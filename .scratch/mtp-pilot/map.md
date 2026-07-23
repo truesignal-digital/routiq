@@ -19,6 +19,8 @@ Phase 1 MTP running in production with the partners' two pilot businesses (one t
 
 <!-- one line per closed ticket: gist + link -->
 
+- [Repo + scaffold baseline](issues/05-repo-baseline.md) — git repo live on `main`, root commit `0448daf`; toolchain pinned per §8 (drizzle now exact); typecheck + 7 tests green. Build hand-off structure unblocked.
+
 - [Research: Supabase Storage S3 compatibility vs MinIO](issues/13-research-supabase-s3-minio.md) — S3 API portable for CRUD/multipart/presigned URLs; TUS resumable upload needs a dual-path abstraction *only if* on-prem means a raw S3 store; **MinIO is unmaintained (archived Apr 2026) → on-prem target is RustFS**. Surfaced ticket: on-prem storage shape (14).
 - [Research: WhatsApp Business Cloud API for Cameroon alerts](issues/12-research-whatsapp-api.md) — utility messages to Cameroon ≈ $0.004/msg ("Rest of Africa" rate) → ~$2–5/month at pilot scale; the blocker is Meta Business Verification lead time + a dedicated number + intl card, not cost. Recommendation: in-app for MTP, WhatsApp fast-follow; start verification in parallel if partners can supply business docs. Unblocks the channel decision (11).
 
