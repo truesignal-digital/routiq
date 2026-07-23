@@ -116,7 +116,10 @@
         "required": "This field is required.",
         "wrongType": "Invalid value for this field.",
         "unknown": "Unknown field for this template."
-      }
+      },
+      "chassisNumber": "Chassis number",
+      "acquisitionDate": "Acquisition date",
+      "acquisitionAmount": "Acquisition amount (XAF)"
     }
   },
   "more": {

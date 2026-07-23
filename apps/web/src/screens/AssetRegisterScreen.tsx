@@ -20,6 +20,7 @@ import { applyTemplateFieldMetadata, applyValidationMetadata } from "../commands
 import { commandClient, commandStatusStore } from "../commands/instance.js";
 import { createCommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
+import { formatXAF } from "@asset/domain";
 
 type FormInput = z.input<typeof registerAssetPayload>;
 type FormOutput = z.output<typeof registerAssetPayload>;
@@ -71,6 +72,7 @@ export function AssetRegisterScreen() {
     },
   });
   const templateCode = form.watch("templateCode");
+  const acquisitionAmount = form.watch("acquisitionAmountMinor");
   const templateFields = useMemo(() => TEMPLATE_FIELDS[templateCode] ?? [], [templateCode]);
 
   async function onSubmit(values: FormOutput) {
@@ -84,6 +86,8 @@ export function AssetRegisterScreen() {
         applyTemplateFieldMetadata(result.metadata, t, setFieldError);
       } else if (result.code === "VALIDATION_FAILED") {
         applyValidationMetadata(result.metadata, t, setFieldError);
+      } else if (result.code === "DUPLICATE_ASSET_CODE") {
+        setFieldError("assetCode", t("errors.DUPLICATE_ASSET_CODE"));
       }
       setErrorCode(result.code);
       return;
@@ -217,6 +221,39 @@ export function AssetRegisterScreen() {
               className="min-h-11"
               {...form.register("model", { setValueAs: emptyToUndefined })}
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="chassisNumber">{t("assets.form.chassisNumber")}</Label>
+            <Input
+              id="chassisNumber"
+              className="min-h-11"
+              {...form.register("chassisNumber", { setValueAs: emptyToUndefined })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="acquisitionDate">{t("assets.form.acquisitionDate")}</Label>
+            <Input
+              id="acquisitionDate"
+              className="min-h-11"
+              type="date"
+              {...form.register("acquisitionDate", { setValueAs: emptyToUndefined })}
+            />
+            {fieldError("acquisitionDate")}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="acquisitionAmountMinor">{t("assets.form.acquisitionAmount")}</Label>
+            <Input
+              id="acquisitionAmountMinor"
+              className="min-h-11"
+              type="number"
+              inputMode="numeric"
+              step="1"
+              {...form.register("acquisitionAmountMinor", { setValueAs: emptyToNumber })}
+            />
+            {typeof acquisitionAmount === "number" && Number.isFinite(acquisitionAmount) ? (
+              <p className="text-xs text-muted-foreground">{formatXAF(acquisitionAmount)}</p>
+            ) : undefined}
+            {fieldError("acquisitionAmountMinor")}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="capacityValue">{t("assets.form.capacityValue")}</Label>
