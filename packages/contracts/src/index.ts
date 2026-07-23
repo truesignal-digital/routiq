@@ -4,3 +4,4 @@ export * from "./errors.js";
 export * from "./modules.js";
 export * from "./roles.js";
 export * from "./commands/register-asset.js";
+export * from "./commands/module-toggle.js";

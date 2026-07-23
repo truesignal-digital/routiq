@@ -5,6 +5,7 @@ import { LocalSessionProvider } from "./auth/local.js";
 import { makeRequireAuth, registerAuthRoutes } from "./auth/plugin.js";
 import type { IdentityProvider } from "./auth/types.js";
 import "./commands/register-asset.js";
+import "./commands/module-toggle.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
