@@ -19,6 +19,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   approvalContext(payload) {
     return {
       branchCode: payload.branchCode,
+      categoryCode: payload.assetClassCode,
       ...(payload.acquisitionAmountMinor === undefined
         ? {}
         : { amountMinor: payload.acquisitionAmountMinor }),

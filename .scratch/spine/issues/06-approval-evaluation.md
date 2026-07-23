@@ -4,10 +4,15 @@
 
 **Blocked by:** 03 — Command pipeline core.
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
-- [ ] `approval_rules` table: command type, category, branch, amount range, required role — tenant-editable rows
-- [ ] Pipeline evaluation step before commit; handlers contain no approval logic
-- [ ] Safe default proven by test: command with no matching rule → `APPROVAL_REQUIRED`, nothing committed
-- [ ] Seed rules give spine commands their catalog defaults (§5.1): register/commission/assign auto for the asset-manager permission
-- [ ] Evaluation outcome recorded on the command receipt (auto-approved vs would-require-approval) so later reporting can show which rules fired
+- [x] `approval_rules` table: command type, category, branch, amount range, required role — tenant-editable rows
+- [x] Pipeline evaluation step before commit; handlers contain no approval logic
+- [x] Safe default proven by test: command with no matching rule → `APPROVAL_REQUIRED`, nothing committed
+- [x] Seed rules give spine commands their catalog defaults (§5.1): register/commission/assign auto for the asset-manager permission
+- [x] Auto-approved outcome and matched rule recorded on the executed command receipt; would-require-approval remains an uncommitted rejection until the pending-approval flow lands
+
+## Comments
+
+- Implemented 2026-07-22. Category, branch, and amount filters are supported. The evaluator applies the most-specific matching rule set before checking the actor role, allowing tenant-specific rules to override broad seeded defaults. Tests cover auto-approval provenance, safe-default rollback, and override precedence.
+- Fable review (2026-07-23): worker hit its session limit near the end; Fable added the missing test cases (amount-range filter; rejected command leaves its idempotency key free for the retry — proven with same key/commandId succeeding after a rule is added). Most-specific-decides semantics kept as an improvement over the original any-match spec: broad defaults would otherwise make stricter tenant rules unenforceable.

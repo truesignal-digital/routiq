@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createTestApp } from "../test/fixture.js";
 import { seedWorkspace, seedMember } from "../test/seed.js";
 import { createSession } from "../auth/local.js";
-import { assets, commands, auditEvents, workspaces } from "../db/schema.js";
+import { approvalRules, assets, commands, auditEvents, workspaces } from "../db/schema.js";
 import { registerCommand } from "./dispatcher.js";
 import { buildServer } from "../server.js";
 import type { Db } from "../db/client.js";
@@ -608,6 +608,12 @@ describe("Command Pipeline", () => {
             .values({ slug: `explode-${envelope.commandId}`, name: "explode" });
           throw new Error("boom");
         },
+      });
+
+      await db.insert(approvalRules).values({
+        workspaceId: workspace.id,
+        commandType: "test-explode",
+        requiredRole: "ADMIN",
       });
 
       const response = await postCommand(
