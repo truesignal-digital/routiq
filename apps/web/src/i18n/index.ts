@@ -1,5 +1,6 @@
 import i18next, { type i18n as I18n } from "i18next";
 import { z } from "zod";
+import { makeZodErrorMap } from "./zod-error-map.js";
 import ICU from "i18next-icu";
 import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
@@ -32,3 +33,6 @@ i18n.on("languageChanged", (lng) => {
 });
 
 z.config(z.locales.fr());
+// Friendly overrides for the cases users actually hit; i18n.t resolves at
+// validation time so messages follow the active language.
+z.config({ customError: makeZodErrorMap((key, options) => i18n.t(key, options ?? {})) });

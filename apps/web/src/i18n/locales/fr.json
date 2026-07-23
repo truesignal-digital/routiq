@@ -110,5 +110,13 @@
     "signedInAs": "Connecté en tant que {username}",
     "language": "Langue",
     "logout": "Se déconnecter"
+  },
+  "form": {
+    "errors": {
+      "required": "Ce champ est obligatoire.",
+      "number": "Veuillez saisir un nombre.",
+      "min": "Doit être au moins {min}.",
+      "max": "Ne doit pas dépasser {max}."
+    }
   }
 }

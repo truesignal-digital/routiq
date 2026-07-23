@@ -110,5 +110,13 @@
     "signedInAs": "Signed in as {username}",
     "language": "Language",
     "logout": "Sign out"
+  },
+  "form": {
+    "errors": {
+      "required": "This field is required.",
+      "number": "Please enter a number.",
+      "min": "Must be at least {min}.",
+      "max": "Must not exceed {max}."
+    }
   }
 }
