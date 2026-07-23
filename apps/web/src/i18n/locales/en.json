@@ -1,0 +1,18 @@
+{
+  "app": {
+    "name": "Asset Management"
+  },
+  "nav": {
+    "assets": "Assets",
+    "more": "More"
+  },
+  "assets": {
+    "title": "Assets",
+    "emptyHint": "Your fleet's assets will appear here."
+  },
+  "more": {
+    "title": "More",
+    "language": "Language",
+    "placeholder": "Profile, language and sign-out will land here."
+  }
+}
