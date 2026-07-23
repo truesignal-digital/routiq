@@ -17,10 +17,10 @@ pnpm --filter @asset/api test     # one package
 pnpm --filter @asset/api exec vitest run src/server.test.ts   # single test file
 pnpm db:generate                  # drizzle-kit generate (from apps/api/src/db/schema.ts)
 pnpm db:migrate                   # drizzle-kit migrate
-docker compose up -d              # Postgres 17 on localhost:5433 (user/pass/db: asset/asset/asset_dev)
+docker compose up -d              # Postgres 17 on localhost:5435 (user/pass/db: asset/asset/asset_dev)
 ```
 
-- Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5433**, not 5432; API `PORT=3001`).
+- Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
 - Dev servers (`pnpm --filter ... dev`) — assume already running; don't start them.
 - Dependency versions were deliberately pinned against the registry (ARCHITECTURE.md §8) — don't bump without reason. TypeScript 7 (native compiler), Zod 4 (`z.uuid()`, `z.iso.date()` — not the Zod 3 spellings), Tailwind 4 (CSS-first config, no tailwind.config.js), Drizzle 0.x (pin exact).
 

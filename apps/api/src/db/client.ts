@@ -3,7 +3,7 @@ import pg from "pg";
 import * as schema from "./schema.js";
 
 const connectionString =
-  process.env["DATABASE_URL"] ?? "postgres://asset:asset@localhost:5433/asset_dev";
+  process.env["DATABASE_URL"] ?? "postgres://asset:asset@localhost:5435/asset_dev";
 
 export const pool = new pg.Pool({ connectionString });
 export const db = drizzle(pool, { schema });
