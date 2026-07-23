@@ -1,0 +1,18 @@
+{
+  "app": {
+    "name": "Gestion des actifs"
+  },
+  "nav": {
+    "assets": "Actifs",
+    "more": "Plus"
+  },
+  "assets": {
+    "title": "Actifs",
+    "emptyHint": "La liste des actifs de votre flotte apparaîtra ici."
+  },
+  "more": {
+    "title": "Plus",
+    "language": "Langue",
+    "placeholder": "Profil, langue et déconnexion arriveront ici."
+  }
+}
