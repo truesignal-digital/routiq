@@ -97,7 +97,12 @@
       "choose": "Choose…",
       "submit": "Register asset",
       "submitting": "Registering…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "fieldErrors": {
+        "required": "This field is required.",
+        "wrongType": "Invalid value for this field.",
+        "unknown": "Unknown field for this template."
+      }
     }
   },
   "more": {

@@ -4,8 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   registerAssetPayload,
+  templateFieldIssues,
   TEMPLATE_CODES,
   TEMPLATE_FIELDS,
+  type TemplateFieldIssue,
 } from "@asset/contracts";
 import type { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -42,8 +44,22 @@ export function AssetRegisterScreen() {
   const submitting =
     activeCommandId !== undefined && statuses.get(activeCommandId)?.state === "submitting";
 
+  const formSchema = useMemo(
+    () =>
+      registerAssetPayload.superRefine((data, ctx) => {
+        for (const issue of templateFieldIssues(data.templateCode, data.customValues)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["customValues", issue.key],
+            message: t(`assets.form.fieldErrors.${issue.kind}`),
+          });
+        }
+      }),
+    [t],
+  );
+
   const form = useForm<FormInput, unknown, FormOutput>({
-    resolver: zodResolver(registerAssetPayload),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       assetId,
       assetCode: "",
@@ -62,6 +78,9 @@ export function AssetRegisterScreen() {
     setActiveCommandId(submission.envelope.commandId);
     const result = await commandClient.submit(submission);
     if (!result.ok) {
+      if (result.code === "TEMPLATE_FIELD_INVALID") {
+        applyServerTemplateIssues(result.metadata);
+      }
       setErrorCode(result.code);
       return;
     }
@@ -71,8 +90,43 @@ export function AssetRegisterScreen() {
     void navigate({ to: "/assets" });
   }
 
+  function applyServerTemplateIssues(metadata: Record<string, unknown> | undefined) {
+    if (metadata === undefined) return;
+    const setFieldError = (key: string, kind: TemplateFieldIssue["kind"]) =>
+      form.setError(`customValues.${key}`, {
+        type: "server",
+        message: t(`assets.form.fieldErrors.${kind}`),
+      });
+    if (Array.isArray(metadata["missingRequired"])) {
+      for (const key of metadata["missingRequired"]) {
+        if (typeof key === "string") setFieldError(key, "required");
+      }
+    }
+    if (Array.isArray(metadata["wrongType"])) {
+      for (const entry of metadata["wrongType"]) {
+        const key = (entry as { key?: unknown }).key;
+        if (typeof key === "string") setFieldError(key, "wrongType");
+      }
+    }
+    if (Array.isArray(metadata["unknownKeys"])) {
+      for (const key of metadata["unknownKeys"]) {
+        if (typeof key === "string") setFieldError(key, "unknown");
+      }
+    }
+  }
+
   const labelFor = (item: { labelFr: string; labelEn: string }) =>
     i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+
+  const customFieldError = (key: string) => {
+    const errors = form.formState.errors.customValues as
+      | Record<string, { message?: unknown }>
+      | undefined;
+    const message = errors?.[key]?.message;
+    return typeof message !== "string" ? undefined : (
+      <p className="text-xs text-destructive">{message}</p>
+    );
+  };
 
   const fieldError = (name: keyof FormInput) => {
     const message = form.formState.errors[name]?.message;
@@ -234,6 +288,7 @@ export function AssetRegisterScreen() {
                       setValueAs: field.type === "number" ? emptyToNumber : emptyToUndefined,
                     })}
                   />
+                  {customFieldError(field.key)}
                 </div>
               ))}
             </div>

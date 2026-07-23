@@ -97,7 +97,12 @@
       "choose": "Choisir…",
       "submit": "Enregistrer l'actif",
       "submitting": "Enregistrement…",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "fieldErrors": {
+        "required": "Ce champ est obligatoire.",
+        "wrongType": "Valeur invalide pour ce champ.",
+        "unknown": "Champ inconnu pour ce modèle."
+      }
     }
   },
   "more": {
