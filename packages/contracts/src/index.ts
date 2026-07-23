@@ -3,5 +3,6 @@ export * from "./envelope.js";
 export * from "./errors.js";
 export * from "./modules.js";
 export * from "./roles.js";
+export * from "./client/submission.js";
 export * from "./commands/register-asset.js";
 export * from "./commands/module-toggle.js";
