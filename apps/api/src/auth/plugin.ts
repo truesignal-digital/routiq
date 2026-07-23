@@ -30,6 +30,8 @@ export function makeRequireAuth(db: Db, identity: IdentityProvider) {
   };
 }
 
+export type RequireAuth = ReturnType<typeof makeRequireAuth>;
+
 export function registerAuthRoutes(app: FastifyInstance, db: Db) {
   app.post("/v1/auth/login", async (req, reply) => {
     const parsed = loginRequest.safeParse(req.body);

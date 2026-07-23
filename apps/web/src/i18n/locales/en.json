@@ -7,8 +7,41 @@
     "more": "More"
   },
   "assets": {
-    "title": "Assets",
-    "emptyHint": "Your fleet's assets will appear here."
+    "eyebrow": "Operational fleet",
+    "title": "Your assets",
+    "subtitle": "Track every vehicle from registration through retirement.",
+    "register": "New asset",
+    "searchLabel": "Search assets",
+    "searchPlaceholder": "Code, plate or model…",
+    "filterLabel": "Filter assets",
+    "filters": {
+      "ALL": "All",
+      "IN_SERVICE": "In service",
+      "ATTENTION": "Needs attention"
+    },
+    "metrics": {
+      "total": "Total",
+      "inService": "In service",
+      "attention": "Attention"
+    },
+    "status": {
+      "REGISTERED": "Registered",
+      "IN_SERVICE": "In service",
+      "UNDER_MAINTENANCE": "In maintenance",
+      "SOLD": "Sold",
+      "RETIRED": "Retired",
+      "WRITTEN_OFF": "Written off"
+    },
+    "emptyEyebrow": "Your fleet starts here",
+    "emptyTitle": "Register your first vehicle",
+    "emptyHint": "Add a truck, trailer, bus, or minibus. Its trustworthy history starts building from day one.",
+    "emptyAction": "Register an asset",
+    "noResultsTitle": "No assets found",
+    "noResultsHint": "Try another search or clear the filters.",
+    "resetFilters": "Clear filters",
+    "errorTitle": "We couldn't load the fleet",
+    "errorHint": "The connection may have dropped. Your data is still safe.",
+    "retry": "Try again"
   },
   "more": {
     "title": "More",

@@ -7,8 +7,41 @@
     "more": "Plus"
   },
   "assets": {
-    "title": "Actifs",
-    "emptyHint": "La liste des actifs de votre flotte apparaîtra ici."
+    "eyebrow": "Parc opérationnel",
+    "title": "Vos actifs",
+    "subtitle": "Suivez chaque véhicule, de son enregistrement à sa mise hors service.",
+    "register": "Nouvel actif",
+    "searchLabel": "Rechercher dans les actifs",
+    "searchPlaceholder": "Code, plaque ou modèle…",
+    "filterLabel": "Filtrer les actifs",
+    "filters": {
+      "ALL": "Tous",
+      "IN_SERVICE": "En service",
+      "ATTENTION": "À surveiller"
+    },
+    "metrics": {
+      "total": "Total",
+      "inService": "En service",
+      "attention": "À surveiller"
+    },
+    "status": {
+      "REGISTERED": "Enregistré",
+      "IN_SERVICE": "En service",
+      "UNDER_MAINTENANCE": "En maintenance",
+      "SOLD": "Vendu",
+      "RETIRED": "Retiré",
+      "WRITTEN_OFF": "Réformé"
+    },
+    "emptyEyebrow": "Votre parc commence ici",
+    "emptyTitle": "Enregistrez votre premier véhicule",
+    "emptyHint": "Ajoutez un camion, une remorque, un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
+    "emptyAction": "Enregistrer un actif",
+    "noResultsTitle": "Aucun actif trouvé",
+    "noResultsHint": "Essayez un autre terme ou retirez les filtres.",
+    "resetFilters": "Effacer les filtres",
+    "errorTitle": "Impossible de charger le parc",
+    "errorHint": "La connexion a peut-être été interrompue. Vos données restent en sécurité.",
+    "retry": "Réessayer"
   },
   "more": {
     "title": "Plus",
