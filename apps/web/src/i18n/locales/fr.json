@@ -18,7 +18,28 @@
     "AUTH_INVALID_CREDENTIALS": "Nom d'utilisateur ou code PIN incorrect.",
     "VALIDATION_FAILED": "Veuillez vérifier les champs saisis.",
     "NETWORK_ERROR": "Connexion impossible. Vérifiez votre réseau et réessayez.",
-    "generic": "Une erreur est survenue. Réessayez ou contactez votre administrateur."
+    "generic": "Une erreur est survenue. Réessayez ou contactez votre administrateur.",
+    "DUPLICATE_ASSET_CODE": "Ce code d'actif existe déjà dans votre espace.",
+    "TEMPLATE_FIELD_INVALID": "Un champ spécifique au modèle est invalide ou manquant.",
+    "APPROVAL_REQUIRED": "Cette action nécessite une approbation. Elle sera disponible prochainement.",
+    "IDEMPOTENCY_KEY_REUSED": "Cette soumission entre en conflit avec un envoi précédent. Vérifiez la liste puis réessayez.",
+    "REFERENCE_NOT_FOUND": "Une référence choisie n'existe pas ou plus. Actualisez puis réessayez.",
+    "ROLE_FORBIDDEN": "Votre rôle ne permet pas cette action.",
+    "READ_FAILED": "Impossible de charger les données. Réessayez.",
+    "AUTH_REQUIRED": "Connexion requise. Veuillez vous reconnecter.",
+    "AUTH_INVALID_TOKEN": "Session expirée. Veuillez vous reconnecter.",
+    "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
+    "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
+    "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
+    "COMMAND_FAILED": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
+    "EXPECTED_VERSION_REQUIRED": "Impossible d'enregistrer : version de l'enregistrement manquante. Actualisez la page.",
+    "VERSION_CONFLICT": "Cet enregistrement a été modifié par quelqu'un d'autre. Actualisez puis réappliquez vos changements.",
+    "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
+    "ARTIFACT_UPLOAD_INCOMPLETE": "Une pièce jointe n'a pas fini d'être téléversée. Attendez la fin ou retirez-la.",
+    "UNSUPPORTED_MEDIA_TYPE": "Format de fichier non pris en charge (JPEG, PNG, WebP ou PDF uniquement).",
+    "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
+    "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",
+    "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente."
   },
   "assets": {
     "eyebrow": "Parc opérationnel",
@@ -55,12 +76,62 @@
     "resetFilters": "Effacer les filtres",
     "errorTitle": "Impossible de charger le parc",
     "errorHint": "La connexion a peut-être été interrompue. Vos données restent en sécurité.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "form": {
+      "eyebrow": "Nouvel enregistrement",
+      "title": "Enregistrer un actif",
+      "assetCode": "Code de l'actif",
+      "assetClass": "Classe d'actif",
+      "branch": "Agence",
+      "template": "Modèle d'activité",
+      "templates": {
+        "TRUCKING": "Transport de marchandises",
+        "PASSENGER_TRANSPORT": "Transport de voyageurs"
+      },
+      "registrationNumber": "Immatriculation",
+      "manufacturer": "Marque",
+      "model": "Modèle",
+      "modelYear": "Année",
+      "capacityValue": "Capacité",
+      "capacityUnit": "Unité de capacité",
+      "units": {
+        "KG": "Kilogrammes",
+        "TONNE": "Tonnes",
+        "M3": "Mètres cubes",
+        "SEAT": "Places"
+      },
+      "templateFields": "Champs spécifiques",
+      "custom": {
+        "axleCount": "Nombre d'essieux",
+        "bodyType": "Type de carrosserie",
+        "tonnageCapacity": "Tonnage (t)",
+        "seatCount": "Nombre de places",
+        "lineType": "Type de ligne"
+      },
+      "choose": "Choisir…",
+      "submit": "Enregistrer l'actif",
+      "submitting": "Enregistrement…",
+      "cancel": "Annuler",
+      "fieldErrors": {
+        "required": "Ce champ est obligatoire.",
+        "wrongType": "Valeur invalide pour ce champ.",
+        "unknown": "Champ inconnu pour ce modèle."
+      }
+    }
   },
   "more": {
     "title": "Plus",
     "signedInAs": "Connecté en tant que {username}",
     "language": "Langue",
     "logout": "Se déconnecter"
+  },
+  "form": {
+    "errors": {
+      "required": "Ce champ est obligatoire.",
+      "number": "Veuillez saisir un nombre.",
+      "min": "Doit être au moins {min}.",
+      "max": "Ne doit pas dépasser {max}.",
+      "invalid": "Valeur invalide."
+    }
   }
 }

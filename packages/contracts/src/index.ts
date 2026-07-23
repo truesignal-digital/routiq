@@ -5,6 +5,7 @@ export * from "./modules.js";
 export * from "./roles.js";
 export * from "./client/submission.js";
 export * from "./commands/add-or-renew-document.js";
+export * from "./templates.js";
 export * from "./commands/register-asset.js";
 export * from "./commands/module-toggle.js";
 export * from "./commands/asset-lifecycle.js";

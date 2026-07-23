@@ -1,10 +1,14 @@
-import type { CommandResult, CommandSubmission } from "@asset/contracts";
+import type { ApiErrorCode, CommandResult, CommandSubmission } from "@asset/contracts";
 import { extractApiError } from "../lib/api-error.js";
 import type { CommandStatusStore } from "./store.js";
 
+/** Codes a submit can fail with: the contracts registry, the client-side
+ * NETWORK_ERROR, or an unknown future code (string) that renders generically. */
+export type SubmitErrorCode = ApiErrorCode | "NETWORK_ERROR" | (string & {});
+
 export type SubmitResult =
   | { ok: true; outcome: CommandResult }
-  | { ok: false; code: string; metadata?: Record<string, unknown> };
+  | { ok: false; code: SubmitErrorCode; metadata?: Record<string, unknown> };
 
 export interface CommandClientDeps {
   store: CommandStatusStore;
