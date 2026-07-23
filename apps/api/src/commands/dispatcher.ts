@@ -1,11 +1,9 @@
 import type { z } from "zod";
 import type { CommandEnvelope } from "@asset/contracts";
+import type { AuthContext } from "../auth/types.js";
 
-export interface CommandContext {
-  workspaceId: string;
-  principalId: string;
-  branchScope: string[] | "ALL";
-}
+/** Server-derived actor context, resolved by the auth layer — never client-supplied. */
+export type CommandContext = AuthContext;
 
 export interface CommandOutcome {
   commandId: string;

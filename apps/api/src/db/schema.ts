@@ -1,3 +1,5 @@
+import { PRINCIPAL_TYPES, ROLES } from "@asset/contracts";
+import { sql } from "drizzle-orm";
 import {
   boolean,
   jsonb,
@@ -44,12 +46,63 @@ export const branches = pgTable(
 
 export const principals = pgTable("principals", {
   id: uuid("id").primaryKey().defaultRandom(),
-  principalType: text("principal_type", {
-    enum: ["HUMAN", "AI_AGENT", "INTEGRATION"],
-  }).notNull(),
+  principalType: text("principal_type", { enum: PRINCIPAL_TYPES }).notNull(),
   displayName: text("display_name").notNull(),
   externalSubject: text("external_subject"),
   disabledAt: timestamp("disabled_at", { withTimezone: true }),
+});
+
+export const memberships = pgTable(
+  "memberships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    principalId: uuid("principal_id")
+      .notNull()
+      .references(() => principals.id),
+    role: text("role", { enum: ROLES }).notNull(),
+    allBranches: boolean("all_branches").notNull().default(false),
+    branchIds: uuid("branch_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("memberships_ws_principal_uq").on(t.workspaceId, t.principalId)],
+);
+
+/** App-owned username/PIN credentials for field roles — no email flow (§6a guard 1). */
+export const credentials = pgTable(
+  "credentials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    principalId: uuid("principal_id")
+      .notNull()
+      .references(() => principals.id),
+    username: text("username").notNull(),
+    pinHash: text("pin_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("credentials_ws_username_uq").on(t.workspaceId, t.username)],
+);
+
+export const sessions = pgTable("sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  principalId: uuid("principal_id")
+    .notNull()
+    .references(() => principals.id),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const commands = pgTable(

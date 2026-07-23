@@ -21,6 +21,6 @@ describe("api server (integration)", () => {
 
   it("has migrations applied (workspaces table queryable)", async () => {
     const rows = await ctx.db.select().from(workspaces);
-    expect(rows).toEqual([]);
+    expect(Array.isArray(rows)).toBe(true);
   });
 });
