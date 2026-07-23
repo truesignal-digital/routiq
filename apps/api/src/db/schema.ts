@@ -97,6 +97,8 @@ export const credentials = pgTable(
       .references(() => principals.id),
     username: text("username").notNull(),
     pinHash: text("pin_hash").notNull(),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
   },

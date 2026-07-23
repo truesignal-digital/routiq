@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "./local.js";
+import { credentials } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 
@@ -69,6 +71,65 @@ describe("username/PIN login", () => {
     const res = await login({ workspaceSlug: ws.workspace.slug, username: "ghost", pin: "0000" });
     expect(res.statusCode).toBe(401);
     expect(res.json()).toEqual({ error: { code: "AUTH_INVALID_CREDENTIALS" } });
+  });
+
+  it("locks the credential after 5 wrong PINs and unlocks after the window", async () => {
+    await seedMember(ctx.db, {
+      workspaceId: ws.workspace.id,
+      role: "FIELD_SUBMITTER",
+      branchIds: [ws.branch.id],
+      username: "clerk3",
+      pin: "2468",
+    });
+    const attempt = (pin: string) =>
+      login({ workspaceSlug: ws.workspace.slug, username: "clerk3", pin });
+
+    for (let i = 0; i < 5; i++) {
+      expect((await attempt("0000")).json().error.code).toBe("AUTH_INVALID_CREDENTIALS");
+    }
+
+    const locked = await attempt("2468");
+    expect(locked.statusCode).toBe(401);
+    const lockedBody = locked.json();
+    expect(lockedBody.error.code).toBe("AUTH_LOCKED");
+    expect(lockedBody.error.metadata.retryAfterSeconds).toBeGreaterThan(0);
+
+    await ctx.db
+      .update(credentials)
+      .set({ lockedUntil: new Date(Date.now() - 1000) })
+      .where(eq(credentials.username, "clerk3"));
+
+    const afterExpiry = await attempt("2468");
+    expect(afterExpiry.statusCode).toBe(200);
+
+    const [cred] = await ctx.db
+      .select()
+      .from(credentials)
+      .where(eq(credentials.username, "clerk3"));
+    expect(cred?.failedAttempts).toBe(0);
+    expect(cred?.lockedUntil).toBeNull();
+  });
+
+  it("a correct login resets the failed-attempt counter", async () => {
+    await seedMember(ctx.db, {
+      workspaceId: ws.workspace.id,
+      role: "FIELD_SUBMITTER",
+      branchIds: [ws.branch.id],
+      username: "clerk4",
+      pin: "1357",
+    });
+    const attempt = (pin: string) =>
+      login({ workspaceSlug: ws.workspace.slug, username: "clerk4", pin });
+
+    await attempt("0000");
+    await attempt("0000");
+    expect((await attempt("1357")).statusCode).toBe(200);
+
+    const [cred] = await ctx.db
+      .select()
+      .from(credentials)
+      .where(eq(credentials.username, "clerk4"));
+    expect(cred?.failedAttempts).toBe(0);
   });
 });
 

@@ -6,6 +6,7 @@ export const AUTH_ERROR_CODES = [
   "AUTH_REQUIRED",
   "AUTH_INVALID_TOKEN",
   "AUTH_INVALID_CREDENTIALS",
+  "AUTH_LOCKED",
 ] as const;
 
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[number];

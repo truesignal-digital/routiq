@@ -37,8 +37,20 @@ export function registerAuthRoutes(app: FastifyInstance, db: Db) {
     const parsed = loginRequest.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
 
-    const session = await loginWithPin(db, parsed.data);
-    if (!session) return unauthorized(reply, "AUTH_INVALID_CREDENTIALS");
-    return { token: session.token, expiresAt: session.expiresAt.toISOString() };
+    const result = await loginWithPin(db, parsed.data);
+    if (!result.ok) {
+      return reply.status(401).send({
+        error: {
+          code: result.code,
+          ...(result.retryAfterSeconds === undefined
+            ? {}
+            : { metadata: { retryAfterSeconds: result.retryAfterSeconds } }),
+        },
+      });
+    }
+    return {
+      token: result.session.token,
+      expiresAt: result.session.expiresAt.toISOString(),
+    };
   });
 }

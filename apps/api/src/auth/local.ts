@@ -9,6 +9,10 @@ import type { IdentityProvider, VerifiedIdentity } from "./types.js";
 /** §6: sessions must survive the max plausible offline window (≥ 14 days). */
 const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
+/** 5 wrong PINs lock the credential for 15 minutes; a correct login resets the counter. */
+const MAX_PIN_ATTEMPTS = 5;
+const PIN_LOCKOUT_MS = 15 * 60 * 1000;
+
 /** Verified on unknown-username paths so lookup misses cost the same as a wrong PIN. */
 const DUMMY_PIN_HASH = await hashPin(randomBytes(8).toString("hex"));
 
@@ -31,7 +35,11 @@ export async function createSession(
   return { token, expiresAt };
 }
 
-export async function loginWithPin(db: Db, input: LoginRequest) {
+export type LoginResult =
+  | { ok: true; session: { token: string; expiresAt: Date } }
+  | { ok: false; code: "AUTH_INVALID_CREDENTIALS" | "AUTH_LOCKED"; retryAfterSeconds?: number };
+
+export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginResult> {
   const [row] = await db
     .select({
       credential: credentials,
@@ -47,14 +55,44 @@ export async function loginWithPin(db: Db, input: LoginRequest) {
 
   if (!row || row.credential.disabledAt || row.principalDisabledAt) {
     await verifyPin(input.pin, DUMMY_PIN_HASH);
-    return null;
+    return { ok: false as const, code: "AUTH_INVALID_CREDENTIALS" as const };
   }
-  if (!(await verifyPin(input.pin, row.credential.pinHash))) return null;
 
-  return createSession(db, {
+  const now = Date.now();
+  if (row.credential.lockedUntil && row.credential.lockedUntil.getTime() > now) {
+    await verifyPin(input.pin, DUMMY_PIN_HASH);
+    return {
+      ok: false as const,
+      code: "AUTH_LOCKED" as const,
+      retryAfterSeconds: Math.ceil((row.credential.lockedUntil.getTime() - now) / 1000),
+    };
+  }
+
+  if (!(await verifyPin(input.pin, row.credential.pinHash))) {
+    const failedAttempts = row.credential.failedAttempts + 1;
+    await db
+      .update(credentials)
+      .set(
+        failedAttempts >= MAX_PIN_ATTEMPTS
+          ? { failedAttempts: 0, lockedUntil: new Date(now + PIN_LOCKOUT_MS) }
+          : { failedAttempts },
+      )
+      .where(eq(credentials.id, row.credential.id));
+    return { ok: false as const, code: "AUTH_INVALID_CREDENTIALS" as const };
+  }
+
+  if (row.credential.failedAttempts > 0 || row.credential.lockedUntil) {
+    await db
+      .update(credentials)
+      .set({ failedAttempts: 0, lockedUntil: null })
+      .where(eq(credentials.id, row.credential.id));
+  }
+
+  const session = await createSession(db, {
     principalId: row.credential.principalId,
     workspaceId: row.workspaceId,
   });
+  return { ok: true as const, session };
 }
 
 /** Local implementation of the identity seam: opaque tokens in the sessions table. */

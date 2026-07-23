@@ -50,6 +50,13 @@
       "when": 1784846257209,
       "tag": "0006_mysterious_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784849045080,
+      "tag": "0007_closed_kabuki",
+      "breakpoints": true
     }
   ]
 }
