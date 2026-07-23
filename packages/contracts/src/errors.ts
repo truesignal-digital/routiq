@@ -30,6 +30,7 @@ export const COMMAND_ERROR_CODES = [
   "TEMPLATE_FIELD_INVALID",
   "ARTIFACT_UPLOAD_INCOMPLETE",
   "UNSUPPORTED_MEDIA_TYPE",
+  "STORAGE_FAILED",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

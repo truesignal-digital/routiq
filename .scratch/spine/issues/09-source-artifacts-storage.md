@@ -4,11 +4,17 @@
 
 **Blocked by:** 03 — Command pipeline core.
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
-- [ ] `source_artifacts` table: immutable rows with SHA-256 hash, MIME type, size, storage key, uploader provenance
-- [ ] One storage interface, S3-API-only implementation; presigned upload + download via standard SigV4 (not `createSignedUrl`); tests run against a local S3-compatible container
-- [ ] MIME type verified by content on finalize, not by extension; EXIF location stripped from photos
-- [ ] Commands link artifacts via the envelope's `sourceArtifactIds`; the many-to-many link rows carry workspace scoping
-- [ ] Artifact rows have no update path through the command layer; corrections attach new artifacts, never replace
-- [ ] Integration test: presign → upload → finalize → hash verified → RegisterAsset with `sourceArtifactIds` → link present with full provenance
+- [x] `source_artifacts` table: immutable rows with SHA-256 hash, MIME type, size, storage key, uploader provenance
+- [x] One storage interface, S3-API-only implementation; presigned upload + download via standard SigV4 (not `createSignedUrl`); tests run against a local S3-compatible container
+- [x] MIME type verified by content on finalize, not by extension; EXIF location stripped from photos
+- [x] Commands link artifacts via the envelope's `sourceArtifactIds`; the many-to-many link rows carry workspace scoping
+- [x] Artifact rows have no update path through the command layer; corrections attach new artifacts, never replace
+- [x] Integration test: presign → upload → finalize → hash verified → RegisterAsset with `sourceArtifactIds` → link present with full provenance
+
+## Comments
+
+- Implemented (2026-07-23) by a codex worker, reviewed and corrected by Fable. `ObjectStorage` seam (S3 API + SigV4 presigning only) with `createS3Storage`; presign/finalize/download-url routes (auth-derived storage keys — client can never choose a key); MIME sniffed from bytes via file-type (jpeg/png/webp/pdf allowlist); images re-encoded with sharp (`rotate()` bakes orientation, re-encode drops EXIF/GPS); SHA-256 over final stored bytes; artifact rows immutable (runtime role has no UPDATE/DELETE on source_artifacts per migration 0005). Dispatcher validates and links `sourceArtifactIds` inside the command transaction.
+- Fable corrections: worker had gated the whole test suite behind a manual `RUN_MINIO_TESTS` env (silently skipping 9 tests) — rewritten to boot a MinIO GenericContainer per file; Zod-3 `z.string().uuid()` spellings fixed; five ad-hoc error codes replaced with registered `STORAGE_FAILED` / `UNSUPPORTED_MEDIA_TYPE`.
+- Deferred: resumable upload interface (wayfinder ticket 14, on-prem only); artifact GC for presigned-but-never-finalized objects.
