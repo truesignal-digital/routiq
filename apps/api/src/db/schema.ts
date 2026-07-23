@@ -242,6 +242,9 @@ export const assets = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
+    templateVersion: integer("template_version").notNull().default(1),
+    commissionedAt: timestamp("commissioned_at", { withTimezone: true }),
+    custodianMembershipId: uuid("custodian_membership_id").references(() => memberships.id),
     rowVersion: integer("row_version").notNull().default(1),
     createdByCommandId: uuid("created_by_command_id")
       .notNull()
@@ -249,4 +252,66 @@ export const assets = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("assets_ws_code_uq").on(t.workspaceId, t.assetCode)],
+);
+
+export const categories = pgTable(
+  "categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    kind: text("kind", {
+      enum: [
+        "ASSET_CLASS",
+        "ACTIVITY_TYPE",
+        "REVENUE_CATEGORY",
+        "EXPENSE_CATEGORY",
+        "DOCUMENT_TYPE",
+        "ISSUE_TYPE",
+      ],
+    }).notNull(),
+    code: text("code").notNull(),
+    labelFr: text("label_fr").notNull(),
+    labelEn: text("label_en").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("categories_ws_kind_code_uq").on(t.workspaceId, t.kind, t.code)],
+);
+
+/** Immutable, hashed evidence blobs (§3.4). No update path exists by design. */
+export const sourceArtifacts = pgTable("source_artifacts", {
+  id: uuid("id").primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id),
+  storageKey: text("storage_key").notNull().unique(),
+  sha256: text("sha256").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "bigint" }).notNull(),
+  originalFileName: text("original_file_name"),
+  uploadedByPrincipalId: uuid("uploaded_by_principal_id")
+    .notNull()
+    .references(() => principals.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const commandSourceArtifacts = pgTable(
+  "command_source_artifacts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    commandId: uuid("command_id")
+      .notNull()
+      .references(() => commands.id),
+    artifactId: uuid("artifact_id")
+      .notNull()
+      .references(() => sourceArtifacts.id),
+  },
+  (t) => [uniqueIndex("command_artifacts_uq").on(t.commandId, t.artifactId)],
 );

@@ -17,7 +17,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   module: "ASSETS",
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: registerAssetPayload,
-  approvalContext(payload) {
+  async approvalContext(_tx, _ctx, payload) {
     return {
       branchCode: payload.branchCode,
       categoryCode: payload.assetClassCode,

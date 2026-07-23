@@ -6,19 +6,24 @@ import { makeRequireAuth, registerAuthRoutes } from "./auth/plugin.js";
 import type { IdentityProvider } from "./auth/types.js";
 import "./commands/register-asset.js";
 import "./commands/module-toggle.js";
+import "./commands/asset-lifecycle.js";
+import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
+import type { ObjectStorage } from "./storage/types.js";
 
 export interface ServerDeps {
   db: Db;
   identity?: IdentityProvider;
+  storage?: ObjectStorage;
   logger?: boolean | object;
 }
 
 export function buildServer({
   db,
   identity = new LocalSessionProvider(db),
+  storage,
   logger = true,
 }: ServerDeps) {
   // Auto request-logging is off because Fastify's completion line binds reply.log
@@ -44,6 +49,7 @@ export function buildServer({
 
   registerAuthRoutes(app, db);
   registerCommandRoutes(app, db, requireAuth);
+  if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   app.get("/v1/me", { preHandler: requireAuth }, async (req) => req.auth);
   app.get("/v1/commands", { preHandler: requireAuth }, async () => ({
     commands: listCommands(),

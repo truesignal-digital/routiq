@@ -6,12 +6,13 @@ import {
   type Role,
   type ValidationErrorCode,
 } from "@asset/contracts";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
-import { auditEvents, commands } from "../db/schema.js";
+import { auditEvents, commands, commandSourceArtifacts, sourceArtifacts } from "../db/schema.js";
 import { isModuleEnabled } from "../modules/registry.js";
+import { reportUnexpectedFailure } from "../observability/sentry.js";
 import { evaluateApproval, type ApprovalContext } from "./approvals.js";
 
 export type CommandContext = AuthContext;
@@ -62,8 +63,8 @@ export interface CommandDefinition<P> {
   module: ModuleCode;
   allowedRoles: readonly Role[];
   payloadSchema: z.ZodType<P>;
-  /** Filter values approval rules may match on (branch, category, amount). */
-  approvalContext?(payload: P): ApprovalContext;
+  /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
+  approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   execute(
     tx: Tx,
     ctx: CommandContext,
@@ -185,7 +186,7 @@ export async function dispatchCommand(
           ctx,
           outer.data.envelope,
           outer.data.name,
-          definition.approvalContext?.(parsedPayload.data) ?? {},
+          (await definition.approvalContext?.(tx, ctx, parsedPayload.data)) ?? {},
         );
 
         // The receipt is staged first because domain and audit rows reference its command id.
@@ -206,6 +207,8 @@ export async function dispatchCommand(
           approvalOutcome: approval.outcome,
           approvalRuleId: approval.ruleId,
         });
+
+        await linkSourceArtifacts(tx, ctx, outer.data.envelope);
 
         const result = await definition.execute(
           tx,
@@ -255,8 +258,59 @@ export async function dispatchCommand(
       );
     }
     log?.error({ err: error, event: "command.failed" });
+    reportUnexpectedFailure(error, {
+      commandId: outer.data.envelope.commandId,
+      workspaceId: ctx.workspaceId,
+      commandType: outer.data.name,
+      origin: outer.data.envelope.origin,
+    });
     return commandErrorResponse(new CommandError(500, "COMMAND_FAILED"));
   }
+}
+
+/** §5.3 optimistic concurrency: mutations of existing rows must carry expectedVersion. */
+export function checkOptimisticVersion(envelope: CommandEnvelope, currentVersion: number): void {
+  if (envelope.expectedVersion === undefined) {
+    throw new CommandError(400, "EXPECTED_VERSION_REQUIRED");
+  }
+  if (envelope.expectedVersion !== currentVersion) {
+    throw new CommandError(409, "VERSION_CONFLICT", {
+      expectedVersion: envelope.expectedVersion,
+      currentVersion,
+    });
+  }
+}
+
+async function linkSourceArtifacts(
+  tx: Tx,
+  ctx: CommandContext,
+  envelope: CommandEnvelope,
+): Promise<void> {
+  if (envelope.sourceArtifactIds.length === 0) return;
+  const rows = await tx
+    .select({ id: sourceArtifacts.id })
+    .from(sourceArtifacts)
+    .where(
+      and(
+        eq(sourceArtifacts.workspaceId, ctx.workspaceId),
+        inArray(sourceArtifacts.id, envelope.sourceArtifactIds),
+      ),
+    );
+  const found = new Set(rows.map((r) => r.id));
+  const missing = envelope.sourceArtifactIds.filter((id) => !found.has(id));
+  if (missing.length > 0) {
+    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+      referenceType: "sourceArtifact",
+      missing,
+    });
+  }
+  await tx.insert(commandSourceArtifacts).values(
+    envelope.sourceArtifactIds.map((artifactId) => ({
+      workspaceId: ctx.workspaceId,
+      commandId: envelope.commandId,
+      artifactId,
+    })),
+  );
 }
 
 interface ReceiptStore {
