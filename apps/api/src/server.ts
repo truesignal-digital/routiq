@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { sql } from "drizzle-orm";
+import { MODULE_CODES } from "@asset/contracts";
+import { and, eq, sql } from "drizzle-orm";
 import Fastify from "fastify";
 import { LocalSessionProvider } from "./auth/local.js";
 import { makeRequireAuth, registerAuthRoutes } from "./auth/plugin.js";
@@ -12,6 +13,7 @@ import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
+import { workspaceModules } from "./db/schema.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 
@@ -53,7 +55,24 @@ export function buildServer({
   registerCommandRoutes(app, db, requireAuth);
   registerAssetReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
-  app.get("/v1/me", { preHandler: requireAuth }, async (req) => req.auth);
+  app.get("/v1/me", { preHandler: requireAuth }, async (req) => {
+    const auth = req.auth;
+    if (!auth) return req.auth;
+    const disabled = await db
+      .select({ moduleCode: workspaceModules.moduleCode })
+      .from(workspaceModules)
+      .where(
+        and(
+          eq(workspaceModules.workspaceId, auth.workspaceId),
+          eq(workspaceModules.enabled, false),
+        ),
+      );
+    const disabledCodes = new Set(disabled.map((row) => row.moduleCode));
+    return {
+      ...auth,
+      enabledModules: MODULE_CODES.filter((code) => !disabledCodes.has(code)),
+    };
+  });
   app.get("/v1/commands", { preHandler: requireAuth }, async () => ({
     commands: listCommands(),
   }));
