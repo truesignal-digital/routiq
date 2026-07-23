@@ -371,7 +371,7 @@ AI agent = a **principal with a restricted role**, going through the same comman
 | Frontend | Vite + React + TypeScript strict | Owner default; SPA — Next.js adds nothing here |
 | Routing / data | TanStack Router + TanStack Query | Typed routes; Query cache is not offline storage |
 | Forms | React Hook Form + Zod (schemas shared with API) | Long field forms; invariants stay server-side |
-| UI | Tailwind + Radix/shadcn | Restrained internal design system |
+| UI | Tailwind + shadcn (Base UI primitives) | Restrained internal design system; components only ever consumed through shadcn generation (decision #28) |
 | Offline | vite-plugin-pwa/Workbox + Dexie | Drafts, outbox, blob queue (§6) |
 | Backend | Node LTS + Fastify + TypeScript strict | One language; first-class schema validation |
 | DB access | Drizzle ORM + explicit SQL views for reports | Type-safe CRUD without hiding Postgres |
@@ -481,3 +481,4 @@ Every profitability figure discloses: layers included, approval statuses include
 | 25a (v0.2) | Remote approvals via cloud relay inbox: cloud queues decision envelopes, home server polls + executes, `row_version` staleness guard | Read-only mirror; exposing home server via tunnel/port-forward |
 | 26 (v0.2) | Portability guards at MTP: auth interface, S3-API-only storage, cold-startable compose, workspace export | Building the on-prem appliance now — or coupling to Supabase-only runtime features |
 | 27 (v0.2) | Web PWA only at MTP; React Native later as another API client sharing `packages/contracts` | Building native driver app before GPS module exists |
+| 28 (2026-07-23) | shadcn on Base UI primitives (CLI's recommended default; owner expectation; consolidated `radix-ui` pkg shipped a missing-tslib packaging bug) | Radix primitives named at v0.2 review |
