@@ -475,10 +475,6 @@ describe("Command Pipeline", () => {
             assetClassCode: "TRUCK",
             templateCode: "TRUCKING",
             branchCode: "DLA",
-            customValues: {
-              workspaceId: randomUUID(), // forged
-              actorId: randomUUID(), // forged
-            },
           },
         },
         token

@@ -1,13 +1,14 @@
 import { registerAssetPayload } from "@asset/contracts";
 import type { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { assets, branches } from "../db/schema.js";
+import { assets, branches, categories } from "../db/schema.js";
 import {
   appendAuditEvent,
   CommandError,
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { validateCustomValues } from "./templates.js";
 
 type RegisterAssetPayload = z.infer<typeof registerAssetPayload>;
 
@@ -44,6 +45,24 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
     if (payload.capacityValue !== undefined) customValues["capacityValue"] = payload.capacityValue;
     if (payload.capacityUnit !== undefined) customValues["capacityUnit"] = payload.capacityUnit;
 
+    const templateMeta = validateCustomValues(payload.templateCode, customValues);
+
+    const categoryRow = await tx.query.categories.findFirst({
+      where: and(
+        eq(categories.workspaceId, ctx.workspaceId),
+        eq(categories.kind, "ASSET_CLASS"),
+        eq(categories.code, payload.assetClassCode),
+        eq(categories.active, true),
+      ),
+    });
+
+    if (!categoryRow) {
+      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+        referenceType: "assetClass",
+        referenceCode: payload.assetClassCode,
+      });
+    }
+
     await tx.insert(assets).values({
       id: payload.assetId,
       workspaceId: ctx.workspaceId,
@@ -51,6 +70,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
       assetCode: payload.assetCode,
       assetClassCode: payload.assetClassCode,
       templateCode: payload.templateCode,
+      templateVersion: templateMeta.version,
       ...(payload.registrationNumber === undefined
         ? {}
         : { registrationNumber: payload.registrationNumber }),
@@ -79,6 +99,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
         assetCode: payload.assetCode,
         assetClassCode: payload.assetClassCode,
         templateCode: payload.templateCode,
+        templateVersion: templateMeta.version,
         lifecycleStatus: "REGISTERED",
         registrationNumber: payload.registrationNumber ?? null,
         chassisNumber: payload.chassisNumber ?? null,
@@ -98,6 +119,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
         "assetCode",
         "assetClassCode",
         "templateCode",
+        "templateVersion",
         "lifecycleStatus",
         "registrationNumber",
         "chassisNumber",

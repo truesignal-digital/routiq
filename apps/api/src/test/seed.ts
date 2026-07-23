@@ -1,9 +1,10 @@
 import type { PrincipalType, Role } from "@asset/contracts";
 import { randomUUID } from "node:crypto";
 import { hashPin } from "../auth/pin.js";
-import { branches, credentials, memberships, principals, workspaces, approvalRules } from "../db/schema.js";
+import { branches, categories, credentials, memberships, principals, workspaces, approvalRules } from "../db/schema.js";
 import type { Db } from "../db/client.js";
 import { defaultApprovalRules } from "../commands/approval-defaults.js";
+import { presetCategories } from "../commands/category-presets.js";
 
 export async function seedWorkspace(db: Db, slug = `ws-${randomUUID().slice(0, 8)}`) {
   const [workspace] = await db
@@ -16,6 +17,12 @@ export async function seedWorkspace(db: Db, slug = `ws-${randomUUID().slice(0, 8
     .values({ workspaceId: workspace.id, code: "DLA", name: "Douala" })
     .returning();
   if (!branch) throw new Error("branch insert returned no row");
+
+  // Insert preset categories for this workspace
+  const categoryPresets = presetCategories(workspace.id);
+  if (categoryPresets.length > 0) {
+    await db.insert(categories).values(categoryPresets);
+  }
 
   // Insert default approval rules for this workspace
   await db.insert(approvalRules).values(defaultApprovalRules(workspace.id));

@@ -72,6 +72,17 @@ export function defaultApprovalRules(
       requiredRole: "OPS_MANAGER",
       createdByCommandId: null,
     },
+    // assign-asset: CROSS_BRANCH requires FINANCE_APPROVER
+    {
+      workspaceId,
+      commandType: "assign-asset",
+      categoryCode: "CROSS_BRANCH",
+      branchId: null,
+      amountMinMinor: null,
+      amountMaxMinor: null,
+      requiredRole: "FINANCE_APPROVER",
+      createdByCommandId: null,
+    },
     // enable-module: ADMIN only, no filters
     {
       workspaceId,
