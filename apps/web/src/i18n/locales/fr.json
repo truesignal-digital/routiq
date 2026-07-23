@@ -6,6 +6,20 @@
     "assets": "Actifs",
     "more": "Plus"
   },
+  "login": {
+    "subtitle": "Connectez-vous pour continuer",
+    "workspace": "Espace de travail",
+    "username": "Nom d'utilisateur",
+    "pin": "Code PIN",
+    "submit": "Se connecter",
+    "submitting": "Connexion…"
+  },
+  "errors": {
+    "AUTH_INVALID_CREDENTIALS": "Nom d'utilisateur ou code PIN incorrect.",
+    "VALIDATION_FAILED": "Veuillez vérifier les champs saisis.",
+    "NETWORK_ERROR": "Connexion impossible. Vérifiez votre réseau et réessayez.",
+    "generic": "Une erreur est survenue. Réessayez ou contactez votre administrateur."
+  },
   "assets": {
     "eyebrow": "Parc opérationnel",
     "title": "Vos actifs",
@@ -45,7 +59,8 @@
   },
   "more": {
     "title": "Plus",
+    "signedInAs": "Connecté en tant que {username}",
     "language": "Langue",
-    "placeholder": "Profil, langue et déconnexion arriveront ici."
+    "logout": "Se déconnecter"
   }
 }
