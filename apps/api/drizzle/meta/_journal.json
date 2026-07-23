@@ -15,6 +15,13 @@
       "when": 1784767870924,
       "tag": "0001_workable_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784768802851,
+      "tag": "0002_damp_blink",
+      "breakpoints": true
     }
   ]
 }

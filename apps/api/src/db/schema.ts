@@ -1,7 +1,10 @@
 import { PRINCIPAL_TYPES, ROLES } from "@asset/contracts";
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
+  date,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -9,6 +12,14 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+export interface StoredCommandOutcome {
+  commandId: string;
+  recordId: string;
+  rowVersion: number;
+  warnings: string[];
+  idempotentReplay: boolean;
+}
 
 /**
  * M0 seed schema: tenancy + command spine only.
@@ -126,7 +137,7 @@ export const commands = pgTable(
     idempotencyKey: text("idempotency_key").notNull(),
     clientOccurredAt: timestamp("client_occurred_at", { withTimezone: true }),
     payload: jsonb("payload").notNull(),
-    result: jsonb("result"),
+    result: jsonb("result").$type<StoredCommandOutcome>(),
     failureCode: text("failure_code"),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -152,3 +163,51 @@ export const auditEvents = pgTable("audit_events", {
   changedFields: text("changed_fields").array(),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const assets = pgTable(
+  "assets",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    assetCode: text("asset_code").notNull(),
+    assetClassCode: text("asset_class_code").notNull(),
+    templateCode: text("template_code", {
+      enum: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    }).notNull(),
+    lifecycleStatus: text("lifecycle_status", {
+      enum: [
+        "REGISTERED",
+        "IN_SERVICE",
+        "UNDER_MAINTENANCE",
+        "SOLD",
+        "RETIRED",
+        "WRITTEN_OFF",
+      ],
+    })
+      .notNull()
+      .default("REGISTERED"),
+    registrationNumber: text("registration_number"),
+    chassisNumber: text("chassis_number"),
+    manufacturer: text("manufacturer"),
+    model: text("model"),
+    modelYear: integer("model_year"),
+    acquisitionDate: date("acquisition_date"),
+    acquisitionAmountMinor: bigint("acquisition_amount_minor", { mode: "bigint" }),
+    currency: text("currency").notNull().default("XAF"),
+    customValues: jsonb("custom_values")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("assets_ws_code_uq").on(t.workspaceId, t.assetCode)],
+);
