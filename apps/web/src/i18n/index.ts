@@ -1,4 +1,5 @@
 import i18next, { type i18n as I18n } from "i18next";
+import { z } from "zod";
 import ICU from "i18next-icu";
 import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
@@ -26,4 +27,8 @@ i18n.on("languageChanged", (lng) => {
   if (typeof document !== "undefined") {
     document.documentElement.lang = lng;
   }
+  // Zod powers client-side form validation — its messages follow the app locale.
+  z.config(lng.startsWith("en") ? z.locales.en() : z.locales.fr());
 });
+
+z.config(z.locales.fr());

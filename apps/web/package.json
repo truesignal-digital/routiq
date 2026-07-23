@@ -11,6 +11,7 @@
   "dependencies": {
     "@asset/contracts": "workspace:*",
     "@base-ui/react": "^1.6.0",
+    "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.18",
     "class-variance-authority": "^0.7.1",
@@ -20,6 +21,7 @@
     "lucide-react": "^1.25.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-hook-form": "^7.82.0",
     "react-i18next": "^17.0.11",
     "shadcn": "^4.14.0",
     "tailwind-merge": "^3.6.0",

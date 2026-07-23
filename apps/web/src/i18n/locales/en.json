@@ -18,7 +18,14 @@
     "AUTH_INVALID_CREDENTIALS": "Incorrect username or PIN.",
     "VALIDATION_FAILED": "Please check the entered fields.",
     "NETWORK_ERROR": "Could not connect. Check your network and try again.",
-    "generic": "Something went wrong. Retry or contact your administrator."
+    "generic": "Something went wrong. Retry or contact your administrator.",
+    "DUPLICATE_ASSET_CODE": "This asset code already exists in your workspace.",
+    "TEMPLATE_FIELD_INVALID": "A template-specific field is invalid or missing.",
+    "APPROVAL_REQUIRED": "This action requires an approval. It will be available soon.",
+    "IDEMPOTENCY_KEY_REUSED": "This submission conflicts with a previous one. Check the list, then retry.",
+    "REFERENCE_NOT_FOUND": "A selected reference no longer exists. Refresh and retry.",
+    "ROLE_FORBIDDEN": "Your role does not allow this action.",
+    "READ_FAILED": "Could not load data. Please retry."
   },
   "assets": {
     "eyebrow": "Operational fleet",
@@ -55,7 +62,43 @@
     "resetFilters": "Clear filters",
     "errorTitle": "We couldn't load the fleet",
     "errorHint": "The connection may have dropped. Your data is still safe.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "form": {
+      "eyebrow": "New registration",
+      "title": "Register an asset",
+      "assetCode": "Asset code",
+      "assetClass": "Asset class",
+      "branch": "Branch",
+      "template": "Business template",
+      "templates": {
+        "TRUCKING": "Trucking",
+        "PASSENGER_TRANSPORT": "Passenger transport"
+      },
+      "registrationNumber": "Registration number",
+      "manufacturer": "Make",
+      "model": "Model",
+      "modelYear": "Year",
+      "capacityValue": "Capacity",
+      "capacityUnit": "Capacity unit",
+      "units": {
+        "KG": "Kilograms",
+        "TONNE": "Tonnes",
+        "M3": "Cubic metres",
+        "SEAT": "Seats"
+      },
+      "templateFields": "Template fields",
+      "custom": {
+        "axleCount": "Axle count",
+        "bodyType": "Body type",
+        "tonnageCapacity": "Tonnage (t)",
+        "seatCount": "Seat count",
+        "lineType": "Line type"
+      },
+      "choose": "Choose…",
+      "submit": "Register asset",
+      "submitting": "Registering…",
+      "cancel": "Cancel"
+    }
   },
   "more": {
     "title": "More",

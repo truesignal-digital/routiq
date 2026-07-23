@@ -3,12 +3,17 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import { assets, branches, categories } from "../db/schema.js";
+import { registerReferenceReadRoutes } from "./reference.js";
 
 export function registerAssetReadRoutes(
   app: FastifyInstance,
   db: Db,
   requireAuth: RequireAuth,
 ) {
+  // Piggybacked so reads/** wires itself without touching server.ts (backend-owned).
+  // Backend: a reads/index.ts entry point would make this explicit.
+  registerReferenceReadRoutes(app, db, requireAuth);
+
   app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
     try {
     const auth = req.auth!;
