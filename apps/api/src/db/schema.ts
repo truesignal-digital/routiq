@@ -282,6 +282,35 @@ export const categories = pgTable(
   (t) => [uniqueIndex("categories_ws_kind_code_uq").on(t.workspaceId, t.kind, t.code)],
 );
 
+/**
+ * Compliance documents (§3.1). Append-only: renewal inserts a new row whose
+ * supersedes_document_id points at the original; originals are never edited and
+ * supersession state is derived, not stored on the old row.
+ */
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    documentTypeCode: text("document_type_code").notNull(),
+    title: text("title"),
+    documentNumber: text("document_number"),
+    issuedAt: date("issued_at"),
+    expiresAt: date("expires_at"),
+    supersedesDocumentId: uuid("supersedes_document_id"),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("documents_supersedes_uq").on(t.workspaceId, t.supersedesDocumentId)],
+);
+
 /** Immutable, hashed evidence blobs (§3.4). No update path exists by design. */
 export const sourceArtifacts = pgTable("source_artifacts", {
   id: uuid("id").primaryKey(),

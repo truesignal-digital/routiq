@@ -10,7 +10,13 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
-import { auditEvents, commands, commandSourceArtifacts, sourceArtifacts } from "../db/schema.js";
+import {
+  assets,
+  auditEvents,
+  commands,
+  commandSourceArtifacts,
+  sourceArtifacts,
+} from "../db/schema.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { reportUnexpectedFailure } from "../observability/sentry.js";
 import { evaluateApproval, type ApprovalContext } from "./approvals.js";
@@ -63,6 +69,12 @@ export interface CommandDefinition<P> {
   module: ModuleCode;
   allowedRoles: readonly Role[];
   payloadSchema: z.ZodType<P>;
+  /**
+   * Declares which asset the command writes operational records against. The
+   * dispatcher rejects SOLD/RETIRED/WRITTEN_OFF assets (§3.4) before any
+   * handler code runs — handlers never re-implement this invariant.
+   */
+  operationalAssetId?(payload: P): string | undefined;
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   execute(
@@ -179,6 +191,24 @@ export async function dispatchCommand(
         );
         if (existing) {
           return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);
+        }
+
+        const targetAssetId = definition.operationalAssetId?.(parsedPayload.data);
+        if (targetAssetId !== undefined) {
+          const [target] = await tx
+            .select({ lifecycleStatus: assets.lifecycleStatus })
+            .from(assets)
+            .where(and(eq(assets.workspaceId, ctx.workspaceId), eq(assets.id, targetAssetId)));
+          // Missing asset falls through to the handler's REFERENCE_NOT_FOUND with context.
+          if (
+            target &&
+            ["SOLD", "RETIRED", "WRITTEN_OFF"].includes(target.lifecycleStatus)
+          ) {
+            throw new CommandError(409, "ASSET_NOT_OPERATIONAL", {
+              assetId: targetAssetId,
+              lifecycleStatus: target.lifecycleStatus,
+            });
+          }
         }
 
         const approval = await evaluateApproval(

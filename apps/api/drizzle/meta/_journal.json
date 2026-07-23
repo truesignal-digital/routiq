@@ -43,6 +43,13 @@
       "when": 1784810068952,
       "tag": "0005_cloudy_thundra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784846257209,
+      "tag": "0006_mysterious_nighthawk",
+      "breakpoints": true
     }
   ]
 }
