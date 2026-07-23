@@ -19,6 +19,7 @@ import { useActiveSession } from "../auth/store.js";
 import { applyTemplateFieldMetadata, applyValidationMetadata } from "../commands/field-errors.js";
 import { commandClient, commandStatusStore } from "../commands/instance.js";
 import { createCommandIntent } from "../commands/intent.js";
+import { AttachmentField } from "../artifacts/AttachmentField.js";
 import { errorMessage } from "../lib/error-message.js";
 import { formatXAF } from "@asset/domain";
 
@@ -37,6 +38,7 @@ export function AssetRegisterScreen() {
   const [assetId] = useState(() => crypto.randomUUID());
   const intentRef = useRef(createCommandIntent<FormOutput>(commandClient, "register-asset", 1));
   const [activeCommandId, setActiveCommandId] = useState<string>();
+  const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [errorCode, setErrorCode] = useState<string>();
 
   const statuses = useSyncExternalStore(
@@ -77,8 +79,9 @@ export function AssetRegisterScreen() {
 
   async function onSubmit(values: FormOutput) {
     setErrorCode(undefined);
-    setActiveCommandId(intentRef.current.current(values).envelope.commandId);
-    const result = await intentRef.current.submit(values);
+    const options = artifactIds.length > 0 ? { sourceArtifactIds: artifactIds } : {};
+    setActiveCommandId(intentRef.current.current(values, options).envelope.commandId);
+    const result = await intentRef.current.submit(values, options);
     if (!result.ok) {
       const setFieldError = (field: string, message: string) =>
         form.setError(field as Parameters<typeof form.setError>[0], { type: "server", message });
@@ -310,6 +313,11 @@ export function AssetRegisterScreen() {
             </div>
           </fieldset>
         )}
+
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">{t("attachments.label")}</span>
+          <AttachmentField onChange={setArtifactIds} />
+        </div>
 
         {errorCode !== undefined && (
           <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
