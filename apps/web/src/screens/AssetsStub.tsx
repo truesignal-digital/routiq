@@ -20,6 +20,7 @@ import {
   type AssetListItem,
 } from "../assets/model.js";
 import { useAssets } from "../assets/useAssets.js";
+import { isReadOnlyRole, useMeContext } from "../auth/me.js";
 import { cn } from "../lib/utils.js";
 
 const filters: AssetFilter[] = ["ALL", "IN_SERVICE", "ATTENTION"];
@@ -36,6 +37,7 @@ const statusStyles: Record<AssetLifecycleStatus, string> = {
 export function AssetsStub() {
   const { t } = useTranslation();
   const { assets, status, retry } = useAssets();
+  const readOnly = isReadOnlyRole(useMeContext()?.role);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<AssetFilter>("ALL");
 
@@ -62,13 +64,15 @@ export function AssetsStub() {
             </p>
           </div>
 
-          <a
-            href="/assets/new"
-            className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background shadow-[0_8px_24px_-12px_var(--foreground)] transition hover:-translate-y-0.5 hover:bg-primary sm:inline-flex"
-          >
-            <Plus className="size-4" aria-hidden />
-            {t("assets.register")}
-          </a>
+          {!readOnly && (
+            <a
+              href="/assets/new"
+              className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background shadow-[0_8px_24px_-12px_var(--foreground)] transition hover:-translate-y-0.5 hover:bg-primary sm:inline-flex"
+            >
+              <Plus className="size-4" aria-hidden />
+              {t("assets.register")}
+            </a>
+          )}
         </div>
       </header>
 
@@ -136,7 +140,7 @@ export function AssetsStub() {
           ) : status === "error" && assets.length === 0 ? (
             <ErrorState onRetry={retry} />
           ) : assets.length === 0 ? (
-            <EmptyState />
+            <EmptyState readOnly={readOnly} />
           ) : visibleAssets.length === 0 ? (
             <NoResults onReset={() => {
               setQuery("");
@@ -152,13 +156,15 @@ export function AssetsStub() {
         </div>
       </div>
 
-      <a
-        href="/assets/new"
-        aria-label={t("assets.register")}
-        className="fixed bottom-24 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-[var(--signal)] text-[var(--signal-foreground)] shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
-      >
-        <Plus className="size-6" aria-hidden />
-      </a>
+      {!readOnly && (
+        <a
+          href="/assets/new"
+          aria-label={t("assets.register")}
+          className="fixed bottom-24 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-[var(--signal)] text-[var(--signal-foreground)] shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
+        >
+          <Plus className="size-6" aria-hidden />
+        </a>
+      )}
     </section>
   );
 }
@@ -247,7 +253,7 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ readOnly }: { readOnly: boolean }) {
   const { t } = useTranslation();
   return (
     <div className="empty-grid relative overflow-hidden rounded-3xl border border-foreground/10 bg-card px-6 py-12 text-center shadow-[0_24px_60px_-52px_var(--foreground)] sm:px-10 sm:py-16">
@@ -263,13 +269,15 @@ function EmptyState() {
       <p className="relative mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
         {t("assets.emptyHint")}
       </p>
-      <a
-        href="/assets/new"
-        className="relative mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[var(--signal)] px-5 text-sm font-bold text-[var(--signal-foreground)] transition hover:-translate-y-0.5"
-      >
-        {t("assets.emptyAction")}
-        <ArrowRight className="size-4" aria-hidden />
-      </a>
+      {!readOnly && (
+        <a
+          href="/assets/new"
+          className="relative mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[var(--signal)] px-5 text-sm font-bold text-[var(--signal-foreground)] transition hover:-translate-y-0.5"
+        >
+          {t("assets.emptyAction")}
+          <ArrowRight className="size-4" aria-hidden />
+        </a>
+      )}
     </div>
   );
 }

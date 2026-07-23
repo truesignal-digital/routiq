@@ -1,12 +1,16 @@
 import { Link, Outlet } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { shellSections } from "./sections.js";
+import { MeCtx, useMe } from "../auth/me.js";
+import { visibleSections } from "./sections.js";
 
 export function AppShell() {
   const { t } = useTranslation();
+  const me = useMe();
+  const shellSections = visibleSections(me.data?.enabledModules);
 
   return (
+    <MeCtx.Provider value={me.data}>
     <div className="flex min-h-dvh bg-background text-foreground">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border md:flex">
         <div className="px-5 py-5 text-base font-semibold">{t("app.name")}</div>
@@ -52,5 +56,6 @@ export function AppShell() {
         </nav>
       </div>
     </div>
+    </MeCtx.Provider>
   );
 }
