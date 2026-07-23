@@ -120,6 +120,19 @@
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
       "acquisitionAmount": "Acquisition amount (XAF)"
+    },
+    "actions": {
+      "commission": "Commission",
+      "assign": "Assign",
+      "assignTo": "Assign to branch",
+      "confirm": "Confirm",
+      "working": "Working…",
+      "close": "Close",
+      "reload": "Refresh",
+      "conflictTitle": "Modified elsewhere",
+      "conflictBody": "Someone else modified this asset. Refresh, review, then reapply your action.",
+      "approvalTitle": "Approval required",
+      "approvalBody": "A transfer to another branch needs an approval. That step arrives with the approval flow."
     }
   },
   "more": {

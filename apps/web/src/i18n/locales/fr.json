@@ -120,6 +120,19 @@
       "chassisNumber": "Numéro de châssis",
       "acquisitionDate": "Date d'acquisition",
       "acquisitionAmount": "Montant d'acquisition (XAF)"
+    },
+    "actions": {
+      "commission": "Mettre en service",
+      "assign": "Affecter",
+      "assignTo": "Affecter à l'agence",
+      "confirm": "Confirmer",
+      "working": "En cours…",
+      "close": "Fermer",
+      "reload": "Actualiser",
+      "conflictTitle": "Modifié ailleurs",
+      "conflictBody": "Cet actif a été modifié par quelqu'un d'autre. Actualisez, vérifiez, puis réappliquez votre action.",
+      "approvalTitle": "Approbation requise",
+      "approvalBody": "Un transfert vers une autre agence nécessite une approbation. Cette étape arrive avec le circuit d'approbation."
     }
   },
   "more": {
