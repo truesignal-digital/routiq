@@ -15,5 +15,30 @@ services:
       timeout: 3s
       retries: 10
 
+  # §6a guard 4: this file is the distribution artifact — the API must come up
+  # cold from it. Dev workflow ignores this service (run `pnpm --filter dev`);
+  # it is built/started by `docker compose --profile appliance up`.
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    profiles: ["appliance"]
+    environment:
+      DATABASE_URL: postgres://asset:asset@postgres:5432/asset_dev
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # TODO(web): served PWA joins the appliance profile once apps/web has a build
+  # script (owned by the UI session).
+
 volumes:
   pgdata:

@@ -17,7 +17,8 @@ pnpm --filter @asset/api test     # one package
 pnpm --filter @asset/api exec vitest run src/server.test.ts   # single test file
 pnpm db:generate                  # drizzle-kit generate (from apps/api/src/db/schema.ts)
 pnpm db:migrate                   # drizzle-kit migrate
-docker compose up -d              # Postgres 17 on localhost:5435 (user/pass/db: asset/asset/asset_dev)
+docker compose up -d              # Postgres 17 on localhost:5435
+docker compose --profile appliance up   # full-stack cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: asset/asset/asset_dev)
 ```
 
 - Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
