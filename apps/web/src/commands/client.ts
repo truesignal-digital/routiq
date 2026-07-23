@@ -1,4 +1,5 @@
 import type { CommandResult, CommandSubmission } from "@asset/contracts";
+import { extractApiError } from "../lib/api-error.js";
 import type { CommandStatusStore } from "./store.js";
 
 export type SubmitResult =
@@ -62,7 +63,7 @@ export function createCommandClient({
         return { ok: true, outcome: body };
       }
 
-      const { code, metadata } = extractError(body);
+      const { code, metadata } = extractApiError(body, "COMMAND_FAILED");
       store.markRejected(commandId, code, metadata);
       return { ok: false, code, ...(metadata === undefined ? {} : { metadata }) };
     },
@@ -77,22 +78,4 @@ function isCommandResult(body: unknown): body is CommandResult {
     typeof (body as CommandResult).recordId === "string" &&
     typeof (body as CommandResult).rowVersion === "number"
   );
-}
-
-function extractError(body: unknown): { code: string; metadata?: Record<string, unknown> } {
-  if (typeof body === "object" && body !== null && "error" in body) {
-    const error = (body as { error: unknown }).error;
-    if (typeof error === "object" && error !== null && "code" in error) {
-      const { code, metadata } = error as { code: unknown; metadata?: unknown };
-      if (typeof code === "string") {
-        return {
-          code,
-          ...(typeof metadata === "object" && metadata !== null
-            ? { metadata: metadata as Record<string, unknown> }
-            : {}),
-        };
-      }
-    }
-  }
-  return { code: "COMMAND_FAILED" };
 }

@@ -8,3 +8,10 @@ export const loginRequest = z.object({
 });
 
 export type LoginRequest = z.infer<typeof loginRequest>;
+
+export const loginResponse = z.object({
+  token: z.string().min(1),
+  expiresAt: z.iso.datetime({ offset: true }),
+});
+
+export type LoginResponse = z.infer<typeof loginResponse>;

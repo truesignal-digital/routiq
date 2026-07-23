@@ -6,13 +6,28 @@
     "assets": "Assets",
     "more": "More"
   },
+  "login": {
+    "subtitle": "Sign in to continue",
+    "workspace": "Workspace",
+    "username": "Username",
+    "pin": "PIN code",
+    "submit": "Sign in",
+    "submitting": "Signing in…"
+  },
+  "errors": {
+    "AUTH_INVALID_CREDENTIALS": "Incorrect username or PIN.",
+    "VALIDATION_FAILED": "Please check the entered fields.",
+    "NETWORK_ERROR": "Could not connect. Check your network and try again.",
+    "generic": "Something went wrong. Retry or contact your administrator."
+  },
   "assets": {
     "title": "Assets",
     "emptyHint": "Your fleet's assets will appear here."
   },
   "more": {
     "title": "More",
+    "signedInAs": "Signed in as {username}",
     "language": "Language",
-    "placeholder": "Profile, language and sign-out will land here."
+    "logout": "Sign out"
   }
 }
