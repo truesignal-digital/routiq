@@ -16,6 +16,14 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   version: 1,
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: registerAssetPayload,
+  approvalContext(payload) {
+    return {
+      branchCode: payload.branchCode,
+      ...(payload.acquisitionAmountMinor === undefined
+        ? {}
+        : { amountMinor: payload.acquisitionAmountMinor }),
+    };
+  },
   async execute(tx, ctx, envelope, payload) {
     const [branch] = await tx
       .select({ id: branches.id })

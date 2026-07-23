@@ -1,4 +1,4 @@
-import { PRINCIPAL_TYPES, ROLES } from "@asset/contracts";
+import { MODULE_CODES, PRINCIPAL_TYPES, ROLES } from "@asset/contracts";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -139,6 +139,10 @@ export const commands = pgTable(
     payload: jsonb("payload").notNull(),
     result: jsonb("result").$type<StoredCommandOutcome>(),
     failureCode: text("failure_code"),
+    approvalOutcome: text("approval_outcome", {
+      enum: ["AUTO_APPROVED", "APPROVAL_REQUIRED"],
+    }),
+    approvalRuleId: uuid("approval_rule_id"),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("commands_ws_idem_uq").on(t.workspaceId, t.idempotencyKey)],
@@ -162,6 +166,41 @@ export const auditEvents = pgTable("audit_events", {
   afterState: jsonb("after_state"),
   changedFields: text("changed_fields").array(),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const workspaceModules = pgTable(
+  "workspace_modules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    moduleCode: text("module_code", { enum: MODULE_CODES }).notNull(),
+    enabled: boolean("enabled").notNull(),
+    updatedByCommandId: uuid("updated_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [uniqueIndex("workspace_modules_ws_module_uq").on(t.workspaceId, t.moduleCode)],
+);
+
+/** Tenant-editable approval rules (§5.2). Null filter columns are wildcards. */
+export const approvalRules = pgTable("approval_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id),
+  commandType: text("command_type").notNull(),
+  categoryCode: text("category_code"),
+  branchId: uuid("branch_id").references(() => branches.id),
+  amountMinMinor: bigint("amount_min_minor", { mode: "bigint" }),
+  amountMaxMinor: bigint("amount_max_minor", { mode: "bigint" }),
+  requiredRole: text("required_role", { enum: ROLES }).notNull(),
+  createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  rowVersion: integer("row_version").notNull().default(1),
 });
 
 export const assets = pgTable(

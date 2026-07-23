@@ -5,11 +5,13 @@ import {
   type Role,
   type ValidationErrorCode,
 } from "@asset/contracts";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import { auditEvents, commands } from "../db/schema.js";
+import { isModuleEnabled, moduleOwningCommand } from "../modules/registry.js";
+import { evaluateApproval, type ApprovalContext } from "./approvals.js";
 
 export type CommandContext = AuthContext;
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -45,6 +47,8 @@ export interface CommandDefinition<P> {
   version: number;
   allowedRoles: readonly Role[];
   payloadSchema: z.ZodType<P>;
+  /** Filter values approval rules may match on (branch, category, amount). */
+  approvalContext?(payload: P): ApprovalContext;
   execute(
     tx: Tx,
     ctx: CommandContext,
@@ -143,6 +147,16 @@ export async function dispatchCommand(
 
     try {
       return await db.transaction(async (tx) => {
+        // Pool-safe RLS context (§4.4 layer 2): scoped to this transaction only.
+        await tx.execute(
+          sql`select set_config('app.workspace_id', ${ctx.workspaceId}, true)`,
+        );
+
+        const owningModule = moduleOwningCommand(outer.data.name);
+        if (owningModule && !(await isModuleEnabled(tx, ctx.workspaceId, owningModule))) {
+          throw new CommandError(403, "MODULE_DISABLED", { module: owningModule });
+        }
+
         const existing = await findReceipt(
           tx,
           ctx.workspaceId,
@@ -151,6 +165,14 @@ export async function dispatchCommand(
         if (existing) {
           return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);
         }
+
+        const approval = await evaluateApproval(
+          tx,
+          ctx,
+          outer.data.envelope,
+          outer.data.name,
+          definition.approvalContext?.(parsedPayload.data) ?? {},
+        );
 
         // The receipt is staged first because domain and audit rows reference its command id.
         await tx.insert(commands).values({
@@ -167,6 +189,8 @@ export async function dispatchCommand(
             : null,
           payload: outer.data.payload,
           result: null,
+          approvalOutcome: approval.outcome,
+          approvalRuleId: approval.ruleId,
         });
 
         const result = await definition.execute(
