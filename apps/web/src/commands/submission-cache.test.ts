@@ -25,3 +25,21 @@ describe("SubmissionCache", () => {
     expect(reverted.envelope.idempotencyKey).not.toBe(first.envelope.idempotencyKey);
   });
 });
+
+describe("expectedVersion in the fingerprint", () => {
+  it("same payload with a reloaded version is a NEW intent — stale attempt never replays", () => {
+    const cache = new SubmissionCache<{ assetId: string }>("commission-asset", 1);
+    const v1 = cache.for({ assetId: "a" }, { expectedVersion: 1 });
+    const v2 = cache.for({ assetId: "a" }, { expectedVersion: 2 });
+    expect(v1.envelope.expectedVersion).toBe(1);
+    expect(v2.envelope.expectedVersion).toBe(2);
+    expect(v1.envelope.idempotencyKey).not.toBe(v2.envelope.idempotencyKey);
+  });
+
+  it("unchanged payload and version reuse the envelope", () => {
+    const cache = new SubmissionCache<{ assetId: string }>("commission-asset", 1);
+    const a = cache.for({ assetId: "a" }, { expectedVersion: 3 });
+    const b = cache.for({ assetId: "a" }, { expectedVersion: 3 });
+    expect(a.envelope.idempotencyKey).toBe(b.envelope.idempotencyKey);
+  });
+});

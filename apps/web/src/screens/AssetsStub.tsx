@@ -19,6 +19,7 @@ import {
   type AssetLifecycleStatus,
   type AssetListItem,
 } from "../assets/model.js";
+import { AssetActions } from "../assets/AssetActions.js";
 import { useAssets } from "../assets/useAssets.js";
 import { isReadOnlyRole, useMeContext } from "../auth/me.js";
 import { cn } from "../lib/utils.js";
@@ -247,6 +248,8 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
             <span aria-hidden>·</span>
             <span className="font-mono">{asset.branch.code}</span>
           </div>
+
+          <AssetActions asset={asset} />
         </div>
       </div>
     </article>

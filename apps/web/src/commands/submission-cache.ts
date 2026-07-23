@@ -1,4 +1,4 @@
-import { createSubmission, type CommandSubmission } from "@asset/contracts";
+import { createSubmission, type CommandSubmission, type SubmissionOptions } from "@asset/contracts";
 
 /**
  * Retrying an unchanged form must re-post the SAME submission (same
@@ -13,10 +13,15 @@ export class SubmissionCache<P> {
     private version: number,
   ) {}
 
-  for(payload: P): CommandSubmission<P> {
-    const fingerprint = JSON.stringify(payload);
+  for(payload: P, options?: SubmissionOptions): CommandSubmission<P> {
+    // Options are part of the fingerprint: a reloaded expectedVersion is a
+    // NEW intent — reusing the old key would replay a stale-version attempt.
+    const fingerprint = JSON.stringify({ payload, options });
     if (this.entry?.fingerprint !== fingerprint) {
-      this.entry = { fingerprint, submission: createSubmission(this.name, this.version, payload) };
+      this.entry = {
+        fingerprint,
+        submission: createSubmission(this.name, this.version, payload, options),
+      };
     }
     return this.entry.submission;
   }

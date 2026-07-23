@@ -1,12 +1,13 @@
-import type { CommandSubmission } from "@asset/contracts";
+import type { CommandSubmission, SubmissionOptions } from "@asset/contracts";
 import type { CommandClient, SubmitResult } from "./client.js";
 import { SubmissionCache } from "./submission-cache.js";
 
 export interface CommandIntent<P> {
-  /** Submit (or retry) this intent. Unchanged payload reuses the identical
-   * envelope — same commandId + idempotencyKey — so retries replay (§5.3). */
-  submit(payload: P): Promise<SubmitResult>;
-  current(payload: P): CommandSubmission<P>;
+  /** Submit (or retry) this intent. Unchanged payload+options reuse the
+   * identical envelope — same commandId + idempotencyKey — so retries
+   * replay (§5.3); a changed expectedVersion is a new intent. */
+  submit(payload: P, options?: SubmissionOptions): Promise<SubmitResult>;
+  current(payload: P, options?: SubmissionOptions): CommandSubmission<P>;
 }
 
 /** One user intent = one envelope. Screens hold one intent per form. */
@@ -17,7 +18,7 @@ export function createCommandIntent<P>(
 ): CommandIntent<P> {
   const cache = new SubmissionCache<P>(name, version);
   return {
-    current: (payload) => cache.for(payload),
-    submit: (payload) => client.submit(cache.for(payload)),
+    current: (payload, options) => cache.for(payload, options),
+    submit: (payload, options) => client.submit(cache.for(payload, options)),
   };
 }
