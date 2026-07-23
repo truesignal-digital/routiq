@@ -7,7 +7,6 @@ import {
   templateFieldIssues,
   TEMPLATE_CODES,
   TEMPLATE_FIELDS,
-  type TemplateFieldIssue,
 } from "@asset/contracts";
 import type { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -17,8 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAssetRegistrationReference } from "../assets/reference.js";
 import { useActiveSession } from "../auth/store.js";
+import { applyTemplateFieldMetadata, applyValidationMetadata } from "../commands/field-errors.js";
 import { commandClient, commandStatusStore } from "../commands/instance.js";
-import { SubmissionCache } from "../commands/submission-cache.js";
+import { createCommandIntent } from "../commands/intent.js";
+import { errorMessage } from "../lib/error-message.js";
 
 type FormInput = z.input<typeof registerAssetPayload>;
 type FormOutput = z.output<typeof registerAssetPayload>;
@@ -33,7 +34,7 @@ export function AssetRegisterScreen() {
   const reference = useAssetRegistrationReference();
 
   const [assetId] = useState(() => crypto.randomUUID());
-  const cacheRef = useRef(new SubmissionCache<FormOutput>("register-asset", 1));
+  const intentRef = useRef(createCommandIntent<FormOutput>(commandClient, "register-asset", 1));
   const [activeCommandId, setActiveCommandId] = useState<string>();
   const [errorCode, setErrorCode] = useState<string>();
 
@@ -74,12 +75,15 @@ export function AssetRegisterScreen() {
 
   async function onSubmit(values: FormOutput) {
     setErrorCode(undefined);
-    const submission = cacheRef.current.for(values);
-    setActiveCommandId(submission.envelope.commandId);
-    const result = await commandClient.submit(submission);
+    setActiveCommandId(intentRef.current.current(values).envelope.commandId);
+    const result = await intentRef.current.submit(values);
     if (!result.ok) {
+      const setFieldError = (field: string, message: string) =>
+        form.setError(field as Parameters<typeof form.setError>[0], { type: "server", message });
       if (result.code === "TEMPLATE_FIELD_INVALID") {
-        applyServerTemplateIssues(result.metadata);
+        applyTemplateFieldMetadata(result.metadata, t, setFieldError);
+      } else if (result.code === "VALIDATION_FAILED") {
+        applyValidationMetadata(result.metadata, t, setFieldError);
       }
       setErrorCode(result.code);
       return;
@@ -88,31 +92,6 @@ export function AssetRegisterScreen() {
       queryKey: ["ws", session?.workspaceSlug, "assets"],
     });
     void navigate({ to: "/assets" });
-  }
-
-  function applyServerTemplateIssues(metadata: Record<string, unknown> | undefined) {
-    if (metadata === undefined) return;
-    const setFieldError = (key: string, kind: TemplateFieldIssue["kind"]) =>
-      form.setError(`customValues.${key}`, {
-        type: "server",
-        message: t(`assets.form.fieldErrors.${kind}`),
-      });
-    if (Array.isArray(metadata["missingRequired"])) {
-      for (const key of metadata["missingRequired"]) {
-        if (typeof key === "string") setFieldError(key, "required");
-      }
-    }
-    if (Array.isArray(metadata["wrongType"])) {
-      for (const entry of metadata["wrongType"]) {
-        const key = (entry as { key?: unknown }).key;
-        if (typeof key === "string") setFieldError(key, "wrongType");
-      }
-    }
-    if (Array.isArray(metadata["unknownKeys"])) {
-      for (const key of metadata["unknownKeys"]) {
-        if (typeof key === "string") setFieldError(key, "unknown");
-      }
-    }
   }
 
   const labelFor = (item: { labelFr: string; labelEn: string }) =>
@@ -297,9 +276,7 @@ export function AssetRegisterScreen() {
 
         {errorCode !== undefined && (
           <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {i18n.exists(`errors.${errorCode}`)
-              ? t(`errors.${errorCode}`)
-              : `${t("errors.generic")} (${errorCode})`}
+            {errorMessage(i18n, errorCode)}
           </p>
         )}
 

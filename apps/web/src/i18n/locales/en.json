@@ -25,7 +25,21 @@
     "IDEMPOTENCY_KEY_REUSED": "This submission conflicts with a previous one. Check the list, then retry.",
     "REFERENCE_NOT_FOUND": "A selected reference no longer exists. Refresh and retry.",
     "ROLE_FORBIDDEN": "Your role does not allow this action.",
-    "READ_FAILED": "Could not load data. Please retry."
+    "READ_FAILED": "Could not load data. Please retry.",
+    "AUTH_REQUIRED": "Sign-in required. Please sign in again.",
+    "AUTH_INVALID_TOKEN": "Session expired. Please sign in again.",
+    "COMMAND_NOT_FOUND": "Unknown action. Update the app and retry.",
+    "MODULE_DISABLED": "This module is not enabled for your workspace.",
+    "UNIQUE_CONSTRAINT_VIOLATION": "An identical record already exists.",
+    "COMMAND_FAILED": "The action failed. Retry; if it persists, contact your administrator.",
+    "EXPECTED_VERSION_REQUIRED": "Cannot save: record version missing. Refresh the page.",
+    "VERSION_CONFLICT": "Someone else modified this record. Refresh, then reapply your changes.",
+    "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
+    "ARTIFACT_UPLOAD_INCOMPLETE": "An attachment has not finished uploading. Wait or remove it.",
+    "UNSUPPORTED_MEDIA_TYPE": "Unsupported file format (JPEG, PNG, WebP or PDF only).",
+    "STORAGE_FAILED": "Storing the file failed. Please retry.",
+    "ASSET_NOT_OPERATIONAL": "This asset has left the fleet: no new operations are possible.",
+    "DOCUMENT_ALREADY_SUPERSEDED": "This document was already renewed. Renew the latest version."
   },
   "assets": {
     "eyebrow": "Operational fleet",
@@ -116,7 +130,8 @@
       "required": "This field is required.",
       "number": "Please enter a number.",
       "min": "Must be at least {min}.",
-      "max": "Must not exceed {max}."
+      "max": "Must not exceed {max}.",
+      "invalid": "Invalid value."
     }
   }
 }

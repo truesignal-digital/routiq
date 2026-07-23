@@ -126,3 +126,27 @@ describe("createCommandClient", () => {
     expect(store.get(submission.envelope.commandId)?.state).toBe("rejected");
   });
 });
+
+describe("discriminated error branches", () => {
+  const cases: Array<[number, string]> = [
+    [409, "VERSION_CONFLICT"],
+    [409, "IDEMPOTENCY_KEY_REUSED"],
+    [403, "APPROVAL_REQUIRED"],
+    [403, "MODULE_DISABLED"],
+    [400, "TEMPLATE_FIELD_INVALID"],
+    [422, "ASSET_NOT_OPERATIONAL"],
+  ];
+  for (const [status, code] of cases) {
+    it(`${status} ${code} → rejected with that code`, async () => {
+      const submission = createSubmission("register-asset", 1, {});
+      const { client, store } = makeClient((async () =>
+        jsonResponse(status, { error: { code } })) as typeof fetch);
+      const result = await client.submit(submission);
+      expect(result).toEqual({ ok: false, code });
+      expect(store.get(submission.envelope.commandId)).toEqual({
+        state: "rejected",
+        code,
+      });
+    });
+  }
+});

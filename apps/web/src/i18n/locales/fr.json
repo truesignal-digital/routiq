@@ -25,7 +25,21 @@
     "IDEMPOTENCY_KEY_REUSED": "Cette soumission entre en conflit avec un envoi précédent. Vérifiez la liste puis réessayez.",
     "REFERENCE_NOT_FOUND": "Une référence choisie n'existe pas ou plus. Actualisez puis réessayez.",
     "ROLE_FORBIDDEN": "Votre rôle ne permet pas cette action.",
-    "READ_FAILED": "Impossible de charger les données. Réessayez."
+    "READ_FAILED": "Impossible de charger les données. Réessayez.",
+    "AUTH_REQUIRED": "Connexion requise. Veuillez vous reconnecter.",
+    "AUTH_INVALID_TOKEN": "Session expirée. Veuillez vous reconnecter.",
+    "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
+    "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
+    "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
+    "COMMAND_FAILED": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
+    "EXPECTED_VERSION_REQUIRED": "Impossible d'enregistrer : version de l'enregistrement manquante. Actualisez la page.",
+    "VERSION_CONFLICT": "Cet enregistrement a été modifié par quelqu'un d'autre. Actualisez puis réappliquez vos changements.",
+    "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
+    "ARTIFACT_UPLOAD_INCOMPLETE": "Une pièce jointe n'a pas fini d'être téléversée. Attendez la fin ou retirez-la.",
+    "UNSUPPORTED_MEDIA_TYPE": "Format de fichier non pris en charge (JPEG, PNG, WebP ou PDF uniquement).",
+    "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
+    "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",
+    "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente."
   },
   "assets": {
     "eyebrow": "Parc opérationnel",
@@ -116,7 +130,8 @@
       "required": "Ce champ est obligatoire.",
       "number": "Veuillez saisir un nombre.",
       "min": "Doit être au moins {min}.",
-      "max": "Ne doit pas dépasser {max}."
+      "max": "Ne doit pas dépasser {max}.",
+      "invalid": "Valeur invalide."
     }
   }
 }

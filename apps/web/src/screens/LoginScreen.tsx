@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "../auth/api.js";
 import { sessionStore } from "../auth/store.js";
+import { errorMessage } from "../lib/error-message.js";
 
 export function LoginScreen() {
   const { t, i18n } = useTranslation();
@@ -81,9 +82,7 @@ export function LoginScreen() {
 
         {errorCode !== undefined && (
           <p role="alert" className="text-sm text-destructive">
-            {i18n.exists(`errors.${errorCode}`)
-              ? t(`errors.${errorCode}`)
-              : `${t("errors.generic")} (${errorCode})`}
+            {errorMessage(i18n, errorCode)}
           </p>
         )}
 
