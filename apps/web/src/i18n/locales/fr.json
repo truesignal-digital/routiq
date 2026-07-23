@@ -116,7 +116,10 @@
         "required": "Ce champ est obligatoire.",
         "wrongType": "Valeur invalide pour ce champ.",
         "unknown": "Champ inconnu pour ce modèle."
-      }
+      },
+      "chassisNumber": "Numéro de châssis",
+      "acquisitionDate": "Date d'acquisition",
+      "acquisitionAmount": "Montant d'acquisition (XAF)"
     }
   },
   "more": {

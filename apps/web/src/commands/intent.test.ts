@@ -54,3 +54,32 @@ describe("createCommandIntent", () => {
     expect(keys[0]).not.toBe(keys[1]);
   });
 });
+
+describe("double-tap safety", () => {
+  it("two concurrent submits of the same payload post the identical envelope; replay renders success", async () => {
+    const envelopes: Array<{ idempotencyKey: string; commandId: string }> = [];
+    let calls = 0;
+    const fetchImpl = (async (_u: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      envelopes.push(body.envelope);
+      calls += 1;
+      // Second concurrent call is the replay path server-side.
+      return okResponse(body.envelope.commandId, calls > 1);
+    }) as typeof fetch;
+
+    const client = createCommandClient({
+      store: new CommandStatusStore(),
+      getToken: () => "t",
+      fetchImpl,
+    });
+    const intent = createCommandIntent<{ code: string }>(client, "register-asset", 1);
+
+    const [a, b] = await Promise.all([
+      intent.submit({ code: "DLA-9" }),
+      intent.submit({ code: "DLA-9" }),
+    ]);
+    expect(a.ok).toBe(true);
+    expect(b.ok).toBe(true);
+    expect(envelopes[0]).toEqual(envelopes[1]);
+  });
+});
