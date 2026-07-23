@@ -149,5 +149,12 @@
       "max": "Ne doit pas dépasser {max}.",
       "invalid": "Valeur invalide."
     }
+  },
+  "attachments": {
+    "label": "Pièces justificatives",
+    "add": "Ajouter une photo ou un document",
+    "uploading": "Téléversement…",
+    "retry": "Réessayer",
+    "remove": "Retirer"
   }
 }

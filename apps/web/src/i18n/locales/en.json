@@ -149,5 +149,12 @@
       "max": "Must not exceed {max}.",
       "invalid": "Invalid value."
     }
+  },
+  "attachments": {
+    "label": "Supporting evidence",
+    "add": "Add a photo or document",
+    "uploading": "Uploading…",
+    "retry": "Retry",
+    "remove": "Remove"
   }
 }
