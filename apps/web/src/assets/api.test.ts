@@ -1,46 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { readActiveSessionToken } from "./api.js";
+import { fetchAssets } from "./api.js";
 
-class MemoryStorage implements Storage {
-  private values = new Map<string, string>();
-  get length() {
-    return this.values.size;
-  }
-  clear() {
-    this.values.clear();
-  }
-  getItem(key: string) {
-    return this.values.get(key) ?? null;
-  }
-  key(index: number) {
-    return [...this.values.keys()][index] ?? null;
-  }
-  removeItem(key: string) {
-    this.values.delete(key);
-  }
-  setItem(key: string, value: string) {
-    this.values.set(key, value);
-  }
+const validItem = {
+  id: "a1",
+  assetCode: "DLA-001",
+  registrationNumber: null,
+  manufacturer: "Mercedes",
+  model: "Actros",
+  lifecycleStatus: "IN_SERVICE",
+  rowVersion: 1,
+  category: { code: "TRUCK", labelFr: "Camion", labelEn: "Truck" },
+  branch: { code: "DLA", name: "Douala" },
+};
+
+function fakeFetch(status: number, body: unknown): typeof fetch {
+  return (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
+    expect(headers.get("authorization")).toBe("Bearer tok");
+    return new Response(JSON.stringify(body), { status });
+  }) as typeof fetch;
 }
 
-describe("asset API session compatibility", () => {
-  it("reads the active token from the username-keyed session shape", () => {
-    const storage = new MemoryStorage();
-    storage.setItem(
-      "asset.sessions.v1",
-      JSON.stringify({
-        activeUsername: "fatima",
-        sessions: { fatima: { token: "session-token" } },
-      }),
+describe("fetchAssets", () => {
+  it("parses a valid response", async () => {
+    const result = await fetchAssets(
+      "tok",
+      undefined,
+      fakeFetch(200, { workspaceId: "ws1", assets: [validItem] }),
     );
-
-    expect(readActiveSessionToken(storage)).toBe("session-token");
+    expect(result.assets[0]?.assetCode).toBe("DLA-001");
   });
 
-  it("treats malformed or absent state as signed out", () => {
-    const storage = new MemoryStorage();
-    expect(readActiveSessionToken(storage)).toBeNull();
-    storage.setItem("asset.sessions.v1", "{not-json");
-    expect(readActiveSessionToken(storage)).toBeNull();
+  it("rejects a malformed body instead of rendering garbage", async () => {
+    await expect(
+      fetchAssets("tok", undefined, fakeFetch(200, { nonsense: true })),
+    ).rejects.toThrow("ASSET_LIST_INVALID_RESPONSE");
+  });
+
+  it("rejects non-ok responses with the status", async () => {
+    await expect(
+      fetchAssets("tok", undefined, fakeFetch(403, { error: { code: "ROLE_FORBIDDEN" } })),
+    ).rejects.toThrow("ASSET_LIST_403");
   });
 });

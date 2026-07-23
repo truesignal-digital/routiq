@@ -12,8 +12,9 @@ interface AssetListResponse {
 export async function fetchAssets(
   token: string,
   signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
 ): Promise<AssetListResponse> {
-  const response = await fetch("/v1/assets", {
+  const response = await fetchImpl("/v1/assets", {
     headers: { authorization: `Bearer ${token}` },
     ...(signal === undefined ? {} : { signal }),
   });
@@ -65,27 +66,4 @@ function isLifecycleStatus(value: unknown): value is AssetLifecycleStatus {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-/**
- * Temporary compatibility seam with ticket 02's keyed session store.
- * Keeping storage parsing here lets the screen work before and after that
- * branch merges, without coupling asset reads to auth implementation details.
- */
-export function readActiveSessionToken(storage: Storage): string | null {
-  try {
-    const raw = storage.getItem("asset.sessions.v1");
-    if (raw === null) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed) || typeof parsed["activeUsername"] !== "string") {
-      return null;
-    }
-    const sessions = parsed["sessions"];
-    if (!isRecord(sessions)) return null;
-    const active = sessions[parsed["activeUsername"]];
-    if (!isRecord(active) || typeof active["token"] !== "string") return null;
-    return active["token"];
-  } catch {
-    return null;
-  }
 }

@@ -2,7 +2,9 @@
 import "dotenv/config";
 import { hashPin } from "../src/auth/pin.js";
 import { db, pool } from "../src/db/client.js";
-import { branches, credentials, memberships, principals, workspaces } from "../src/db/schema.js";
+import { approvalRules, branches, categories, credentials, memberships, principals, workspaces } from "../src/db/schema.js";
+import { defaultApprovalRules } from "../src/commands/approval-defaults.js";
+import { presetCategories } from "../src/commands/category-presets.js";
 
 const [ws] = await db
   .insert(workspaces)
@@ -37,5 +39,8 @@ await db.insert(credentials).values({
   pinHash: await hashPin("246810"),
 });
 
-console.log("seeded: workspace=sotrafret username=amina pin=246810");
+await db.insert(approvalRules).values(defaultApprovalRules(workspace.id)).onConflictDoNothing();
+await db.insert(categories).values(presetCategories(workspace.id)).onConflictDoNothing();
+
+console.log("seeded: workspace=sotrafret username=amina pin=246810 (+approval rules, categories)");
 await pool.end();

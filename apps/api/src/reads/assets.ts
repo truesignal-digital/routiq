@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import { assets, branches, categories } from "../db/schema.js";
@@ -9,7 +9,8 @@ export function registerAssetReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get("/v1/assets", { preHandler: requireAuth }, async (req) => {
+  app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
     const auth = req.auth!;
     const branchFilter =
       auth.branchScope === "ALL"
@@ -74,5 +75,9 @@ export function registerAssetReadRoutes(
         },
       })),
     };
+    } catch (error) {
+      req.log.error({ err: error }, "asset list read failed");
+      return reply.status(500).send({ error: { code: "READ_FAILED" } });
+    }
   });
 }
