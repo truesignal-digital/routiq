@@ -12,6 +12,7 @@ import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
 import type { ObjectStorage } from "./storage/types.js";
+import { registerAssetReadRoutes } from "./reads/assets.js";
 
 export interface ServerDeps {
   db: Db;
@@ -49,6 +50,7 @@ export function buildServer({
 
   registerAuthRoutes(app, db);
   registerCommandRoutes(app, db, requireAuth);
+  registerAssetReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   app.get("/v1/me", { preHandler: requireAuth }, async (req) => req.auth);
   app.get("/v1/commands", { preHandler: requireAuth }, async () => ({
@@ -60,6 +62,8 @@ export function buildServer({
 
 const isMain = process.argv[1]?.endsWith("server.ts") || process.argv[1]?.endsWith("server.js");
 if (isMain) {
+  const { initSentry } = await import("./observability/sentry.js");
+  initSentry();
   const { db } = await import("./db/client.js");
   const app = buildServer({ db });
   const port = Number(process.env["PORT"] ?? 3001);
