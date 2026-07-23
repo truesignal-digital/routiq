@@ -4,23 +4,11 @@ import { workspaceModules } from "../db/schema.js";
 import type { Tx } from "../commands/dispatcher.js";
 
 /**
- * Fixed code-level module registry (§3.3a): each module declares the commands it owns.
- * CORE commands are never disableable and skip the entitlement check.
+ * Per-workspace module entitlement (§3.3a). Command ownership is declared on
+ * each CommandDefinition's `module` field — there is no separate list to sync.
+ * Absent row = enabled: modules are on by default and disabling is the recorded
+ * act. CORE is never disableable.
  */
-const MODULE_COMMANDS: Record<ModuleCode, readonly string[]> = {
-  CORE: ["enable-module", "disable-module"],
-  ASSETS: ["register-asset", "commission-asset", "assign-asset"],
-  DOCUMENTS: ["add-or-renew-document"],
-};
-
-export function moduleOwningCommand(commandName: string): ModuleCode | undefined {
-  for (const [module, commandNames] of Object.entries(MODULE_COMMANDS)) {
-    if (commandNames.includes(commandName)) return module as ModuleCode;
-  }
-  return undefined;
-}
-
-/** Absent row = enabled: modules are on by default and disabling is the recorded act. */
 export async function isModuleEnabled(
   tx: Tx,
   workspaceId: string,

@@ -2,6 +2,7 @@ import {
   commandEnvelope,
   type CommandEnvelope,
   type CommandErrorCode,
+  type ModuleCode,
   type Role,
   type ValidationErrorCode,
 } from "@asset/contracts";
@@ -10,7 +11,7 @@ import { z } from "zod";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import { auditEvents, commands } from "../db/schema.js";
-import { isModuleEnabled, moduleOwningCommand } from "../modules/registry.js";
+import { isModuleEnabled } from "../modules/registry.js";
 import { evaluateApproval, type ApprovalContext } from "./approvals.js";
 
 export type CommandContext = AuthContext;
@@ -42,9 +43,23 @@ export class CommandError extends Error {
   }
 }
 
+/**
+ * Adding a command:
+ *   1. Payload schema in packages/contracts/src/commands/<name>.ts (+ test).
+ *   2. A CommandDefinition like this one, registered via registerCommand and
+ *      side-effect imported in server.ts. `module` declares ownership — commands
+ *      of a disabled module are rejected MODULE_DISABLED; CORE is always on.
+ *   3. A catalog default in approval-defaults.ts — without one every call is
+ *      rejected APPROVAL_REQUIRED (registry.test.ts enforces this).
+ *   4. New tables need explicit GRANTs to asset_app in their migration
+ *      (db/grants.test.ts enforces this).
+ * The dispatcher supplies auth, module check, idempotency, approval evaluation,
+ * receipt, audit atomicity; execute() owns only references, invariants, writes.
+ */
 export interface CommandDefinition<P> {
   name: string;
   version: number;
+  module: ModuleCode;
   allowedRoles: readonly Role[];
   payloadSchema: z.ZodType<P>;
   /** Filter values approval rules may match on (branch, category, amount). */
@@ -152,9 +167,8 @@ export async function dispatchCommand(
           sql`select set_config('app.workspace_id', ${ctx.workspaceId}, true)`,
         );
 
-        const owningModule = moduleOwningCommand(outer.data.name);
-        if (owningModule && !(await isModuleEnabled(tx, ctx.workspaceId, owningModule))) {
-          throw new CommandError(403, "MODULE_DISABLED", { module: owningModule });
+        if (!(await isModuleEnabled(tx, ctx.workspaceId, definition.module))) {
+          throw new CommandError(403, "MODULE_DISABLED", { module: definition.module });
         }
 
         const existing = await findReceipt(

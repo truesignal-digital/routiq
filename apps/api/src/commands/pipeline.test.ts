@@ -600,6 +600,7 @@ describe("Command Pipeline", () => {
       registerCommand({
         name: "test-explode",
         version: 1,
+        module: "CORE",
         allowedRoles: ["ADMIN"],
         payloadSchema: z.object({}),
         execute: async (tx, _ctx, envelope) => {

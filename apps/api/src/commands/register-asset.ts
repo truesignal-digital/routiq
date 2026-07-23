@@ -14,6 +14,7 @@ type RegisterAssetPayload = z.infer<typeof registerAssetPayload>;
 const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   name: "register-asset",
   version: 1,
+  module: "ASSETS",
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: registerAssetPayload,
   approvalContext(payload) {
