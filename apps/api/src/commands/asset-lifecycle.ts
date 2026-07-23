@@ -95,6 +95,7 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   version: 1,
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: assignAssetPayload,
+  operationalAssetId: (payload) => payload.assetId,
 
   async approvalContext(tx, ctx, payload) {
     const asset = await tx.query.assets.findFirst({
@@ -140,13 +141,6 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
     }
 
     checkOptimisticVersion(envelope, asset.rowVersion);
-
-    if (["SOLD", "RETIRED", "WRITTEN_OFF"].includes(asset.lifecycleStatus)) {
-      throw new CommandError(409, "INVALID_STATE_TRANSITION", {
-        from: asset.lifecycleStatus,
-        to: "OPERATIONAL",
-      });
-    }
 
     let newBranchId = asset.branchId;
     let newCustodianMembershipId = asset.custodianMembershipId;

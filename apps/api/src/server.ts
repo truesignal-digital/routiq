@@ -5,6 +5,7 @@ import { LocalSessionProvider } from "./auth/local.js";
 import { makeRequireAuth, registerAuthRoutes } from "./auth/plugin.js";
 import type { IdentityProvider } from "./auth/types.js";
 import "./commands/register-asset.js";
+import "./commands/add-or-renew-document.js";
 import "./commands/module-toggle.js";
 import "./commands/asset-lifecycle.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";

@@ -409,7 +409,7 @@ describe("Asset Lifecycle Commands", () => {
 
       expect(res.statusCode).toBe(409);
       const body = JSON.parse(res.body);
-      expect(body.error.code).toBe("INVALID_STATE_TRANSITION");
+      expect(body.error.code).toBe("ASSET_NOT_OPERATIONAL");
     });
 
     it("test 6: Cross-branch assign returns 403 APPROVAL_REQUIRED", async () => {
