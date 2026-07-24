@@ -4,7 +4,9 @@
 
 **Blocked by:** 04, 05 (attachments optional on documents but expected).
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
+
+> Happy-path verified 2026-07-24 against compose Postgres: register → add document (INS-001) → renew with supersedesDocumentId → GET /v1/assets/:id/documents returns correct chain (original unchanged, superseded/current links correct). Implementation committed in 3a99ee9.
 
 - [ ] Documents list per asset (needs a `GET /v1/assets/:id/documents` read — UI-owned reads/, GET only), grouped by DOCUMENT_TYPE category, current-vs-superseded distinguished, expiry badges (expired / expiring ≤30d / ok — client-side date math, server stays source of truth)
 - [ ] Add document form mirrors `addOrRenewDocumentPayload`; renew pre-fills from the superseded document and sets supersedesDocumentId
