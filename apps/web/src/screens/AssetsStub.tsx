@@ -1,4 +1,5 @@
 import {
+  FileText,
   ArrowRight,
   CircleAlert,
   Gauge,
@@ -170,6 +171,21 @@ export function AssetsStub() {
   );
 }
 
+function DocumentsLink({ assetId }: { assetId: string }) {
+  const { t } = useTranslation();
+  const me = useMeContext();
+  if (!me?.enabledModules.includes("DOCUMENTS")) return null;
+  return (
+    <a
+      href={`/assets/${assetId}/documents`}
+      className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-medium text-primary underline-offset-2 hover:underline"
+    >
+      <FileText className="size-3.5" aria-hidden />
+      {t("documents.link")}
+    </a>
+  );
+}
+
 function Metric({
   label,
   value,
@@ -250,6 +266,8 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
           </div>
 
           <AssetActions asset={asset} />
+
+          <DocumentsLink assetId={asset.id} />
         </div>
       </div>
     </article>

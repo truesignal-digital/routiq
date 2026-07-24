@@ -2,8 +2,10 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
+import { inWorkspace } from "../db/tenant.js";
 import { assets, branches, categories } from "../db/schema.js";
 import { registerCategoryReadRoutes } from "./categories.js";
+import { registerDocumentReadRoutes } from "./documents.js";
 import { registerReferenceReadRoutes } from "./reference.js";
 
 export function registerAssetReadRoutes(
@@ -15,6 +17,7 @@ export function registerAssetReadRoutes(
   // Backend: a reads/index.ts entry point would make this explicit.
   registerReferenceReadRoutes(app, db, requireAuth);
   registerCategoryReadRoutes(app, db, requireAuth);
+  registerDocumentReadRoutes(app, db, requireAuth);
 
   app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -27,39 +30,41 @@ export function registerAssetReadRoutes(
             inArray(assets.branchId, auth.branchScope),
           );
 
-    const rows = await db
-      .select({
-        id: assets.id,
-        assetCode: assets.assetCode,
-        registrationNumber: assets.registrationNumber,
-        manufacturer: assets.manufacturer,
-        model: assets.model,
-        lifecycleStatus: assets.lifecycleStatus,
-        rowVersion: assets.rowVersion,
-        categoryCode: assets.assetClassCode,
-        categoryLabelFr: categories.labelFr,
-        categoryLabelEn: categories.labelEn,
-        branchCode: branches.code,
-        branchName: branches.name,
-      })
-      .from(assets)
-      .innerJoin(
-        branches,
-        and(
-          eq(branches.workspaceId, assets.workspaceId),
-          eq(branches.id, assets.branchId),
-        ),
-      )
-      .leftJoin(
-        categories,
-        and(
-          eq(categories.workspaceId, assets.workspaceId),
-          eq(categories.kind, "ASSET_CLASS"),
-          eq(categories.code, assets.assetClassCode),
-        ),
-      )
-      .where(branchFilter)
-      .orderBy(asc(assets.assetCode));
+    const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+      tx
+        .select({
+          id: assets.id,
+          assetCode: assets.assetCode,
+          registrationNumber: assets.registrationNumber,
+          manufacturer: assets.manufacturer,
+          model: assets.model,
+          lifecycleStatus: assets.lifecycleStatus,
+          rowVersion: assets.rowVersion,
+          categoryCode: assets.assetClassCode,
+          categoryLabelFr: categories.labelFr,
+          categoryLabelEn: categories.labelEn,
+          branchCode: branches.code,
+          branchName: branches.name,
+        })
+        .from(assets)
+        .innerJoin(
+          branches,
+          and(
+            eq(branches.workspaceId, assets.workspaceId),
+            eq(branches.id, assets.branchId),
+          ),
+        )
+        .leftJoin(
+          categories,
+          and(
+            eq(categories.workspaceId, assets.workspaceId),
+            eq(categories.kind, "ASSET_CLASS"),
+            eq(categories.code, assets.assetClassCode),
+          ),
+        )
+        .where(branchFilter)
+        .orderBy(asc(assets.assetCode)),
+    );
 
     return {
       workspaceId: auth.workspaceId,

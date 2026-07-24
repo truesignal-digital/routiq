@@ -18,10 +18,13 @@ interface Attachment {
 
 export function AttachmentField({
   onChange,
+  onUploadingChange,
   uploadImpl = uploadArtifact,
 }: {
   /** Called with the ids of every FINALIZED artifact, in pick order. */
   onChange: (artifactIds: string[]) => void;
+  /** Lets the owning form prevent submission while selected evidence uploads. */
+  onUploadingChange?: (uploading: boolean) => void;
   uploadImpl?: typeof uploadArtifact;
 }) {
   const { t, i18n } = useTranslation();
@@ -30,6 +33,7 @@ export function AttachmentField({
 
   function publish(next: Attachment[]) {
     setAttachments(next);
+    onUploadingChange?.(next.some((attachment) => attachment.state.kind === "uploading"));
     onChange(
       next.filter((a) => a.state.kind === "finalized").map((a) => a.artifactId),
     );
@@ -38,6 +42,7 @@ export function AttachmentField({
   function update(artifactId: string, state: Attachment["state"]) {
     setAttachments((current) => {
       const next = current.map((a) => (a.artifactId === artifactId ? { ...a, state } : a));
+      onUploadingChange?.(next.some((attachment) => attachment.state.kind === "uploading"));
       onChange(
         next.filter((a) => a.state.kind === "finalized").map((a) => a.artifactId),
       );

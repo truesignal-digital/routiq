@@ -42,19 +42,21 @@ export function createCommandClient({
       let response: Response;
       try {
         const token = getToken();
-        response = await fetchImpl(`${baseUrl}/v1/commands`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+        response = await fetchImpl(
+          `${baseUrl}/v1/commands/${encodeURIComponent(submission.name)}`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+            },
+            body: JSON.stringify({
+              version: submission.version,
+              envelope: submission.envelope,
+              payload: submission.payload,
+            }),
           },
-          body: JSON.stringify({
-            name: submission.name,
-            version: submission.version,
-            envelope: submission.envelope,
-            payload: submission.payload,
-          }),
-        });
+        );
       } catch {
         store.markRejected(commandId, "NETWORK_ERROR");
         return { ok: false, code: "NETWORK_ERROR" };

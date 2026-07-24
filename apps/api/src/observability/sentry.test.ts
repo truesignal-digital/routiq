@@ -173,6 +173,7 @@ describe("Sentry Observability", () => {
         module: "CORE",
         allowedRoles: ["ADMIN"],
         payloadSchema: z.object({}),
+        branchAuthorization: { kind: "workspace" },
         execute: async () => {
           throw new Error("intentional failure");
         },

@@ -18,6 +18,22 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   module: "ASSETS",
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: registerAssetPayload,
+  branchAuthorization: {
+    kind: "branches",
+    async resolve(tx, ctx, payload) {
+      const [branch] = await tx
+        .select({ id: branches.id })
+        .from(branches)
+        .where(
+          and(
+            eq(branches.workspaceId, ctx.workspaceId),
+            eq(branches.code, payload.branchCode),
+          ),
+        )
+        .limit(1);
+      return branch ? [branch.id] : [];
+    },
+  },
   async approvalContext(_tx, _ctx, payload) {
     return {
       branchCode: payload.branchCode,

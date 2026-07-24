@@ -40,6 +40,8 @@ TypeScript strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + 
 
 **One command layer, one write path** (§1, §5). Every mutation — web form, offline sync, CSV import, future AI agent — is a named, versioned command (`register-asset.v1`) through the same pipeline: authenticate → authorize → module check → idempotency → schema → optimistic concurrency → invariants → approval rules → **atomic commit** (records + command receipt + append-only audit event in one transaction). No adapter ever writes to the database directly. Reads are plain REST/SQL views (CQRS-lite, no projections).
 
+Canonical HTTP writes use `POST /v1/commands/:name` with `{ version, envelope, payload }`. The older generic `POST /v1/commands` shape is a temporary compatibility facade only; new clients use named routes (ADR-0002). Both reach the same dispatcher.
+
 Adding a command touches three places:
 1. **Payload schema** in `packages/contracts/src/commands/<name>.ts` — Zod object composing `commandEnvelope` from `envelope.ts`, plus a test.
 2. **Handler** in `apps/api/src/commands/` — implements `CommandDefinition` from `dispatcher.ts`, registered via `registerCommand`. `execute` runs inside one transaction.

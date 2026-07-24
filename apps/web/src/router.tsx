@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { z } from "zod";
 import { sessionStore } from "./auth/store.js";
+import { AssetDocumentsScreen } from "./screens/AssetDocumentsScreen.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
@@ -55,6 +56,12 @@ const assetsNewRoute = createRoute({
   component: AssetRegisterScreen,
 });
 
+const assetDocumentsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/assets/$assetId/documents",
+  component: AssetDocumentsScreen,
+});
+
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
@@ -63,7 +70,7 @@ const moreRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  appRoute.addChildren([indexRoute, assetsRoute, assetsNewRoute, moreRoute]),
+  appRoute.addChildren([indexRoute, assetsRoute, assetsNewRoute, assetDocumentsRoute, moreRoute]),
 ]);
 
 export const router = createRouter({ routeTree });

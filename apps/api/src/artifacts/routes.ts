@@ -5,6 +5,7 @@ import { z } from "zod";
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 import type { Db } from "../db/client.js";
+import { inWorkspace } from "../db/tenant.js";
 import type { ObjectStorage } from "../storage/types.js";
 import { sourceArtifacts } from "../db/schema.js";
 
@@ -44,6 +45,7 @@ export function registerArtifactRoutes(
       if (!req.auth) {
         return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
       }
+      const auth = req.auth;
 
       const parsed = presignRequestSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -61,7 +63,7 @@ export function registerArtifactRoutes(
       }
 
       const { artifactId, fileName, sizeBytes } = parsed.data;
-      const storageKey = getStorageKey(req.auth.workspaceId, artifactId);
+      const storageKey = getStorageKey(auth.workspaceId, artifactId);
 
       try {
         const uploadUrl = await storage.presignPut(storageKey, {
@@ -89,6 +91,7 @@ export function registerArtifactRoutes(
       if (!req.auth) {
         return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
       }
+      const auth = req.auth;
 
       const parsed = finalizeRequestSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -106,7 +109,7 @@ export function registerArtifactRoutes(
       }
 
       const { artifactId, fileName } = parsed.data;
-      const storageKey = getStorageKey(req.auth.workspaceId, artifactId);
+      const storageKey = getStorageKey(auth.workspaceId, artifactId);
 
       try {
         // Step 1: Check if object exists
@@ -167,22 +170,33 @@ export function registerArtifactRoutes(
 
         // Step 5: Insert sourceArtifacts row
         try {
-          await db.insert(sourceArtifacts).values({
-            id: artifactId,
-            workspaceId: req.auth.workspaceId,
-            storageKey,
-            sha256,
-            mimeType,
-            sizeBytes: BigInt(finalBytes.length),
-            originalFileName: fileName ?? null,
-            uploadedByPrincipalId: req.auth.principalId,
-          });
+          const inserted = await inWorkspace(
+            db,
+            auth.workspaceId,
+            async (tx) => {
+              await tx.insert(sourceArtifacts).values({
+                id: artifactId,
+                workspaceId: auth.workspaceId,
+                storageKey,
+                sha256,
+                mimeType,
+                sizeBytes: BigInt(finalBytes.length),
+                originalFileName: fileName ?? null,
+                uploadedByPrincipalId: auth.principalId,
+              });
 
-          // Return the inserted row (convert bigint to Number for JSON serialization)
-          const [inserted] = await db
-            .select()
-            .from(sourceArtifacts)
-            .where(eq(sourceArtifacts.id, artifactId));
+              const [row] = await tx
+                .select()
+                .from(sourceArtifacts)
+                .where(
+                  and(
+                    eq(sourceArtifacts.workspaceId, auth.workspaceId),
+                    eq(sourceArtifacts.id, artifactId),
+                  ),
+                );
+              return row;
+            },
+          );
 
           if (!inserted) {
             return reply.status(500).send({
@@ -243,19 +257,27 @@ export function registerArtifactRoutes(
       if (!req.auth) {
         return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
       }
+      const auth = req.auth;
 
       const { id } = req.params as { id: string };
 
       try {
-        const [artifact] = await db
-          .select()
-          .from(sourceArtifacts)
-          .where(
-            and(
-              eq(sourceArtifacts.id, id),
-              eq(sourceArtifacts.workspaceId, req.auth.workspaceId),
-            ),
-          );
+        const artifact = await inWorkspace(
+          db,
+          auth.workspaceId,
+          async (tx) => {
+            const [row] = await tx
+              .select()
+              .from(sourceArtifacts)
+              .where(
+                and(
+                  eq(sourceArtifacts.id, id),
+                  eq(sourceArtifacts.workspaceId, auth.workspaceId),
+                ),
+              );
+            return row;
+          },
+        );
 
         if (!artifact) {
           return reply.status(404).send({

@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { inject } from "vitest";
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
+import pg from "pg";
 import { createTestApp } from "../test/fixture.js";
 import { seedWorkspace, seedMember } from "../test/seed.js";
 import { createSession } from "../auth/local.js";
 import { assets, auditEvents, branches } from "../db/schema.js";
 import type { Db } from "../db/client.js";
+import { buildServer } from "../server.js";
 
 describe("Asset Lifecycle Commands", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -355,6 +358,93 @@ describe("Asset Lifecycle Commands", () => {
       expect(res.statusCode).toBe(409);
       const body = JSON.parse(res.body);
       expect(body.error.code).toBe("INVALID_STATE_TRANSITION");
+    });
+
+    it("allows only one of two concurrent commands using the same row version", async () => {
+      const assetId = randomUUID();
+      const registerRes = await postCommand(
+        {
+          name: "register-asset",
+          version: 1,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `idem-${randomUUID()}`,
+            origin: "HUMAN_UI",
+          },
+          payload: {
+            assetId,
+            assetCode: `RACE-${randomUUID().slice(0, 8)}`,
+            assetClassCode: "TRUCK",
+            templateCode: "TRUCKING",
+            branchCode: "DLA",
+          },
+        },
+        token,
+      );
+      expect(registerRes.statusCode).toBe(200);
+
+      const control = new pg.Client({ connectionString: inject("databaseUrl") });
+      const concurrentApp = buildServer({
+        db: ctx.runtimeDb,
+        authDb: db,
+        logger: false,
+      });
+      await concurrentApp.ready();
+      await control.connect();
+      await control.query(`
+        create function test_delay_asset_update() returns trigger
+        language plpgsql as $$
+        begin
+          perform pg_sleep(0.25);
+          return new;
+        end
+        $$
+      `);
+      await control.query(`
+        create trigger test_delay_asset_update
+        before update on assets
+        for each row execute function test_delay_asset_update()
+      `);
+
+      const commissionBody = () => ({
+        name: "commission-asset",
+        version: 1,
+        envelope: {
+          commandId: randomUUID(),
+          idempotencyKey: `idem-${randomUUID()}`,
+          expectedVersion: 1,
+          origin: "HUMAN_UI",
+        },
+        payload: { assetId },
+      });
+
+      try {
+        const first = postCommand(commissionBody(), token);
+        const second = concurrentApp.inject({
+          method: "POST",
+          url: "/v1/commands",
+          payload: commissionBody(),
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+        const responses = await Promise.all([first, second]);
+        expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+        const conflict = responses.find((response) => response.statusCode === 409);
+        expect(conflict?.json()).toEqual({
+          error: {
+            code: "VERSION_CONFLICT",
+            metadata: {
+              expectedVersion: 1,
+              currentVersion: 2,
+            },
+          },
+        });
+      } finally {
+        await control.query("drop trigger if exists test_delay_asset_update on assets");
+        await control.query("drop function if exists test_delay_asset_update()");
+        await control.end();
+        await concurrentApp.close();
+      }
     });
   });
 

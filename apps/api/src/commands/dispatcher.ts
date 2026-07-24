@@ -6,10 +6,11 @@ import {
   type Role,
   type ValidationErrorCode,
 } from "@routiq/contracts";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
+import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import {
   assets,
   auditEvents,
@@ -22,7 +23,7 @@ import { reportUnexpectedFailure } from "../observability/sentry.js";
 import { evaluateApproval, type ApprovalContext } from "./approvals.js";
 
 export type CommandContext = AuthContext;
-export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type Tx = TenantTx;
 
 export interface CommandOutcome {
   commandId: string;
@@ -75,6 +76,20 @@ export interface CommandDefinition<P> {
    * handler code runs — handlers never re-implement this invariant.
    */
   operationalAssetId?(payload: P): string | undefined;
+  /**
+   * Explicitly declares whether the command is workspace-wide or which
+   * branches it mutates. Requiring this policy keeps new commands fail-closed.
+   */
+  branchAuthorization:
+    | { kind: "workspace" }
+    | {
+        kind: "branches";
+        resolve(
+          tx: Tx,
+          ctx: CommandContext,
+          payload: P,
+        ): Promise<readonly string[]>;
+      };
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   execute(
@@ -106,6 +121,9 @@ const registry = new Map<string, CommandDefinition<unknown>>();
 export function registerCommand<P>(def: CommandDefinition<P>): void {
   const key = commandKey(def.name, def.version);
   if (registry.has(key)) throw new Error(`duplicate command registration: ${key}`);
+  if (!def.branchAuthorization) {
+    throw new Error(`command branch authorization missing: ${key}`);
+  }
   registry.set(key, def as CommandDefinition<unknown>);
 }
 
@@ -174,11 +192,25 @@ export async function dispatchCommand(
     }
 
     try {
-      return await db.transaction(async (tx) => {
-        // Pool-safe RLS context (§4.4 layer 2): scoped to this transaction only.
-        await tx.execute(
-          sql`select set_config('app.workspace_id', ${ctx.workspaceId}, true)`,
-        );
+      return await inWorkspace(db, ctx.workspaceId, async (tx) => {
+        const authorizedBranchIds =
+          definition.branchAuthorization.kind === "branches"
+            ? await definition.branchAuthorization.resolve(
+                tx,
+                ctx,
+                parsedPayload.data,
+              )
+            : [];
+        if (
+          ctx.branchScope !== "ALL" &&
+          authorizedBranchIds.some(
+            (branchId) => !ctx.branchScope.includes(branchId),
+          )
+        ) {
+          throw new CommandError(403, "ROLE_FORBIDDEN", {
+            command: commandKey(outer.data.name, outer.data.version),
+          });
+        }
 
         if (!(await isModuleEnabled(tx, ctx.workspaceId, definition.module))) {
           throw new CommandError(403, "MODULE_DISABLED", { module: definition.module });
@@ -260,10 +292,14 @@ export async function dispatchCommand(
       });
     } catch (error) {
       if (uniqueViolation(error)?.constraint === "commands_ws_idem_uq") {
-        const existing = await findReceipt(
+        const existing = await inWorkspace(
           db,
           ctx.workspaceId,
-          outer.data.envelope.idempotencyKey,
+          (tx) => findReceipt(
+            tx,
+            ctx.workspaceId,
+            outer.data.envelope.idempotencyKey,
+          ),
         );
         if (existing) {
           return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);

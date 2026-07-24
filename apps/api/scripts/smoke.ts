@@ -5,7 +5,7 @@
  */
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
-import { db, pool } from "../src/db/client.js";
+import { authDb, authPool, db, pool } from "../src/db/client.js";
 import { buildServer } from "../src/server.js";
 import { seedMember, seedWorkspace } from "../src/test/seed.js";
 
@@ -18,13 +18,13 @@ function check(label: string, ok: boolean, detail?: unknown) {
   if (!ok) failures += 1;
 }
 
-const app = buildServer({ db, logger: false });
+const app = buildServer({ db, authDb, logger: false });
 await app.listen({ port: PORT, host: "127.0.0.1" });
 
 try {
   const slug = `smoke-${Date.now()}`;
-  const { workspace, branch } = await seedWorkspace(db, slug);
-  await seedMember(db, {
+  const { workspace, branch } = await seedWorkspace(authDb, slug);
+  await seedMember(authDb, {
     workspaceId: workspace.id,
     role: "ADMIN",
     allBranches: true,
@@ -132,5 +132,6 @@ try {
 } finally {
   await app.close();
   await pool.end();
+  await authPool.end();
 }
 process.exitCode = failures === 0 ? 0 : 1;

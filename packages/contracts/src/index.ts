@@ -9,3 +9,4 @@ export * from "./templates.js";
 export * from "./commands/register-asset.js";
 export * from "./commands/module-toggle.js";
 export * from "./commands/asset-lifecycle.js";
+export * from "./reads/documents.js";

@@ -1,7 +1,7 @@
 // Dev bootstrap WITH object storage (server.ts main block doesn't wire it yet
 // — backend: consider env-driven storage there, then delete this script).
 import "dotenv/config";
-import { db } from "../src/db/client.js";
+import { authDb, db } from "../src/db/client.js";
 import { buildServer } from "../src/server.js";
 import { createS3Storage } from "../src/storage/s3.js";
 
@@ -14,7 +14,7 @@ const storage = createS3Storage({
   forcePathStyle: true,
 });
 
-const app = buildServer({ db, storage });
+const app = buildServer({ db, authDb, storage });
 const port = Number(process.env["PORT"] ?? 3001);
 app.listen({ port, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err);

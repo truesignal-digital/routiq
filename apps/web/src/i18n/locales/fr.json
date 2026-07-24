@@ -28,6 +28,7 @@
     "READ_FAILED": "Impossible de charger les données. Réessayez.",
     "AUTH_REQUIRED": "Connexion requise. Veuillez vous reconnecter.",
     "AUTH_INVALID_TOKEN": "Session expirée. Veuillez vous reconnecter.",
+    "AUTH_LOCKED": "Trop de tentatives. Réessayez plus tard ou contactez votre administrateur.",
     "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
@@ -39,7 +40,12 @@
     "UNSUPPORTED_MEDIA_TYPE": "Format de fichier non pris en charge (JPEG, PNG, WebP ou PDF uniquement).",
     "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
     "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",
-    "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente."
+    "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente.",
+    "POSTINGS_SUM_MISMATCH": "Les lignes d'écriture doivent correspondre au montant de l'entrée.",
+    "MAKER_CANNOT_APPROVE": "La personne qui a créé une entrée ne peut pas l'approuver.",
+    "ENTRY_ALREADY_REVERSED": "Cette entrée a déjà été contrepassée.",
+    "PERIOD_LOCKED": "Cette période comptable est verrouillée.",
+    "CATEGORY_KIND_MISMATCH": "Cette catégorie ne correspond pas au sens de l'entrée."
   },
   "assets": {
     "eyebrow": "Parc opérationnel",
@@ -156,5 +162,36 @@
     "uploading": "Téléversement…",
     "retry": "Réessayer",
     "remove": "Retirer"
+  },
+  "documents": {
+    "link": "Documents",
+    "title": "Documents de l'actif",
+    "back": "Retour aux actifs",
+    "add": "Ajouter un document",
+    "addTitle": "Nouveau document",
+    "renew": "Renouveler",
+    "renewTitle": "Renouveler « {name} »",
+    "save": "Enregistrer",
+    "loading": "Chargement…",
+    "loadFailed": "Impossible de charger les documents de cet actif.",
+    "typesFailed": "Impossible de charger les types de document. Actualisez cette page.",
+    "retry": "Réessayer",
+    "empty": "Aucun document pour cet actif.",
+    "superseded": "Remplacé",
+    "renewal": "renouvellement",
+    "replacedBy": "Remplacé par",
+    "expiry": {
+      "expired": "Expiré",
+      "expiringSoon": "Expire le {date}",
+      "ok": "Valide → {date}",
+      "none": "Sans échéance"
+    },
+    "fields": {
+      "type": "Type de document",
+      "title": "Titre",
+      "number": "Numéro",
+      "issuedAt": "Délivré le",
+      "expiresAt": "Expire le"
+    }
   }
 }

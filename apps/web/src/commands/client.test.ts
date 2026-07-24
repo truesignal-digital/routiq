@@ -32,13 +32,12 @@ describe("createCommandClient", () => {
   it("posts the submission and resolves committed", async () => {
     const submission = createSubmission("register-asset", 1, { code: "DLA-001" });
     const fetchImpl = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-      expect(String(url)).toBe("/v1/commands");
+      expect(String(url)).toBe("/v1/commands/register-asset");
       expect(init?.method).toBe("POST");
       const headers = new Headers(init?.headers);
       expect(headers.get("authorization")).toBe("Bearer test-token");
       const body = JSON.parse(String(init?.body));
       expect(body).toEqual({
-        name: "register-asset",
         version: 1,
         envelope: submission.envelope,
         payload: { code: "DLA-001" },

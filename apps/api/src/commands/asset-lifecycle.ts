@@ -15,6 +15,11 @@ import {
   type CommissionAssetPayload,
 } from "@routiq/contracts";
 import { assets, branches, memberships } from "../db/schema.js";
+import {
+  updateAssetAtVersion,
+  type AssetVersionedChanges,
+} from "./versioned-write.js";
+import { assetBranchIds } from "./branch-authorization.js";
 
 export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   name: "commission-asset",
@@ -22,6 +27,11 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   version: 1,
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: commissionAssetPayload,
+  branchAuthorization: {
+    kind: "branches",
+    resolve: (tx, ctx, payload) =>
+      assetBranchIds(tx, ctx, payload.assetId),
+  },
 
   async execute(tx, ctx, envelope, payload) {
     const asset = await tx.query.assets.findFirst({
@@ -49,18 +59,10 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
 
     const commissionedAt =
       payload.commissionedAt ? new Date(payload.commissionedAt) : new Date();
-    const newRowVersion = (asset.rowVersion ?? 0) + 1;
-
-    await tx.update(assets).set({
+    const updated = await updateAssetAtVersion(tx, ctx, envelope, asset.id, {
       lifecycleStatus: "IN_SERVICE",
       commissionedAt,
-      rowVersion: newRowVersion,
-    }).where(
-      and(
-        eq(assets.workspaceId, ctx.workspaceId),
-        eq(assets.id, payload.assetId),
-      ),
-    );
+    });
 
     const beforeState = {
       lifecycleStatus: asset.lifecycleStatus,
@@ -69,8 +71,8 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
     };
     const afterState = {
       lifecycleStatus: "IN_SERVICE",
-      commissionedAt,
-      rowVersion: newRowVersion,
+      commissionedAt: updated.commissionedAt,
+      rowVersion: updated.rowVersion,
     };
 
     await appendAuditEvent(tx, ctx, envelope, {
@@ -84,7 +86,7 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
 
     return {
       recordId: asset.id,
-      rowVersion: newRowVersion,
+      rowVersion: updated.rowVersion,
     };
   },
 };
@@ -96,6 +98,11 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: assignAssetPayload,
   operationalAssetId: (payload) => payload.assetId,
+  branchAuthorization: {
+    kind: "branches",
+    resolve: (tx, ctx, payload) =>
+      assetBranchIds(tx, ctx, payload.assetId),
+  },
 
   async approvalContext(tx, ctx, payload) {
     const asset = await tx.query.assets.findFirst({
@@ -181,8 +188,7 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
       newCustodianMembershipId = membership.id;
     }
 
-    const newRowVersion = (asset.rowVersion ?? 0) + 1;
-    const updateData: Record<string, unknown> = { rowVersion: newRowVersion };
+    const updateData: AssetVersionedChanges = {};
     const changedFields: string[] = ["rowVersion"];
 
     if (newBranchId !== asset.branchId) {
@@ -195,11 +201,12 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
       changedFields.push("custodianMembershipId");
     }
 
-    await tx.update(assets).set(updateData).where(
-      and(
-        eq(assets.workspaceId, ctx.workspaceId),
-        eq(assets.id, payload.assetId),
-      ),
+    const updated = await updateAssetAtVersion(
+      tx,
+      ctx,
+      envelope,
+      asset.id,
+      updateData,
     );
 
     const beforeState = {
@@ -210,7 +217,7 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
     const afterState = {
       branchId: newBranchId,
       custodianMembershipId: newCustodianMembershipId,
-      rowVersion: newRowVersion,
+      rowVersion: updated.rowVersion,
     };
 
     await appendAuditEvent(tx, ctx, envelope, {
@@ -224,7 +231,7 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
 
     return {
       recordId: asset.id,
-      rowVersion: newRowVersion,
+      rowVersion: updated.rowVersion,
     };
   },
 };

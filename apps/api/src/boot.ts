@@ -6,7 +6,7 @@
 import "dotenv/config";
 import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db } from "./db/client.js";
+import { authDb, db } from "./db/client.js";
 import { initSentry } from "./observability/sentry.js";
 import { buildServer } from "./server.js";
 import { createS3Storage } from "./storage/s3.js";
@@ -14,7 +14,7 @@ import type { ObjectStorage } from "./storage/types.js";
 
 initSentry();
 
-await migrate(db, {
+await migrate(authDb, {
   migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
 });
 
@@ -31,6 +31,6 @@ if (s3Endpoint) {
   });
 }
 
-const app = buildServer({ db, ...(storage ? { storage } : {}) });
+const app = buildServer({ db, authDb, ...(storage ? { storage } : {}) });
 const port = Number(process.env["PORT"] ?? 3001);
 await app.listen({ port, host: "0.0.0.0" });

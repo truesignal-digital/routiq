@@ -20,6 +20,7 @@ describe(
     let minio: StartedTestContainer;
     let minioEndpoint: string;
     let pool: pg.Pool;
+    let runtimePool: pg.Pool;
     let db: Db;
     let app: Awaited<ReturnType<typeof buildServer>>;
     let workspace: Awaited<ReturnType<typeof seedWorkspace>>["workspace"];
@@ -61,6 +62,11 @@ describe(
       pool = new pg.Pool({ connectionString: inject("databaseUrl") });
       const dbWithSchema = drizzle(pool, { schema });
       db = dbWithSchema as unknown as Db;
+      const runtimeUrl = new URL(inject("databaseUrl"));
+      runtimeUrl.username = "routiq_app";
+      runtimeUrl.password = "routiq_app";
+      runtimePool = new pg.Pool({ connectionString: runtimeUrl.toString() });
+      const runtimeDb = drizzle(runtimePool, { schema }) as unknown as Db;
 
       // Seed workspace and member
       const seeded = await seedWorkspace(db);
@@ -81,7 +87,8 @@ describe(
 
       // Build app with S3 storage
       app = buildServer({
-        db,
+        db: runtimeDb,
+        authDb: db,
         storage: createS3Storage({
           endpoint: minioEndpoint,
           region: "us-east-1",
@@ -97,6 +104,7 @@ describe(
 
     afterAll(async () => {
       await app.close();
+      await runtimePool.end();
       await pool.end();
       await minio.stop();
     });

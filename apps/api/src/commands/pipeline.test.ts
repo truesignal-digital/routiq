@@ -396,6 +396,7 @@ describe("Command Pipeline", () => {
       const member2 = await seedMember(db, {
         workspaceId: workspace2.workspace.id,
         role: "ADMIN",
+        allBranches: true,
       });
       const session2 = await createSession(db, {
         principalId: member2.principal.id,
@@ -599,6 +600,7 @@ describe("Command Pipeline", () => {
         module: "CORE",
         allowedRoles: ["ADMIN"],
         payloadSchema: z.object({}),
+        branchAuthorization: { kind: "workspace" },
         execute: async (tx, _ctx, envelope) => {
           await tx
             .insert(workspaces)
@@ -650,7 +652,8 @@ describe("Command Pipeline", () => {
     it("every request log line carries commandId and workspaceId", async () => {
       const lines: string[] = [];
       const logApp = buildServer({
-        db,
+        db: ctx.runtimeDb,
+        authDb: db,
         logger: {
           level: "info",
           stream: {
