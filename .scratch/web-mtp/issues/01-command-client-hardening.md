@@ -7,8 +7,8 @@
 **Status:** ready-for-human
 
 - [x] Command client generates commandId + idempotencyKey once per user intent and reuses them across retries; a timeout/double-submit resubmits the identical envelope and `idempotentReplay: true` is surfaced as plain success
-- [x] Client accepts optional `expectedVersion` and threads it into the envelope; result type is discriminated on `@asset/contracts` `ApiErrorCode`
-- [x] i18n error map covers EVERY code exported by `@asset/contracts` in both fr and en — proven by a meta-test that imports the code arrays and asserts a translation exists per code per locale
+- [x] Client accepts optional `expectedVersion` and threads it into the envelope; result type is discriminated on `@routiq/contracts` `ApiErrorCode`
+- [x] i18n error map covers EVERY code exported by `@routiq/contracts` in both fr and en — proven by a meta-test that imports the code arrays and asserts a translation exists per code per locale
 - [x] `TEMPLATE_FIELD_INVALID` and `VALIDATION_FAILED` metadata map to per-field messages, not one blob
 - [x] Unknown/future code renders a generic fr fallback and logs the raw code to console
 - [x] Unit tests: retry reuses the key; replay renders success; each discriminated branch reachable

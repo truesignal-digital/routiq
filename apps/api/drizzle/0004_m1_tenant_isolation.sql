@@ -2,25 +2,25 @@
 
 -- Create runtime role (idempotent)
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'asset_app') THEN
-    CREATE ROLE asset_app LOGIN PASSWORD 'asset_app' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'routiq_app') THEN
+    CREATE ROLE routiq_app LOGIN PASSWORD 'routiq_app' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
   END IF;
 END $$;
 
 --> statement-breakpoint
 
 -- Grant schema access
-GRANT USAGE ON SCHEMA public TO asset_app;
+GRANT USAGE ON SCHEMA public TO routiq_app;
 
 --> statement-breakpoint
 
--- Grant SELECT/INSERT/UPDATE/DELETE on all current tables to asset_app
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO asset_app;
+-- Grant SELECT/INSERT/UPDATE/DELETE on all current tables to routiq_app
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO routiq_app;
 
 --> statement-breakpoint
 
 -- Revoke UPDATE, DELETE on audit_events (append-only)
-REVOKE UPDATE, DELETE ON audit_events FROM asset_app;
+REVOKE UPDATE, DELETE ON audit_events FROM routiq_app;
 
 --> statement-breakpoint
 

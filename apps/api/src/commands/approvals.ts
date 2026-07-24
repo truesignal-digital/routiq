@@ -1,4 +1,4 @@
-import type { CommandEnvelope } from "@asset/contracts";
+import type { CommandEnvelope } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { approvalRules, branches } from "../db/schema.js";
 import { CommandError } from "./dispatcher.js";

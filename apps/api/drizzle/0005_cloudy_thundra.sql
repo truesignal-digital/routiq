@@ -74,8 +74,8 @@ CREATE POLICY tenant_isolation ON command_source_artifacts
   USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
   WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE, DELETE ON categories TO asset_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON categories TO routiq_app;
 --> statement-breakpoint
-GRANT SELECT, INSERT ON source_artifacts TO asset_app;
+GRANT SELECT, INSERT ON source_artifacts TO routiq_app;
 --> statement-breakpoint
-GRANT SELECT, INSERT ON command_source_artifacts TO asset_app;
+GRANT SELECT, INSERT ON command_source_artifacts TO routiq_app;

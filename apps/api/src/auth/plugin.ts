@@ -1,5 +1,5 @@
-import type { AuthErrorCode } from "@asset/contracts";
-import { loginRequest } from "@asset/contracts";
+import type { AuthErrorCode } from "@routiq/contracts";
+import { loginRequest } from "@routiq/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { resolveAuthContext } from "./context.js";
 import { loginWithPin } from "./local.js";

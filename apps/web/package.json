@@ -1,5 +1,5 @@
 {
-  "name": "@asset/web",
+  "name": "@routiq/web",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@asset/contracts": "workspace:*",
-    "@asset/domain": "workspace:*",
+    "@routiq/contracts": "workspace:*",
+    "@routiq/domain": "workspace:*",
     "@base-ui/react": "^1.6.0",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.4",

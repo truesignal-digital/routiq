@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import type { LoginRequest } from "@asset/contracts";
+import type { LoginRequest } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { credentials, principals, sessions, workspaces } from "../db/schema.js";
 import type { Db } from "../db/client.js";

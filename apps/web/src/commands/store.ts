@@ -1,4 +1,4 @@
-import type { CommandResult } from "@asset/contracts";
+import type { CommandResult } from "@routiq/contracts";
 
 /**
  * ADR-0001: the UI renders server truth plus explicit pending state — never

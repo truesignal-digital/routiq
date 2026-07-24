@@ -12,7 +12,7 @@
 - [x] i18next + ICU wired: fr-CM default, en catalog present; no sentence concatenation; chrome fully translated in both
 - [x] Web app manifest + icons: installable on Chrome/Android, standalone display; NO service worker
 - [x] Components sized against French label lengths; fr and en both render without overflow at 360px width
-- [x] `pnpm --filter @asset/web typecheck` and existing tests green
+- [x] `pnpm --filter @routiq/web typecheck` and existing tests green
 
 **Status:** ready-for-human
 

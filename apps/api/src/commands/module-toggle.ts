@@ -1,4 +1,4 @@
-import { disableModulePayload, enableModulePayload } from "@asset/contracts";
+import { disableModulePayload, enableModulePayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { workspaceModules } from "../db/schema.js";

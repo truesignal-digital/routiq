@@ -2,7 +2,7 @@ import {
   AUTH_ERROR_CODES,
   COMMAND_ERROR_CODES,
   VALIDATION_ERROR_CODES,
-} from "@asset/contracts";
+} from "@routiq/contracts";
 import { describe, expect, it } from "vitest";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";

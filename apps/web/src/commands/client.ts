@@ -1,4 +1,4 @@
-import type { ApiErrorCode, CommandResult, CommandSubmission } from "@asset/contracts";
+import type { ApiErrorCode, CommandResult, CommandSubmission } from "@routiq/contracts";
 import { extractApiError } from "../lib/api-error.js";
 import type { CommandStatusStore } from "./store.js";
 

@@ -7,7 +7,7 @@ import {
   templateFieldIssues,
   TEMPLATE_CODES,
   TEMPLATE_FIELDS,
-} from "@asset/contracts";
+} from "@routiq/contracts";
 import type { z } from "zod";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -21,7 +21,7 @@ import { commandClient, commandStatusStore } from "../commands/instance.js";
 import { createCommandIntent } from "../commands/intent.js";
 import { AttachmentField } from "../artifacts/AttachmentField.js";
 import { errorMessage } from "../lib/error-message.js";
-import { formatXAF } from "@asset/domain";
+import { formatXAF } from "@routiq/domain";
 
 type FormInput = z.input<typeof registerAssetPayload>;
 type FormOutput = z.output<typeof registerAssetPayload>;

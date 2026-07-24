@@ -5,7 +5,7 @@ import {
   type ModuleCode,
   type Role,
   type ValidationErrorCode,
-} from "@asset/contracts";
+} from "@routiq/contracts";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AuthContext } from "../auth/types.js";
@@ -58,7 +58,7 @@ export class CommandError extends Error {
  *      of a disabled module are rejected MODULE_DISABLED; CORE is always on.
  *   3. A catalog default in approval-defaults.ts — without one every call is
  *      rejected APPROVAL_REQUIRED (registry.test.ts enforces this).
- *   4. New tables need explicit GRANTs to asset_app in their migration
+ *   4. New tables need explicit GRANTs to routiq_app in their migration
  *      (db/grants.test.ts enforces this).
  * The dispatcher supplies auth, module check, idempotency, approval evaluation,
  * receipt, audit atomicity; execute() owns only references, invariants, writes.

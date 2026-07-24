@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { MODULE_CODES } from "@asset/contracts";
+import { MODULE_CODES } from "@routiq/contracts";
 import { and, eq, sql } from "drizzle-orm";
 import Fastify from "fastify";
 import { LocalSessionProvider } from "./auth/local.js";

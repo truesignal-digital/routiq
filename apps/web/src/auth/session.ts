@@ -21,7 +21,7 @@ interface PersistedShape {
   lastIdentity?: Identity;
 }
 
-const STORAGE_KEY = "asset.sessions.v1";
+const STORAGE_KEY = "routiq.sessions.v1";
 
 function keyOf({ workspaceSlug, username }: Identity): string {
   return `${workspaceSlug}:${username}`;

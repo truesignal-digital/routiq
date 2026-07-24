@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { BranchScope, ModuleCode, PrincipalType, Role } from "@asset/contracts";
+import type { BranchScope, ModuleCode, PrincipalType, Role } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "./store.js";
 
 export interface MeContext {

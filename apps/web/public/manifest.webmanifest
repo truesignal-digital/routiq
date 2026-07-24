@@ -1,7 +1,7 @@
 {
-  "name": "Gestion des actifs",
-  "short_name": "Actifs",
-  "description": "Cycle de vie et rentabilité des actifs de transport",
+  "name": "ROUTIQ",
+  "short_name": "ROUTIQ",
+  "description": "ROUTIQ — cycle de vie et rentabilité des actifs de transport",
   "lang": "fr-CM",
   "start_url": "/",
   "scope": "/",

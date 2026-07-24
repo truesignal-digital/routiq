@@ -1,5 +1,5 @@
 {
-  "name": "@asset/api",
+  "name": "@routiq/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@asset/contracts": "workspace:*",
-    "@asset/domain": "workspace:*",
+    "@routiq/contracts": "workspace:*",
+    "@routiq/domain": "workspace:*",
     "@aws-sdk/client-s3": "3.1093.0",
     "@aws-sdk/s3-request-presigner": "3.1093.0",
     "@sentry/node": "10.67.0",

@@ -1,10 +1,10 @@
-# CLAUDE.md
+# CLAUDE.md — ROUTIQ
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
 
-Asset lifecycle & profitability platform for Cameroonian transport operators (trucking + passenger transport). Pilot-stage: two known tenants, French-first users, intermittent connectivity, offline capture on low-end Android. **`ARCHITECTURE.md` (v0.2) is the authoritative design document — consult it before any non-trivial design decision; section references below point into it.**
+**ROUTIQ** is an asset lifecycle & profitability platform for Cameroonian transport operators (trucking + passenger transport). Pilot-stage: two known tenants, French-first users, intermittent connectivity, offline capture on low-end Android. **`ARCHITECTURE.md` (v0.2) is the authoritative design document — consult it before any non-trivial design decision; section references below point into it.**
 
 ## Commands
 
@@ -13,12 +13,12 @@ pnpm workspace monorepo (never npm/yarn). Node ≥ 24.
 ```bash
 pnpm typecheck                    # all packages (tsc --noEmit)
 pnpm test                         # all packages (vitest run)
-pnpm --filter @asset/api test     # one package
-pnpm --filter @asset/api exec vitest run src/server.test.ts   # single test file
+pnpm --filter @routiq/api test     # one package
+pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file
 pnpm db:generate                  # drizzle-kit generate (from apps/api/src/db/schema.ts)
 pnpm db:migrate                   # drizzle-kit migrate
 docker compose up -d              # Postgres 17 on localhost:5435
-docker compose --profile appliance up   # full-stack cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: asset/asset/asset_dev)
+docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev)
 ```
 
 - Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
@@ -29,10 +29,10 @@ docker compose --profile appliance up   # full-stack cold start (§6a guard 4): 
 
 | Path | Package | Role |
 |---|---|---|
-| `apps/api` | `@asset/api` | Fastify command API + Drizzle schema/migrations |
-| `apps/web` | `@asset/web` | Vite + React 19 PWA |
-| `packages/contracts` | `@asset/contracts` | Zod command envelopes + payload schemas — shared by API, web, offline sync, future AI |
-| `packages/domain` | `@asset/domain` | Pure domain logic (money, invariants); no I/O deps |
+| `apps/api` | `@routiq/api` | Fastify command API + Drizzle schema/migrations |
+| `apps/web` | `@routiq/web` | Vite + React 19 PWA |
+| `packages/contracts` | `@routiq/contracts` | Zod command envelopes + payload schemas — shared by API, web, offline sync, future AI |
+| `packages/domain` | `@routiq/domain` | Pure domain logic (money, invariants); no I/O deps |
 
 TypeScript strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `verbatimModuleSyntax` (`tsconfig.base.json`). ESM everywhere; intra-package imports use `.js` extensions.
 

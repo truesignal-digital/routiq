@@ -15,7 +15,7 @@
 
 ## Comments
 
-- Done (2026-07-23, web-ui). The web-foundation form already covered most criteria (shared-contract resolver, template-driven custom fields with required markers, replay-safe submit, field-level TEMPLATE_FIELD_INVALID); this ticket added the gaps: full payload mirror (chassisNumber, acquisitionDate, acquisitionAmountMinor — no local re-definition anywhere), XAF entry as integer minor units with a live `formatXAF` preview from `@asset/domain` ("45 000 000 FCFA", zero /100 anywhere), `DUPLICATE_ASSET_CODE` lands on the code field via setError.
+- Done (2026-07-23, web-ui). The web-foundation form already covered most criteria (shared-contract resolver, template-driven custom fields with required markers, replay-safe submit, field-level TEMPLATE_FIELD_INVALID); this ticket added the gaps: full payload mirror (chassisNumber, acquisitionDate, acquisitionAmountMinor — no local re-definition anywhere), XAF entry as integer minor units with a live `formatXAF` preview from `@routiq/domain` ("45 000 000 FCFA", zero /100 anywhere), `DUPLICATE_ASSET_CODE` lands on the code field via setError.
 - `GET /v1/categories?kind=` built in reads/ (UI-owned per the queue note): kind-validated, workspace-scoped, active-only, bilingual labels — the form keeps using the richer `/v1/reference/asset-registration`; `/v1/categories` serves ticket 06 (DOCUMENT_TYPE verified live: Assurance/Permis).
 - Double-tap proven by test: two concurrent submits of one payload post byte-identical envelopes; the replay resolves as plain success (plus the earlier live kill-API-retry proof → one row).
 - Verified e2e on :5435: registered DLA-T-011 with 45 000 000 XAF → stored `acquisition_amount_minor=45000000`. 57 web tests + full suite green, typecheck clean.

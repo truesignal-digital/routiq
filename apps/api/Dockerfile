@@ -7,7 +7,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/domain/package.json packages/domain/
-RUN pnpm install --frozen-lockfile --filter @asset/api...
+RUN pnpm install --frozen-lockfile --filter @routiq/api...
 
 COPY packages/contracts packages/contracts
 COPY packages/domain packages/domain

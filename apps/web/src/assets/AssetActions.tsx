@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type {
   AssignAssetPayload,
   CommissionAssetPayload,
-} from "@asset/contracts";
+} from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { isReadOnlyRole, useMeContext } from "../auth/me.js";

@@ -5,6 +5,6 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    url: process.env["DATABASE_URL"] ?? "postgres://asset:asset@localhost:5435/asset_dev",
+    url: process.env["DATABASE_URL"] ?? "postgres://routiq:routiq@localhost:5435/routiq_dev",
   },
 });

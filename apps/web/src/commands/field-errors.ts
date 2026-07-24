@@ -1,4 +1,4 @@
-import type { TemplateFieldIssue } from "@asset/contracts";
+import type { TemplateFieldIssue } from "@routiq/contracts";
 
 type Translate = (key: string) => string;
 type SetFieldError = (field: string, message: string) => void;

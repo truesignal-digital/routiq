@@ -1,4 +1,4 @@
-import { createSubmission } from "@asset/contracts";
+import { createSubmission } from "@routiq/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { createCommandClient } from "./client.js";
 import { CommandStatusStore } from "./store.js";

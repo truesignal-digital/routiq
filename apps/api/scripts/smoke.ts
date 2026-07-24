@@ -1,7 +1,7 @@
 /**
  * Hands-on smoke of the spine against the local compose Postgres.
  * Prereqs: `docker compose up -d` and `pnpm db:migrate`.
- * Run: pnpm --filter @asset/api exec tsx scripts/smoke.ts
+ * Run: pnpm --filter @routiq/api exec tsx scripts/smoke.ts
  */
 import "dotenv/config";
 import { randomUUID } from "node:crypto";

@@ -1,4 +1,4 @@
-import { createSubmission, type CommandSubmission, type SubmissionOptions } from "@asset/contracts";
+import { createSubmission, type CommandSubmission, type SubmissionOptions } from "@routiq/contracts";
 
 /**
  * Retrying an unchanged form must re-post the SAME submission (same

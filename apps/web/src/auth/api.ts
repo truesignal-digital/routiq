@@ -1,4 +1,4 @@
-import { loginResponse, type LoginRequest } from "@asset/contracts";
+import { loginResponse, type LoginRequest } from "@routiq/contracts";
 import { extractApiError } from "../lib/api-error.js";
 import type { StoredSession } from "./session.js";
 

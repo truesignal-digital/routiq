@@ -1,4 +1,4 @@
-import type { ModuleCode } from "@asset/contracts";
+import type { ModuleCode } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { workspaceModules } from "../db/schema.js";
 import type { Tx } from "../commands/dispatcher.js";

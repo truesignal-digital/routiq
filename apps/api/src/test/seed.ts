@@ -1,4 +1,4 @@
-import type { PrincipalType, Role } from "@asset/contracts";
+import type { PrincipalType, Role } from "@routiq/contracts";
 import { randomUUID } from "node:crypto";
 import { hashPin } from "../auth/pin.js";
 import { branches, categories, credentials, memberships, principals, workspaces, approvalRules } from "../db/schema.js";

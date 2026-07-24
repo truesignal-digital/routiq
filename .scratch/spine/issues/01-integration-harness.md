@@ -9,7 +9,7 @@
 - [x] Test suite boots a Testcontainers Postgres 17 and applies all drizzle migrations before tests run
 - [x] A shared fixture provides the built server + a database handle to tests; containers are reused across the file run (not per-test) for speed
 - [x] Health check test passes through the fixture against the real database
-- [x] `pnpm --filter @asset/api test` runs the whole thing with no local Postgres or manual setup (Docker required is fine)
+- [x] `pnpm --filter @routiq/api test` runs the whole thing with no local Postgres or manual setup (Docker required is fine)
 - [x] Existing unit tests (contracts, domain) still pass unchanged
 
 ## Comments

@@ -8,7 +8,7 @@ import { auditEvents, commands, assets } from "./schema.js";
 
 /**
  * RLS structural tests: verify tenant isolation below the app layer.
- * Uses raw pg.Client connected as asset_app to test RLS policies.
+ * Uses raw pg.Client connected as routiq_app to test RLS policies.
  */
 describe("rls tenant isolation", () => {
   let testApp: Awaited<ReturnType<typeof createTestApp>>;
@@ -105,11 +105,11 @@ describe("rls tenant isolation", () => {
       entityId: randomUUID(),
     });
 
-    // Create raw pg.Client as asset_app
+    // Create raw pg.Client as routiq_app
     const databaseUrl = inject("databaseUrl");
     const url = new URL(databaseUrl);
-    url.username = "asset_app";
-    url.password = "asset_app";
+    url.username = "routiq_app";
+    url.password = "routiq_app";
     appClient = new pg.Client({ connectionString: url.toString() });
     await appClient.connect();
   });
@@ -119,14 +119,14 @@ describe("rls tenant isolation", () => {
     if (testApp) await testApp.close();
   });
 
-  it("workspace A asset_app sees only A's assets when workspace_id is set", async () => {
+  it("workspace A routiq_app sees only A's assets when workspace_id is set", async () => {
     await appClient.query(`SET app.workspace_id = '${workspaceA.workspace.id}'`);
     const result = await appClient.query("SELECT asset_code FROM assets");
     expect(result.rows.length).toBe(1);
     expect(result.rows[0].asset_code).toMatch(/^ASSET-A-/);
   });
 
-  it("workspace A asset_app gets zero rows querying B's workspace_id", async () => {
+  it("workspace A routiq_app gets zero rows querying B's workspace_id", async () => {
     await appClient.query(`SET app.workspace_id = '${workspaceA.workspace.id}'`);
     const result = await appClient.query(
       "SELECT asset_code FROM assets WHERE workspace_id = $1",
@@ -229,8 +229,8 @@ describe("rls tenant isolation", () => {
   it("no app.workspace_id set returns zero rows", async () => {
     // Fresh connection to guarantee no workspace_id is set
     const freshUrl = new URL(inject("databaseUrl"));
-    freshUrl.username = "asset_app";
-    freshUrl.password = "asset_app";
+    freshUrl.username = "routiq_app";
+    freshUrl.password = "routiq_app";
     const freshClient = new pg.Client({ connectionString: freshUrl.toString() });
     await freshClient.connect();
 

@@ -13,7 +13,7 @@ import {
   commissionAssetPayload,
   type AssignAssetPayload,
   type CommissionAssetPayload,
-} from "@asset/contracts";
+} from "@routiq/contracts";
 import { assets, branches, memberships } from "../db/schema.js";
 
 export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {

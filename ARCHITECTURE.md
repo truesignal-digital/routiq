@@ -1,4 +1,4 @@
-# Architecture — Asset Lifecycle & Profitability Platform
+# ROUTIQ Architecture — Asset Lifecycle & Profitability Platform
 
 **Version 0.2 — 22 July 2026 — for review before build**
 

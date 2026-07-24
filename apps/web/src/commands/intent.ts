@@ -1,4 +1,4 @@
-import type { CommandSubmission, SubmissionOptions } from "@asset/contracts";
+import type { CommandSubmission, SubmissionOptions } from "@routiq/contracts";
 import type { CommandClient, SubmitResult } from "./client.js";
 import { SubmissionCache } from "./submission-cache.js";
 

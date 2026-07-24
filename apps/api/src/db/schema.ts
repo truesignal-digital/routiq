@@ -1,4 +1,4 @@
-import { MODULE_CODES, PRINCIPAL_TYPES, ROLES } from "@asset/contracts";
+import { MODULE_CODES, PRINCIPAL_TYPES, ROLES } from "@routiq/contracts";
 import { sql } from "drizzle-orm";
 import {
   bigint,

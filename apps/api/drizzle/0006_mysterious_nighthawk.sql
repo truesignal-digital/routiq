@@ -30,4 +30,4 @@ CREATE POLICY tenant_isolation ON documents
   USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
   WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
 --> statement-breakpoint
-GRANT SELECT, INSERT ON documents TO asset_app;
+GRANT SELECT, INSERT ON documents TO routiq_app;

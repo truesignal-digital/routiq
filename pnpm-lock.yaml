@@ -10,10 +10,10 @@ importers:
 
   apps/api:
     dependencies:
-      '@asset/contracts':
+      '@routiq/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@asset/domain':
+      '@routiq/domain':
         specifier: workspace:*
         version: link:../../packages/domain
       '@aws-sdk/client-s3':
@@ -74,10 +74,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@asset/contracts':
+      '@routiq/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@asset/domain':
+      '@routiq/domain':
         specifier: workspace:*
         version: link:../../packages/domain
       '@base-ui/react':

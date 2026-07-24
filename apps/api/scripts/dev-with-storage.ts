@@ -9,7 +9,7 @@ const storage = createS3Storage({
   endpoint: process.env["S3_ENDPOINT"] ?? "http://localhost:9100",
   region: "us-east-1",
   bucket: process.env["S3_BUCKET"] ?? "artifacts",
-  accessKeyId: process.env["S3_ACCESS_KEY"] ?? "asset",
+  accessKeyId: process.env["S3_ACCESS_KEY"] ?? "routiq",
   secretAccessKey: process.env["S3_SECRET_KEY"] ?? "assetsecret",
   forcePathStyle: true,
 });

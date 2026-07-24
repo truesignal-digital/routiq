@@ -89,7 +89,7 @@ describe("SessionStore", () => {
   });
 
   it("tolerates corrupted storage content", () => {
-    storage.setItem("asset.sessions.v1", "{not json");
+    storage.setItem("routiq.sessions.v1", "{not json");
     const recovered = new SessionStore(storage);
     expect(recovered.getActive()).toBeUndefined();
   });

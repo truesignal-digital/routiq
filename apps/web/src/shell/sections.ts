@@ -1,5 +1,5 @@
 import { Menu, Truck, type LucideIcon } from "lucide-react";
-import type { ModuleCode } from "@asset/contracts";
+import type { ModuleCode } from "@routiq/contracts";
 
 export interface ShellSection {
   key: "assets" | "more";

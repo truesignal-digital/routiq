@@ -1,4 +1,4 @@
-import { addOrRenewDocumentPayload } from "@asset/contracts";
+import { addOrRenewDocumentPayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { assets, categories, documents } from "../db/schema.js";

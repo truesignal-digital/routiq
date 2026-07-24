@@ -3,11 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestApp } from "../test/fixture.js";
 
 /**
- * Convention guard: migrations must GRANT new tables to asset_app explicitly
+ * Convention guard: migrations must GRANT new tables to routiq_app explicitly
  * (no ALTER DEFAULT PRIVILEGES — see migration 0004). A failure here means a
  * migration added a table the runtime role cannot touch.
  */
-describe("asset_app grants", () => {
+describe("routiq_app grants", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
 
   beforeAll(async () => {
@@ -22,7 +22,7 @@ describe("asset_app grants", () => {
     const result = await ctx.db.execute(sql`
       select table_name, privilege_type
       from information_schema.role_table_grants
-      where grantee = 'asset_app' and table_schema = 'public'
+      where grantee = 'routiq_app' and table_schema = 'public'
     `);
     const map = new Map<string, Set<string>>();
     for (const row of result.rows as { table_name: string; privilege_type: string }[]) {
@@ -43,7 +43,7 @@ describe("asset_app grants", () => {
       const privs = grants.get(tablename);
       expect(
         privs?.has("SELECT") && privs.has("INSERT"),
-        `table "${tablename}" lacks asset_app grants — the migration that created it ` +
+        `table "${tablename}" lacks routiq_app grants — the migration that created it ` +
           `must GRANT explicitly (default privileges are deliberately not configured).`,
       ).toBe(true);
     }

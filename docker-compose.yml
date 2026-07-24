@@ -1,16 +1,18 @@
+name: routiq
+
 services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: asset
-      POSTGRES_PASSWORD: asset
-      POSTGRES_DB: asset_dev
+      POSTGRES_USER: routiq
+      POSTGRES_PASSWORD: routiq
+      POSTGRES_DB: routiq_dev
     ports:
       - "5435:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U asset -d asset_dev"]
+      test: ["CMD-SHELL", "pg_isready -U routiq -d routiq_dev"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -24,7 +26,7 @@ services:
       dockerfile: apps/api/Dockerfile
     profiles: ["appliance"]
     environment:
-      DATABASE_URL: postgres://asset:asset@postgres:5432/asset_dev
+      DATABASE_URL: postgres://routiq:routiq@postgres:5432/routiq_dev
       PORT: 3001
     ports:
       - "3001:3001"
@@ -42,3 +44,4 @@ services:
 
 volumes:
   pgdata:
+    name: routiq_pgdata

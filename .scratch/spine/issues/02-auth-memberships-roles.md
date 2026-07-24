@@ -15,7 +15,7 @@
 
 ## Comments
 
-- Implemented (2026-07-22): `memberships`/`credentials`/`sessions` tables (migration 0001); role + principal-type registries and stable error codes in `@asset/contracts`; `IdentityProvider` seam with `LocalSessionProvider` (opaque sha256-hashed session tokens, 14-day TTL); scrypt PIN hashing with cost params encoded in the hash; timing-equalized login (dummy verify on unknown username); `requireAuth` hook + `GET /v1/me`; dispatcher `CommandContext` now aliases the server-derived `AuthContext`.
+- Implemented (2026-07-22): `memberships`/`credentials`/`sessions` tables (migration 0001); role + principal-type registries and stable error codes in `@routiq/contracts`; `IdentityProvider` seam with `LocalSessionProvider` (opaque sha256-hashed session tokens, 14-day TTL); scrypt PIN hashing with cost params encoded in the hash; timing-equalized login (dummy verify on unknown username); `requireAuth` hook + `GET /v1/me`; dispatcher `CommandContext` now aliases the server-derived `AuthContext`.
 - Deliberately deferred, carried by later tickets:
   - Admin provisioning commands (create member/credential) → ticket 03 command pipeline; tests seed directly for now.
   - `row_version`/`created_by_command_id` on `memberships`/`credentials`, composite tenant FKs, and a possible `membership_branches` join table (branch_ids is a bare uuid[]) → tickets 03/04.

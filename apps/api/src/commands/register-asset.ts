@@ -1,4 +1,4 @@
-import { registerAssetPayload } from "@asset/contracts";
+import { registerAssetPayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { assets, branches, categories } from "../db/schema.js";

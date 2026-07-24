@@ -1,4 +1,4 @@
-import type { BranchScope, PrincipalType, Role } from "@asset/contracts";
+import type { BranchScope, PrincipalType, Role } from "@routiq/contracts";
 
 /** What verifying a bearer token yields — nothing provider-specific may leak past this. */
 export interface VerifiedIdentity {
