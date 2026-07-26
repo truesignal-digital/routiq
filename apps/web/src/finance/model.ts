@@ -2,6 +2,7 @@ import { z } from "zod";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
+  PeriodRead,
 } from "@routiq/contracts";
 
 type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
@@ -17,8 +18,8 @@ export function formatMoneyXaf(minor: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(minor);
-  // Normalize non-breaking space (U+202F) and other whitespace to regular space
-  return formatted.replace(/[  ]/g, " ");
+  // Replace non-breaking space (U+202F) and other whitespace with regular space
+  return formatted.replace(/\s/g, " ");
 }
 
 /**
@@ -126,4 +127,49 @@ export function isOwnSubmission(
   sessionPrincipalId: string | undefined,
 ): boolean {
   return sessionPrincipalId !== undefined && submittedByPrincipalId === sessionPrincipalId;
+}
+
+/**
+ * Compute the current period code (YYYY-MM format) from today's date.
+ */
+export function currentPeriodCode(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+/**
+ * Merge an implicit OPEN period for the current month if not present.
+ * Allows locking the current month even if no entries have been posted yet.
+ */
+export function mergeImplicitCurrentPeriod(
+  periods: PeriodRead[],
+): PeriodRead[] {
+  const current = currentPeriodCode();
+  const hasCurrentPeriod = periods.some((p) => p.periodCode === current);
+
+  if (hasCurrentPeriod) {
+    return periods;
+  }
+
+  return [
+    {
+      periodCode: current,
+      status: "OPEN" as const,
+      lockedAt: null,
+      entryCount: 0,
+      rowVersion: 0,
+    },
+    ...periods,
+  ];
+}
+
+/**
+ * Validate reopen reason (required, 1-500 chars after trim).
+ * Mirrors the contract bound in packages/contracts/src/commands/lock-period.ts
+ */
+export function validateReopenReason(reason: string): boolean {
+  const trimmed = reason.trim();
+  return trimmed.length > 0 && trimmed.length <= 500;
 }

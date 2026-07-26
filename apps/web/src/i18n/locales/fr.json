@@ -317,6 +317,32 @@
       "cancel": "Annuler",
       "submitting": "En cours…",
       "done": "Fermer"
+    },
+    "periods": {
+      "title": "Gestion des périodes",
+      "back": "Retour",
+      "accessDenied": "Vous n'avez pas accès à cette fonctionnalité.",
+      "loading": "Chargement…",
+      "loadFailed": "Impossible de charger les périodes. Réessayez.",
+      "retry": "Réessayer",
+      "empty": "Aucune période disponible.",
+      "statusOpen": "Ouverte",
+      "statusLocked": "Verrouillée depuis le {{date}}",
+      "entryCount": "{{count}} écriture(s)",
+      "lock": "Verrouiller",
+      "reopen": "Rouvrir",
+      "lockTitle": "Verrouiller la période",
+      "reopenTitle": "Rouvrir la période",
+      "lockExplanation": "Une fois verrouillée, aucune écriture ne pourra être créée pour cette période.",
+      "reasonLabel": "Motif de la réouverture",
+      "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
+      "cancel": "Annuler",
+      "submitting": "En cours…",
+      "locked": "Période verrouillée",
+      "reopened": "Période rouverte",
+      "warningsLabel": "Avis",
+      "warningSubmittedEntries": "Cette période contient des écritures en attente d'approbation.",
+      "done": "Fermer"
     }
   }
 }

@@ -40,3 +40,10 @@ export function canApproveEntries(
     ENTRY_APPROVERS.includes(role)
   );
 }
+
+export function canManagePeriods(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return canApproveEntries(role, enabledModules);
+}

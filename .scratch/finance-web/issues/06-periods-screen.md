@@ -1,6 +1,6 @@
 # 06 — Periods screen + lock/reopen
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 02
 
 **What to build:** Finance → Periods (FINANCE_APPROVER + ADMIN only) lists months newest first with status (Ouvert/Verrouillé), entry count, and lockedAt. Lock action on an OPEN (or absent — lock creates it) period: confirm dialog explaining the boundary ("les écritures de ce mois seront définitives"), fires `lock-period.v1`. Reopen on a LOCKED period requires a reason, fires `reopen-period.v1`.
@@ -17,7 +17,11 @@ Blocked by: 02
 
 ## Acceptance
 
-- [ ] Lock and reopen payload mapping tests (reopen reason required)
-- [ ] Warning rendering on lock covered
-- [ ] Implicit current-month row logic tested (model test)
-- [ ] Role gating test; web tests + typecheck green
+- [x] Lock and reopen payload mapping tests (reopen reason required)
+- [x] Warning rendering on lock covered
+- [x] Implicit current-month row logic tested (model test)
+- [x] Role gating test; web tests + typecheck green
+
+## Comments
+
+2026-07-26 [codex] clean first-round pass. currentPeriodCode/mergeImplicitCurrentPeriod/validateReopenReason live in finance/model.ts and are imported by both screen and tests (13 new tests: merge absent/present/preserve, reason bounds incl trim, role gating incl module + undefined). PERIOD_HAS_SUBMITTED_ENTRIES notice rendered on lock; 24 fr/en keys at parity. 118 web tests + typecheck green, Fable-verified.

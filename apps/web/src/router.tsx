@@ -15,6 +15,7 @@ import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
 import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
 import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
+import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
 import { AppShell } from "./shell/AppShell.js";
 
 const rootRoute = createRootRoute();
@@ -90,6 +91,12 @@ const financeApprovalsRoute = createRoute({
   component: FinanceApprovalsScreen,
 });
 
+const financePeriodsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/finance/periods",
+  component: FinancePeriodsScreen,
+});
+
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
@@ -107,6 +114,7 @@ const routeTree = rootRoute.addChildren([
     financeEntriesRoute,
     financeEntryDetailRoute,
     financeApprovalsRoute,
+    financePeriodsRoute,
     moreRoute,
   ]),
 ]);
