@@ -14,7 +14,9 @@
         }
       ],
       "registryDependencies": [],
-      "dependencies": ["class-variance-authority"]
+      "dependencies": [
+        "class-variance-authority"
+      ]
     },
     {
       "name": "card",
@@ -78,8 +80,13 @@
           "target": "components/ui/form.tsx"
         }
       ],
-      "registryDependencies": [],
-      "dependencies": ["react-hook-form"]
+      "registryDependencies": [
+        "label"
+      ],
+      "dependencies": [
+        "react-hook-form",
+        "@base-ui/react"
+      ]
     },
     {
       "name": "alert-dialog",
@@ -91,7 +98,9 @@
           "target": "components/ui/alert-dialog.tsx"
         }
       ],
-      "registryDependencies": ["button"],
+      "registryDependencies": [
+        "button"
+      ],
       "dependencies": []
     },
     {
@@ -104,8 +113,12 @@
           "target": "components/ui/dialog.tsx"
         }
       ],
-      "registryDependencies": ["button"],
-      "dependencies": ["lucide-react"]
+      "registryDependencies": [
+        "button"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ]
     },
     {
       "name": "select",
@@ -118,7 +131,9 @@
         }
       ],
       "registryDependencies": [],
-      "dependencies": ["lucide-react"]
+      "dependencies": [
+        "lucide-react"
+      ]
     },
     {
       "name": "separator",
@@ -157,7 +172,9 @@
         }
       ],
       "registryDependencies": [],
-      "dependencies": ["class-variance-authority"]
+      "dependencies": [
+        "class-variance-authority"
+      ]
     },
     {
       "name": "table",
@@ -183,7 +200,10 @@
         }
       ],
       "registryDependencies": [],
-      "dependencies": ["sonner", "lucide-react"]
+      "dependencies": [
+        "sonner",
+        "lucide-react"
+      ]
     },
     {
       "name": "file-upload",
@@ -195,8 +215,13 @@
           "target": "components/ui/file-upload.tsx"
         }
       ],
-      "registryDependencies": ["button"],
-      "dependencies": ["lucide-react", "react-i18next"]
+      "registryDependencies": [
+        "button"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
     },
     {
       "name": "data-table",
@@ -208,8 +233,13 @@
           "target": "components/data-table.tsx"
         }
       ],
-      "registryDependencies": ["button", "table"],
-      "dependencies": ["@tanstack/react-table"]
+      "registryDependencies": [
+        "button",
+        "table"
+      ],
+      "dependencies": [
+        "@tanstack/react-table"
+      ]
     },
     {
       "name": "page",
@@ -221,8 +251,13 @@
           "target": "components/page.tsx"
         }
       ],
-      "registryDependencies": ["button", "skeleton"],
-      "dependencies": ["lucide-react"]
+      "registryDependencies": [
+        "button",
+        "skeleton"
+      ],
+      "dependencies": [
+        "lucide-react"
+      ]
     },
     {
       "name": "utils",
@@ -235,7 +270,10 @@
         }
       ],
       "registryDependencies": [],
-      "dependencies": ["clsx", "tailwind-merge"]
+      "dependencies": [
+        "clsx",
+        "tailwind-merge"
+      ]
     },
     {
       "name": "error-message",
@@ -261,7 +299,120 @@
         }
       ],
       "registryDependencies": [],
-      "dependencies": ["sonner"]
+      "dependencies": [
+        "sonner"
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/tabs.tsx",
+          "type": "registry:file",
+          "target": "components/ui/tabs.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/checkbox.tsx",
+          "type": "registry:file",
+          "target": "components/ui/checkbox.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react",
+        "lucide-react"
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/dropdown-menu.tsx",
+          "type": "registry:file",
+          "target": "components/ui/dropdown-menu.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react",
+        "lucide-react"
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/popover.tsx",
+          "type": "registry:file",
+          "target": "components/ui/popover.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react"
+      ]
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/alert.tsx",
+          "type": "registry:file",
+          "target": "components/ui/alert.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "class-variance-authority"
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/tooltip.tsx",
+          "type": "registry:file",
+          "target": "components/ui/tooltip.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react"
+      ]
+    },
+    {
+      "name": "sheet",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/sheet.tsx",
+          "type": "registry:file",
+          "target": "components/ui/sheet.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button"
+      ],
+      "dependencies": [
+        "@base-ui/react",
+        "lucide-react"
+      ]
     }
   ]
 }

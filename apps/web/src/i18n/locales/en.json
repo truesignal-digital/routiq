@@ -399,5 +399,8 @@
       "warningSubmittedEntries": "This period contains entries awaiting approval.",
       "done": "Close"
     }
+  },
+  "common": {
+    "close": "Close"
   }
 }

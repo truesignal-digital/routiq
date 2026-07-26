@@ -399,5 +399,8 @@
       "warningSubmittedEntries": "Cette période contient des écritures en attente d'approbation.",
       "done": "Fermer"
     }
+  },
+  "common": {
+    "close": "« Fermer »"
   }
 }
