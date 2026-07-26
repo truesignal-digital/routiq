@@ -1,6 +1,6 @@
 # 01 — Entries + entry-detail reads
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: —
 
 **What to build:** The read contract handed over by `.scratch/financial-core/spec.md`: list and detail views for financial entries, shaped for the screens in tickets 03–04. Follow the documents-slice pattern (`packages/contracts/src/reads/documents.ts`, `apps/api/src/reads/documents.ts`) exactly.
@@ -36,3 +36,5 @@ Blocked by: —
 2026-07-26 [codex] implemented, Fable reviewed: contracts/routes/serializeMinor/tests match the ticket; independently verified 17/17 tests + typecheck green. Pagination cursor checked against DESC NULLS LAST ordering (correct incl. null tail); postedAt is always JS Date (ms) so the ISO cursor round-trips without microsecond loss; 404 matches the documents pattern.
 
 2026-07-26 REGRESSION: the ticket-02 worker rewrote this ticket's verified route instead of extending it (NULLS FIRST ordering, broken null cursor, dropped branchId+periodCode filters, tests 17->13; 4 failing). Rework dispatched with an exact fix list. Re-verify before returning to ready-for-human. Process fix: verified tickets get committed immediately from now on.
+
+2026-07-26 (later) Re-verified after rework + Opus test coverage: 25/25 finance read tests, full suite 313 green. Committed.

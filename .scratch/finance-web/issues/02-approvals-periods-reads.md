@@ -1,6 +1,6 @@
 # 02 — Approvals + periods reads
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: —
 
 **What to build:** Read views for the approvals inbox (ticket 05) and periods screen (ticket 06). Same pattern and file placement as ticket 01 (shares `packages/contracts/src/reads/finance.ts` and `apps/api/src/reads/finance.ts` — coordinate if run in parallel, or run after 01).
@@ -24,7 +24,11 @@ Blocked by: —
 
 ## Acceptance
 
-- [ ] Submitter principal resolves correctly through the command receipt join
-- [ ] Scope test: branch-scoped approver sees only in-scope SUBMITTED entries; total matches
-- [ ] Periods: auto-created period appears with count; locked period carries lockedAt
-- [ ] Contracts exported + parse tests; vitest + typecheck green
+- [x] Submitter principal resolves correctly through the command receipt join
+- [x] Scope test: branch-scoped approver sees only in-scope SUBMITTED entries; total matches
+- [x] Periods: auto-created period appears with count; locked period carries lockedAt
+- [x] Contracts exported + parse tests; vitest + typecheck green
+
+## Comments
+
+2026-07-26 [codex] implemented routes/contracts; regressed ticket 01 in the process (see 01 comments), fixed on rework. [opus] wrote the route test coverage and caught a real bug: both count() selects were uncast (pg returns int8 as string), so approvals and periods 500'd on any workspace with data — the sole reason the earlier 15 tests looked green. Two ::integer casts applied per the period-commands.ts house pattern. Final: 25/25 finance read tests, adjacent command suites re-run green, full suite 313 green. Committed.
