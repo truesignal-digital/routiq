@@ -24,6 +24,7 @@ docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API 
 - Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
 - Dev servers (`pnpm --filter ... dev`) — assume already running; don't start them.
 - Dependency versions were deliberately pinned against the registry (ARCHITECTURE.md §8) — don't bump without reason. TypeScript 7 (native compiler), Zod 4 (`z.uuid()`, `z.iso.date()` — not the Zod 3 spellings), Tailwind 4 (CSS-first config, no tailwind.config.js), Drizzle 0.x (pin exact).
+- **UI headless layer is Base UI (`@base-ui/react`), NEVER Radix.** shadcn components use the `base-nova` style configured in `apps/web/components.json` — vendor via the shadcn CLI so it resolves Base UI-backed versions; adding any `@radix-ui` package is a bug.
 
 ## Layout
 
