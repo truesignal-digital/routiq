@@ -5,6 +5,20 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DataTable } from "./data-table.js";
 
+// Mock react-i18next
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        "dataTable.loading": "Loading…",
+        "dataTable.loadMore": "Load more",
+      };
+      return translations[key] || key;
+    },
+    i18n: { resolvedLanguage: "en" },
+  }),
+}));
+
 type Person = {
   name: string;
   email: string;
@@ -71,7 +85,7 @@ describe("DataTable", () => {
     expect(screen.getByText("grace@example.com")).toBeTruthy();
   });
 
-  it("calls onLoadMore only when another page exists", async () => {
+  it("renders localized load more button and calls onLoadMore", async () => {
     const onLoadMore = vi.fn();
     const { rerender } = render(
       <DataTable

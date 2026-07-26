@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, FileText } from "lucide-react";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
+import { formatMoney, formatDate, formatDateTime, localizedLabel, formatPaymentMethod } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -28,6 +28,7 @@ import { useEntry } from "../finance/useEntry.js";
 import { canReverseEntry } from "../finance/permissions.js";
 import { validateReversalReason } from "../finance/model.js";
 import { z } from "zod";
+import { ReversalLink } from "../finance/ReversalLink.js";
 import { reverseEntryPayload } from "@routiq/contracts";
 
 interface ReverseDialogState {
@@ -176,7 +177,7 @@ export function FinanceEntryDetailScreen() {
                 <dt className="text-xs font-semibold uppercase text-muted-foreground">
                   {t("finance.entries.detail.paymentMethod")}
                 </dt>
-                <dd className="mt-1">{entryQuery.data.paymentMethod}</dd>
+                <dd className="mt-1">{formatPaymentMethod(entryQuery.data.paymentMethod, t)}</dd>
               </div>
               {entryQuery.data.description && (
                 <div className="sm:col-span-2">
@@ -239,32 +240,10 @@ export function FinanceEntryDetailScreen() {
               <h2 className="mb-3 font-semibold">{t("finance.entries.detail.reversalChain")}</h2>
               <div className="space-y-2">
                 {entryQuery.data.reversesEntryId && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void navigate({
-                        to: "/finance/entries/$entryId",
-                        params: { entryId: entryQuery.data.reversesEntryId! },
-                      })
-                    }
-                    className="block text-left text-sm text-blue-600 hover:underline"
-                  >
-                    {t("finance.entries.detail.reversesEntry")} {entryQuery.data.reversesEntryId}
-                  </button>
+                  <ReversalLink entryId={entryQuery.data.reversesEntryId} type="reverses" />
                 )}
                 {entryQuery.data.reversedByEntryId && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void navigate({
-                        to: "/finance/entries/$entryId",
-                        params: { entryId: entryQuery.data.reversedByEntryId! },
-                      })
-                    }
-                    className="block text-left text-sm text-blue-600 hover:underline"
-                  >
-                    {t("finance.entries.detail.reversedByEntry")} {entryQuery.data.reversedByEntryId}
-                  </button>
+                  <ReversalLink entryId={entryQuery.data.reversedByEntryId} type="reversedBy" />
                 )}
               </div>
             </div>

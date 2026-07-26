@@ -119,7 +119,7 @@ export function FinancePeriodsScreen() {
     setActionDialog({ open: false });
   };
 
-  if (!canManage) {
+  if (me !== undefined && !canManage) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-6">
         <PageHeader title={t("finance.periods.title")} />

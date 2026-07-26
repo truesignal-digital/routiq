@@ -83,3 +83,14 @@ export function localizedLabel(
   }
   return fallback;
 }
+
+export function formatPaymentMethod(
+  method: "CASH" | "MOMO" | "OM" | "BANK" | "OTHER",
+  i18nT?: (key: string) => string,
+): string {
+  if (!i18nT) {
+    // Fallback if useTranslation not available
+    return method;
+  }
+  return i18nT(`finance.record.paymentMethods.${method.toLowerCase()}`);
+}

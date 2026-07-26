@@ -210,7 +210,7 @@ export function FinanceApprovalsScreen() {
     setActionDialog({ open: false });
   };
 
-  if (!canApprove) {
+  if (me !== undefined && !canApprove) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-6">
         <PageHeader title={t("finance.approvals.title")} />

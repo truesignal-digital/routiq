@@ -1,4 +1,5 @@
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   flexRender,
   getCoreRowModel,
@@ -47,6 +48,7 @@ export function DataTable<TData>({
   loadMore,
   emptyState,
 }: DataTableProps<TData>) {
+  const { t } = useTranslation();
   const isDesktop = useDesktopMediaQuery();
   const table = useReactTable({
     data,
@@ -159,7 +161,7 @@ export function DataTable<TData>({
           onClick={loadMore.onLoadMore}
           disabled={loadMore.isFetching}
         >
-          {loadMore.isFetching ? "Loading…" : "Load more"}
+          {loadMore.isFetching ? t("dataTable.loading") : t("dataTable.loadMore")}
         </Button>
       )}
     </div>

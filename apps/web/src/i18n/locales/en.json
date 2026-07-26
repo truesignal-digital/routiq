@@ -403,5 +403,9 @@
   },
   "common": {
     "close": "Close"
+  },
+  "dataTable": {
+    "loading": "Loading…",
+    "loadMore": "Load more"
   }
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useDebounce } from "../lib/useDebounce.js";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { FileText } from "lucide-react";
@@ -26,10 +27,14 @@ export function FinanceEntriesScreen() {
   const [periodCode, setPeriodCode] = useState<string>("");
   const [assetId, setAssetId] = useState<string>("");
 
+  const SEARCH_DEBOUNCE_MS = 300;
+  const debouncedPeriodCode = useDebounce(periodCode.trim(), SEARCH_DEBOUNCE_MS);
+  const debouncedAssetId = useDebounce(assetId.trim(), SEARCH_DEBOUNCE_MS);
+
   const entriesQuery = useEntries({
     ...(status ? { status } : {}),
-    ...(periodCode ? { periodCode } : {}),
-    ...(assetId ? { assetId } : {}),
+    ...(debouncedPeriodCode ? { periodCode: debouncedPeriodCode } : {}),
+    ...(debouncedAssetId ? { assetId: debouncedAssetId } : {}),
   });
 
   const allEntries = entriesQuery.data?.pages.flatMap((page) => page.entries) ?? [];

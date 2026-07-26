@@ -403,5 +403,9 @@
   },
   "common": {
     "close": "« Fermer »"
+  },
+  "dataTable": {
+    "loading": "Chargement…",
+    "loadMore": "Charger plus"
   }
 }

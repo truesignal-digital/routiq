@@ -31,7 +31,7 @@ import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
-import { localizedLabel } from "../lib/format.js";
+import { localizedLabel, formatPaymentMethod } from "../lib/format.js";
 
 function normalizeMoneySpacing(value: string): string {
   return value.replace(/ /g, " ");
@@ -435,7 +435,7 @@ function RecordForm({
                 <SelectContent>
                   {PAYMENT_METHODS.map((method) => (
                     <SelectItem key={method} value={method}>
-                      {t(`finance.record.paymentMethods.${paymentMethodKey(method)}`)}
+                      {t(`finance.record.paymentMethods.${method.toLowerCase()}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -559,9 +559,6 @@ function RecordForm({
   );
 }
 
-function paymentMethodKey(method: RecordFormValues["paymentMethod"]) {
-  return method.toLowerCase() as Lowercase<RecordFormValues["paymentMethod"]>;
-}
 
 function OutcomeView({
   outcome,
