@@ -550,6 +550,104 @@ describe("finance reads", () => {
     });
   });
 
+  describe("GET /v1/finance/entries?assetId", () => {
+    let assetToken: string;
+    let trackedAssetId: string;
+    let otherAssetId: string;
+    const trackedEntryIds: string[] = [];
+    const otherEntryIds: string[] = [];
+
+    beforeAll(async () => {
+      // Own workspace: the asset filter must not have to compete with the
+      // entries the other groups post against their own assets.
+      const seeded = await seedWorkspace(db);
+      const admin = await seedMember(db, {
+        workspaceId: seeded.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      assetToken = (
+        await createSession(db, {
+          principalId: admin.principal.id,
+          workspaceId: seeded.workspace.id,
+        })
+      ).token;
+
+      trackedAssetId = await registerAsset(assetToken, "ASSET-FILTER-001");
+      otherAssetId = await registerAsset(assetToken, "ASSET-FILTER-002");
+
+      // Five on the tracked asset, then two decoys the filter must exclude:
+      // one on a sibling asset, one with no asset at all.
+      for (let index = 0; index < 5; index += 1) {
+        const created = await recordExpense(assetToken, {
+          amountMinor: 10_000 + index,
+          assetId: trackedAssetId,
+        });
+        expect(created.recordStatus).toBe("POSTED");
+        trackedEntryIds.push(created.entryId);
+      }
+      otherEntryIds.push(
+        (
+          await recordExpense(assetToken, {
+            amountMinor: 20_000,
+            assetId: otherAssetId,
+          })
+        ).entryId,
+        (await recordExpense(assetToken, { amountMinor: 20_001 })).entryId,
+      );
+    });
+
+    it("returns only entries posted against that asset", async () => {
+      const body = await fetchEntriesPage(assetToken, null, {
+        assetId: trackedAssetId,
+      });
+
+      expect(body.entries.map((entry) => entry.id).sort()).toEqual(
+        [...trackedEntryIds].sort(),
+      );
+      expect(
+        body.entries.some((entry) => otherEntryIds.includes(entry.id)),
+      ).toBe(false);
+      expect(body.nextCursor).toBeNull();
+    });
+
+    it("composes with cursor pagination", async () => {
+      const pages: string[][] = [];
+      let cursor: string | null = null;
+      do {
+        const page = await fetchEntriesPage(assetToken, cursor, {
+          assetId: trackedAssetId,
+          limit: "2",
+        });
+        pages.push(page.entries.map((entry) => entry.id));
+        cursor = page.nextCursor;
+        if (pages.length > 5) throw new Error("cursor walk did not terminate");
+      } while (cursor !== null);
+
+      expect(pages.map((page) => page.length)).toEqual([2, 2, 1]);
+      const seenIds = pages.flat();
+      expect(new Set(seenIds).size).toBe(seenIds.length);
+      expect(new Set(seenIds)).toEqual(new Set(trackedEntryIds));
+    });
+
+    it("returns an empty page for an asset in another workspace", async () => {
+      const body = await fetchEntriesPage(assetToken, null, { assetId });
+
+      expect(body.entries).toEqual([]);
+      expect(body.nextCursor).toBeNull();
+    });
+
+    it("rejects a malformed asset id", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/finance/entries?assetId=not-a-uuid",
+        headers: { authorization: `Bearer ${assetToken}` },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+  });
+
   describe("GET /v1/finance/entries/:entryId reversal chain", () => {
     it("links the original and its mirror in both directions", async () => {
       const { entryId: originalEntryId, rowVersion } = await recordExpense(
@@ -897,13 +995,51 @@ describe("finance reads", () => {
     return { entryId, recordStatus: body.recordStatus, rowVersion: body.rowVersion };
   }
 
-  async function fetchEntriesPage(token: string, cursor: string | null) {
+  async function registerAsset(token: string, assetCode: string) {
+    const registeredAssetId = randomUUID();
+    const response = await ctx.app.inject({
+      method: "POST",
+      url: "/v1/commands/register-asset",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        version: 1,
+        envelope: {
+          commandId: randomUUID(),
+          idempotencyKey: `asset-${randomUUID()}`,
+          origin: "HUMAN_UI",
+        },
+        payload: {
+          assetId: registeredAssetId,
+          assetCode,
+          assetClassCode: "TRUCK",
+          templateCode: "TRUCKING",
+          branchCode: "DLA",
+        },
+      },
+    });
+    if (response.statusCode !== 200) {
+      throw new Error(
+        `register-asset failed: ${response.statusCode} ${response.body}`,
+      );
+    }
+    return registeredAssetId;
+  }
+
+  async function fetchEntriesPage(
+    token: string,
+    cursor: string | null,
+    filters: Record<string, string> = {},
+  ) {
+    const query = new URLSearchParams(filters);
+    if (cursor !== null) {
+      query.set("cursor", cursor);
+    }
+    const search = query.toString();
     const response = await ctx.app.inject({
       method: "GET",
-      url:
-        cursor === null
-          ? "/v1/finance/entries"
-          : `/v1/finance/entries?cursor=${encodeURIComponent(cursor)}`,
+      url: search === ""
+        ? "/v1/finance/entries"
+        : `/v1/finance/entries?${search}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.statusCode).toBe(200);

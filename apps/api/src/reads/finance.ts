@@ -5,7 +5,7 @@ import {
   pendingApprovalsResponse,
   periodsResponse,
 } from "@routiq/contracts";
-import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -77,6 +77,33 @@ export function registerFinanceReadRoutes(
 
           if (periodCode) {
             conditions.push(eq(postingPeriods.periodCode, periodCode));
+          }
+
+          // EXISTS, not a join: an entry may carry several postings on the same
+          // asset, and duplicated rows would corrupt the keyset page size. The
+          // subquery is correlated on workspace_id as well as the entry id, so
+          // it can only ever see postings inside the caller's tenant.
+          if (assetId) {
+            conditions.push(
+              exists(
+                tx
+                  .select({ one: sql`1` })
+                  .from(financialPostings)
+                  .where(
+                    and(
+                      eq(
+                        financialPostings.workspaceId,
+                        financialEntries.workspaceId,
+                      ),
+                      eq(
+                        financialPostings.financialEntryId,
+                        financialEntries.id,
+                      ),
+                      eq(financialPostings.assetId, assetId),
+                    ),
+                  ),
+              ),
+            );
           }
 
           if (decodedCursor) {
