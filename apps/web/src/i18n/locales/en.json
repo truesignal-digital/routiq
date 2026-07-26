@@ -332,6 +332,12 @@
     "periods": {
       "title": "Period management",
       "back": "Back",
+      "columns": {
+        "period": "Period",
+        "status": "Status",
+        "entries": "Entries",
+        "actions": "Actions"
+      },
       "accessDenied": "You do not have access to this feature.",
       "loading": "Loading…",
       "loadFailed": "Failed to load periods. Please try again.",

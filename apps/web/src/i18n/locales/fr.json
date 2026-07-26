@@ -332,6 +332,12 @@
     "periods": {
       "title": "Gestion des périodes",
       "back": "Retour",
+      "columns": {
+        "period": "Période",
+        "status": "Statut",
+        "entries": "Écritures",
+        "actions": "Actions"
+      },
       "accessDenied": "Vous n'avez pas accès à cette fonctionnalité.",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les périodes. Réessayez.",

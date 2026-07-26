@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { z } from "zod";
+import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,11 +53,92 @@ export function FinanceApprovalsScreen() {
   const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
-  const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
-
   const entries = (approvalsQuery.data?.entries ?? []).filter(
     (e) => !removedEntryIds.has(e.id),
+  );
+  const columns = useMemo<ColumnDef<PendingApprovalItem>[]>(
+    () => [
+      {
+        accessorKey: "status",
+        header: t("finance.entries.detail.status"),
+        meta: { mobile: "primary" },
+        cell: ({ row }) => t(`finance.entries.status.${row.original.status}`),
+      },
+      {
+        accessorKey: "submittedAt",
+        header: t("finance.entries.detail.date"),
+        meta: { mobile: "secondary" },
+        cell: ({ row }) => new Date(row.original.submittedAt).toLocaleDateString(),
+      },
+      {
+        id: "category",
+        header: t("finance.entries.detail.category"),
+        meta: { mobile: "primary" },
+        cell: ({ row }) =>
+          i18n.resolvedLanguage === "en"
+            ? row.original.category.labelEn
+            : row.original.category.labelFr,
+      },
+      {
+        id: "amount",
+        header: t("finance.entries.detail.amount"),
+        meta: { mobile: "primary" },
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap font-mono font-semibold">
+            {formatAmount(row.original.amountMinor)} {row.original.currency}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "counterpartyName",
+        header: t("finance.entries.detail.counterparty"),
+        meta: { mobile: "secondary" },
+        cell: ({ row }) => row.original.counterpartyName ?? "—",
+      },
+      {
+        id: "actions",
+        header: "",
+        meta: { mobile: "primary" },
+        cell: ({ row }) =>
+          isOwnSubmission(row.original.submittedByPrincipalId, me?.principalId) ? (
+            <p className="text-xs font-medium text-amber-900">
+              {t("finance.approvals.makerGuard")}
+            </p>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setActionDialog({
+                    open: true,
+                    entryId: row.original.id,
+                    action: "approve",
+                    rowVersion: row.original.rowVersion,
+                  })
+                }
+              >
+                {t("finance.approvals.approve")}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() =>
+                  setActionDialog({
+                    open: true,
+                    entryId: row.original.id,
+                    action: "reject",
+                    rowVersion: row.original.rowVersion,
+                  })
+                }
+              >
+                {t("finance.approvals.reject")}
+              </Button>
+            </div>
+          ),
+      },
+    ],
+    [i18n.resolvedLanguage, me?.principalId, t],
   );
 
   const handleApprove = async (entryId: string, rowVersion: number, note: string) => {
@@ -165,33 +248,17 @@ export function FinanceApprovalsScreen() {
             {t("finance.approvals.retry")}
           </Button>
         </div>
-      ) : entries.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.approvals.empty")}</p>
       ) : (
-        <div className="mt-6 flex flex-col gap-3">
-          {entries.map((entry) => (
-            <ApprovalRow
-              key={entry.id}
-              entry={entry}
-              isOwnSubmission={isOwnSubmission(entry.submittedByPrincipalId, me?.principalId)}
-              onApprove={() =>
-                setActionDialog({
-                  open: true,
-                  entryId: entry.id,
-                  action: "approve",
-                  rowVersion: entry.rowVersion,
-                })
-              }
-              onReject={() =>
-                setActionDialog({
-                  open: true,
-                  entryId: entry.id,
-                  action: "reject",
-                  rowVersion: entry.rowVersion,
-                })
-              }
-            />
-          ))}
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            data={entries}
+            emptyState={
+              <p className="text-sm text-muted-foreground">
+                {t("finance.approvals.empty")}
+              </p>
+            }
+          />
         </div>
       )}
 
@@ -218,59 +285,12 @@ export function FinanceApprovalsScreen() {
   );
 }
 
-function ApprovalRow({
-  entry,
-  isOwnSubmission,
-  onApprove,
-  onReject,
-}: {
-  entry: PendingApprovalItem;
-  isOwnSubmission: boolean;
-  onApprove: () => void;
-  onReject: () => void;
-}) {
-  const { t, i18n } = useTranslation();
-
-  const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
-
-  const formatAmount = (minor: number) => {
-    return new Intl.NumberFormat("fr-CM", {
-      style: "decimal",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(minor);
-  };
-
-  const submittedDate = new Date(entry.submittedAt).toLocaleDateString();
-
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{labelOf(entry.category)}</p>
-        <p className="text-xs text-muted-foreground">{submittedDate}</p>
-        {entry.counterpartyName && (
-          <p className="text-xs text-muted-foreground">{entry.counterpartyName}</p>
-        )}
-      </div>
-      <p className="whitespace-nowrap text-right font-mono font-semibold">
-        {formatAmount(entry.amountMinor)} {entry.currency}
-      </p>
-
-      {isOwnSubmission ? (
-        <p className="text-xs font-medium text-amber-900">{t("finance.approvals.makerGuard")}</p>
-      ) : (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onApprove}>
-            {t("finance.approvals.approve")}
-          </Button>
-          <Button size="sm" variant="destructive" onClick={onReject}>
-            {t("finance.approvals.reject")}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+function formatAmount(minor: number) {
+  return new Intl.NumberFormat("fr-CM", {
+    style: "decimal",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(minor);
 }
 
 function ActionDialog({

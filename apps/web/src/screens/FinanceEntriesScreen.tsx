@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { useMeContext } from "../auth/me.js";
 import { errorMessage } from "../lib/error-message.js";
@@ -35,10 +37,63 @@ export function FinanceEntriesScreen() {
     ...(assetId ? { assetId } : {}),
   });
 
-  const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
-
   const allEntries = entriesQuery.data?.pages.flatMap((page) => page.entries) ?? [];
+  const columns = useMemo<ColumnDef<FinancialEntryListItem>[]>(
+    () => [
+      {
+        accessorKey: "status",
+        header: t("finance.entries.detail.status"),
+        meta: { mobile: "primary" },
+        cell: ({ row }) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex min-h-6 items-center rounded-full px-2 text-[0.65rem] font-bold uppercase ring-1 ring-inset ${
+                statusStyles[row.original.status]
+              }`}
+            >
+              {t(`finance.entries.status.${row.original.status}`)}
+            </span>
+            {row.original.isLatePosting && (
+              <span className="text-[0.65rem] font-bold uppercase text-amber-900">
+                {t("finance.entries.detail.latePosting")}
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "economicDate",
+        header: t("finance.entries.detail.date"),
+        meta: { mobile: "secondary" },
+      },
+      {
+        id: "category",
+        header: t("finance.entries.detail.category"),
+        meta: { mobile: "primary" },
+        cell: ({ row }) =>
+          i18n.resolvedLanguage === "en"
+            ? row.original.category.labelEn
+            : row.original.category.labelFr,
+      },
+      {
+        id: "amount",
+        header: t("finance.entries.detail.amount"),
+        meta: { mobile: "primary" },
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap font-mono text-right font-semibold">
+            {formatAmount(row.original.amountMinor, true)} {row.original.currency}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "counterpartyName",
+        header: t("finance.entries.detail.counterparty"),
+        meta: { mobile: "secondary" },
+        cell: ({ row }) => row.original.counterpartyName ?? "—",
+      },
+    ],
+    [i18n.resolvedLanguage, t],
+  );
 
   if (me !== undefined && !canView) {
     return (
@@ -114,7 +169,6 @@ export function FinanceEntriesScreen() {
         </div>
       </div>
 
-      {/* Entries List */}
       {entriesQuery.isPending ? (
         <p className="mt-6 text-sm text-muted-foreground">{t("finance.entries.loading")}</p>
       ) : entriesQuery.isError ? (
@@ -128,100 +182,37 @@ export function FinanceEntriesScreen() {
             {t("finance.entries.retry")}
           </Button>
         </div>
-      ) : allEntries.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.entries.empty")}</p>
       ) : (
-        <div className="mt-6 flex flex-col gap-3">
-          {allEntries.map((entry) => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              onNavigate={() =>
-                void navigate({
-                  to: "/finance/entries/$entryId",
-                  params: { entryId: entry.id },
-                })
-              }
-            />
-          ))}
-
-          {entriesQuery.hasNextPage && (
-            <Button
-              variant="outline"
-              className="min-h-11 w-full"
-              onClick={() => void entriesQuery.fetchNextPage()}
-              disabled={entriesQuery.isFetchingNextPage}
-            >
-              {entriesQuery.isFetchingNextPage
-                ? t("finance.entries.loading")
-                : t("finance.entries.loadMore")}
-            </Button>
-          )}
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            data={allEntries}
+            onRowClick={(entry) =>
+              void navigate({
+                to: "/finance/entries/$entryId",
+                params: { entryId: entry.id },
+              })
+            }
+            loadMore={{
+              hasNextPage: entriesQuery.hasNextPage,
+              isFetching: entriesQuery.isFetchingNextPage,
+              onLoadMore: () => void entriesQuery.fetchNextPage(),
+            }}
+            emptyState={
+              <p className="text-sm text-muted-foreground">{t("finance.entries.empty")}</p>
+            }
+          />
         </div>
       )}
     </section>
   );
 }
 
-function EntryRow({
-  entry,
-  onNavigate,
-}: {
-  entry: FinancialEntryListItem;
-  onNavigate: () => void;
-}) {
-  const { t, i18n } = useTranslation();
-
-  const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
-
-  const formatAmount = (minor: number) => {
-    return new Intl.NumberFormat("fr-CM", {
-      style: "decimal",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-      signDisplay: "always",
-    }).format(minor);
-  };
-
-  const statusLabel = t(`finance.entries.status.${entry.status}`);
-
-  return (
-    <button
-      type="button"
-      onClick={onNavigate}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 hover:bg-accent"
-    >
-      <div className="min-w-0 flex-1 text-left">
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex min-h-6 items-center rounded-full px-2 text-[0.65rem] font-bold uppercase ring-1 ring-inset ${
-              statusStyles[entry.status]
-            }`}
-          >
-            {statusLabel}
-          </span>
-          {entry.isLatePosting && (
-            <span className="text-[0.65rem] font-bold uppercase text-amber-900">
-              {t("finance.entries.detail.latePosting")}
-            </span>
-          )}
-        </div>
-        <div className="mt-2 flex items-baseline justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="font-medium">
-              {labelOf(entry.category)} · {entry.economicDate}
-            </p>
-            {entry.counterpartyName && (
-              <p className="text-xs text-muted-foreground">{entry.counterpartyName}</p>
-            )}
-          </div>
-          <p className="whitespace-nowrap text-right font-mono text-lg font-semibold">
-            {formatAmount(entry.amountMinor)} {entry.currency}
-          </p>
-        </div>
-      </div>
-      <ChevronRight className="size-4 flex-shrink-0 text-muted-foreground" aria-hidden />
-    </button>
-  );
+function formatAmount(minor: number, signDisplay = false) {
+  return new Intl.NumberFormat("fr-CM", {
+    style: "decimal",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+    ...(signDisplay ? { signDisplay: "always" as const } : {}),
+  }).format(minor);
 }

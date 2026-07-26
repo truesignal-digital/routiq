@@ -7,6 +7,14 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -141,19 +149,41 @@ export function FinancePeriodsScreen() {
       ) : periods.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">{t("finance.periods.empty")}</p>
       ) : (
-        <div className="mt-6 flex flex-col gap-3">
-          {periods.map((period) => (
-            <PeriodRow
-              key={period.periodCode}
-              period={period}
-              onLock={() =>
-                setActionDialog({ open: true, periodCode: period.periodCode, action: "lock" })
-              }
-              onReopen={() =>
-                setActionDialog({ open: true, periodCode: period.periodCode, action: "reopen" })
-              }
-            />
-          ))}
+        <div className="mt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("finance.periods.columns.period")}</TableHead>
+                <TableHead>{t("finance.periods.columns.status")}</TableHead>
+                <TableHead>{t("finance.periods.columns.entries")}</TableHead>
+                <TableHead className="text-right">
+                  {t("finance.periods.columns.actions")}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {periods.map((period) => (
+                <PeriodRow
+                  key={period.periodCode}
+                  period={period}
+                  onLock={() =>
+                    setActionDialog({
+                      open: true,
+                      periodCode: period.periodCode,
+                      action: "lock",
+                    })
+                  }
+                  onReopen={() =>
+                    setActionDialog({
+                      open: true,
+                      periodCode: period.periodCode,
+                      action: "reopen",
+                    })
+                  }
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -195,31 +225,28 @@ function PeriodRow({
     : null;
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{period.periodCode}</p>
-        <p className="text-xs text-muted-foreground">
-          {isOpen
-            ? t("finance.periods.statusOpen")
-            : t("finance.periods.statusLocked", { date: lockedDate })}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {t("finance.periods.entryCount", { count: period.entryCount })}
-        </p>
-      </div>
-
-      {isOpen ? (
-        <Button size="sm" variant="outline" onClick={onLock}>
-          <Lock className="mr-2 size-4" aria-hidden />
-          {t("finance.periods.lock")}
-        </Button>
-      ) : (
-        <Button size="sm" variant="outline" onClick={onReopen}>
-          <Unlock className="mr-2 size-4" aria-hidden />
-          {t("finance.periods.reopen")}
-        </Button>
-      )}
-    </div>
+    <TableRow>
+      <TableCell className="font-medium">{period.periodCode}</TableCell>
+      <TableCell>
+        {isOpen
+          ? t("finance.periods.statusOpen")
+          : t("finance.periods.statusLocked", { date: lockedDate })}
+      </TableCell>
+      <TableCell>{t("finance.periods.entryCount", { count: period.entryCount })}</TableCell>
+      <TableCell className="text-right">
+        {isOpen ? (
+          <Button size="sm" variant="outline" onClick={onLock}>
+            <Lock className="mr-2 size-4" aria-hidden />
+            {t("finance.periods.lock")}
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={onReopen}>
+            <Unlock className="mr-2 size-4" aria-hidden />
+            {t("finance.periods.reopen")}
+          </Button>
+        )}
+      </TableCell>
+    </TableRow>
   );
 }
 
