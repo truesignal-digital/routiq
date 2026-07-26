@@ -194,5 +194,47 @@
       "issuedAt": "Délivré le",
       "expiresAt": "Expire le"
     }
+  },
+  "finance": {
+    "record": {
+      "title": "Enregistrer une transaction",
+      "back": "Retour",
+      "expenseLabel": "Dépense",
+      "revenueLabel": "Recette",
+      "categoryLabel": "Catégorie",
+      "chooseCategory": "Choisir une catégorie…",
+      "categoriesFailed": "Impossible de charger les catégories. Actualisez cette page.",
+      "amountLabel": "Montant (XAF)",
+      "amountPlaceholder": "0",
+      "paymentMethodLabel": "Moyen de paiement",
+      "paymentMethods": {
+        "cash": "Espèces",
+        "momo": "Mobile Money",
+        "om": "Orange Money",
+        "bank": "Virement bancaire",
+        "other": "Autre"
+      },
+      "economicDateLabel": "Date",
+      "counterpartyLabel": "Tiers (optionnel)",
+      "counterpartyPlaceholder": "Fournisseur, client…",
+      "descriptionLabel": "Description (optionnel)",
+      "descriptionPlaceholder": "Détails de la transaction…",
+      "paymentRefLabel": "Référence de paiement (optionnel)",
+      "paymentRefPlaceholder": "N° de reçu, N° de virement…",
+      "assetLabel": "Actif (optionnel)",
+      "assetPlaceholder": "Attribuer à un véhicule…",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement…",
+      "outcomePosted": "Enregistré",
+      "outcomePostedDesc": "La transaction a été enregistrée et approuvée.",
+      "outcomeSubmitted": "En attente d'approbation",
+      "outcomeSubmittedDesc": "Votre transaction est sauvegardée et en attente de validation par un responsable financier.",
+      "outcomeSuccess": "Succès",
+      "outcomeDesc": "Votre transaction a été enregistrée.",
+      "warningsLabel": "Avis",
+      "warningEvidenceMissing": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
+      "warningLatePosting": "Cette transaction a été enregistrée dans une période précédente.",
+      "done": "Fermer"
+    }
   }
 }

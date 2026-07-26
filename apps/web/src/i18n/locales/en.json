@@ -171,7 +171,7 @@
     "add": "Add a document",
     "addTitle": "New document",
     "renew": "Renew",
-    "renewTitle": "Renew “{name}”",
+    "renewTitle": "Renew {name}",
     "save": "Save",
     "loading": "Loading…",
     "loadFailed": "We couldn't load this asset's documents.",
@@ -193,6 +193,48 @@
       "number": "Number",
       "issuedAt": "Issued",
       "expiresAt": "Expires"
+    }
+  },
+  "finance": {
+    "record": {
+      "title": "Record a transaction",
+      "back": "Back",
+      "expenseLabel": "Expense",
+      "revenueLabel": "Revenue",
+      "categoryLabel": "Category",
+      "chooseCategory": "Choose a category…",
+      "categoriesFailed": "We couldn't load categories. Retry this page.",
+      "amountLabel": "Amount (XAF)",
+      "amountPlaceholder": "0",
+      "paymentMethodLabel": "Payment method",
+      "paymentMethods": {
+        "cash": "Cash",
+        "momo": "Mobile Money",
+        "om": "Orange Money",
+        "bank": "Bank transfer",
+        "other": "Other"
+      },
+      "economicDateLabel": "Date",
+      "counterpartyLabel": "Counterparty (optional)",
+      "counterpartyPlaceholder": "Vendor, customer…",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Transaction details…",
+      "paymentRefLabel": "Payment reference (optional)",
+      "paymentRefPlaceholder": "Receipt #, Transfer #…",
+      "assetLabel": "Asset (optional)",
+      "assetPlaceholder": "Assign to a vehicle…",
+      "submit": "Record",
+      "submitting": "Recording…",
+      "outcomePosted": "Recorded",
+      "outcomePostedDesc": "Your transaction has been recorded and approved.",
+      "outcomeSubmitted": "Awaiting approval",
+      "outcomeSubmittedDesc": "Your transaction is saved and waiting for validation by a finance manager.",
+      "outcomeSuccess": "Success",
+      "outcomeDesc": "Your transaction has been recorded.",
+      "warningsLabel": "Notices",
+      "warningEvidenceMissing": "Missing evidence: this category requires supporting documentation or a photo.",
+      "warningLatePosting": "This transaction was recorded in a previous accounting period.",
+      "done": "Close"
     }
   }
 }
