@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, FileText } from "lucide-react";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -48,18 +49,10 @@ export function FinanceEntryDetailScreen() {
   const [reverseError, setReverseError] = useState<string>();
 
   const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+    localizedLabel(item);
 
   const canReverse = canReverseEntry(me?.role, entryQuery.data?.status);
 
-  const formatAmount = (minor: number) => {
-    return new Intl.NumberFormat("fr-CM", {
-      style: "decimal",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-      signDisplay: "always",
-    }).format(minor);
-  };
 
   const handleReverseSubmit = async () => {
     if (!entryQuery.data || !validateReversalReason(reverseDialog.reason)) return;
@@ -152,14 +145,14 @@ export function FinanceEntryDetailScreen() {
                   {t("finance.entries.detail.amount")}
                 </dt>
                 <dd className="mt-1 font-mono text-lg font-semibold">
-                  {formatAmount(entryQuery.data.amountMinor)} {entryQuery.data.currency}
+                  {formatMoney(entryQuery.data.amountMinor, { currency: entryQuery.data.currency, signDisplay: "always" })}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase text-muted-foreground">
                   {t("finance.entries.detail.date")}
                 </dt>
-                <dd className="mt-1">{entryQuery.data.economicDate}</dd>
+                <dd className="mt-1">{formatDate(entryQuery.data.economicDate)}</dd>
               </div>
               {entryQuery.data.postedAt && (
                 <div>
@@ -167,7 +160,7 @@ export function FinanceEntryDetailScreen() {
                     {t("finance.entries.detail.postingDate")}
                   </dt>
                   <dd className="mt-1">
-                    {new Date(entryQuery.data.postedAt).toLocaleDateString()}
+                    {formatDate(entryQuery.data.postedAt)}
                   </dd>
                 </div>
               )}
@@ -233,7 +226,7 @@ export function FinanceEntryDetailScreen() {
                       )}
                     </div>
                     <span className="font-mono font-semibold">
-                      {formatAmount(posting.amountMinor)}
+                      {formatMoney(posting.amountMinor, { signDisplay: "always" })}
                     </span>
                   </div>
                 ))}

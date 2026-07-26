@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { formatMoney, formatDate, localizedLabel } from "../lib/format.js";
 import type { ColumnDef } from "@tanstack/react-table";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
@@ -73,16 +74,14 @@ export function FinanceApprovalsScreen() {
         accessorKey: "submittedAt",
         header: t("finance.entries.detail.date"),
         meta: { mobile: "secondary" },
-        cell: ({ row }) => new Date(row.original.submittedAt).toLocaleDateString(),
+        cell: ({ row }) => formatDate(row.original.submittedAt),
       },
       {
         id: "category",
         header: t("finance.entries.detail.category"),
         meta: { mobile: "primary" },
         cell: ({ row }) =>
-          i18n.resolvedLanguage === "en"
-            ? row.original.category.labelEn
-            : row.original.category.labelFr,
+          localizedLabel(row.original.category),
       },
       {
         id: "amount",
@@ -90,7 +89,7 @@ export function FinanceApprovalsScreen() {
         meta: { mobile: "primary" },
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono font-semibold">
-            {formatAmount(row.original.amountMinor)} {row.original.currency}
+            {formatMoney(row.original.amountMinor, { currency: row.original.currency, signDisplay: "never" })}
           </span>
         ),
       },
@@ -273,13 +272,6 @@ export function FinanceApprovalsScreen() {
   );
 }
 
-function formatAmount(minor: number) {
-  return new Intl.NumberFormat("fr-CM", {
-    style: "decimal",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(minor);
-}
 
 function ActionDialog({
   action,

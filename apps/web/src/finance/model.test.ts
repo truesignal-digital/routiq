@@ -1,23 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatMoneyXaf,
   parseMoneyXaf,
   toRecordExpensePayload,
   toRecordRevenuePayload,
   type FinanceFormState,
 } from "./model.js";
-
-describe("formatMoneyXaf", () => {
-  it("formats whole amounts with thousands grouping", () => {
-    expect(formatMoneyXaf(0)).toBe("0");
-    expect(formatMoneyXaf(1000)).toBe("1 000");
-    expect(formatMoneyXaf(123456)).toBe("123 456");
-  });
-
-  it("handles large amounts", () => {
-    expect(formatMoneyXaf(1000000)).toBe("1 000 000");
-  });
-});
 
 describe("parseMoneyXaf", () => {
   it("parses valid positive integers", () => {

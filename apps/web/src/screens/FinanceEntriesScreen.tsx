@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { useMeContext } from "../auth/me.js";
 import { errorMessage } from "../lib/error-message.js";
+import { formatMoney, formatDate, localizedLabel } from "../lib/format.js";
 import { useEntries } from "../finance/useEntries.js";
 import { canRecordFinance } from "../finance/permissions.js";
 import { FinanceNav } from "../finance/FinanceNav.js";
@@ -55,15 +56,13 @@ export function FinanceEntriesScreen() {
         accessorKey: "economicDate",
         header: t("finance.entries.detail.date"),
         meta: { mobile: "secondary" },
+        cell: ({ row }) => formatDate(row.original.economicDate),
       },
       {
         id: "category",
         header: t("finance.entries.detail.category"),
         meta: { mobile: "primary" },
-        cell: ({ row }) =>
-          i18n.resolvedLanguage === "en"
-            ? row.original.category.labelEn
-            : row.original.category.labelFr,
+        cell: ({ row }) => localizedLabel(row.original.category),
       },
       {
         id: "amount",
@@ -71,7 +70,10 @@ export function FinanceEntriesScreen() {
         meta: { mobile: "primary" },
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono text-right font-semibold">
-            {formatAmount(row.original.amountMinor, true)} {row.original.currency}
+            {formatMoney(row.original.amountMinor, {
+              currency: row.original.currency,
+              signDisplay: "always",
+            })}
           </span>
         ),
       },
@@ -193,13 +195,4 @@ export function FinanceEntriesScreen() {
       )}
     </section>
   );
-}
-
-function formatAmount(minor: number, signDisplay = false) {
-  return new Intl.NumberFormat("fr-CM", {
-    style: "decimal",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-    ...(signDisplay ? { signDisplay: "always" as const } : {}),
-  }).format(minor);
 }

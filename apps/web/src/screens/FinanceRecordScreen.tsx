@@ -31,8 +31,12 @@ import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
+import { localizedLabel } from "../lib/format.js";
+
+function normalizeMoneySpacing(value: string): string {
+  return value.replace(/ /g, " ");
+}
 import {
-  formatMoneyXaf,
   parseMoneyXaf,
   toRecordExpensePayload,
   toRecordRevenuePayload,
@@ -49,6 +53,7 @@ interface ScreenState {
   stage: "form" | "outcome";
   outcome?: CommandResult;
 }
+
 
 export function FinanceRecordScreen() {
   const { t, i18n } = useTranslation();
@@ -183,9 +188,6 @@ function RecordForm({
   const categoriesQuery = useCategories(
     direction === "EXPENSE" ? "EXPENSE_CATEGORY" : "REVENUE_CATEGORY",
   );
-
-  const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
 
   const [errorCode, setErrorCode] = useState<string>();
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
@@ -356,7 +358,7 @@ function RecordForm({
                 <SelectContent>
                   {(categoriesQuery.data ?? []).map((category) => (
                     <SelectItem key={category.code} value={category.code}>
-                      {labelOf(category)}
+                      {localizedLabel(category)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -387,7 +389,13 @@ function RecordForm({
                     onBlur={(event) => {
                       const parsed = parseMoneyXaf(event.target.value);
                       if (parsed !== null) {
-                        field.onChange(formatMoneyXaf(parsed));
+                        const formatted = new Intl.NumberFormat("fr-CM", {
+                          style: "decimal",
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })
+                          .format(parsed);
+                        field.onChange(normalizeMoneySpacing(formatted));
                       }
                       field.onBlur();
                     }}

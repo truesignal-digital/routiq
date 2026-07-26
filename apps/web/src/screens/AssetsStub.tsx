@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import {
@@ -281,11 +282,8 @@ function Metric({
 }
 
 function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
-  const { t, i18n } = useTranslation();
-  const category =
-    i18n.resolvedLanguage === "en"
-      ? asset.category.labelEn
-      : asset.category.labelFr;
+  const { t } = useTranslation();
+  const category = localizedLabel(asset.category);
 
   return (
     <article

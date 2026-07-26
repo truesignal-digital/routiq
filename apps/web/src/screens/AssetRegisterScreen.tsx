@@ -10,6 +10,7 @@ import {
 } from "@routiq/contracts";
 import type { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -111,7 +112,7 @@ export function AssetRegisterScreen() {
   }
 
   const labelFor = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+    localizedLabel(item);
 
   return (
     <section className="mx-auto w-full max-w-xl px-4 py-6">

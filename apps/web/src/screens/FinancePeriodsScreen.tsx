@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CalendarRange, Lock, Unlock } from "lucide-react";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -221,7 +222,7 @@ function PeriodRow({
 
   const isOpen = period.status === "OPEN";
   const lockedDate = period.lockedAt
-    ? new Date(period.lockedAt).toLocaleDateString()
+    ? formatDate(period.lockedAt)
     : null;
 
   return (

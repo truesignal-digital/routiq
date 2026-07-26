@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { FileText, Plus } from "lucide-react";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,7 @@ export function AssetDocumentsScreen() {
   const today = new Date();
 
   const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+    localizedLabel(item);
 
   if (me !== undefined && !documentsEnabled) {
     return (
@@ -160,9 +161,9 @@ export function AssetDocumentsScreen() {
                               ? t("documents.expiry.expired")
                               : state === "expiringSoon"
                                 ? t("documents.expiry.expiringSoon", {
-                                    date: doc.expiresAt,
+                                    date: formatDate(doc.expiresAt),
                                   })
-                                : t("documents.expiry.ok", { date: doc.expiresAt })}
+                                : t("documents.expiry.ok", { date: formatDate(doc.expiresAt) })}
                         </span>
                       </div>
                       {canManage && !form.open && (
@@ -254,7 +255,7 @@ function DocumentForm({
   const [errorCode, setErrorCode] = useState<string>();
 
   const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+    localizedLabel(item);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();

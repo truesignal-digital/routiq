@@ -9,20 +9,6 @@ type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
 type RecordRevenuePayload = z.infer<typeof recordRevenuePayload>;
 
 /**
- * Format XAF minor units to a display string with thousands grouping.
- * XAF has exponent 0 — 1 XAF = 1 minor unit; never divide by 100.
- */
-export function formatMoneyXaf(minor: number): string {
-  const formatted = new Intl.NumberFormat("fr-CM", {
-    style: "decimal",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(minor);
-  // Replace non-breaking space (U+202F) and other whitespace with regular space
-  return formatted.replace(/\s/g, " ");
-}
-
-/**
  * Parse user input string to XAF minor units (positive integer).
  * Removes whitespace and thousands separators; returns null if invalid.
  */
