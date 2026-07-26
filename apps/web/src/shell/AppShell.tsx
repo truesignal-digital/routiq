@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { MeCtx, useMe } from "../auth/me.js";
 import { visibleSections } from "./sections.js";
+import { Toaster } from "@/components/ui/sonner.js";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -56,6 +57,7 @@ export function AppShell() {
         </nav>
       </div>
     </div>
+    <Toaster richColors position="top-center" />
     </MeCtx.Provider>
   );
 }
