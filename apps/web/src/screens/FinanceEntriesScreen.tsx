@@ -7,6 +7,7 @@ import { useMeContext } from "../auth/me.js";
 import { errorMessage } from "../lib/error-message.js";
 import { useEntries } from "../finance/useEntries.js";
 import { canRecordFinance } from "../finance/permissions.js";
+import { FinanceNav } from "../finance/FinanceNav.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 
 const statusStyles: Record<string, string> = {
@@ -61,6 +62,7 @@ export function FinanceEntriesScreen() {
         {t("finance.entries.back")}
       </button>
       <h1 className="mt-2 text-2xl font-semibold">{t("finance.entries.title")}</h1>
+      <FinanceNav />
 
       {/* Filters */}
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -90,7 +92,7 @@ export function FinanceEntriesScreen() {
           <input
             id="period-filter"
             type="text"
-            placeholder="YYYY-MM"
+            placeholder={t("finance.entries.filters.periodPlaceholder")}
             value={periodCode}
             onChange={(e) => setPeriodCode(e.target.value)}
             className="min-h-9 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground"

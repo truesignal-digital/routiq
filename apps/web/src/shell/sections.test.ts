@@ -12,6 +12,11 @@ describe("visibleSections (module gate)", () => {
     expect(keys).toEqual(["assets", "more"]);
   });
 
+  it("finance module shows the finances section", () => {
+    const keys = visibleSections(["CORE", "FINANCE"]).map((s) => s.key);
+    expect(keys).toEqual(["finances", "more"]);
+  });
+
   it("while membership is loading only module-less sections render", () => {
     expect(visibleSections(undefined).map((s) => s.key)).toEqual(["more"]);
   });

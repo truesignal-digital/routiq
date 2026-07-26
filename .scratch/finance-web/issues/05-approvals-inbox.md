@@ -29,3 +29,5 @@ Blocked by: 02
 ## Comments
 
 2026-07-26 [codex] clean first-round pass. Tests import production code (isOwnSubmission, validateRejectionReason, canApproveEntries — the ticket-04 lesson held). expectedVersion on approve and reject, VERSION_CONFLICT refetch on both paths, maker guard rendered, LATE_POSTING notice, 23 fr/en keys at parity. 105 web tests + typecheck green, Fable-verified.
+
+2026-07-26 CRITICAL POST-COMMIT BUG (Fable review of 07): one intentRef shared across both commands with an if-unset guard and no reset — after an approve, a reject submits through approve-entry.v1 (zod strips `reason`) and SILENTLY APPROVES the entry while showing the rejected message. Same shared-ref pattern in periods (fails loudly there). Missed in review because per-action payload tests never exercised sequential mixed actions. Fix + command-routing regression test dispatched; slice commit held until green.

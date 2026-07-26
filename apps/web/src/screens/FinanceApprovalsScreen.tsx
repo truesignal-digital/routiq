@@ -3,17 +3,26 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
-import { createCommandIntent } from "../commands/intent.js";
+import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
 import { useApprovals } from "../finance/useApprovals.js";
 import { canApproveEntries } from "../finance/permissions.js";
 import { isOwnSubmission, validateRejectionReason } from "../finance/model.js";
-import type { PendingApprovalItem } from "@routiq/contracts";
+import { FinanceNav } from "../finance/FinanceNav.js";
+import {
+  approveEntryPayload,
+  rejectEntryPayload,
+  type PendingApprovalItem,
+} from "@routiq/contracts";
+
+type ApproveEntryPayloadType = z.infer<typeof approveEntryPayload>;
+type RejectEntryPayloadType = z.infer<typeof rejectEntryPayload>;
 
 type ActionDialogState =
   | { open: false }
@@ -34,11 +43,12 @@ export function FinanceApprovalsScreen() {
   const queryClient = useQueryClient();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
-  const approvalsQuery = useApprovals();
+  const approvalsQuery = useApprovals(canApprove);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [successDialog, setSuccessDialog] = useState<SuccessDialogState>({ open: false });
   const [removedEntryIds, setRemovedEntryIds] = useState<Set<string>>(new Set());
-  const intentRef = useRef<any>(undefined);
+  const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
+  const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
   const labelOf = (item: { labelFr: string; labelEn: string }) =>
@@ -50,15 +60,13 @@ export function FinanceApprovalsScreen() {
 
   const handleApprove = async (entryId: string, rowVersion: number, note: string) => {
     setActionError(undefined);
-    if (!intentRef.current) {
-      intentRef.current = createCommandIntent(
-        commandClient,
-        "approve-entry",
-        1,
-      );
-    }
+    approveIntentRef.current ??= createCommandIntent<ApproveEntryPayloadType>(
+      commandClient,
+      "approve-entry",
+      1,
+    );
 
-    const result = await intentRef.current.submit(
+    const result = await approveIntentRef.current.submit(
       {
         entryId,
         ...(note ? { note } : {}),
@@ -88,15 +96,13 @@ export function FinanceApprovalsScreen() {
 
   const handleReject = async (entryId: string, rowVersion: number, reason: string) => {
     setActionError(undefined);
-    if (!intentRef.current) {
-      intentRef.current = createCommandIntent(
-        commandClient,
-        "reject-entry",
-        1,
-      );
-    }
+    rejectIntentRef.current ??= createCommandIntent<RejectEntryPayloadType>(
+      commandClient,
+      "reject-entry",
+      1,
+    );
 
-    const result = await intentRef.current.submit(
+    const result = await rejectIntentRef.current.submit(
       {
         entryId,
         reason,
@@ -144,6 +150,7 @@ export function FinanceApprovalsScreen() {
         {t("finance.approvals.back")}
       </button>
       <h1 className="mt-2 text-2xl font-semibold">{t("finance.approvals.title")}</h1>
+      <FinanceNav />
 
       {approvalsQuery.isPending ? (
         <p className="mt-6 text-sm text-muted-foreground">{t("finance.approvals.loading")}</p>

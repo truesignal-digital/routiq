@@ -4,6 +4,7 @@
   },
   "nav": {
     "assets": "Assets",
+    "finances": "Finance",
     "more": "More"
   },
   "login": {
@@ -195,6 +196,14 @@
     }
   },
   "finance": {
+    "navigation": {
+      "label": "Finance sections",
+      "record": "Record",
+      "entries": "Entries",
+      "approvals": "Approvals",
+      "periods": "Periods",
+      "approvalsBadge": "{{count}} pending approvals"
+    },
     "record": {
       "title": "Record a transaction",
       "back": "Back",
@@ -280,6 +289,7 @@
         "title": "Reverse entry",
         "reasonLabel": "Reason for reversal",
         "reasonPlaceholder": "Explain why this entry is being reversed…",
+        "cancel": "Cancel",
         "submit": "Reverse",
         "submitting": "Reversing…",
         "success": "Entry reversed",
@@ -289,6 +299,7 @@
         "status": "Status",
         "allStatuses": "All statuses",
         "period": "Period",
+        "periodPlaceholder": "YYYY-MM",
         "asset": "Asset",
         "assetPlaceholder": "UUID or code…"
       }

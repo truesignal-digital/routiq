@@ -20,6 +20,7 @@ import {
 import { canRecordFinance } from "../finance/permissions.js";
 import { useCategories } from "../documents/useCategories.js";
 import { useAssetRegistrationReference } from "../assets/reference.js";
+import { FinanceNav } from "../finance/FinanceNav.js";
 
 type Direction = "EXPENSE" | "REVENUE";
 
@@ -63,6 +64,7 @@ export function FinanceRecordScreen() {
         {t("finance.record.back")}
       </button>
       <h1 className="mt-2 text-2xl font-semibold">{t("finance.record.title")}</h1>
+      <FinanceNav />
 
       {screenState.stage === "form" && (
         <RecordForm

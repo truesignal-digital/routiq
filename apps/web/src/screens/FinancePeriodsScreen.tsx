@@ -3,12 +3,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, CheckCircle2, Lock, Unlock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
-import { createCommandIntent } from "../commands/intent.js";
+import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
 import { usePeriods } from "../finance/usePeriods.js";
 import {
@@ -16,7 +17,15 @@ import {
   validateReopenReason,
 } from "../finance/model.js";
 import { canManagePeriods } from "../finance/permissions.js";
-import type { PeriodRead } from "@routiq/contracts";
+import {
+  lockPeriodPayload,
+  reopenPeriodPayload,
+  type PeriodRead,
+} from "@routiq/contracts";
+import { FinanceNav } from "../finance/FinanceNav.js";
+
+type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
+type ReopenPeriodPayloadType = z.infer<typeof reopenPeriodPayload>;
 
 type ActionDialogState =
   | { open: false }
@@ -37,7 +46,8 @@ export function FinancePeriodsScreen() {
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [successDialog, setSuccessDialog] = useState<SuccessDialogState>({ open: false });
   const [removedPeriods, setRemovedPeriods] = useState<Set<string>>(new Set());
-  const intentRef = useRef<any>(undefined);
+  const lockIntentRef = useRef<CommandIntent<LockPeriodPayloadType> | undefined>(undefined);
+  const reopenIntentRef = useRef<CommandIntent<ReopenPeriodPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
   const periods = mergeImplicitCurrentPeriod(
@@ -46,11 +56,13 @@ export function FinancePeriodsScreen() {
 
   const handleLock = async (periodCode: string) => {
     setActionError(undefined);
-    if (!intentRef.current) {
-      intentRef.current = createCommandIntent(commandClient, "lock-period", 1);
-    }
+    lockIntentRef.current ??= createCommandIntent<LockPeriodPayloadType>(
+      commandClient,
+      "lock-period",
+      1,
+    );
 
-    const result = await intentRef.current.submit({ periodCode });
+    const result = await lockIntentRef.current.submit({ periodCode });
 
     if (!result.ok) {
       setActionError(result.code);
@@ -68,11 +80,13 @@ export function FinancePeriodsScreen() {
 
   const handleReopen = async (periodCode: string, reason: string) => {
     setActionError(undefined);
-    if (!intentRef.current) {
-      intentRef.current = createCommandIntent(commandClient, "reopen-period", 1);
-    }
+    reopenIntentRef.current ??= createCommandIntent<ReopenPeriodPayloadType>(
+      commandClient,
+      "reopen-period",
+      1,
+    );
 
-    const result = await intentRef.current.submit({ periodCode, reason });
+    const result = await reopenIntentRef.current.submit({ periodCode, reason });
 
     if (!result.ok) {
       setActionError(result.code);
@@ -109,6 +123,7 @@ export function FinancePeriodsScreen() {
         {t("finance.periods.back")}
       </button>
       <h1 className="mt-2 text-2xl font-semibold">{t("finance.periods.title")}</h1>
+      <FinanceNav />
 
       {periodsQuery.isPending ? (
         <p className="mt-6 text-sm text-muted-foreground">{t("finance.periods.loading")}</p>

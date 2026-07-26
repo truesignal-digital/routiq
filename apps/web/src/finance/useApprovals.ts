@@ -15,11 +15,11 @@ export async function fetchApprovals(
   return (await response.json()) as PendingApprovalsResponse;
 }
 
-export function useApprovals() {
+export function useApprovals(enabled = true) {
   const session = useActiveSession();
   return useQuery({
     queryKey: ["ws", session?.workspaceSlug, "finance", "approvals"],
-    enabled: session !== undefined,
+    enabled: enabled && session !== undefined,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");

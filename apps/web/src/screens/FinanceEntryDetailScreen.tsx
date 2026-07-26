@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
-import { createCommandIntent } from "../commands/intent.js";
+import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
 import { useEntry } from "../finance/useEntry.js";
 import { canReverseEntry } from "../finance/permissions.js";
@@ -32,7 +32,7 @@ export function FinanceEntryDetailScreen() {
 
   const entryQuery = useEntry(entryId);
   const [reverseDialog, setReverseDialog] = useState<ReverseDialogState>({ open: false, reason: "", submitting: false });
-  const intentRef = useRef<any>(undefined);
+  const intentRef = useRef<CommandIntent<z.infer<typeof reverseEntryPayload>> | undefined>(undefined);
   const [reverseError, setReverseError] = useState<string>();
 
   const labelOf = (item: { labelFr: string; labelEn: string }) =>
@@ -62,13 +62,11 @@ export function FinanceEntryDetailScreen() {
       reason: reverseDialog.reason,
     };
 
-    if (!intentRef.current) {
-      intentRef.current = createCommandIntent<z.infer<typeof reverseEntryPayload>>(
-        commandClient,
-        "reverse-entry",
-        1,
-      );
-    }
+    intentRef.current ??= createCommandIntent<z.infer<typeof reverseEntryPayload>>(
+      commandClient,
+      "reverse-entry",
+      1,
+    );
 
     const result = await intentRef.current.submit(payload, {
       expectedVersion: entryQuery.data.rowVersion,
@@ -372,7 +370,7 @@ function ReverseDialog({
             onClick={onCancel}
             disabled={submitting}
           >
-            Cancel
+            {t("finance.entries.reversal.cancel")}
           </Button>
           <Button
             className="min-h-11 flex-1"

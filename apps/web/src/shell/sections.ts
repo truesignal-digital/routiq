@@ -1,8 +1,8 @@
-import { Menu, Truck, type LucideIcon } from "lucide-react";
+import { DollarSign, Menu, Truck, type LucideIcon } from "lucide-react";
 import type { ModuleCode } from "@routiq/contracts";
 
 export interface ShellSection {
-  key: "assets" | "more";
+  key: "assets" | "finances" | "more";
   to: string;
   icon: LucideIcon;
   /** Module that owns this section; sections without one are always visible. */
@@ -11,6 +11,12 @@ export interface ShellSection {
 
 const ALL_SECTIONS: ShellSection[] = [
   { key: "assets", to: "/assets", icon: Truck, module: "ASSETS" },
+  {
+    key: "finances",
+    to: "/finance/entries",
+    icon: DollarSign,
+    module: "FINANCE",
+  },
   { key: "more", to: "/more", icon: Menu },
 ];
 

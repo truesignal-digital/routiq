@@ -4,6 +4,7 @@
   },
   "nav": {
     "assets": "Actifs",
+    "finances": "Finances",
     "more": "Plus"
   },
   "login": {
@@ -195,6 +196,14 @@
     }
   },
   "finance": {
+    "navigation": {
+      "label": "Sections financières",
+      "record": "Saisie",
+      "entries": "Écritures",
+      "approvals": "Approbations",
+      "periods": "Périodes",
+      "approvalsBadge": "{{count}} approbations en attente"
+    },
     "record": {
       "title": "Enregistrer une transaction",
       "back": "Retour",
@@ -280,6 +289,7 @@
         "title": "Contre-passer l'écriture",
         "reasonLabel": "Motif du contre-passage",
         "reasonPlaceholder": "Expliquez pourquoi cette écriture est contre-passée…",
+        "cancel": "Annuler",
         "submit": "Contre-passer",
         "submitting": "Contre-passage…",
         "success": "Écriture contre-passée",
@@ -289,6 +299,7 @@
         "status": "Statut",
         "allStatuses": "Tous les statuts",
         "period": "Période",
+        "periodPlaceholder": "AAAA-MM",
         "asset": "Actif",
         "assetPlaceholder": "UUID ou code…"
       }
