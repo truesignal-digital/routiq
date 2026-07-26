@@ -1,11 +1,27 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, CheckCircle2, Lock, Unlock } from "lucide-react";
+import { AlertCircle, ArrowLeft, Lock, Unlock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -18,7 +34,10 @@ import {
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { errorMessage } from "../lib/error-message.js";
+import {
+  notifyCommandSuccess,
+  notifyCommandWarnings,
+} from "../lib/notify.js";
 import { usePeriods } from "../finance/usePeriods.js";
 import {
   mergeImplicitCurrentPeriod,
@@ -39,20 +58,14 @@ type ActionDialogState =
   | { open: false }
   | { open: true; periodCode: string; action: "lock" | "reopen" };
 
-type SuccessDialogState =
-  | { open: false }
-  | { open: true; message: string; warnings?: string[] };
-
 export function FinancePeriodsScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
-  const queryClient = useQueryClient();
   const canManage = canManagePeriods(me?.role, me?.enabledModules);
 
   const periodsQuery = usePeriods();
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
-  const [successDialog, setSuccessDialog] = useState<SuccessDialogState>({ open: false });
   const [removedPeriods, setRemovedPeriods] = useState<Set<string>>(new Set());
   const lockIntentRef = useRef<CommandIntent<LockPeriodPayloadType> | undefined>(undefined);
   const reopenIntentRef = useRef<CommandIntent<ReopenPeriodPayloadType> | undefined>(undefined);
@@ -78,11 +91,8 @@ export function FinancePeriodsScreen() {
     }
 
     setRemovedPeriods((prev) => new Set([...prev, periodCode]));
-    setSuccessDialog({
-      open: true,
-      message: t("finance.periods.locked"),
-      warnings: result.outcome.warnings,
-    });
+    notifyCommandSuccess("locked");
+    notifyCommandWarnings(result.outcome.warnings);
     setActionDialog({ open: false });
   };
 
@@ -102,10 +112,8 @@ export function FinancePeriodsScreen() {
     }
 
     setRemovedPeriods((prev) => new Set([...prev, periodCode]));
-    setSuccessDialog({
-      open: true,
-      message: t("finance.periods.reopened"),
-    });
+    notifyCommandSuccess("reopened");
+    notifyCommandWarnings(result.outcome.warnings);
     setActionDialog({ open: false });
   };
 
@@ -197,13 +205,6 @@ export function FinancePeriodsScreen() {
         />
       )}
 
-      {successDialog.open && (
-        <SuccessDialog
-          message={successDialog.message}
-          warnings={successDialog.warnings}
-          onClose={() => setSuccessDialog({ open: false })}
-        />
-      )}
     </section>
   );
 }
@@ -267,8 +268,6 @@ function ActionDialog({
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const isValid = action === "lock" ? true : validateReopenReason(reason);
-
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -282,105 +281,97 @@ function ActionDialog({
     }
   };
 
+  if (action === "lock") {
+    return (
+      <AlertDialog open onOpenChange={(open) => !open && onCancel()}>
+        <AlertDialogContent onBackdropClick={onCancel}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("finance.periods.lockTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("finance.periods.lockExplanation")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {error && (
+            <div
+              role="alert"
+              className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
+              <p>{t(`errors.${error}`, { defaultValue: error })}</p>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-11 flex-1 sm:flex-none">
+              {t("finance.periods.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="min-h-11 flex-1 sm:flex-none"
+              disabled={submitting}
+              onClick={() => void handleSubmit()}
+            >
+              {submitting
+                ? t("finance.periods.submitting")
+                : t("finance.periods.lock")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6">
-        <h2 className="text-lg font-semibold">
-          {action === "lock" ? t("finance.periods.lockTitle") : t("finance.periods.reopenTitle")}
-        </h2>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("finance.periods.reopenTitle")}</DialogTitle>
+        </DialogHeader>
 
         {error && (
-          <div role="alert" className="mt-4 flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div
+            role="alert"
+            className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+          >
             <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
             <p>{t(`errors.${error}`, { defaultValue: error })}</p>
           </div>
         )}
 
-        {action === "lock" && (
-          <p className="mt-4 text-sm text-muted-foreground">
-            {t("finance.periods.lockExplanation")}
-          </p>
-        )}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="reason">{t("finance.periods.reasonLabel")}</Label>
+          <textarea
+            id="reason"
+            placeholder={t("finance.periods.reasonPlaceholder")}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+          />
+        </div>
 
-        {action === "reopen" && (
-          <div className="mt-4 flex flex-col gap-2">
-            <Label htmlFor="reason">{t("finance.periods.reasonLabel")}</Label>
-            <textarea
-              id="reason"
-              placeholder={t("finance.periods.reasonPlaceholder")}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-            />
-          </div>
-        )}
-
-        <div className="mt-6 flex gap-2">
-          <Button
-            variant="outline"
-            className="min-h-11 flex-1"
-            onClick={onCancel}
-            disabled={submitting}
+        <DialogFooter>
+          <DialogClose
+            render={
+              <Button
+                variant="outline"
+                className="min-h-11 flex-1 sm:flex-none"
+              />
+            }
           >
             {t("finance.periods.cancel")}
-          </Button>
+          </DialogClose>
           <Button
-            className="min-h-11 flex-1"
-            disabled={!isValid || submitting}
+            className="min-h-11 flex-1 sm:flex-none"
+            disabled={!validateReopenReason(reason) || submitting}
             onClick={() => void handleSubmit()}
           >
             {submitting
               ? t("finance.periods.submitting")
-              : action === "lock"
-                ? t("finance.periods.lock")
-                : t("finance.periods.reopen")}
+              : t("finance.periods.reopen")}
           </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SuccessDialog({
-  message,
-  warnings,
-  onClose,
-}: {
-  message: string;
-  warnings: string[] | undefined;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="mt-0.5 size-6 text-green-600" aria-hidden />
-          <div>
-            <h2 className="font-semibold text-green-900">{message}</h2>
-            {warnings && warnings.length > 0 && (
-              <div className="mt-3 border-t border-green-200 pt-3">
-                <p className="text-xs font-semibold uppercase text-green-900">
-                  {t("finance.periods.warningsLabel")}
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {warnings.map((warning, idx) => (
-                    <li key={idx} className="text-xs text-green-800">
-                      {warning === "PERIOD_HAS_SUBMITTED_ENTRIES"
-                        ? t("finance.periods.warningSubmittedEntries")
-                        : warning}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-        <Button onClick={onClose} className="min-h-11 mt-4 w-full">
-          {t("finance.periods.done")}
-        </Button>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

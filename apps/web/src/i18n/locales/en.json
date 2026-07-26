@@ -196,6 +196,28 @@
     }
   },
   "finance": {
+    "notify": {
+      "success": {
+        "generic": "Action completed",
+        "approved": "Entry approved",
+        "rejected": "Entry rejected",
+        "reversed": "Entry reversed",
+        "locked": "Period locked",
+        "reopened": "Period reopened"
+      },
+      "warnings": {
+        "generic": "The action completed with a warning ({code}).",
+        "LATE_POSTING": "This transaction was posted to a previous accounting period.",
+        "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
+      },
+      "errors": {
+        "generic": "The action failed. Please try again. ({code})",
+        "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
+        "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
+        "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
+        "PERIOD_LOCKED": "This period is locked. No postings are possible."
+      }
+    },
     "navigation": {
       "label": "Finance sections",
       "record": "Record",

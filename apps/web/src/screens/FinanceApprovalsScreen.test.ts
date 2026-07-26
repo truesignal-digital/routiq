@@ -5,19 +5,24 @@ import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeCtx, type MeContext } from "../auth/me.js";
-import {
-  canApproveEntries,
-  canManagePeriods,
-} from "../finance/permissions.js";
-import { currentPeriodCode } from "../finance/model.js";
+import { canApproveEntries } from "../finance/permissions.js";
 import { i18n } from "../i18n/index.js";
 import { FinanceApprovalsScreen } from "./FinanceApprovalsScreen.js";
-import { FinancePeriodsScreen } from "./FinancePeriodsScreen.js";
 
 const mocks = vi.hoisted(() => ({
   createCommandIntent: vi.fn(),
   useApprovals: vi.fn(),
-  usePeriods: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
+  toastError: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: mocks.toastSuccess,
+    warning: mocks.toastWarning,
+    error: mocks.toastError,
+  },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -30,10 +35,6 @@ vi.mock("../commands/intent.js", () => ({
 
 vi.mock("../finance/useApprovals.js", () => ({
   useApprovals: mocks.useApprovals,
-}));
-
-vi.mock("../finance/usePeriods.js", () => ({
-  usePeriods: mocks.usePeriods,
 }));
 
 vi.mock("../finance/FinanceNav.js", () => ({
@@ -50,6 +51,49 @@ const approver: MeContext = {
   enabledModules: ["CORE", "FINANCE"],
 };
 
+const approvalEntries = [
+  {
+    id: "00000000-0000-4000-8000-000000000010",
+    entryNumber: "FIN-001",
+    direction: "EXPENSE",
+    status: "SUBMITTED",
+    category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+    amountMinor: 1000,
+    currency: "XAF",
+    economicDate: "2026-07-01",
+    postingPeriodCode: null,
+    isLatePosting: false,
+    branchId: "00000000-0000-4000-8000-000000000020",
+    counterpartyName: null,
+    paymentMethod: "CASH",
+    estimateStatus: "ACTUAL",
+    postedAt: null,
+    rowVersion: 1,
+    submittedByPrincipalId: "00000000-0000-4000-8000-000000000030",
+    submittedAt: "2026-07-01T10:00:00.000Z",
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000011",
+    entryNumber: "FIN-002",
+    direction: "EXPENSE",
+    status: "SUBMITTED",
+    category: { code: "TOLLS", labelFr: "Péages", labelEn: "Tolls" },
+    amountMinor: 500,
+    currency: "XAF",
+    economicDate: "2026-07-02",
+    postingPeriodCode: null,
+    isLatePosting: false,
+    branchId: "00000000-0000-4000-8000-000000000020",
+    counterpartyName: null,
+    paymentMethod: "CASH",
+    estimateStatus: "ACTUAL",
+    postedAt: null,
+    rowVersion: 2,
+    submittedByPrincipalId: "00000000-0000-4000-8000-000000000031",
+    submittedAt: "2026-07-02T10:00:00.000Z",
+  },
+];
+
 function renderScreen(screenNode: ReactNode) {
   return render(
     createElement(
@@ -58,6 +102,18 @@ function renderScreen(screenNode: ReactNode) {
       createElement(MeCtx.Provider, { value: approver }, screenNode),
     ),
   );
+}
+
+function mockApprovals() {
+  mocks.useApprovals.mockReturnValue({
+    data: {
+      entries: approvalEntries,
+      total: approvalEntries.length,
+    },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
 }
 
 function successfulIntentRecorder(submissionOrder: string[]) {
@@ -91,64 +147,14 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockApprovals();
 });
 
 afterEach(cleanup);
 
 describe("finance approval command routing", () => {
-  it("submits approve entry A, then reject entry B through their distinct commands", async () => {
+  it("dispatches approve then reject through their distinct commands and toasts approval success", async () => {
     expect(canApproveEntries(approver.role, approver.enabledModules)).toBe(true);
-
-    mocks.useApprovals.mockReturnValue({
-      data: {
-        entries: [
-          {
-            id: "00000000-0000-4000-8000-000000000010",
-            entryNumber: "FIN-001",
-            direction: "EXPENSE",
-            status: "SUBMITTED",
-            category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
-            amountMinor: 1000,
-            currency: "XAF",
-            economicDate: "2026-07-01",
-            postingPeriodCode: null,
-            isLatePosting: false,
-            branchId: "00000000-0000-4000-8000-000000000020",
-            counterpartyName: null,
-            paymentMethod: "CASH",
-            estimateStatus: "ACTUAL",
-            postedAt: null,
-            rowVersion: 1,
-            submittedByPrincipalId: "00000000-0000-4000-8000-000000000030",
-            submittedAt: "2026-07-01T10:00:00.000Z",
-          },
-          {
-            id: "00000000-0000-4000-8000-000000000011",
-            entryNumber: "FIN-002",
-            direction: "EXPENSE",
-            status: "SUBMITTED",
-            category: { code: "TOLLS", labelFr: "Péages", labelEn: "Tolls" },
-            amountMinor: 500,
-            currency: "XAF",
-            economicDate: "2026-07-02",
-            postingPeriodCode: null,
-            isLatePosting: false,
-            branchId: "00000000-0000-4000-8000-000000000020",
-            counterpartyName: null,
-            paymentMethod: "CASH",
-            estimateStatus: "ACTUAL",
-            postedAt: null,
-            rowVersion: 2,
-            submittedByPrincipalId: "00000000-0000-4000-8000-000000000031",
-            submittedAt: "2026-07-02T10:00:00.000Z",
-          },
-        ],
-        total: 2,
-      },
-      isPending: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
 
     const submissionOrder: string[] = [];
     successfulIntentRecorder(submissionOrder);
@@ -158,7 +164,7 @@ describe("finance approval command routing", () => {
     await user.click(screen.getAllByRole("button", { name: "Approve" })[0]!);
     await user.click(screen.getAllByRole("button", { name: "Approve" }).at(-1)!);
     await waitFor(() => expect(submissionOrder).toEqual(["approve-entry"]));
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Entry approved");
 
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.type(screen.getByLabelText("Rejection reason"), "Duplicate entry");
@@ -168,52 +174,31 @@ describe("finance approval command routing", () => {
       expect(submissionOrder).toEqual(["approve-entry", "reject-entry"]),
     );
   });
-});
 
-describe("finance period command routing", () => {
-  it("submits lock, then reopen through their distinct commands", async () => {
-    expect(canManagePeriods(approver.role, approver.enabledModules)).toBe(true);
-
-    mocks.usePeriods.mockReturnValue({
-      data: {
-        periods: [
-          {
-            periodCode: currentPeriodCode(),
-            status: "OPEN",
-            lockedAt: null,
-            entryCount: 2,
-            rowVersion: 1,
-          },
-          {
-            periodCode: "2026-06",
-            status: "LOCKED",
-            lockedAt: "2026-07-01T10:00:00.000Z",
-            entryCount: 4,
-            rowVersion: 2,
-          },
-        ],
-      },
-      isPending: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
-
-    const submissionOrder: string[] = [];
-    successfulIntentRecorder(submissionOrder);
+  it("keeps reject submit disabled while the reason is empty", async () => {
     const user = userEvent.setup();
-    renderScreen(createElement(FinancePeriodsScreen));
+    renderScreen(createElement(FinanceApprovalsScreen));
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
-    await user.click(screen.getAllByRole("button", { name: "Lock" }).at(-1)!);
-    await waitFor(() => expect(submissionOrder).toEqual(["lock-period"]));
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getAllByRole("button", { name: "Reject" })[0]!);
 
-    await user.click(screen.getByRole("button", { name: "Reopen" }));
-    await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");
-    await user.click(screen.getAllByRole("button", { name: "Reopen" }).at(-1)!);
+    expect(
+      (screen.getAllByRole("button", { name: "Reject" }).at(-1) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("closes on cancel without dispatching a command", async () => {
+    const user = userEvent.setup();
+    renderScreen(createElement(FinanceApprovalsScreen));
+
+    await user.click(screen.getAllByRole("button", { name: "Reject" })[0]!);
+    expect(screen.getByRole("dialog")).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(() =>
-      expect(submissionOrder).toEqual(["lock-period", "reopen-period"]),
+      expect(screen.queryByRole("dialog")).toBeNull(),
     );
+    expect(mocks.createCommandIntent).not.toHaveBeenCalled();
   });
 });

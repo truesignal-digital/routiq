@@ -196,6 +196,28 @@
     }
   },
   "finance": {
+    "notify": {
+      "success": {
+        "generic": "Action terminée",
+        "approved": "Écriture approuvée",
+        "rejected": "Écriture rejetée",
+        "reversed": "Écriture contre-passée",
+        "locked": "Période verrouillée",
+        "reopened": "Période rouverte"
+      },
+      "warnings": {
+        "generic": "L'action est terminée avec un avertissement ({code}).",
+        "LATE_POSTING": "Cette transaction a été comptabilisée dans une période précédente.",
+        "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
+      },
+      "errors": {
+        "generic": "L'action a échoué. Veuillez réessayer. ({code})",
+        "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
+        "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
+        "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été contre-passée.",
+        "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible."
+      }
+    },
     "navigation": {
       "label": "Sections financières",
       "record": "Saisie",

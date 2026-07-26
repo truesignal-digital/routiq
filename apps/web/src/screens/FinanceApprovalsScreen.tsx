@@ -1,18 +1,27 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { errorMessage } from "../lib/error-message.js";
+import {
+  notifyCommandSuccess,
+  notifyCommandWarnings,
+} from "../lib/notify.js";
 import { useApprovals } from "../finance/useApprovals.js";
 import { canApproveEntries } from "../finance/permissions.js";
 import { isOwnSubmission, validateRejectionReason } from "../finance/model.js";
@@ -30,24 +39,14 @@ type ActionDialogState =
   | { open: false }
   | { open: true; entryId: string; action: "approve" | "reject"; rowVersion: number };
 
-type SuccessDialogState =
-  | { open: false }
-  | {
-      open: true;
-      message: string;
-      warnings?: string[];
-    };
-
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
-  const queryClient = useQueryClient();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
   const approvalsQuery = useApprovals(canApprove);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
-  const [successDialog, setSuccessDialog] = useState<SuccessDialogState>({ open: false });
   const [removedEntryIds, setRemovedEntryIds] = useState<Set<string>>(new Set());
   const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
   const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
@@ -169,11 +168,8 @@ export function FinanceApprovalsScreen() {
     }
 
     setRemovedEntryIds((prev) => new Set([...prev, entryId]));
-    setSuccessDialog({
-      open: true,
-      message: t("finance.approvals.approved"),
-      warnings: result.outcome.warnings,
-    });
+    notifyCommandSuccess("approved");
+    notifyCommandWarnings(result.outcome.warnings);
     setActionDialog({ open: false });
   };
 
@@ -204,10 +200,8 @@ export function FinanceApprovalsScreen() {
     }
 
     setRemovedEntryIds((prev) => new Set([...prev, entryId]));
-    setSuccessDialog({
-      open: true,
-      message: t("finance.approvals.rejected"),
-    });
+    notifyCommandSuccess("rejected");
+    notifyCommandWarnings(result.outcome.warnings);
     setActionDialog({ open: false });
   };
 
@@ -274,13 +268,6 @@ export function FinanceApprovalsScreen() {
         />
       )}
 
-      {successDialog.open && (
-        <SuccessDialog
-          message={successDialog.message}
-          warnings={successDialog.warnings}
-          onClose={() => setSuccessDialog({ open: false })}
-        />
-      )}
     </section>
   );
 }
@@ -310,10 +297,10 @@ function ActionDialog({
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const isValid =
-    action === "approve" ? true : validateRejectionReason(text);
+  const isValid = action === "approve" || validateRejectionReason(text);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     setSubmitting(true);
     try {
       if (action === "approve") {
@@ -327,23 +314,28 @@ function ActionDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6">
-        <h2 className="text-lg font-semibold">
-          {action === "approve"
-            ? t("finance.approvals.approveTitle")
-            : t("finance.approvals.rejectTitle")}
-        </h2>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {action === "approve"
+              ? t("finance.approvals.approveTitle")
+              : t("finance.approvals.rejectTitle")}
+          </DialogTitle>
+        </DialogHeader>
 
         {error && (
-          <div role="alert" className="mt-4 flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div
+            role="alert"
+            className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+          >
             <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
             <p>{t(`errors.${error}`, { defaultValue: error })}</p>
           </div>
         )}
 
         {action === "approve" ? (
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="note">{t("finance.approvals.noteLabel")} {t("finance.approvals.optional")}</Label>
             <textarea
               id="note"
@@ -354,7 +346,7 @@ function ActionDialog({
             />
           </div>
         ) : (
-          <div className="mt-4 flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="reason">{t("finance.approvals.reasonLabel")}</Label>
             <textarea
               id="reason"
@@ -366,18 +358,20 @@ function ActionDialog({
           </div>
         )}
 
-        <div className="mt-6 flex gap-2">
-          <Button
-            variant="outline"
-            className="min-h-11 flex-1"
-            onClick={onCancel}
-            disabled={submitting}
+        <DialogFooter>
+          <DialogClose
+            render={
+              <Button
+                variant="outline"
+                className="min-h-11 flex-1 sm:flex-none"
+              />
+            }
           >
             {t("finance.approvals.cancel")}
-          </Button>
+          </DialogClose>
           <Button
-            className="min-h-11 flex-1"
-            disabled={!isValid || submitting}
+            className="min-h-11 flex-1 sm:flex-none"
+            disabled={action === "reject" && (!isValid || submitting)}
             onClick={() => void handleSubmit()}
           >
             {submitting
@@ -386,52 +380,8 @@ function ActionDialog({
                 ? t("finance.approvals.approve")
                 : t("finance.approvals.reject")}
           </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SuccessDialog({
-  message,
-  warnings,
-  onClose,
-}: {
-  message: string;
-  warnings: string[] | undefined;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="mt-0.5 size-6 text-green-600" aria-hidden />
-          <div>
-            <h2 className="font-semibold text-green-900">{message}</h2>
-            {warnings && warnings.length > 0 && (
-              <div className="mt-3 border-t border-green-200 pt-3">
-                <p className="text-xs font-semibold uppercase text-green-900">
-                  {t("finance.approvals.warningsLabel")}
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {warnings.map((warning, idx) => (
-                    <li key={idx} className="text-xs text-green-800">
-                      {warning === "LATE_POSTING"
-                        ? t("finance.entries.detail.latePosting")
-                        : warning}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-        <Button onClick={onClose} className="min-h-11 mt-4 w-full">
-          {t("finance.approvals.done")}
-        </Button>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

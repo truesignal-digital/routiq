@@ -1,15 +1,26 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
+import {
+  notifyCommandSuccess,
+  notifyCommandWarnings,
+} from "../lib/notify.js";
 import { useEntry } from "../finance/useEntry.js";
 import { canReverseEntry } from "../finance/permissions.js";
 import { validateReversalReason } from "../finance/model.js";
@@ -20,7 +31,6 @@ interface ReverseDialogState {
   open: boolean;
   reason: string;
   submitting: boolean;
-  success?: boolean;
 }
 
 export function FinanceEntryDetailScreen() {
@@ -79,7 +89,9 @@ export function FinanceEntryDetailScreen() {
       return;
     }
 
-    setReverseDialog((s) => ({ ...s, success: true }));
+    setReverseDialog({ open: false, reason: "", submitting: false });
+    notifyCommandSuccess("reversed");
+    notifyCommandWarnings(result.outcome.warnings);
     await queryClient.invalidateQueries({ queryKey: ["ws"] });
 
     setTimeout(() => {
@@ -284,7 +296,6 @@ export function FinanceEntryDetailScreen() {
               reason={reverseDialog.reason}
               submitting={reverseDialog.submitting}
               error={reverseError}
-              success={reverseDialog.success}
               onReasonChange={(reason) => setReverseDialog((s) => ({ ...s, reason }))}
               onCancel={() => setReverseDialog({ open: false, reason: "", submitting: false })}
               onSubmit={handleReverseSubmit}
@@ -301,7 +312,6 @@ function ReverseDialog({
   reason,
   submitting,
   error,
-  success,
   onReasonChange,
   onCancel,
   onSubmit,
@@ -310,7 +320,6 @@ function ReverseDialog({
   reason: string;
   submitting: boolean;
   error: string | undefined;
-  success: boolean | undefined;
   onReasonChange: (reason: string) => void;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
@@ -319,39 +328,24 @@ function ReverseDialog({
 
   if (!isOpen) return null;
 
-  if (success) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="w-full max-w-sm rounded-xl bg-white p-6">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 size-6 text-green-600" aria-hidden />
-            <div>
-              <h2 className="font-semibold text-green-900">
-                {t("finance.entries.reversal.success")}
-              </h2>
-              <p className="mt-1 text-sm text-green-800">
-                {t("finance.entries.reversal.successDesc")}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6">
-        <h2 className="text-lg font-semibold">{t("finance.entries.reversal.title")}</h2>
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("finance.entries.reversal.title")}</DialogTitle>
+        </DialogHeader>
 
         {error && (
-          <div role="alert" className="mt-4 flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div
+            role="alert"
+            className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+          >
             <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
             <p>{errorMessage(i18n, error)}</p>
           </div>
         )}
 
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="reason">{t("finance.entries.reversal.reasonLabel")}</Label>
           <textarea
             id="reason"
@@ -363,24 +357,26 @@ function ReverseDialog({
           />
         </div>
 
-        <div className="mt-6 flex gap-2">
-          <Button
-            variant="outline"
-            className="min-h-11 flex-1"
-            onClick={onCancel}
-            disabled={submitting}
+        <DialogFooter>
+          <DialogClose
+            render={
+              <Button
+                variant="outline"
+                className="min-h-11 flex-1 sm:flex-none"
+              />
+            }
           >
             {t("finance.entries.reversal.cancel")}
-          </Button>
+          </DialogClose>
           <Button
-            className="min-h-11 flex-1"
+            className="min-h-11 flex-1 sm:flex-none"
             disabled={!validateReversalReason(reason) || submitting}
             onClick={() => void onSubmit()}
           >
             {submitting ? t("finance.entries.reversal.submitting") : t("finance.entries.reversal.submit")}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
