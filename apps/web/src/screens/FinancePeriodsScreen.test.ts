@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -72,8 +72,35 @@ afterAll(async () => {
   await i18n.changeLanguage("fr-CM");
 });
 
+/** jsdom never matches a width query; the table needs a nudge to render desktop. */
+function mockDesktop() {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+/** Period codes top to bottom, read through each row's first cell. */
+function periodCodesInOrder(): string[] {
+  return screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => within(row).getAllByRole("cell")[0]?.textContent ?? "");
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mockDesktop();
   mocks.usePeriods.mockReturnValue({
     data: {
       periods: [
@@ -151,6 +178,23 @@ describe("finance period command routing", () => {
       expect(screen.queryByRole("dialog")).toBeNull(),
     );
     expect(mocks.createCommandIntent).not.toHaveBeenCalled();
+  });
+
+  // The periods read is unpaginated, so client-side sorting reorders the whole
+  // list — the reason these headers carry a sort control and the entries table's
+  // headers do not.
+  it("reorders the whole list from a column header, newest period first by default", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    expect(periodCodesInOrder()).toEqual([currentPeriodCode(), "2026-06"]);
+
+    // Busiest period first: 2026-06 holds four entries, the current one two.
+    await user.click(screen.getByRole("button", { name: "Entries" }));
+    expect(periodCodesInOrder()).toEqual(["2026-06", currentPeriodCode()]);
+
+    await user.click(screen.getByRole("button", { name: "Entries" }));
+    expect(periodCodesInOrder()).toEqual([currentPeriodCode(), "2026-06"]);
   });
 
   it("cancels lock from the overlay without dispatching", async () => {

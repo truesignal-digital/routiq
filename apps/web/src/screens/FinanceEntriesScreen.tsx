@@ -1,12 +1,18 @@
-import { useMemo, useState } from "react";
-import { useDebounce } from "../lib/useDebounce.js";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { DataTable } from "@/components/data-table";
+import {
+  DataTable,
+  type DataTableFilter,
+  type DataTableFilterOption,
+  type DataTableFilterValues,
+} from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { useMeContext } from "../auth/me.js";
+import { assetDisplayName } from "../assets/model.js";
+import { useAssets } from "../assets/useAssets.js";
 import { errorMessage } from "../lib/error-message.js";
 import { formatMoney, formatDate, localizedLabel } from "../lib/format.js";
 import { useEntries } from "../finance/useEntries.js";
@@ -24,27 +30,88 @@ export function FinanceEntriesScreen() {
   const me = useMeContext();
   const canView = canRecordFinance(me?.role, me?.enabledModules);
 
-  const [status, setStatus] = useState<string>("");
-  const [periodCode, setPeriodCode] = useState<string>("");
-  const [assetId, setAssetId] = useState<string>("");
-
-  const SEARCH_DEBOUNCE_MS = 300;
-  const debouncedPeriodCode = useDebounce(periodCode.trim(), SEARCH_DEBOUNCE_MS);
-  const debouncedAssetId = useDebounce(assetId.trim(), SEARCH_DEBOUNCE_MS);
+  // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
+  // does the filtering, so the table never narrows rows itself.
+  const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
+  const periodCode = filterValues["periodCode"]?.trim() ?? "";
 
   const entriesQuery = useEntries({
-    ...(status ? { status } : {}),
-    ...(debouncedPeriodCode ? { periodCode: debouncedPeriodCode } : {}),
-    ...(debouncedAssetId ? { assetId: debouncedAssetId } : {}),
+    ...(filterValues["status"] ? { status: filterValues["status"] } : {}),
+    ...(periodCode ? { periodCode } : {}),
+    ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
   });
 
+  const assetsQuery = useAssets();
+  const {
+    hasNextPage: hasMoreAssets,
+    isFetchingNextPage: isFetchingMoreAssets,
+    fetchNextPage: fetchMoreAssets,
+  } = assetsQuery;
+
+  // The asset filter has to offer the whole fleet: stopping at the first keyset
+  // page would silently drop assets an operator needs to filter by. Pilot fleets
+  // are tens of rows, so draining the cursor costs a request or two.
+  useEffect(() => {
+    if (hasMoreAssets && !isFetchingMoreAssets) {
+      void fetchMoreAssets();
+    }
+  }, [hasMoreAssets, isFetchingMoreAssets, fetchMoreAssets]);
+
+  const assetOptions = useMemo<DataTableFilterOption[]>(
+    () =>
+      (assetsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((asset) => {
+        const name = assetDisplayName(asset);
+        return {
+          value: asset.id,
+          label:
+            name === asset.assetCode
+              ? asset.assetCode
+              : t("finance.entries.filters.assetOption", {
+                  code: asset.assetCode,
+                  name,
+                }),
+        };
+      }),
+    [assetsQuery.data, t],
+  );
+
+  const filters = useMemo<DataTableFilter[]>(
+    () => [
+      {
+        columnId: "status",
+        type: "select",
+        placeholder: t("finance.entries.filters.status"),
+        options: STATUS_OPTIONS.map((status) => ({
+          value: status,
+          label: t(`finance.entries.status.${status}`),
+        })),
+      },
+      {
+        columnId: "periodCode",
+        type: "search",
+        placeholder: t("finance.entries.filters.periodPlaceholder"),
+      },
+      {
+        columnId: "assetId",
+        type: "select",
+        placeholder: t("finance.entries.filters.asset"),
+        options: assetOptions,
+      },
+    ],
+    [assetOptions, t],
+  );
+
   const allEntries = entriesQuery.data?.pages.flatMap((page) => page.entries) ?? [];
+
+  // No column is sortable. The read is keyset-paginated on `postedAt` and takes
+  // no `sort` param (apps/api/src/reads/finance.ts), so a header control could
+  // only reorder the pages already loaded and would misrepresent the rest.
   const columns = useMemo<ColumnDef<FinancialEntryListItem>[]>(
     () => [
       {
         accessorKey: "status",
         header: t("finance.entries.detail.status"),
-        meta: { mobile: "primary" },
+        meta: { mobile: "primary", label: t("finance.entries.detail.status") },
         cell: ({ row }) => (
           <div className="flex flex-wrap items-center gap-2">
             <FinanceStatusBadge status={row.original.status}>
@@ -61,19 +128,19 @@ export function FinanceEntriesScreen() {
       {
         accessorKey: "economicDate",
         header: t("finance.entries.detail.date"),
-        meta: { mobile: "secondary" },
+        meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
         cell: ({ row }) => formatDate(row.original.economicDate),
       },
       {
         id: "category",
         header: t("finance.entries.detail.category"),
-        meta: { mobile: "primary" },
+        meta: { mobile: "primary", label: t("finance.entries.detail.category") },
         cell: ({ row }) => localizedLabel(row.original.category),
       },
       {
         id: "amount",
         header: t("finance.entries.detail.amount"),
-        meta: { mobile: "primary" },
+        meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono text-right font-semibold">
             {formatMoney(row.original.amountMinor, {
@@ -86,7 +153,10 @@ export function FinanceEntriesScreen() {
       {
         accessorKey: "counterpartyName",
         header: t("finance.entries.detail.counterparty"),
-        meta: { mobile: "secondary" },
+        meta: {
+          mobile: "secondary",
+          label: t("finance.entries.detail.counterparty"),
+        },
         cell: ({ row }) => row.original.counterpartyName ?? "—",
       },
     ],
@@ -115,59 +185,7 @@ export function FinanceEntriesScreen() {
       />
       <FinanceNav />
 
-      {/* Filters */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="status-filter" className="text-xs font-semibold uppercase text-muted-foreground">
-            {t("finance.entries.filters.status")}
-          </label>
-          <select
-            id="status-filter"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="min-h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-          >
-            <option value="">{t("finance.entries.filters.allStatuses")}</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {t(`finance.entries.status.${s}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="period-filter" className="text-xs font-semibold uppercase text-muted-foreground">
-            {t("finance.entries.filters.period")}
-          </label>
-          <input
-            id="period-filter"
-            type="text"
-            placeholder={t("finance.entries.filters.periodPlaceholder")}
-            value={periodCode}
-            onChange={(e) => setPeriodCode(e.target.value)}
-            className="min-h-9 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="asset-filter" className="text-xs font-semibold uppercase text-muted-foreground">
-            {t("finance.entries.filters.asset")}
-          </label>
-          <input
-            id="asset-filter"
-            type="text"
-            placeholder={t("finance.entries.filters.assetPlaceholder")}
-            value={assetId}
-            onChange={(e) => setAssetId(e.target.value)}
-            className="min-h-9 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground"
-          />
-        </div>
-      </div>
-
-      {entriesQuery.isPending ? (
-        <LoadingState className="mt-6" label={t("finance.entries.loading")} />
-      ) : entriesQuery.isError ? (
+      {entriesQuery.isError ? (
         <ErrorState
           className="mt-6"
           message={t("finance.entries.loadFailed")}
@@ -176,9 +194,17 @@ export function FinanceEntriesScreen() {
         />
       ) : (
         <div className="mt-6">
+          {/* Each filter change is a new query key, so the fetch reports
+              `isPending`. Rendering the table through it keeps the toolbar
+              mounted — replacing it with a full-page loader would yank the
+              controls out from under the operator mid-refinement. */}
           <DataTable
             columns={columns}
             data={allEntries}
+            filters={filters}
+            filterValues={filterValues}
+            onFilterChange={setFilterValues}
+            enableColumnVisibility
             onRowClick={(entry) =>
               void navigate({
                 to: "/finance/entries/$entryId",
@@ -191,10 +217,14 @@ export function FinanceEntriesScreen() {
               onLoadMore: () => void entriesQuery.fetchNextPage(),
             }}
             emptyState={
-              <EmptyState
-                icon={<FileText className="size-7" aria-hidden />}
-                message={t("finance.entries.empty")}
-              />
+              entriesQuery.isPending ? (
+                <LoadingState label={t("finance.entries.loading")} />
+              ) : (
+                <EmptyState
+                  icon={<FileText className="size-7" aria-hidden />}
+                  message={t("finance.entries.empty")}
+                />
+              )
             }
           />
         </div>

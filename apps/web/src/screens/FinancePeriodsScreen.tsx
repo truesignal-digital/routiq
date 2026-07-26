@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, CalendarRange, Lock, Unlock } from "lucide-react";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
+import { CalendarRange, Lock, Unlock } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { formatDate } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { DataTable } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import {
   AlertDialog,
@@ -25,14 +27,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -62,7 +56,7 @@ type ActionDialogState =
   | { open: true; periodCode: string; action: "lock" | "reopen" };
 
 export function FinancePeriodsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
   const canManage = canManagePeriods(me?.role, me?.enabledModules);
@@ -76,7 +70,88 @@ export function FinancePeriodsScreen() {
 
   const periods = mergeImplicitCurrentPeriod(
     (periodsQuery.data?.periods ?? []).filter((p) => !removedPeriods.has(p.periodCode)),
-  ).sort((a, b) => b.periodCode.localeCompare(a.periodCode));
+  );
+
+  // Every column sorts. `/v1/finance/periods` is unpaginated — the whole list
+  // is in memory — so ordering it client-side reorders all of the data, not a
+  // loaded prefix. Newest period first is the default view.
+  const columns = useMemo<ColumnDef<PeriodRead>[]>(
+    () => [
+      {
+        accessorKey: "periodCode",
+        header: t("finance.periods.columns.period"),
+        enableSorting: true,
+        meta: { mobile: "primary", label: t("finance.periods.columns.period") },
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.periodCode}</span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: t("finance.periods.columns.status"),
+        enableSorting: true,
+        meta: { mobile: "secondary", label: t("finance.periods.columns.status") },
+        cell: ({ row }) =>
+          row.original.status === "OPEN"
+            ? t("finance.periods.statusOpen")
+            : t("finance.periods.statusLocked", {
+                date: formatDate(row.original.lockedAt),
+              }),
+      },
+      {
+        accessorKey: "entryCount",
+        header: t("finance.periods.columns.entries"),
+        enableSorting: true,
+        meta: { mobile: "secondary", label: t("finance.periods.columns.entries") },
+        cell: ({ row }) =>
+          t("finance.periods.entryCount", { count: row.original.entryCount }),
+      },
+      {
+        id: "actions",
+        header: t("finance.periods.columns.actions"),
+        enableSorting: false,
+        // Hiding the lock/reopen buttons would leave the screen with nothing to do.
+        enableHiding: false,
+        meta: { mobile: "primary", label: t("finance.periods.columns.actions") },
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            {row.original.status === "OPEN" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setActionDialog({
+                    open: true,
+                    periodCode: row.original.periodCode,
+                    action: "lock",
+                  })
+                }
+              >
+                <Lock className="mr-2 size-4" aria-hidden />
+                {t("finance.periods.lock")}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setActionDialog({
+                    open: true,
+                    periodCode: row.original.periodCode,
+                    action: "reopen",
+                  })
+                }
+              >
+                <Unlock className="mr-2 size-4" aria-hidden />
+                {t("finance.periods.reopen")}
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [i18n.resolvedLanguage, t],
+  );
 
   const handleLock = async (periodCode: string) => {
     setActionError(undefined);
@@ -151,48 +226,21 @@ export function FinancePeriodsScreen() {
           retryLabel={t("finance.periods.retry")}
           onRetry={() => void periodsQuery.refetch()}
         />
-      ) : periods.length === 0 ? (
-        <EmptyState
-          className="mt-6"
-          icon={<CalendarRange className="size-7" aria-hidden />}
-          message={t("finance.periods.empty")}
-        />
       ) : (
         <div className="mt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("finance.periods.columns.period")}</TableHead>
-                <TableHead>{t("finance.periods.columns.status")}</TableHead>
-                <TableHead>{t("finance.periods.columns.entries")}</TableHead>
-                <TableHead className="text-right">
-                  {t("finance.periods.columns.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {periods.map((period) => (
-                <PeriodRow
-                  key={period.periodCode}
-                  period={period}
-                  onLock={() =>
-                    setActionDialog({
-                      open: true,
-                      periodCode: period.periodCode,
-                      action: "lock",
-                    })
-                  }
-                  onReopen={() =>
-                    setActionDialog({
-                      open: true,
-                      periodCode: period.periodCode,
-                      action: "reopen",
-                    })
-                  }
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={columns}
+            data={periods}
+            getRowId={(period) => period.periodCode}
+            defaultSorting={[{ id: "periodCode", desc: true }]}
+            enableColumnVisibility
+            emptyState={
+              <EmptyState
+                icon={<CalendarRange className="size-7" aria-hidden />}
+                message={t("finance.periods.empty")}
+              />
+            }
+          />
         </div>
       )}
 
@@ -207,48 +255,6 @@ export function FinancePeriodsScreen() {
       )}
 
     </section>
-  );
-}
-
-function PeriodRow({
-  period,
-  onLock,
-  onReopen,
-}: {
-  period: PeriodRead;
-  onLock: () => void;
-  onReopen: () => void;
-}) {
-  const { t } = useTranslation();
-
-  const isOpen = period.status === "OPEN";
-  const lockedDate = period.lockedAt
-    ? formatDate(period.lockedAt)
-    : null;
-
-  return (
-    <TableRow>
-      <TableCell className="font-medium">{period.periodCode}</TableCell>
-      <TableCell>
-        {isOpen
-          ? t("finance.periods.statusOpen")
-          : t("finance.periods.statusLocked", { date: lockedDate })}
-      </TableCell>
-      <TableCell>{t("finance.periods.entryCount", { count: period.entryCount })}</TableCell>
-      <TableCell className="text-right">
-        {isOpen ? (
-          <Button size="sm" variant="outline" onClick={onLock}>
-            <Lock className="mr-2 size-4" aria-hidden />
-            {t("finance.periods.lock")}
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" onClick={onReopen}>
-            <Unlock className="mr-2 size-4" aria-hidden />
-            {t("finance.periods.reopen")}
-          </Button>
-        )}
-      </TableCell>
-    </TableRow>
   );
 }
 

@@ -239,7 +239,7 @@
       "entries": "Écritures",
       "approvals": "Approbations",
       "periods": "Périodes",
-      "approvalsBadge": "{{count}} approbations en attente"
+      "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
     },
     "record": {
       "title": "Enregistrer une transaction",
@@ -336,11 +336,9 @@
       },
       "filters": {
         "status": "Statut",
-        "allStatuses": "Tous les statuts",
-        "period": "Période",
-        "periodPlaceholder": "AAAA-MM",
+        "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
-        "assetPlaceholder": "UUID ou code…"
+        "assetOption": "{code} — {name}"
       }
     },
     "approvals": {
@@ -351,6 +349,9 @@
       "loadFailed": "Impossible de charger les approbations. Réessayez.",
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
+      "columns": {
+        "actions": "Actions"
+      },
       "makerGuard": "Votre saisie — un autre approbateur doit décider",
       "approve": "Approuver",
       "reject": "Rejeter",
@@ -383,8 +384,8 @@
       "retry": "Réessayer",
       "empty": "Aucune période disponible.",
       "statusOpen": "Ouverte",
-      "statusLocked": "Verrouillée depuis le {{date}}",
-      "entryCount": "{{count}} écriture(s)",
+      "statusLocked": "Verrouillée depuis le {date}",
+      "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
       "lock": "Verrouiller",
       "reopen": "Rouvrir",
       "lockTitle": "Verrouiller la période",

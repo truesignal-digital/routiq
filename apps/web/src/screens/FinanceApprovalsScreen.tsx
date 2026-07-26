@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ClipboardCheck } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { formatMoney, formatDate, localizedLabel } from "../lib/format.js";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -60,12 +60,16 @@ export function FinanceApprovalsScreen() {
   const entries = (approvalsQuery.data?.entries ?? []).filter(
     (e) => !removedEntryIds.has(e.id),
   );
+  // The queue carries no toolbar: `/v1/finance/approvals` takes no filter or
+  // sort params, and it answers with at most 100 rows next to a separate
+  // `total`. Both a filter and a sort control would therefore act on a prefix
+  // of the queue while looking like they act on all of it.
   const columns = useMemo<ColumnDef<PendingApprovalItem>[]>(
     () => [
       {
         accessorKey: "status",
         header: t("finance.entries.detail.status"),
-        meta: { mobile: "primary" },
+        meta: { mobile: "primary", label: t("finance.entries.detail.status") },
         cell: ({ row }) => (
           <FinanceStatusBadge status={row.original.status}>
             {t(`finance.entries.status.${row.original.status}`)}
@@ -75,20 +79,20 @@ export function FinanceApprovalsScreen() {
       {
         accessorKey: "submittedAt",
         header: t("finance.entries.detail.date"),
-        meta: { mobile: "secondary" },
+        meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
       },
       {
         id: "category",
         header: t("finance.entries.detail.category"),
-        meta: { mobile: "primary" },
+        meta: { mobile: "primary", label: t("finance.entries.detail.category") },
         cell: ({ row }) =>
           localizedLabel(row.original.category),
       },
       {
         id: "amount",
         header: t("finance.entries.detail.amount"),
-        meta: { mobile: "primary" },
+        meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono font-semibold">
             {formatMoney(row.original.amountMinor, { currency: row.original.currency, signDisplay: "never" })}
@@ -98,13 +102,22 @@ export function FinanceApprovalsScreen() {
       {
         accessorKey: "counterpartyName",
         header: t("finance.entries.detail.counterparty"),
-        meta: { mobile: "secondary" },
+        meta: {
+          mobile: "secondary",
+          label: t("finance.entries.detail.counterparty"),
+        },
         cell: ({ row }) => row.original.counterpartyName ?? "—",
       },
       {
         id: "actions",
-        header: "",
-        meta: { mobile: "primary" },
+        header: t("finance.approvals.columns.actions"),
+        // Hiding the decision buttons would leave an approver a queue they
+        // cannot act on.
+        enableHiding: false,
+        meta: {
+          mobile: "primary",
+          label: t("finance.approvals.columns.actions"),
+        },
         cell: ({ row }) =>
           isOwnSubmission(row.original.submittedByPrincipalId, me?.principalId) ? (
             <StatusBadge tone="warning">
@@ -248,6 +261,8 @@ export function FinanceApprovalsScreen() {
           <DataTable
             columns={columns}
             data={entries}
+            getRowId={(entry) => entry.id}
+            enableColumnVisibility
             emptyState={
               <EmptyState
                 icon={<ClipboardCheck className="size-7" aria-hidden />}
