@@ -1,20 +1,11 @@
 import {
   financialEntryDetail,
   financialEntryListResponse,
+  listQuery,
   pendingApprovalsResponse,
   periodsResponse,
 } from "@routiq/contracts";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  inArray,
-  isNull,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -28,36 +19,18 @@ import {
   postingPeriods,
 } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
+import { afterTimestampKeyset, timestampKeysetCodec } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
 
-const listQuerySchema = z.object({
+// Read-side list conventions live in ADR-0003: Zod-validated filters, keyset
+// pagination on a stable sort key, server-bounded limits. This response keeps
+// `entries` where new resources use `items` — the legacy key documented there.
+const listQuerySchema = listQuery({
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]).optional(),
   periodCode: z.string().optional(),
   assetId: z.uuid().optional(),
   branchId: z.uuid().optional(),
-  cursor: z.string().optional(),
 });
-
-const cursorSchema = z.object({
-  postedAt: z.string().nullable(),
-  id: z.uuid(),
-});
-
-type FinanceCursor = z.infer<typeof cursorSchema>;
-
-function decodeCursor(cursor: string): FinanceCursor | undefined {
-  try {
-    const decoded = Buffer.from(cursor, "base64url").toString("utf8");
-    const parsed = cursorSchema.safeParse(JSON.parse(decoded));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function encodeCursor(cursor: FinanceCursor): string {
-  return Buffer.from(JSON.stringify(cursor)).toString("base64url");
-}
 
 export function registerFinanceReadRoutes(
   app: FastifyInstance,
@@ -74,10 +47,13 @@ export function registerFinanceReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, periodCode, assetId, branchId, cursor } = parsedQuery.data;
+        const { status, periodCode, assetId, branchId, cursor, limit } =
+          parsedQuery.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          const decodedCursor = cursor ? decodeCursor(cursor) : undefined;
+          const decodedCursor = cursor
+            ? timestampKeysetCodec.decode(cursor)
+            : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" };
           }
@@ -103,24 +79,14 @@ export function registerFinanceReadRoutes(
             conditions.push(eq(postingPeriods.periodCode, periodCode));
           }
 
-          // Keyset pagination cursor condition
           if (decodedCursor) {
-            const postedAt = decodedCursor.postedAt ? new Date(decodedCursor.postedAt) : null;
-            if (postedAt === null) {
-              // NULL postedAt cursor: get entries with NULL postedAt and id > cursor.id
-              conditions.push(
-                and(isNull(financialEntries.postedAt), sql`${financialEntries.id} > ${decodedCursor.id}`)!,
-              );
-            } else {
-              // Non-null cursor: postedAt < c OR (postedAt = c AND id > c.id) OR postedAt IS NULL
-              conditions.push(
-                or(
-                  sql`${financialEntries.postedAt} < ${postedAt}`,
-                  and(eq(financialEntries.postedAt, postedAt), sql`${financialEntries.id} > ${decodedCursor.id}`),
-                  isNull(financialEntries.postedAt),
-                )!,
-              );
-            }
+            conditions.push(
+              afterTimestampKeyset(
+                financialEntries.postedAt,
+                financialEntries.id,
+                decodedCursor,
+              ),
+            );
           }
 
           const rows = await tx
@@ -161,7 +127,8 @@ export function registerFinanceReadRoutes(
             )
             .where(and(...conditions))
             .orderBy(sql`${financialEntries.postedAt} desc nulls last`, asc(financialEntries.id))
-            .limit(51);
+            // One extra row is the has-next probe, never returned.
+            .limit(limit + 1);
 
           return { rows };
         });
@@ -171,8 +138,8 @@ export function registerFinanceReadRoutes(
         }
 
         const { rows } = result || { rows: [] };
-        const hasNextPage = rows.length > 50;
-        const entries = rows.slice(0, 50).map((row) => ({
+        const hasNextPage = rows.length > limit;
+        const entries = rows.slice(0, limit).map((row) => ({
           id: row.id,
           entryNumber: row.entryNumber,
           direction: row.direction,
@@ -198,7 +165,10 @@ export function registerFinanceReadRoutes(
         let nextCursor: string | null = null;
         if (hasNextPage && entries.length > 0) {
           const lastEntry = entries[entries.length - 1]!;
-          nextCursor = encodeCursor({ postedAt: lastEntry.postedAt, id: lastEntry.id });
+          nextCursor = timestampKeysetCodec.encode({
+            postedAt: lastEntry.postedAt,
+            id: lastEntry.id,
+          });
         }
 
         return financialEntryListResponse.parse({ entries, nextCursor });

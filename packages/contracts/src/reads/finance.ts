@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listResponse } from "./list.js";
 
 const categoryType = z.object({
   code: z.string(),
@@ -25,9 +26,9 @@ export const financialEntryListItem = z.object({
   rowVersion: z.number(),
 });
 
-export const financialEntryListResponse = z.object({
-  entries: z.array(financialEntryListItem),
-  nextCursor: z.string().nullable(),
+/** `entries`, not `items`: the published key on /v1/finance/entries (ADR-0003). */
+export const financialEntryListResponse = listResponse(financialEntryListItem, {
+  key: "entries",
 });
 
 const financialPosting = z.object({
