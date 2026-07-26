@@ -164,6 +164,18 @@
     "retry": "Réessayer",
     "remove": "Retirer"
   },
+  "fileUpload": {
+    "dropzone": "Déposez les fichiers ici ou cliquez pour choisir",
+    "remove": "Retirer",
+    "uploading": "Téléversement…",
+    "error": "Échec du téléversement : {message}",
+    "fileSize": "{value} {unit}",
+    "units": {
+      "bytes": "o",
+      "kilobytes": "ko",
+      "megabytes": "Mo"
+    }
+  },
   "documents": {
     "link": "Documents",
     "title": "Documents de l'actif",
@@ -253,6 +265,7 @@
       "paymentRefPlaceholder": "N° de reçu, N° de virement…",
       "assetLabel": "Actif (optionnel)",
       "assetPlaceholder": "Attribuer à un véhicule…",
+      "evidenceLabel": "Justificatif (optionnel)",
       "submit": "Enregistrer",
       "submitting": "Enregistrement…",
       "outcomePosted": "Enregistré",

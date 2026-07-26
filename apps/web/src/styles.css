@@ -150,6 +150,19 @@
   }
 }
 
+@keyframes file-upload-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.file-upload-indeterminate {
+  animation: file-upload-indeterminate 1.15s ease-in-out infinite;
+}
+
 .asset-card {
   animation: asset-card-in 360ms ease-out both;
 }
@@ -166,7 +179,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .asset-card {
+  .asset-card,
+  .file-upload-indeterminate {
     animation: none;
   }
 }

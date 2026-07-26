@@ -5,9 +5,9 @@ import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { ArrowLeft, FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AttachmentField } from "../artifacts/AttachmentField.js";
 import { useMeContext } from "../auth/me.js";
 import { commandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -341,7 +341,11 @@ function DocumentForm({
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{t("attachments.label")}</span>
-        <AttachmentField onChange={setArtifactIds} onUploadingChange={setAttachmentsUploading} />
+        <FileUpload
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={setArtifactIds}
+          onUploadingChange={setAttachmentsUploading}
+        />
       </div>
 
       {errorCode !== undefined && (

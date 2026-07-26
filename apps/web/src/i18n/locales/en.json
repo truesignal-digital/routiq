@@ -164,6 +164,18 @@
     "retry": "Retry",
     "remove": "Remove"
   },
+  "fileUpload": {
+    "dropzone": "Drop files here or click to choose",
+    "remove": "Remove",
+    "uploading": "Uploading…",
+    "error": "Upload failed: {message}",
+    "fileSize": "{value} {unit}",
+    "units": {
+      "bytes": "B",
+      "kilobytes": "KB",
+      "megabytes": "MB"
+    }
+  },
   "documents": {
     "link": "Documents",
     "title": "Asset documents",
@@ -253,6 +265,7 @@
       "paymentRefPlaceholder": "Receipt #, Transfer #…",
       "assetLabel": "Asset (optional)",
       "assetPlaceholder": "Assign to a vehicle…",
+      "evidenceLabel": "Supporting document (optional)",
       "submit": "Record",
       "submitting": "Recording…",
       "outcomePosted": "Recorded",

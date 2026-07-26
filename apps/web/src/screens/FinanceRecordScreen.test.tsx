@@ -13,15 +13,19 @@ import {
   vi,
 } from "vitest";
 import { MeCtx, type MeContext } from "../auth/me.js";
+import { sessionStore } from "../auth/store.js";
 import { toRecordExpensePayload } from "../finance/model.js";
 import { i18n } from "../i18n/index.js";
 import { FinanceRecordScreen } from "./FinanceRecordScreen.js";
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000010";
+const ARTIFACT_ID = "00000000-0000-4000-8000-000000000020";
+const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   submit: vi.fn(),
+  uploadArtifact: vi.fn(),
   useAssetRegistrationReference: vi.fn(),
   useCategories: vi.fn(),
 }));
@@ -34,6 +38,11 @@ vi.mock("../commands/instance.js", () => ({
   commandClient: {
     submit: mocks.submit,
   },
+}));
+
+vi.mock("../artifacts/upload.js", () => ({
+  downscaleImage: (file: File) => Promise.resolve(file),
+  uploadArtifact: mocks.uploadArtifact,
 }));
 
 vi.mock("../assets/reference.js", () => ({
@@ -85,6 +94,11 @@ afterAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(ENTRY_ID);
+  sessionStore.save({
+    ...sessionIdentity,
+    token: "token",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
   mocks.useAssetRegistrationReference.mockReturnValue({
     data: {
       assetClasses: [],
@@ -109,9 +123,14 @@ beforeEach(() => {
       idempotentReplay: false,
     },
   });
+  mocks.uploadArtifact.mockImplementation(async (artifactId: string, file: Blob) => ({
+    ok: true,
+    artifact: { id: artifactId, sha256: "abc123", sizeBytes: file.size },
+  }));
 });
 
 afterEach(() => {
+  sessionStore.logout(sessionIdentity);
   vi.restoreAllMocks();
   cleanup();
 });
@@ -159,5 +178,25 @@ describe("finance record form", () => {
         assetId: "asset-123",
       }),
     );
+  });
+
+  it("dispatches completed evidence uploads as source artifact ids", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    vi.mocked(globalThis.crypto.randomUUID).mockReturnValue(ARTIFACT_ID);
+    await chooseFuelCategory(user);
+
+    await user.upload(
+      screen.getByLabelText("Drop files here or click to choose"),
+      new File(["receipt"], "receipt.jpg", { type: "image/jpeg" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("progressbar")).toBeNull());
+    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record" }));
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
+    expect(mocks.submit.mock.calls[0]?.[0].envelope.sourceArtifactIds).toEqual([
+      ARTIFACT_ID,
+    ]);
   });
 });

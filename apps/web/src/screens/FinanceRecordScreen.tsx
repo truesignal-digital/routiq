@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { FileUpload } from "@/components/ui/file-upload";
 import {
   Form,
   FormControl,
@@ -185,6 +186,8 @@ function RecordForm({
     i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
 
   const [errorCode, setErrorCode] = useState<string>();
+  const [artifactIds, setArtifactIds] = useState<string[]>([]);
+  const [attachmentsUploading, setAttachmentsUploading] = useState(false);
 
   // Preselect branch if only one is available
   useEffect(() => {
@@ -231,7 +234,10 @@ function RecordForm({
     const intentRef =
       values.direction === "EXPENSE" ? intentExpenseRef : intentRevenueRef;
 
-    const result = await intentRef.current.submit(payload);
+    const result = await intentRef.current.submit(
+      payload,
+      artifactIds.length > 0 ? { sourceArtifactIds: artifactIds } : {},
+    );
 
     if (!result.ok) {
       setErrorCode(result.code);
@@ -515,10 +521,21 @@ function RecordForm({
           </FormItem>
         </FormField>
 
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">
+            {t("finance.record.evidenceLabel")}
+          </span>
+          <FileUpload
+            accept="image/*"
+            onChange={setArtifactIds}
+            onUploadingChange={setAttachmentsUploading}
+          />
+        </div>
+
         <Button
           type="submit"
           className="min-h-11"
-          disabled={!isValid || form.formState.isSubmitting}
+          disabled={!isValid || form.formState.isSubmitting || attachmentsUploading}
         >
           {form.formState.isSubmitting
             ? t("finance.record.submitting")
