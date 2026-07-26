@@ -83,6 +83,7 @@
     "noResultsTitle": "No assets found",
     "noResultsHint": "Try another search or clear the filters.",
     "resetFilters": "Clear filters",
+    "loadMore": "Load more",
     "errorTitle": "We couldn't load the fleet",
     "errorHint": "The connection may have dropped. Your data is still safe.",
     "retry": "Try again",

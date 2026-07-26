@@ -1,31 +1,30 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { sessionStore, useActiveSession } from "../auth/store.js";
-import { fetchAssets } from "./api.js";
-import type { AssetListItem } from "./model.js";
+import { fetchAssets, type AssetListResponse } from "./api.js";
+import type { AssetLifecycleStatus } from "./model.js";
 
-interface UseAssetsResult {
-  status: "loading" | "ready" | "error";
-  assets: AssetListItem[];
-  retry: () => void;
+export interface UseAssetsParams {
+  status?: readonly AssetLifecycleStatus[];
+  category?: string;
+  branchId?: string;
+  search?: string;
 }
 
-export function useAssets(): UseAssetsResult {
+export function useAssets(params: UseAssetsParams = {}) {
   const session = useActiveSession();
 
-  const query = useQuery({
+  return useInfiniteQuery<AssetListResponse>({
     // Workspace-scoped key: the cache can never leak across a workspace switch.
-    queryKey: ["ws", session?.workspaceSlug, "assets"],
+    queryKey: ["ws", session?.workspaceSlug, "assets", params],
     enabled: session !== undefined,
-    queryFn: ({ signal }) => {
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage: AssetListResponse) =>
+      lastPage.nextCursor ?? undefined,
+    queryFn: ({ signal, pageParam }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchAssets(token, signal);
+      const cursor = pageParam as string | undefined;
+      return fetchAssets(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
     },
   });
-
-  return {
-    status: query.isPending ? "loading" : query.isError ? "error" : "ready",
-    assets: query.data?.assets ?? [],
-    retry: () => void query.refetch(),
-  };
 }

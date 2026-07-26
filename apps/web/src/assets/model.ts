@@ -30,49 +30,33 @@ export interface AssetListItem {
 
 export type AssetFilter = "ALL" | "IN_SERVICE" | "ATTENTION";
 
+export const ATTENTION_STATUSES = [
+  "UNDER_MAINTENANCE",
+  "RETIRED",
+  "WRITTEN_OFF",
+] as const satisfies readonly AssetLifecycleStatus[];
+
 export function assetDisplayName(asset: AssetListItem): string {
   const makeAndModel = [asset.manufacturer, asset.model].filter(Boolean).join(" ");
   return makeAndModel || asset.assetCode;
 }
 
-export function assetMatches(
-  asset: AssetListItem,
-  query: string,
+/** The statuses a filter tab asks the server for; `ALL` constrains nothing. */
+export function assetFilterStatuses(
   filter: AssetFilter,
-): boolean {
-  const matchesFilter =
-    filter === "ALL" ||
-    (filter === "IN_SERVICE" && asset.lifecycleStatus === "IN_SERVICE") ||
-    (filter === "ATTENTION" &&
-      ["UNDER_MAINTENANCE", "RETIRED", "WRITTEN_OFF"].includes(
-        asset.lifecycleStatus,
-      ));
-
-  if (!matchesFilter) return false;
-  const normalizedQuery = query.trim().toLocaleLowerCase();
-  if (!normalizedQuery) return true;
-
-  return [
-    asset.assetCode,
-    asset.registrationNumber,
-    asset.manufacturer,
-    asset.model,
-    asset.category.labelFr,
-    asset.category.labelEn,
-    asset.branch.code,
-    asset.branch.name,
-  ].some((value) => value?.toLocaleLowerCase().includes(normalizedQuery));
+): readonly AssetLifecycleStatus[] | undefined {
+  if (filter === "IN_SERVICE") return ["IN_SERVICE"];
+  if (filter === "ATTENTION") return ATTENTION_STATUSES;
+  return undefined;
 }
 
 export function summarizeAssets(assets: AssetListItem[]) {
+  const attention: readonly string[] = ATTENTION_STATUSES;
   return {
     total: assets.length,
     inService: assets.filter((asset) => asset.lifecycleStatus === "IN_SERVICE")
       .length,
-    attention: assets.filter((asset) =>
-      ["UNDER_MAINTENANCE", "RETIRED", "WRITTEN_OFF"].includes(
-        asset.lifecycleStatus,
-      ),
-    ).length,
+    attention: assets.filter((asset) => attention.includes(asset.lifecycleStatus))
+      .length,
   };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assetDisplayName,
-  assetMatches,
+  assetFilterStatuses,
   summarizeAssets,
   type AssetListItem,
 } from "./model.js";
@@ -40,11 +40,14 @@ describe("asset list view model", () => {
     });
   });
 
-  it("searches bilingual labels and operational identifiers", () => {
-    expect(assetMatches(assets[0]!, "camion", "ALL")).toBe(true);
-    expect(assetMatches(assets[0]!, "LT 123", "ALL")).toBe(true);
-    expect(assetMatches(assets[1]!, "yaoundé", "ATTENTION")).toBe(true);
-    expect(assetMatches(assets[0]!, "douala", "ATTENTION")).toBe(false);
+  it("translates a filter tab into the statuses the server is asked for", () => {
+    expect(assetFilterStatuses("ALL")).toBeUndefined();
+    expect(assetFilterStatuses("IN_SERVICE")).toEqual(["IN_SERVICE"]);
+    expect(assetFilterStatuses("ATTENTION")).toEqual([
+      "UNDER_MAINTENANCE",
+      "RETIRED",
+      "WRITTEN_OFF",
+    ]);
   });
 
   it("uses make and model when present, then falls back to asset code", () => {

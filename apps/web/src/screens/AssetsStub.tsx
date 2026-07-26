@@ -9,25 +9,39 @@ import {
   Truck,
   Wrench,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import {
   assetDisplayName,
-  assetMatches,
+  assetFilterStatuses,
   summarizeAssets,
   type AssetFilter,
   type AssetLifecycleStatus,
   type AssetListItem,
 } from "../assets/model.js";
 import { AssetActions } from "../assets/AssetActions.js";
-import { useAssets } from "../assets/useAssets.js";
+import { useAssets, type UseAssetsParams } from "../assets/useAssets.js";
 import { isReadOnlyRole, useMeContext } from "../auth/me.js";
 import { cn } from "../lib/utils.js";
 
 const filters: AssetFilter[] = ["ALL", "IN_SERVICE", "ATTENTION"];
+
+/** Search now hits the API, so keystrokes must not each become a request. */
+const SEARCH_DEBOUNCE_MS = 300;
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [settled, setSettled] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+
+  return settled;
+}
 
 const statusStyles: Record<AssetLifecycleStatus, string> = {
   REGISTERED: "bg-sky-50 text-sky-800 ring-sky-700/15",
@@ -41,16 +55,29 @@ const statusStyles: Record<AssetLifecycleStatus, string> = {
 export function AssetsStub() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { assets, status, retry } = useAssets();
   const readOnly = isReadOnlyRole(useMeContext()?.role);
-  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AssetFilter>("ALL");
+  const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
 
-  const summary = useMemo(() => summarizeAssets(assets), [assets]);
-  const visibleAssets = useMemo(
-    () => assets.filter((asset) => assetMatches(asset, query, filter)),
-    [assets, filter, query],
+  const params = useMemo<UseAssetsParams>(() => {
+    const statuses = assetFilterStatuses(filter);
+    return {
+      ...(debouncedSearch === "" ? {} : { search: debouncedSearch }),
+      ...(statuses === undefined ? {} : { status: statuses }),
+    };
+  }, [debouncedSearch, filter]);
+
+  const assetsQuery = useAssets(params);
+  const assets = useMemo(
+    () => assetsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [assetsQuery.data],
   );
+  const narrowed = debouncedSearch !== "" || filter !== "ALL";
+
+  // Server-side filtering means these count only the pages fetched under the
+  // current filter, not the whole fleet.
+  const summary = useMemo(() => summarizeAssets(assets), [assets]);
 
   return (
     <section className="asset-page min-h-dvh">
@@ -109,8 +136,8 @@ export function AssetsStub() {
             />
             <input
               type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
               placeholder={t("assets.searchPlaceholder")}
               className="min-h-12 w-full rounded-xl border border-foreground/10 bg-card py-3 pl-11 pr-4 text-base shadow-sm outline-none transition placeholder:text-muted-foreground/75 focus:border-foreground/25 focus:ring-4 focus:ring-primary/10 sm:text-sm"
             />
@@ -139,15 +166,15 @@ export function AssetsStub() {
           </div>
         </div>
 
-        <div className="mt-5" aria-live="polite">
-          {status === "loading" && assets.length === 0 ? (
+        <div className="mt-5" aria-live="polite" aria-busy={assetsQuery.isFetching}>
+          {assetsQuery.isPending ? (
             <LoadingState
               label={t("assets.loading")}
               rows={4}
               className="grid gap-3 lg:grid-cols-2"
               rowClassName="h-44 rounded-2xl"
             />
-          ) : status === "error" && assets.length === 0 ? (
+          ) : assetsQuery.isError ? (
             <ErrorState
               message={
                 <span className="flex flex-col gap-1">
@@ -163,7 +190,26 @@ export function AssetsStub() {
                   {t("assets.retry")}
                 </span>
               }
-              onRetry={retry}
+              onRetry={() => void assetsQuery.refetch()}
+            />
+          ) : assets.length === 0 && narrowed ? (
+            <EmptyState
+              icon={<Search className="size-7" aria-hidden />}
+              message={
+                <span className="flex flex-col gap-1">
+                  <strong className="font-semibold text-foreground">
+                    {t("assets.noResultsTitle")}
+                  </strong>
+                  <span>{t("assets.noResultsHint")}</span>
+                </span>
+              }
+              action={{
+                label: t("assets.resetFilters"),
+                onClick: () => {
+                  setSearch("");
+                  setFilter("ALL");
+                },
+              }}
             />
           ) : assets.length === 0 ? (
             <EmptyState
@@ -198,31 +244,28 @@ export function AssetsStub() {
                     }
               }
             />
-          ) : visibleAssets.length === 0 ? (
-            <EmptyState
-              icon={<Search className="size-7" aria-hidden />}
-              message={
-                <span className="flex flex-col gap-1">
-                  <strong className="font-semibold text-foreground">
-                    {t("assets.noResultsTitle")}
-                  </strong>
-                  <span>{t("assets.noResultsHint")}</span>
-                </span>
-              }
-              action={{
-                label: t("assets.resetFilters"),
-                onClick: () => {
-                  setQuery("");
-                  setFilter("ALL");
-                },
-              }}
-            />
           ) : (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {visibleAssets.map((asset, index) => (
-                <AssetCard key={asset.id} asset={asset} index={index} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {assets.map((asset, index) => (
+                  <AssetCard key={asset.id} asset={asset} index={index} />
+                ))}
+              </div>
+              {assetsQuery.hasNextPage && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => void assetsQuery.fetchNextPage()}
+                    disabled={assetsQuery.isFetchingNextPage}
+                    className="min-h-11 rounded-full border border-foreground/12 bg-card px-5 text-sm font-semibold transition hover:border-foreground/25 disabled:opacity-60"
+                  >
+                    {assetsQuery.isFetchingNextPage
+                      ? t("assets.loading")
+                      : t("assets.loadMore")}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

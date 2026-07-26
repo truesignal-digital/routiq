@@ -68,3 +68,33 @@ export function afterTimestampKeyset(
     isNull(timestamp),
   )!;
 }
+
+/**
+ * Keyset position for a list ordered `<text> asc, id asc`. The sort key is a
+ * non-null text column (an asset always has a code), and the id breaks ties
+ * into a total order.
+ */
+export const textKeysetCursor = z.object({
+  key: z.string(),
+  id: z.uuid(),
+});
+
+export type TextKeysetCursor = z.infer<typeof textKeysetCursor>;
+
+export const textKeysetCodec = cursorCodec(textKeysetCursor);
+
+/**
+ * The rows strictly after `cursor` under `<text> asc, id asc`. The comparison
+ * runs in the column's collation, the same one the ORDER BY uses, so the
+ * boundary can never disagree with the order it paginates.
+ */
+export function afterTextKeyset(
+  key: PgColumn,
+  id: PgColumn,
+  cursor: TextKeysetCursor,
+): SQL {
+  return or(
+    sql`${key} > ${cursor.key}`,
+    and(eq(key, cursor.key), sql`${id} > ${cursor.id}`),
+  )!;
+}

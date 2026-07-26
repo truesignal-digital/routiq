@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { fetchAssets } from "./api.js";
 
@@ -13,8 +14,13 @@ const validItem = {
   branch: { code: "DLA", name: "Douala" },
 };
 
-function fakeFetch(status: number, body: unknown): typeof fetch {
-  return (async (_url: RequestInfo | URL, init?: RequestInit) => {
+function fakeFetch(
+  status: number,
+  body: unknown,
+  requested: string[] = [],
+): typeof fetch {
+  return (async (url: RequestInfo | URL, init?: RequestInit) => {
+    requested.push(String(url));
     const headers = new Headers(init?.headers);
     expect(headers.get("authorization")).toBe("Bearer tok");
     return new Response(JSON.stringify(body), { status });
@@ -22,24 +28,101 @@ function fakeFetch(status: number, body: unknown): typeof fetch {
 }
 
 describe("fetchAssets", () => {
-  it("parses a valid response", async () => {
+  it("parses the list envelope", async () => {
     const result = await fetchAssets(
       "tok",
+      {},
       undefined,
-      fakeFetch(200, { workspaceId: "ws1", assets: [validItem] }),
+      fakeFetch(200, { items: [validItem], nextCursor: "opaque" }),
     );
-    expect(result.assets[0]?.assetCode).toBe("DLA-001");
+
+    expect(result.items[0]?.assetCode).toBe("DLA-001");
+    expect(result.nextCursor).toBe("opaque");
   });
 
-  it("rejects a malformed body instead of rendering garbage", async () => {
+  it("requests the bare path when no filter is set", async () => {
+    const requested: string[] = [];
+    await fetchAssets(
+      "tok",
+      {},
+      undefined,
+      fakeFetch(200, { items: [], nextCursor: null }, requested),
+    );
+
+    expect(requested).toEqual(["/v1/assets"]);
+  });
+
+  it("sends every filter, repeating status once per lifecycle state", async () => {
+    const requested: string[] = [];
+    await fetchAssets(
+      "tok",
+      {
+        status: ["UNDER_MAINTENANCE", "RETIRED", "WRITTEN_OFF"],
+        category: "TRUCK",
+        branchId: "branch-1",
+        search: "mercedes actros",
+        cursor: "opaque",
+        limit: 25,
+      },
+      undefined,
+      fakeFetch(200, { items: [], nextCursor: null }, requested),
+    );
+
+    const query = new URLSearchParams(requested[0]!.split("?")[1]);
+    expect(query.getAll("status")).toEqual([
+      "UNDER_MAINTENANCE",
+      "RETIRED",
+      "WRITTEN_OFF",
+    ]);
+    expect(query.get("category")).toBe("TRUCK");
+    expect(query.get("branchId")).toBe("branch-1");
+    expect(query.get("search")).toBe("mercedes actros");
+    expect(query.get("cursor")).toBe("opaque");
+    expect(query.get("limit")).toBe("25");
+  });
+
+  it("rejects the superseded envelope instead of rendering nothing", async () => {
     await expect(
-      fetchAssets("tok", undefined, fakeFetch(200, { nonsense: true })),
+      fetchAssets(
+        "tok",
+        {},
+        undefined,
+        fakeFetch(200, { workspaceId: "ws1", assets: [validItem] }),
+      ),
+    ).rejects.toThrow("ASSET_LIST_INVALID_RESPONSE");
+  });
+
+  it("rejects a missing or mistyped cursor", async () => {
+    await expect(
+      fetchAssets("tok", {}, undefined, fakeFetch(200, { items: [] })),
+    ).rejects.toThrow("ASSET_LIST_INVALID_RESPONSE");
+    await expect(
+      fetchAssets("tok", {}, undefined, fakeFetch(200, { items: [], nextCursor: 1 })),
+    ).rejects.toThrow("ASSET_LIST_INVALID_RESPONSE");
+  });
+
+  it("rejects an item with an unknown lifecycle status", async () => {
+    await expect(
+      fetchAssets(
+        "tok",
+        {},
+        undefined,
+        fakeFetch(200, {
+          items: [{ ...validItem, lifecycleStatus: "SCRAPPED" }],
+          nextCursor: null,
+        }),
+      ),
     ).rejects.toThrow("ASSET_LIST_INVALID_RESPONSE");
   });
 
   it("rejects non-ok responses with the status", async () => {
     await expect(
-      fetchAssets("tok", undefined, fakeFetch(403, { error: { code: "ROLE_FORBIDDEN" } })),
+      fetchAssets(
+        "tok",
+        {},
+        undefined,
+        fakeFetch(403, { error: { code: "ROLE_FORBIDDEN" } }),
+      ),
     ).rejects.toThrow("ASSET_LIST_403");
   });
 });

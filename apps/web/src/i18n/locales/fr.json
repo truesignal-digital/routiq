@@ -83,6 +83,7 @@
     "noResultsTitle": "Aucun actif trouvé",
     "noResultsHint": "Essayez un autre terme ou retirez les filtres.",
     "resetFilters": "Effacer les filtres",
+    "loadMore": "Charger plus",
     "errorTitle": "Impossible de charger le parc",
     "errorHint": "La connexion a peut-être été interrompue. Vos données restent en sécurité.",
     "retry": "Réessayer",

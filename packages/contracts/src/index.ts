@@ -10,6 +10,7 @@ export * from "./commands/register-asset.js";
 export * from "./commands/module-toggle.js";
 export * from "./commands/asset-lifecycle.js";
 export * from "./reads/list.js";
+export * from "./reads/assets.js";
 export * from "./reads/documents.js";
 export * from "./commands/record-financial-entry.js";
 export * from "./commands/approve-entry.js";

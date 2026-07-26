@@ -1,20 +1,43 @@
 import {
   ASSET_LIFECYCLE_STATUSES,
-  type AssetListItem,
   type AssetLifecycleStatus,
+  type AssetListItem,
 } from "./model.js";
 
-interface AssetListResponse {
-  workspaceId: string;
-  assets: AssetListItem[];
+export interface AssetListParams {
+  status?: readonly AssetLifecycleStatus[];
+  category?: string;
+  branchId?: string;
+  search?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+/** The ADR-0003 list envelope: `items` plus the opaque keyset cursor. */
+export interface AssetListResponse {
+  items: AssetListItem[];
+  nextCursor: string | null;
 }
 
 export async function fetchAssets(
   token: string,
+  params: AssetListParams = {},
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
 ): Promise<AssetListResponse> {
-  const response = await fetchImpl("/v1/assets", {
+  const url = new URL("/v1/assets", window.location.origin);
+  for (const status of params.status ?? []) {
+    url.searchParams.append("status", status);
+  }
+  if (params.category) url.searchParams.append("category", params.category);
+  if (params.branchId) url.searchParams.append("branchId", params.branchId);
+  if (params.search) url.searchParams.append("search", params.search);
+  if (params.cursor) url.searchParams.append("cursor", params.cursor);
+  if (params.limit !== undefined) {
+    url.searchParams.append("limit", String(params.limit));
+  }
+
+  const response = await fetchImpl(url.pathname + url.search, {
     headers: { authorization: `Bearer ${token}` },
     ...(signal === undefined ? {} : { signal }),
   });
@@ -26,9 +49,11 @@ export async function fetchAssets(
 }
 
 function isAssetListResponse(value: unknown): value is AssetListResponse {
-  if (!isRecord(value) || typeof value["workspaceId"] !== "string") return false;
-  const assets = value["assets"];
-  return Array.isArray(assets) && assets.every(isAssetListItem);
+  if (!isRecord(value)) return false;
+  const nextCursor = value["nextCursor"];
+  if (nextCursor !== null && typeof nextCursor !== "string") return false;
+  const items = value["items"];
+  return Array.isArray(items) && items.every(isAssetListItem);
 }
 
 function isAssetListItem(value: unknown): value is AssetListItem {
