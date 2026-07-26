@@ -1,6 +1,6 @@
 import type { AssetLifecycleStatus } from "@routiq/contracts";
-import { dashboardResponse } from "@routiq/contracts";
-import { and, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { dashboardQuery, dashboardResponse } from "@routiq/contracts";
+import { and, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { AuthContext } from "../auth/types.js";
@@ -15,6 +15,7 @@ import {
 } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
 import { pendingApprovalConditions } from "./approvals-queue.js";
+import { currentBusinessDate, dayWindow } from "./business-date.js";
 import { serializeMinor } from "./serialize-minor.js";
 
 /**
@@ -55,6 +56,11 @@ export function registerDashboardReadRoutes(
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         const auth = req.auth!;
+        const parsedQuery = dashboardQuery.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { days } = parsedQuery.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           const assetRows = await tx
@@ -76,6 +82,52 @@ export function registerDashboardReadRoutes(
             .from(financialEntries)
             .where(and(...pendingApprovalConditions(auth)));
 
+          const [workspace] = await tx
+            .select({
+              defaultCurrency: workspaces.defaultCurrency,
+              timezone: workspaces.timezone,
+            })
+            .from(workspaces)
+            .where(eq(workspaces.id, auth.workspaceId));
+          const currency = workspace?.defaultCurrency ?? "XAF";
+
+          const windowEnd = currentBusinessDate(
+            new Date(),
+            workspace?.timezone ?? "Africa/Douala",
+          );
+          const windowDates = dayWindow(windowEnd, days);
+          const windowStart = windowDates[0]!;
+
+          // Bucketed on economic_date, which is already a date column — no
+          // date_trunc, so a day is exactly a day with no timestamp rounding.
+          // Same predicates as the period totals: signed postings, POSTED plus
+          // REVERSED so a reversal nets its own economic day back to zero.
+          const seriesRows = await tx
+            .select({
+              date: financialEntries.economicDate,
+              expenseMinor: sql<string>`coalesce(sum(case when ${financialEntries.direction} = 'EXPENSE' then ${financialPostings.amountMinor} else 0 end), 0)::text`,
+              revenueMinor: sql<string>`coalesce(sum(case when ${financialEntries.direction} = 'REVENUE' then ${financialPostings.amountMinor} else 0 end), 0)::text`,
+            })
+            .from(financialPostings)
+            .innerJoin(
+              financialEntries,
+              and(
+                eq(financialEntries.workspaceId, financialPostings.workspaceId),
+                eq(financialEntries.id, financialPostings.financialEntryId),
+              ),
+            )
+            .where(
+              and(
+                eq(financialPostings.workspaceId, auth.workspaceId),
+                inArray(financialEntries.status, [...LEDGER_ENTRY_STATUSES]),
+                eq(financialEntries.currency, currency),
+                gte(financialEntries.economicDate, windowStart),
+                lte(financialEntries.economicDate, windowEnd),
+                ...branchScoped(auth, financialEntries.branchId),
+              ),
+            )
+            .groupBy(financialEntries.economicDate);
+
           // Latest open period is "current": periods are auto-created per
           // economic month, and an older one may still be open behind it.
           const [openPeriod] = await tx
@@ -94,14 +146,14 @@ export function registerDashboardReadRoutes(
             .limit(1);
 
           if (!openPeriod) {
-            return { assetRows, approvalsCount, openPeriod: null };
+            return {
+              assetRows,
+              approvalsCount,
+              openPeriod: null,
+              window: windowDates,
+              seriesRows,
+            };
           }
-
-          const [workspace] = await tx
-            .select({ defaultCurrency: workspaces.defaultCurrency })
-            .from(workspaces)
-            .where(eq(workspaces.id, auth.workspaceId));
-          const currency = workspace?.defaultCurrency ?? "XAF";
 
           // Sum the postings, not the entry amounts: postings are the canonical
           // signed lines, and summing them can't double-count a multi-line
@@ -138,6 +190,8 @@ export function registerDashboardReadRoutes(
               expenseMinor: totals?.expenseMinor ?? "0",
               revenueMinor: totals?.revenueMinor ?? "0",
             },
+            window: windowDates,
+            seriesRows,
           };
         });
 
@@ -147,6 +201,21 @@ export function registerDashboardReadRoutes(
           byStatus[row.lifecycleStatus] = row.count;
           total += row.count;
         }
+
+        // Zero-fill here rather than in the chart: a day the client never
+        // received is indistinguishable from a day it failed to draw, and an
+        // area chart bridges the gap silently.
+        const postedByDay = new Map(
+          result.seriesRows.map((row) => [row.date, row]),
+        );
+        const series = result.window.map((date) => {
+          const posted = postedByDay.get(date);
+          return {
+            date,
+            expenseMinor: serializeMinor(BigInt(posted?.expenseMinor ?? "0")),
+            revenueMinor: serializeMinor(BigInt(posted?.revenueMinor ?? "0")),
+          };
+        });
 
         return dashboardResponse.parse({
           assets: { total, byStatus },
@@ -164,6 +233,7 @@ export function registerDashboardReadRoutes(
                   currency: result.openPeriod.currency,
                 },
           pendingApprovals: { count: result.approvalsCount?.count ?? 0 },
+          series,
         });
       } catch (error) {
         req.log.error({ err: error }, "dashboard read failed");

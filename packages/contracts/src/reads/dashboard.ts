@@ -27,14 +27,49 @@ export const dashboardPendingApprovals = z.object({
   count: z.number().int().nonnegative(),
 });
 
+/** A week is the tightest chart worth drawing; a year the widest we zero-fill per day. */
+export const DASHBOARD_SERIES_DAYS_MIN = 7;
+export const DASHBOARD_SERIES_DAYS_MAX = 365;
+export const DASHBOARD_SERIES_DAYS_DEFAULT = 90;
+
+/** `GET /v1/dashboard` — only the chart window is client-chosen; scope never is (ADR-0003). */
+export const dashboardQuery = z.object({
+  days: z.coerce
+    .number()
+    .int()
+    .min(DASHBOARD_SERIES_DAYS_MIN)
+    .max(DASHBOARD_SERIES_DAYS_MAX)
+    .default(DASHBOARD_SERIES_DAYS_DEFAULT),
+});
+
+/**
+ * One day of posted totals, bucketed on the entry's economic date — the
+ * business date, not `posted_at` — so the chart answers "what happened when",
+ * the same question period membership answers. Signed and in minor units of
+ * the workspace default currency, like the period totals above.
+ */
+export const dashboardSeriesPoint = z.object({
+  date: z.iso.date(),
+  expenseMinor: z.number().int(),
+  revenueMinor: z.number().int(),
+});
+
 /** `GET /v1/dashboard` — aggregates computed per request, no projections (ADR-0003). */
 export const dashboardResponse = z.object({
   assets: dashboardAssetCounts,
   /** Null when the workspace has no open period yet — nothing has been posted. */
   openPeriod: dashboardOpenPeriod.nullable(),
   pendingApprovals: dashboardPendingApprovals,
+  /**
+   * Every day of the requested window, ascending, zero-filled: a day with no
+   * postings arrives as an explicit zero so the chart plots a flat line there
+   * instead of interpolating across a gap it cannot see.
+   */
+  series: z.array(dashboardSeriesPoint),
 });
 
 export type DashboardAssetCounts = z.infer<typeof dashboardAssetCounts>;
 export type DashboardOpenPeriod = z.infer<typeof dashboardOpenPeriod>;
+export type DashboardQuery = z.infer<typeof dashboardQuery>;
+export type DashboardSeriesPoint = z.infer<typeof dashboardSeriesPoint>;
 export type DashboardResponse = z.infer<typeof dashboardResponse>;

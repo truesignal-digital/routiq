@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  DASHBOARD_SERIES_DAYS_DEFAULT,
   dashboardResponse,
   pendingApprovalsResponse,
 } from "@routiq/contracts";
@@ -9,6 +10,7 @@ import type { Db } from "../db/client.js";
 import { branches } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
+import { addDays, currentBusinessDate } from "./business-date.js";
 
 describe("GET /v1/dashboard", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -44,21 +46,25 @@ describe("GET /v1/dashboard", () => {
     it("reports zeros and no open period rather than omitting them", async () => {
       const body = await fetchDashboard(token);
 
-      expect(body).toEqual({
-        assets: {
-          total: 0,
-          byStatus: {
-            REGISTERED: 0,
-            IN_SERVICE: 0,
-            UNDER_MAINTENANCE: 0,
-            SOLD: 0,
-            RETIRED: 0,
-            WRITTEN_OFF: 0,
-          },
+      expect(body.assets).toEqual({
+        total: 0,
+        byStatus: {
+          REGISTERED: 0,
+          IN_SERVICE: 0,
+          UNDER_MAINTENANCE: 0,
+          SOLD: 0,
+          RETIRED: 0,
+          WRITTEN_OFF: 0,
         },
-        openPeriod: null,
-        pendingApprovals: { count: 0 },
       });
+      expect(body.openPeriod).toBeNull();
+      expect(body.pendingApprovals).toEqual({ count: 0 });
+      // A workspace with nothing posted still gets a full window of explicit
+      // zeros — an empty array would leave the chart with nothing to draw.
+      expect(body.series).toHaveLength(DASHBOARD_SERIES_DAYS_DEFAULT);
+      expect(
+        body.series.every((p) => p.expenseMinor === 0 && p.revenueMinor === 0),
+      ).toBe(true);
     });
   });
 
@@ -284,10 +290,222 @@ describe("GET /v1/dashboard", () => {
     });
   });
 
-  async function fetchDashboard(token: string) {
+  describe("posted totals time series", () => {
+    /**
+     * Dates are derived from one captured business day, never hard-coded: the
+     * window is relative to the server's today, so a fixture pinned to a
+     * calendar date would silently slide out of the window as time passes.
+     */
+    let today: string;
+    let adminToken: string;
+    let scopedToken: string;
+
+    beforeAll(async () => {
+      const seeded = await seedWorkspace(db);
+      const workspaceId = seeded.workspace.id;
+      const dlaBranchId = seeded.branch.id;
+      await db
+        .insert(branches)
+        .values({ workspaceId, code: "YDE", name: "Yaoundé" });
+
+      const admin = await seedMember(db, {
+        workspaceId,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      adminToken = (
+        await createSession(db, { principalId: admin.principal.id, workspaceId })
+      ).token;
+
+      const scoped = await seedMember(db, {
+        workspaceId,
+        role: "FINANCE_APPROVER",
+        allBranches: false,
+        branchIds: [dlaBranchId],
+      });
+      scopedToken = (
+        await createSession(db, { principalId: scoped.principal.id, workspaceId })
+      ).token;
+
+      today = currentBusinessDate(new Date(), "Africa/Douala");
+
+      await recordEntry(adminToken, "record-expense", {
+        amountMinor: 50_000,
+        branchCode: "DLA",
+        categoryCode: "FUEL",
+        economicDate: today,
+        expectStatus: "POSTED",
+      });
+      await recordEntry(adminToken, "record-expense", {
+        amountMinor: 30_000,
+        branchCode: "YDE",
+        categoryCode: "FUEL",
+        economicDate: addDays(today, -2),
+        expectStatus: "POSTED",
+      });
+      await recordEntry(adminToken, "record-revenue", {
+        amountMinor: 200_000,
+        branchCode: "DLA",
+        categoryCode: "FREIGHT_REVENUE",
+        economicDate: addDays(today, -3),
+        expectStatus: "POSTED",
+      });
+      // Older than any window the client can ask for except the widest.
+      await recordEntry(adminToken, "record-expense", {
+        amountMinor: 70_000,
+        branchCode: "DLA",
+        categoryCode: "FUEL",
+        economicDate: addDays(today, -120),
+        expectStatus: "POSTED",
+      });
+    });
+
+    it("buckets each day on its economic date", async () => {
+      const { series } = await fetchDashboard(adminToken);
+
+      expect(dayOf(series, today)).toEqual({
+        date: today,
+        expenseMinor: 50_000,
+        revenueMinor: 0,
+      });
+      expect(dayOf(series, addDays(today, -2))).toMatchObject({
+        expenseMinor: 30_000,
+        revenueMinor: 0,
+      });
+      expect(dayOf(series, addDays(today, -3))).toMatchObject({
+        expenseMinor: 0,
+        revenueMinor: 200_000,
+      });
+    });
+
+    it("zero-fills a day nothing was posted on", async () => {
+      const { series } = await fetchDashboard(adminToken);
+
+      expect(dayOf(series, addDays(today, -5))).toEqual({
+        date: addDays(today, -5),
+        expenseMinor: 0,
+        revenueMinor: 0,
+      });
+    });
+
+    it("returns every day of the requested window, ascending and contiguous", async () => {
+      for (const days of [DASHBOARD_SERIES_DAYS_DEFAULT, 30, 7]) {
+        const { series } = await fetchDashboard(adminToken, days);
+
+        expect(series).toHaveLength(days);
+        expect(series.at(-1)?.date).toBe(today);
+        expect(series[0]?.date).toBe(addDays(today, -(days - 1)));
+        expect(series.map((p) => p.date)).toEqual(
+          series.map((_, i) => addDays(today, i - days + 1)),
+        );
+      }
+    });
+
+    it("defaults the window to 90 days when the client asks for none", async () => {
+      const { series } = await fetchDashboard(adminToken);
+      expect(series).toHaveLength(90);
+    });
+
+    it("leaves out days before the window and keeps them in a wider one", async () => {
+      const old = addDays(today, -120);
+
+      const narrow = await fetchDashboard(adminToken, 90);
+      expect(dayOf(narrow.series, old)).toBeUndefined();
+
+      const wide = await fetchDashboard(adminToken, 365);
+      expect(dayOf(wide.series, old)).toMatchObject({ expenseMinor: 70_000 });
+    });
+
+    it("nets a reversal back to zero on the day it was economically dated", async () => {
+      const reversedDay = addDays(today, -1);
+      const { entryId, rowVersion } = await recordEntry(
+        adminToken,
+        "record-expense",
+        {
+          amountMinor: 45_000,
+          branchCode: "DLA",
+          categoryCode: "FUEL",
+          economicDate: reversedDay,
+          expectStatus: "POSTED",
+        },
+      );
+
+      const posted = await fetchDashboard(adminToken);
+      expect(dayOf(posted.series, reversedDay)).toMatchObject({
+        expenseMinor: 45_000,
+      });
+
+      const reversal = await ctx.app.inject({
+        method: "POST",
+        url: "/v1/commands/reverse-entry",
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          version: 1,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `reverse-${randomUUID()}`,
+            origin: "HUMAN_UI",
+            expectedVersion: rowVersion,
+          },
+          payload: {
+            reversalEntryId: randomUUID(),
+            originalEntryId: entryId,
+            reason: "duplicate capture",
+          },
+        },
+      });
+      expect(reversal.statusCode).toBe(200);
+
+      // The reversal inherits the original's economic date, so the pair nets on
+      // that day — not on the day the correction happened to be captured.
+      const reversed = await fetchDashboard(adminToken);
+      expect(dayOf(reversed.series, reversedDay)).toEqual({
+        date: reversedDay,
+        expenseMinor: 0,
+        revenueMinor: 0,
+      });
+    });
+
+    it("narrows the series to a branch-scoped member's branches", async () => {
+      const { series } = await fetchDashboard(scopedToken);
+
+      expect(dayOf(series, today)).toMatchObject({ expenseMinor: 50_000 });
+      // YDE's 30_000 is out of scope, and its day still arrives as a zero.
+      expect(dayOf(series, addDays(today, -2))).toEqual({
+        date: addDays(today, -2),
+        expenseMinor: 0,
+        revenueMinor: 0,
+      });
+    });
+
+    it.each([6, 366, 0, -30, "ninety"])(
+      "rejects days=%s with VALIDATION_FAILED",
+      async (days) => {
+        const response = await ctx.app.inject({
+          method: "GET",
+          url: `/v1/dashboard?days=${days}`,
+          headers: { authorization: `Bearer ${adminToken}` },
+        });
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error: { code: "VALIDATION_FAILED" },
+        });
+      },
+    );
+  });
+
+  function dayOf<TPoint extends { date: string }>(
+    series: readonly TPoint[],
+    date: string,
+  ): TPoint | undefined {
+    return series.find((point) => point.date === date);
+  }
+
+  async function fetchDashboard(token: string, days?: number | string) {
     const response = await ctx.app.inject({
       method: "GET",
-      url: "/v1/dashboard",
+      url:
+        days === undefined ? "/v1/dashboard" : `/v1/dashboard?days=${days}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.statusCode).toBe(200);
