@@ -1,31 +1,28 @@
-import type { FinancialEntryListItem } from "@routiq/contracts";
-import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
+import type { FinancialEntryListItem } from "@routiq/contracts"
+import type { ReactNode } from "react"
 
-type FinanceEntryStatus = FinancialEntryListItem["status"];
-type FinanceStatusBadgeVariant =
-  | "default"
-  | "secondary"
-  | "destructive"
-  | "outline";
+import { StatusBadge } from "@/components/status-badge.js"
 
-const STATUS_VARIANTS: Record<FinanceEntryStatus, FinanceStatusBadgeVariant> = {
-  SUBMITTED: "secondary",
-  POSTED: "default",
-  REJECTED: "destructive",
-  REVERSED: "outline",
-};
+type FinanceEntryStatus = FinancialEntryListItem["status"]
+type StatusBadgeTone = "neutral" | "success" | "warning" | "info" | "danger"
+
+const STATUS_TONES: Record<FinanceEntryStatus, StatusBadgeTone> = {
+  SUBMITTED: "info",
+  POSTED: "success",
+  REJECTED: "danger",
+  REVERSED: "neutral",
+}
 
 export function FinanceStatusBadge({
   status,
   children,
 }: {
-  status: FinanceEntryStatus;
-  children: ReactNode;
+  status: FinanceEntryStatus
+  children: ReactNode
 }) {
   return (
-    <Badge variant={STATUS_VARIANTS[status]} className="uppercase">
+    <StatusBadge tone={STATUS_TONES[status]} className="uppercase">
       {children}
-    </Badge>
-  );
+    </StatusBadge>
+  )
 }

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { login } from "../auth/api.js";
 import { sessionStore } from "../auth/store.js";
 import { errorMessage } from "../lib/error-message.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 
 export function LoginScreen() {
   const { t, i18n } = useTranslation();
@@ -81,9 +82,7 @@ export function LoginScreen() {
         </div>
 
         {errorCode !== undefined && (
-          <p role="alert" className="text-sm text-destructive">
-            {errorMessage(i18n, errorCode)}
-          </p>
+          <ErrorBanner code={errorCode} />
         )}
 
         <Button type="submit" className="min-h-11" disabled={submitting}>

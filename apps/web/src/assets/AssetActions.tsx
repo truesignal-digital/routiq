@@ -12,6 +12,7 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { errorMessage } from "../lib/error-message.js";
 import { useAssetRegistrationReference } from "./reference.js";
 import type { AssetListItem } from "./model.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 
 type Panel =
   | { kind: "idle" }
@@ -110,8 +111,8 @@ export function AssetActions({
           </Button>
         </div>
       ) : panel.kind === "error" ? (
-        <div role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          <p>{errorMessage(i18n, panel.code)}</p>
+        <>
+          <ErrorBanner code={panel.code} />
           <Button
             variant="outline"
             className="mt-2 min-h-9"
@@ -119,7 +120,7 @@ export function AssetActions({
           >
             {t("assets.actions.close")}
           </Button>
-        </div>
+        </>
       ) : panel.kind === "assign" ? (
         <div className="flex flex-wrap items-center gap-2">
           <select

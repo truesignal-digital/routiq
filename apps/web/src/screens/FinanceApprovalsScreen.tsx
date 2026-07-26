@@ -28,6 +28,8 @@ import { useApprovals } from "../finance/useApprovals.js";
 import { canApproveEntries } from "../finance/permissions.js";
 import { isOwnSubmission, validateRejectionReason } from "../finance/model.js";
 import { FinanceNav } from "../finance/FinanceNav.js";
+import { StatusBadge } from "@/components/status-badge.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
 import {
   approveEntryPayload,
@@ -105,9 +107,9 @@ export function FinanceApprovalsScreen() {
         meta: { mobile: "primary" },
         cell: ({ row }) =>
           isOwnSubmission(row.original.submittedByPrincipalId, me?.principalId) ? (
-            <p className="text-xs font-medium text-amber-900">
+            <StatusBadge tone="warning">
               {t("finance.approvals.makerGuard")}
-            </p>
+            </StatusBadge>
           ) : (
             <div className="flex gap-2">
               <Button
@@ -317,15 +319,7 @@ function ActionDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {error && (
-          <div
-            role="alert"
-            className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-          >
-            <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
-            <p>{t(`errors.${error}`, { defaultValue: error })}</p>
-          </div>
-        )}
+        {error && <ErrorBanner code={error} />}
 
         {action === "approve" ? (
           <div className="flex flex-col gap-2">

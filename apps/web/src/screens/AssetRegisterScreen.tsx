@@ -32,6 +32,7 @@ import { createCommandIntent } from "../commands/intent.js";
 import { AttachmentField } from "../artifacts/AttachmentField.js";
 import { errorMessage } from "../lib/error-message.js";
 import { formatXAF } from "@routiq/domain";
+import { ErrorBanner } from "@/components/error-banner.js";
 
 type FormInput = z.input<typeof registerAssetPayload>;
 type FormOutput = z.output<typeof registerAssetPayload>;
@@ -412,9 +413,7 @@ export function AssetRegisterScreen() {
           </div>
 
           {errorCode !== undefined && (
-            <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {errorMessage(i18n, errorCode)}
-            </p>
+            <ErrorBanner code={errorCode} />
           )}
 
           <div className="flex items-center gap-3">

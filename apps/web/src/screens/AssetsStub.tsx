@@ -26,6 +26,7 @@ import { AssetActions } from "../assets/AssetActions.js";
 import { useAssets, type UseAssetsParams } from "../assets/useAssets.js";
 import { isReadOnlyRole, useMeContext } from "../auth/me.js";
 import { cn } from "../lib/utils.js";
+import { StatusBadge } from "@/components/status-badge.js";
 
 const filters: AssetFilter[] = ["ALL", "IN_SERVICE", "ATTENTION"];
 
@@ -43,14 +44,16 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return settled;
 }
 
-const statusStyles: Record<AssetLifecycleStatus, string> = {
-  REGISTERED: "bg-sky-50 text-sky-800 ring-sky-700/15",
-  IN_SERVICE: "bg-emerald-50 text-emerald-800 ring-emerald-700/15",
-  UNDER_MAINTENANCE: "bg-amber-50 text-amber-900 ring-amber-700/15",
-  SOLD: "bg-stone-100 text-stone-700 ring-stone-600/15",
-  RETIRED: "bg-stone-100 text-stone-700 ring-stone-600/15",
-  WRITTEN_OFF: "bg-red-50 text-red-800 ring-red-700/15",
+const STATUS_TONES: Record<AssetLifecycleStatus, "neutral" | "success" | "warning" | "danger"> = {
+  REGISTERED: "neutral",
+  IN_SERVICE: "success",
+  UNDER_MAINTENANCE: "warning",
+  SOLD: "neutral",
+  RETIRED: "neutral",
+  WRITTEN_OFF: "danger",
 };
+
+
 
 export function AssetsStub() {
   const { t } = useTranslation();
@@ -353,15 +356,9 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 text-[0.68rem] font-bold uppercase tracking-[0.05em] ring-1 ring-inset",
-                statusStyles[asset.lifecycleStatus],
-              )}
-            >
-              <span className="size-1.5 rounded-full bg-current opacity-70" />
+            <StatusBadge tone={STATUS_TONES[asset.lifecycleStatus]}>
               {t(`assets.status.${asset.lifecycleStatus}`)}
-            </span>
+            </StatusBadge>
             <span className="inline-flex min-h-7 items-center rounded-full bg-foreground/[0.055] px-2.5 text-xs font-medium text-muted-foreground">
               {category}
             </span>

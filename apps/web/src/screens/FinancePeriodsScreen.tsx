@@ -52,6 +52,7 @@ import {
   type PeriodRead,
 } from "@routiq/contracts";
 import { FinanceNav } from "../finance/FinanceNav.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 
 type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
 type ReopenPeriodPayloadType = z.infer<typeof reopenPeriodPayload>;
@@ -293,13 +294,7 @@ function ActionDialog({
           </AlertDialogHeader>
 
           {error && (
-            <div
-              role="alert"
-              className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-            >
-              <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
-              <p>{t(`errors.${error}`, { defaultValue: error })}</p>
-            </div>
+            <ErrorBanner code={error} />
           )}
 
           <AlertDialogFooter>
@@ -330,13 +325,7 @@ function ActionDialog({
         </DialogHeader>
 
         {error && (
-          <div
-            role="alert"
-            className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-          >
-            <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
-            <p>{t(`errors.${error}`, { defaultValue: error })}</p>
-          </div>
+          <ErrorBanner code={error} />
         )}
 
         <div className="flex flex-col gap-2">

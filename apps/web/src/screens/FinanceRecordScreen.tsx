@@ -46,6 +46,7 @@ import { canRecordFinance } from "../finance/permissions.js";
 import { useCategories } from "../documents/useCategories.js";
 import { useAssetRegistrationReference } from "../assets/reference.js";
 import { FinanceNav } from "../finance/FinanceNav.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
 
@@ -294,10 +295,7 @@ function RecordForm({
         />
 
         {errorCode && (
-          <div role="alert" className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
-            <p>{errorMessage(i18n, errorCode)}</p>
-          </div>
+          <ErrorBanner code={errorCode} />
         )}
 
         <FormField

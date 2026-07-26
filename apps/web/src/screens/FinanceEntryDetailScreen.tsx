@@ -30,6 +30,7 @@ import { validateReversalReason } from "../finance/model.js";
 import { z } from "zod";
 import { ReversalLink } from "../finance/ReversalLink.js";
 import { reverseEntryPayload } from "@routiq/contracts";
+import { ErrorBanner } from "@/components/error-banner.js";
 
 interface ReverseDialogState {
   open: boolean;
@@ -310,13 +311,7 @@ function ReverseDialog({
         </DialogHeader>
 
         {error && (
-          <div
-            role="alert"
-            className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-          >
-            <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
-            <p>{errorMessage(i18n, error)}</p>
-          </div>
+          <ErrorBanner code={error} />
         )}
 
         <div className="flex flex-col gap-2">

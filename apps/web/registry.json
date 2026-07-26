@@ -177,6 +177,41 @@
       ]
     },
     {
+      "name": "status-badge",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/status-badge.tsx",
+          "type": "registry:file",
+          "target": "components/status-badge.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "badge"
+      ],
+      "dependencies": [
+        "class-variance-authority"
+      ]
+    },
+    {
+      "name": "error-banner",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/error-banner.tsx",
+          "type": "registry:file",
+          "target": "components/error-banner.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "alert"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "table",
       "type": "registry:ui",
       "files": [
@@ -225,7 +260,7 @@
     },
     {
       "name": "data-table",
-      "type": "registry:component",
+      "type": "registry:block",
       "files": [
         {
           "path": "src/components/data-table.tsx",
@@ -234,11 +269,17 @@
         }
       ],
       "registryDependencies": [
+        "table",
         "button",
-        "table"
+        "checkbox",
+        "dropdown-menu",
+        "input",
+        "select"
       ],
       "dependencies": [
-        "@tanstack/react-table"
+        "@tanstack/react-table",
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {

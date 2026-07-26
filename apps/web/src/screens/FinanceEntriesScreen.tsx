@@ -13,6 +13,7 @@ import { useEntries } from "../finance/useEntries.js";
 import { canRecordFinance } from "../finance/permissions.js";
 import { FinanceNav } from "../finance/FinanceNav.js";
 import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
+import { StatusBadge } from "@/components/status-badge.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
@@ -50,9 +51,9 @@ export function FinanceEntriesScreen() {
               {t(`finance.entries.status.${row.original.status}`)}
             </FinanceStatusBadge>
             {row.original.isLatePosting && (
-              <span className="text-[0.65rem] font-bold uppercase text-amber-900">
+              <StatusBadge tone="warning">
                 {t("finance.entries.detail.latePosting")}
-              </span>
+              </StatusBadge>
             )}
           </div>
         ),

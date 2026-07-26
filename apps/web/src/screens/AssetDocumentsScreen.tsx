@@ -24,19 +24,23 @@ import {
 import { useAssetDocuments } from "../documents/useDocuments.js";
 import { useCategories } from "../documents/useCategories.js";
 import { canAccessDocuments, canManageDocuments } from "../documents/permissions.js";
+import { StatusBadge } from "@/components/status-badge.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 
-const expiryBadgeStyles: Record<ExpiryState, string> = {
-  expired: "bg-red-100 text-red-900 ring-red-200",
-  expiringSoon: "bg-amber-100 text-amber-900 ring-amber-200",
-  ok: "bg-emerald-100 text-emerald-900 ring-emerald-200",
-  none: "bg-foreground/[0.05] text-muted-foreground ring-foreground/10",
-};
 
 interface FormState {
   open: boolean;
   /** When renewing: the document being superseded pre-fills the form. */
   renews?: AssetDocument;
 }
+
+const EXPIRY_TONES: Record<ExpiryState, "neutral" | "success" | "warning" | "danger"> = {
+  none: "neutral",
+  ok: "success",
+  expiringSoon: "warning",
+  expired: "danger",
+};
+
 
 export function AssetDocumentsScreen() {
   const { t, i18n } = useTranslation();
@@ -152,9 +156,7 @@ export function AssetDocumentsScreen() {
                             </span>
                           ) : null}
                         </p>
-                        <span
-                          className={`inline-flex min-h-6 items-center rounded-full px-2 text-[0.65rem] font-bold uppercase ring-1 ring-inset ${expiryBadgeStyles[state]}`}
-                        >
+                        <StatusBadge tone={EXPIRY_TONES[state]}>
                           {state === "none"
                             ? t("documents.expiry.none")
                             : state === "expired"
@@ -164,7 +166,7 @@ export function AssetDocumentsScreen() {
                                     date: formatDate(doc.expiresAt),
                                   })
                                 : t("documents.expiry.ok", { date: formatDate(doc.expiresAt) })}
-                        </span>
+                        </StatusBadge>
                       </div>
                       {canManage && !form.open && (
                         <Button
@@ -295,7 +297,7 @@ function DocumentForm({
       <div className="flex flex-col gap-2">
         <Label htmlFor="doc-type">{t("documents.fields.type")}</Label>
         {documentTypesFailed && (
-          <p role="alert" className="text-sm text-destructive">{t("documents.typesFailed")}</p>
+          <ErrorBanner message={t("documents.typesFailed")} />
         )}
         <select
           id="doc-type"
