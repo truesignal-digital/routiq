@@ -364,7 +364,51 @@ describe("finance reads", () => {
       expect(body.reversesEntryId).toBeNull();
       expect(body.reversedByEntryId).toBeNull();
     });
+    it("returns entry detail with asset-less posting", async () => {
+      const entryId = randomUUID();
+      await ctx.app.inject({
+        method: "POST",
+        url: "/v1/commands/record-expense",
+        headers: { authorization: `Bearer ${allBranchesToken}` },
+        payload: {
+          version: 1,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `expense-${randomUUID()}`,
+            origin: "HUMAN_UI",
+          },
+          payload: {
+            entryId,
+            branchCode: "DLA",
+            categoryCode: "FUEL",
+            economicDate: "2026-07-27",
+            amountMinor: 50000,
+            paymentMethod: "CASH",
+            postings: [{ amountMinor: 50000 }],
+          },
+        },
+      });
 
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/finance/entries/${entryId}`,
+        headers: { authorization: `Bearer ${allBranchesToken}` },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as Record<string, unknown>;
+      expect(body.id).toBe(entryId);
+      expect(body.status).toBe("POSTED");
+      expect(Array.isArray(body.postings)).toBe(true);
+      expect((body.postings as unknown[]).length).toBe(1);
+      const posting = (body.postings as Record<string, unknown>[])[0]!;
+      expect(posting).toMatchObject({
+        lineNo: 1,
+        amountMinor: 50000,
+        assetId: null,
+        assetCode: null,
+        assetAttribution: "DIRECT",
+      });
+    });
     it("returns 404 for missing entry", async () => {
       const response = await ctx.app.inject({
         method: "GET",

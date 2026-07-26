@@ -346,7 +346,7 @@ export function registerFinanceReadRoutes(
         const mappedPostings = postings.map((p) => ({
           lineNo: p.lineNo,
           amountMinor: serializeMinor(p.amountMinor),
-          assetId: p.assetId ?? undefined,
+          assetId: p.assetId,
           assetCode: p.assetCode ?? null,
           assetAttribution: p.assetAttribution,
           category: {
