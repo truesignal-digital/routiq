@@ -8,6 +8,7 @@ import type { IdentityProvider } from "./auth/types.js";
 import "./commands/register-asset.js";
 import "./commands/add-or-renew-document.js";
 import "./commands/module-toggle.js";
+import "./commands/update-approval-threshold.js";
 import "./commands/asset-lifecycle.js";
 import "./commands/record-financial-entry.js";
 import "./commands/entry-decisions.js";

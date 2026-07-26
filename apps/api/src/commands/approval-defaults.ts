@@ -105,6 +105,17 @@ export function defaultApprovalRules(
       requiredRole: "ADMIN",
       createdByCommandId: null,
     },
+    // update-approval-threshold: ADMIN only, no filters
+    {
+      workspaceId,
+      commandType: "update-approval-threshold",
+      categoryCode: null,
+      branchId: null,
+      amountMinMinor: null,
+      amountMaxMinor: null,
+      requiredRole: "ADMIN",
+      createdByCommandId: null,
+    },
     // add-or-renew-document: ADMIN, OPS_MANAGER, FIELD_SUBMITTER, no filters
     {
       workspaceId,

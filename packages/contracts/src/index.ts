@@ -15,3 +15,4 @@ export * from "./commands/approve-entry.js";
 export * from "./commands/reverse-entry.js";
 export * from "./commands/lock-period.js";
 export * from "./reads/finance.js";
+export * from "./commands/update-approval-threshold.js";
