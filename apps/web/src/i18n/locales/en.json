@@ -225,7 +225,7 @@
       "submit": "Record",
       "submitting": "Recording…",
       "outcomePosted": "Recorded",
-      "outcomePostedDesc": "Your transaction has been recorded and approved.",
+      "outcomePostedDesc": "Your transaction has been recorded and posted.",
       "outcomeSubmitted": "Awaiting approval",
       "outcomeSubmittedDesc": "Your transaction is saved and waiting for validation by a finance manager.",
       "outcomeSuccess": "Success",
@@ -237,6 +237,61 @@
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch…",
       "branchesFailed": "We couldn't load branches. Retry this page."
+    },
+    "entries": {
+      "title": "Entries",
+      "back": "Back",
+      "loading": "Loading…",
+      "loadFailed": "We couldn't load entries. Please retry.",
+      "retry": "Try again",
+      "empty": "No entries for this branch.",
+      "loadMore": "Load more",
+      "status": {
+        "SUBMITTED": "Pending",
+        "POSTED": "Posted",
+        "REJECTED": "Rejected",
+        "REVERSED": "Reversed"
+      },
+      "detail": {
+        "title": "Entry detail",
+        "entryNumber": "Entry number",
+        "direction": "Direction",
+        "status": "Status",
+        "category": "Category",
+        "amount": "Amount",
+        "date": "Economic date",
+        "postingDate": "Posting date",
+        "counterparty": "Counterparty",
+        "paymentMethod": "Payment method",
+        "description": "Description",
+        "paymentReference": "Payment reference",
+        "sourceReference": "Source reference",
+        "postings": "Posting lines",
+        "asset": "Asset",
+        "postingAmount": "Amount",
+        "reversalChain": "Reversal chain",
+        "reversesEntry": "Reverses entry",
+        "reversedByEntry": "Reversed by entry",
+        "reverseAction": "Reverse",
+        "rejectedReason": "Rejection reason",
+        "latePosting": "Late posting"
+      },
+      "reversal": {
+        "title": "Reverse entry",
+        "reasonLabel": "Reason for reversal",
+        "reasonPlaceholder": "Explain why this entry is being reversed…",
+        "submit": "Reverse",
+        "submitting": "Reversing…",
+        "success": "Entry reversed",
+        "successDesc": "The reversal entry has been created successfully."
+      },
+      "filters": {
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "period": "Period",
+        "asset": "Asset",
+        "assetPlaceholder": "UUID or code…"
+      }
     }
   }
 }

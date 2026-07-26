@@ -225,7 +225,7 @@
       "submit": "Enregistrer",
       "submitting": "Enregistrement…",
       "outcomePosted": "Enregistré",
-      "outcomePostedDesc": "La transaction a été enregistrée et approuvée.",
+      "outcomePostedDesc": "La transaction a été enregistrée et comptabilisée.",
       "outcomeSubmitted": "En attente d'approbation",
       "outcomeSubmittedDesc": "Votre transaction est sauvegardée et en attente de validation par un responsable financier.",
       "outcomeSuccess": "Succès",
@@ -237,6 +237,61 @@
       "branchLabel": "Succursale",
       "chooseBranch": "Choisir une succursale…",
       "branchesFailed": "Impossible de charger les succursales. Actualisez cette page."
+    },
+    "entries": {
+      "title": "Écritures comptables",
+      "back": "Retour",
+      "loading": "Chargement…",
+      "loadFailed": "Impossible de charger les écritures. Réessayez.",
+      "retry": "Réessayer",
+      "empty": "Aucune écriture pour cette succursale.",
+      "loadMore": "Charger plus",
+      "status": {
+        "SUBMITTED": "En attente",
+        "POSTED": "Comptabilisée",
+        "REJECTED": "Rejetée",
+        "REVERSED": "Extournée"
+      },
+      "detail": {
+        "title": "Détail de l'écriture",
+        "entryNumber": "Numéro d'écriture",
+        "direction": "Direction",
+        "status": "Statut",
+        "category": "Catégorie",
+        "amount": "Montant",
+        "date": "Date comptable",
+        "postingDate": "Date de comptabilisation",
+        "counterparty": "Tiers",
+        "paymentMethod": "Moyen de paiement",
+        "description": "Description",
+        "paymentReference": "Référence de paiement",
+        "sourceReference": "Référence source",
+        "postings": "Lignes de débit/crédit",
+        "asset": "Actif",
+        "postingAmount": "Montant",
+        "reversalChain": "Chaîne d'extournement",
+        "reversesEntry": "Extourne l'écriture",
+        "reversedByEntry": "Extournée par l'écriture",
+        "reverseAction": "Contre-passer",
+        "rejectedReason": "Motif du rejet",
+        "latePosting": "Comptabilisation tardive"
+      },
+      "reversal": {
+        "title": "Contre-passer l'écriture",
+        "reasonLabel": "Motif du contre-passage",
+        "reasonPlaceholder": "Expliquez pourquoi cette écriture est contre-passée…",
+        "submit": "Contre-passer",
+        "submitting": "Contre-passage…",
+        "success": "Écriture contre-passée",
+        "successDesc": "L'écriture de contre-passage a été créée avec succès."
+      },
+      "filters": {
+        "status": "Statut",
+        "allStatuses": "Tous les statuts",
+        "period": "Période",
+        "asset": "Actif",
+        "assetPlaceholder": "UUID ou code…"
+      }
     }
   }
 }

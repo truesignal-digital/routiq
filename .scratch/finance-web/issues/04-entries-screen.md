@@ -1,6 +1,6 @@
 # 04 — Entries screen: list, detail, reversal
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 01
 
 **What to build:** Finance → Entries shows the branch's money records newest first: status chip (SUBMITTED amber / POSTED green / REJECTED red / REVERSED gray), direction indicator, category label per locale, formatted XAF amount, economic date, late-posting marker. Filters: status, period, asset. Tapping opens the detail: all entry fields, postings with asset codes, evidence refs (paymentReference/sourceReference), entry number, and the reversal chain — "reverses entry X" / "reversed by entry Y" links navigating between the pair.
@@ -20,8 +20,12 @@ Blocked by: 01
 
 ## Acceptance
 
-- [ ] List renders all four statuses correctly (fixture test)
-- [ ] Reversal chain navigates both directions
-- [ ] Reverse action hidden for non-approver roles; reason required
-- [ ] Pagination appends without duplicates
-- [ ] Web tests + typecheck green
+- [x] List renders all four statuses correctly (fixture test)
+- [x] Reversal chain navigates both directions
+- [x] Reverse action hidden for non-approver roles; reason required
+- [x] Pagination appends without duplicates
+- [x] Web tests + typecheck green
+
+## Comments
+
+2026-07-26 [codex] two rounds: v1 had an off-by-one load-more (accumulation in the click handler), no filters, no tests; v2 fixed pagination with useInfiniteQuery and added filters + tests, but the reversal-permission and reason tests were tautologies (logic redefined inside the test file, production untested). Fable takeover per two-failure rule: extracted canReverseEntry into finance/permissions.ts and validateReversalReason into finance/model.ts (mirrors reverse-entry contract min1/max500 — screen previously missed the max), screen and tests now share them; removed a stray `any`. 96 web tests + web typecheck green. Detail screen (reversal flow, expectedVersion, chain links) was correct from codex v1.

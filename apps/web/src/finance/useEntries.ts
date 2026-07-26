@@ -1,0 +1,54 @@
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { sessionStore, useActiveSession } from "../auth/store.js";
+import type { FinancialEntryListResponse } from "@routiq/contracts";
+
+export async function fetchFinanceEntries(
+  token: string,
+  params?: {
+    status?: string;
+    periodCode?: string;
+    assetId?: string;
+    branchId?: string;
+    cursor?: string;
+  },
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<FinancialEntryListResponse> {
+  const url = new URL("/v1/finance/entries", window.location.origin);
+  if (params?.status) url.searchParams.append("status", params.status);
+  if (params?.periodCode) url.searchParams.append("periodCode", params.periodCode);
+  if (params?.assetId) url.searchParams.append("assetId", params.assetId);
+  if (params?.branchId) url.searchParams.append("branchId", params.branchId);
+  if (params?.cursor) url.searchParams.append("cursor", params.cursor);
+
+  const response = await fetchImpl(url.pathname + url.search, {
+    headers: { authorization: `Bearer ${token}` },
+    ...(signal === undefined ? {} : { signal }),
+  });
+  if (!response.ok) throw new Error(`ENTRIES_${response.status}`);
+  return (await response.json()) as FinancialEntryListResponse;
+}
+
+export interface UseEntriesParams {
+  status?: string;
+  periodCode?: string;
+  assetId?: string;
+  branchId?: string;
+}
+
+export function useEntries(params: UseEntriesParams = {}) {
+  const session = useActiveSession();
+
+  return useInfiniteQuery<FinancialEntryListResponse>({
+    queryKey: ["ws", session?.workspaceSlug, "finance", "entries", params],
+    enabled: session !== undefined,
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage: FinancialEntryListResponse) => lastPage.nextCursor ?? undefined,
+    queryFn: ({ signal, pageParam }) => {
+      const token = sessionStore.getToken();
+      if (token === undefined) throw new Error("AUTH_REQUIRED");
+      const cursor = pageParam as string | undefined;
+      return fetchFinanceEntries(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
+    },
+  });
+}

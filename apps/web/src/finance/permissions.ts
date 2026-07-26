@@ -17,3 +17,13 @@ export function canRecordFinance(
     FINANCE_WRITERS.includes(role)
   );
 }
+
+const ENTRY_REVERSERS: readonly Role[] = ["FINANCE_APPROVER", "ADMIN"];
+
+/** Reverse is only offered on a POSTED entry, to approver roles (maker guard lives server-side). */
+export function canReverseEntry(
+  role: Role | undefined,
+  entryStatus: string | undefined,
+): boolean {
+  return entryStatus === "POSTED" && role !== undefined && ENTRY_REVERSERS.includes(role);
+}

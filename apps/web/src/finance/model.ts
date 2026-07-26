@@ -102,3 +102,8 @@ export function toRecordRevenuePayload(
     ],
   };
 }
+
+/** Mirrors reverse-entry.v1 contract: reason z.string().min(1).max(500). */
+export function validateReversalReason(reason: string): boolean {
+  return reason.trim().length > 0 && reason.length <= 500;
+}

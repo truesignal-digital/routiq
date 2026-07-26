@@ -12,6 +12,8 @@ import { AssetsStub } from "./screens/AssetsStub.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
+import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
+import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
 import { AppShell } from "./shell/AppShell.js";
 
 const rootRoute = createRootRoute();
@@ -69,6 +71,18 @@ const financeRecordRoute = createRoute({
   component: FinanceRecordScreen,
 });
 
+const financeEntriesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/finance/entries",
+  component: FinanceEntriesScreen,
+});
+
+const financeEntryDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/finance/entries/$entryId",
+  component: FinanceEntryDetailScreen,
+});
+
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
@@ -83,6 +97,8 @@ const routeTree = rootRoute.addChildren([
     assetsNewRoute,
     assetDocumentsRoute,
     financeRecordRoute,
+    financeEntriesRoute,
+    financeEntryDetailRoute,
     moreRoute,
   ]),
 ]);
