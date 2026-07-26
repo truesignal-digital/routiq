@@ -19,6 +19,7 @@ import {
   postingPeriods,
 } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
+import { pendingApprovalConditions } from "./approvals-queue.js";
 import { afterTimestampKeyset, timestampKeysetCodec } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
 
@@ -399,14 +400,9 @@ export function registerFinanceReadRoutes(
         const auth = req.auth!;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          const conditions = [
-            eq(financialEntries.workspaceId, auth.workspaceId),
-            eq(financialEntries.status, "SUBMITTED"),
-          ];
-
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(financialEntries.branchId, auth.branchScope));
-          }
+          // Shared with the dashboard's pendingApprovals count — one definition
+          // of the queue, so the two can never disagree on screen.
+          const conditions = pendingApprovalConditions(auth);
 
           const [countResult] = await tx
             .select({ count: sql<number>`count(*)::integer` })
