@@ -41,11 +41,12 @@
     "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
     "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",
     "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente.",
-    "POSTINGS_SUM_MISMATCH": "Les lignes d'écriture doivent correspondre au montant de l'entrée.",
-    "MAKER_CANNOT_APPROVE": "La personne qui a créé une entrée ne peut pas l'approuver.",
-    "ENTRY_ALREADY_REVERSED": "Cette entrée a déjà été contrepassée.",
-    "PERIOD_LOCKED": "Cette période comptable est verrouillée.",
-    "CATEGORY_KIND_MISMATCH": "Cette catégorie ne correspond pas au sens de l'entrée."
+    "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
+    "POSTINGS_SUM_MISMATCH": "Le total des lignes ne correspond pas au montant de l'écriture.",
+    "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
+    "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
+    "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
+    "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense)."
   },
   "assets": {
     "eyebrow": "Parc opérationnel",

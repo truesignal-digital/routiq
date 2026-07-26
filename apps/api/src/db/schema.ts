@@ -1,23 +1,33 @@
-import { MODULE_CODES, PRINCIPAL_TYPES, ROLES } from "@routiq/contracts";
+import {
+  MODULE_CODES,
+  PRINCIPAL_TYPES,
+  ROLES,
+  type CommandWarningCode,
+} from "@routiq/contracts";
 import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  char,
   date,
+  index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 export interface StoredCommandOutcome {
   commandId: string;
   recordId: string;
   rowVersion: number;
-  warnings: string[];
+  recordStatus?: string;
+  warnings: CommandWarningCode[];
   idempotentReplay: boolean;
 }
 
@@ -136,6 +146,11 @@ export const commands = pgTable(
     initiatedByPrincipalId: uuid("initiated_by_principal_id")
       .notNull()
       .references(() => principals.id),
+    /**
+     * REJECTED/FAILED receipts get a server-generated id (the client commandId
+     * must stay reusable for the retry); the envelope's commandId lands here.
+     */
+    clientCommandId: uuid("client_command_id"),
     idempotencyKey: text("idempotency_key").notNull(),
     clientOccurredAt: timestamp("client_occurred_at", { withTimezone: true }),
     payload: jsonb("payload").notNull(),
@@ -147,7 +162,13 @@ export const commands = pgTable(
     approvalRuleId: uuid("approval_rule_id"),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("commands_ws_idem_uq").on(t.workspaceId, t.idempotencyKey)],
+  // Partial: only success consumes the idempotency key. REJECTED/FAILED rows
+  // are a retry/debugging trail and may repeat per key.
+  (t) => [
+    uniqueIndex("commands_ws_idem_uq")
+      .on(t.workspaceId, t.idempotencyKey)
+      .where(sql`${t.status} = 'EXECUTED'`),
+  ],
 );
 
 export const auditEvents = pgTable("audit_events", {
@@ -276,6 +297,20 @@ export const categories = pgTable(
     code: text("code").notNull(),
     labelFr: text("label_fr").notNull(),
     labelEn: text("label_en").notNull(),
+    /**
+     * §4.2: the profitability layer lives on the category only — no second
+     * classification column to disagree with it. Required (CHECK in migration)
+     * for REVENUE_CATEGORY/EXPENSE_CATEGORY kinds, null for the rest.
+     */
+    profitabilityLayer: text("profitability_layer", {
+      enum: ["DIRECT", "MAINTENANCE", "OWNERSHIP", "SHARED"],
+    }),
+    /** §5.4: NO_RECEIPT_EXPECTED categories become declared cash expenses — warned, never blocked. */
+    evidencePolicy: text("evidence_policy", {
+      enum: ["RECEIPT_EXPECTED", "NO_RECEIPT_EXPECTED"],
+    })
+      .notNull()
+      .default("RECEIPT_EXPECTED"),
     active: boolean("active").notNull().default(true),
     createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
     rowVersion: integer("row_version").notNull().default(1),
@@ -345,4 +380,154 @@ export const commandSourceArtifacts = pgTable(
       .references(() => sourceArtifacts.id),
   },
   (t) => [uniqueIndex("command_artifacts_uq").on(t.commandId, t.artifactId)],
+);
+
+/**
+ * Monthly posting periods (§4.3) — the strict boundary. Auto-created OPEN by
+ * the first command that posts into the month; LockPeriod is the ceremony.
+ * A locked month is only reopened via ReopenPeriod (finance role + reason).
+ */
+export const postingPeriods = pgTable(
+  "posting_periods",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    /** Calendar month in the workspace timezone, 'YYYY-MM'. */
+    periodCode: text("period_code").notNull(),
+    status: text("status", { enum: ["OPEN", "LOCKED"] })
+      .notNull()
+      .default("OPEN"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockedByCommandId: uuid("locked_by_command_id").references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("posting_periods_ws_code_uq").on(t.workspaceId, t.periodCode)],
+);
+
+/**
+ * Financial entries (§4.2) — the part that must be right. Status transitions
+ * are the only edits after insert; posted amounts are corrected exclusively by
+ * reversal (reverses_entry_id), never edited. DRAFT is a client-side concept:
+ * the server never stores drafts.
+ */
+export const financialEntries = pgTable(
+  "financial_entries",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    /** Human-readable `{branchCode}-{year}-{seq5}`, assigned server-side from number_counters. */
+    entryNumber: text("entry_number").notNull(),
+    direction: text("direction", { enum: ["REVENUE", "EXPENSE"] }).notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id),
+    /** When it economically happened — may differ from the posting period (late postings). */
+    economicDate: date("economic_date").notNull(),
+    /** Null until POSTED; period resolved at posting time, never at submission. */
+    postingPeriodId: uuid("posting_period_id").references(() => postingPeriods.id),
+    isLatePosting: boolean("is_late_posting").notNull().default(false),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    /** Counterparty entity deferred — free text at MTP. */
+    counterpartyName: text("counterparty_name"),
+    description: text("description"),
+    /** SIGNED minor units (XAF exponent 0). Reversal entries carry the negated amount. */
+    amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("XAF"),
+    paymentMethod: text("payment_method", {
+      enum: ["CASH", "MOMO", "OM", "BANK", "OTHER"],
+    }).notNull(),
+    /** MoMo/OM transaction refs count as evidence (§5.4). */
+    paymentReference: text("payment_reference"),
+    sourceReference: text("source_reference"),
+    estimateStatus: text("estimate_status", { enum: ["ACTUAL", "ESTIMATED"] })
+      .notNull()
+      .default("ACTUAL"),
+    status: text("status", {
+      enum: ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"],
+    }).notNull(),
+    rejectedReason: text("rejected_reason"),
+    reversesEntryId: uuid("reverses_entry_id").references((): AnyPgColumn => financialEntries.id),
+    postedAt: timestamp("posted_at", { withTimezone: true }),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("financial_entries_ws_number_uq").on(t.workspaceId, t.entryNumber),
+    // An entry is reversed at most once — structural backstop for ENTRY_ALREADY_REVERSED.
+    uniqueIndex("financial_entries_reverses_uq").on(t.workspaceId, t.reversesEntryId),
+    index("financial_entries_ws_period_idx").on(t.workspaceId, t.postingPeriodId),
+  ],
+);
+
+/**
+ * Signed posting lines (§4.2). Immutable after insert (UPDATE/DELETE revoked
+ * from routiq_app) except the period-assignment update at approval time, done
+ * via the owner path inside the command transaction — corrections are new
+ * negated rows via reversal entries. Sum of a POSTED entry's postings equals
+ * the entry amount (command-layer invariant). activity_id / work_order_id /
+ * person_id attribution dimensions land with their own specs.
+ */
+export const financialPostings = pgTable(
+  "financial_postings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    financialEntryId: uuid("financial_entry_id")
+      .notNull()
+      .references(() => financialEntries.id),
+    lineNo: integer("line_no").notNull(),
+    // Indexing copies of entry fields — kept in sync by the command layer.
+    economicDate: date("economic_date").notNull(),
+    postingPeriodId: uuid("posting_period_id").references(() => postingPeriods.id),
+    direction: text("direction", { enum: ["REVENUE", "EXPENSE"] }).notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    assetId: uuid("asset_id").references(() => assets.id),
+    /** SIGNED minor units: reversals subtract, sums can't double-count. */
+    amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
+    assetAttribution: text("asset_attribution", { enum: ["DIRECT", "ALLOCATED"] })
+      .notNull()
+      .default("DIRECT"),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("financial_postings_entry_line_uq").on(t.financialEntryId, t.lineNo),
+    index("financial_postings_ws_asset_date_idx").on(t.workspaceId, t.assetId, t.economicDate),
+    index("financial_postings_ws_period_idx").on(t.workspaceId, t.postingPeriodId),
+  ],
+);
+
+/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}'). */
+export const numberCounters = pgTable(
+  "number_counters",
+  {
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    scope: text("scope").notNull(),
+    nextValue: bigint("next_value", { mode: "bigint" }).notNull().default(sql`1`),
+  },
+  (t) => [primaryKey({ columns: [t.workspaceId, t.scope] })],
 );

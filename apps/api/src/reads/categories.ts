@@ -5,7 +5,7 @@ import type { Db } from "../db/client.js";
 import { inWorkspace } from "../db/tenant.js";
 import { categories } from "../db/schema.js";
 
-const CATEGORY_KIND_VALUES = [
+const CATEGORY_KINDS = [
   "ASSET_CLASS",
   "ACTIVITY_TYPE",
   "REVENUE_CATEGORY",
@@ -13,8 +13,12 @@ const CATEGORY_KIND_VALUES = [
   "DOCUMENT_TYPE",
   "ISSUE_TYPE",
 ] as const;
-type CategoryKind = (typeof CATEGORY_KIND_VALUES)[number];
-const CATEGORY_KINDS = new Set<string>(CATEGORY_KIND_VALUES);
+
+type CategoryKind = (typeof CATEGORY_KINDS)[number];
+
+function isCategoryKind(value: unknown): value is CategoryKind {
+  return (CATEGORY_KINDS as readonly unknown[]).includes(value);
+}
 
 export function registerCategoryReadRoutes(
   app: FastifyInstance,
@@ -28,7 +32,7 @@ export function registerCategoryReadRoutes(
       try {
         const auth = req.auth!;
         const kind = (req.query as Record<string, unknown>)["kind"];
-        if (typeof kind !== "string" || !CATEGORY_KINDS.has(kind)) {
+        if (!isCategoryKind(kind)) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const rows = await inWorkspace(db, auth.workspaceId, (tx) =>

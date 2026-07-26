@@ -57,4 +57,27 @@ describe("routiq_app grants", () => {
     expect(privs?.has("UPDATE")).toBe(false);
     expect(privs?.has("DELETE")).toBe(false);
   });
+
+  it("financial rows keep the intended append-only runtime grants", async () => {
+    const grants = await grantsByTable();
+    const entries = grants.get("financial_entries");
+    expect(entries?.has("UPDATE")).toBe(true);
+    expect(entries?.has("DELETE")).toBe(false);
+
+    const postings = grants.get("financial_postings");
+    expect(postings?.has("UPDATE")).toBe(false);
+    expect(postings?.has("DELETE")).toBe(false);
+
+    const columnGrants = await ctx.db.execute(sql`
+      select column_name
+      from information_schema.role_column_grants
+      where grantee = 'routiq_app'
+        and table_schema = 'public'
+        and table_name = 'financial_postings'
+        and privilege_type = 'UPDATE'
+    `);
+    expect(columnGrants.rows).toEqual([
+      expect.objectContaining({ column_name: "posting_period_id" }),
+    ]);
+  });
 });

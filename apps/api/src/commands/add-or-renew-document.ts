@@ -22,7 +22,7 @@ const addOrRenewDocument: CommandDefinition<AddOrRenewDocumentPayload> = {
   branchAuthorization: {
     kind: "branches",
     resolve: (tx, ctx, payload) =>
-      assetBranchIds(tx, ctx, payload.assetId),
+      assetBranchIds(tx, ctx, [payload.assetId]),
   },
 
   async execute(tx, ctx, envelope, payload) {

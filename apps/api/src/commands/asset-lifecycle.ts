@@ -30,7 +30,7 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   branchAuthorization: {
     kind: "branches",
     resolve: (tx, ctx, payload) =>
-      assetBranchIds(tx, ctx, payload.assetId),
+      assetBranchIds(tx, ctx, [payload.assetId]),
   },
 
   async execute(tx, ctx, envelope, payload) {
@@ -100,8 +100,10 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   operationalAssetId: (payload) => payload.assetId,
   branchAuthorization: {
     kind: "branches",
-    resolve: (tx, ctx, payload) =>
-      assetBranchIds(tx, ctx, payload.assetId),
+    // Source branch only: the target branch is governed by the CROSS_BRANCH
+    // approval rule, not by scope. Including it here would make that rule
+    // unreachable for branch-scoped actors.
+    resolve: (tx, ctx, payload) => assetBranchIds(tx, ctx, [payload.assetId]),
   },
 
   async approvalContext(tx, ctx, payload) {

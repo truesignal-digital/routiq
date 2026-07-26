@@ -396,7 +396,7 @@ describe("Command Pipeline", () => {
       const member2 = await seedMember(db, {
         workspaceId: workspace2.workspace.id,
         role: "ADMIN",
-        allBranches: true,
+        branchIds: [workspace2.branch.id],
       });
       const session2 = await createSession(db, {
         principalId: member2.principal.id,
