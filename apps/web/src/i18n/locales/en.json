@@ -292,6 +292,31 @@
         "asset": "Asset",
         "assetPlaceholder": "UUID or code…"
       }
+    },
+    "approvals": {
+      "title": "Approvals",
+      "back": "Back",
+      "accessDenied": "You don't have access to this feature.",
+      "loading": "Loading…",
+      "loadFailed": "We couldn't load approvals. Please retry.",
+      "retry": "Try again",
+      "empty": "No entries awaiting approval.",
+      "makerGuard": "Your submission — another approver must decide",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveTitle": "Approve entry",
+      "rejectTitle": "Reject entry",
+      "noteLabel": "Note",
+      "optional": "(optional)",
+      "notePlaceholder": "Add a note…",
+      "reasonLabel": "Rejection reason",
+      "reasonPlaceholder": "Explain why this entry is being rejected…",
+      "approved": "Entry approved",
+      "rejected": "Entry rejected",
+      "warningsLabel": "Notices",
+      "cancel": "Cancel",
+      "submitting": "Working…",
+      "done": "Close"
     }
   }
 }

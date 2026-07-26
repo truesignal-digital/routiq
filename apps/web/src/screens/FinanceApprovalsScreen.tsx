@@ -1,0 +1,410 @@
+import { useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useMeContext } from "../auth/me.js";
+import { commandClient } from "../commands/instance.js";
+import { createCommandIntent } from "../commands/intent.js";
+import { errorMessage } from "../lib/error-message.js";
+import { useApprovals } from "../finance/useApprovals.js";
+import { canApproveEntries } from "../finance/permissions.js";
+import { isOwnSubmission, validateRejectionReason } from "../finance/model.js";
+import type { PendingApprovalItem } from "@routiq/contracts";
+
+type ActionDialogState =
+  | { open: false }
+  | { open: true; entryId: string; action: "approve" | "reject"; rowVersion: number };
+
+type SuccessDialogState =
+  | { open: false }
+  | {
+      open: true;
+      message: string;
+      warnings?: string[];
+    };
+
+export function FinanceApprovalsScreen() {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const me = useMeContext();
+  const queryClient = useQueryClient();
+  const canApprove = canApproveEntries(me?.role, me?.enabledModules);
+
+  const approvalsQuery = useApprovals();
+  const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
+  const [successDialog, setSuccessDialog] = useState<SuccessDialogState>({ open: false });
+  const [removedEntryIds, setRemovedEntryIds] = useState<Set<string>>(new Set());
+  const intentRef = useRef<any>(undefined);
+  const [actionError, setActionError] = useState<string>();
+
+  const labelOf = (item: { labelFr: string; labelEn: string }) =>
+    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+
+  const entries = (approvalsQuery.data?.entries ?? []).filter(
+    (e) => !removedEntryIds.has(e.id),
+  );
+
+  const handleApprove = async (entryId: string, rowVersion: number, note: string) => {
+    setActionError(undefined);
+    if (!intentRef.current) {
+      intentRef.current = createCommandIntent(
+        commandClient,
+        "approve-entry",
+        1,
+      );
+    }
+
+    const result = await intentRef.current.submit(
+      {
+        entryId,
+        ...(note ? { note } : {}),
+      },
+      { expectedVersion: rowVersion },
+    );
+
+    if (!result.ok) {
+      if (result.code === "VERSION_CONFLICT") {
+        // Refetch on version conflict
+        await approvalsQuery.refetch();
+        setRemovedEntryIds(new Set());
+        return;
+      }
+      setActionError(result.code);
+      return;
+    }
+
+    setRemovedEntryIds((prev) => new Set([...prev, entryId]));
+    setSuccessDialog({
+      open: true,
+      message: t("finance.approvals.approved"),
+      warnings: result.outcome.warnings,
+    });
+    setActionDialog({ open: false });
+  };
+
+  const handleReject = async (entryId: string, rowVersion: number, reason: string) => {
+    setActionError(undefined);
+    if (!intentRef.current) {
+      intentRef.current = createCommandIntent(
+        commandClient,
+        "reject-entry",
+        1,
+      );
+    }
+
+    const result = await intentRef.current.submit(
+      {
+        entryId,
+        reason,
+      },
+      { expectedVersion: rowVersion },
+    );
+
+    if (!result.ok) {
+      if (result.code === "VERSION_CONFLICT") {
+        await approvalsQuery.refetch();
+        setRemovedEntryIds(new Set());
+        return;
+      }
+      setActionError(result.code);
+      return;
+    }
+
+    setRemovedEntryIds((prev) => new Set([...prev, entryId]));
+    setSuccessDialog({
+      open: true,
+      message: t("finance.approvals.rejected"),
+    });
+    setActionDialog({ open: false });
+  };
+
+  if (!canApprove) {
+    return (
+      <section className="mx-auto w-full max-w-3xl px-4 py-6">
+        <h1 className="text-2xl font-semibold">{t("finance.approvals.title")}</h1>
+        <p role="status" className="mt-4 text-sm text-muted-foreground">
+          {t("finance.approvals.accessDenied")}
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto w-full max-w-4xl px-4 py-6">
+      <button
+        type="button"
+        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
+        onClick={() => void navigate({ to: "/assets" })}
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        {t("finance.approvals.back")}
+      </button>
+      <h1 className="mt-2 text-2xl font-semibold">{t("finance.approvals.title")}</h1>
+
+      {approvalsQuery.isPending ? (
+        <p className="mt-6 text-sm text-muted-foreground">{t("finance.approvals.loading")}</p>
+      ) : approvalsQuery.isError ? (
+        <div role="alert" className="mt-6 flex flex-col gap-3">
+          <p className="text-sm text-destructive">{t("finance.approvals.loadFailed")}</p>
+          <Button
+            variant="outline"
+            className="min-h-11 self-start"
+            onClick={() => void approvalsQuery.refetch()}
+          >
+            {t("finance.approvals.retry")}
+          </Button>
+        </div>
+      ) : entries.length === 0 ? (
+        <p className="mt-6 text-sm text-muted-foreground">{t("finance.approvals.empty")}</p>
+      ) : (
+        <div className="mt-6 flex flex-col gap-3">
+          {entries.map((entry) => (
+            <ApprovalRow
+              key={entry.id}
+              entry={entry}
+              isOwnSubmission={isOwnSubmission(entry.submittedByPrincipalId, me?.principalId)}
+              onApprove={() =>
+                setActionDialog({
+                  open: true,
+                  entryId: entry.id,
+                  action: "approve",
+                  rowVersion: entry.rowVersion,
+                })
+              }
+              onReject={() =>
+                setActionDialog({
+                  open: true,
+                  entryId: entry.id,
+                  action: "reject",
+                  rowVersion: entry.rowVersion,
+                })
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {actionDialog.open && (
+        <ActionDialog
+          action={actionDialog.action}
+          onApprove={(note) => handleApprove(actionDialog.entryId, actionDialog.rowVersion, note)}
+          onReject={(reason) =>
+            handleReject(actionDialog.entryId, actionDialog.rowVersion, reason)
+          }
+          onCancel={() => setActionDialog({ open: false })}
+          error={actionError}
+        />
+      )}
+
+      {successDialog.open && (
+        <SuccessDialog
+          message={successDialog.message}
+          warnings={successDialog.warnings}
+          onClose={() => setSuccessDialog({ open: false })}
+        />
+      )}
+    </section>
+  );
+}
+
+function ApprovalRow({
+  entry,
+  isOwnSubmission,
+  onApprove,
+  onReject,
+}: {
+  entry: PendingApprovalItem;
+  isOwnSubmission: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+
+  const labelOf = (item: { labelFr: string; labelEn: string }) =>
+    i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
+
+  const formatAmount = (minor: number) => {
+    return new Intl.NumberFormat("fr-CM", {
+      style: "decimal",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(minor);
+  };
+
+  const submittedDate = new Date(entry.submittedAt).toLocaleDateString();
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{labelOf(entry.category)}</p>
+        <p className="text-xs text-muted-foreground">{submittedDate}</p>
+        {entry.counterpartyName && (
+          <p className="text-xs text-muted-foreground">{entry.counterpartyName}</p>
+        )}
+      </div>
+      <p className="whitespace-nowrap text-right font-mono font-semibold">
+        {formatAmount(entry.amountMinor)} {entry.currency}
+      </p>
+
+      {isOwnSubmission ? (
+        <p className="text-xs font-medium text-amber-900">{t("finance.approvals.makerGuard")}</p>
+      ) : (
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={onApprove}>
+            {t("finance.approvals.approve")}
+          </Button>
+          <Button size="sm" variant="destructive" onClick={onReject}>
+            {t("finance.approvals.reject")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActionDialog({
+  action,
+  onApprove,
+  onReject,
+  onCancel,
+  error,
+}: {
+  action: "approve" | "reject";
+  onApprove: (note: string) => Promise<void>;
+  onReject: (reason: string) => Promise<void>;
+  onCancel: () => void;
+  error: string | undefined;
+}) {
+  const { t } = useTranslation();
+  const [text, setText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const isValid =
+    action === "approve" ? true : validateRejectionReason(text);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      if (action === "approve") {
+        await onApprove(text);
+      } else {
+        await onReject(text);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-sm rounded-xl bg-white p-6">
+        <h2 className="text-lg font-semibold">
+          {action === "approve"
+            ? t("finance.approvals.approveTitle")
+            : t("finance.approvals.rejectTitle")}
+        </h2>
+
+        {error && (
+          <div role="alert" className="mt-4 flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
+            <p>{t(`errors.${error}`, { defaultValue: error })}</p>
+          </div>
+        )}
+
+        {action === "approve" ? (
+          <div className="mt-4 flex flex-col gap-2">
+            <Label htmlFor="note">{t("finance.approvals.noteLabel")} {t("finance.approvals.optional")}</Label>
+            <textarea
+              id="note"
+              placeholder={t("finance.approvals.notePlaceholder")}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            />
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-2">
+            <Label htmlFor="reason">{t("finance.approvals.reasonLabel")}</Label>
+            <textarea
+              id="reason"
+              placeholder={t("finance.approvals.reasonPlaceholder")}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            />
+          </div>
+        )}
+
+        <div className="mt-6 flex gap-2">
+          <Button
+            variant="outline"
+            className="min-h-11 flex-1"
+            onClick={onCancel}
+            disabled={submitting}
+          >
+            {t("finance.approvals.cancel")}
+          </Button>
+          <Button
+            className="min-h-11 flex-1"
+            disabled={!isValid || submitting}
+            onClick={() => void handleSubmit()}
+          >
+            {submitting
+              ? t("finance.approvals.submitting")
+              : action === "approve"
+                ? t("finance.approvals.approve")
+                : t("finance.approvals.reject")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuccessDialog({
+  message,
+  warnings,
+  onClose,
+}: {
+  message: string;
+  warnings: string[] | undefined;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-sm rounded-xl bg-white p-6">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 size-6 text-green-600" aria-hidden />
+          <div>
+            <h2 className="font-semibold text-green-900">{message}</h2>
+            {warnings && warnings.length > 0 && (
+              <div className="mt-3 border-t border-green-200 pt-3">
+                <p className="text-xs font-semibold uppercase text-green-900">
+                  {t("finance.approvals.warningsLabel")}
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {warnings.map((warning, idx) => (
+                    <li key={idx} className="text-xs text-green-800">
+                      {warning === "LATE_POSTING"
+                        ? t("finance.entries.detail.latePosting")
+                        : warning}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+        <Button onClick={onClose} className="min-h-11 mt-4 w-full">
+          {t("finance.approvals.done")}
+        </Button>
+      </div>
+    </div>
+  );
+}

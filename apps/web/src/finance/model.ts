@@ -107,3 +107,23 @@ export function toRecordRevenuePayload(
 export function validateReversalReason(reason: string): boolean {
   return reason.trim().length > 0 && reason.length <= 500;
 }
+
+/**
+ * Validate rejection reason (required, 1-500 chars).
+ * Mirrors the contract bound in packages/contracts/src/commands/approve-entry.ts
+ */
+export function validateRejectionReason(reason: string): boolean {
+  const trimmed = reason.trim();
+  return trimmed.length > 0 && trimmed.length <= 500;
+}
+
+/**
+ * Check if a principal made a submission (maker guard).
+ * Returns true if the entry was submitted by the current session principal.
+ */
+export function isOwnSubmission(
+  submittedByPrincipalId: string,
+  sessionPrincipalId: string | undefined,
+): boolean {
+  return sessionPrincipalId !== undefined && submittedByPrincipalId === sessionPrincipalId;
+}

@@ -292,6 +292,31 @@
         "asset": "Actif",
         "assetPlaceholder": "UUID ou code…"
       }
+    },
+    "approvals": {
+      "title": "Approbations",
+      "back": "Retour",
+      "accessDenied": "Vous n'avez pas accès à cette fonctionnalité.",
+      "loading": "Chargement…",
+      "loadFailed": "Impossible de charger les approbations. Réessayez.",
+      "retry": "Réessayer",
+      "empty": "Aucune écriture en attente d'approbation.",
+      "makerGuard": "Votre saisie — un autre approbateur doit décider",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "approveTitle": "Approuver l'écriture",
+      "rejectTitle": "Rejeter l'écriture",
+      "noteLabel": "Remarque",
+      "optional": "(optionnel)",
+      "notePlaceholder": "Ajoutez une remarque…",
+      "reasonLabel": "Motif du rejet",
+      "reasonPlaceholder": "Expliquez pourquoi cette écriture est rejetée…",
+      "approved": "Écriture approuvée",
+      "rejected": "Écriture rejetée",
+      "warningsLabel": "Avis",
+      "cancel": "Annuler",
+      "submitting": "En cours…",
+      "done": "Fermer"
     }
   }
 }

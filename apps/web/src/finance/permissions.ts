@@ -27,3 +27,16 @@ export function canReverseEntry(
 ): boolean {
   return entryStatus === "POSTED" && role !== undefined && ENTRY_REVERSERS.includes(role);
 }
+
+const ENTRY_APPROVERS: readonly Role[] = ["FINANCE_APPROVER", "ADMIN"];
+
+export function canApproveEntries(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return (
+    (enabledModules?.includes("FINANCE") ?? false) &&
+    role !== undefined &&
+    ENTRY_APPROVERS.includes(role)
+  );
+}

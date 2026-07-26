@@ -1,6 +1,6 @@
 # 05 — Approvals inbox + maker-guard UX
 
-Status: ready-for-agent
+Status: ready-for-human
 Blocked by: 02
 
 **What to build:** Finance → Approvals (FINANCE_APPROVER + ADMIN only) lists SUBMITTED entries oldest first: who submitted, when, category, amount, branch. Each row expands or navigates to a decision view: Approve (optional note) / Reject (reason required). Actions call `approve-entry.v1` / `reject-entry.v1` with the entry's `rowVersion` as `expectedVersion`.
@@ -21,7 +21,11 @@ Blocked by: 02
 
 ## Acceptance
 
-- [ ] Own submissions render guard state, not buttons (model test on principal comparison)
-- [ ] Approve and reject payload mapping tests incl. expectedVersion
-- [ ] Role gating test: OPS_MANAGER/FIELD_SUBMITTER cannot reach the screen
-- [ ] Web tests + typecheck green
+- [x] Own submissions render guard state, not buttons (model test on principal comparison)
+- [x] Approve and reject payload mapping tests incl. expectedVersion
+- [x] Role gating test: OPS_MANAGER/FIELD_SUBMITTER cannot reach the screen
+- [x] Web tests + typecheck green
+
+## Comments
+
+2026-07-26 [codex] clean first-round pass. Tests import production code (isOwnSubmission, validateRejectionReason, canApproveEntries — the ticket-04 lesson held). expectedVersion on approve and reject, VERSION_CONFLICT refetch on both paths, maker guard rendered, LATE_POSTING notice, 23 fr/en keys at parity. 105 web tests + typecheck green, Fable-verified.
