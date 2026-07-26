@@ -1,0 +1,267 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "routiq",
+  "homepage": "http://localhost:5173",
+  "items": [
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/button.tsx",
+          "type": "registry:file",
+          "target": "components/ui/button.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["class-variance-authority"]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/card.tsx",
+          "type": "registry:file",
+          "target": "components/ui/card.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/label.tsx",
+          "type": "registry:file",
+          "target": "components/ui/label.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/input.tsx",
+          "type": "registry:file",
+          "target": "components/ui/input.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "textarea",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/textarea.tsx",
+          "type": "registry:file",
+          "target": "components/ui/textarea.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "form",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/form.tsx",
+          "type": "registry:file",
+          "target": "components/ui/form.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["react-hook-form"]
+    },
+    {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/alert-dialog.tsx",
+          "type": "registry:file",
+          "target": "components/ui/alert-dialog.tsx"
+        }
+      ],
+      "registryDependencies": ["button"],
+      "dependencies": []
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/dialog.tsx",
+          "type": "registry:file",
+          "target": "components/ui/dialog.tsx"
+        }
+      ],
+      "registryDependencies": ["button"],
+      "dependencies": ["lucide-react"]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/select.tsx",
+          "type": "registry:file",
+          "target": "components/ui/select.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["lucide-react"]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/separator.tsx",
+          "type": "registry:file",
+          "target": "components/ui/separator.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/skeleton.tsx",
+          "type": "registry:file",
+          "target": "components/ui/skeleton.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/badge.tsx",
+          "type": "registry:file",
+          "target": "components/ui/badge.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["class-variance-authority"]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/table.tsx",
+          "type": "registry:file",
+          "target": "components/ui/table.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "sonner",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/sonner.tsx",
+          "type": "registry:file",
+          "target": "components/ui/sonner.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["sonner", "lucide-react"]
+    },
+    {
+      "name": "file-upload",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/file-upload.tsx",
+          "type": "registry:file",
+          "target": "components/ui/file-upload.tsx"
+        }
+      ],
+      "registryDependencies": ["button"],
+      "dependencies": ["lucide-react", "react-i18next"]
+    },
+    {
+      "name": "data-table",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/data-table.tsx",
+          "type": "registry:file",
+          "target": "components/data-table.tsx"
+        }
+      ],
+      "registryDependencies": ["button", "table"],
+      "dependencies": ["@tanstack/react-table"]
+    },
+    {
+      "name": "page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/page.tsx",
+          "type": "registry:file",
+          "target": "components/page.tsx"
+        }
+      ],
+      "registryDependencies": ["button", "skeleton"],
+      "dependencies": ["lucide-react"]
+    },
+    {
+      "name": "utils",
+      "type": "registry:lib",
+      "files": [
+        {
+          "path": "src/lib/utils.ts",
+          "type": "registry:file",
+          "target": "lib/utils.ts"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["clsx", "tailwind-merge"]
+    },
+    {
+      "name": "error-message",
+      "type": "registry:lib",
+      "files": [
+        {
+          "path": "src/lib/error-message.ts",
+          "type": "registry:file",
+          "target": "lib/error-message.ts"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "notify",
+      "type": "registry:lib",
+      "files": [
+        {
+          "path": "src/lib/notify.ts",
+          "type": "registry:file",
+          "target": "lib/notify.ts"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": ["sonner"]
+    }
+  ]
+}

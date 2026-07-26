@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "registry:build": "shadcn build"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
