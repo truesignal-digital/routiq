@@ -1,4 +1,4 @@
-# Spec: UI Foundation — primitives, tables, toasts, dialogs, attachments
+# Spec: UI Foundation — primitives, tables, toasts, dialogs, attachments (Base UI)
 
 Status: ready-for-agent
 Source: Linus 2026-07-26 — "the UI is not really scalable… data-tables where necessary, toasts where necessary, dialog boxes should have action buttons or something to cancel out, shadcn attachments, fix the fundamentals so it can be scalable and maintainable."
@@ -12,12 +12,12 @@ Screens shipped faster than the foundation under them. Current inventory: three 
 - **Mobile-first on low-end Android** (ARCHITECTURE §6): data-tables are a desktop density win but must degrade on phones. Every table has a card rendering below `sm` via column `meta` — never horizontal scrolling as the primary mobile experience.
 - **Keyset pagination is the house read pattern**: the table exposes a "load more" footer wired to useInfiniteQuery. NO client-side sorting or filtering on paginated data (lying to the user about the dataset) — server order only, until a read view supports sort params.
 - **fr-CM first**: all new component strings via locale keys; primitives take labels as props, never bake text.
-- **Pinned deps** (CLAUDE.md §8): new packages pinned exact. Radix/shadcn additions are vendored files under `components/ui/` (the shadcn model — code we own), not runtime deps to chase.
+- **Pinned deps** (CLAUDE.md §8): new packages pinned exact. **Headless layer is Base UI (`@base-ui/react` 1.6.0), NOT Radix** — components.json is configured with the shadcn `base-nova` style; add components via the shadcn CLI so it vendors the Base UI-backed versions, and never introduce @radix-ui packages.
 - **Command outcomes carry meaning**: POSTED vs SUBMITTED on the record screen is a business state the user must read — it stays a full outcome view. Toasts are for row actions whose context is the list they happened in.
 
 ## Design
 
-### 1. Primitives (`components/ui/`, shadcn/radix, ticket 01)
+### 1. Primitives (`components/ui/`, shadcn base-nova / Base UI, ticket 01)
 
 Add: `dialog`, `alert-dialog`, `select`, `textarea`, `badge`, `card`, `table`, `skeleton`, `sonner` (toaster), `form` (RHF wrapper), `separator`. Mount `<Toaster richColors position="top-center" />` once in the app shell. Nothing speculative beyond this consumed set.
 
@@ -37,7 +37,7 @@ Add: `dialog`, `alert-dialog`, `select`, `textarea`, `badge`, `card`, `table`, `
 
 Every hand-rolled modal migrates:
 - Pure confirmation (lock period) → `AlertDialog` — title, description, `Cancel` + destructive-variant action.
-- Input dialogs (reject reason, reverse reason, reopen reason, approve note) → `Dialog` with `DialogFooter`: `Annuler` (always) + submit button, disabled while invalid/submitting. ESC and overlay close = cancel. Focus trapped, returns to trigger (radix default).
+- Input dialogs (reject reason, reverse reason, reopen reason, approve note) → `Dialog` with `DialogFooter`: `Annuler` (always) + submit button, disabled while invalid/submitting. ESC and overlay close = cancel. Focus trapped, returns to trigger (Base UI default).
 - The shared validators (validateReversalReason etc.) stay the single source of enable/disable truth.
 
 ### 5. Forms (ticket 04)
