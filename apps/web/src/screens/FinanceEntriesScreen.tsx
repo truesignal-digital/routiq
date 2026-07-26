@@ -10,14 +10,8 @@ import { errorMessage } from "../lib/error-message.js";
 import { useEntries } from "../finance/useEntries.js";
 import { canRecordFinance } from "../finance/permissions.js";
 import { FinanceNav } from "../finance/FinanceNav.js";
+import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
-
-const statusStyles: Record<string, string> = {
-  SUBMITTED: "bg-amber-100 text-amber-900 ring-amber-200",
-  POSTED: "bg-emerald-100 text-emerald-900 ring-emerald-200",
-  REJECTED: "bg-red-100 text-red-900 ring-red-200",
-  REVERSED: "bg-slate-100 text-slate-900 ring-slate-200",
-};
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
 
@@ -46,13 +40,9 @@ export function FinanceEntriesScreen() {
         meta: { mobile: "primary" },
         cell: ({ row }) => (
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex min-h-6 items-center rounded-full px-2 text-[0.65rem] font-bold uppercase ring-1 ring-inset ${
-                statusStyles[row.original.status]
-              }`}
-            >
+            <FinanceStatusBadge status={row.original.status}>
               {t(`finance.entries.status.${row.original.status}`)}
-            </span>
+            </FinanceStatusBadge>
             {row.original.isLatePosting && (
               <span className="text-[0.65rem] font-bold uppercase text-amber-900">
                 {t("finance.entries.detail.latePosting")}

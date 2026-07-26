@@ -26,6 +26,7 @@ import { useApprovals } from "../finance/useApprovals.js";
 import { canApproveEntries } from "../finance/permissions.js";
 import { isOwnSubmission, validateRejectionReason } from "../finance/model.js";
 import { FinanceNav } from "../finance/FinanceNav.js";
+import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
 import {
   approveEntryPayload,
   rejectEntryPayload,
@@ -61,7 +62,11 @@ export function FinanceApprovalsScreen() {
         accessorKey: "status",
         header: t("finance.entries.detail.status"),
         meta: { mobile: "primary" },
-        cell: ({ row }) => t(`finance.entries.status.${row.original.status}`),
+        cell: ({ row }) => (
+          <FinanceStatusBadge status={row.original.status}>
+            {t(`finance.entries.status.${row.original.status}`)}
+          </FinanceStatusBadge>
+        ),
       },
       {
         accessorKey: "submittedAt",

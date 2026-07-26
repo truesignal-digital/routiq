@@ -4,6 +4,7 @@ import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
 import {
   Dialog,
   DialogClose,
@@ -142,7 +143,9 @@ export function FinanceEntryDetailScreen() {
                   {t("finance.entries.detail.status")}
                 </dt>
                 <dd className="mt-1">
-                  {t(`finance.entries.status.${entryQuery.data.status}`)}
+                  <FinanceStatusBadge status={entryQuery.data.status}>
+                    {t(`finance.entries.status.${entryQuery.data.status}`)}
+                  </FinanceStatusBadge>
                 </dd>
               </div>
               <div>
