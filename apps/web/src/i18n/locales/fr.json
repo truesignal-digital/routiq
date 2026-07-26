@@ -406,6 +406,14 @@
   },
   "dataTable": {
     "loading": "Chargement…",
-    "loadMore": "Charger plus"
+    "loadMore": "Charger plus",
+    "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
+    "selectedCount": "{count, plural, one {# ligne sélectionnée} other {# lignes sélectionnées}}",
+    "selectAll": "Tout sélectionner",
+    "selectRow": "Sélectionner la ligne",
+    "view": "Affichage",
+    "columns": "Colonnes",
+    "clearFilters": "Effacer les filtres",
+    "filterAll": "Tous"
   }
 }
