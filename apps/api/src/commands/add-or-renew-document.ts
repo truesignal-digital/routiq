@@ -8,6 +8,7 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { assetBranchIds } from "./branch-authorization.js";
 
 type AddOrRenewDocumentPayload = z.infer<typeof addOrRenewDocumentPayload>;
 
@@ -18,6 +19,11 @@ const addOrRenewDocument: CommandDefinition<AddOrRenewDocumentPayload> = {
   allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
   payloadSchema: addOrRenewDocumentPayload,
   operationalAssetId: (payload) => payload.assetId,
+  branchAuthorization: {
+    kind: "branches",
+    resolve: (tx, ctx, payload) =>
+      assetBranchIds(tx, ctx, [payload.assetId]),
+  },
 
   async execute(tx, ctx, envelope, payload) {
     // Verify asset exists in workspace

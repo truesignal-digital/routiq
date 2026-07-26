@@ -28,6 +28,7 @@ function moduleToggleCommand(opts: {
     module: "CORE",
     allowedRoles: ["ADMIN"],
     payloadSchema: opts.payloadSchema,
+    branchAuthorization: { kind: "workspace" },
     async execute(tx, ctx, envelope, payload) {
       const [existingRow] = await tx
         .select()

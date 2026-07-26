@@ -396,6 +396,7 @@ describe("Command Pipeline", () => {
       const member2 = await seedMember(db, {
         workspaceId: workspace2.workspace.id,
         role: "ADMIN",
+        branchIds: [workspace2.branch.id],
       });
       const session2 = await createSession(db, {
         principalId: member2.principal.id,
@@ -599,6 +600,7 @@ describe("Command Pipeline", () => {
         module: "CORE",
         allowedRoles: ["ADMIN"],
         payloadSchema: z.object({}),
+        branchAuthorization: { kind: "workspace" },
         execute: async (tx, _ctx, envelope) => {
           await tx
             .insert(workspaces)

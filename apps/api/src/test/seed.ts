@@ -1,7 +1,16 @@
 import type { PrincipalType, Role } from "@routiq/contracts";
 import { randomUUID } from "node:crypto";
+import type { FastifyInstance } from "fastify";
 import { hashPin } from "../auth/pin.js";
-import { branches, categories, credentials, memberships, principals, workspaces, approvalRules } from "../db/schema.js";
+import {
+  approvalRules,
+  branches,
+  categories,
+  credentials,
+  memberships,
+  principals,
+  workspaces,
+} from "../db/schema.js";
 import type { Db } from "../db/client.js";
 import { defaultApprovalRules } from "../commands/approval-defaults.js";
 import { presetCategories } from "../commands/category-presets.js";
@@ -73,4 +82,40 @@ export async function seedMember(
   }
 
   return { principal, membership };
+}
+
+export async function seedAsset(
+  app: FastifyInstance,
+  token: string,
+  opts: {
+    assetCode?: string;
+    branchCode?: string;
+  } = {},
+): Promise<string> {
+  const assetId = randomUUID();
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/commands",
+    headers: { authorization: `Bearer ${token}` },
+    payload: {
+      name: "register-asset",
+      version: 1,
+      envelope: {
+        commandId: randomUUID(),
+        idempotencyKey: `idem-${randomUUID()}`,
+        origin: "HUMAN_UI",
+      },
+      payload: {
+        assetId,
+        assetCode: opts.assetCode ?? `TEST-ASSET-${randomUUID().slice(0, 8)}`,
+        assetClassCode: "TRUCK",
+        templateCode: "TRUCKING",
+        branchCode: opts.branchCode ?? "DLA",
+      },
+    },
+  });
+  if (response.statusCode !== 200) {
+    throw new Error(`asset seed failed: ${response.statusCode} ${response.body}`);
+  }
+  return assetId;
 }

@@ -4,14 +4,20 @@ import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import { categories } from "../db/schema.js";
 
-const CATEGORY_KINDS = new Set([
+const CATEGORY_KINDS = [
   "ASSET_CLASS",
   "ACTIVITY_TYPE",
   "REVENUE_CATEGORY",
   "EXPENSE_CATEGORY",
   "DOCUMENT_TYPE",
   "ISSUE_TYPE",
-]);
+] as const;
+
+type CategoryKind = (typeof CATEGORY_KINDS)[number];
+
+function isCategoryKind(value: unknown): value is CategoryKind {
+  return (CATEGORY_KINDS as readonly unknown[]).includes(value);
+}
 
 export function registerCategoryReadRoutes(
   app: FastifyInstance,
@@ -25,7 +31,7 @@ export function registerCategoryReadRoutes(
       try {
         const auth = req.auth!;
         const kind = (req.query as Record<string, unknown>)["kind"];
-        if (typeof kind !== "string" || !CATEGORY_KINDS.has(kind)) {
+        if (!isCategoryKind(kind)) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const rows = await db

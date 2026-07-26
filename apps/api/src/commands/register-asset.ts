@@ -8,6 +8,7 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { branchIdsByCode } from "./branch-authorization.js";
 import { validateCustomValues } from "./templates.js";
 
 type RegisterAssetPayload = z.infer<typeof registerAssetPayload>;
@@ -18,6 +19,11 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   module: "ASSETS",
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: registerAssetPayload,
+  branchAuthorization: {
+    kind: "branches",
+    resolve: (tx, ctx, payload) =>
+      branchIdsByCode(tx, ctx, [payload.branchCode]),
+  },
   async approvalContext(_tx, _ctx, payload) {
     return {
       branchCode: payload.branchCode,

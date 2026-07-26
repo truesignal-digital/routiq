@@ -15,6 +15,10 @@ import {
   type CommissionAssetPayload,
 } from "@routiq/contracts";
 import { assets, branches, memberships } from "../db/schema.js";
+import {
+  assetBranchIds,
+  branchIdsByCode,
+} from "./branch-authorization.js";
 
 export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   name: "commission-asset",
@@ -22,6 +26,11 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   version: 1,
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: commissionAssetPayload,
+  branchAuthorization: {
+    kind: "branches",
+    resolve: (tx, ctx, payload) =>
+      assetBranchIds(tx, ctx, [payload.assetId]),
+  },
 
   async execute(tx, ctx, envelope, payload) {
     const asset = await tx.query.assets.findFirst({
@@ -96,6 +105,18 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   allowedRoles: ["ADMIN", "OPS_MANAGER"],
   payloadSchema: assignAssetPayload,
   operationalAssetId: (payload) => payload.assetId,
+  branchAuthorization: {
+    kind: "branches",
+    async resolve(tx, ctx, payload) {
+      const [sourceBranchIds, targetBranchIds] = await Promise.all([
+        assetBranchIds(tx, ctx, [payload.assetId]),
+        payload.branchCode === undefined
+          ? Promise.resolve([])
+          : branchIdsByCode(tx, ctx, [payload.branchCode]),
+      ]);
+      return [...new Set([...sourceBranchIds, ...targetBranchIds])];
+    },
+  },
 
   async approvalContext(tx, ctx, payload) {
     const asset = await tx.query.assets.findFirst({

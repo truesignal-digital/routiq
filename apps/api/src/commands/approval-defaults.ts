@@ -8,7 +8,7 @@ import type { approvalRules } from "../db/schema.js";
 export function defaultApprovalRules(
   workspaceId: string,
 ): (typeof approvalRules.$inferInsert)[] {
-  return [
+  const rules: (typeof approvalRules.$inferInsert)[] = [
     // register-asset: ADMIN and OPS_MANAGER, no filters
     {
       workspaceId,
@@ -137,4 +137,58 @@ export function defaultApprovalRules(
       createdByCommandId: null,
     },
   ];
+
+  for (const commandType of ["record-expense", "record-revenue"]) {
+    // All writing roles auto-post through the pilot threshold.
+    rules.push(
+      ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const).map(
+        (requiredRole) => ({
+          workspaceId,
+          commandType,
+          categoryCode: null,
+          branchId: null,
+          amountMinMinor: null,
+          amountMaxMinor: 100_000n,
+          requiredRole,
+          createdByCommandId: null,
+        }),
+      ),
+    );
+    // Finance approvers and admins may auto-post above the threshold too.
+    rules.push(
+      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
+        workspaceId,
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  for (const commandType of [
+    "approve-entry",
+    "reject-entry",
+    "reverse-entry",
+    "lock-period",
+    "reopen-period",
+  ]) {
+    rules.push(
+      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
+        workspaceId,
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  return rules;
 }

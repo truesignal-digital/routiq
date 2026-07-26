@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
+import { TOGGLEABLE_MODULE_CODES } from "../modules.js";
 
 export const enableModulePayload = z.strictObject({
-  moduleCode: z.enum(["ASSETS", "DOCUMENTS"]),
+  moduleCode: z.enum(TOGGLEABLE_MODULE_CODES),
 });
 
 export const disableModulePayload = z.strictObject({
-  moduleCode: z.enum(["ASSETS", "DOCUMENTS"]),
+  moduleCode: z.enum(TOGGLEABLE_MODULE_CODES),
 });
 
 export const enableModuleCommand = z.object({

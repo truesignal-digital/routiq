@@ -34,9 +34,23 @@ export const COMMAND_ERROR_CODES = [
   "STORAGE_FAILED",
   "ASSET_NOT_OPERATIONAL",
   "DOCUMENT_ALREADY_SUPERSEDED",
+  "POSTINGS_SUM_MISMATCH",
+  "MAKER_CANNOT_APPROVE",
+  "ENTRY_ALREADY_REVERSED",
+  "PERIOD_LOCKED",
+  "CATEGORY_KIND_MISMATCH",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
+
+/** Stable machine-readable warning codes returned by successful commands. */
+export const COMMAND_WARNING_CODES = [
+  "EVIDENCE_MISSING",
+  "LATE_POSTING",
+  "PERIOD_HAS_SUBMITTED_ENTRIES",
+] as const;
+
+export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];
 
 export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode;
 

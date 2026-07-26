@@ -2,6 +2,7 @@ import {
   commandEnvelope,
   type CommandEnvelope,
   type CommandErrorCode,
+  type CommandWarningCode,
   type ModuleCode,
   type Role,
   type ValidationErrorCode,
@@ -19,7 +20,11 @@ import {
 } from "../db/schema.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { reportUnexpectedFailure } from "../observability/sentry.js";
-import { evaluateApproval, type ApprovalContext } from "./approvals.js";
+import {
+  evaluateApproval,
+  type ApprovalContext,
+  type ApprovalDecision,
+} from "./approvals.js";
 
 export type CommandContext = AuthContext;
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -28,7 +33,9 @@ export interface CommandOutcome {
   commandId: string;
   recordId: string;
   rowVersion: number;
-  warnings: string[];
+  /** Post-command record state where it matters (POSTED vs SUBMITTED entries). */
+  recordStatus?: string;
+  warnings: CommandWarningCode[];
   idempotentReplay: boolean;
 }
 
@@ -75,14 +82,41 @@ export interface CommandDefinition<P> {
    * handler code runs — handlers never re-implement this invariant.
    */
   operationalAssetId?(payload: P): string | undefined;
+  /**
+   * Every command explicitly declares its branch impact. Requiring a policy
+   * keeps new commands fail-closed instead of silently skipping branch scope.
+   */
+  branchAuthorization:
+    | { kind: "workspace" }
+    | {
+        kind: "branches";
+        resolve(
+          tx: Tx,
+          ctx: CommandContext,
+          payload: P,
+        ): Promise<readonly string[]>;
+      };
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
+  /**
+   * What APPROVAL_REQUIRED means for this command. Default 'REJECT': the call
+   * fails 403 and nothing commits. 'SUBMIT' (financial entries, §5.2): the
+   * command proceeds and the handler must store the record in a SUBMITTED
+   * state, to be decided later by an approve/reject command.
+   */
+  approvalMode?: "REJECT" | "SUBMIT";
   execute(
     tx: Tx,
     ctx: CommandContext,
     envelope: CommandEnvelope,
     payload: P,
-  ): Promise<{ recordId: string; rowVersion: number }>;
+    approval: ApprovalDecision,
+  ): Promise<{
+    recordId: string;
+    rowVersion: number;
+    recordStatus?: string;
+    warnings?: CommandWarningCode[];
+  }>;
 }
 
 export interface AuditEventInput {
@@ -106,6 +140,9 @@ const registry = new Map<string, CommandDefinition<unknown>>();
 export function registerCommand<P>(def: CommandDefinition<P>): void {
   const key = commandKey(def.name, def.version);
   if (registry.has(key)) throw new Error(`duplicate command registration: ${key}`);
+  if (!def.branchAuthorization) {
+    throw new Error(`command branch authorization missing: ${key}`);
+  }
   registry.set(key, def as CommandDefinition<unknown>);
 }
 
@@ -180,6 +217,25 @@ export async function dispatchCommand(
           sql`select set_config('app.workspace_id', ${ctx.workspaceId}, true)`,
         );
 
+        const authorizedBranchIds =
+          definition.branchAuthorization.kind === "branches"
+            ? await definition.branchAuthorization.resolve(
+                tx,
+                ctx,
+                parsedPayload.data,
+              )
+            : [];
+        if (
+          ctx.branchScope !== "ALL" &&
+          authorizedBranchIds.some(
+            (branchId) => !ctx.branchScope.includes(branchId),
+          )
+        ) {
+          throw new CommandError(403, "ROLE_FORBIDDEN", {
+            command: commandKey(outer.data.name, outer.data.version),
+          });
+        }
+
         if (!(await isModuleEnabled(tx, ctx.workspaceId, definition.module))) {
           throw new CommandError(403, "MODULE_DISABLED", { module: definition.module });
         }
@@ -218,6 +274,9 @@ export async function dispatchCommand(
           outer.data.name,
           (await definition.approvalContext?.(tx, ctx, parsedPayload.data)) ?? {},
         );
+        if (approval.outcome === "APPROVAL_REQUIRED" && definition.approvalMode !== "SUBMIT") {
+          throw new CommandError(403, "APPROVAL_REQUIRED", { commandType: outer.data.name });
+        }
 
         // The receipt is staged first because domain and audit rows reference its command id.
         await tx.insert(commands).values({
@@ -245,12 +304,14 @@ export async function dispatchCommand(
           ctx,
           outer.data.envelope,
           parsedPayload.data,
+          approval,
         );
         const outcome: CommandOutcome = {
           commandId: outer.data.envelope.commandId,
           recordId: result.recordId,
           rowVersion: result.rowVersion,
-          warnings: [],
+          ...(result.recordStatus === undefined ? {} : { recordStatus: result.recordStatus }),
+          warnings: result.warnings ?? [],
           idempotentReplay: false,
         };
 
@@ -272,11 +333,13 @@ export async function dispatchCommand(
       throw error;
     }
   } catch (error) {
-    if (error instanceof CommandError) return commandErrorResponse(error);
-    const violation = uniqueViolation(error);
-    if (violation) {
-      return commandErrorResponse(
-        new CommandError(
+    let commandError: CommandError;
+    if (error instanceof CommandError) {
+      commandError = error;
+    } else {
+      const violation = uniqueViolation(error);
+      if (violation) {
+        commandError = new CommandError(
           409,
           violation.constraint === "assets_ws_code_uq"
             ? "DUPLICATE_ASSET_CODE"
@@ -284,17 +347,61 @@ export async function dispatchCommand(
           {
             ...(violation.constraint === undefined ? {} : { constraint: violation.constraint }),
           },
-        ),
-      );
+        );
+      } else {
+        log?.error({ err: error, event: "command.failed" });
+        reportUnexpectedFailure(error, {
+          commandId: outer.data.envelope.commandId,
+          workspaceId: ctx.workspaceId,
+          commandType: outer.data.name,
+          origin: outer.data.envelope.origin,
+        });
+        commandError = new CommandError(500, "COMMAND_FAILED");
+      }
     }
-    log?.error({ err: error, event: "command.failed" });
-    reportUnexpectedFailure(error, {
-      commandId: outer.data.envelope.commandId,
-      workspaceId: ctx.workspaceId,
-      commandType: outer.data.name,
-      origin: outer.data.envelope.origin,
+    await recordFailureReceipt(db, ctx, outer.data, commandError, log);
+    return commandErrorResponse(commandError);
+  }
+}
+
+/**
+ * Offline-replay debugging trail (financial-core 01): failed commands leave a
+ * REJECTED (business rejection) or FAILED (unexpected) receipt in their own
+ * transaction after the original one rolled back. These rows never consume the
+ * idempotency key — the unique index is partial on EXECUTED — so a retry with
+ * the same key/commandId re-evaluates against current state. Receipt-write
+ * failure must never mask the original error.
+ */
+async function recordFailureReceipt(
+  db: Db,
+  ctx: CommandContext,
+  request: { name: string; version: number; envelope: CommandEnvelope; payload: unknown },
+  commandError: CommandError,
+  log?: { error: (obj: object) => void },
+): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.workspace_id', ${ctx.workspaceId}, true)`);
+      await tx.insert(commands).values({
+        id: crypto.randomUUID(),
+        clientCommandId: request.envelope.commandId,
+        workspaceId: ctx.workspaceId,
+        commandType: request.name,
+        commandVersion: String(request.version),
+        origin: request.envelope.origin,
+        status: commandError.httpStatus >= 500 ? "FAILED" : "REJECTED",
+        initiatedByPrincipalId: ctx.principalId,
+        idempotencyKey: request.envelope.idempotencyKey,
+        clientOccurredAt: request.envelope.clientOccurredAt
+          ? new Date(request.envelope.clientOccurredAt)
+          : null,
+        payload: request.payload,
+        result: null,
+        failureCode: commandError.code,
+      });
     });
-    return commandErrorResponse(new CommandError(500, "COMMAND_FAILED"));
+  } catch (receiptError) {
+    log?.error({ err: receiptError, event: "command.failure_receipt_failed" });
   }
 }
 
@@ -378,7 +485,15 @@ async function findReceipt(
       result: commands.result,
     })
     .from(commands)
-    .where(and(eq(commands.workspaceId, workspaceId), eq(commands.idempotencyKey, idempotencyKey)))
+    .where(
+      and(
+        eq(commands.workspaceId, workspaceId),
+        eq(commands.idempotencyKey, idempotencyKey),
+        // REJECTED/FAILED receipts are a debugging trail, not idempotency
+        // participants: only success consumes the key (partial unique index).
+        eq(commands.status, "EXECUTED"),
+      ),
+    )
     .limit(1);
   return receipt;
 }
@@ -429,6 +544,7 @@ function isCommandOutcome(value: unknown): value is CommandOutcome {
     typeof candidate["commandId"] === "string" &&
     typeof candidate["recordId"] === "string" &&
     typeof candidate["rowVersion"] === "number" &&
+    (candidate["recordStatus"] === undefined || typeof candidate["recordStatus"] === "string") &&
     Array.isArray(candidate["warnings"]) &&
     typeof candidate["idempotentReplay"] === "boolean"
   );

@@ -39,7 +39,13 @@
     "UNSUPPORTED_MEDIA_TYPE": "Format de fichier non pris en charge (JPEG, PNG, WebP ou PDF uniquement).",
     "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
     "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",
-    "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente."
+    "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente.",
+    "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
+    "POSTINGS_SUM_MISMATCH": "Le total des lignes ne correspond pas au montant de l'écriture.",
+    "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
+    "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
+    "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
+    "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense)."
   },
   "assets": {
     "eyebrow": "Parc opérationnel",

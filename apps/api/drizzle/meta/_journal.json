@@ -57,6 +57,41 @@
       "when": 1784849045080,
       "tag": "0007_closed_kabuki",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784850675556,
+      "tag": "0008_calm_martin_li",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784850953880,
+      "tag": "0009_sticky_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784850963413,
+      "tag": "0010_finance_isolation",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784880138676,
+      "tag": "0011_clammy_chamber",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784899264899,
+      "tag": "0012_finance_command_defaults",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 import type { CommandEnvelope } from "../envelope.js";
+import type { CommandWarningCode } from "../errors.js";
 
 /**
  * One user-initiated command submission. Created once when the user starts
@@ -48,6 +49,7 @@ export interface CommandResult {
   commandId: string;
   recordId: string;
   rowVersion: number;
-  warnings: string[];
+  recordStatus?: string;
+  warnings: CommandWarningCode[];
   idempotentReplay: boolean;
 }

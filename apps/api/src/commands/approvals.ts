@@ -1,13 +1,14 @@
 import type { CommandEnvelope } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { approvalRules, branches } from "../db/schema.js";
-import { CommandError } from "./dispatcher.js";
 import type { CommandContext, Tx } from "./dispatcher.js";
 
 export interface ApprovalDecision {
-  outcome: "AUTO_APPROVED";
+  outcome: "AUTO_APPROVED" | "APPROVAL_REQUIRED";
   ruleId: string | null;
 }
+
+const APPROVAL_REQUIRED: ApprovalDecision = { outcome: "APPROVAL_REQUIRED", ruleId: null };
 
 export interface ApprovalContext {
   branchCode?: string;
@@ -31,6 +32,10 @@ export interface ApprovalContext {
  * 4. If one of those rules authorizes the actor's role, auto-approve. Otherwise
  *    require approval. Ties are deterministic by creation time and id.
  *    Safe default = require review.
+ *
+ * Returns the decision — never throws. The dispatcher decides what
+ * APPROVAL_REQUIRED means per command: reject 403 (default) or proceed with a
+ * SUBMITTED record (approvalMode 'SUBMIT', financial entries).
  */
 export async function evaluateApproval(
   tx: Tx,
@@ -49,9 +54,7 @@ export async function evaluateApproval(
       ),
     );
 
-  if (rules.length === 0) {
-    throw new CommandError(403, "APPROVAL_REQUIRED", { commandType });
-  }
+  if (rules.length === 0) return APPROVAL_REQUIRED;
 
   let resolvedBranchId: string | undefined;
   if (approvalContext.branchCode) {
@@ -87,9 +90,7 @@ export async function evaluateApproval(
     return true;
   });
 
-  if (matchingRules.length === 0) {
-    throw new CommandError(403, "APPROVAL_REQUIRED", { commandType });
-  }
+  if (matchingRules.length === 0) return APPROVAL_REQUIRED;
 
   const maxSpecificity = Math.max(...matchingRules.map(ruleSpecificity));
   const authorizingRule = matchingRules
@@ -100,7 +101,7 @@ export async function evaluateApproval(
     )[0];
 
   if (authorizingRule) return { outcome: "AUTO_APPROVED", ruleId: authorizingRule.id };
-  throw new CommandError(403, "APPROVAL_REQUIRED", { commandType });
+  return APPROVAL_REQUIRED;
 }
 
 function ruleSpecificity(rule: typeof approvalRules.$inferSelect): number {
