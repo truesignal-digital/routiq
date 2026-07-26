@@ -46,7 +46,8 @@
     "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
     "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
     "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
-    "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense)."
+    "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
+    "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {
     "eyebrow": "Parc opérationnel",

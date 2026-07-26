@@ -46,7 +46,8 @@
     "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
     "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
     "PERIOD_LOCKED": "This period is locked. No postings are possible.",
-    "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense)."
+    "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense).",
+    "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
     "eyebrow": "Operational fleet",
