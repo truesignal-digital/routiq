@@ -27,4 +27,13 @@ describe("locale catalogs", () => {
       }
     }
   });
+
+  it("does not contain i18next-style interpolation", () => {
+    for (const [locale, catalog] of [
+      ["fr", fr],
+      ["en", en],
+    ] as const) {
+      expect(JSON.stringify(catalog), locale).not.toContain("{{");
+    }
+  });
 });
