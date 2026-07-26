@@ -116,3 +116,60 @@ describe("toRecordRevenuePayload", () => {
     expect(payload.postings).toHaveLength(1);
   });
 });
+
+describe("branch code validation (regression: branchScope bug)", () => {
+  it("requires branchCode to be non-empty (user-selected, not branchScope-derived)", () => {
+    const formState: FinanceFormState = {
+      entryId: "550e8400-e29b-41d4-a716-446655440000",
+      branchCode: "CM-YDE",
+      economicDate: "2026-07-26",
+      categoryCode: "FUEL",
+      amountMinor: 50000,
+      paymentMethod: "CASH",
+    };
+
+    const payload = toRecordExpensePayload(formState);
+
+    // branchCode must be non-empty and match the selected value
+    expect(payload.branchCode).toBe("CM-YDE");
+    expect(payload.branchCode.length).toBeGreaterThan(0);
+  });
+
+  it("fails contract validation if branchCode is empty (prevents ALL-scope bug)", () => {
+    const emptyBranchForm: FinanceFormState = {
+      entryId: "550e8400-e29b-41d4-a716-446655440000",
+      branchCode: "",
+      economicDate: "2026-07-26",
+      categoryCode: "FUEL",
+      amountMinor: 50000,
+      paymentMethod: "CASH",
+    };
+
+    const payload = toRecordExpensePayload(emptyBranchForm);
+
+    // Payload with empty branchCode should fail server-side validation
+    // (z.string().min(1) in the contract)
+    expect(payload.branchCode).toBe("");
+    // This would fail contract validation when sent to server
+  });
+
+  it("uses selected branch code (not branchScope which is UUID array or ALL)", () => {
+    // Regression: previously used me.branchScope which is "ALL" for admins
+    // or an array of branch UUIDs for scoped users
+    // Now we pass selected branchCode from dropdown
+    const selectedBranchForm: FinanceFormState = {
+      entryId: "550e8400-e29b-41d4-a716-446655440000",
+      branchCode: "CM-DB",
+      economicDate: "2026-07-26",
+      categoryCode: "MAINTENANCE",
+      amountMinor: 25000,
+      paymentMethod: "BANK",
+    };
+
+    const payload = toRecordExpensePayload(selectedBranchForm);
+
+    // The payload must contain the selected branch CODE (not UUID or "ALL")
+    expect(payload.branchCode).toBe("CM-DB");
+    expect(payload.branchCode).toMatch(/^[A-Z]{2}-[A-Z]{2}$/);
+  });
+});

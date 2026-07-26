@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { CommandResult } from "@routiq/contracts";
 import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -19,6 +19,7 @@ import {
 } from "../finance/model.js";
 import { canRecordFinance } from "../finance/permissions.js";
 import { useCategories } from "../documents/useCategories.js";
+import { useAssetRegistrationReference } from "../assets/reference.js";
 
 type Direction = "EXPENSE" | "REVENUE";
 
@@ -32,6 +33,7 @@ export function FinanceRecordScreen() {
   const navigate = useNavigate();
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
+  const reference = useAssetRegistrationReference();
 
   const [screenState, setScreenState] = useState<ScreenState>({ stage: "form" });
 
@@ -50,12 +52,6 @@ export function FinanceRecordScreen() {
     void navigate({ to: "/assets" });
   };
 
-  // Get branch code from branchScope (if array, use first; if "ALL", use empty string)
-  const branchCode: string =
-    (me && Array.isArray(me.branchScope) && me.branchScope.length > 0
-      ? me.branchScope[0]
-      : "") ?? "";
-
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6">
       <button
@@ -70,7 +66,9 @@ export function FinanceRecordScreen() {
 
       {screenState.stage === "form" && (
         <RecordForm
-          branchCode={branchCode}
+          branches={reference.data?.branches ?? []}
+          branchesLoading={reference.isPending}
+          branchesFailed={reference.isError}
           onOutcome={(outcome) => setScreenState({ stage: "outcome", outcome })}
         />
       )}
@@ -85,10 +83,14 @@ export function FinanceRecordScreen() {
 type RecordPayload = ReturnType<typeof toRecordExpensePayload>;
 
 function RecordForm({
-  branchCode,
+  branches,
+  branchesLoading,
+  branchesFailed,
   onOutcome,
 }: {
-  branchCode: string;
+  branches: Array<{ code: string; name: string }>;
+  branchesLoading: boolean;
+  branchesFailed: boolean;
   onOutcome: (outcome: CommandResult) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -105,6 +107,7 @@ function RecordForm({
     i18n.resolvedLanguage === "en" ? item.labelEn : item.labelFr;
 
   // Form state
+  const [branchCode, setBranchCode] = useState("");
   const [categoryCode, setCategoryCode] = useState("");
   const [amountInput, setAmountInput] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<
@@ -120,8 +123,19 @@ function RecordForm({
   const [submitting, setSubmitting] = useState(false);
   const [errorCode, setErrorCode] = useState<string>();
 
+  // Preselect branch if only one is available
+  useEffect(() => {
+    if (branches.length === 1 && branchCode === "") {
+      const firstBranch = branches[0];
+      if (firstBranch) {
+        setBranchCode(firstBranch.code);
+      }
+    }
+  }, [branches, branchCode]);
+
   const amountMinor = parseMoneyXaf(amountInput);
   const isValid =
+    branchCode &&
     categoryCode &&
     amountMinor !== null &&
     amountMinor > 0 &&
@@ -209,6 +223,30 @@ function RecordForm({
           <p>{errorMessage(i18n, errorCode)}</p>
         </div>
       )}
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="branch">{t("finance.record.branchLabel")}</Label>
+        {branchesFailed && (
+          <p role="alert" className="text-sm text-destructive">
+            {t("finance.record.branchesFailed")}
+          </p>
+        )}
+        <select
+          id="branch"
+          className="min-h-11 rounded-md border border-input bg-transparent px-3 text-sm"
+          value={branchCode}
+          onChange={(e) => setBranchCode(e.target.value)}
+          disabled={branchesLoading || branchesFailed}
+          required
+        >
+          <option value="">{t("finance.record.chooseBranch")}</option>
+          {branches.map((b) => (
+            <option key={b.code} value={b.code}>
+              {b.name} ({b.code})
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="category">{t("finance.record.categoryLabel")}</Label>

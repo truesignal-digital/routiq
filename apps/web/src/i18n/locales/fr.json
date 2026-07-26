@@ -28,7 +28,7 @@
     "READ_FAILED": "Impossible de charger les données. Réessayez.",
     "AUTH_REQUIRED": "Connexion requise. Veuillez vous reconnecter.",
     "AUTH_INVALID_TOKEN": "Session expirée. Veuillez vous reconnecter.",
-    "AUTH_LOCKED": "Trop de tentatives. Réessayez plus tard ou contactez votre administrateur.",
+    "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
     "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
@@ -41,7 +41,6 @@
     "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
     "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",
     "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente.",
-    "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
     "POSTINGS_SUM_MISMATCH": "Le total des lignes ne correspond pas au montant de l'écriture.",
     "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
     "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
@@ -234,7 +233,10 @@
       "warningsLabel": "Avis",
       "warningEvidenceMissing": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
       "warningLatePosting": "Cette transaction a été enregistrée dans une période précédente.",
-      "done": "Fermer"
+      "done": "Fermer",
+      "branchLabel": "Succursale",
+      "chooseBranch": "Choisir une succursale…",
+      "branchesFailed": "Impossible de charger les succursales. Actualisez cette page."
     }
   }
 }

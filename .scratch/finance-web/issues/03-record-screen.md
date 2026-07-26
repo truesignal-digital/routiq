@@ -31,3 +31,5 @@ Blocked by: —
 ## Comments
 
 2026-07-26 [codex] implemented, Fable reviewed and independently verified: 89 web tests (+14 new) and typecheck green. recordStatus drives distinct POSTED/SUBMITTED success states; warnings render per stable code; category kind follows direction; 36 finance locale keys with exact fr/en parity; no hardcoded strings. Minor accepted nit: parseMoneyXaf admits 0, server rejects with stable code. Nav tab deliberately deferred to ticket 07.
+
+2026-07-26 HUMAN REVIEW BUG (Linus, in-browser): submit impossible — 400 VALIDATION_FAILED with all fields filled. Cause: screen derived branchCode from me.branchScope, which is "ALL" for admins (sends "") and branch UUIDs (not codes) for scoped users. Fix dispatched: branch select fed by /v1/reference/asset-registration per the AssetRegisterScreen pattern, single-branch preselect, regression test. Also a review-process miss: the branchCode derivation was outside the model, so model tests could not catch it.
