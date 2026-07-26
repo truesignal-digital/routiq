@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowLeft } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { useMeContext } from "../auth/me.js";
 import { errorMessage } from "../lib/error-message.js";
 import { useEntries } from "../finance/useEntries.js";
@@ -88,25 +88,23 @@ export function FinanceEntriesScreen() {
   if (me !== undefined && !canView) {
     return (
       <section className="mx-auto w-full max-w-4xl px-4 py-6">
-        <h1 className="text-2xl font-semibold">{t("finance.entries.title")}</h1>
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          {errorMessage(i18n, "MODULE_DISABLED")}
-        </p>
+        <PageHeader title={t("finance.entries.title")} />
+        <EmptyState
+          className="mt-6"
+          icon={<FileText className="size-7" aria-hidden />}
+          message={errorMessage(i18n, "MODULE_DISABLED")}
+        />
       </section>
     );
   }
 
   return (
     <section className="mx-auto w-full max-w-4xl px-4 py-6">
-      <button
-        type="button"
-        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
-        onClick={() => void navigate({ to: "/assets" })}
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("finance.entries.back")}
-      </button>
-      <h1 className="mt-2 text-2xl font-semibold">{t("finance.entries.title")}</h1>
+      <PageHeader
+        title={t("finance.entries.title")}
+        onBack={() => void navigate({ to: "/assets" })}
+        backLabel={t("finance.entries.back")}
+      />
       <FinanceNav />
 
       {/* Filters */}
@@ -160,18 +158,14 @@ export function FinanceEntriesScreen() {
       </div>
 
       {entriesQuery.isPending ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.entries.loading")}</p>
+        <LoadingState className="mt-6" label={t("finance.entries.loading")} />
       ) : entriesQuery.isError ? (
-        <div role="alert" className="mt-6 flex flex-col gap-3">
-          <p className="text-sm text-destructive">{t("finance.entries.loadFailed")}</p>
-          <Button
-            variant="outline"
-            className="min-h-11 self-start"
-            onClick={() => void entriesQuery.refetch()}
-          >
-            {t("finance.entries.retry")}
-          </Button>
-        </div>
+        <ErrorState
+          className="mt-6"
+          message={t("finance.entries.loadFailed")}
+          retryLabel={t("finance.entries.retry")}
+          onRetry={() => void entriesQuery.refetch()}
+        />
       ) : (
         <div className="mt-6">
           <DataTable
@@ -189,7 +183,10 @@ export function FinanceEntriesScreen() {
               onLoadMore: () => void entriesQuery.fetchNextPage(),
             }}
             emptyState={
-              <p className="text-sm text-muted-foreground">{t("finance.entries.empty")}</p>
+              <EmptyState
+                icon={<FileText className="size-7" aria-hidden />}
+                message={t("finance.entries.empty")}
+              />
             }
           />
         </div>

@@ -1,6 +1,6 @@
 # Spec: UI Foundation — primitives, tables, toasts, dialogs, attachments (Base UI)
 
-Status: ready-for-agent
+Status: ready-for-human
 Source: Linus 2026-07-26 — "the UI is not really scalable… data-tables where necessary, toasts where necessary, dialog boxes should have action buttons or something to cancel out, shadcn attachments, fix the fundamentals so it can be scalable and maintainable."
 
 ## Problem

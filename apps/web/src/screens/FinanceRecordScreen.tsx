@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "@tanstack/react-router";
 import type { CommandResult } from "@routiq/contracts";
-import { AlertCircle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, WalletCards } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { EmptyState, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
@@ -61,10 +62,12 @@ export function FinanceRecordScreen() {
   if (me !== undefined && !canRecord) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-6">
-        <h1 className="text-2xl font-semibold">{t("finance.record.title")}</h1>
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          {errorMessage(i18n, "MODULE_DISABLED")}
-        </p>
+        <PageHeader title={t("finance.record.title")} />
+        <EmptyState
+          className="mt-6"
+          icon={<WalletCards className="size-7" aria-hidden />}
+          message={errorMessage(i18n, "MODULE_DISABLED")}
+        />
       </section>
     );
   }
@@ -75,15 +78,11 @@ export function FinanceRecordScreen() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6">
-      <button
-        type="button"
-        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
-        onClick={() => void navigate({ to: "/assets" })}
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("finance.record.back")}
-      </button>
-      <h1 className="mt-2 text-2xl font-semibold">{t("finance.record.title")}</h1>
+      <PageHeader
+        title={t("finance.record.title")}
+        onBack={() => void navigate({ to: "/assets" })}
+        backLabel={t("finance.record.back")}
+      />
       <FinanceNav />
 
       {screenState.stage === "form" && (

@@ -78,6 +78,7 @@
     "emptyTitle": "Register your first vehicle",
     "emptyHint": "Add a truck, trailer, bus, or minibus. Its trustworthy history starts building from day one.",
     "emptyAction": "Register an asset",
+    "loading": "Loading assets…",
     "noResultsTitle": "No assets found",
     "noResultsHint": "Try another search or clear the filters.",
     "resetFilters": "Clear filters",
@@ -298,6 +299,7 @@
       },
       "detail": {
         "title": "Entry detail",
+        "notFound": "This entry could not be found.",
         "entryNumber": "Entry number",
         "direction": "Direction",
         "status": "Status",

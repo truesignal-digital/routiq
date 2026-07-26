@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { sessionStore, useActiveSession } from "../auth/store.js";
 
@@ -20,7 +21,7 @@ export function MoreStub() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6">
-      <h1 className="text-2xl font-semibold">{t("more.title")}</h1>
+      <PageHeader title={t("more.title")} />
       {session && (
         <p className="mt-2 text-sm text-muted-foreground">
           {t("more.signedInAs", { username: session.username })}

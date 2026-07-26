@@ -1,7 +1,6 @@
 import {
   FileText,
   ArrowRight,
-  CircleAlert,
   Gauge,
   MapPin,
   Plus,
@@ -11,7 +10,9 @@ import {
   Wrench,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import {
   assetDisplayName,
   assetMatches,
@@ -38,6 +39,7 @@ const statusStyles: Record<AssetLifecycleStatus, string> = {
 
 export function AssetsStub() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { assets, status, retry } = useAssets();
   const readOnly = isReadOnlyRole(useMeContext()?.role);
   const [query, setQuery] = useState("");
@@ -51,32 +53,32 @@ export function AssetsStub() {
 
   return (
     <section className="asset-page min-h-dvh">
-      <header className="border-b border-foreground/10 px-4 pb-5 pt-5 sm:px-7 md:px-10 md:pb-7 md:pt-8">
-        <div className="mx-auto flex w-full max-w-6xl items-end justify-between gap-5">
-          <div>
-            <p className="mb-2 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.19em] text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-[var(--signal)]" />
-              {t("assets.eyebrow")}
-            </p>
-            <h1 className="text-balance text-[2rem] font-semibold leading-none tracking-[-0.045em] sm:text-4xl">
-              {t("assets.title")}
-            </h1>
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-              {t("assets.subtitle")}
-            </p>
-          </div>
-
-          {!readOnly && (
-            <a
-              href="/assets/new"
-              className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background shadow-[0_8px_24px_-12px_var(--foreground)] transition hover:-translate-y-0.5 hover:bg-primary sm:inline-flex"
-            >
-              <Plus className="size-4" aria-hidden />
-              {t("assets.register")}
-            </a>
-          )}
+      <div className="border-b border-foreground/10 px-4 pb-5 pt-5 sm:px-7 md:px-10 md:pb-7 md:pt-8">
+        <div className="mx-auto w-full max-w-6xl">
+          <p className="mb-2 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.19em] text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-[var(--signal)]" />
+            {t("assets.eyebrow")}
+          </p>
+          <PageHeader
+            title={t("assets.title")}
+            titleClassName="text-balance text-[2rem] leading-none tracking-[-0.045em] sm:text-4xl"
+            actions={
+              !readOnly ? (
+                <a
+                  href="/assets/new"
+                  className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background shadow-[0_8px_24px_-12px_var(--foreground)] transition hover:-translate-y-0.5 hover:bg-primary sm:inline-flex"
+                >
+                  <Plus className="size-4" aria-hidden />
+                  {t("assets.register")}
+                </a>
+              ) : undefined
+            }
+          />
+          <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
+            {t("assets.subtitle")}
+          </p>
         </div>
-      </header>
+      </div>
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-7 md:px-10 md:pb-10 md:pt-8">
         <dl className="grid grid-cols-3 overflow-hidden rounded-2xl border border-foreground/10 bg-card shadow-[0_16px_44px_-36px_var(--foreground)]">
@@ -138,16 +140,82 @@ export function AssetsStub() {
 
         <div className="mt-5" aria-live="polite">
           {status === "loading" && assets.length === 0 ? (
-            <AssetSkeleton />
+            <LoadingState
+              label={t("assets.loading")}
+              rows={4}
+              className="grid gap-3 lg:grid-cols-2"
+              rowClassName="h-44 rounded-2xl"
+            />
           ) : status === "error" && assets.length === 0 ? (
-            <ErrorState onRetry={retry} />
+            <ErrorState
+              message={
+                <span className="flex flex-col gap-1">
+                  <strong className="font-semibold text-destructive">
+                    {t("assets.errorTitle")}
+                  </strong>
+                  <span>{t("assets.errorHint")}</span>
+                </span>
+              }
+              retryLabel={
+                <span className="flex items-center gap-2">
+                  <RotateCcw className="size-4" aria-hidden />
+                  {t("assets.retry")}
+                </span>
+              }
+              onRetry={retry}
+            />
           ) : assets.length === 0 ? (
-            <EmptyState readOnly={readOnly} />
+            <EmptyState
+              className="empty-grid relative overflow-hidden border-foreground/10 bg-card shadow-[0_24px_60px_-52px_var(--foreground)] sm:px-10 sm:py-16"
+              icon={
+                <span className="relative grid size-20 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[12px_12px_0_var(--signal)]">
+                  <Truck className="size-9" strokeWidth={1.55} aria-hidden />
+                </span>
+              }
+              message={
+                <span className="relative flex flex-col items-center">
+                  <span className="text-[0.68rem] font-bold uppercase tracking-[0.18em]">
+                    {t("assets.emptyEyebrow")}
+                  </span>
+                  <strong className="mt-2 text-2xl font-semibold leading-tight tracking-[-0.035em] text-foreground sm:text-3xl">
+                    {t("assets.emptyTitle")}
+                  </strong>
+                  <span className="mt-3 text-sm leading-6">{t("assets.emptyHint")}</span>
+                </span>
+              }
+              action={
+                readOnly
+                  ? undefined
+                  : {
+                      label: (
+                        <span className="flex items-center gap-2">
+                          {t("assets.emptyAction")}
+                          <ArrowRight className="size-4" aria-hidden />
+                        </span>
+                      ),
+                      onClick: () => void navigate({ to: "/assets/new" }),
+                    }
+              }
+            />
           ) : visibleAssets.length === 0 ? (
-            <NoResults onReset={() => {
-              setQuery("");
-              setFilter("ALL");
-            }} />
+            <EmptyState
+              icon={<Search className="size-7" aria-hidden />}
+              message={
+                <span className="flex flex-col gap-1">
+                  <strong className="font-semibold text-foreground">
+                    {t("assets.noResultsTitle")}
+                  </strong>
+                  <span>{t("assets.noResultsHint")}</span>
+                </span>
+              }
+              action={{
+                label: t("assets.resetFilters"),
+                onClick: () => {
+                  setQuery("");
+                  setFilter("ALL");
+                },
+              }}
+            />
           ) : (
             <div className="grid gap-3 lg:grid-cols-2">
               {visibleAssets.map((asset, index) => (
@@ -271,90 +339,5 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
         </div>
       </div>
     </article>
-  );
-}
-
-function EmptyState({ readOnly }: { readOnly: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <div className="empty-grid relative overflow-hidden rounded-3xl border border-foreground/10 bg-card px-6 py-12 text-center shadow-[0_24px_60px_-52px_var(--foreground)] sm:px-10 sm:py-16">
-      <div className="relative mx-auto grid size-20 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[12px_12px_0_var(--signal)]">
-        <Truck className="size-9" strokeWidth={1.55} aria-hidden />
-      </div>
-      <p className="relative mt-8 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-        {t("assets.emptyEyebrow")}
-      </p>
-      <h2 className="relative mx-auto mt-2 max-w-md text-2xl font-semibold leading-tight tracking-[-0.035em] sm:text-3xl">
-        {t("assets.emptyTitle")}
-      </h2>
-      <p className="relative mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-        {t("assets.emptyHint")}
-      </p>
-      {!readOnly && (
-        <a
-          href="/assets/new"
-          className="relative mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[var(--signal)] px-5 text-sm font-bold text-[var(--signal-foreground)] transition hover:-translate-y-0.5"
-        >
-          {t("assets.emptyAction")}
-          <ArrowRight className="size-4" aria-hidden />
-        </a>
-      )}
-    </div>
-  );
-}
-
-function NoResults({ onReset }: { onReset: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <div className="rounded-2xl border border-dashed border-foreground/20 px-5 py-12 text-center">
-      <Search className="mx-auto size-7 text-muted-foreground" aria-hidden />
-      <h2 className="mt-4 font-semibold">{t("assets.noResultsTitle")}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("assets.noResultsHint")}
-      </p>
-      <button
-        type="button"
-        onClick={onReset}
-        className="mt-5 min-h-11 rounded-full border border-foreground/15 bg-card px-4 text-sm font-semibold hover:bg-muted"
-      >
-        {t("assets.resetFilters")}
-      </button>
-    </div>
-  );
-}
-
-function ErrorState({ onRetry }: { onRetry: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <div className="rounded-2xl border border-red-900/15 bg-red-50/70 px-5 py-10 text-center">
-      <CircleAlert className="mx-auto size-7 text-red-800" aria-hidden />
-      <h2 className="mt-4 font-semibold text-red-950">
-        {t("assets.errorTitle")}
-      </h2>
-      <p className="mx-auto mt-1 max-w-sm text-sm text-red-900/70">
-        {t("assets.errorHint")}
-      </p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-red-950 px-4 text-sm font-semibold text-white"
-      >
-        <RotateCcw className="size-4" aria-hidden />
-        {t("assets.retry")}
-      </button>
-    </div>
-  );
-}
-
-function AssetSkeleton() {
-  return (
-    <div className="grid gap-3 lg:grid-cols-2" aria-hidden>
-      {[0, 1, 2, 3].map((item) => (
-        <div
-          key={item}
-          className="h-44 animate-pulse rounded-2xl border border-foreground/5 bg-card"
-        />
-      ))}
-    </div>
   );
 }

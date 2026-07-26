@@ -2,8 +2,9 @@ import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
-import { ArrowLeft, FileText, Plus } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
@@ -66,32 +67,31 @@ export function AssetDocumentsScreen() {
   if (me !== undefined && !documentsEnabled) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-6">
-        <h1 className="text-2xl font-semibold">{t("documents.title")}</h1>
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          {errorMessage(i18n, "MODULE_DISABLED")}
-        </p>
+        <PageHeader title={t("documents.title")} />
+        <EmptyState
+          className="mt-6"
+          icon={<FileText className="size-7" aria-hidden />}
+          message={errorMessage(i18n, "MODULE_DISABLED")}
+        />
       </section>
     );
   }
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6">
-      <button
-        type="button"
-        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
-        onClick={() => void navigate({ to: "/assets" })}
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("documents.back")}
-      </button>
-      <h1 className="mt-2 text-2xl font-semibold">{t("documents.title")}</h1>
-
-      {canManage && !form.open && (
-        <Button className="mt-4 min-h-11 gap-2" onClick={() => setForm({ open: true })}>
-          <Plus className="size-4" aria-hidden />
-          {t("documents.add")}
-        </Button>
-      )}
+      <PageHeader
+        title={t("documents.title")}
+        onBack={() => void navigate({ to: "/assets" })}
+        backLabel={t("documents.back")}
+        actions={
+          canManage && !form.open ? (
+            <Button className="min-h-11 gap-2" onClick={() => setForm({ open: true })}>
+              <Plus className="size-4" aria-hidden />
+              {t("documents.add")}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {form.open && (
         <DocumentForm
@@ -110,16 +110,26 @@ export function AssetDocumentsScreen() {
 
       <div className="mt-6 flex flex-col gap-6">
         {documentsQuery.isPending || me === undefined ? (
-          <p className="text-sm text-muted-foreground">{t("documents.loading")}</p>
+          <LoadingState label={t("documents.loading")} />
         ) : documentsQuery.isError ? (
-          <div role="alert" className="flex flex-col gap-3 text-sm text-destructive">
-            <p>{t("documents.loadFailed")}</p>
-            <Button variant="outline" className="min-h-11 self-start" onClick={() => void documentsQuery.refetch()}>
-              {t("documents.retry")}
-            </Button>
-          </div>
+          <ErrorState
+            message={t("documents.loadFailed")}
+            retryLabel={t("documents.retry")}
+            onRetry={() => void documentsQuery.refetch()}
+          />
         ) : groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("documents.empty")}</p>
+          <EmptyState
+            icon={<FileText className="size-7" aria-hidden />}
+            message={t("documents.empty")}
+            action={
+              canManage
+                ? {
+                    label: t("documents.add"),
+                    onClick: () => setForm({ open: true }),
+                  }
+                : undefined
+            }
+          />
         ) : (
           groups.map((group) => (
             <div key={group.type.code}>

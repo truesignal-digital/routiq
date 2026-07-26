@@ -78,6 +78,7 @@
     "emptyTitle": "Enregistrez votre premier véhicule",
     "emptyHint": "Ajoutez un camion, une remorque, un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
     "emptyAction": "Enregistrer un actif",
+    "loading": "Chargement des actifs…",
     "noResultsTitle": "Aucun actif trouvé",
     "noResultsHint": "Essayez un autre terme ou retirez les filtres.",
     "resetFilters": "Effacer les filtres",
@@ -298,6 +299,7 @@
       },
       "detail": {
         "title": "Détail de l'écriture",
+        "notFound": "Cette écriture est introuvable.",
         "entryNumber": "Numéro d'écriture",
         "direction": "Direction",
         "status": "Statut",

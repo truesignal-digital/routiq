@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, Lock, Unlock } from "lucide-react";
+import { AlertCircle, CalendarRange, Lock, Unlock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -120,42 +121,40 @@ export function FinancePeriodsScreen() {
   if (!canManage) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-6">
-        <h1 className="text-2xl font-semibold">{t("finance.periods.title")}</h1>
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          {t("finance.periods.accessDenied")}
-        </p>
+        <PageHeader title={t("finance.periods.title")} />
+        <EmptyState
+          className="mt-6"
+          icon={<CalendarRange className="size-7" aria-hidden />}
+          message={t("finance.periods.accessDenied")}
+        />
       </section>
     );
   }
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6">
-      <button
-        type="button"
-        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
-        onClick={() => void navigate({ to: "/assets" })}
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("finance.periods.back")}
-      </button>
-      <h1 className="mt-2 text-2xl font-semibold">{t("finance.periods.title")}</h1>
+      <PageHeader
+        title={t("finance.periods.title")}
+        onBack={() => void navigate({ to: "/assets" })}
+        backLabel={t("finance.periods.back")}
+      />
       <FinanceNav />
 
       {periodsQuery.isPending ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.periods.loading")}</p>
+        <LoadingState className="mt-6" label={t("finance.periods.loading")} />
       ) : periodsQuery.isError ? (
-        <div role="alert" className="mt-6 flex flex-col gap-3">
-          <p className="text-sm text-destructive">{t("finance.periods.loadFailed")}</p>
-          <Button
-            variant="outline"
-            className="min-h-11 self-start"
-            onClick={() => void periodsQuery.refetch()}
-          >
-            {t("finance.periods.retry")}
-          </Button>
-        </div>
+        <ErrorState
+          className="mt-6"
+          message={t("finance.periods.loadFailed")}
+          retryLabel={t("finance.periods.retry")}
+          onRetry={() => void periodsQuery.refetch()}
+        />
       ) : periods.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.periods.empty")}</p>
+        <EmptyState
+          className="mt-6"
+          icon={<CalendarRange className="size-7" aria-hidden />}
+          message={t("finance.periods.empty")}
+        />
       ) : (
         <div className="mt-6">
           <Table>

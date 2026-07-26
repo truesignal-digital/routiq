@@ -11,6 +11,7 @@ import {
 import type { z } from "zod";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -117,7 +118,7 @@ export function AssetRegisterScreen() {
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {t("assets.form.eyebrow")}
       </p>
-      <h1 className="mt-1 text-2xl font-semibold">{t("assets.form.title")}</h1>
+      <PageHeader className="mt-1" title={t("assets.form.title")} />
 
       <Form {...form}>
         <form

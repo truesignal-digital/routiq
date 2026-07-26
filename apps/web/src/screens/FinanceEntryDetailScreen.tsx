@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
 import {
@@ -105,29 +106,21 @@ export function FinanceEntryDetailScreen() {
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-6">
-      <button
-        type="button"
-        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
-        onClick={() => void navigate({ to: "/finance/entries" })}
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("finance.entries.back")}
-      </button>
-      <h1 className="mt-2 text-2xl font-semibold">{t("finance.entries.detail.title")}</h1>
+      <PageHeader
+        title={t("finance.entries.detail.title")}
+        onBack={() => void navigate({ to: "/finance/entries" })}
+        backLabel={t("finance.entries.back")}
+      />
 
       {entryQuery.isPending ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.entries.loading")}</p>
+        <LoadingState className="mt-6" label={t("finance.entries.loading")} />
       ) : entryQuery.isError ? (
-        <div role="alert" className="mt-6 flex flex-col gap-3">
-          <p className="text-sm text-destructive">{t("finance.entries.loadFailed")}</p>
-          <Button
-            variant="outline"
-            className="min-h-11 self-start"
-            onClick={() => void entryQuery.refetch()}
-          >
-            {t("finance.entries.retry")}
-          </Button>
-        </div>
+        <ErrorState
+          className="mt-6"
+          message={t("finance.entries.loadFailed")}
+          retryLabel={t("finance.entries.retry")}
+          onRetry={() => void entryQuery.refetch()}
+        />
       ) : entryQuery.data ? (
         <div className="mt-6 space-y-6">
           <div className="rounded-xl border border-border bg-card p-4">
@@ -305,7 +298,13 @@ export function FinanceEntryDetailScreen() {
             />
           )}
         </div>
-      ) : null}
+      ) : (
+        <EmptyState
+          className="mt-6"
+          icon={<FileText className="size-7" aria-hidden />}
+          message={t("finance.entries.detail.notFound")}
+        />
+      )}
     </section>
   );
 }

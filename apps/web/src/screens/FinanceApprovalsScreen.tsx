@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -213,49 +214,44 @@ export function FinanceApprovalsScreen() {
   if (!canApprove) {
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-6">
-        <h1 className="text-2xl font-semibold">{t("finance.approvals.title")}</h1>
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          {t("finance.approvals.accessDenied")}
-        </p>
+        <PageHeader title={t("finance.approvals.title")} />
+        <EmptyState
+          className="mt-6"
+          icon={<ClipboardCheck className="size-7" aria-hidden />}
+          message={t("finance.approvals.accessDenied")}
+        />
       </section>
     );
   }
 
   return (
     <section className="mx-auto w-full max-w-4xl px-4 py-6">
-      <button
-        type="button"
-        className="flex min-h-9 items-center gap-1.5 text-sm text-muted-foreground"
-        onClick={() => void navigate({ to: "/assets" })}
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("finance.approvals.back")}
-      </button>
-      <h1 className="mt-2 text-2xl font-semibold">{t("finance.approvals.title")}</h1>
+      <PageHeader
+        title={t("finance.approvals.title")}
+        onBack={() => void navigate({ to: "/assets" })}
+        backLabel={t("finance.approvals.back")}
+      />
       <FinanceNav />
 
       {approvalsQuery.isPending ? (
-        <p className="mt-6 text-sm text-muted-foreground">{t("finance.approvals.loading")}</p>
+        <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
       ) : approvalsQuery.isError ? (
-        <div role="alert" className="mt-6 flex flex-col gap-3">
-          <p className="text-sm text-destructive">{t("finance.approvals.loadFailed")}</p>
-          <Button
-            variant="outline"
-            className="min-h-11 self-start"
-            onClick={() => void approvalsQuery.refetch()}
-          >
-            {t("finance.approvals.retry")}
-          </Button>
-        </div>
+        <ErrorState
+          className="mt-6"
+          message={t("finance.approvals.loadFailed")}
+          retryLabel={t("finance.approvals.retry")}
+          onRetry={() => void approvalsQuery.refetch()}
+        />
       ) : (
         <div className="mt-6">
           <DataTable
             columns={columns}
             data={entries}
             emptyState={
-              <p className="text-sm text-muted-foreground">
-                {t("finance.approvals.empty")}
-              </p>
+              <EmptyState
+                icon={<ClipboardCheck className="size-7" aria-hidden />}
+                message={t("finance.approvals.empty")}
+              />
             }
           />
         </div>
