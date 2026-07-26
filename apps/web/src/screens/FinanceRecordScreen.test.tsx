@@ -199,4 +199,29 @@ describe("finance record form", () => {
       ARTIFACT_ID,
     ]);
   });
+
+  it("preselects the branch when the workspace has only one", async () => {
+    renderScreen();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("DLA"),
+    );
+  });
+
+  it("clears the chosen category when the direction flips", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await chooseFuelCategory(user);
+    expect(screen.getByLabelText("Category").textContent).not.toContain(
+      "Choose a category",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Revenue" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Category").textContent).toContain(
+        "Choose a category",
+      ),
+    );
+  });
 });

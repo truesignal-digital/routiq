@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -9,7 +9,7 @@ import {
   TEMPLATE_FIELDS,
 } from "@routiq/contracts";
 import type { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -125,216 +125,248 @@ export function AssetRegisterScreen() {
           className="mt-6 flex flex-col gap-5"
           onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
         >
-          <FormField name="assetCode">
-            <FormItem>
-              <FormLabel htmlFor="assetCode">{t("assets.form.assetCode")}</FormLabel>
-              <FormControl>
-                <Input id="assetCode" className="min-h-11" {...form.register("assetCode")} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          </FormField>
+          <FormField
+            control={form.control}
+            name="assetCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("assets.form.assetCode")}</FormLabel>
+                <FormControl>
+                  <Input className="min-h-11" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <FormField name="assetClassCode">
-              <FormItem>
-                <FormLabel htmlFor="assetClassCode">{t("assets.form.assetClass")}</FormLabel>
-                <FormControl>
-                  <select
-                    id="assetClassCode"
-                    className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                    {...form.register("assetClassCode")}
-                  >
-                    <option value="">{t("assets.form.choose")}</option>
-                    {reference.data?.assetClasses.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {labelFor(c)}
-                      </option>
-                    ))}
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
+            <FormField
+              control={form.control}
+              name="assetClassCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.assetClass")}</FormLabel>
+                  <FormControl>
+                    <select
+                      className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                      {...field}
+                    >
+                      <option value="">{t("assets.form.choose")}</option>
+                      {reference.data?.assetClasses.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {labelFor(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <FormField name="branchCode">
-              <FormItem>
-                <FormLabel htmlFor="branchCode">{t("assets.form.branch")}</FormLabel>
-                <FormControl>
-                  <select
-                    id="branchCode"
-                    className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                    {...form.register("branchCode")}
-                  >
-                    <option value="">{t("assets.form.choose")}</option>
-                    {reference.data?.branches.map((b) => (
-                      <option key={b.code} value={b.code}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
+            <FormField
+              control={form.control}
+              name="branchCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.branch")}</FormLabel>
+                  <FormControl>
+                    <select
+                      className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                      {...field}
+                    >
+                      <option value="">{t("assets.form.choose")}</option>
+                      {reference.data?.branches.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.name} ({b.code})
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
-          <FormField name="templateCode">
-            <FormItem>
-              <FormLabel htmlFor="templateCode">{t("assets.form.template")}</FormLabel>
-              <FormControl>
-                <select
-                  id="templateCode"
-                  className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  {...form.register("templateCode")}
-                >
-                  {TEMPLATE_CODES.map((code) => (
-                    <option key={code} value={code}>
-                      {t(`assets.form.templates.${code}`)}
-                    </option>
-                  ))}
-                </select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          </FormField>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <FormField name="registrationNumber">
+          <FormField
+            control={form.control}
+            name="templateCode"
+            render={({ field }) => (
               <FormItem>
-                <FormLabel htmlFor="registrationNumber">{t("assets.form.registrationNumber")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="registrationNumber"
-                    className="min-h-11"
-                    {...form.register("registrationNumber", { setValueAs: emptyToUndefined })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="modelYear">
-              <FormItem>
-                <FormLabel htmlFor="modelYear">{t("assets.form.modelYear")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="modelYear"
-                    className="min-h-11"
-                    type="number"
-                    inputMode="numeric"
-                    {...form.register("modelYear", { setValueAs: emptyToNumber })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="manufacturer">
-              <FormItem>
-                <FormLabel htmlFor="manufacturer">{t("assets.form.manufacturer")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="manufacturer"
-                    className="min-h-11"
-                    {...form.register("manufacturer", { setValueAs: emptyToUndefined })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="model">
-              <FormItem>
-                <FormLabel htmlFor="model">{t("assets.form.model")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="model"
-                    className="min-h-11"
-                    {...form.register("model", { setValueAs: emptyToUndefined })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="chassisNumber">
-              <FormItem>
-                <FormLabel htmlFor="chassisNumber">{t("assets.form.chassisNumber")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="chassisNumber"
-                    className="min-h-11"
-                    {...form.register("chassisNumber", { setValueAs: emptyToUndefined })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="acquisitionDate">
-              <FormItem>
-                <FormLabel htmlFor="acquisitionDate">{t("assets.form.acquisitionDate")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="acquisitionDate"
-                    className="min-h-11"
-                    type="date"
-                    {...form.register("acquisitionDate", { setValueAs: emptyToUndefined })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="acquisitionAmountMinor">
-              <FormItem>
-                <FormLabel htmlFor="acquisitionAmountMinor">{t("assets.form.acquisitionAmount")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="acquisitionAmountMinor"
-                    className="min-h-11"
-                    type="number"
-                    inputMode="numeric"
-                    step="1"
-                    {...form.register("acquisitionAmountMinor", { setValueAs: emptyToNumber })}
-                  />
-                </FormControl>
-                {typeof acquisitionAmount === "number" && Number.isFinite(acquisitionAmount) ? (
-                  <FormDescription>{formatXAF(acquisitionAmount)}</FormDescription>
-                ) : undefined}
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="capacityValue">
-              <FormItem>
-                <FormLabel htmlFor="capacityValue">{t("assets.form.capacityValue")}</FormLabel>
-                <FormControl>
-                  <Input
-                    id="capacityValue"
-                    className="min-h-11"
-                    type="number"
-                    inputMode="decimal"
-                    {...form.register("capacityValue", { setValueAs: emptyToNumber })}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField name="capacityUnit">
-              <FormItem>
-                <FormLabel htmlFor="capacityUnit">{t("assets.form.capacityUnit")}</FormLabel>
+                <FormLabel>{t("assets.form.template")}</FormLabel>
                 <FormControl>
                   <select
-                    id="capacityUnit"
                     className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                    {...form.register("capacityUnit", { setValueAs: emptyToUndefined })}
+                    {...field}
                   >
-                    <option value="">{t("assets.form.choose")}</option>
-                    {CAPACITY_UNITS.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {t(`assets.form.units.${unit}`)}
+                    {TEMPLATE_CODES.map((code) => (
+                      <option key={code} value={code}>
+                        {t(`assets.form.templates.${code}`)}
                       </option>
                     ))}
                   </select>
                 </FormControl>
                 <FormMessage />
               </FormItem>
-            </FormField>
+            )}
+          />
+
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="registrationNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.registrationNumber")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="min-h-11"
+                      {...textFieldProps(field)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="modelYear"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.modelYear")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="min-h-11"
+                      type="number"
+                      inputMode="numeric"
+                      {...numberFieldProps(field)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="manufacturer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.manufacturer")}</FormLabel>
+                  <FormControl>
+                    <Input className="min-h-11" {...textFieldProps(field)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="model"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.model")}</FormLabel>
+                  <FormControl>
+                    <Input className="min-h-11" {...textFieldProps(field)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="chassisNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.chassisNumber")}</FormLabel>
+                  <FormControl>
+                    <Input className="min-h-11" {...textFieldProps(field)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="acquisitionDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.acquisitionDate")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="min-h-11"
+                      type="date"
+                      {...textFieldProps(field)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="acquisitionAmountMinor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.acquisitionAmount")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="min-h-11"
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      {...numberFieldProps(field)}
+                    />
+                  </FormControl>
+                  {typeof acquisitionAmount === "number" && Number.isFinite(acquisitionAmount) ? (
+                    <FormDescription>{formatXAF(acquisitionAmount)}</FormDescription>
+                  ) : undefined}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="capacityValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.capacityValue")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="min-h-11"
+                      type="number"
+                      inputMode="decimal"
+                      {...numberFieldProps(field)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="capacityUnit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.capacityUnit")}</FormLabel>
+                  <FormControl>
+                    <select
+                      className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                      {...textFieldProps(field)}
+                    >
+                      <option value="">{t("assets.form.choose")}</option>
+                      {CAPACITY_UNITS.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {t(`assets.form.units.${unit}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           {templateFields.length > 0 && (
@@ -343,27 +375,31 @@ export function AssetRegisterScreen() {
                 {t("assets.form.templateFields")}
               </legend>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {templateFields.map((field) => (
-                  <FormField key={field.key} name={`customValues.${field.key}`}>
-                    <FormItem>
-                      <FormLabel htmlFor={`cv-${field.key}`}>
-                        {t(`assets.form.custom.${field.key}`)}
-                        {field.required === true ? " *" : ""}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          id={`cv-${field.key}`}
-                          className="min-h-11"
-                          type={field.type === "number" ? "number" : "text"}
-                          inputMode={field.type === "number" ? "decimal" : undefined}
-                          {...form.register(`customValues.${field.key}`, {
-                            setValueAs: field.type === "number" ? emptyToNumber : emptyToUndefined,
-                          })}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  </FormField>
+                {templateFields.map((templateField) => (
+                  <FormField
+                    key={templateField.key}
+                    control={form.control}
+                    name={`customValues.${templateField.key}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t(`assets.form.custom.${templateField.key}`)}
+                          {templateField.required === true ? " *" : ""}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            className="min-h-11"
+                            type={templateField.type === "number" ? "number" : "text"}
+                            inputMode={templateField.type === "number" ? "decimal" : undefined}
+                            {...(templateField.type === "number"
+                              ? numberFieldProps(field)
+                              : textFieldProps(field))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 ))}
               </div>
             </fieldset>
@@ -407,4 +443,42 @@ function emptyToNumber(value: unknown): unknown {
   if (value === "" || value === undefined || value === null) return undefined;
   const n = Number(value);
   return Number.isNaN(n) ? value : n;
+}
+
+// The payload schema wants `undefined` (not "") for unset optionals and real
+// numbers for numeric fields, so the controller stores the coerced value while
+// the control keeps rendering the raw text.
+type OptionalField<TName extends FieldPath<FormInput>> = ControllerRenderProps<
+  FormInput,
+  TName
+>;
+
+function toControlValue(value: unknown): string | number {
+  return typeof value === "string" || typeof value === "number" ? value : "";
+}
+
+function textFieldProps<TName extends FieldPath<FormInput>>(
+  field: OptionalField<TName>,
+) {
+  return {
+    name: field.name,
+    ref: field.ref,
+    onBlur: field.onBlur,
+    value: toControlValue(field.value),
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      field.onChange(emptyToUndefined(event.target.value)),
+  };
+}
+
+function numberFieldProps<TName extends FieldPath<FormInput>>(
+  field: OptionalField<TName>,
+) {
+  return {
+    name: field.name,
+    ref: field.ref,
+    onBlur: field.onBlur,
+    value: toControlValue(field.value),
+    onChange: (event: ChangeEvent<HTMLInputElement>) =>
+      field.onChange(emptyToNumber(event.target.value)),
+  };
 }

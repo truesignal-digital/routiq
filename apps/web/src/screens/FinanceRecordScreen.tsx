@@ -158,6 +158,9 @@ function RecordForm({
   );
   const form = useForm<RecordFormValues>({
     resolver: zodResolver(formSchema),
+    // Validate as the user edits, matching the eager `shouldValidate` the
+    // hand-wired setValue calls used to pass.
+    mode: "onChange",
     defaultValues: {
       direction: "EXPENSE",
       branchCode: "",
@@ -252,37 +255,41 @@ function RecordForm({
         className="mt-6 flex flex-col gap-4 rounded-xl border border-border bg-card p-4"
         onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
       >
-        <FormField name="direction">
-          <FormItem>
-            <div className="flex gap-2">
-              {(["EXPENSE", "REVENUE"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                    direction === value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                  onClick={() => {
-                    form.setValue("direction", value, { shouldDirty: true });
-                    form.setValue("categoryCode", "", {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
-                  }}
-                >
-                  {t(
-                    value === "EXPENSE"
-                      ? "finance.record.expenseLabel"
-                      : "finance.record.revenueLabel",
-                  )}
-                </button>
-              ))}
-            </div>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+        <FormField
+          control={form.control}
+          name="direction"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex gap-2">
+                {(["EXPENSE", "REVENUE"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                      field.value === value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                    onClick={() => {
+                      field.onChange(value);
+                      form.setValue("categoryCode", "", {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
+                  >
+                    {t(
+                      value === "EXPENSE"
+                        ? "finance.record.expenseLabel"
+                        : "finance.record.revenueLabel",
+                    )}
+                  </button>
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {errorCode && (
           <div role="alert" className="flex gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -291,28 +298,27 @@ function RecordForm({
           </div>
         )}
 
-        <FormField name="branchCode">
-          <FormItem>
-            <FormLabel htmlFor="branch">{t("finance.record.branchLabel")}</FormLabel>
-            {branchesFailed && (
-              <FormDescription role="alert" className="text-destructive">
-                {t("finance.record.branchesFailed")}
-              </FormDescription>
-            )}
-            <FormControl>
+        <FormField
+          control={form.control}
+          name="branchCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.branchLabel")}</FormLabel>
+              {branchesFailed && (
+                <FormDescription role="alert" className="text-destructive">
+                  {t("finance.record.branchesFailed")}
+                </FormDescription>
+              )}
               <Select
-                value={branchCode || null}
-                onValueChange={(value) =>
-                  form.setValue("branchCode", value ?? "", {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
+                value={field.value || null}
+                onValueChange={(value) => field.onChange(value ?? "")}
                 disabled={branchesLoading || branchesFailed}
               >
-                <SelectTrigger id="branch" className="min-h-11 w-full">
-                  <SelectValue placeholder={t("finance.record.chooseBranch")} />
-                </SelectTrigger>
+                <FormControl>
+                  <SelectTrigger className="min-h-11 w-full">
+                    <SelectValue placeholder={t("finance.record.chooseBranch")} />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
                   {branches.map((branch) => (
                     <SelectItem key={branch.code} value={branch.code}>
@@ -321,33 +327,32 @@ function RecordForm({
                   ))}
                 </SelectContent>
               </Select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="categoryCode">
-          <FormItem>
-            <FormLabel htmlFor="category">{t("finance.record.categoryLabel")}</FormLabel>
-            {categoriesQuery.isError && (
-              <FormDescription role="alert" className="text-destructive">
-                {t("finance.record.categoriesFailed")}
-              </FormDescription>
-            )}
-            <FormControl>
+        <FormField
+          control={form.control}
+          name="categoryCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.categoryLabel")}</FormLabel>
+              {categoriesQuery.isError && (
+                <FormDescription role="alert" className="text-destructive">
+                  {t("finance.record.categoriesFailed")}
+                </FormDescription>
+              )}
               <Select
-                value={categoryCode || null}
-                onValueChange={(value) =>
-                  form.setValue("categoryCode", value ?? "", {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
+                value={field.value || null}
+                onValueChange={(value) => field.onChange(value ?? "")}
                 disabled={categoriesQuery.isPending || categoriesQuery.isError}
               >
-                <SelectTrigger id="category" className="min-h-11 w-full">
-                  <SelectValue placeholder={t("finance.record.chooseCategory")} />
-                </SelectTrigger>
+                <FormControl>
+                  <SelectTrigger className="min-h-11 w-full">
+                    <SelectValue placeholder={t("finance.record.chooseCategory")} />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
                   {(categoriesQuery.data ?? []).map((category) => (
                     <SelectItem key={category.code} value={category.code}>
@@ -356,71 +361,69 @@ function RecordForm({
                   ))}
                 </SelectContent>
               </Select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="amountInput">
-          <FormItem>
-            <FormLabel htmlFor="amount">{t("finance.record.amountLabel")}</FormLabel>
-            <FormControl>
+        <FormField
+          control={form.control}
+          name="amountInput"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.amountLabel")}</FormLabel>
               <div className="relative">
-                <Input
-                  id="amount"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder={t("finance.record.amountPlaceholder")}
-                  value={amountInput}
-                  onChange={(event) => {
-                    form.setValue(
-                      "amountInput",
-                      event.target.value.replace(/[^\d\s]/g, ""),
-                      { shouldDirty: true, shouldValidate: true },
-                    );
-                  }}
-                  onBlur={(event) => {
-                    const parsed = parseMoneyXaf(event.target.value);
-                    if (parsed !== null) {
-                      form.setValue("amountInput", formatMoneyXaf(parsed), {
-                        shouldTouch: true,
-                        shouldValidate: true,
-                      });
-                    }
-                  }}
-                  className="min-h-11"
-                />
+                <FormControl>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={t("finance.record.amountPlaceholder")}
+                    name={field.name}
+                    ref={field.ref}
+                    value={field.value}
+                    onChange={(event) => {
+                      field.onChange(event.target.value.replace(/[^\d\s]/g, ""));
+                    }}
+                    onBlur={(event) => {
+                      const parsed = parseMoneyXaf(event.target.value);
+                      if (parsed !== null) {
+                        field.onChange(formatMoneyXaf(parsed));
+                      }
+                      field.onBlur();
+                    }}
+                    className="min-h-11"
+                  />
+                </FormControl>
                 {amountInput && amountMinor !== null && (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                     XAF
                   </span>
                 )}
               </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="paymentMethod">
-          <FormItem>
-            <FormLabel htmlFor="payment-method">
-              {t("finance.record.paymentMethodLabel")}
-            </FormLabel>
-            <FormControl>
+        <FormField
+          control={form.control}
+          name="paymentMethod"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.paymentMethodLabel")}</FormLabel>
               <Select
-                value={paymentMethod}
+                value={field.value}
                 onValueChange={(value) => {
                   if (value) {
-                    form.setValue("paymentMethod", value, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
+                    field.onChange(value);
                   }
                 }}
               >
-                <SelectTrigger id="payment-method" className="min-h-11 w-full">
-                  <SelectValue />
-                </SelectTrigger>
+                <FormControl>
+                  <SelectTrigger className="min-h-11 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
                 <SelectContent>
                   {PAYMENT_METHODS.map((method) => (
                     <SelectItem key={method} value={method}>
@@ -429,96 +432,99 @@ function RecordForm({
                   ))}
                 </SelectContent>
               </Select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="economicDate">
-          <FormItem>
-            <FormLabel htmlFor="economic-date">
-              {t("finance.record.economicDateLabel")}
-            </FormLabel>
-            <FormControl>
-              <Input
-                id="economic-date"
-                type="date"
-                className="min-h-11"
-                {...form.register("economicDate")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+        <FormField
+          control={form.control}
+          name="economicDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.economicDateLabel")}</FormLabel>
+              <FormControl>
+                <Input type="date" className="min-h-11" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="counterpartyName">
-          <FormItem>
-            <FormLabel htmlFor="counterparty">
-              {t("finance.record.counterpartyLabel")}
-            </FormLabel>
-            <FormControl>
-              <Input
-                id="counterparty"
-                type="text"
-                placeholder={t("finance.record.counterpartyPlaceholder")}
-                className="min-h-11"
-                {...form.register("counterpartyName")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+        <FormField
+          control={form.control}
+          name="counterpartyName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.counterpartyLabel")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder={t("finance.record.counterpartyPlaceholder")}
+                  className="min-h-11"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="description">
-          <FormItem>
-            <FormLabel htmlFor="description">
-              {t("finance.record.descriptionLabel")}
-            </FormLabel>
-            <FormControl>
-              <Textarea
-                id="description"
-                placeholder={t("finance.record.descriptionPlaceholder")}
-                className="min-h-24"
-                {...form.register("description")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.descriptionLabel")}</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder={t("finance.record.descriptionPlaceholder")}
+                  className="min-h-24"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="paymentReference">
-          <FormItem>
-            <FormLabel htmlFor="payment-ref">
-              {t("finance.record.paymentRefLabel")}
-            </FormLabel>
-            <FormControl>
-              <Input
-                id="payment-ref"
-                type="text"
-                placeholder={t("finance.record.paymentRefPlaceholder")}
-                className="min-h-11"
-                {...form.register("paymentReference")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+        <FormField
+          control={form.control}
+          name="paymentReference"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.paymentRefLabel")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder={t("finance.record.paymentRefPlaceholder")}
+                  className="min-h-11"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <FormField name="assetId">
-          <FormItem>
-            <FormLabel htmlFor="asset">{t("finance.record.assetLabel")}</FormLabel>
-            <FormControl>
-              <Input
-                id="asset"
-                type="text"
-                placeholder={t("finance.record.assetPlaceholder")}
-                className="min-h-11"
-                {...form.register("assetId")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+        <FormField
+          control={form.control}
+          name="assetId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("finance.record.assetLabel")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder={t("finance.record.assetPlaceholder")}
+                  className="min-h-11"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">
