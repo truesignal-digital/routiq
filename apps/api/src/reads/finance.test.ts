@@ -536,13 +536,14 @@ describe("finance reads", () => {
       const first = await fetchEntriesPage(pagedToken, null);
       expect(first.nextCursor).not.toBeNull();
       const firstCursor = decodeTestCursor(first.nextCursor!);
-      expect(firstCursor.postedAt).not.toBeNull();
+      expect(firstCursor).toMatchObject({ field: "postedAt", direction: "desc" });
+      expect(firstCursor.value).not.toBeNull();
       expect(firstCursor.id).toBe(first.entries[PAGE_SIZE - 1]!.id);
 
       const second = await fetchEntriesPage(pagedToken, first.nextCursor);
       expect(second.nextCursor).not.toBeNull();
       const secondCursor = decodeTestCursor(second.nextCursor!);
-      expect(secondCursor.postedAt).toBeNull();
+      expect(secondCursor.value).toBeNull();
       expect(secondCursor.id).toBe(second.entries[PAGE_SIZE - 1]!.id);
 
       const third = await fetchEntriesPage(pagedToken, second.nextCursor);
@@ -645,6 +646,167 @@ describe("finance reads", () => {
       });
       expect(response.statusCode).toBe(400);
       expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+  });
+
+  describe("GET /v1/finance/entries?sort", () => {
+    let sortToken: string;
+    /** Ids in creation order, which is also entryNumber and postedAt order. */
+    const created: string[] = [];
+    /** Amounts and dates are deliberately shuffled against creation order, so
+     * a page walk that silently fell back to the default order would fail. */
+    const fixture = [
+      { amountMinor: 5_000, economicDate: "2026-03-02" },
+      { amountMinor: 1_000, economicDate: "2026-03-06" },
+      { amountMinor: 6_000, economicDate: "2026-03-01" },
+      { amountMinor: 2_000, economicDate: "2026-03-05" },
+      { amountMinor: 4_000, economicDate: "2026-03-03" },
+      { amountMinor: 3_000, economicDate: "2026-03-04" },
+    ];
+
+    beforeAll(async () => {
+      // Own workspace: six rows exactly, so a limit=2 walk is three full pages.
+      const seeded = await seedWorkspace(db);
+      const submitter = await seedMember(db, {
+        workspaceId: seeded.workspace.id,
+        role: "FIELD_SUBMITTER",
+        allBranches: true,
+      });
+      sortToken = (
+        await createSession(db, {
+          principalId: submitter.principal.id,
+          workspaceId: seeded.workspace.id,
+        })
+      ).token;
+
+      for (const row of fixture) {
+        // Below the auto-approval threshold, so every row posts and postedAt
+        // is a total order rather than a null tail.
+        const entry = await recordExpense(sortToken, row);
+        expect(entry.recordStatus).toBe("POSTED");
+        created.push(entry.entryId);
+        await tick();
+      }
+    });
+
+    /** The order the server must produce, derived independently of the API. */
+    function expectedAscending(field: string): string[] {
+      const indexed = fixture.map((row, index) => ({ ...row, index }));
+      const by = (compare: (a: typeof indexed[number], b: typeof indexed[number]) => number) =>
+        [...indexed].sort(compare).map((row) => created[row.index]!);
+
+      switch (field) {
+        case "amount":
+          return by((a, b) => a.amountMinor - b.amountMinor);
+        case "economicDate":
+          return by((a, b) => a.economicDate.localeCompare(b.economicDate));
+        default:
+          // entryNumber is assigned sequentially and postedAt advances with it.
+          return [...created];
+      }
+    }
+
+    async function walkSorted(sort: string) {
+      const pages: string[][] = [];
+      let cursor: string | null = null;
+      do {
+        const page = await fetchEntriesPage(sortToken, cursor, {
+          sort,
+          limit: "2",
+        });
+        pages.push(page.entries.map((entry) => entry.id));
+        cursor = page.nextCursor;
+        if (pages.length > 6) throw new Error("cursor walk did not terminate");
+      } while (cursor !== null);
+      return pages;
+    }
+
+    async function entriesResponse(params: Record<string, string>) {
+      return ctx.app.inject({
+        method: "GET",
+        url: `/v1/finance/entries?${new URLSearchParams(params).toString()}`,
+        headers: { authorization: `Bearer ${sortToken}` },
+      });
+    }
+
+    const sortFields = ["economicDate", "postedAt", "amount", "entryNumber"];
+
+    it.each(sortFields)(
+      "walks %s ascending across three pages with no gaps or duplicates",
+      async (field) => {
+        const pages = await walkSorted(`${field}:asc`);
+
+        expect(pages.map((page) => page.length)).toEqual([2, 2, 2]);
+        const seen = pages.flat();
+        expect(seen).toEqual(expectedAscending(field));
+        expect(new Set(seen).size).toBe(seen.length);
+      },
+    );
+
+    it.each(sortFields)(
+      "walks %s descending across three pages with no gaps or duplicates",
+      async (field) => {
+        const pages = await walkSorted(`${field}:desc`);
+
+        expect(pages.map((page) => page.length)).toEqual([2, 2, 2]);
+        const seen = pages.flat();
+        expect(seen).toEqual([...expectedAscending(field)].reverse());
+        expect(new Set(seen).size).toBe(seen.length);
+      },
+    );
+
+    it("rejects a cursor minted under a different sort field", async () => {
+      const first = await fetchEntriesPage(sortToken, null, {
+        sort: "amount:asc",
+        limit: "2",
+      });
+      expect(first.nextCursor).not.toBeNull();
+
+      const response = await entriesResponse({
+        sort: "economicDate:asc",
+        limit: "2",
+        cursor: first.nextCursor!,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
+    it("rejects a cursor minted under the opposite direction", async () => {
+      const first = await fetchEntriesPage(sortToken, null, {
+        sort: "amount:asc",
+        limit: "2",
+      });
+
+      const response = await entriesResponse({
+        sort: "amount:desc",
+        limit: "2",
+        cursor: first.nextCursor!,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
+    it("rejects a sort over an undeclared field", async () => {
+      const response = await entriesResponse({ sort: "counterpartyName:asc" });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
+    it("names the active sort in the cursor it hands back", async () => {
+      const first = await fetchEntriesPage(sortToken, null, {
+        sort: "amount:desc",
+        limit: "2",
+      });
+
+      expect(decodeTestCursor(first.nextCursor!)).toEqual({
+        field: "amount",
+        direction: "desc",
+        value: "5000",
+        id: first.entries[1]!.id,
+      });
     });
   });
 
@@ -838,6 +1000,150 @@ describe("finance reads", () => {
       expect(body.entries.map((entry) => entry.id).sort()).toEqual(
         [...inScopeIds, outOfScopeId].sort(),
       );
+    });
+  });
+
+  describe("GET /v1/finance/approvals pagination and sorting", () => {
+    let queueToken: string;
+    /** Ids oldest first — submittedAt order, and entryNumber order with it. */
+    const queued: string[] = [];
+    /** Above the auto-approval threshold so every row stays SUBMITTED; the
+     * amounts are shuffled against submission order on purpose. */
+    const amounts = [150_000, 500_000, 300_000, 600_000, 200_000, 400_000];
+
+    beforeAll(async () => {
+      const seeded = await seedWorkspace(db);
+      const submitter = await seedMember(db, {
+        workspaceId: seeded.workspace.id,
+        role: "FIELD_SUBMITTER",
+        allBranches: true,
+      });
+      queueToken = (
+        await createSession(db, {
+          principalId: submitter.principal.id,
+          workspaceId: seeded.workspace.id,
+        })
+      ).token;
+
+      for (const amountMinor of amounts) {
+        const entry = await recordExpense(queueToken, { amountMinor });
+        expect(entry.recordStatus).toBe("SUBMITTED");
+        queued.push(entry.entryId);
+        await tick();
+      }
+    });
+
+    function expectedAscending(field: string): string[] {
+      if (field !== "amount") return [...queued];
+      return amounts
+        .map((amountMinor, index) => ({ amountMinor, index }))
+        .sort((a, b) => a.amountMinor - b.amountMinor)
+        .map((row) => queued[row.index]!);
+    }
+
+    async function walkSorted(sort: string) {
+      const pages: string[][] = [];
+      let cursor: string | null = null;
+      do {
+        const page = await fetchApprovals(queueToken, {
+          sort,
+          limit: "2",
+          ...(cursor === null ? {} : { cursor }),
+        });
+        // The queue count is the queue, never the page in hand.
+        expect(page.total).toBe(amounts.length);
+        pages.push(page.entries.map((entry) => entry.id));
+        cursor = page.nextCursor;
+        if (pages.length > 6) throw new Error("cursor walk did not terminate");
+      } while (cursor !== null);
+      return pages;
+    }
+
+    async function approvalsResponse(params: Record<string, string>) {
+      return ctx.app.inject({
+        method: "GET",
+        url: `/v1/finance/approvals?${new URLSearchParams(params).toString()}`,
+        headers: { authorization: `Bearer ${queueToken}` },
+      });
+    }
+
+    const sortFields = ["submittedAt", "amount", "entryNumber"];
+
+    it("answers a paramless call with the whole queue, oldest first", async () => {
+      const body = await fetchApprovals(queueToken);
+
+      expect(body.entries.map((entry) => entry.id)).toEqual(queued);
+      expect(body.total).toBe(amounts.length);
+      expect(body.nextCursor).toBeNull();
+    });
+
+    it.each(sortFields)(
+      "walks %s ascending across three pages with no gaps or duplicates",
+      async (field) => {
+        const pages = await walkSorted(`${field}:asc`);
+
+        expect(pages.map((page) => page.length)).toEqual([2, 2, 2]);
+        const seen = pages.flat();
+        expect(seen).toEqual(expectedAscending(field));
+        expect(new Set(seen).size).toBe(seen.length);
+      },
+    );
+
+    it.each(sortFields)(
+      "walks %s descending across three pages with no gaps or duplicates",
+      async (field) => {
+        const pages = await walkSorted(`${field}:desc`);
+
+        expect(pages.map((page) => page.length)).toEqual([2, 2, 2]);
+        const seen = pages.flat();
+        expect(seen).toEqual([...expectedAscending(field)].reverse());
+        expect(new Set(seen).size).toBe(seen.length);
+      },
+    );
+
+    it("reports the same total on every page of a walk", async () => {
+      const first = await fetchApprovals(queueToken, { limit: "2" });
+      const second = await fetchApprovals(queueToken, {
+        limit: "2",
+        cursor: first.nextCursor!,
+      });
+
+      expect(first.entries).toHaveLength(2);
+      expect(first.total).toBe(amounts.length);
+      expect(second.total).toBe(first.total);
+    });
+
+    it("rejects a cursor minted under a different sort", async () => {
+      const first = await fetchApprovals(queueToken, {
+        sort: "amount:asc",
+        limit: "2",
+      });
+
+      const response = await approvalsResponse({
+        sort: "submittedAt:asc",
+        limit: "2",
+        cursor: first.nextCursor!,
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
+    it("rejects a tampered cursor and an undeclared sort field", async () => {
+      const tampered = await approvalsResponse({ cursor: "not-a-cursor" });
+      expect(tampered.statusCode).toBe(400);
+      expect(tampered.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+
+      const unsortable = await approvalsResponse({ sort: "branchId:asc" });
+      expect(unsortable.statusCode).toBe(400);
+      expect(unsortable.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
+    it("rejects a limit above the ceiling this queue publishes", async () => {
+      const response = await approvalsResponse({ limit: "101" });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
     });
   });
 
@@ -1060,7 +1366,9 @@ describe("finance reads", () => {
   }
 
   function decodeTestCursor(cursor: string): {
-    postedAt: string | null;
+    field: string;
+    direction: "asc" | "desc";
+    value: string | number | null;
     id: string;
   } {
     return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
@@ -1076,10 +1384,16 @@ describe("finance reads", () => {
     return financialEntryDetail.parse(response.json());
   }
 
-  async function fetchApprovals(token: string) {
+  async function fetchApprovals(
+    token: string,
+    params: Record<string, string> = {},
+  ) {
+    const search = new URLSearchParams(params).toString();
     const response = await ctx.app.inject({
       method: "GET",
-      url: "/v1/finance/approvals",
+      url: search === ""
+        ? "/v1/finance/approvals"
+        : `/v1/finance/approvals?${search}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.statusCode).toBe(200);

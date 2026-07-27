@@ -4,6 +4,7 @@ import {
   listQuery,
   pendingApprovalsResponse,
   periodsResponse,
+  type ListSort,
 } from "@routiq/contracts";
 import { and, asc, desc, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -20,18 +21,129 @@ import {
 } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
 import { pendingApprovalConditions } from "./approvals-queue.js";
-import { afterTimestampKeyset, timestampKeysetCodec } from "./cursor.js";
+import {
+  afterKeyset,
+  bindBigint,
+  bindDate,
+  bindText,
+  bindTimestamp,
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  keysetOrderBy,
+  type KeysetColumn,
+  type KeysetValue,
+} from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+
+const entrySortFields = [
+  "economicDate",
+  "postedAt",
+  "amount",
+  "entryNumber",
+] as const;
+type EntrySortField = (typeof entrySortFields)[number];
+
+/** Wire-compatible with the fixed order this read shipped with. */
+const defaultEntrySort: ListSort<EntrySortField> = {
+  field: "postedAt",
+  direction: "desc",
+};
+
+const entrySortColumns: Record<EntrySortField, KeysetColumn> = {
+  economicDate: { column: financialEntries.economicDate, bind: bindDate },
+  // Null until an entry posts, so the null tail is part of this ordering.
+  postedAt: {
+    column: financialEntries.postedAt,
+    bind: bindTimestamp,
+    nullable: true,
+  },
+  // The entry's own SIGNED total. Postings sum to it by invariant (§3.4), so
+  // there is nothing to aggregate — and a reversal sorts below its original.
+  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  entryNumber: { column: financialEntries.entryNumber, bind: bindText },
+};
+
+interface EntrySortRow {
+  economicDate: string;
+  postedAt: Date | null;
+  amountMinor: bigint;
+  entryNumber: string;
+}
+
+function entrySortValue(field: EntrySortField, row: EntrySortRow): KeysetValue {
+  switch (field) {
+    case "economicDate":
+      return row.economicDate;
+    case "postedAt":
+      return row.postedAt?.toISOString() ?? null;
+    // Minor units are bigint; a string survives the round trip exactly.
+    case "amount":
+      return row.amountMinor.toString();
+    case "entryNumber":
+      return row.entryNumber;
+  }
+}
 
 // Read-side list conventions live in ADR-0003: Zod-validated filters, keyset
 // pagination on a stable sort key, server-bounded limits. This response keeps
 // `entries` where new resources use `items` — the legacy key documented there.
-const listQuerySchema = listQuery({
-  status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]).optional(),
-  periodCode: z.string().optional(),
-  assetId: z.uuid().optional(),
-  branchId: z.uuid().optional(),
-});
+const listQuerySchema = listQuery(
+  {
+    status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]).optional(),
+    periodCode: z.string().optional(),
+    assetId: z.uuid().optional(),
+    branchId: z.uuid().optional(),
+  },
+  { sortFields: entrySortFields },
+);
+
+const approvalSortFields = ["submittedAt", "amount", "entryNumber"] as const;
+type ApprovalSortField = (typeof approvalSortFields)[number];
+
+/** Oldest first: the queue's honest order, and what this read always returned. */
+const defaultApprovalSort: ListSort<ApprovalSortField> = {
+  field: "submittedAt",
+  direction: "asc",
+};
+
+const approvalSortColumns: Record<ApprovalSortField, KeysetColumn> = {
+  submittedAt: { column: financialEntries.createdAt, bind: bindTimestamp },
+  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  entryNumber: { column: financialEntries.entryNumber, bind: bindText },
+};
+
+interface ApprovalSortRow {
+  submittedAt: Date;
+  amountMinor: bigint;
+  entryNumber: string;
+}
+
+function approvalSortValue(
+  field: ApprovalSortField,
+  row: ApprovalSortRow,
+): KeysetValue {
+  switch (field) {
+    case "submittedAt":
+      return row.submittedAt.toISOString();
+    case "amount":
+      return row.amountMinor.toString();
+    case "entryNumber":
+      return row.entryNumber;
+  }
+}
+
+/** The page size this read has always returned; kept as the default so a
+ * paramless call is byte-for-byte what it was before pagination landed. */
+const APPROVALS_PAGE_SIZE = 100;
+
+const approvalsQuerySchema = listQuery(
+  {},
+  {
+    sortFields: approvalSortFields,
+    defaultLimit: APPROVALS_PAGE_SIZE,
+    maxLimit: APPROVALS_PAGE_SIZE,
+  },
+);
 
 export function registerFinanceReadRoutes(
   app: FastifyInstance,
@@ -50,10 +162,12 @@ export function registerFinanceReadRoutes(
         }
         const { status, periodCode, assetId, branchId, cursor, limit } =
           parsedQuery.data;
+        const sort = parsedQuery.data.sort ?? defaultEntrySort;
+        const sortColumn = entrySortColumns[sort.field];
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           const decodedCursor = cursor
-            ? timestampKeysetCodec.decode(cursor)
+            ? decodeKeysetCursor(cursor, sort)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" };
@@ -109,8 +223,9 @@ export function registerFinanceReadRoutes(
 
           if (decodedCursor) {
             conditions.push(
-              afterTimestampKeyset(
-                financialEntries.postedAt,
+              afterKeyset(
+                sortColumn,
+                sort.direction,
                 financialEntries.id,
                 decodedCursor,
               ),
@@ -154,7 +269,7 @@ export function registerFinanceReadRoutes(
               ),
             )
             .where(and(...conditions))
-            .orderBy(sql`${financialEntries.postedAt} desc nulls last`, asc(financialEntries.id))
+            .orderBy(...keysetOrderBy(sortColumn, sort.direction, financialEntries.id))
             // One extra row is the has-next probe, never returned.
             .limit(limit + 1);
 
@@ -192,11 +307,14 @@ export function registerFinanceReadRoutes(
 
         let nextCursor: string | null = null;
         if (hasNextPage && entries.length > 0) {
-          const lastEntry = entries[entries.length - 1]!;
-          nextCursor = timestampKeysetCodec.encode({
-            postedAt: lastEntry.postedAt,
-            id: lastEntry.id,
-          });
+          // Encoded off the raw row: the mapped item has already lost the
+          // bigint amount and the Date to their wire forms.
+          const lastRow = rows[entries.length - 1]!;
+          nextCursor = encodeKeysetCursor(
+            sort,
+            entrySortValue(sort.field, lastRow),
+            lastRow.id,
+          );
         }
 
         return financialEntryListResponse.parse({ entries, nextCursor });
@@ -398,17 +516,44 @@ export function registerFinanceReadRoutes(
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         const auth = req.auth!;
+        const parsedQuery = approvalsQuerySchema.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { cursor, limit } = parsedQuery.data;
+        const sort = parsedQuery.data.sort ?? defaultApprovalSort;
+        const sortColumn = approvalSortColumns[sort.field];
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          const decodedCursor = cursor
+            ? decodeKeysetCursor(cursor, sort)
+            : undefined;
+          if (cursor && !decodedCursor) {
+            return { error: "VALIDATION_FAILED" as const };
+          }
+
           // Shared with the dashboard's pendingApprovals count — one definition
           // of the queue, so the two can never disagree on screen.
           const conditions = pendingApprovalConditions(auth);
 
+          // Counts the queue, not the page: the cursor never reaches this.
           const [countResult] = await tx
             .select({ count: sql<number>`count(*)::integer` })
             .from(financialEntries)
             .where(and(...conditions));
           const total = countResult?.count ?? 0;
+
+          const pageConditions = decodedCursor
+            ? [
+                ...conditions,
+                afterKeyset(
+                  sortColumn,
+                  sort.direction,
+                  financialEntries.id,
+                  decodedCursor,
+                ),
+              ]
+            : conditions;
 
           const rows = await tx
             .select({
@@ -452,16 +597,23 @@ export function registerFinanceReadRoutes(
               commands,
               eq(commands.id, financialEntries.createdByCommandId),
             )
-            .where(and(...conditions))
-            .orderBy(asc(financialEntries.createdAt))
-            .limit(100);
+            .where(and(...pageConditions))
+            .orderBy(...keysetOrderBy(sortColumn, sort.direction, financialEntries.id))
+            // One extra row is the has-next probe, never returned.
+            .limit(limit + 1);
 
           return { rows, total };
         });
 
-        const { rows, total } = result || { rows: [], total: 0 };
+        if (result && "error" in result) {
+          return reply.status(400).send({ error: { code: result.error } });
+        }
 
-        const entries = rows.map((row) => ({
+        const { rows, total } = result || { rows: [], total: 0 };
+        const hasNextPage = rows.length > limit;
+        const pageRows = rows.slice(0, limit);
+
+        const entries = pageRows.map((row) => ({
           id: row.id,
           entryNumber: row.entryNumber,
           direction: row.direction,
@@ -486,7 +638,17 @@ export function registerFinanceReadRoutes(
           submittedAt: row.submittedAt.toISOString(),
         }));
 
-        return pendingApprovalsResponse.parse({ entries, total });
+        let nextCursor: string | null = null;
+        if (hasNextPage && pageRows.length > 0) {
+          const lastRow = pageRows[pageRows.length - 1]!;
+          nextCursor = encodeKeysetCursor(
+            sort,
+            approvalSortValue(sort.field, lastRow),
+            lastRow.id,
+          );
+        }
+
+        return pendingApprovalsResponse.parse({ entries, nextCursor, total });
       } catch (error) {
         req.log.error({ err: error }, "finance approvals read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });

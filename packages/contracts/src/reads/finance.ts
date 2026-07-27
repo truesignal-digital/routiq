@@ -60,10 +60,14 @@ export const pendingApprovalItem = financialEntryListItem.extend({
   submittedAt: z.iso.datetime(),
 });
 
-export const pendingApprovalsResponse = z.object({
-  entries: z.array(pendingApprovalItem),
-  total: z.number(),
-});
+/**
+ * Keyset-paginated like every list read, but it also publishes `total`: the
+ * dashboard card and the queue badge count the whole queue, not the page. The
+ * `entries` key is inherited from before ADR-0003, same as the entries list.
+ */
+export const pendingApprovalsResponse = listResponse(pendingApprovalItem, {
+  key: "entries",
+}).extend({ total: z.number() });
 
 export const periodRead = z.object({
   periodCode: z.string(),

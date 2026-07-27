@@ -1,3 +1,4 @@
+import { sortDirections, type ListSort, type SortDirection } from "@routiq/contracts";
 import { and, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -32,41 +33,118 @@ export function cursorCodec<TSchema extends z.ZodType>(
 }
 
 /**
- * Keyset position for a list ordered `<timestamp> desc nulls last, id asc`.
- * The timestamp is nullable because the sort key itself is (an unposted entry
- * has no `postedAt`), and the id breaks ties into a total order.
+ * A keyset position under an explicitly named sort. The field and direction
+ * ride inside the payload so a boundary can only ever be replayed against the
+ * ordering that minted it — re-sorting mid-walk would otherwise skip and
+ * duplicate rows with no error anywhere (ADR-0003).
  */
-export const timestampKeysetCursor = z.object({
-  postedAt: z.string().nullable(),
+export const keysetCursor = z.object({
+  field: z.string().min(1),
+  direction: z.enum(sortDirections),
+  value: z.union([z.string(), z.number(), z.null()]),
   id: z.uuid(),
 });
 
-export type TimestampKeysetCursor = z.infer<typeof timestampKeysetCursor>;
+export type KeysetCursor = z.infer<typeof keysetCursor>;
+export type KeysetValue = KeysetCursor["value"];
 
-export const timestampKeysetCodec = cursorCodec(timestampKeysetCursor);
+const keysetCodec = cursorCodec(keysetCursor);
+
+export function encodeKeysetCursor(
+  sort: ListSort,
+  value: KeysetValue,
+  id: string,
+): string {
+  return keysetCodec.encode({
+    field: sort.field,
+    direction: sort.direction,
+    value,
+    id,
+  });
+}
 
 /**
- * The rows strictly after `cursor` under `desc nulls last, id asc`. A null
- * cursor timestamp means we are already inside the null tail, where only the
- * id advances; otherwise later pages hold earlier timestamps, tie-broken ids,
- * and the whole null tail.
+ * Decodes a cursor and refuses it unless it was minted under `sort`. Tampered,
+ * stale and mismatched cursors all come back `undefined` — one funnel, so a
+ * route cannot answer a re-sorted request with a stale boundary by omission.
  */
-export function afterTimestampKeyset(
-  timestamp: PgColumn,
-  id: PgColumn,
-  cursor: TimestampKeysetCursor,
-): SQL {
-  const position = cursor.postedAt === null ? null : new Date(cursor.postedAt);
+export function decodeKeysetCursor(
+  cursor: string,
+  sort: ListSort,
+): KeysetCursor | undefined {
+  const decoded = keysetCodec.decode(cursor);
+  if (decoded === undefined) return undefined;
+  if (decoded.field !== sort.field || decoded.direction !== sort.direction) {
+    return undefined;
+  }
+  return decoded;
+}
 
-  if (position === null) {
-    return and(isNull(timestamp), sql`${id} > ${cursor.id}`)!;
+/**
+ * A column a list may be ordered by, plus how to hand a decoded cursor value
+ * back to Postgres as a parameter of that column's own type.
+ */
+export interface KeysetColumn {
+  column: PgColumn;
+  bind: (value: Exclude<KeysetValue, null>) => SQL;
+  /** Nulls sort last in both directions, matching the ORDER BY below. */
+  nullable?: boolean;
+}
+
+export const bindTimestamp = (value: Exclude<KeysetValue, null>): SQL =>
+  sql`${new Date(value)}`;
+export const bindDate = (value: Exclude<KeysetValue, null>): SQL =>
+  sql`${String(value)}::date`;
+export const bindBigint = (value: Exclude<KeysetValue, null>): SQL =>
+  sql`${String(value)}::bigint`;
+export const bindText = (value: Exclude<KeysetValue, null>): SQL =>
+  sql`${String(value)}`;
+
+/** `<column> <direction> [nulls last], id asc` — the id totalises the order. */
+export function keysetOrderBy(
+  spec: KeysetColumn,
+  direction: SortDirection,
+  id: PgColumn,
+): SQL[] {
+  const { column, nullable } = spec;
+  const ordered =
+    direction === "desc"
+      ? nullable
+        ? sql`${column} desc nulls last`
+        : sql`${column} desc`
+      : nullable
+        ? sql`${column} asc nulls last`
+        : sql`${column} asc`;
+
+  return [ordered, sql`${id} asc`];
+}
+
+/**
+ * The rows strictly after `cursor` under the same order `keysetOrderBy` emits.
+ * A null cursor value means the walk is already inside the null tail, where
+ * only the id advances; otherwise later pages hold keys beyond the boundary,
+ * its tie-broken ids, and — for a nullable column — the whole null tail.
+ */
+export function afterKeyset(
+  spec: KeysetColumn,
+  direction: SortDirection,
+  id: PgColumn,
+  cursor: KeysetCursor,
+): SQL {
+  const { column, nullable } = spec;
+
+  if (cursor.value === null) {
+    return and(isNull(column), sql`${id} > ${cursor.id}`)!;
   }
 
-  return or(
-    sql`${timestamp} < ${position}`,
-    and(eq(timestamp, position), sql`${id} > ${cursor.id}`),
-    isNull(timestamp),
-  )!;
+  const position = spec.bind(cursor.value);
+  const beyond =
+    direction === "desc"
+      ? sql`${column} < ${position}`
+      : sql`${column} > ${position}`;
+  const tied = and(sql`${column} = ${position}`, sql`${id} > ${cursor.id}`)!;
+
+  return nullable ? or(beyond, tied, isNull(column))! : or(beyond, tied)!;
 }
 
 /**

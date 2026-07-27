@@ -32,3 +32,13 @@ declares. Tenant and branch scope are not part of this contract at all: every
 list read runs inside `inWorkspace` and applies `auth.branchScope`, both derived
 from the session exactly as the command envelope derives them. A `branchId`
 filter narrows within that scope and can never widen it. (Decided 2026-07-26.)
+
+Amended 2026-07-27: the `entries` legacy exception covers two endpoints, not one
+— `/v1/finance/entries` and `/v1/finance/approvals`, which also publishes a
+`total` alongside the envelope. Both retire together once the web client stops
+reading that key.
+
+Amended 2026-07-27: a cursor now carries the sort that minted it (field and
+direction) alongside the key value and row id. Replaying one under a different
+sort is answered `400 VALIDATION_FAILED`, same as a tampered cursor — re-sorting
+mid-walk would otherwise skip and duplicate rows with no error anywhere.
