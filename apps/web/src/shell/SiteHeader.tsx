@@ -27,7 +27,13 @@ export function SiteHeader() {
         aria-label={t("shell.toggleSidebar")}
         className="-ms-1 size-11 md:size-7"
       />
-      <Separator orientation="vertical" className="h-5" />
+      {/* `data-vertical:self-stretch` in the vendored separator would run this
+          tick the full height of the header; dashboard-01 opts out and centers
+          a 1rem rule instead. */}
+      <Separator
+        orientation="vertical"
+        className="mx-2 h-4 data-vertical:self-auto"
+      />
       {/* Screens own the page <h1>; this is wayfinding, not a heading. */}
       <Breadcrumb className="min-w-0">
         <BreadcrumbList className="flex-nowrap">

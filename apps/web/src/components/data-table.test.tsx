@@ -20,8 +20,8 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       const translations: Record<string, string> = {
-        "dataTable.loading": "Loading…",
-        "dataTable.loadMore": "Load more",
+        "dataTable.page": "Page {page}",
+        "dataTable.actions": "Actions",
         "dataTable.rowCount": "{count} rows loaded",
         "dataTable.selectedCount": "{count} rows selected",
         "dataTable.selectAll": "Select all",
@@ -132,27 +132,19 @@ describe("DataTable", () => {
     expect(screen.getByText("grace@example.com")).toBeTruthy();
   });
 
-  it("renders localized load more button and calls onLoadMore", async () => {
+  it("asks for the next cursor from the pager, not a load-more button", async () => {
     const onLoadMore = vi.fn();
-    const { rerender } = render(
+    render(
       <DataTable
         columns={columns}
         data={data}
-        loadMore={{ hasNextPage: true, isFetching: false, onLoadMore }}
+        loadMore={{ hasNextPage: true, isFetching: false, onLoadMore, pageSize: 2 }}
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+    expect(screen.queryByRole("button", { name: /load more/i })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
     expect(onLoadMore).toHaveBeenCalledOnce();
-
-    rerender(
-      <DataTable
-        columns={columns}
-        data={data}
-        loadMore={{ hasNextPage: false, isFetching: false, onLoadMore }}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
   it("renders the empty state when data is empty", () => {
@@ -367,13 +359,14 @@ describe("DataTable", () => {
       expect(onRowClick).not.toHaveBeenCalled();
     });
 
-    it("keeps keyboard row activation working and swallows checkbox keystrokes", async () => {
+    it("keeps selection keystrokes clear of the primary trigger", async () => {
       const onRowClick = vi.fn();
       render(
         <DataTable
           columns={columns}
           data={data}
           enableRowSelection
+          primaryColumn={{ columnId: "name" }}
           onRowClick={onRowClick}
         />,
       );
@@ -383,8 +376,8 @@ describe("DataTable", () => {
       await userEvent.keyboard(" ");
       expect(onRowClick).not.toHaveBeenCalled();
 
-      const firstRow = screen.getAllByRole("row")[1]!;
-      firstRow.focus();
+      // The primary cell is a real button, so Enter on it opens the row.
+      screen.getByRole("button", { name: "Ada Lovelace" }).focus();
       await userEvent.keyboard("{Enter}");
       expect(onRowClick).toHaveBeenCalledExactlyOnceWith(data[0]);
     });
@@ -515,20 +508,189 @@ describe("DataTable", () => {
       expect(screen.getByText("1 rows selected")).toBeTruthy();
     });
 
-    it("stays away from keyset reads, which have no page count to show", () => {
+  });
+
+  describe("keyset pager", () => {
+    const manyPeople: Person[] = Array.from({ length: 12 }, (_, index) => ({
+      name: `Person ${String(index).padStart(2, "0")}`,
+      email: `person${index}@example.com`,
+      internalId: `person-${index}`,
+    }));
+
+    function keyset(overrides: Partial<{
+      hasNextPage: boolean;
+      isFetching: boolean;
+      onLoadMore: () => void;
+    }> = {}) {
+      return {
+        hasNextPage: false,
+        isFetching: false,
+        onLoadMore: vi.fn(),
+        pageSize: 5,
+        ...overrides,
+      };
+    }
+
+    it("counts up without claiming a total it cannot know", () => {
+      render(
+        <DataTable columns={columns} data={manyPeople} loadMore={keyset()} />,
+      );
+
+      expect(screen.getByText("Page 1")).toBeTruthy();
+      expect(screen.queryByText(/of/)).toBeNull();
+      // A cursor cannot jump to an end it has never seen.
+      expect(screen.queryByRole("button", { name: "Go to first page" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Go to last page" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Rows per page" })).toBeNull();
+    });
+
+    it("slices the cache into pages and walks back without refetching", async () => {
+      const onLoadMore = vi.fn();
       render(
         <DataTable
           columns={columns}
           data={manyPeople}
-          loadMore={{ hasNextPage: true, isFetching: false, onLoadMore: vi.fn() }}
+          loadMore={keyset({ onLoadMore })}
         />,
       );
 
-      expect(screen.queryByText(/^Page \d+ of/)).toBeNull();
-      expect(screen.queryByRole("button", { name: "Go to next page" })).toBeNull();
-      // Nothing is sliced away either: every loaded row stays on screen.
-      expect(renderedNames()).toHaveLength(12);
-      expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+      expect(renderedNames()).toHaveLength(5);
+      expect(screen.getByText("Person 00")).toBeTruthy();
+
+      // Forward into rows already cached: no fetch.
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText("Page 2")).toBeTruthy();
+      expect(screen.getByText("Person 05")).toBeTruthy();
+      expect(screen.queryByText("Person 00")).toBeNull();
+      expect(onLoadMore).not.toHaveBeenCalled();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Go to previous page" }),
+      );
+      expect(screen.getByText("Page 1")).toBeTruthy();
+      expect(screen.getByText("Person 00")).toBeTruthy();
+      expect(onLoadMore).not.toHaveBeenCalled();
+    });
+
+    it("fetches at the edge of the cache and steps on once the rows land", async () => {
+      const onLoadMore = vi.fn();
+      const firstPage = manyPeople.slice(0, 5);
+      const { rerender } = render(
+        <DataTable
+          columns={columns}
+          data={firstPage}
+          loadMore={keyset({ hasNextPage: true, onLoadMore })}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(onLoadMore).toHaveBeenCalledOnce();
+      // Still on page 1 — the rows for page 2 do not exist yet.
+      expect(screen.getByText("Page 1")).toBeTruthy();
+
+      rerender(
+        <DataTable
+          columns={columns}
+          data={manyPeople.slice(0, 10)}
+          loadMore={keyset({ hasNextPage: true, onLoadMore })}
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByText("Page 2")).toBeTruthy());
+      expect(screen.getByText("Person 05")).toBeTruthy();
+    });
+
+    it("stops advancing when the server says there is nothing more", () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople.slice(0, 5)}
+          loadMore={keyset()}
+        />,
+      );
+
+      const next = screen.getByRole("button", { name: "Go to next page" });
+      expect(next.hasAttribute("disabled")).toBe(true);
+      expect(
+        screen.getByRole("button", { name: "Go to previous page" }).hasAttribute("disabled"),
+      ).toBe(true);
+    });
+
+    it("holds the pager still while a fetch is in flight", () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          loadMore={keyset({ hasNextPage: true, isFetching: true })}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Go to next page" }).hasAttribute("disabled"),
+      ).toBe(true);
+    });
+
+    it("returns to the first page when the filter changes", async () => {
+      const onFilterChange = vi.fn();
+      const filters: DataTableFilter[] = [
+        { columnId: "status", type: "select", placeholder: "Status", options: [
+          { value: "A", label: "Alpha" },
+        ] },
+      ];
+      const { rerender } = render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          loadMore={keyset()}
+          filters={filters}
+          filterValues={{}}
+          onFilterChange={onFilterChange}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText("Page 2")).toBeTruthy();
+
+      // The rows behind "page 2" are not the same rows once the filter moves.
+      rerender(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          loadMore={keyset()}
+          filters={filters}
+          filterValues={{ status: "A" }}
+          onFilterChange={onFilterChange}
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByText("Page 1")).toBeTruthy());
+    });
+
+    it("returns to the first page when the sort changes", async () => {
+      const { rerender } = render(
+        <DataTable
+          columns={sortableColumns}
+          data={manyPeople}
+          loadMore={keyset()}
+          sorting={[]}
+          onSortingChange={vi.fn()}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText("Page 2")).toBeTruthy();
+
+      rerender(
+        <DataTable
+          columns={sortableColumns}
+          data={manyPeople}
+          loadMore={keyset()}
+          sorting={[{ id: "name", desc: true }]}
+          onSortingChange={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByText("Page 1")).toBeTruthy());
     });
   });
 
@@ -539,38 +701,92 @@ describe("DataTable", () => {
       render: (person: Person) => <p>Internal ID {person.internalId}</p>,
     };
 
-    it("opens on row click with the activated row's detail", async () => {
-      render(<DataTable columns={columns} data={data} rowViewer={viewer} />);
+    const primary = { columnId: "name" } as const;
+
+    it("opens from the primary cell with the activated row's detail", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          rowViewer={viewer}
+        />,
+      );
 
       expect(screen.queryByRole("dialog")).toBeNull();
 
-      await userEvent.click(screen.getAllByRole("row")[1]!);
+      await userEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
 
       const drawer = await screen.findByRole("dialog");
-      expect(within(drawer).getByText("Ada Lovelace")).toBeTruthy();
       expect(within(drawer).getByText("ada@example.com")).toBeTruthy();
       expect(within(drawer).getByText("Internal ID person-1")).toBeTruthy();
     });
 
-    it("opens on keyboard activation and closes on Escape", async () => {
-      render(<DataTable columns={columns} data={data} rowViewer={viewer} />);
+    it("leaves the rest of the row inert", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          rowViewer={viewer}
+        />,
+      );
 
-      const secondRow = screen.getAllByRole("row")[2]!;
-      expect(secondRow.getAttribute("aria-haspopup")).toBe("dialog");
-      secondRow.focus();
+      // A non-primary cell — the row body no longer opens anything, which is
+      // what frees it to carry action controls.
+      await userEvent.click(screen.getByText("ada@example.com"));
+      expect(screen.queryByRole("dialog")).toBeNull();
+
+      await userEvent.click(screen.getAllByRole("row")[1]!);
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("announces the primary cell as opening a dialog", () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          rowViewer={viewer}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Ada Lovelace" }).getAttribute("aria-haspopup"),
+      ).toBe("dialog");
+    });
+
+    it("opens on keyboard activation and closes on Escape", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          rowViewer={viewer}
+        />,
+      );
+
+      screen.getByRole("button", { name: "Grace Hopper" }).focus();
       await userEvent.keyboard("{Enter}");
 
       const drawer = await screen.findByRole("dialog");
-      expect(within(drawer).getByText("Grace Hopper")).toBeTruthy();
+      expect(within(drawer).getByText("grace@example.com")).toBeTruthy();
 
       await userEvent.keyboard("{Escape}");
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     });
 
     it("closes through the drawer's own close action", async () => {
-      render(<DataTable columns={columns} data={data} rowViewer={viewer} />);
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          rowViewer={viewer}
+        />,
+      );
 
-      await userEvent.click(screen.getAllByRole("row")[1]!);
+      await userEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
       await screen.findByRole("dialog");
 
       await userEvent.click(screen.getByRole("button", { name: "Close" }));
@@ -583,6 +799,7 @@ describe("DataTable", () => {
         <DataTable
           columns={columns}
           data={data}
+          primaryColumn={primary}
           rowViewer={{
             ...viewer,
             fullScreen: { label: "Open full screen", onOpen },
@@ -590,30 +807,162 @@ describe("DataTable", () => {
         />,
       );
 
-      await userEvent.click(screen.getAllByRole("row")[1]!);
+      await userEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
       await screen.findByRole("dialog");
       await userEvent.click(screen.getByRole("button", { name: "Open full screen" }));
 
       expect(onOpen).toHaveBeenCalledExactlyOnceWith(data[0]);
     });
 
-    it("opens from a mobile card too", async () => {
+    it("opens from the mobile card's title", async () => {
       mockDesktop(false);
-      render(<DataTable columns={columns} data={[data[0]!]} rowViewer={viewer} />);
+      render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          primaryColumn={primary}
+          rowViewer={viewer}
+        />,
+      );
 
-      await userEvent.click(screen.getByRole("button", { name: /Ada Lovelace/ }));
+      await userEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
 
       expect(await screen.findByRole("dialog")).toBeTruthy();
     });
 
-    it("stays shut for screens that navigate instead", async () => {
+    it("navigates instead of opening when the screen chose onRowClick", async () => {
       const onRowClick = vi.fn();
-      render(<DataTable columns={columns} data={data} onRowClick={onRowClick} />);
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          onRowClick={onRowClick}
+        />,
+      );
 
-      await userEvent.click(screen.getAllByRole("row")[1]!);
+      await userEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
 
       expect(onRowClick).toHaveBeenCalledExactlyOnceWith(data[0]);
       expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  describe("primary column", () => {
+    it("pins itself first among the data columns", () => {
+      render(
+        <DataTable
+          columns={labelledColumns}
+          data={data}
+          primaryColumn={{ columnId: "email" }}
+        />,
+      );
+
+      expect(
+        screen.getAllByRole("columnheader").map((header) => header.textContent),
+      ).toEqual(["Email", "Name", "Internal ID"]);
+    });
+
+    it("cannot be hidden — it is the only way into a row", async () => {
+      render(
+        <DataTable
+          columns={labelledColumns}
+          data={data}
+          primaryColumn={{ columnId: "name" }}
+          enableColumnVisibility
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "View" }));
+
+      const items = (await screen.findAllByRole("menuitemcheckbox")).map(
+        (item) => item.textContent,
+      );
+      expect(items).not.toContain("Full name");
+      expect(items).toContain("Email address");
+    });
+
+    it("stays plain text when no activation is configured", () => {
+      render(
+        <DataTable columns={columns} data={data} primaryColumn={{ columnId: "name" }} />,
+      );
+
+      expect(screen.queryByRole("button", { name: "Ada Lovelace" })).toBeNull();
+      expect(screen.getByText("Ada Lovelace")).toBeTruthy();
+    });
+  });
+
+  describe("row actions", () => {
+    it("fires the chosen action with its row", async () => {
+      const onSelect = vi.fn();
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          rowActions={(person) => [
+            { key: "reverse", label: `Reverse ${person.name}`, onSelect },
+          ]}
+        />,
+      );
+
+      const menus = screen.getAllByRole("button", { name: "Actions" });
+      expect(menus).toHaveLength(2);
+
+      await userEvent.click(menus[1]!);
+      await userEvent.click(
+        await screen.findByRole("menuitem", { name: "Reverse Grace Hopper" }),
+      );
+
+      expect(onSelect).toHaveBeenCalledExactlyOnceWith(data[1]);
+    });
+
+    it("offers no menu for a row with nothing to do", () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          rowActions={(person) =>
+            person.name === "Ada Lovelace"
+              ? [{ key: "edit", label: "Edit", onSelect: vi.fn() }]
+              : []
+          }
+        />,
+      );
+
+      // Role gating is the screen's business; the table just renders what it gets.
+      expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
+    });
+
+    it("keeps its column out of the view menu", async () => {
+      render(
+        <DataTable
+          columns={labelledColumns}
+          data={data}
+          rowActions={() => [{ key: "edit", label: "Edit", onSelect: vi.fn() }]}
+          enableColumnVisibility
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "View" }));
+
+      const items = (await screen.findAllByRole("menuitemcheckbox")).map(
+        (item) => item.textContent,
+      );
+      expect(items).toEqual(["Full name", "Email address", "Identifier"]);
+    });
+
+    it("puts the menu in the mobile card corner", () => {
+      mockDesktop(false);
+      render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          rowActions={() => [{ key: "edit", label: "Edit", onSelect: vi.fn() }]}
+        />,
+      );
+
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.getByRole("button", { name: "Actions" })).toBeTruthy();
     });
   });
 

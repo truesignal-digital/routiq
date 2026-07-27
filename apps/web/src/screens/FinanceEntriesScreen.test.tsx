@@ -323,14 +323,15 @@ describe("FinanceEntriesScreen", () => {
     });
   });
 
-  it("pages the cursor through load more without changing the filter params", async () => {
+  it("walks the cursor from the pager without changing the filter params", async () => {
     mockUseEntriesValue.hasNextPage = true;
     try {
       const user = userEvent.setup();
       render(<FinanceEntriesScreen />);
 
-      await user.click(screen.getByRole("button", { name: "dataTable.loadMore" }));
+      await user.click(screen.getByRole("button", { name: "dataTable.nextPage" }));
 
+      // Advancing the cursor is a fetch, not a new query key.
       expect(mockUseEntriesValue.fetchNextPage).toHaveBeenCalledOnce();
       expect(issuedQueries).toEqual([{}]);
     } finally {

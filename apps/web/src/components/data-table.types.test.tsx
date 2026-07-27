@@ -55,4 +55,50 @@ describe("DataTable prop exclusivity", () => {
 
     expect(both).toBeTruthy();
   });
+
+  it("takes a primary column and row actions alongside either activation", () => {
+    const configured = (
+      <DataTable
+        columns={columns}
+        data={data}
+        primaryColumn={{ columnId: "name" }}
+        rowActions={(person) => [
+          { key: "open", label: person.name, onSelect: vi.fn(), destructive: true },
+        ]}
+        rowViewer={viewer}
+      />
+    );
+
+    expect(configured).toBeTruthy();
+  });
+
+  it("types a row action's onSelect to the table's own row", () => {
+    // The generic is pinned so a wrong handler blames itself rather than
+    // re-inferring TData from the mistake.
+    const typed = (
+      <DataTable<Person>
+        columns={columns}
+        data={data}
+        // @ts-expect-error the action receives a Person, not a string
+        rowActions={() => [
+          { key: "open", label: "Open", onSelect: (row: string) => row.trim() },
+        ]}
+      />
+    );
+
+    expect(typed).toBeTruthy();
+  });
+
+  it("keeps the keyset page size a number", () => {
+    const sized = (
+      <DataTable
+        columns={columns}
+        data={data}
+        // @ts-expect-error the page size mirrors the read's numeric limit
+        loadMore={{ ...loadMore, pageSize: "50" }}
+      />
+    );
+
+    expect(sized).toBeTruthy();
+  });
 });

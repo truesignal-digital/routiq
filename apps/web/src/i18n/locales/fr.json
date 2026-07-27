@@ -468,8 +468,6 @@
     "close": "Fermer"
   },
   "dataTable": {
-    "loading": "Chargement…",
-    "loadMore": "Charger plus",
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
     "selectedCount": "{count, plural, one {# ligne sélectionnée} other {# lignes sélectionnées}}",
     "selectAll": "Tout sélectionner",
@@ -486,7 +484,9 @@
     "lastPage": "Aller à la dernière page",
     "viewer": {
       "close": "Fermer"
-    }
+    },
+    "page": "Page {page}",
+    "actions": "Actions"
   },
   "breadcrumb": {
     "label": "Fil d'Ariane",

@@ -132,6 +132,16 @@ describe("SiteHeader breadcrumb", () => {
     expect(current.closest("a")).toBeNull();
   });
 
+  it("keeps the divider a short centred tick, not a full-height rule", () => {
+    const { container } = render(<SiteHeader />);
+
+    const separator = container.querySelector('[data-slot="separator"]');
+    // The vendored separator defaults to `data-vertical:self-stretch`, which
+    // ran this the whole height of the header; dashboard-01 opts out.
+    expect(separator?.className).toContain("h-4");
+    expect(separator?.className).toContain("data-vertical:self-auto");
+  });
+
   it("replaces the old plain section title", () => {
     pathname = "/assets";
     render(<SiteHeader />);

@@ -468,8 +468,6 @@
     "close": "Close"
   },
   "dataTable": {
-    "loading": "Loading…",
-    "loadMore": "Load more",
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
     "selectedCount": "{count, plural, one {# row selected} other {# rows selected}}",
     "selectAll": "Select all",
@@ -486,7 +484,9 @@
     "lastPage": "Go to last page",
     "viewer": {
       "close": "Close"
-    }
+    },
+    "page": "Page {page}",
+    "actions": "Actions"
   },
   "breadcrumb": {
     "label": "Breadcrumb",
