@@ -108,6 +108,7 @@
     "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
     "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
     "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
+    "ACTIVITY_CLOSE_BLOCKED": "Impossible de clôturer : il manque les dates réelles ou au moins un engin affecté.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {

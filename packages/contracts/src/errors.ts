@@ -39,6 +39,7 @@ export const COMMAND_ERROR_CODES = [
   "ENTRY_ALREADY_REVERSED",
   "PERIOD_LOCKED",
   "CATEGORY_KIND_MISMATCH",
+  "ACTIVITY_CLOSE_BLOCKED",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
@@ -48,9 +49,34 @@ export const COMMAND_WARNING_CODES = [
   "EVIDENCE_MISSING",
   "LATE_POSTING",
   "PERIOD_HAS_SUBMITTED_ENTRIES",
+  "ACTIVITY_MISSING_START_READING",
+  "ACTIVITY_MISSING_END_READING",
+  "ACTIVITY_NO_LEGS",
+  "ACTIVITY_MISSING_CREW",
+  "ACTIVITY_NO_REVENUE",
+  "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED",
+  "METER_READING_DECREASED",
+  "POSTING_DEFERRED_PERIOD_LOCKED",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];
+
+/**
+ * The subset of warning codes an activity close may record on the row
+ * (`activities.completeness_codes`) as well as return. One vocabulary, not two:
+ * membership is proven at compile time by the satisfies below, so a code can
+ * never exist on the row without also being a legal API warning.
+ */
+export const ACTIVITY_COMPLETENESS_CODES = [
+  "ACTIVITY_MISSING_START_READING",
+  "ACTIVITY_MISSING_END_READING",
+  "ACTIVITY_NO_LEGS",
+  "ACTIVITY_MISSING_CREW",
+  "ACTIVITY_NO_REVENUE",
+  "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED",
+] as const satisfies readonly CommandWarningCode[];
+
+export type ActivityCompletenessCode = (typeof ACTIVITY_COMPLETENESS_CODES)[number];
 
 export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode;
 

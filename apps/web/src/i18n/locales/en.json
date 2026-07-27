@@ -108,6 +108,7 @@
     "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
     "PERIOD_LOCKED": "This period is locked. No postings are possible.",
     "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense).",
+    "ACTIVITY_CLOSE_BLOCKED": "Cannot close: the actual dates or at least one assigned asset are missing.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
