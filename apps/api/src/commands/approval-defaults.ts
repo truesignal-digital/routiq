@@ -201,12 +201,30 @@ export function defaultApprovalRules(
     );
   }
 
-  // Activities (§5.1): auto for the roles that run operations. "1 approval" on
-  // reopen is realized the way reopen-period already realizes it — a restricted
-  // role plus a mandatory reason, not a second approval step (§5.2).
+  // Registering a person is back-office work: managers only.
   for (const commandType of ["register-person"]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
+        workspaceId,
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  // Recording operational facts is auto for everyone who writes (§5.1, §5.2:
+  // legs, readings and assignments save directly with full audit and are
+  // corrected by superseding commands — no ceremony). The field clerk is the
+  // whole point, so a rule that omitted FIELD_SUBMITTER would let the role check
+  // pass and then 403 on approval.
+  for (const commandType of ["create-activity"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({
         workspaceId,
         commandType,
         categoryCode: null,

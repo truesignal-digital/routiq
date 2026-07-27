@@ -20,3 +20,4 @@ export * from "./commands/lock-period.js";
 export * from "./reads/finance.js";
 export * from "./commands/update-approval-threshold.js";
 export * from "./commands/register-person.js";
+export * from "./commands/create-activity.js";
