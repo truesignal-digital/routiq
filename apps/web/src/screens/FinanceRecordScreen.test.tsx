@@ -227,6 +227,31 @@ describe("finance record form", () => {
     expect(category.textContent).not.toContain("FUEL");
   });
 
+  it("renders the direction toggle as a stock tabs pill", () => {
+    renderScreen();
+
+    const list = screen.getByRole("tablist");
+    expect(list.className).toContain("bg-muted");
+    expect(
+      list.className
+        .split(/\s+/)
+        .filter((c) => c.startsWith("group-data-horizontal/tabs:h-")),
+    ).toEqual(["group-data-horizontal/tabs:h-11"]);
+
+    for (const tab of screen.getAllByRole("tab")) {
+      // Sized by the strip; a height here would push the pill past its edges.
+      expect(tab.className).toContain("h-[calc(100%-1px)]");
+      expect(tab.className).not.toMatch(/(^|\s)min-h-/);
+    }
+
+    const active = screen.getByRole("tab", { name: "Expense" });
+    expect(active.hasAttribute("data-active")).toBe(true);
+    expect(active.className).toContain("data-active:bg-background");
+    expect(active.className).toContain(
+      "group-data-[variant=default]/tabs-list:data-active:shadow-sm",
+    );
+  });
+
   it("clears the chosen category when the direction flips", async () => {
     const user = userEvent.setup();
     renderScreen();

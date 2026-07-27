@@ -38,14 +38,12 @@ export function FinanceNav({ className }: { className?: string }) {
           if (next) void navigate({ to: next.to });
         }}
       >
-        <TabsList>
+        {/* Height belongs on the strip, never on a trigger: the trigger is
+            `h-[calc(100%-1px)]`, so sizing it instead pushes the active pill
+            out past the muted background. */}
+        <TabsList className="group-data-horizontal/tabs:h-11">
           {sections.map(({ key, to }) => (
-            <TabsTrigger
-              key={key}
-              value={to}
-              className="min-h-11 px-3"
-              render={<Link to={to} />}
-            >
+            <TabsTrigger key={key} value={to} render={<Link to={to} />}>
               {t(`finance.navigation.${key}`)}
               {key === "approvals" && approvalsTotal > 0 && (
                 <Badge

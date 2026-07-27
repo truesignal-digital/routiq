@@ -151,6 +151,49 @@ describe("FinanceNav", () => {
     ).toBe(true);
   });
 
+  describe("stock pill rendering", () => {
+    it("keeps the muted strip one continuous box", () => {
+      render(<FinanceNav />);
+      const list = screen.getByRole("tablist");
+
+      expect(list.className).toContain("bg-muted");
+      expect(list.className).toContain("rounded-lg");
+      // The stock height and our override must collapse to one class, or the
+      // winner is left to CSS source order. (The vertical height is separate.)
+      expect(
+        list.className
+          .split(/\s+/)
+          .filter((c) => c.startsWith("group-data-horizontal/tabs:h-")),
+      ).toEqual(["group-data-horizontal/tabs:h-11"]);
+    });
+
+    it("never lets a trigger set its own height", () => {
+      render(<FinanceNav />);
+
+      // A trigger is sized by the strip via h-[calc(100%-1px)]. Giving it a
+      // height of its own paints the active pill past the strip's edges.
+      for (const tab of screen.getAllByRole("tab")) {
+        expect(tab.className).toContain("h-[calc(100%-1px)]");
+        expect(tab.className).not.toMatch(/(^|\s)min-h-/);
+      }
+    });
+
+    it("raises the active tab with the stock pill classes", () => {
+      render(<FinanceNav />);
+      const active = screen
+        .getAllByRole("tab")
+        .find((tab) => tab.getAttribute("aria-selected") === "true");
+
+      // Present even though the trigger renders as a Link.
+      expect(active?.hasAttribute("data-active")).toBe(true);
+      expect(active?.className).toContain("data-active:bg-background");
+      expect(active?.className).toContain(
+        "group-data-[variant=default]/tabs-list:data-active:shadow-sm",
+      );
+      expect(active?.className).toContain("rounded-md");
+    });
+  });
+
   it("badges no tab when nothing is pending", () => {
     approvalsTotal = 0;
     const { container } = render(<FinanceNav />);
