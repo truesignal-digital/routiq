@@ -358,6 +358,24 @@ describe("DataTable", () => {
       expect(header?.className).toContain("top-0");
       expect(header?.className).toContain("bg-muted");
     });
+
+    it("wraps the table in the block's bordered shell", () => {
+      const { container } = render(<DataTable columns={columns} data={data} />);
+
+      const shell = container.querySelector('[data-slot="data-table-shell"]');
+      expect(shell?.className).toContain("rounded-lg");
+      expect(shell?.className).toContain("border");
+      expect(shell?.className).toContain("overflow-hidden");
+      expect(shell?.querySelector("table")).toBeTruthy();
+    });
+
+    it("leaves the mobile card list unwrapped", () => {
+      mockDesktop(false);
+      const { container } = render(<DataTable columns={columns} data={data} />);
+
+      expect(container.querySelector("table")).toBeNull();
+      expect(container.querySelector('[data-slot="data-table-shell"]')).toBeNull();
+    });
   });
 
   describe("pagination footer", () => {

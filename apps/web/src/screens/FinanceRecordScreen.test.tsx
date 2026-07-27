@@ -208,6 +208,25 @@ describe("finance record form", () => {
     );
   });
 
+  it("shows localized labels in the closed select triggers, never raw codes", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    // Defaults to CASH without the popup ever opening.
+    const payment = screen.getByLabelText("Payment method");
+    expect(payment.textContent).toContain("Cash");
+    expect(payment.textContent).not.toContain("CASH");
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("Douala"),
+    );
+
+    await chooseFuelCategory(user);
+    const category = screen.getByLabelText("Category");
+    expect(category.textContent).toContain("Fuel");
+    expect(category.textContent).not.toContain("FUEL");
+  });
+
   it("clears the chosen category when the direction flips", async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -216,7 +235,8 @@ describe("finance record form", () => {
       "Choose a category",
     );
 
-    await user.click(screen.getByRole("button", { name: "Revenue" }));
+    // Stock Tabs exposes the direction toggle as a tablist, not two buttons.
+    await user.click(screen.getByRole("tab", { name: "Revenue" }));
 
     await waitFor(() =>
       expect(screen.getByLabelText("Category").textContent).toContain(

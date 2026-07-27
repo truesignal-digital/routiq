@@ -1,5 +1,6 @@
 import { DollarSign, Menu, Truck, type LucideIcon } from "lucide-react";
 import type { ModuleCode } from "@routiq/contracts";
+import { isRouteActive } from "../lib/route-match.js";
 
 export interface ShellSection {
   key: "assets" | "finances" | "more";
@@ -34,19 +35,9 @@ export function visibleSections(enabledModules: ModuleCode[] | undefined): Shell
   );
 }
 
-function withoutTrailingSlash(path: string): string {
-  return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
-}
-
-/**
- * Whole-segment exact-or-child match. A bare `startsWith` would light up
- * `/assets` for `/assets-archive`, and a section whose `to` is a sibling route
- * would steal its neighbour's highlight.
- */
+/** Whole-segment exact-or-child match over the subtree the section owns. */
 export function isSectionActive(section: ShellSection, pathname: string): boolean {
-  const root = withoutTrailingSlash(section.match ?? section.to);
-  const path = withoutTrailingSlash(pathname);
-  return path === root || path.startsWith(`${root}/`);
+  return isRouteActive(section.match ?? section.to, pathname);
 }
 
 /** The one section owning `pathname`, or undefined outside every section. */

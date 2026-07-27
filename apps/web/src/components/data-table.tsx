@@ -414,61 +414,66 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       {toolbar}
 
       {isDesktop ? (
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-muted">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} aria-sort={ariaSort(header.column)}>
-                    {header.isPlaceholder ? null : isSortable(header.column) ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="-ml-2.5"
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
+        <div
+          data-slot="data-table-shell"
+          className="overflow-hidden rounded-lg border"
+        >
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-muted">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} aria-sort={ariaSort(header.column)}>
+                      {header.isPlaceholder ? null : isSortable(header.column) ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="-ml-2.5"
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                          <SortIndicator direction={header.column.getIsSorted()} />
+                        </Button>
+                      ) : (
+                        flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
-                        )}
-                        <SortIndicator direction={header.column.getIsSorted()} />
-                      </Button>
-                    ) : (
-                      flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() ? "selected" : undefined}
-                className={cn(activateRow && "cursor-pointer")}
-                tabIndex={activateRow ? 0 : undefined}
-                aria-haspopup={rowViewer ? "dialog" : undefined}
-                onClick={activateRow ? () => activateRow(row.original) : undefined}
-                onKeyDown={
-                  activateRow
-                    ? (event) => handleRowKeyDown(event, row, activateRow)
-                    : undefined
-                }
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                        )
+                      )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                  className={cn(activateRow && "cursor-pointer")}
+                  tabIndex={activateRow ? 0 : undefined}
+                  aria-haspopup={rowViewer ? "dialog" : undefined}
+                  onClick={activateRow ? () => activateRow(row.original) : undefined}
+                  onKeyDown={
+                    activateRow
+                      ? (event) => handleRowKeyDown(event, row, activateRow)
+                      : undefined
+                  }
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           {rows.map((row) => {

@@ -4,7 +4,56 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+interface DerivedItem {
+  value: unknown
+  label: React.ReactNode
+}
+
+/**
+ * Collect the `<SelectItem>`s declared in the subtree. They live inside a
+ * portal that only mounts while the popup is open, so the trigger cannot read
+ * their text — but the elements are plain JSX here, before rendering, and can
+ * be walked.
+ */
+function collectItems(node: React.ReactNode, into: DerivedItem[]): void {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return
+
+    if (child.type === SelectItem) {
+      const { value, children } = child.props as SelectPrimitive.Item.Props
+      into.push({ value, label: children })
+      return
+    }
+
+    const { children } = child.props as { children?: React.ReactNode }
+    if (children !== undefined) collectItems(children, into)
+  })
+}
+
+/**
+ * Base UI renders the raw value in a closed trigger unless it is handed an
+ * `items` map, which is how a payment select showed "CASH" instead of
+ * « Espèces ». Deriving that map from the items the caller already declared
+ * fixes every call site without one having to repeat its options.
+ */
+function Select<Value, Multiple extends boolean | undefined = false>({
+  items,
+  children,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const derivedItems = React.useMemo(() => {
+    if (items !== undefined) return items
+    const collected: DerivedItem[] = []
+    collectItems(children, collected)
+    return collected.length > 0 ? collected : undefined
+  }, [items, children])
+
+  return (
+    <SelectPrimitive.Root items={derivedItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

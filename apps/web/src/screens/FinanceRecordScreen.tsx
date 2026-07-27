@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useMeContext } from "@/auth/me.js";
 import { commandClient } from "@/commands/instance.js";
@@ -264,32 +265,28 @@ function RecordForm({
           name="direction"
           render={({ field }) => (
             <FormItem>
-              <div className="flex gap-2">
-                {(["EXPENSE", "REVENUE"] as const).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-                      field.value === value
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
-                    }`}
-                    onClick={() => {
-                      field.onChange(value);
-                      form.setValue("categoryCode", "", {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                    }}
-                  >
-                    {t(
-                      value === "EXPENSE"
-                        ? "finance.record.expenseLabel"
-                        : "finance.record.revenueLabel",
-                    )}
-                  </button>
-                ))}
-              </div>
+              <Tabs
+                value={field.value}
+                onValueChange={(value) => {
+                  if (value !== "EXPENSE" && value !== "REVENUE") return;
+                  field.onChange(value);
+                  // Expense and revenue draw from different category lists, so
+                  // the old pick cannot survive the flip.
+                  form.setValue("categoryCode", "", {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
+              >
+                <TabsList className="w-full group-data-horizontal/tabs:h-11">
+                  <TabsTrigger value="EXPENSE">
+                    {t("finance.record.expenseLabel")}
+                  </TabsTrigger>
+                  <TabsTrigger value="REVENUE">
+                    {t("finance.record.revenueLabel")}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
               <FormMessage />
             </FormItem>
           )}

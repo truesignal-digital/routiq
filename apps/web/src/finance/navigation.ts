@@ -1,4 +1,5 @@
 import type { ModuleCode, Role } from "@routiq/contracts";
+import { isRouteActive } from "../lib/route-match.js";
 import { canManagePeriods, canRecordFinance } from "./permissions.js";
 
 export type FinanceSectionKey = "record" | "entries" | "approvals" | "periods";
@@ -31,4 +32,16 @@ export function visibleFinanceSections(
     if (key === "approvals" || key === "periods") return canManage;
     return true;
   });
+}
+
+/**
+ * The section owning `pathname`, or undefined outside finance. Child routes
+ * count, so `/finance/entries/<id>` keeps Écritures lit; the four section
+ * paths are siblings, so at most one can match.
+ */
+export function activeFinanceSection(
+  sections: readonly FinanceSection[],
+  pathname: string,
+): FinanceSection | undefined {
+  return sections.find((section) => isRouteActive(section.to, pathname));
 }
