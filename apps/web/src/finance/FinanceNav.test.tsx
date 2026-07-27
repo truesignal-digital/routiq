@@ -136,12 +136,25 @@ describe("FinanceNav", () => {
     expect(navigate).toHaveBeenCalledWith({ to: "/finance/periods" });
   });
 
-  it("badges the pending approvals count", () => {
+  it("badges the pending approvals count inside the approvals tab", () => {
     approvalsTotal = 3;
     render(<FinanceNav />);
 
+    const badge = screen.getByLabelText("finance.navigation.approvalsBadge:3");
+    expect(badge.textContent).toBe("3");
+    // The block renders the count as a Badge pill within the trigger itself.
+    expect(badge.getAttribute("data-slot")).toBe("badge");
     expect(
-      screen.getByLabelText("finance.navigation.approvalsBadge:3").textContent,
-    ).toBe("3");
+      screen
+        .getByRole("tab", { name: /finance\.navigation\.approvals/ })
+        .contains(badge),
+    ).toBe(true);
+  });
+
+  it("badges no tab when nothing is pending", () => {
+    approvalsTotal = 0;
+    const { container } = render(<FinanceNav />);
+
+    expect(container.querySelector('[data-slot="badge"]')).toBeNull();
   });
 });

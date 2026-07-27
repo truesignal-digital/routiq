@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ColumnDef, RowSelectionState, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  RowSelectionState,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DataTable, type DataTableFilter } from "./data-table.js";
+import {
+  DataTable,
+  DataTableViewOptions,
+  type DataTableFilter,
+} from "./data-table.js";
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
@@ -287,6 +297,48 @@ describe("DataTable", () => {
       render(<DataTable columns={labelledColumns} data={data} />);
 
       expect(screen.queryByRole("button", { name: "View" })).toBeNull();
+    });
+
+    it("drives the table from a view menu the screen placed itself", async () => {
+      function Screen() {
+        const [visibility, setVisibility] = useState<VisibilityState>({});
+        return (
+          <>
+            <DataTableViewOptions
+              columns={labelledColumns}
+              value={visibility}
+              onChange={setVisibility}
+            />
+            <DataTable
+              columns={labelledColumns}
+              data={data}
+              columnVisibility={visibility}
+              onColumnVisibilityChange={setVisibility}
+            />
+          </>
+        );
+      }
+
+      render(<Screen />);
+      expect(screen.getByRole("columnheader", { name: "Email" })).toBeTruthy();
+
+      // Proves the standalone control resolves the same column ids the table does.
+      await userEvent.click(screen.getByRole("button", { name: "View" }));
+      await userEvent.click(
+        await screen.findByRole("menuitemcheckbox", { name: "Email address" }),
+      );
+
+      expect(screen.queryByRole("columnheader", { name: "Email" })).toBeNull();
+      expect(screen.queryByText("ada@example.com")).toBeNull();
+      expect(screen.getByText("Ada Lovelace")).toBeTruthy();
+    });
+
+    it("renders only one view menu when the table embeds its own", () => {
+      render(
+        <DataTable columns={labelledColumns} data={data} enableColumnVisibility />,
+      );
+
+      expect(screen.getAllByRole("button", { name: "View" })).toHaveLength(1);
     });
   });
 

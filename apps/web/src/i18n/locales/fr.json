@@ -299,6 +299,7 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture pour cette succursale.",
       "loadMore": "Charger plus",
+      "recordAction": "Saisir une écriture",
       "status": {
         "SUBMITTED": "En attente",
         "POSTED": "Comptabilisée",

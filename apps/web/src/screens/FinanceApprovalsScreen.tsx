@@ -2,12 +2,12 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { z } from "zod";
 import { useMeContext } from "@/auth/me.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
-import { DataTable } from "@/components/data-table";
+import { DataTable, DataTableViewOptions } from "@/components/data-table";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { FinanceNav } from "@/finance/FinanceNav.js";
+import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
@@ -54,6 +54,7 @@ export function FinanceApprovalsScreen() {
   const approvalsQuery = useApprovals(canApprove);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [removedEntryIds, setRemovedEntryIds] = useState<Set<string>>(new Set());
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
   const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
@@ -244,7 +245,15 @@ export function FinanceApprovalsScreen() {
             onBack={() => void navigate({ to: "/assets" })}
             backLabel={t("finance.approvals.back")}
           />
-          <FinanceNav />
+          <FinanceToolbar>
+            {!approvalsQuery.isPending && !approvalsQuery.isError && (
+              <DataTableViewOptions
+                columns={columns}
+                value={columnVisibility}
+                onChange={setColumnVisibility}
+              />
+            )}
+          </FinanceToolbar>
 
           {approvalsQuery.isPending ? (
             <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
@@ -261,7 +270,8 @@ export function FinanceApprovalsScreen() {
                 columns={columns}
                 data={entries}
                 getRowId={(entry) => entry.id}
-                enableColumnVisibility
+                columnVisibility={columnVisibility}
+                onColumnVisibilityChange={setColumnVisibility}
                 emptyState={
                   <EmptyState
                     icon={<ClipboardCheck className="size-7" aria-hidden />}

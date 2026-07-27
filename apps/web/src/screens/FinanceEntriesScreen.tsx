@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
-import { FileText } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import { FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   DataTable,
+  DataTableViewOptions,
   type DataTableFilter,
   type DataTableFilterOption,
   type DataTableFilterValues,
 } from "@/components/data-table";
+import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -16,7 +18,7 @@ import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/model.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
-import { FinanceNav } from "@/finance/FinanceNav.js";
+import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { canRecordFinance } from "@/finance/permissions.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { useEntries } from "@/finance/useEntries.js";
@@ -35,6 +37,8 @@ export function FinanceEntriesScreen() {
   // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
   // does the filtering, so the table never narrows rows itself.
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
+  // Owned here so the view menu can sit in the toolbar row beside the tabs.
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
 
   const entriesQuery = useEntries({
@@ -185,7 +189,19 @@ export function FinanceEntriesScreen() {
         onBack={() => void navigate({ to: "/assets" })}
         backLabel={t("finance.entries.back")}
       />
-      <FinanceNav />
+      <FinanceToolbar>
+        <DataTableViewOptions
+          columns={columns}
+          value={columnVisibility}
+          onChange={setColumnVisibility}
+        />
+        {canView && (
+          <Button size="sm" render={<Link to="/finance/record" />}>
+            <Plus aria-hidden />
+            {t("finance.entries.recordAction")}
+          </Button>
+        )}
+      </FinanceToolbar>
 
       {entriesQuery.isError ? (
         <ErrorState
@@ -206,7 +222,8 @@ export function FinanceEntriesScreen() {
             filters={filters}
             filterValues={filterValues}
             onFilterChange={setFilterValues}
-            enableColumnVisibility
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
             rowViewer={{
               title: (entry) => entry.entryNumber,
               description: (entry) =>

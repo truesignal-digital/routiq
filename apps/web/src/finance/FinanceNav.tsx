@@ -1,13 +1,14 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "../auth/me.js";
+import { Badge } from "../components/ui/badge.js";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs.js";
 import { cn } from "../lib/utils.js";
 import { useApprovals } from "./useApprovals.js";
 import { activeFinanceSection, visibleFinanceSections } from "./navigation.js";
 import { canManagePeriods } from "./permissions.js";
 
-export function FinanceNav() {
+export function FinanceNav({ className }: { className?: string }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -24,7 +25,10 @@ export function FinanceNav() {
   const active = activeFinanceSection(sections, pathname);
 
   return (
-    <nav aria-label={t("finance.navigation.label")} className="mt-4 overflow-x-auto">
+    <nav
+      aria-label={t("finance.navigation.label")}
+      className={cn("mt-4 overflow-x-auto", className)}
+    >
       <Tabs
         value={active?.to ?? null}
         onValueChange={(value) => {
@@ -44,17 +48,15 @@ export function FinanceNav() {
             >
               {t(`finance.navigation.${key}`)}
               {key === "approvals" && approvalsTotal > 0 && (
-                <span
+                <Badge
+                  variant="secondary"
                   aria-label={t("finance.navigation.approvalsBadge", {
                     count: approvalsTotal,
                   })}
-                  className={cn(
-                    "inline-flex min-w-5 items-center justify-center rounded-full",
-                    "bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground",
-                  )}
+                  className="px-1.5"
                 >
                   {approvalsTotal}
-                </span>
+                </Badge>
               )}
             </TabsTrigger>
           ))}

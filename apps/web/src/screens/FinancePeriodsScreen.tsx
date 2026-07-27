@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { formatDate } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { DataTable } from "@/components/data-table";
+import { DataTable, DataTableViewOptions } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import {
@@ -46,7 +46,7 @@ import {
   reopenPeriodPayload,
   type PeriodRead,
 } from "@routiq/contracts";
-import { FinanceNav } from "@/finance/FinanceNav.js";
+import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
@@ -65,6 +65,7 @@ export function FinancePeriodsScreen() {
   const periodsQuery = usePeriods();
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [removedPeriods, setRemovedPeriods] = useState<Set<string>>(new Set());
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const lockIntentRef = useRef<CommandIntent<LockPeriodPayloadType> | undefined>(undefined);
   const reopenIntentRef = useRef<CommandIntent<ReopenPeriodPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
@@ -216,7 +217,15 @@ export function FinancePeriodsScreen() {
         onBack={() => void navigate({ to: "/assets" })}
         backLabel={t("finance.periods.back")}
       />
-      <FinanceNav />
+      <FinanceToolbar>
+        {!periodsQuery.isPending && !periodsQuery.isError && (
+          <DataTableViewOptions
+            columns={columns}
+            value={columnVisibility}
+            onChange={setColumnVisibility}
+          />
+        )}
+      </FinanceToolbar>
 
       {periodsQuery.isPending ? (
         <LoadingState className="mt-6" label={t("finance.periods.loading")} />
@@ -234,7 +243,8 @@ export function FinancePeriodsScreen() {
             data={periods}
             getRowId={(period) => period.periodCode}
             defaultSorting={[{ id: "periodCode", desc: true }]}
-            enableColumnVisibility
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
             // The periods read is unpaginated, so the page count is real.
             pagination={{ defaultPageSize: 10 }}
             emptyState={

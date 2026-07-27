@@ -299,6 +299,7 @@
       "retry": "Try again",
       "empty": "No entries for this branch.",
       "loadMore": "Load more",
+      "recordAction": "Record an entry",
       "status": {
         "SUBMITTED": "Pending",
         "POSTED": "Posted",

@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { ReactNode } from "react";
 import type { UseEntriesParams } from "../finance/useEntries.js";
 
 /**
@@ -38,7 +39,8 @@ vi.mock("react-i18next", async () => {
         key === "finance.entries.filters.assetOption"
           ? `${String(options?.["code"])} — ${String(options?.["name"])}`
           : key,
-      i18n: { resolvedLanguage: "en" },
+      // `errorMessage` consults this instance for the module-disabled state.
+      i18n: { resolvedLanguage: "en", exists: () => true, t: (key: string) => key },
     }),
     initReactI18next: {
       type: "3rdParty",
@@ -52,6 +54,11 @@ const navigate = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
   useParams: () => ({}),
+  Link: ({ to, children, ...props }: { to: string; children?: ReactNode }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("../auth/me.js", () => ({
@@ -152,6 +159,7 @@ vi.mock("../finance/useEntry.js", () => ({
   }),
 }));
 
+import { canRecordFinance } from "../finance/permissions.js";
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
 
 const DEBOUNCE_MS = 300;
@@ -176,6 +184,9 @@ function mockDesktop() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks keeps implementations, so an opt-out set by one test would
+  // otherwise follow the next one.
+  vi.mocked(canRecordFinance).mockReturnValue(true);
   mockDesktop();
   issuedQueries.length = 0;
 });
@@ -256,6 +267,29 @@ describe("FinanceEntriesScreen", () => {
     await waitFor(() =>
       expect(issuedQueries).toEqual([{}, { status: "POSTED" }]),
     );
+  });
+
+  it("offers the view menu and the record action in the toolbar row", () => {
+    render(<FinanceEntriesScreen />);
+
+    expect(screen.getByRole("button", { name: "dataTable.view" })).toBeTruthy();
+
+    const action = screen.getByRole("link", {
+      name: /finance\.entries\.recordAction/,
+    });
+    expect(action.getAttribute("href")).toBe("/finance/record");
+  });
+
+  it("drops the record action along with the screen when finance writing is denied", () => {
+    // On this screen the action's gate is the screen's own gate: a role that
+    // cannot record cannot reach the list either.
+    vi.mocked(canRecordFinance).mockReturnValue(false);
+    render(<FinanceEntriesScreen />);
+
+    expect(
+      screen.queryByRole("link", { name: /finance\.entries\.recordAction/ }),
+    ).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("opens the row drawer instead of leaving the list", async () => {

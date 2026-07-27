@@ -165,7 +165,11 @@ interface DataTableBaseProps<TData> {
   defaultSorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
 
+  /** Embeds the view menu in the table's own toolbar. */
   enableColumnVisibility?: boolean;
+  /** Set both to place a `DataTableViewOptions` elsewhere on the screen. */
+  columnVisibility?: VisibilityState;
+  onColumnVisibilityChange?: (visibility: VisibilityState) => void;
 
   enableRowSelection?: boolean;
   rowSelection?: RowSelectionState;
@@ -193,6 +197,8 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     defaultSorting,
     onSortingChange,
     enableColumnVisibility = false,
+    columnVisibility,
+    onColumnVisibilityChange,
     enableRowSelection = false,
     rowSelection,
     onRowSelectionChange,
@@ -208,7 +214,8 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   const [internalSorting, setInternalSorting] = useState<SortingState>(
     () => defaultSorting ?? [],
   );
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [internalColumnVisibility, setInternalColumnVisibility] =
+    useState<VisibilityState>({});
   const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
   const [paginationState, setPaginationState] = useState<PaginationState>(() => ({
     pageIndex: 0,
@@ -226,6 +233,16 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
 
   const sortingState = sorting ?? internalSorting;
   const rowSelectionState = rowSelection ?? internalRowSelection;
+  const columnVisibilityState = columnVisibility ?? internalColumnVisibility;
+
+  const handleColumnVisibilityChange: OnChangeFn<VisibilityState> = (updater) => {
+    const next =
+      typeof updater === "function" ? updater(columnVisibilityState) : updater;
+    if (columnVisibility === undefined) {
+      setInternalColumnVisibility(next);
+    }
+    onColumnVisibilityChange?.(next);
+  };
 
   const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
     const next = typeof updater === "function" ? updater(sortingState) : updater;
@@ -285,7 +302,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     columns: tableColumns,
     state: {
       sorting: sortingState,
-      columnVisibility,
+      columnVisibility: columnVisibilityState,
       rowSelection: rowSelectionState,
       ...(pagination ? { pagination: paginationState } : {}),
     },
@@ -304,7 +321,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     manualSorting: sorting !== undefined,
     enableRowSelection,
     onSortingChange: handleSortingChange,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: handleColumnVisibilityChange,
     onRowSelectionChange: handleRowSelectionChange,
     ...(getRowId ? { getRowId } : {}),
   });
@@ -364,31 +381,15 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       )}
 
       {enableColumnVisibility && hideableColumns.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button type="button" variant="outline" size="sm" className="ml-auto">
-                <SlidersHorizontal aria-hidden />
-                {t("dataTable.view")}
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>{t("dataTable.columns")}</DropdownMenuLabel>
-              {hideableColumns.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  closeOnClick={false}
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(checked) => column.toggleVisibility(checked)}
-                >
-                  {columnLabel(column)}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ColumnVisibilityMenu
+          className="ml-auto"
+          entries={hideableColumns.map((column) => ({
+            id: column.id,
+            label: columnLabel(column),
+            visible: column.getIsVisible(),
+          }))}
+          onToggle={(id, visible) => table.getColumn(id)?.toggleVisibility(visible)}
+        />
       )}
     </div>
   ) : null;
@@ -747,6 +748,98 @@ function DataTablePager<TData>({
         </div>
       </div>
     </div>
+  );
+}
+
+interface ColumnVisibilityEntry {
+  id: string;
+  label: string;
+  visible: boolean;
+}
+
+function ColumnVisibilityMenu({
+  entries,
+  onToggle,
+  className,
+}: {
+  entries: ColumnVisibilityEntry[];
+  onToggle: (id: string, visible: boolean) => void;
+  className?: string | undefined;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button type="button" variant="outline" size="sm" className={className}>
+            <SlidersHorizontal aria-hidden />
+            {t("dataTable.view")}
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{t("dataTable.columns")}</DropdownMenuLabel>
+          {entries.map((entry) => (
+            <DropdownMenuCheckboxItem
+              key={entry.id}
+              closeOnClick={false}
+              checked={entry.visible}
+              onCheckedChange={(checked) => onToggle(entry.id, checked)}
+            >
+              {entry.label}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** TanStack's own rule: an explicit `id`, else the accessor key. */
+function columnDefId<TData>(column: ColumnDef<TData>, index: number): string {
+  if (column.id !== undefined) return column.id;
+  if ("accessorKey" in column && column.accessorKey !== undefined) {
+    return String(column.accessorKey);
+  }
+  return String(index);
+}
+
+/**
+ * The column-visibility control on its own, for screens that place it in a
+ * toolbar of their own instead of letting `DataTable` embed it. Pair it with
+ * `DataTable`'s controlled `columnVisibility` props; leave
+ * `enableColumnVisibility` off so the table does not render a second one.
+ */
+export function DataTableViewOptions<TData>({
+  columns,
+  value,
+  onChange,
+  className,
+}: {
+  columns: ColumnDef<TData>[];
+  value: VisibilityState;
+  onChange: (visibility: VisibilityState) => void;
+  className?: string;
+}) {
+  const entries = columns
+    .map((column, index) => ({ column, id: columnDefId(column, index) }))
+    .filter(({ column }) => column.enableHiding !== false)
+    .map(({ column, id }) => ({
+      id,
+      label: column.meta?.label ?? id,
+      visible: value[id] !== false,
+    }));
+
+  if (entries.length === 0) return null;
+
+  return (
+    <ColumnVisibilityMenu
+      className={className}
+      entries={entries}
+      onToggle={(id, visible) => onChange({ ...value, [id]: visible })}
+    />
   );
 }
 
