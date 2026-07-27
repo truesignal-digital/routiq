@@ -251,7 +251,6 @@
     },
     "link": "Documents",
     "title": "Asset documents",
-    "back": "Back to assets",
     "add": "Add a document",
     "addTitle": "New document",
     "renew": "Renew",
@@ -316,7 +315,6 @@
     },
     "record": {
       "title": "Record a transaction",
-      "back": "Back",
       "expenseLabel": "Expense",
       "revenueLabel": "Revenue",
       "categoryLabel": "Category",
@@ -350,7 +348,6 @@
     },
     "entries": {
       "title": "Entries",
-      "back": "Back",
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "retry": "Try again",
@@ -386,7 +383,8 @@
         "reversedByEntry": "Reversed by entry",
         "reverseAction": "Reverse",
         "rejectedReason": "Rejection reason",
-        "latePosting": "Late posting"
+        "latePosting": "Late posting",
+        "breadcrumb": "Detail"
       },
       "viewer": {
         "description": "Economic date {date}",
@@ -411,7 +409,6 @@
     },
     "approvals": {
       "title": "Approvals",
-      "back": "Back",
       "loading": "Loading…",
       "loadFailed": "We couldn't load approvals. Please retry.",
       "retry": "Try again",
@@ -438,7 +435,6 @@
     },
     "periods": {
       "title": "Period management",
-      "back": "Back",
       "columns": {
         "period": "Period",
         "status": "Status",
@@ -491,5 +487,9 @@
     "viewer": {
       "close": "Close"
     }
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "more": "More"
   }
 }

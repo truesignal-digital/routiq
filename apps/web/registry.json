@@ -515,6 +515,23 @@
       ]
     },
     {
+      "name": "breadcrumb",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/breadcrumb.tsx",
+          "type": "registry:file",
+          "target": "components/ui/breadcrumb.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react",
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "drawer",
       "type": "registry:ui",
       "files": [

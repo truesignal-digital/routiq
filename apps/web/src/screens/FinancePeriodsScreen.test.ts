@@ -195,6 +195,12 @@ describe("finance period command routing", () => {
     expect(periodCodesInOrder()).toEqual([currentPeriodCode(), "2026-06"]);
   });
 
+  it("uses the wide container the other finance list screens use", () => {
+    const { container } = renderScreen();
+
+    expect(container.querySelector("section")?.className).toContain("max-w-6xl");
+  });
+
   it("cancels lock from the overlay without dispatching", async () => {
     const user = userEvent.setup();
     renderScreen();

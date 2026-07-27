@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -51,7 +51,6 @@ const EXPIRY_TONES: Record<ExpiryState, "neutral" | "success" | "warning" | "dan
 export function AssetDocumentsScreen() {
   const { t, i18n } = useTranslation();
   const { assetId } = useParams({ from: "/app/assets/$assetId/documents" });
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const me = useMeContext();
@@ -90,8 +89,6 @@ export function AssetDocumentsScreen() {
     <PageContainer>
       <PageHeader
         title={t("documents.title")}
-        onBack={() => void navigate({ to: "/assets" })}
-        backLabel={t("documents.back")}
         actions={
           canManage && !form.open ? (
             <Button className="min-h-11 gap-2" onClick={() => setForm({ open: true })}>

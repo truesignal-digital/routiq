@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
@@ -48,7 +47,6 @@ type ActionDialogState =
 
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const me = useMeContext();
@@ -249,8 +247,6 @@ export function FinanceApprovalsScreen() {
     <PageContainer width="wide">
       <PageHeader
         title={t("finance.approvals.title")}
-        onBack={() => void navigate({ to: "/assets" })}
-        backLabel={t("finance.approvals.back")}
       />
       <FinanceToolbar>
         {!approvalsQuery.isPending && !approvalsQuery.isError && (

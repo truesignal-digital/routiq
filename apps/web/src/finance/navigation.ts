@@ -2,19 +2,18 @@ import type { ModuleCode, Role } from "@routiq/contracts";
 import { isRouteActive } from "../lib/route-match.js";
 import { canManagePeriods, canRecordFinance } from "./permissions.js";
 
-export type FinanceSectionKey = "record" | "entries" | "approvals" | "periods";
+export type FinanceSectionKey = "entries" | "approvals" | "periods";
 
 export interface FinanceSection {
   key: FinanceSectionKey;
-  to:
-    | "/finance/record"
-    | "/finance/entries"
-    | "/finance/approvals"
-    | "/finance/periods";
+  to: "/finance/entries" | "/finance/approvals" | "/finance/periods";
 }
 
+/**
+ * Recording is reached through the « Saisir une écriture » action on the
+ * entries screen, not a tab — so /finance/record activates none of these.
+ */
 const FINANCE_SECTIONS: readonly FinanceSection[] = [
-  { key: "record", to: "/finance/record" },
   { key: "entries", to: "/finance/entries" },
   { key: "approvals", to: "/finance/approvals" },
   { key: "periods", to: "/finance/periods" },

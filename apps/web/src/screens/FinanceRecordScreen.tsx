@@ -50,7 +50,6 @@ import { useCategories } from "@/documents/useCategories.js";
 import { assetDisplayName } from "@/assets/model.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { FinanceNav } from "@/finance/FinanceNav.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
@@ -80,23 +79,22 @@ export function FinanceRecordScreen() {
   }
 
   return (
-    <PageContainer>
-      <PageHeader
-        title={t("finance.record.title")}
-        onBack={() => void navigate({ to: "/assets" })}
-        backLabel={t("finance.record.back")}
-      />
-      <FinanceNav />
+    // Wide like every other finance page so the heading lines up, but the
+    // fields stay in a readable column instead of stretching to the edge.
+    <PageContainer width="wide">
+      <PageHeader title={t("finance.record.title")} />
 
-      <RecordForm
-        branches={reference.data?.branches ?? []}
-        branchesLoading={reference.isPending}
-        branchesFailed={reference.isError}
-        onRecorded={(outcome) => {
-          notifyCommandSuccess("finance", successKey(outcome), outcome.warnings);
-          void navigate({ to: "/finance/entries" });
-        }}
-      />
+      <div className="max-w-xl">
+        <RecordForm
+          branches={reference.data?.branches ?? []}
+          branchesLoading={reference.isPending}
+          branchesFailed={reference.isError}
+          onRecorded={(outcome) => {
+            notifyCommandSuccess("finance", successKey(outcome), outcome.warnings);
+            void navigate({ to: "/finance/entries" });
+          }}
+        />
+      </div>
     </PageContainer>
   );
 }

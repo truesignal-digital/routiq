@@ -1,46 +1,26 @@
-import { ArrowLeft, CircleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-type PageHeaderProps = {
+/** Going back is the SiteHeader breadcrumb's job; screens carry no back link. */
+export interface PageHeaderProps {
   title: ReactNode;
   actions?: ReactNode;
   className?: string;
   titleClassName?: string;
-} & (
-  | {
-      onBack: () => void;
-      backLabel: ReactNode;
-    }
-  | {
-      onBack?: undefined;
-      backLabel?: never;
-    }
-);
+}
 
 export function PageHeader({
   title,
   actions,
   className,
   titleClassName,
-  onBack,
-  backLabel,
 }: PageHeaderProps) {
   return (
     <header className={cn("flex flex-col", className)}>
-      {onBack && (
-        <button
-          type="button"
-          className="flex min-h-9 items-center gap-1.5 self-start text-sm text-muted-foreground"
-          onClick={onBack}
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          {backLabel}
-        </button>
-      )}
-      <div className={cn("flex items-center justify-between gap-4", onBack && "mt-2")}>
+      <div className="flex items-center justify-between gap-4">
         <h1 className={cn("text-2xl font-semibold", titleClassName)}>{title}</h1>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>

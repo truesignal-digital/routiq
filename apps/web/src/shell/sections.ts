@@ -45,7 +45,7 @@ export function isSectionActive(section: ShellSection, pathname: string): boolea
 
 /** The one section owning `pathname`, or undefined outside every section. */
 export function activeSection(
-  sections: ShellSection[],
+  sections: readonly ShellSection[],
   pathname: string,
 ): ShellSection | undefined {
   return sections.find((section) => isSectionActive(section, pathname));

@@ -251,7 +251,6 @@
     },
     "link": "Documents",
     "title": "Documents de l'actif",
-    "back": "Retour aux actifs",
     "add": "Ajouter un document",
     "addTitle": "Nouveau document",
     "renew": "Renouveler",
@@ -316,7 +315,6 @@
     },
     "record": {
       "title": "Enregistrer une transaction",
-      "back": "Retour",
       "expenseLabel": "Dépense",
       "revenueLabel": "Recette",
       "categoryLabel": "Catégorie",
@@ -350,7 +348,6 @@
     },
     "entries": {
       "title": "Écritures comptables",
-      "back": "Retour",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les écritures. Réessayez.",
       "retry": "Réessayer",
@@ -386,7 +383,8 @@
         "reversedByEntry": "Extournée par l'écriture",
         "reverseAction": "Contre-passer",
         "rejectedReason": "Motif du rejet",
-        "latePosting": "Comptabilisation tardive"
+        "latePosting": "Comptabilisation tardive",
+        "breadcrumb": "Détail"
       },
       "viewer": {
         "description": "Date comptable {date}",
@@ -411,7 +409,6 @@
     },
     "approvals": {
       "title": "Approbations",
-      "back": "Retour",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les approbations. Réessayez.",
       "retry": "Réessayer",
@@ -438,7 +435,6 @@
     },
     "periods": {
       "title": "Gestion des périodes",
-      "back": "Retour",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -491,5 +487,9 @@
     "viewer": {
       "close": "Fermer"
     }
+  },
+  "breadcrumb": {
+    "label": "Fil d'Ariane",
+    "more": "Plus"
   }
 }

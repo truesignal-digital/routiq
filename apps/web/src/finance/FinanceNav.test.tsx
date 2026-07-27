@@ -78,7 +78,6 @@ afterEach(cleanup);
 describe("FinanceNav", () => {
   it("lights exactly the tab owning the current route", () => {
     const routes = [
-      ["/finance/record", "finance.navigation.record"],
       ["/finance/entries", "finance.navigation.entries"],
       ["/finance/approvals", "finance.navigation.approvals"],
       ["/finance/periods", "finance.navigation.periods"],
@@ -120,12 +119,25 @@ describe("FinanceNav", () => {
       screen
         .getAllByRole("tab")
         .map((tab) => tab.getAttribute("href")),
-    ).toEqual([
-      "/finance/record",
-      "/finance/entries",
-      "/finance/approvals",
-      "/finance/periods",
-    ]);
+    ).toEqual(["/finance/entries", "/finance/approvals", "/finance/periods"]);
+  });
+
+  it("offers three tabs — recording is an action, not a section", () => {
+    render(<FinanceNav />);
+
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(
+      screen.queryByRole("tab", { name: /finance\.navigation\.record/ }),
+    ).toBeNull();
+  });
+
+  it("selects no tab on the record route", () => {
+    pathname = "/finance/record";
+    render(<FinanceNav />);
+
+    // Reached from « Saisir une écriture », so no tab owns it — and nothing throws.
+    expect(activeTabName()).toBeUndefined();
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
   });
 
   it("navigates on keyboard activation of another tab", () => {

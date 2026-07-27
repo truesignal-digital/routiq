@@ -109,8 +109,6 @@ export function FinanceEntryDetailScreen() {
     <PageContainer>
       <PageHeader
         title={t("finance.entries.detail.title")}
-        onBack={() => void navigate({ to: "/finance/entries" })}
-        backLabel={t("finance.entries.back")}
       />
 
       {entryQuery.isPending ? (

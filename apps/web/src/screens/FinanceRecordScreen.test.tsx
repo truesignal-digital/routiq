@@ -327,6 +327,27 @@ describe("finance record form", () => {
     expect(category.textContent).not.toContain("FUEL");
   });
 
+  it("aligns with the finance pages while keeping the fields readable", () => {
+    const { container } = renderScreen();
+
+    // Wide container so the heading lines up with entries/approvals/periods…
+    expect(container.querySelector("section")?.className).toContain("max-w-6xl");
+    // …but the form itself stays in a narrow column.
+    const form = container.querySelector("form");
+    expect(form?.closest(".max-w-xl")).not.toBeNull();
+  });
+
+  it("drops the finance tabs — it is an action page, not a section", () => {
+    renderScreen();
+
+    // Exactly one tablist: the Expense/Revenue toggle, not FinanceNav.
+    expect(screen.getAllByRole("tablist")).toHaveLength(1);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Expense",
+      "Revenue",
+    ]);
+  });
+
   it("renders the direction toggle as a stock tabs pill", () => {
     renderScreen();
 

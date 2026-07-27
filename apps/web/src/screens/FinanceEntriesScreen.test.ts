@@ -8,7 +8,7 @@ import {
 import { visibleSections } from "../shell/sections.js";
 
 describe("finance navigation by role and module", () => {
-  it("shows Finance, Record, and Entries to a FIELD_SUBMITTER", () => {
+  it("shows Finance and the Entries tab to a FIELD_SUBMITTER", () => {
     const enabledModules = ["CORE", "FINANCE"] as const;
 
     expect(canRecordFinance("FIELD_SUBMITTER", enabledModules)).toBe(true);
@@ -21,10 +21,10 @@ describe("finance navigation by role and module", () => {
       visibleFinanceSections("FIELD_SUBMITTER", enabledModules).map(
         ({ key }) => key,
       ),
-    ).toEqual(["record", "entries"]);
+    ).toEqual(["entries"]);
   });
 
-  it("shows all four finance screens to a FINANCE_APPROVER", () => {
+  it("shows all three finance tabs to a FINANCE_APPROVER", () => {
     const enabledModules = ["CORE", "FINANCE"] as const;
 
     expect(canRecordFinance("FINANCE_APPROVER", enabledModules)).toBe(true);
@@ -37,7 +37,7 @@ describe("finance navigation by role and module", () => {
       visibleFinanceSections("FINANCE_APPROVER", enabledModules).map(
         ({ key }) => key,
       ),
-    ).toEqual(["record", "entries", "approvals", "periods"]);
+    ).toEqual(["entries", "approvals", "periods"]);
   });
 
   it("hides Finance when the FINANCE module is disabled", () => {

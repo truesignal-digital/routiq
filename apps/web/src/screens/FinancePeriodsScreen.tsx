@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { formatDate } from "@/lib/format.js";
@@ -59,7 +58,6 @@ type ActionDialogState =
 
 export function FinancePeriodsScreen() {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const me = useMeContext();
@@ -213,11 +211,9 @@ export function FinancePeriodsScreen() {
   }
 
   return (
-    <PageContainer>
+    <PageContainer width="wide">
       <PageHeader
         title={t("finance.periods.title")}
-        onBack={() => void navigate({ to: "/assets" })}
-        backLabel={t("finance.periods.back")}
       />
       <FinanceToolbar>
         {!periodsQuery.isPending && !periodsQuery.isError && (

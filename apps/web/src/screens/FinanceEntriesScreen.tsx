@@ -136,8 +136,6 @@ export function FinanceEntriesScreen() {
     <PageContainer width="wide">
       <PageHeader
         title={t("finance.entries.title")}
-        onBack={() => void navigate({ to: "/assets" })}
-        backLabel={t("finance.entries.back")}
       />
       <FinanceToolbar>
         <DataTableViewOptions

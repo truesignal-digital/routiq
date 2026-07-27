@@ -150,7 +150,11 @@ describe("AppShell (sidebar frame)", () => {
     await renderShell("/assets");
 
     const navs = screen.getAllByRole("navigation");
-    expect(navs.map((nav) => nav.getAttribute("aria-label"))).toEqual(["Navigation"]);
+    // The sidebar and the SiteHeader breadcrumb; nothing pinned to the bottom.
+    expect(navs.map((nav) => nav.getAttribute("aria-label")).sort()).toEqual([
+      "Breadcrumb",
+      "Navigation",
+    ]);
     expect(document.querySelector("nav.fixed")).toBeNull();
   });
 

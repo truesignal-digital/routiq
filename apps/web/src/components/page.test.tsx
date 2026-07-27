@@ -7,22 +7,23 @@ import { EmptyState, ErrorState, LoadingState, PageHeader } from "./page.js";
 afterEach(cleanup);
 
 describe("page scaffolds", () => {
-  it("PageHeader renders its title, back action, and right-slot actions", async () => {
-    const onBack = vi.fn();
-
+  it("PageHeader renders its title and right-slot actions", () => {
     render(
       <PageHeader
         title="Asset documents"
-        onBack={onBack}
-        backLabel="Back to assets"
         actions={<button type="button">Add document</button>}
       />,
     );
 
     expect(screen.getByRole("heading", { name: "Asset documents" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add document" })).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Back to assets" }));
-    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("carries no back affordance — the SiteHeader breadcrumb is the way back", () => {
+    render(<PageHeader title="Asset documents" />);
+
+    expect(screen.queryAllByRole("button")).toEqual([]);
+    expect(screen.queryAllByRole("link")).toEqual([]);
   });
 
   it("EmptyState renders its icon, message, and CTA callback", async () => {
