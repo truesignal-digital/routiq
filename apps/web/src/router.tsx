@@ -9,6 +9,7 @@ import { sessionStore } from "./auth/store.js";
 import { AssetDocumentsScreen } from "./screens/AssetDocumentsScreen.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
+import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
@@ -25,7 +26,7 @@ const loginRoute = createRoute({
   path: "/login",
   validateSearch: z.object({ redirect: z.string().optional() }),
   beforeLoad: () => {
-    if (sessionStore.getActive()) throw redirect({ to: "/assets" });
+    if (sessionStore.getActive()) throw redirect({ to: "/" });
   },
   component: LoginScreen,
 });
@@ -44,9 +45,7 @@ const appRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: "/assets" });
-  },
+  component: DashboardScreen,
 });
 
 const assetsRoute = createRoute({

@@ -60,7 +60,7 @@ export function LoginScreen() {
       return;
     }
     sessionStore.save(result.session);
-    void navigate({ to: safeInternalPath(redirectTo) ?? "/assets" });
+    void navigate({ to: safeInternalPath(redirectTo) ?? "/" });
   }
 
   return (

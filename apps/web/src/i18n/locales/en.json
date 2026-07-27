@@ -3,9 +3,53 @@
     "name": "ROUTIQ"
   },
   "nav": {
+    "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
     "more": "More"
+  },
+  "home": {
+    "title": "Home",
+    "loadFailed": "We couldn't load the dashboard. Please retry.",
+    "retry": "Try again",
+    "cards": {
+      "pendingApprovals": {
+        "title": "Pending approvals",
+        "description": "{count, plural, =0 {Nothing awaiting your decision} one {# entry awaiting your decision} other {# entries awaiting your decision}}"
+      },
+      "assets": {
+        "title": "Assets in service",
+        "description": "{count, plural, one {of # registered asset} other {of # registered assets}}"
+      },
+      "openPeriodExpense": {
+        "title": "Period expense"
+      },
+      "openPeriodRevenue": {
+        "title": "Period revenue"
+      },
+      "periodDescription": "Open period {period}",
+      "noOpenPeriod": "No open period yet"
+    },
+    "chart": {
+      "title": "Expense and revenue",
+      "description": "Posted totals by economic date",
+      "expense": "Expense",
+      "revenue": "Revenue",
+      "rangeLabel": "Date range",
+      "range": {
+        "7": "7 days",
+        "30": "30 days",
+        "90": "3 months"
+      },
+      "empty": "Nothing posted in this range."
+    },
+    "recent": {
+      "title": "Recent entries",
+      "viewAll": "View all entries",
+      "loading": "Loading…",
+      "loadFailed": "We couldn't load entries. Please retry.",
+      "empty": "No entries for this branch."
+    }
   },
   "shell": {
     "navLabel": "Navigation",

@@ -3,9 +3,53 @@
     "name": "ROUTIQ"
   },
   "nav": {
+    "home": "Accueil",
     "assets": "Actifs",
     "finances": "Finances",
     "more": "Plus"
+  },
+  "home": {
+    "title": "Accueil",
+    "loadFailed": "Impossible de charger le tableau de bord. Veuillez réessayer.",
+    "retry": "Réessayer",
+    "cards": {
+      "pendingApprovals": {
+        "title": "Approbations en attente",
+        "description": "{count, plural, =0 {Aucune écriture à décider} one {# écriture attend votre décision} other {# écritures attendent votre décision}}"
+      },
+      "assets": {
+        "title": "Actifs en service",
+        "description": "{count, plural, one {sur # actif enregistré} other {sur # actifs enregistrés}}"
+      },
+      "openPeriodExpense": {
+        "title": "Dépenses de la période"
+      },
+      "openPeriodRevenue": {
+        "title": "Recettes de la période"
+      },
+      "periodDescription": "Période ouverte {period}",
+      "noOpenPeriod": "Aucune période ouverte"
+    },
+    "chart": {
+      "title": "Dépenses et recettes",
+      "description": "Totaux comptabilisés par date économique",
+      "expense": "Dépenses",
+      "revenue": "Recettes",
+      "rangeLabel": "Période affichée",
+      "range": {
+        "7": "7 jours",
+        "30": "30 jours",
+        "90": "3 mois"
+      },
+      "empty": "Rien de comptabilisé sur cette période."
+    },
+    "recent": {
+      "title": "Écritures récentes",
+      "viewAll": "Voir toutes les écritures",
+      "loading": "Chargement…",
+      "loadFailed": "Impossible de charger les écritures. Veuillez réessayer.",
+      "empty": "Aucune écriture pour cette agence."
+    }
   },
   "shell": {
     "navLabel": "Navigation",

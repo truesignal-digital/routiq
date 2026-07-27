@@ -68,6 +68,7 @@ function setViewport(width: number) {
 }
 
 const SCREEN_PATHS = [
+  "/",
   "/assets",
   "/assets/new",
   "/finance/entries",
@@ -155,24 +156,33 @@ describe("AppShell (sidebar frame)", () => {
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Assets", "Finance", "More"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
   });
 
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Assets", "More"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "More"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["More"]);
+    expect(navLinkNames()).toEqual(["Home", "More"]);
   });
 
   it("marks the section owning the route active, and only that one", async () => {
     await renderShell("/finance/periods");
     expect(activeNavName()).toBe("Finance");
+  });
+
+  it("highlights Home on the landing route without swallowing the others", async () => {
+    await renderShell("/");
+    expect(activeNavName()).toBe("Home");
+
+    cleanup();
+    await renderShell("/assets/new");
+    expect(activeNavName()).toBe("Assets");
   });
 
   it("keeps the parent section active on a child route", async () => {
@@ -214,7 +224,7 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Assets", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
     });
 
     it("closes the sheet after navigating", async () => {

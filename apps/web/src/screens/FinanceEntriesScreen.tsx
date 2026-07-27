@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,22 +14,32 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
-import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/model.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { canRecordFinance } from "@/finance/permissions.js";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import {
+  useFinanceEntryColumns,
+  type FinanceEntryColumnId,
+} from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
-import { formatMoney, formatDate, localizedLabel } from "@/lib/format.js";
-import type { FinancialEntryListItem } from "@routiq/contracts";
+import { formatDate } from "@/lib/format.js";
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
 
+/** Module-level so the column memo in `useFinanceEntryColumns` holds. */
+const LIST_COLUMNS: readonly FinanceEntryColumnId[] = [
+  "status",
+  "economicDate",
+  "category",
+  "amount",
+  "counterpartyName",
+];
+
 export function FinanceEntriesScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
   const canView = canRecordFinance(me?.role, me?.enabledModules);
@@ -109,65 +119,7 @@ export function FinanceEntriesScreen() {
 
   const allEntries = entriesQuery.data?.pages.flatMap((page) => page.entries) ?? [];
 
-  // No column is sortable. The read is keyset-paginated on `postedAt` and takes
-  // no `sort` param (apps/api/src/reads/finance.ts), so a header control could
-  // only reorder the pages already loaded and would misrepresent the rest.
-  const columns = useMemo<ColumnDef<FinancialEntryListItem>[]>(
-    () => [
-      {
-        accessorKey: "status",
-        header: t("finance.entries.detail.status"),
-        meta: { mobile: "primary", label: t("finance.entries.detail.status") },
-        cell: ({ row }) => (
-          <div className="flex flex-wrap items-center gap-2">
-            <FinanceStatusBadge status={row.original.status}>
-              {t(`finance.entries.status.${row.original.status}`)}
-            </FinanceStatusBadge>
-            {row.original.isLatePosting && (
-              <StatusBadge tone="warning">
-                {t("finance.entries.detail.latePosting")}
-              </StatusBadge>
-            )}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "economicDate",
-        header: t("finance.entries.detail.date"),
-        meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
-        cell: ({ row }) => formatDate(row.original.economicDate),
-      },
-      {
-        id: "category",
-        header: t("finance.entries.detail.category"),
-        meta: { mobile: "primary", label: t("finance.entries.detail.category") },
-        cell: ({ row }) => localizedLabel(row.original.category),
-      },
-      {
-        id: "amount",
-        header: t("finance.entries.detail.amount"),
-        meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap font-mono text-right font-semibold">
-            {formatMoney(row.original.amountMinor, {
-              currency: row.original.currency,
-              signDisplay: "always",
-            })}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "counterpartyName",
-        header: t("finance.entries.detail.counterparty"),
-        meta: {
-          mobile: "secondary",
-          label: t("finance.entries.detail.counterparty"),
-        },
-        cell: ({ row }) => row.original.counterpartyName ?? "—",
-      },
-    ],
-    [i18n.resolvedLanguage, t],
-  );
+  const columns = useFinanceEntryColumns(LIST_COLUMNS);
 
   if (me !== undefined && !canView) {
     return (

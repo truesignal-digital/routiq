@@ -82,7 +82,7 @@ describe("login form", () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it("saves the session and lands on the fleet after a successful sign-in", async () => {
+  it("saves the session and lands on the home screen after a successful sign-in", async () => {
     mocks.login.mockResolvedValue({
       ok: true,
       session: {
@@ -101,7 +101,7 @@ describe("login form", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     await waitFor(() =>
-      expect(mocks.navigate).toHaveBeenCalledWith({ to: "/assets" }),
+      expect(mocks.navigate).toHaveBeenCalledWith({ to: "/" }),
     );
     expect(mocks.login).toHaveBeenCalledWith({
       workspaceSlug: "sotrafret",

@@ -547,6 +547,75 @@
       "dependencies": [
         "react-i18next"
       ]
+    },
+    {
+      "name": "chart",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/chart.tsx",
+          "type": "registry:file",
+          "target": "components/ui/chart.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "recharts"
+      ]
+    },
+    {
+      "name": "dashboard-home",
+      "type": "registry:block",
+      "files": [
+        {
+          "path": "src/screens/DashboardScreen.tsx",
+          "type": "registry:file",
+          "target": "screens/DashboardScreen.tsx"
+        },
+        {
+          "path": "src/dashboard/SectionCards.tsx",
+          "type": "registry:file",
+          "target": "dashboard/SectionCards.tsx"
+        },
+        {
+          "path": "src/dashboard/ChartAreaInteractive.tsx",
+          "type": "registry:file",
+          "target": "dashboard/ChartAreaInteractive.tsx"
+        },
+        {
+          "path": "src/dashboard/useDashboard.ts",
+          "type": "registry:file",
+          "target": "dashboard/useDashboard.ts"
+        },
+        {
+          "path": "src/dashboard/cards.ts",
+          "type": "registry:file",
+          "target": "dashboard/cards.ts"
+        },
+        {
+          "path": "src/finance/entryColumns.tsx",
+          "type": "registry:file",
+          "target": "finance/entryColumns.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "card",
+        "chart",
+        "tabs",
+        "data-table",
+        "page",
+        "page-container",
+        "skeleton",
+        "status-badge"
+      ],
+      "dependencies": [
+        "recharts",
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@tanstack/react-table",
+        "lucide-react",
+        "react-i18next"
+      ]
     }
   ]
 }

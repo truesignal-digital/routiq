@@ -10,21 +10,28 @@ function activeKey(pathname: string): string | undefined {
 describe("visibleSections (module gate)", () => {
   it("disabled module removes its section entirely", () => {
     const keys = visibleSections(["CORE"]).map((s) => s.key);
-    expect(keys).toEqual(["more"]);
+    expect(keys).toEqual(["home", "more"]);
   });
 
   it("enabled module shows its section", () => {
     const keys = visibleSections(["CORE", "ASSETS"]).map((s) => s.key);
-    expect(keys).toEqual(["assets", "more"]);
+    expect(keys).toEqual(["home", "assets", "more"]);
   });
 
   it("finance module shows the finances section", () => {
     const keys = visibleSections(["CORE", "FINANCE"]).map((s) => s.key);
-    expect(keys).toEqual(["finances", "more"]);
+    expect(keys).toEqual(["home", "finances", "more"]);
   });
 
   it("while membership is loading only module-less sections render", () => {
-    expect(visibleSections(undefined).map((s) => s.key)).toEqual(["more"]);
+    expect(visibleSections(undefined).map((s) => s.key)).toEqual(["home", "more"]);
+  });
+
+  it("home leads the nav and survives every module combination", () => {
+    for (const modules of [["CORE"], ["CORE", "ASSETS"], ["CORE", "FINANCE"]] as const) {
+      expect(visibleSections([...modules])[0]?.key).toBe("home");
+    }
+    expect(visibleSections(undefined)[0]?.key).toBe("home");
   });
 });
 
@@ -32,6 +39,12 @@ describe("isSectionActive (exact-or-child)", () => {
   it("matches the section's own route", () => {
     expect(activeKey("/assets")).toBe("assets");
     expect(activeKey("/more")).toBe("more");
+  });
+
+  it("home owns the landing route only, never every route beneath it", () => {
+    expect(activeKey("/")).toBe("home");
+    expect(activeKey("/assets")).toBe("assets");
+    expect(activeKey("/finance/entries")).toBe("finances");
   });
 
   it("matches child routes", () => {
