@@ -11,9 +11,12 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
+import { localizedLabel } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   assetDisplayName,
   assetFilterStatuses,
@@ -21,11 +24,11 @@ import {
   type AssetFilter,
   type AssetLifecycleStatus,
   type AssetListItem,
-} from "../assets/model.js";
-import { AssetActions } from "../assets/AssetActions.js";
-import { useAssets, type UseAssetsParams } from "../assets/useAssets.js";
-import { isReadOnlyRole, useMeContext } from "../auth/me.js";
-import { cn } from "../lib/utils.js";
+} from "@/assets/model.js";
+import { AssetActions } from "@/assets/AssetActions.js";
+import { useAssets, type UseAssetsParams } from "@/assets/useAssets.js";
+import { isReadOnlyRole, useMeContext } from "@/auth/me.js";
+import { cn } from "@/lib/utils.js";
 import { StatusBadge } from "@/components/status-badge.js";
 
 const filters: AssetFilter[] = ["ALL", "IN_SERVICE", "ATTENTION"];
@@ -84,8 +87,8 @@ export function AssetsStub() {
 
   return (
     <section className="asset-page min-h-dvh">
-      <div className="border-b border-foreground/10 px-4 pb-5 pt-5 sm:px-7 md:px-10 md:pb-7 md:pt-8">
-        <div className="mx-auto w-full max-w-6xl">
+      <div className="border-b border-border px-4 pb-5 pt-5 sm:px-7 md:px-10 md:pb-7 md:pt-8">
+        <PageContainer width="wide" className="px-0 py-0">
           <p className="mb-2 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.19em] text-muted-foreground">
             <span className="size-1.5 rounded-full bg-signal" />
             {t("assets.eyebrow")}
@@ -108,11 +111,14 @@ export function AssetsStub() {
           <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
             {t("assets.subtitle")}
           </p>
-        </div>
+        </PageContainer>
       </div>
 
-      <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-7 md:px-10 md:pb-10 md:pt-8">
-        <dl className="grid grid-cols-3 overflow-hidden rounded-2xl border border-foreground/10 bg-card shadow-[0_16px_44px_-36px_var(--foreground)]">
+      <PageContainer
+        width="wide"
+        className="pb-28 pt-5 sm:px-7 md:px-10 md:pb-10 md:pt-8"
+      >
+        <dl className="grid grid-cols-3 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_16px_44px_-36px_var(--foreground)]">
           <Metric
             label={t("assets.metrics.total")}
             value={summary.total}
@@ -142,7 +148,7 @@ export function AssetsStub() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t("assets.searchPlaceholder")}
-              className="min-h-12 w-full rounded-xl border border-foreground/10 bg-card py-3 pl-11 pr-4 text-base shadow-sm outline-none transition placeholder:text-muted-foreground/75 focus:border-foreground/25 focus:ring-4 focus:ring-primary/10 sm:text-sm"
+              className="min-h-12 w-full rounded-xl border border-border bg-card py-3 pl-11 pr-4 text-base shadow-sm outline-none transition placeholder:text-muted-foreground/75 focus:border-foreground/25 focus:ring-4 focus:ring-primary/10 sm:text-sm"
             />
           </label>
 
@@ -216,7 +222,7 @@ export function AssetsStub() {
             />
           ) : assets.length === 0 ? (
             <EmptyState
-              className="empty-grid relative overflow-hidden border-foreground/10 bg-card shadow-[0_24px_60px_-52px_var(--foreground)] sm:px-10 sm:py-16"
+              className="empty-grid relative overflow-hidden border-border bg-card shadow-[0_24px_60px_-52px_var(--foreground)] sm:px-10 sm:py-16"
               icon={
                 <span className="relative grid size-20 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[12px_12px_0_var(--signal)]">
                   <Truck className="size-9" strokeWidth={1.55} aria-hidden />
@@ -271,7 +277,7 @@ export function AssetsStub() {
             </>
           )}
         </div>
-      </div>
+      </PageContainer>
 
       {!readOnly && (
         <a
@@ -311,7 +317,7 @@ function Metric({
   icon: typeof Truck;
 }) {
   return (
-    <div className="relative border-r border-foreground/10 px-3 py-4 last:border-r-0 sm:px-5 sm:py-5">
+    <div className="relative border-r border-border px-3 py-4 last:border-r-0 sm:px-5 sm:py-5">
       <Icon
         className="mb-3 size-4 text-muted-foreground sm:absolute sm:right-5 sm:top-5"
         strokeWidth={1.8}
@@ -332,50 +338,53 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
   const category = localizedLabel(asset.category);
 
   return (
-    <article
-      className="asset-card relative overflow-hidden rounded-2xl border border-foreground/10 bg-card p-4 shadow-[0_12px_34px_-30px_var(--foreground)] sm:p-5"
+    <Card
+      className="asset-card relative gap-0 overflow-hidden rounded-2xl border border-border bg-card py-0"
       style={{ animationDelay: `${Math.min(index, 6) * 45}ms` }}
     >
-      <div className="flex items-start gap-3.5">
-        <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary ring-1 ring-primary/10">
-          <Truck className="size-6" strokeWidth={1.7} aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold tracking-[-0.015em]">
-                {assetDisplayName(asset)}
-              </p>
-              <p className="mt-0.5 truncate font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
-                {asset.assetCode}
-                {asset.registrationNumber
-                  ? ` · ${asset.registrationNumber}`
-                  : ""}
-              </p>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-start gap-3.5">
+          <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary ring-1 ring-primary/10">
+            <Truck className="size-6" strokeWidth={1.7} aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold tracking-[-0.015em]">
+                  {assetDisplayName(asset)}
+                </p>
+                <p className="mt-0.5 truncate font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
+                  {asset.assetCode}
+                  {asset.registrationNumber
+                    ? ` · ${asset.registrationNumber}`
+                    : ""}
+                </p>
+              </div>
             </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <StatusBadge tone={STATUS_TONES[asset.lifecycleStatus]}>
+                {t(`assets.status.${asset.lifecycleStatus}`)}
+              </StatusBadge>
+              <span className="inline-flex min-h-7 items-center rounded-full bg-foreground/[0.055] px-2.5 text-xs font-medium text-muted-foreground">
+                {category}
+              </span>
+            </div>
+
+            <Separator className="mt-4" />
+            <div className="flex items-center gap-1.5 pt-3 text-xs text-muted-foreground">
+              <MapPin className="size-3.5" aria-hidden />
+              <span className="truncate">{asset.branch.name}</span>
+              <span aria-hidden>·</span>
+              <span className="font-mono">{asset.branch.code}</span>
+            </div>
+
+            <AssetActions asset={asset} />
+
+            <DocumentsLink assetId={asset.id} />
           </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <StatusBadge tone={STATUS_TONES[asset.lifecycleStatus]}>
-              {t(`assets.status.${asset.lifecycleStatus}`)}
-            </StatusBadge>
-            <span className="inline-flex min-h-7 items-center rounded-full bg-foreground/[0.055] px-2.5 text-xs font-medium text-muted-foreground">
-              {category}
-            </span>
-          </div>
-
-          <div className="mt-4 flex items-center gap-1.5 border-t border-foreground/[0.07] pt-3 text-xs text-muted-foreground">
-            <MapPin className="size-3.5" aria-hidden />
-            <span className="truncate">{asset.branch.name}</span>
-            <span aria-hidden>·</span>
-            <span className="font-mono">{asset.branch.code}</span>
-          </div>
-
-          <AssetActions asset={asset} />
-
-          <DocumentsLink assetId={asset.id} />
         </div>
-      </div>
-    </article>
+      </CardContent>
+    </Card>
   );
 }

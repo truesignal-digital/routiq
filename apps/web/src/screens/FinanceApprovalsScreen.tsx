@@ -2,11 +2,16 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { formatMoney, formatDate, localizedLabel } from "../lib/format.js";
 import type { ColumnDef } from "@tanstack/react-table";
 import { z } from "zod";
+import { useMeContext } from "@/auth/me.js";
+import { commandClient } from "@/commands/instance.js";
+import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import { DataTable } from "@/components/data-table";
+import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
+import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,20 +22,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useMeContext } from "../auth/me.js";
-import { commandClient } from "../commands/instance.js";
-import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
+import { FinanceNav } from "@/finance/FinanceNav.js";
+import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
+import { canApproveEntries } from "@/finance/permissions.js";
+import { useApprovals } from "@/finance/useApprovals.js";
+import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import {
   notifyCommandSuccess,
   notifyCommandWarnings,
-} from "../lib/notify.js";
-import { useApprovals } from "../finance/useApprovals.js";
-import { canApproveEntries } from "../finance/permissions.js";
-import { isOwnSubmission, validateRejectionReason } from "../finance/model.js";
-import { FinanceNav } from "../finance/FinanceNav.js";
-import { StatusBadge } from "@/components/status-badge.js";
-import { ErrorBanner } from "@/components/error-banner.js";
-import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
+} from "@/lib/notify.js";
 import {
   approveEntryPayload,
   rejectEntryPayload,
@@ -225,67 +226,68 @@ export function FinanceApprovalsScreen() {
     setActionDialog({ open: false });
   };
 
-  if (me !== undefined && !canApprove) {
-    return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-6">
-        <PageHeader title={t("finance.approvals.title")} />
-        <EmptyState
-          className="mt-6"
-          icon={<ClipboardCheck className="size-7" aria-hidden />}
-          message={t("finance.approvals.accessDenied")}
-        />
-      </section>
-    );
-  }
-
   return (
-    <section className="mx-auto w-full max-w-4xl px-4 py-6">
-      <PageHeader
-        title={t("finance.approvals.title")}
-        onBack={() => void navigate({ to: "/assets" })}
-        backLabel={t("finance.approvals.back")}
-      />
-      <FinanceNav />
-
-      {approvalsQuery.isPending ? (
-        <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
-      ) : approvalsQuery.isError ? (
-        <ErrorState
-          className="mt-6"
-          message={t("finance.approvals.loadFailed")}
-          retryLabel={t("finance.approvals.retry")}
-          onRetry={() => void approvalsQuery.refetch()}
-        />
-      ) : (
-        <div className="mt-6">
-          <DataTable
-            columns={columns}
-            data={entries}
-            getRowId={(entry) => entry.id}
-            enableColumnVisibility
-            emptyState={
-              <EmptyState
-                icon={<ClipboardCheck className="size-7" aria-hidden />}
-                message={t("finance.approvals.empty")}
-              />
-            }
+    <PageContainer width="wide">
+      {me !== undefined && !canApprove ? (
+        <>
+          <PageHeader title={t("finance.approvals.title")} />
+          <EmptyState
+            className="mt-6"
+            icon={<ClipboardCheck className="size-7" aria-hidden />}
+            message={t("finance.approvals.accessDenied")}
           />
-        </div>
-      )}
+        </>
+      ) : (
+        <>
+          <PageHeader
+            title={t("finance.approvals.title")}
+            onBack={() => void navigate({ to: "/assets" })}
+            backLabel={t("finance.approvals.back")}
+          />
+          <FinanceNav />
 
-      {actionDialog.open && (
-        <ActionDialog
-          action={actionDialog.action}
-          onApprove={(note) => handleApprove(actionDialog.entryId, actionDialog.rowVersion, note)}
-          onReject={(reason) =>
-            handleReject(actionDialog.entryId, actionDialog.rowVersion, reason)
-          }
-          onCancel={() => setActionDialog({ open: false })}
-          error={actionError}
-        />
-      )}
+          {approvalsQuery.isPending ? (
+            <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
+          ) : approvalsQuery.isError ? (
+            <ErrorState
+              className="mt-6"
+              message={t("finance.approvals.loadFailed")}
+              retryLabel={t("finance.approvals.retry")}
+              onRetry={() => void approvalsQuery.refetch()}
+            />
+          ) : (
+            <div className="mt-6">
+              <DataTable
+                columns={columns}
+                data={entries}
+                getRowId={(entry) => entry.id}
+                enableColumnVisibility
+                emptyState={
+                  <EmptyState
+                    icon={<ClipboardCheck className="size-7" aria-hidden />}
+                    message={t("finance.approvals.empty")}
+                  />
+                }
+              />
+            </div>
+          )}
 
-    </section>
+          {actionDialog.open && (
+            <ActionDialog
+              action={actionDialog.action}
+              onApprove={(note) =>
+                handleApprove(actionDialog.entryId, actionDialog.rowVersion, note)
+              }
+              onReject={(reason) =>
+                handleReject(actionDialog.entryId, actionDialog.rowVersion, reason)
+              }
+              onCancel={() => setActionDialog({ open: false })}
+              error={actionError}
+            />
+          )}
+        </>
+      )}
+    </PageContainer>
   );
 }
 

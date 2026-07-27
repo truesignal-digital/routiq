@@ -301,6 +301,22 @@
       ]
     },
     {
+      "name": "page-container",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/page-container.tsx",
+          "type": "registry:file",
+          "target": "components/page-container.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "card",
+        "separator"
+      ],
+      "dependencies": []
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "files": [

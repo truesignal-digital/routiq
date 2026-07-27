@@ -1,8 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { sessionStore, useActiveSession } from "@/auth/store.js";
 
 const languages = [
   { code: "fr-CM", base: "fr", label: "Français" },
@@ -20,7 +21,7 @@ export function MoreStub() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer>
       <PageHeader title={t("more.title")} />
       {session && (
         <p className="mt-2 text-sm text-muted-foreground">
@@ -49,6 +50,6 @@ export function MoreStub() {
           {t("more.logout")}
         </Button>
       </div>
-    </section>
+    </PageContainer>
   );
 }

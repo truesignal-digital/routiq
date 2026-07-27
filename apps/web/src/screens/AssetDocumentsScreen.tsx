@@ -3,29 +3,31 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { FileText, Plus } from "lucide-react";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
 import { useTranslation } from "react-i18next";
+import { useMeContext } from "@/auth/me.js";
+import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
+import { commandClient } from "@/commands/instance.js";
+import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
+import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useMeContext } from "../auth/me.js";
-import { commandClient } from "../commands/instance.js";
-import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { errorMessage } from "../lib/error-message.js";
 import {
   expiryState,
   groupDocuments,
   renewalDefaults,
   type AssetDocument,
   type ExpiryState,
-} from "../documents/model.js";
-import { useAssetDocuments } from "../documents/useDocuments.js";
-import { useCategories } from "../documents/useCategories.js";
-import { canAccessDocuments, canManageDocuments } from "../documents/permissions.js";
-import { StatusBadge } from "@/components/status-badge.js";
-import { ErrorBanner } from "@/components/error-banner.js";
+} from "@/documents/model.js";
+import { canAccessDocuments, canManageDocuments } from "@/documents/permissions.js";
+import { useCategories } from "@/documents/useCategories.js";
+import { useAssetDocuments } from "@/documents/useDocuments.js";
+import { errorMessage } from "@/lib/error-message.js";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "@/lib/format.js";
 
 
 interface FormState {
@@ -71,19 +73,19 @@ export function AssetDocumentsScreen() {
 
   if (me !== undefined && !documentsEnabled) {
     return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-6">
+      <PageContainer>
         <PageHeader title={t("documents.title")} />
         <EmptyState
           className="mt-6"
           icon={<FileText className="size-7" aria-hidden />}
           message={errorMessage(i18n, "MODULE_DISABLED")}
         />
-      </section>
+      </PageContainer>
     );
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer>
       <PageHeader
         title={t("documents.title")}
         onBack={() => void navigate({ to: "/assets" })}
@@ -146,38 +148,42 @@ export function AssetDocumentsScreen() {
                 {group.current.map((doc) => {
                   const state = expiryState(doc.expiresAt, today);
                   return (
-                    <div key={doc.id} className="rounded-xl border border-border bg-card p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="min-w-0 truncate text-sm font-medium">
-                          {doc.title ?? labelOf(group.type)}
-                          {doc.documentNumber ? (
-                            <span className="ml-2 font-mono text-xs text-muted-foreground">
-                              {doc.documentNumber}
-                            </span>
-                          ) : null}
-                        </p>
-                        <StatusBadge tone={EXPIRY_TONES[state]}>
-                          {state === "none"
-                            ? t("documents.expiry.none")
-                            : state === "expired"
-                              ? t("documents.expiry.expired")
-                              : state === "expiringSoon"
-                                ? t("documents.expiry.expiringSoon", {
-                                    date: formatDate(doc.expiresAt),
-                                  })
-                                : t("documents.expiry.ok", { date: formatDate(doc.expiresAt) })}
-                        </StatusBadge>
-                      </div>
-                      {canManage && !form.open && (
-                        <Button
-                          variant="outline"
-                          className="mt-2 min-h-9"
-                          onClick={() => setForm({ open: true, renews: doc })}
-                        >
-                          {t("documents.renew")}
-                        </Button>
-                      )}
-                    </div>
+                    <Card key={doc.id}>
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="min-w-0 truncate text-sm font-medium">
+                            {doc.title ?? labelOf(group.type)}
+                            {doc.documentNumber ? (
+                              <span className="ml-2 font-mono text-xs text-muted-foreground">
+                                {doc.documentNumber}
+                              </span>
+                            ) : null}
+                          </p>
+                          <StatusBadge tone={EXPIRY_TONES[state]}>
+                            {state === "none"
+                              ? t("documents.expiry.none")
+                              : state === "expired"
+                                ? t("documents.expiry.expired")
+                                : state === "expiringSoon"
+                                  ? t("documents.expiry.expiringSoon", {
+                                      date: formatDate(doc.expiresAt),
+                                    })
+                                  : t("documents.expiry.ok", {
+                                      date: formatDate(doc.expiresAt),
+                                    })}
+                          </StatusBadge>
+                        </div>
+                        {canManage && !form.open && (
+                          <Button
+                            variant="outline"
+                            className="mt-2 min-h-9"
+                            onClick={() => setForm({ open: true, renews: doc })}
+                          >
+                            {t("documents.renew")}
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
                   );
                 })}
                 {group.superseded.map((doc) => (
@@ -222,7 +228,7 @@ export function AssetDocumentsScreen() {
           ))
         )}
       </div>
-    </section>
+    </PageContainer>
   );
 }
 

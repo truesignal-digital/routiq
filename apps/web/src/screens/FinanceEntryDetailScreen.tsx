@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, FileText } from "lucide-react";
-import { formatMoney, formatDate, formatDateTime, localizedLabel, formatPaymentMethod } from "../lib/format.js";
+import { formatMoney, formatDate, formatDateTime, localizedLabel, formatPaymentMethod } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
-import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
+import { Card, CardContent } from "@/components/ui/card";
+import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import {
   Dialog,
   DialogClose,
@@ -16,19 +18,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useMeContext } from "../auth/me.js";
-import { commandClient } from "../commands/instance.js";
-import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { errorMessage } from "../lib/error-message.js";
+import { useMeContext } from "@/auth/me.js";
+import { commandClient } from "@/commands/instance.js";
+import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
+import { errorMessage } from "@/lib/error-message.js";
 import {
   notifyCommandSuccess,
   notifyCommandWarnings,
-} from "../lib/notify.js";
-import { useEntry } from "../finance/useEntry.js";
-import { canReverseEntry } from "../finance/permissions.js";
-import { validateReversalReason } from "../finance/model.js";
+} from "@/lib/notify.js";
+import { useEntry } from "@/finance/useEntry.js";
+import { canReverseEntry } from "@/finance/permissions.js";
+import { validateReversalReason } from "@/finance/model.js";
 import { z } from "zod";
-import { ReversalLink } from "../finance/ReversalLink.js";
+import { ReversalLink } from "@/finance/ReversalLink.js";
 import { reverseEntryPayload } from "@routiq/contracts";
 import { ErrorBanner } from "@/components/error-banner.js";
 
@@ -100,7 +102,7 @@ export function FinanceEntryDetailScreen() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer>
       <PageHeader
         title={t("finance.entries.detail.title")}
         onBack={() => void navigate({ to: "/finance/entries" })}
@@ -118,8 +120,9 @@ export function FinanceEntryDetailScreen() {
         />
       ) : entryQuery.data ? (
         <div className="mt-6 space-y-6">
-          <div className="rounded-xl border border-border bg-card p-4">
-            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card>
+            <CardContent>
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-semibold uppercase text-muted-foreground">
                   {t("finance.entries.detail.entryNumber")}
@@ -212,8 +215,9 @@ export function FinanceEntryDetailScreen() {
                   <dd className="mt-1">{entryQuery.data.rejectedReason}</dd>
                 </div>
               )}
-            </dl>
-          </div>
+              </dl>
+            </CardContent>
+          </Card>
 
           {entryQuery.data.postings.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-4">
@@ -278,7 +282,7 @@ export function FinanceEntryDetailScreen() {
           message={t("finance.entries.detail.notFound")}
         />
       )}
-    </section>
+    </PageContainer>
   );
 }
 

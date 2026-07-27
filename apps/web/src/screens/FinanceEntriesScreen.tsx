@@ -10,16 +10,17 @@ import {
   type DataTableFilterValues,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
-import { useMeContext } from "../auth/me.js";
-import { assetDisplayName } from "../assets/model.js";
-import { useAssets } from "../assets/useAssets.js";
-import { errorMessage } from "../lib/error-message.js";
-import { formatMoney, formatDate, localizedLabel } from "../lib/format.js";
-import { useEntries } from "../finance/useEntries.js";
-import { canRecordFinance } from "../finance/permissions.js";
-import { FinanceNav } from "../finance/FinanceNav.js";
-import { FinanceStatusBadge } from "../finance/FinanceStatusBadge.js";
+import { PageContainer } from "@/components/page-container";
 import { StatusBadge } from "@/components/status-badge.js";
+import { useMeContext } from "@/auth/me.js";
+import { assetDisplayName } from "@/assets/model.js";
+import { useAssets } from "@/assets/useAssets.js";
+import { FinanceNav } from "@/finance/FinanceNav.js";
+import { canRecordFinance } from "@/finance/permissions.js";
+import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { useEntries } from "@/finance/useEntries.js";
+import { errorMessage } from "@/lib/error-message.js";
+import { formatMoney, formatDate, localizedLabel } from "@/lib/format.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
@@ -165,19 +166,19 @@ export function FinanceEntriesScreen() {
 
   if (me !== undefined && !canView) {
     return (
-      <section className="mx-auto w-full max-w-4xl px-4 py-6">
+      <PageContainer width="wide">
         <PageHeader title={t("finance.entries.title")} />
         <EmptyState
           className="mt-6"
           icon={<FileText className="size-7" aria-hidden />}
           message={errorMessage(i18n, "MODULE_DISABLED")}
         />
-      </section>
+      </PageContainer>
     );
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl px-4 py-6">
+    <PageContainer width="wide">
       <PageHeader
         title={t("finance.entries.title")}
         onBack={() => void navigate({ to: "/assets" })}
@@ -229,6 +230,6 @@ export function FinanceEntriesScreen() {
           />
         </div>
       )}
-    </section>
+    </PageContainer>
   );
 }

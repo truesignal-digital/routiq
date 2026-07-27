@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { EmptyState, PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
@@ -27,11 +28,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useMeContext } from "../auth/me.js";
-import { commandClient } from "../commands/instance.js";
-import { createCommandIntent } from "../commands/intent.js";
-import { errorMessage } from "../lib/error-message.js";
-import { localizedLabel, formatPaymentMethod } from "../lib/format.js";
+import { useMeContext } from "@/auth/me.js";
+import { commandClient } from "@/commands/instance.js";
+import { createCommandIntent } from "@/commands/intent.js";
+import { errorMessage } from "@/lib/error-message.js";
+import { localizedLabel, formatPaymentMethod } from "@/lib/format.js";
 
 function normalizeMoneySpacing(value: string): string {
   return value.replace(/ /g, " ");
@@ -41,11 +42,11 @@ import {
   toRecordExpensePayload,
   toRecordRevenuePayload,
   type FinanceFormState,
-} from "../finance/model.js";
-import { canRecordFinance } from "../finance/permissions.js";
-import { useCategories } from "../documents/useCategories.js";
-import { useAssetRegistrationReference } from "../assets/reference.js";
-import { FinanceNav } from "../finance/FinanceNav.js";
+} from "@/finance/model.js";
+import { canRecordFinance } from "@/finance/permissions.js";
+import { useCategories } from "@/documents/useCategories.js";
+import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { FinanceNav } from "@/finance/FinanceNav.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
@@ -67,14 +68,14 @@ export function FinanceRecordScreen() {
 
   if (me !== undefined && !canRecord) {
     return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-6">
+      <PageContainer>
         <PageHeader title={t("finance.record.title")} />
         <EmptyState
           className="mt-6"
           icon={<WalletCards className="size-7" aria-hidden />}
           message={errorMessage(i18n, "MODULE_DISABLED")}
         />
-      </section>
+      </PageContainer>
     );
   }
 
@@ -83,7 +84,7 @@ export function FinanceRecordScreen() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer>
       <PageHeader
         title={t("finance.record.title")}
         onBack={() => void navigate({ to: "/assets" })}
@@ -103,7 +104,7 @@ export function FinanceRecordScreen() {
       {screenState.stage === "outcome" && screenState.outcome && (
         <OutcomeView outcome={screenState.outcome} onClose={handleOutcomeClose} />
       )}
-    </section>
+    </PageContainer>
   );
 }
 

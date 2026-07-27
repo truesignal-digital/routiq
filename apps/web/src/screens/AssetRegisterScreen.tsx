@@ -10,9 +10,10 @@ import {
 } from "@routiq/contracts";
 import type { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "../lib/format.js";
+import { formatMoney, formatDate, formatDateTime, localizedLabel } from "@/lib/format";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,13 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useAssetRegistrationReference } from "../assets/reference.js";
-import { useActiveSession } from "../auth/store.js";
-import { applyTemplateFieldMetadata, applyValidationMetadata } from "../commands/field-errors.js";
-import { commandClient, commandStatusStore } from "../commands/instance.js";
-import { createCommandIntent } from "../commands/intent.js";
-import { AttachmentField } from "../artifacts/AttachmentField.js";
-import { errorMessage } from "../lib/error-message.js";
+import { useAssetRegistrationReference } from "@/assets/reference";
+import { useActiveSession } from "@/auth/store";
+import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/field-errors";
+import { commandClient, commandStatusStore } from "@/commands/instance";
+import { createCommandIntent } from "@/commands/intent";
+import { AttachmentField } from "@/artifacts/AttachmentField";
+import { errorMessage } from "@/lib/error-message";
 import { formatXAF } from "@routiq/domain";
 import { ErrorBanner } from "@/components/error-banner.js";
 
@@ -116,7 +117,7 @@ export function AssetRegisterScreen() {
     localizedLabel(item);
 
   return (
-    <section className="mx-auto w-full max-w-xl px-4 py-6">
+    <PageContainer width="narrow">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {t("assets.form.eyebrow")}
       </p>
@@ -431,7 +432,7 @@ export function AssetRegisterScreen() {
           </div>
         </form>
       </Form>
-    </section>
+    </PageContainer>
   );
 }
 

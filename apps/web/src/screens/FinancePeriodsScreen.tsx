@@ -2,11 +2,12 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { formatDate } from "../lib/format.js";
+import { formatDate } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { DataTable } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { PageContainer } from "@/components/page-container";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,25 +28,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useMeContext } from "../auth/me.js";
-import { commandClient } from "../commands/instance.js";
-import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
+import { useMeContext } from "@/auth/me.js";
+import { commandClient } from "@/commands/instance.js";
+import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import {
   notifyCommandSuccess,
   notifyCommandWarnings,
-} from "../lib/notify.js";
-import { usePeriods } from "../finance/usePeriods.js";
+} from "@/lib/notify.js";
+import { usePeriods } from "@/finance/usePeriods.js";
 import {
   mergeImplicitCurrentPeriod,
   validateReopenReason,
-} from "../finance/model.js";
-import { canManagePeriods } from "../finance/permissions.js";
+} from "@/finance/model.js";
+import { canManagePeriods } from "@/finance/permissions.js";
 import {
   lockPeriodPayload,
   reopenPeriodPayload,
   type PeriodRead,
 } from "@routiq/contracts";
-import { FinanceNav } from "../finance/FinanceNav.js";
+import { FinanceNav } from "@/finance/FinanceNav.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
@@ -197,19 +198,19 @@ export function FinancePeriodsScreen() {
 
   if (me !== undefined && !canManage) {
     return (
-      <section className="mx-auto w-full max-w-3xl px-4 py-6">
+      <PageContainer>
         <PageHeader title={t("finance.periods.title")} />
         <EmptyState
           className="mt-6"
           icon={<CalendarRange className="size-7" aria-hidden />}
           message={t("finance.periods.accessDenied")}
         />
-      </section>
+      </PageContainer>
     );
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-6">
+    <PageContainer>
       <PageHeader
         title={t("finance.periods.title")}
         onBack={() => void navigate({ to: "/assets" })}
@@ -254,7 +255,7 @@ export function FinancePeriodsScreen() {
         />
       )}
 
-    </section>
+    </PageContainer>
   );
 }
 
