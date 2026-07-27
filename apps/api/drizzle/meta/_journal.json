@@ -92,6 +92,20 @@
       "when": 1784899264899,
       "tag": "0012_finance_command_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1785138704527,
+      "tag": "0013_spooky_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1785138704528,
+      "tag": "0014_activities_isolation",
+      "breakpoints": true
     }
   ]
 }

@@ -49,7 +49,7 @@ describe("username/PIN login", () => {
       membershipId: member.membership.id,
       role: "FIELD_SUBMITTER",
       branchScope: [ws.branch.id],
-      enabledModules: ["CORE", "ASSETS", "DOCUMENTS", "FINANCE"],
+      enabledModules: ["CORE", "ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES"],
     });
   });
 
