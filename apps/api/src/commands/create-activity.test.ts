@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { createActivityCommand, registerPersonCommand } from "@routiq/contracts";
+import {
+  createActivityCommand,
+  createActivityPayload,
+  registerPersonCommand,
+} from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
+import type { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   activities,
@@ -74,7 +79,9 @@ describe("create-activity.v1", () => {
     await ctx.close();
   });
 
-  function build(overrides: Record<string, unknown> = {}) {
+  type ActivityPayload = z.input<typeof createActivityPayload>;
+
+  function build(overrides: Partial<ActivityPayload> = {}): ActivityPayload {
     return {
       activityId: randomUUID(),
       branchCode: "DLA",
@@ -90,7 +97,7 @@ describe("create-activity.v1", () => {
   }
 
   async function post(
-    payload: Record<string, unknown>,
+    payload: ActivityPayload,
     opts: { token?: string; idempotencyKey?: string } = {},
   ) {
     return ctx.app.inject({
@@ -123,7 +130,7 @@ describe("create-activity.v1", () => {
     const response = await post(payload);
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      recordId: payload["activityId"],
+      recordId: payload.activityId,
       rowVersion: 1,
       recordStatus: "OPEN",
     });
@@ -131,7 +138,7 @@ describe("create-activity.v1", () => {
     const [activity] = await ctx.db
       .select()
       .from(activities)
-      .where(eq(activities.id, payload["activityId"] as string));
+      .where(eq(activities.id, payload.activityId));
     expect(activity).toMatchObject({
       status: "OPEN",
       completeness: null,
@@ -145,26 +152,26 @@ describe("create-activity.v1", () => {
     const segments = await ctx.db
       .select()
       .from(activityAssetSegments)
-      .where(eq(activityAssetSegments.activityId, payload["activityId"] as string));
+      .where(eq(activityAssetSegments.activityId, payload.activityId));
     expect(segments).toHaveLength(1);
     expect(segments[0]).toMatchObject({
       assetId: truckId,
       role: "PRIMARY",
       endedAt: null,
-      startReadingId: (payload["startReading"] as { readingId: string }).readingId,
+      startReadingId: payload.startReading?.readingId,
     });
 
     const crew = await ctx.db
       .select()
       .from(activityPeople)
-      .where(eq(activityPeople.activityId, payload["activityId"] as string));
+      .where(eq(activityPeople.activityId, payload.activityId));
     expect(crew).toHaveLength(1);
     expect(crew[0]).toMatchObject({ personId: driverId, role: "DRIVER" });
 
     const readings = await ctx.db
       .select()
       .from(meterReadings)
-      .where(eq(meterReadings.activityId, payload["activityId"] as string));
+      .where(eq(meterReadings.activityId, payload.activityId));
     expect(readings).toHaveLength(1);
     expect(readings[0]).toMatchObject({
       readingType: "ODOMETER",
@@ -200,14 +207,14 @@ describe("create-activity.v1", () => {
 
     expect(first.statusCode).toBe(200);
     expect(second.json()).toMatchObject({
-      recordId: payload["activityId"],
+      recordId: payload.activityId,
       idempotentReplay: true,
     });
 
     const rows = await ctx.db
       .select()
       .from(activities)
-      .where(eq(activities.id, payload["activityId"] as string));
+      .where(eq(activities.id, payload.activityId));
     expect(rows).toHaveLength(1);
   });
 

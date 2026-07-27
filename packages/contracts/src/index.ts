@@ -21,3 +21,4 @@ export * from "./reads/finance.js";
 export * from "./commands/update-approval-threshold.js";
 export * from "./commands/register-person.js";
 export * from "./commands/create-activity.js";
+export * from "./commands/activity-legs.js";

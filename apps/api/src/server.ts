@@ -16,6 +16,7 @@ import "./commands/period-commands.js";
 import "./commands/reverse-entry.js";
 import "./commands/register-person.js";
 import "./commands/create-activity.js";
+import "./commands/activity-legs.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";

@@ -222,7 +222,11 @@ export function defaultApprovalRules(
   // corrected by superseding commands — no ceremony). The field clerk is the
   // whole point, so a rule that omitted FIELD_SUBMITTER would let the role check
   // pass and then 403 on approval.
-  for (const commandType of ["create-activity"]) {
+  for (const commandType of [
+    "create-activity",
+    "record-movement-leg",
+    "record-meter-reading",
+  ]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({
         workspaceId,
