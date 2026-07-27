@@ -1,6 +1,6 @@
 import { Outlet } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Toaster } from "@/components/ui/sonner.js";
+import { Toaster } from "@/components/ui/toast.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MeCtx, useMe } from "../auth/me.js";
 import { AppSidebar } from "./AppSidebar.js";
@@ -22,7 +22,7 @@ export function AppShell() {
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>
-      <Toaster richColors position="top-center" />
+      <Toaster />
     </MeCtx.Provider>
   );
 }

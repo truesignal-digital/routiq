@@ -21,6 +21,17 @@
     "submit": "Sign in",
     "submitting": "Signing in…"
   },
+  "notify": {
+    "success": {
+      "generic": "Action completed"
+    },
+    "warnings": {
+      "generic": "The action completed with a warning ({code})."
+    },
+    "errors": {
+      "generic": "The action failed. Please try again. ({code})"
+    }
+  },
   "errors": {
     "AUTH_INVALID_CREDENTIALS": "Incorrect username or PIN.",
     "VALIDATION_FAILED": "Please check the entered fields.",
@@ -56,6 +67,13 @@
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
+    "notify": {
+      "success": {
+        "registered": "Asset registered",
+        "commissioned": "Asset commissioned",
+        "assigned": "Asset assigned"
+      }
+    },
     "eyebrow": "Operational fleet",
     "title": "Your assets",
     "subtitle": "Track every vehicle from registration through retirement.",
@@ -181,6 +199,12 @@
     "retry": "Retry"
   },
   "documents": {
+    "notify": {
+      "success": {
+        "added": "Document saved",
+        "renewed": "Document renewed"
+      }
+    },
     "link": "Documents",
     "title": "Asset documents",
     "back": "Back to assets",
@@ -219,10 +243,14 @@
         "rejected": "Entry rejected",
         "reversed": "Entry reversed",
         "locked": "Period locked",
-        "reopened": "Period reopened"
+        "reopened": "Period reopened",
+        "posted": "Transaction recorded and posted",
+        "submitted": "Transaction sent for approval",
+        "recorded": "Transaction recorded"
       },
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
+        "EVIDENCE_MISSING": "Missing evidence: this category requires supporting documentation or a photo.",
         "LATE_POSTING": "This transaction was posted to a previous accounting period.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
       },
@@ -272,16 +300,6 @@
       "evidenceLabel": "Supporting document (optional)",
       "submit": "Record",
       "submitting": "Recording…",
-      "outcomePosted": "Recorded",
-      "outcomePostedDesc": "Your transaction has been recorded and posted.",
-      "outcomeSubmitted": "Awaiting approval",
-      "outcomeSubmittedDesc": "Your transaction is saved and waiting for validation by a finance manager.",
-      "outcomeSuccess": "Success",
-      "outcomeDesc": "Your transaction has been recorded.",
-      "warningsLabel": "Notices",
-      "warningEvidenceMissing": "Missing evidence: this category requires supporting documentation or a photo.",
-      "warningLatePosting": "This transaction was recorded in a previous accounting period.",
-      "done": "Close",
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch…",
       "branchesFailed": "We couldn't load branches. Retry this page."
@@ -350,7 +368,6 @@
     "approvals": {
       "title": "Approvals",
       "back": "Back",
-      "accessDenied": "You don't have access to this feature.",
       "loading": "Loading…",
       "loadFailed": "We couldn't load approvals. Please retry.",
       "retry": "Try again",
@@ -384,7 +401,6 @@
         "entries": "Entries",
         "actions": "Actions"
       },
-      "accessDenied": "You do not have access to this feature.",
       "loading": "Loading…",
       "loadFailed": "Failed to load periods. Please try again.",
       "retry": "Retry",

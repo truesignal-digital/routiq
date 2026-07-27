@@ -5,11 +5,13 @@ import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
+import { useActiveSession } from "@/auth/store.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import { commandClient } from "@/commands/instance.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +30,8 @@ import { canAccessDocuments, canManageDocuments } from "@/documents/permissions.
 import { useCategories } from "@/documents/useCategories.js";
 import { useAssetDocuments } from "@/documents/useDocuments.js";
 import { errorMessage } from "@/lib/error-message.js";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "@/lib/format.js";
+import { formatDate, localizedLabel } from "@/lib/format.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 
 
 interface FormState {
@@ -50,6 +53,7 @@ export function AssetDocumentsScreen() {
   const { assetId } = useParams({ from: "/app/assets/$assetId/documents" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const session = useActiveSession();
   const me = useMeContext();
   const documentsEnabled = canAccessDocuments(me?.enabledModules);
   const canManage = canManageDocuments(me?.role, me?.enabledModules);
@@ -74,14 +78,11 @@ export function AssetDocumentsScreen() {
 
   if (me !== undefined && !documentsEnabled) {
     return (
-      <PageContainer>
-        <PageHeader title={t("documents.title")} />
-        <EmptyState
-          className="mt-6"
-          icon={<FileText className="size-7" aria-hidden />}
-          message={errorMessage(i18n, "MODULE_DISABLED")}
-        />
-      </PageContainer>
+      <PermissionDenied
+        title={t("documents.title")}
+        icon={<FileText className="size-7" aria-hidden />}
+        code={deniedCode(documentsEnabled)}
+      />
     );
   }
 
@@ -109,9 +110,12 @@ export function AssetDocumentsScreen() {
           documentTypes={typesQuery.data ?? []}
           documentTypesFailed={typesQuery.isError}
           onClose={() => setForm({ open: false })}
-          onCommitted={async () => {
+          onCommitted={async (renewed) => {
             setForm({ open: false });
-            await queryClient.invalidateQueries({ queryKey: ["ws"] });
+            notifyCommandSuccess("documents", renewed ? "renewed" : "added");
+            await queryClient.invalidateQueries({
+              queryKey: ["ws", session?.workspaceSlug, "asset", assetId, "documents"],
+            });
           }}
         />
       )}
@@ -246,7 +250,7 @@ function DocumentForm({
   documentTypes: Array<{ code: string; labelFr: string; labelEn: string }>;
   documentTypesFailed: boolean;
   onClose: () => void;
-  onCommitted: () => Promise<void>;
+  onCommitted: (renewed: boolean) => Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
   const [documentId] = useState(() => crypto.randomUUID());
@@ -289,7 +293,7 @@ function DocumentForm({
       setErrorCode(result.code);
       return;
     }
-    await onCommitted();
+    await onCommitted(renews !== undefined);
   }
 
   return (
@@ -374,7 +378,7 @@ function DocumentForm({
           role={errorCode === "ASSET_NOT_OPERATIONAL" || errorCode === "DOCUMENT_ALREADY_SUPERSEDED" ? "status" : "alert"}
           className={
             errorCode === "ASSET_NOT_OPERATIONAL" || errorCode === "DOCUMENT_ALREADY_SUPERSEDED"
-              ? "rounded-lg bg-sky-100 px-4 py-3 text-sm text-sky-900"
+              ? "rounded-lg bg-info/10 px-4 py-3 text-sm text-info-foreground"
               : "rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
           }
         >

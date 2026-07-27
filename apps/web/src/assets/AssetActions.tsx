@@ -8,9 +8,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isReadOnlyRole, useMeContext } from "../auth/me.js";
+import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { errorMessage } from "../lib/error-message.js";
+import { notifyCommandSuccess } from "../lib/notify.js";
 import { useAssetRegistrationReference } from "./reference.js";
 import type { AssetListItem } from "./model.js";
 import { ErrorBanner } from "@/components/error-banner.js";
@@ -29,8 +30,9 @@ export function AssetActions({
   asset: AssetListItem;
   client?: CommandClient;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const session = useActiveSession();
   const me = useMeContext();
   const reference = useAssetRegistrationReference();
 
@@ -48,14 +50,23 @@ export function AssetActions({
   const canAssign = !disposed;
   if (!canCommission && !canAssign) return null;
 
-  async function run(submit: () => Promise<Awaited<ReturnType<CommandClient["submit"]>>>) {
+  const invalidateAssets = () =>
+    queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "assets"],
+    });
+
+  async function run(
+    successKey: string,
+    submit: () => Promise<Awaited<ReturnType<CommandClient["submit"]>>>,
+  ) {
     setSubmitting(true);
     const result = await submit();
     setSubmitting(false);
     if (result.ok) {
       setPanel({ kind: "idle" });
       setAssignBranch("");
-      await queryClient.invalidateQueries({ queryKey: ["ws"] });
+      notifyCommandSuccess("assets", successKey, result.outcome.warnings);
+      await invalidateAssets();
       return;
     }
     if (result.code === "VERSION_CONFLICT") setPanel({ kind: "conflict" });
@@ -65,7 +76,7 @@ export function AssetActions({
 
   function onCommission() {
     commissionIntent.current ??= createCommandIntent(client, "commission-asset", 1);
-    void run(() =>
+    void run("commissioned", () =>
       commissionIntent.current!.submit(
         { assetId: asset.id },
         { expectedVersion: asset.rowVersion },
@@ -76,7 +87,7 @@ export function AssetActions({
   function onAssign() {
     if (assignBranch === "") return;
     assignIntent.current ??= createCommandIntent(client, "assign-asset", 1);
-    void run(() =>
+    void run("assigned", () =>
       assignIntent.current!.submit(
         { assetId: asset.id, branchCode: assignBranch },
         { expectedVersion: asset.rowVersion },
@@ -86,13 +97,13 @@ export function AssetActions({
 
   async function onReload() {
     setPanel({ kind: "idle" });
-    await queryClient.invalidateQueries({ queryKey: ["ws"] });
+    await invalidateAssets();
   }
 
   return (
     <div className="mt-3 border-t border-foreground/10 pt-3">
       {panel.kind === "conflict" ? (
-        <div role="alert" className="rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-900">
+        <div role="alert" className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
           <p className="font-semibold">{t("assets.actions.conflictTitle")}</p>
           <p className="mt-1">{t("assets.actions.conflictBody")}</p>
           <Button variant="outline" className="mt-2 min-h-9" onClick={() => void onReload()}>
@@ -100,7 +111,7 @@ export function AssetActions({
           </Button>
         </div>
       ) : panel.kind === "approval" ? (
-        <div role="status" className="rounded-lg bg-sky-100 px-3 py-2 text-xs text-sky-900">
+        <div role="status" className="rounded-lg bg-info/10 px-3 py-2 text-xs text-info-foreground">
           <p className="font-semibold">{t("assets.actions.approvalTitle")}</p>
           <p className="mt-1">{t("assets.actions.approvalBody")}</p>
           <Button

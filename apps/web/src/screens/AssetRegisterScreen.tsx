@@ -10,7 +10,7 @@ import {
 } from "@routiq/contracts";
 import type { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "@/lib/format";
+import { localizedLabel } from "@/lib/format";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -32,7 +32,7 @@ import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/
 import { commandClient, commandStatusStore } from "@/commands/instance";
 import { createCommandIntent } from "@/commands/intent";
 import { FileUpload } from "@/components/ui/file-upload";
-import { errorMessage } from "@/lib/error-message";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { formatXAF } from "@routiq/domain";
 import { ErrorBanner } from "@/components/error-banner.js";
 
@@ -42,7 +42,7 @@ type FormOutput = z.output<typeof registerAssetPayload>;
 const CAPACITY_UNITS = ["KG", "TONNE", "M3", "SEAT"] as const;
 
 export function AssetRegisterScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useActiveSession();
@@ -108,6 +108,7 @@ export function AssetRegisterScreen() {
       setErrorCode(result.code);
       return;
     }
+    notifyCommandSuccess("assets", "registered", result.outcome.warnings);
     await queryClient.invalidateQueries({
       queryKey: ["ws", session?.workspaceSlug, "assets"],
     });

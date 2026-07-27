@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { AlertCircle, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,13 +20,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMeContext } from "@/auth/me.js";
+import { useActiveSession } from "@/auth/store.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
-import { errorMessage } from "@/lib/error-message.js";
-import {
-  notifyCommandSuccess,
-  notifyCommandWarnings,
-} from "@/lib/notify.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useEntry } from "@/finance/useEntry.js";
 import { canReverseEntry } from "@/finance/permissions.js";
 import { validateReversalReason } from "@/finance/model.js";
@@ -42,10 +39,11 @@ interface ReverseDialogState {
 }
 
 export function FinanceEntryDetailScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { entryId } = useParams({ from: "/app/finance/entries/$entryId" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const session = useActiveSession();
   const me = useMeContext();
 
   const entryQuery = useEntry(entryId);
@@ -90,9 +88,14 @@ export function FinanceEntryDetailScreen() {
     }
 
     setReverseDialog({ open: false, reason: "", submitting: false });
-    notifyCommandSuccess("reversed");
-    notifyCommandWarnings(result.outcome.warnings);
-    await queryClient.invalidateQueries({ queryKey: ["ws"] });
+    notifyCommandSuccess("finance", "reversed", result.outcome.warnings);
+    // A reversal rewrites this entry and adds one to the list; nothing else moves.
+    await queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "finance", "entry"],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "finance", "entries"],
+    });
 
     setTimeout(() => {
       void navigate({
@@ -211,7 +214,7 @@ function ReverseDialog({
   onCancel: () => void;
   onSubmit: () => Promise<void>;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   if (!isOpen) return null;
 

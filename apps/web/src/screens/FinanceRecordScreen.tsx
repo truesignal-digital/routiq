@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "@tanstack/react-router";
 import type { CommandResult } from "@routiq/contracts";
-import { AlertCircle, CheckCircle2, WalletCards } from "lucide-react";
+import { WalletCards } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { EmptyState, PageHeader } from "@/components/page";
+import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
@@ -32,8 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMeContext } from "@/auth/me.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
-import { errorMessage } from "@/lib/error-message.js";
-import { localizedLabel, formatPaymentMethod } from "@/lib/format.js";
+import { localizedLabel } from "@/lib/format.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 
 function normalizeMoneySpacing(value: string): string {
   return value.replace(/ /g, " ");
@@ -46,43 +47,37 @@ import {
 } from "@/finance/model.js";
 import { canRecordFinance } from "@/finance/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
+import { assetDisplayName } from "@/assets/model.js";
+import { useAssets } from "@/assets/useAssets.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { FinanceNav } from "@/finance/FinanceNav.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
 
-interface ScreenState {
-  stage: "form" | "outcome";
-  outcome?: CommandResult;
+/** The recorded entry's server status decides which success line the toast carries. */
+function successKey(outcome: CommandResult): string {
+  if (outcome.recordStatus === "POSTED") return "posted";
+  if (outcome.recordStatus === "SUBMITTED") return "submitted";
+  return "recorded";
 }
 
-
 export function FinanceRecordScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
   const reference = useAssetRegistrationReference();
 
-  const [screenState, setScreenState] = useState<ScreenState>({ stage: "form" });
-
   if (me !== undefined && !canRecord) {
     return (
-      <PageContainer>
-        <PageHeader title={t("finance.record.title")} />
-        <EmptyState
-          className="mt-6"
-          icon={<WalletCards className="size-7" aria-hidden />}
-          message={errorMessage(i18n, "MODULE_DISABLED")}
-        />
-      </PageContainer>
+      <PermissionDenied
+        title={t("finance.record.title")}
+        icon={<WalletCards className="size-7" aria-hidden />}
+        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+      />
     );
   }
-
-  const handleOutcomeClose = () => {
-    void navigate({ to: "/assets" });
-  };
 
   return (
     <PageContainer>
@@ -93,18 +88,15 @@ export function FinanceRecordScreen() {
       />
       <FinanceNav />
 
-      {screenState.stage === "form" && (
-        <RecordForm
-          branches={reference.data?.branches ?? []}
-          branchesLoading={reference.isPending}
-          branchesFailed={reference.isError}
-          onOutcome={(outcome) => setScreenState({ stage: "outcome", outcome })}
-        />
-      )}
-
-      {screenState.stage === "outcome" && screenState.outcome && (
-        <OutcomeView outcome={screenState.outcome} onClose={handleOutcomeClose} />
-      )}
+      <RecordForm
+        branches={reference.data?.branches ?? []}
+        branchesLoading={reference.isPending}
+        branchesFailed={reference.isError}
+        onRecorded={(outcome) => {
+          notifyCommandSuccess("finance", successKey(outcome), outcome.warnings);
+          void navigate({ to: "/finance/entries" });
+        }}
+      />
     </PageContainer>
   );
 }
@@ -130,14 +122,14 @@ function RecordForm({
   branches,
   branchesLoading,
   branchesFailed,
-  onOutcome,
+  onRecorded,
 }: {
   branches: Array<{ code: string; name: string }>;
   branchesLoading: boolean;
   branchesFailed: boolean;
-  onOutcome: (outcome: CommandResult) => void;
+  onRecorded: (outcome: CommandResult) => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [entryId] = useState(() => crypto.randomUUID());
   const intentExpenseRef = useRef(createCommandIntent<RecordPayload>(commandClient, "record-expense", 1));
   const intentRevenueRef = useRef(createCommandIntent<RecordPayload>(commandClient, "record-revenue", 1));
@@ -191,6 +183,7 @@ function RecordForm({
   const categoriesQuery = useCategories(
     direction === "EXPENSE" ? "EXPENSE_CATEGORY" : "REVENUE_CATEGORY",
   );
+  const assetOptions = useAssetOptions();
 
   const [errorCode, setErrorCode] = useState<string>();
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
@@ -251,7 +244,7 @@ function RecordForm({
       return;
     }
 
-    onOutcome(result.outcome);
+    onRecorded(result.outcome);
   }
 
   return (
@@ -517,14 +510,24 @@ function RecordForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t("finance.record.assetLabel")}</FormLabel>
-              <FormControl>
-                <Input
-                  type="text"
-                  placeholder={t("finance.record.assetPlaceholder")}
-                  className="min-h-11"
-                  {...field}
-                />
-              </FormControl>
+              <Select
+                value={field.value || null}
+                onValueChange={(value) => field.onChange(value ?? "")}
+                disabled={assetOptions.length === 0}
+              >
+                <FormControl>
+                  <SelectTrigger className="min-h-11 w-full">
+                    <SelectValue placeholder={t("finance.record.assetPlaceholder")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {assetOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -556,64 +559,37 @@ function RecordForm({
 }
 
 
-function OutcomeView({
-  outcome,
-  onClose,
-}: {
-  outcome: CommandResult;
-  onClose: () => void;
-}) {
+/**
+ * The whole fleet, labelled as the entries filter labels it. Stopping at the
+ * first keyset page would hide assets an operator needs to charge a cost to;
+ * pilot fleets are tens of rows, so draining the cursor costs a request or two.
+ */
+function useAssetOptions(): Array<{ value: string; label: string }> {
   const { t } = useTranslation();
-  const isPosted = outcome.recordStatus === "POSTED";
-  const isSubmitted = outcome.recordStatus === "SUBMITTED";
+  const assetsQuery = useAssets();
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = assetsQuery;
 
-  return (
-    <div className="mt-6 flex flex-col gap-4 rounded-xl border border-green-200 bg-green-50 p-6">
-      <div className="flex items-start gap-3">
-        <CheckCircle2 className="mt-0.5 size-6 text-green-600" aria-hidden />
-        <div>
-          <h2 className="font-semibold text-green-900">
-            {isPosted
-              ? t("finance.record.outcomePosted")
-              : isSubmitted
-                ? t("finance.record.outcomeSubmitted")
-                : t("finance.record.outcomeSuccess")}
-          </h2>
-          <p className="mt-1 text-sm text-green-800">
-            {isPosted
-              ? t("finance.record.outcomePostedDesc")
-              : isSubmitted
-                ? t("finance.record.outcomeSubmittedDesc")
-                : t("finance.record.outcomeDesc")}
-          </p>
-        </div>
-      </div>
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-      {outcome.warnings && outcome.warnings.length > 0 && (
-        <div className="mt-2 border-t border-green-200 pt-4">
-          <p className="text-xs font-semibold uppercase text-green-900">
-            {t("finance.record.warningsLabel")}
-          </p>
-          <ul className="mt-2 space-y-2">
-            {outcome.warnings.map((warning, idx) => (
-              <li key={idx} className="flex gap-2 rounded-md bg-amber-50 p-2 text-sm text-amber-900">
-                <AlertCircle className="mt-0.5 size-4 flex-shrink-0" aria-hidden />
-                <span>
-                  {warning === "EVIDENCE_MISSING"
-                    ? t("finance.record.warningEvidenceMissing")
-                    : warning === "LATE_POSTING"
-                      ? t("finance.record.warningLatePosting")
-                      : warning}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <Button onClick={onClose} className="min-h-11 mt-4">
-        {t("finance.record.done")}
-      </Button>
-    </div>
+  return useMemo(
+    () =>
+      (assetsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((asset) => {
+        const name = assetDisplayName(asset);
+        return {
+          value: asset.id,
+          label:
+            name === asset.assetCode
+              ? asset.assetCode
+              : t("finance.entries.filters.assetOption", {
+                  code: asset.assetCode,
+                  name,
+                }),
+        };
+      }),
+    [assetsQuery.data, t],
   );
 }

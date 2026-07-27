@@ -22,12 +22,20 @@ const ENTRY_ID = "00000000-0000-4000-8000-000000000010";
 const ARTIFACT_ID = "00000000-0000-4000-8000-000000000020";
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
+const ASSET_ID = "00000000-0000-4000-8000-000000000030";
+
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   submit: vi.fn(),
   uploadArtifact: vi.fn(),
   useAssetRegistrationReference: vi.fn(),
   useCategories: vi.fn(),
+  useAssets: vi.fn(),
+  toastAdd: vi.fn(),
+}));
+
+vi.mock("@/components/ui/toast.js", () => ({
+  toast: { add: mocks.toastAdd },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -51,6 +59,10 @@ vi.mock("../assets/reference.js", () => ({
 
 vi.mock("../documents/useCategories.js", () => ({
   useCategories: mocks.useCategories,
+}));
+
+vi.mock("../assets/useAssets.js", () => ({
+  useAssets: mocks.useAssets,
 }));
 
 vi.mock("../finance/FinanceNav.js", () => ({
@@ -112,6 +124,33 @@ beforeEach(() => {
     isPending: false,
     isError: false,
   });
+  mocks.useAssets.mockReturnValue({
+    data: {
+      pages: [
+        {
+          items: [
+            {
+              id: ASSET_ID,
+              assetCode: "TR-001",
+              registrationNumber: "LT-123-AB",
+              manufacturer: "Iveco",
+              model: "Stralis",
+              lifecycleStatus: "IN_SERVICE",
+              rowVersion: 1,
+              category: { code: "TRUCK", labelFr: "Camion", labelEn: "Truck" },
+              branch: { code: "DLA", name: "Douala" },
+            },
+          ],
+          nextCursor: null,
+        },
+      ],
+    },
+    isPending: false,
+    isError: false,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+  });
   mocks.submit.mockResolvedValue({
     ok: true,
     outcome: {
@@ -159,7 +198,8 @@ describe("finance record form", () => {
     await user.type(screen.getByLabelText("Counterparty (optional)"), "Fuel Station");
     await user.type(screen.getByLabelText("Description (optional)"), "Diesel");
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");
-    await user.type(screen.getByLabelText("Asset (optional)"), "asset-123");
+    await user.click(screen.getByLabelText("Asset (optional)"));
+    await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Record" }));
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
@@ -175,7 +215,67 @@ describe("finance record form", () => {
         counterpartyName: "Fuel Station",
         description: "Diesel",
         paymentReference: "R-42",
-        assetId: "asset-123",
+        assetId: ASSET_ID,
+      }),
+    );
+  });
+
+  it("offers the fleet as options instead of a raw UUID field", async () => {
+    renderScreen();
+
+    // The trigger shows what the entries filter shows: code — display name.
+    expect(screen.getByLabelText("Asset (optional)").tagName).not.toBe("INPUT");
+    await waitFor(() =>
+      expect(screen.getByLabelText("Asset (optional)").textContent).toContain(
+        "Assign to a vehicle",
+      ),
+    );
+  });
+
+  it("replaces the outcome panel with a toast and a jump to the entries list", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await chooseFuelCategory(user);
+
+    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record" }));
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Transaction recorded and posted",
+      }),
+    );
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" });
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  it("carries a server warning as a line on the same success toast", async () => {
+    mocks.submit.mockResolvedValue({
+      ok: true,
+      outcome: {
+        commandId: ENTRY_ID,
+        recordId: ENTRY_ID,
+        rowVersion: 1,
+        recordStatus: "SUBMITTED",
+        warnings: ["EVIDENCE_MISSING", "LATE_POSTING"],
+        idempotentReplay: false,
+      },
+    });
+    const user = userEvent.setup();
+    renderScreen();
+    await chooseFuelCategory(user);
+
+    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record" }));
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Transaction sent for approval",
+        description:
+          "Missing evidence: this category requires supporting documentation or a photo.\n" +
+          "This transaction was posted to a previous accounting period.",
       }),
     );
   });

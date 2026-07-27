@@ -283,7 +283,7 @@ export function AssetsStub() {
         <a
           href="/assets/new"
           aria-label={t("assets.register")}
-          className="fixed bottom-6 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-[var(--signal-foreground)] shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
+          className="fixed bottom-6 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
         >
           <Plus className="size-6" aria-hidden />
         </a>

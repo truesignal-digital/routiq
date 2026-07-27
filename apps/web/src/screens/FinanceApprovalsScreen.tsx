@@ -1,16 +1,19 @@
 import { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { z } from "zod";
 import { useMeContext } from "@/auth/me.js";
+import { useActiveSession } from "@/auth/store.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import { DataTable, DataTableViewOptions } from "@/components/data-table";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,10 +32,7 @@ import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import { useApprovals } from "@/finance/useApprovals.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
-import {
-  notifyCommandSuccess,
-  notifyCommandWarnings,
-} from "@/lib/notify.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import {
   approveEntryPayload,
   rejectEntryPayload,
@@ -49,20 +49,30 @@ type ActionDialogState =
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const session = useActiveSession();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
   const approvalsQuery = useApprovals(canApprove);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
-  const [removedEntryIds, setRemovedEntryIds] = useState<Set<string>>(new Set());
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
   const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
-  const entries = (approvalsQuery.data?.entries ?? []).filter(
-    (e) => !removedEntryIds.has(e.id),
-  );
+  const entries = approvalsQuery.data?.entries ?? [];
+
+  // ADR-0001: a decided entry leaves the queue because the server says so, not
+  // because the client crossed it off locally.
+  const invalidateDecided = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "finance", "approvals"],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "finance", "entries"],
+    });
+  };
   // The queue carries no toolbar: `/v1/finance/approvals` takes no filter or
   // sort params, and it answers with at most 100 rows next to a separate
   // `total`. Both a filter and a sort control would therefore act on a prefix
@@ -183,17 +193,15 @@ export function FinanceApprovalsScreen() {
       if (result.code === "VERSION_CONFLICT") {
         // Refetch on version conflict
         await approvalsQuery.refetch();
-        setRemovedEntryIds(new Set());
         return;
       }
       setActionError(result.code);
       return;
     }
 
-    setRemovedEntryIds((prev) => new Set([...prev, entryId]));
-    notifyCommandSuccess("approved");
-    notifyCommandWarnings(result.outcome.warnings);
+    notifyCommandSuccess("finance", "approved", result.outcome.warnings);
     setActionDialog({ open: false });
+    await invalidateDecided();
   };
 
   const handleReject = async (entryId: string, rowVersion: number, reason: string) => {
@@ -215,88 +223,84 @@ export function FinanceApprovalsScreen() {
     if (!result.ok) {
       if (result.code === "VERSION_CONFLICT") {
         await approvalsQuery.refetch();
-        setRemovedEntryIds(new Set());
         return;
       }
       setActionError(result.code);
       return;
     }
 
-    setRemovedEntryIds((prev) => new Set([...prev, entryId]));
-    notifyCommandSuccess("rejected");
-    notifyCommandWarnings(result.outcome.warnings);
+    notifyCommandSuccess("finance", "rejected", result.outcome.warnings);
     setActionDialog({ open: false });
+    await invalidateDecided();
   };
+
+  if (me !== undefined && !canApprove) {
+    return (
+      <PermissionDenied
+        width="wide"
+        title={t("finance.approvals.title")}
+        icon={<ClipboardCheck className="size-7" aria-hidden />}
+        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+      />
+    );
+  }
 
   return (
     <PageContainer width="wide">
-      {me !== undefined && !canApprove ? (
-        <>
-          <PageHeader title={t("finance.approvals.title")} />
-          <EmptyState
-            className="mt-6"
-            icon={<ClipboardCheck className="size-7" aria-hidden />}
-            message={t("finance.approvals.accessDenied")}
+      <PageHeader
+        title={t("finance.approvals.title")}
+        onBack={() => void navigate({ to: "/assets" })}
+        backLabel={t("finance.approvals.back")}
+      />
+      <FinanceToolbar>
+        {!approvalsQuery.isPending && !approvalsQuery.isError && (
+          <DataTableViewOptions
+            columns={columns}
+            value={columnVisibility}
+            onChange={setColumnVisibility}
           />
-        </>
+        )}
+      </FinanceToolbar>
+
+      {approvalsQuery.isPending ? (
+        <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
+      ) : approvalsQuery.isError ? (
+        <ErrorState
+          className="mt-6"
+          message={t("finance.approvals.loadFailed")}
+          retryLabel={t("finance.approvals.retry")}
+          onRetry={() => void approvalsQuery.refetch()}
+        />
       ) : (
-        <>
-          <PageHeader
-            title={t("finance.approvals.title")}
-            onBack={() => void navigate({ to: "/assets" })}
-            backLabel={t("finance.approvals.back")}
+        <div className="mt-6">
+          <DataTable
+            columns={columns}
+            data={entries}
+            getRowId={(entry) => entry.id}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+            emptyState={
+              <EmptyState
+                icon={<ClipboardCheck className="size-7" aria-hidden />}
+                message={t("finance.approvals.empty")}
+              />
+            }
           />
-          <FinanceToolbar>
-            {!approvalsQuery.isPending && !approvalsQuery.isError && (
-              <DataTableViewOptions
-                columns={columns}
-                value={columnVisibility}
-                onChange={setColumnVisibility}
-              />
-            )}
-          </FinanceToolbar>
+        </div>
+      )}
 
-          {approvalsQuery.isPending ? (
-            <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
-          ) : approvalsQuery.isError ? (
-            <ErrorState
-              className="mt-6"
-              message={t("finance.approvals.loadFailed")}
-              retryLabel={t("finance.approvals.retry")}
-              onRetry={() => void approvalsQuery.refetch()}
-            />
-          ) : (
-            <div className="mt-6">
-              <DataTable
-                columns={columns}
-                data={entries}
-                getRowId={(entry) => entry.id}
-                columnVisibility={columnVisibility}
-                onColumnVisibilityChange={setColumnVisibility}
-                emptyState={
-                  <EmptyState
-                    icon={<ClipboardCheck className="size-7" aria-hidden />}
-                    message={t("finance.approvals.empty")}
-                  />
-                }
-              />
-            </div>
-          )}
-
-          {actionDialog.open && (
-            <ActionDialog
-              action={actionDialog.action}
-              onApprove={(note) =>
-                handleApprove(actionDialog.entryId, actionDialog.rowVersion, note)
-              }
-              onReject={(reason) =>
-                handleReject(actionDialog.entryId, actionDialog.rowVersion, reason)
-              }
-              onCancel={() => setActionDialog({ open: false })}
-              error={actionError}
-            />
-          )}
-        </>
+      {actionDialog.open && (
+        <ActionDialog
+          action={actionDialog.action}
+          onApprove={(note) =>
+            handleApprove(actionDialog.entryId, actionDialog.rowVersion, note)
+          }
+          onReject={(reason) =>
+            handleReject(actionDialog.entryId, actionDialog.rowVersion, reason)
+          }
+          onCancel={() => setActionDialog({ open: false })}
+          error={actionError}
+        />
       )}
     </PageContainer>
   );

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeCtx, type MeContext } from "../auth/me.js";
+import { sessionStore } from "../auth/store.js";
 import { canApproveEntries } from "../finance/permissions.js";
 import { i18n } from "../i18n/index.js";
 import { FinanceApprovalsScreen } from "./FinanceApprovalsScreen.js";
@@ -12,17 +13,11 @@ import { FinanceApprovalsScreen } from "./FinanceApprovalsScreen.js";
 const mocks = vi.hoisted(() => ({
   createCommandIntent: vi.fn(),
   useApprovals: vi.fn(),
-  toastSuccess: vi.fn(),
-  toastWarning: vi.fn(),
-  toastError: vi.fn(),
+  toastAdd: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
-  toast: {
-    success: mocks.toastSuccess,
-    warning: mocks.toastWarning,
-    error: mocks.toastError,
-  },
+vi.mock("@/components/ui/toast.js", () => ({
+  toast: { add: mocks.toastAdd },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -40,6 +35,8 @@ vi.mock("../finance/useApprovals.js", () => ({
 vi.mock("../finance/FinanceNav.js", () => ({
   FinanceNav: () => null,
 }));
+
+const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const approver: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
@@ -94,14 +91,26 @@ const approvalEntries = [
   },
 ];
 
-function renderScreen(screenNode: ReactNode) {
+function renderScreen(screenNode: ReactNode, client = new QueryClient()) {
   return render(
     createElement(
       QueryClientProvider,
-      { client: new QueryClient() },
+      { client },
       createElement(MeCtx.Provider, { value: approver }, screenNode),
     ),
   );
+}
+
+/** Records every key handed to `invalidateQueries` on a real client. */
+function recordingClient(): { client: QueryClient; keys: unknown[][] } {
+  const client = new QueryClient();
+  const keys: unknown[][] = [];
+  const original = client.invalidateQueries.bind(client);
+  client.invalidateQueries = ((filters?: { queryKey?: unknown[] }) => {
+    if (filters?.queryKey !== undefined) keys.push(filters.queryKey);
+    return original(filters);
+  }) as QueryClient["invalidateQueries"];
+  return { client, keys };
 }
 
 function mockApprovals() {
@@ -148,9 +157,17 @@ afterAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   mockApprovals();
+  sessionStore.save({
+    ...sessionIdentity,
+    token: "token",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  sessionStore.logout(sessionIdentity);
+  cleanup();
+});
 
 describe("finance approval command routing", () => {
   it("dispatches approve then reject through their distinct commands and toasts approval success", async () => {
@@ -164,15 +181,36 @@ describe("finance approval command routing", () => {
     await user.click(screen.getAllByRole("button", { name: "Approve" })[0]!);
     await user.click(screen.getAllByRole("button", { name: "Approve" }).at(-1)!);
     await waitFor(() => expect(submissionOrder).toEqual(["approve-entry"]));
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Entry approved");
+    expect(mocks.toastAdd).toHaveBeenCalledWith({
+      type: "success",
+      title: "Entry approved",
+    });
 
-    await user.click(screen.getByRole("button", { name: "Reject" }));
+    // Both rows are still in the queue: ADR-0001 leaves removal to the server's
+    // next answer rather than crossing the approved row off locally.
+    await user.click(screen.getAllByRole("button", { name: "Reject" })[0]!);
     await user.type(screen.getByLabelText("Rejection reason"), "Duplicate entry");
     await user.click(screen.getAllByRole("button", { name: "Reject" }).at(-1)!);
 
     await waitFor(() =>
       expect(submissionOrder).toEqual(["approve-entry", "reject-entry"]),
     );
+  });
+
+  it("invalidates only the reads an approval changes, never the whole workspace", async () => {
+    successfulIntentRecorder([]);
+    const { client, keys } = recordingClient();
+    const user = userEvent.setup();
+    renderScreen(createElement(FinanceApprovalsScreen), client);
+
+    await user.click(screen.getAllByRole("button", { name: "Approve" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "Approve" }).at(-1)!);
+
+    await waitFor(() => expect(keys.length).toBe(2));
+    expect(keys).toEqual([
+      ["ws", "sotrafret", "finance", "approvals"],
+      ["ws", "sotrafret", "finance", "entries"],
+    ]);
   });
 
   it("keeps reject submit disabled while the reason is empty", async () => {

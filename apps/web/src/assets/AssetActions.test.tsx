@@ -2,14 +2,35 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
+import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import type { AssetListItem } from "./model.js";
 import { AssetActions } from "./AssetActions.js";
 
-afterEach(cleanup);
+const mocks = vi.hoisted(() => ({ toastAdd: vi.fn() }));
+
+vi.mock("@/components/ui/toast.js", () => ({
+  toast: { add: mocks.toastAdd },
+}));
+
+const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  sessionStore.save({
+    ...sessionIdentity,
+    token: "token",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+});
+
+afterEach(() => {
+  sessionStore.logout(sessionIdentity);
+  cleanup();
+});
 
 const baseAsset: AssetListItem = {
   id: "a1",
@@ -48,15 +69,27 @@ function renderActions(
   asset: AssetListItem,
   client: CommandClient,
   me: MeContext = admin,
+  queryClient = new QueryClient(),
 ) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={queryClient}>
       <MeCtx.Provider value={me}>
         <AssetActions asset={asset} client={client} />
       </MeCtx.Provider>
     </QueryClientProvider>,
   );
 }
+
+const committed: SubmitResult = {
+  ok: true,
+  outcome: {
+    commandId: "c1",
+    recordId: "a1",
+    rowVersion: 5,
+    warnings: [],
+    idempotentReplay: false,
+  },
+};
 
 describe("status-gated visibility", () => {
   it("REGISTERED shows commission + assign", () => {
@@ -86,6 +119,37 @@ describe("status-gated visibility", () => {
       role: "EXECUTIVE_VIEWER",
     });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("committed actions", () => {
+  it("confirms a commission with a toast instead of closing the panel in silence", async () => {
+    renderActions(baseAsset, fakeClient(committed));
+
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Actif mis en service",
+      }),
+    );
+  });
+
+  it("invalidates the asset list alone, not every workspace read", async () => {
+    const queryClient = new QueryClient();
+    const keys: unknown[][] = [];
+    const original = queryClient.invalidateQueries.bind(queryClient);
+    queryClient.invalidateQueries = ((filters?: { queryKey?: unknown[] }) => {
+      if (filters?.queryKey !== undefined) keys.push(filters.queryKey);
+      return original(filters);
+    }) as QueryClient["invalidateQueries"];
+
+    renderActions(baseAsset, fakeClient(committed), admin, queryClient);
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
+
+    await waitFor(() => expect(keys.length).toBe(1));
+    expect(keys[0]).toEqual(["ws", "sotrafret", "assets"]);
   });
 });
 

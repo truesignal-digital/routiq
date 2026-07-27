@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
@@ -8,6 +9,7 @@ import { z } from "zod";
 import { DataTable, DataTableViewOptions } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,12 +32,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMeContext } from "@/auth/me.js";
+import { useActiveSession } from "@/auth/store.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
-import {
-  notifyCommandSuccess,
-  notifyCommandWarnings,
-} from "@/lib/notify.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { usePeriods } from "@/finance/usePeriods.js";
 import {
   mergeImplicitCurrentPeriod,
@@ -60,20 +60,26 @@ type ActionDialogState =
 export function FinancePeriodsScreen() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const session = useActiveSession();
   const me = useMeContext();
   const canManage = canManagePeriods(me?.role, me?.enabledModules);
 
   const periodsQuery = usePeriods();
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
-  const [removedPeriods, setRemovedPeriods] = useState<Set<string>>(new Set());
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const lockIntentRef = useRef<CommandIntent<LockPeriodPayloadType> | undefined>(undefined);
   const reopenIntentRef = useRef<CommandIntent<ReopenPeriodPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
-  const periods = mergeImplicitCurrentPeriod(
-    (periodsQuery.data?.periods ?? []).filter((p) => !removedPeriods.has(p.periodCode)),
-  );
+  const periods = mergeImplicitCurrentPeriod(periodsQuery.data?.periods ?? []);
+
+  // ADR-0001: the period list re-renders from the server's answer, never from a
+  // locally patched cache.
+  const invalidatePeriods = () =>
+    queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "finance", "periods"],
+    });
 
   // Every column sorts. `/v1/finance/periods` is unpaginated — the whole list
   // is in memory — so ordering it client-side reorders all of the data, not a
@@ -171,10 +177,9 @@ export function FinancePeriodsScreen() {
       return;
     }
 
-    setRemovedPeriods((prev) => new Set([...prev, periodCode]));
-    notifyCommandSuccess("locked");
-    notifyCommandWarnings(result.outcome.warnings);
+    notifyCommandSuccess("finance", "locked", result.outcome.warnings);
     setActionDialog({ open: false });
+    await invalidatePeriods();
   };
 
   const handleReopen = async (periodCode: string, reason: string) => {
@@ -192,22 +197,18 @@ export function FinancePeriodsScreen() {
       return;
     }
 
-    setRemovedPeriods((prev) => new Set([...prev, periodCode]));
-    notifyCommandSuccess("reopened");
-    notifyCommandWarnings(result.outcome.warnings);
+    notifyCommandSuccess("finance", "reopened", result.outcome.warnings);
     setActionDialog({ open: false });
+    await invalidatePeriods();
   };
 
   if (me !== undefined && !canManage) {
     return (
-      <PageContainer>
-        <PageHeader title={t("finance.periods.title")} />
-        <EmptyState
-          className="mt-6"
-          icon={<CalendarRange className="size-7" aria-hidden />}
-          message={t("finance.periods.accessDenied")}
-        />
-      </PageContainer>
+      <PermissionDenied
+        title={t("finance.periods.title")}
+        icon={<CalendarRange className="size-7" aria-hidden />}
+        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+      />
     );
   }
 

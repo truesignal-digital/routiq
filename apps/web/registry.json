@@ -225,19 +225,22 @@
       "dependencies": []
     },
     {
-      "name": "sonner",
+      "name": "toast",
       "type": "registry:ui",
       "files": [
         {
-          "path": "src/components/ui/sonner.tsx",
+          "path": "src/components/ui/toast.tsx",
           "type": "registry:file",
-          "target": "components/ui/sonner.tsx"
+          "target": "components/ui/toast.tsx"
         }
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "button"
+      ],
       "dependencies": [
-        "sonner",
-        "lucide-react"
+        "@base-ui/react",
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -357,10 +360,10 @@
           "target": "lib/notify.ts"
         }
       ],
-      "registryDependencies": [],
-      "dependencies": [
-        "sonner"
-      ]
+      "registryDependencies": [
+        "toast"
+      ],
+      "dependencies": []
     },
     {
       "name": "tabs",
@@ -524,6 +527,25 @@
       "registryDependencies": [],
       "dependencies": [
         "@base-ui/react"
+      ]
+    },
+    {
+      "name": "permission-denied",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/permission-denied.tsx",
+          "type": "registry:file",
+          "target": "components/permission-denied.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "error-message"
+      ],
+      "dependencies": [
+        "react-i18next"
       ]
     }
   ]

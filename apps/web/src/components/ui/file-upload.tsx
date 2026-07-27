@@ -223,7 +223,7 @@ export function FileUpload({
               </p>
             </div>
             {item.state.kind === "complete" && (
-              <Check className="size-4 shrink-0 text-emerald-600" aria-hidden />
+              <Check className="size-4 shrink-0 text-success" aria-hidden />
             )}
             <button
               type="button"

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/model.js";
@@ -22,7 +23,6 @@ import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { canRecordFinance } from "@/finance/permissions.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { useEntries } from "@/finance/useEntries.js";
-import { errorMessage } from "@/lib/error-message.js";
 import { formatMoney, formatDate, localizedLabel } from "@/lib/format.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 
@@ -171,14 +171,12 @@ export function FinanceEntriesScreen() {
 
   if (me !== undefined && !canView) {
     return (
-      <PageContainer width="wide">
-        <PageHeader title={t("finance.entries.title")} />
-        <EmptyState
-          className="mt-6"
-          icon={<FileText className="size-7" aria-hidden />}
-          message={errorMessage(i18n, "MODULE_DISABLED")}
-        />
-      </PageContainer>
+      <PermissionDenied
+        width="wide"
+        title={t("finance.entries.title")}
+        icon={<FileText className="size-7" aria-hidden />}
+        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+      />
     );
   }
 

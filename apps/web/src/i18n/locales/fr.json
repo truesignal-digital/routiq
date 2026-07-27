@@ -21,6 +21,17 @@
     "submit": "Se connecter",
     "submitting": "Connexion…"
   },
+  "notify": {
+    "success": {
+      "generic": "Action terminée"
+    },
+    "warnings": {
+      "generic": "L'action est terminée avec un avertissement ({code})."
+    },
+    "errors": {
+      "generic": "L'action a échoué. Veuillez réessayer. ({code})"
+    }
+  },
   "errors": {
     "AUTH_INVALID_CREDENTIALS": "Nom d'utilisateur ou code PIN incorrect.",
     "VALIDATION_FAILED": "Veuillez vérifier les champs saisis.",
@@ -56,6 +67,13 @@
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {
+    "notify": {
+      "success": {
+        "registered": "Actif enregistré",
+        "commissioned": "Actif mis en service",
+        "assigned": "Actif affecté"
+      }
+    },
     "eyebrow": "Parc opérationnel",
     "title": "Vos actifs",
     "subtitle": "Suivez chaque véhicule, de son enregistrement à sa mise hors service.",
@@ -181,6 +199,12 @@
     "retry": "Réessayer"
   },
   "documents": {
+    "notify": {
+      "success": {
+        "added": "Document enregistré",
+        "renewed": "Document renouvelé"
+      }
+    },
     "link": "Documents",
     "title": "Documents de l'actif",
     "back": "Retour aux actifs",
@@ -219,10 +243,14 @@
         "rejected": "Écriture rejetée",
         "reversed": "Écriture contre-passée",
         "locked": "Période verrouillée",
-        "reopened": "Période rouverte"
+        "reopened": "Période rouverte",
+        "posted": "Transaction enregistrée et comptabilisée",
+        "submitted": "Transaction envoyée pour approbation",
+        "recorded": "Transaction enregistrée"
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
+        "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
         "LATE_POSTING": "Cette transaction a été comptabilisée dans une période précédente.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
@@ -272,16 +300,6 @@
       "evidenceLabel": "Justificatif (optionnel)",
       "submit": "Enregistrer",
       "submitting": "Enregistrement…",
-      "outcomePosted": "Enregistré",
-      "outcomePostedDesc": "La transaction a été enregistrée et comptabilisée.",
-      "outcomeSubmitted": "En attente d'approbation",
-      "outcomeSubmittedDesc": "Votre transaction est sauvegardée et en attente de validation par un responsable financier.",
-      "outcomeSuccess": "Succès",
-      "outcomeDesc": "Votre transaction a été enregistrée.",
-      "warningsLabel": "Avis",
-      "warningEvidenceMissing": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-      "warningLatePosting": "Cette transaction a été enregistrée dans une période précédente.",
-      "done": "Fermer",
       "branchLabel": "Succursale",
       "chooseBranch": "Choisir une succursale…",
       "branchesFailed": "Impossible de charger les succursales. Actualisez cette page."
@@ -350,7 +368,6 @@
     "approvals": {
       "title": "Approbations",
       "back": "Retour",
-      "accessDenied": "Vous n'avez pas accès à cette fonctionnalité.",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les approbations. Réessayez.",
       "retry": "Réessayer",
@@ -384,7 +401,6 @@
         "entries": "Écritures",
         "actions": "Actions"
       },
-      "accessDenied": "Vous n'avez pas accès à cette fonctionnalité.",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les périodes. Réessayez.",
       "retry": "Réessayer",
@@ -409,7 +425,7 @@
     }
   },
   "common": {
-    "close": "« Fermer »"
+    "close": "Fermer"
   },
   "dataTable": {
     "loading": "Chargement…",

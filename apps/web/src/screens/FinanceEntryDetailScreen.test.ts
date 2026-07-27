@@ -12,16 +12,11 @@ const mocks = vi.hoisted(() => ({
   createCommandIntent: vi.fn(),
   useEntry: vi.fn(),
   navigate: vi.fn(),
-  toastSuccess: vi.fn(),
-  toastWarning: vi.fn(),
+  toastAdd: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
-  toast: {
-    success: mocks.toastSuccess,
-    warning: mocks.toastWarning,
-    error: vi.fn(),
-  },
+vi.mock("@/components/ui/toast.js", () => ({
+  toast: { add: mocks.toastAdd },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -150,6 +145,35 @@ describe("finance entry reversal dialog", () => {
       "reverse-entry",
       1,
     );
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Entry reversed");
+    expect(mocks.toastAdd).toHaveBeenCalledWith({
+      type: "success",
+      title: "Entry reversed",
+    });
+  });
+});
+
+describe("finance entry detail enums", () => {
+  it("renders status, payment method and category translated, never as raw codes", () => {
+    renderScreen();
+
+    expect(screen.getByText("Posted")).toBeDefined();
+    expect(screen.getByText("Cash")).toBeDefined();
+    expect(screen.getByText("Fuel")).toBeDefined();
+
+    const body = document.body.textContent ?? "";
+    for (const code of ["POSTED", "CASH", "FUEL"]) {
+      expect(body, code).not.toContain(code);
+    }
+  });
+
+  it("translates the same enums into French when the language changes", async () => {
+    await i18n.changeLanguage("fr-CM");
+    renderScreen();
+
+    expect(screen.getByText("Comptabilisée")).toBeDefined();
+    expect(screen.getByText("Espèces")).toBeDefined();
+    expect(screen.getByText("Carburant")).toBeDefined();
+
+    await i18n.changeLanguage("en");
   });
 });

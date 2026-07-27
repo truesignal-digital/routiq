@@ -12,16 +12,11 @@ import { FinancePeriodsScreen } from "./FinancePeriodsScreen.js";
 const mocks = vi.hoisted(() => ({
   createCommandIntent: vi.fn(),
   usePeriods: vi.fn(),
-  toastSuccess: vi.fn(),
-  toastWarning: vi.fn(),
+  toastAdd: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
-  toast: {
-    success: mocks.toastSuccess,
-    warning: mocks.toastWarning,
-    error: vi.fn(),
-  },
+vi.mock("@/components/ui/toast.js", () => ({
+  toast: { add: mocks.toastAdd },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -156,7 +151,10 @@ describe("finance period command routing", () => {
     expect(screen.getByRole("alertdialog")).toBeDefined();
     await user.click(screen.getAllByRole("button", { name: "Lock" }).at(-1)!);
     await waitFor(() => expect(submissionOrder).toEqual(["lock-period"]));
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Period locked");
+    expect(mocks.toastAdd).toHaveBeenCalledWith({
+      type: "success",
+      title: "Period locked",
+    });
 
     await user.click(screen.getByRole("button", { name: "Reopen" }));
     await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");

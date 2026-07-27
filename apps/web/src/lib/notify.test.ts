@@ -1,18 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
-import {
-  notifyCommandError,
-  notifyCommandSuccess,
-  notifyCommandWarnings,
-} from "./notify.js";
+import { notifyCommandError, notifyCommandSuccess } from "./notify.js";
 
 const mocks = vi.hoisted(() => ({
-  success: vi.fn(),
-  warning: vi.fn(),
-  error: vi.fn(),
+  add: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
+vi.mock("@/components/ui/toast.js", () => ({
   toast: mocks,
 }));
 
@@ -28,32 +22,76 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("finance command notifications", () => {
-  it("localizes success and error messages", () => {
-    notifyCommandSuccess("approved");
-    notifyCommandError("PERIOD_LOCKED");
+describe("command notifications", () => {
+  it("localizes success and error messages inside its namespace", () => {
+    notifyCommandSuccess("finance", "approved");
+    notifyCommandError("finance", "PERIOD_LOCKED");
 
-    expect(mocks.success).toHaveBeenCalledWith("Entry approved");
-    expect(mocks.error).toHaveBeenCalledWith(
-      "This period is locked. No postings are possible.",
-    );
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "success",
+      title: "Entry approved",
+    });
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "error",
+      priority: "high",
+      title: "This period is locked. No postings are possible.",
+    });
   });
 
-  it("emits one localized warning toast per stable code", () => {
-    notifyCommandWarnings([
+  it("reads success keys from the namespace it is given", () => {
+    notifyCommandSuccess("assets", "commissioned");
+    notifyCommandSuccess("documents", "renewed");
+
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "success",
+      title: "Asset commissioned",
+    });
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "success",
+      title: "Document renewed",
+    });
+  });
+
+  it("carries deduplicated warnings as description lines on the success toast", () => {
+    notifyCommandSuccess("finance", "posted", [
       "LATE_POSTING",
       "LATE_POSTING",
-      "PERIOD_HAS_SUBMITTED_ENTRIES",
+      "EVIDENCE_MISSING",
     ]);
 
-    expect(mocks.warning).toHaveBeenCalledTimes(2);
-    expect(mocks.warning).toHaveBeenNthCalledWith(
-      1,
-      "This transaction was posted to a previous accounting period.",
-    );
-    expect(mocks.warning).toHaveBeenNthCalledWith(
-      2,
-      "This period contains entries awaiting approval.",
-    );
+    expect(mocks.add).toHaveBeenCalledOnce();
+    expect(mocks.add).toHaveBeenCalledWith({
+      type: "success",
+      title: "Transaction recorded and posted",
+      description:
+        "This transaction was posted to a previous accounting period.\n" +
+        "Missing evidence: this category requires supporting documentation or a photo.",
+    });
+  });
+
+  it("omits the description when a command reports no warnings", () => {
+    notifyCommandSuccess("finance", "locked", []);
+
+    expect(mocks.add).toHaveBeenCalledWith({
+      type: "success",
+      title: "Period locked",
+    });
+  });
+
+  it("falls back to the namespace's generic line for an unknown code", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    notifyCommandError("finance", "SOMETHING_NEW");
+    notifyCommandSuccess("assets", "teleported");
+
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "error",
+      priority: "high",
+      title: "The action failed. Please try again. (SOMETHING_NEW)",
+    });
+    // `assets` has no generic of its own, so the shared root block answers.
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "success",
+      title: "Action completed",
+    });
   });
 });
