@@ -22,6 +22,14 @@ function renderTable(rows: Person[]) {
   );
 }
 
+function renderPagedTable(rows: Person[]) {
+  return render(
+    <I18nextProvider i18n={i18n}>
+      <DataTable columns={columns} data={rows} pagination={{ defaultPageSize: 1 }} />
+    </I18nextProvider>,
+  );
+}
+
 afterEach(async () => {
   cleanup();
   await i18n.changeLanguage("fr-CM");
@@ -48,5 +56,22 @@ describe("DataTable localization", () => {
     expect(screen.getByText("2 rows loaded")).toBeTruthy();
     expect(screen.getByText("0 rows selected")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "Select all" })).toBeTruthy();
+  });
+
+  it("interpolates the pager position in both languages", async () => {
+    renderPagedTable(data);
+    expect(screen.getByText("Page 1 sur 2")).toBeTruthy();
+    expect(screen.getByText("Lignes par page")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Aller à la page suivante" }),
+    ).toBeTruthy();
+
+    cleanup();
+    await i18n.changeLanguage("en");
+    renderPagedTable(data);
+
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    expect(screen.getByText("Rows per page")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Go to next page" })).toBeTruthy();
   });
 });

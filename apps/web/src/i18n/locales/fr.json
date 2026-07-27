@@ -330,6 +330,10 @@
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive"
       },
+      "viewer": {
+        "description": "Date comptable {date}",
+        "fullScreen": "Ouvrir en plein écran"
+      },
       "reversal": {
         "title": "Contre-passer l'écriture",
         "reasonLabel": "Motif du contre-passage",
@@ -421,6 +425,15 @@
     "view": "Affichage",
     "columns": "Colonnes",
     "clearFilters": "Effacer les filtres",
-    "filterAll": "Tous"
+    "filterAll": "Tous",
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {page} sur {pages}",
+    "firstPage": "Aller à la première page",
+    "previousPage": "Aller à la page précédente",
+    "nextPage": "Aller à la page suivante",
+    "lastPage": "Aller à la dernière page",
+    "viewer": {
+      "close": "Fermer"
+    }
   }
 }

@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -10,20 +11,41 @@ import { useTranslation } from "react-i18next";
 import {
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type Column,
   type ColumnDef,
   type OnChangeFn,
+  type PaginationState,
   type Row,
   type RowData,
   type RowSelectionState,
   type SortingState,
+  type Table as TanStackTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronsUpDown,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -33,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -54,6 +77,8 @@ import { cn } from "@/lib/utils";
 const DESKTOP_MEDIA_QUERY = "(min-width: 640px)";
 const SELECTION_COLUMN_ID = "__select";
 const DEFAULT_SEARCH_DEBOUNCE_MS = 300;
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 const NO_FILTERS: DataTableFilter[] = [];
 const NO_FILTER_VALUES: DataTableFilterValues = {};
 
@@ -84,15 +109,55 @@ export type DataTableFilter =
 /** Filter state keyed by `columnId`. An absent key means the filter is unset. */
 export type DataTableFilterValues = Record<string, string>;
 
-export interface DataTableProps<TData> {
+/** Side panel opened by activating a row, per the dashboard-01 row viewer. */
+export interface DataTableRowViewer<TData> {
+  /** Drawer body for the activated row. */
+  render: (row: TData) => ReactNode;
+  title: (row: TData) => string;
+  description?: (row: TData) => string;
+  /** Primary footer action, for handing the row off to its own route. */
+  fullScreen?: {
+    label: string;
+    onOpen: (row: TData) => void;
+  };
+}
+
+/**
+ * A row activates one way only: it either navigates the screen away or opens
+ * the viewer. Offering both would leave the operator guessing which one a click
+ * means.
+ */
+type DataTableRowActivation<TData> =
+  | { onRowClick?: (row: TData) => void; rowViewer?: never }
+  | { rowViewer: DataTableRowViewer<TData>; onRowClick?: never };
+
+export interface DataTableLoadMore {
+  hasNextPage: boolean;
+  isFetching: boolean;
+  onLoadMore: () => void;
+}
+
+export interface DataTablePagination {
+  /** Rows per page until the operator picks another size. */
+  defaultPageSize?: number;
+}
+
+/**
+ * The two footers are exclusive because they answer to different reads. A
+ * keyset cursor never learns how many rows are behind it, so `loadMore` cannot
+ * honestly print "page X of Y" (ADR-0003); only fully-loaded data gets a pager.
+ */
+type DataTablePaging =
+  | { loadMore?: DataTableLoadMore; pagination?: never }
+  | { pagination: DataTablePagination; loadMore?: never };
+
+export type DataTableProps<TData> = DataTableBaseProps<TData> &
+  DataTableRowActivation<TData> &
+  DataTablePaging;
+
+interface DataTableBaseProps<TData> {
   columns: ColumnDef<TData>[];
   data: TData[];
-  onRowClick?: (row: TData) => void;
-  loadMore?: {
-    hasNextPage: boolean;
-    isFetching: boolean;
-    onLoadMore: () => void;
-  };
   emptyState?: ReactNode;
   getRowId?: (row: TData, index: number) => string;
 
@@ -114,26 +179,29 @@ export interface DataTableProps<TData> {
   showRowCount?: boolean;
 }
 
-export function DataTable<TData>({
-  columns,
-  data,
-  onRowClick,
-  loadMore,
-  emptyState,
-  getRowId,
-  sorting,
-  defaultSorting,
-  onSortingChange,
-  enableColumnVisibility = false,
-  enableRowSelection = false,
-  rowSelection,
-  onRowSelectionChange,
-  filters = NO_FILTERS,
-  filterValues = NO_FILTER_VALUES,
-  onFilterChange,
-  searchDebounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
-  showRowCount = true,
-}: DataTableProps<TData>) {
+export function DataTable<TData>(props: DataTableProps<TData>) {
+  const {
+    columns,
+    data,
+    onRowClick,
+    rowViewer,
+    loadMore,
+    pagination,
+    emptyState,
+    getRowId,
+    sorting,
+    defaultSorting,
+    onSortingChange,
+    enableColumnVisibility = false,
+    enableRowSelection = false,
+    rowSelection,
+    onRowSelectionChange,
+    filters = NO_FILTERS,
+    filterValues = NO_FILTER_VALUES,
+    onFilterChange,
+    searchDebounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
+    showRowCount = true,
+  } = props;
   const { t } = useTranslation();
   const isDesktop = useDesktopMediaQuery();
 
@@ -142,6 +210,19 @@ export function DataTable<TData>({
   );
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
+  const [paginationState, setPaginationState] = useState<PaginationState>(() => ({
+    pageIndex: 0,
+    pageSize: pagination?.defaultPageSize ?? DEFAULT_PAGE_SIZE,
+  }));
+  // The row survives the close so the drawer can animate out with its content
+  // still on screen.
+  const [viewerState, setViewerState] = useState<DataTableViewerState<TData>>();
+
+  const activateRow =
+    onRowClick ??
+    (rowViewer === undefined
+      ? undefined
+      : (row: TData) => setViewerState({ row, open: true }));
 
   const sortingState = sorting ?? internalSorting;
   const rowSelectionState = rowSelection ?? internalRowSelection;
@@ -206,9 +287,18 @@ export function DataTable<TData>({
       sorting: sortingState,
       columnVisibility,
       rowSelection: rowSelectionState,
+      ...(pagination ? { pagination: paginationState } : {}),
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    // Registering the pagination row model at all slices the rows, so it only
+    // goes in when the screen asked for a pager.
+    ...(pagination
+      ? {
+          getPaginationRowModel: getPaginationRowModel(),
+          onPaginationChange: setPaginationState,
+        }
+      : {}),
     // A screen that owns the sorting state sorts server-side; sorting the
     // loaded page again client-side would fight it.
     manualSorting: sorting !== undefined,
@@ -325,7 +415,7 @@ export function DataTable<TData>({
 
       {isDesktop ? (
         <Table>
-          <TableHeader className="sticky top-0 z-10 bg-background">
+          <TableHeader className="sticky top-0 z-10 bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -360,12 +450,13 @@ export function DataTable<TData>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() ? "selected" : undefined}
-                className={cn(onRowClick && "cursor-pointer")}
-                tabIndex={onRowClick ? 0 : undefined}
-                onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                className={cn(activateRow && "cursor-pointer")}
+                tabIndex={activateRow ? 0 : undefined}
+                aria-haspopup={rowViewer ? "dialog" : undefined}
+                onClick={activateRow ? () => activateRow(row.original) : undefined}
                 onKeyDown={
-                  onRowClick
-                    ? (event) => handleRowKeyDown(event, row, onRowClick)
+                  activateRow
+                    ? (event) => handleRowKeyDown(event, row, activateRow)
                     : undefined
                 }
               >
@@ -397,14 +488,15 @@ export function DataTable<TData>({
                 key={row.id}
                 className={cn(
                   "rounded-xl border border-border bg-card p-4",
-                  onRowClick && "cursor-pointer hover:bg-accent",
+                  activateRow && "cursor-pointer hover:bg-accent",
                 )}
-                role={onRowClick ? "button" : undefined}
-                tabIndex={onRowClick ? 0 : undefined}
-                onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                role={activateRow ? "button" : undefined}
+                tabIndex={activateRow ? 0 : undefined}
+                aria-haspopup={rowViewer ? "dialog" : undefined}
+                onClick={activateRow ? () => activateRow(row.original) : undefined}
                 onKeyDown={
-                  onRowClick
-                    ? (event) => handleRowKeyDown(event, row, onRowClick)
+                  activateRow
+                    ? (event) => handleRowKeyDown(event, row, activateRow)
                     : undefined
                 }
               >
@@ -436,13 +528,23 @@ export function DataTable<TData>({
         </div>
       )}
 
-      {showRowCount && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>{t("dataTable.rowCount", { count: rows.length })}</span>
-          {enableRowSelection && (
-            <span>{t("dataTable.selectedCount", { count: selectedCount })}</span>
-          )}
-        </div>
+      {/* The pager subsumes the row count — "page X of Y" already says where
+          the operator is — so it carries the selection count itself. */}
+      {pagination ? (
+        <DataTablePager
+          table={table}
+          selectedCount={selectedCount}
+          enableRowSelection={enableRowSelection}
+        />
+      ) : (
+        showRowCount && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>{t("dataTable.rowCount", { count: rows.length })}</span>
+            {enableRowSelection && (
+              <span>{t("dataTable.selectedCount", { count: selectedCount })}</span>
+            )}
+          </div>
+        )
       )}
 
       {loadMore?.hasNextPage && (
@@ -456,6 +558,189 @@ export function DataTable<TData>({
           {loadMore.isFetching ? t("dataTable.loading") : t("dataTable.loadMore")}
         </Button>
       )}
+
+      {rowViewer && (
+        <DataTableRowDrawer
+          viewer={rowViewer}
+          state={viewerState}
+          isDesktop={isDesktop}
+          onClose={() =>
+            setViewerState((current) =>
+              current === undefined ? current : { ...current, open: false },
+            )
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+interface DataTableViewerState<TData> {
+  row: TData;
+  open: boolean;
+}
+
+function DataTableRowDrawer<TData>({
+  viewer,
+  state,
+  isDesktop,
+  onClose,
+}: {
+  viewer: DataTableRowViewer<TData>;
+  state: DataTableViewerState<TData> | undefined;
+  isDesktop: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { description, fullScreen } = viewer;
+
+  return (
+    <Drawer
+      open={state?.open === true}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      swipeDirection={isDesktop ? "right" : "down"}
+    >
+      <DrawerContent>
+        {state !== undefined && (
+          <>
+            <DrawerHeader className="gap-1">
+              <DrawerTitle>{viewer.title(state.row)}</DrawerTitle>
+              {description && (
+                <DrawerDescription>{description(state.row)}</DrawerDescription>
+              )}
+            </DrawerHeader>
+            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-2 text-sm">
+              {viewer.render(state.row)}
+            </div>
+            <DrawerFooter>
+              {fullScreen && (
+                <Button
+                  type="button"
+                  className="min-h-11"
+                  onClick={() => fullScreen.onOpen(state.row)}
+                >
+                  {fullScreen.label}
+                </Button>
+              )}
+              <DrawerClose
+                render={<Button type="button" variant="outline" className="min-h-11" />}
+              >
+                {t("dataTable.viewer.close")}
+              </DrawerClose>
+            </DrawerFooter>
+          </>
+        )}
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function DataTablePager<TData>({
+  table,
+  selectedCount,
+  enableRowSelection,
+}: {
+  table: TanStackTable<TData>;
+  selectedCount: number;
+  enableRowSelection: boolean;
+}) {
+  const { t } = useTranslation();
+  const rowsPerPageId = useId();
+  const { pageIndex, pageSize } = table.getState().pagination;
+  const pageCount = Math.max(table.getPageCount(), 1);
+  const pageSizeItems = PAGE_SIZE_OPTIONS.map((size) => ({
+    value: String(size),
+    label: String(size),
+  }));
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      {enableRowSelection && (
+        <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+          {t("dataTable.selectedCount", { count: selectedCount })}
+        </div>
+      )}
+
+      <div className="flex w-full items-center gap-8 lg:w-fit">
+        <div className="hidden items-center gap-2 lg:flex">
+          <Label htmlFor={rowsPerPageId} className="text-sm font-medium">
+            {t("dataTable.rowsPerPage")}
+          </Label>
+          <Select
+            items={pageSizeItems}
+            value={String(pageSize)}
+            onValueChange={(value: string | null) => {
+              if (value !== null) {
+                table.setPageSize(Number(value));
+              }
+            }}
+          >
+            <SelectTrigger size="sm" className="w-20" id={rowsPerPageId}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {pageSizeItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex w-fit items-center justify-center text-sm font-medium">
+          {t("dataTable.pageOf", { page: pageIndex + 1, pages: pageCount })}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="hidden lg:flex"
+            aria-label={t("dataTable.firstPage")}
+            disabled={!table.getCanPreviousPage()}
+            onClick={() => table.setPageIndex(0)}
+          >
+            <ChevronsLeft aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={t("dataTable.previousPage")}
+            disabled={!table.getCanPreviousPage()}
+            onClick={() => table.previousPage()}
+          >
+            <ChevronLeft aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={t("dataTable.nextPage")}
+            disabled={!table.getCanNextPage()}
+            onClick={() => table.nextPage()}
+          >
+            <ChevronRight aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="hidden lg:flex"
+            aria-label={t("dataTable.lastPage")}
+            disabled={!table.getCanNextPage()}
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          >
+            <ChevronsRight aria-hidden />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -584,12 +869,12 @@ function columnLabel<TData>(column: Column<TData, unknown>): string {
 function handleRowKeyDown<TData>(
   event: KeyboardEvent<HTMLElement>,
   row: Row<TData>,
-  onRowClick: (row: TData) => void,
+  activateRow: (row: TData) => void,
 ) {
   const key = event.key.toLowerCase();
   if (key === "enter" || key === " ") {
     event.preventDefault();
-    onRowClick(row.original);
+    activateRow(row.original);
   }
 }
 

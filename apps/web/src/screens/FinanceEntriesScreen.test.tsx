@@ -1,5 +1,13 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { UseEntriesParams } from "../finance/useEntries.js";
@@ -39,8 +47,10 @@ vi.mock("react-i18next", async () => {
   };
 });
 
+const navigate = vi.fn();
+
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigate,
   useParams: () => ({}),
 }));
 
@@ -130,6 +140,16 @@ vi.mock("../assets/useAssets.js", () => ({
 
 vi.mock("../finance/FinanceNav.js", () => ({
   FinanceNav: () => null,
+}));
+
+// The row drawer mounts EntrySummary, which reads the entry on its own.
+vi.mock("../finance/useEntry.js", () => ({
+  useEntry: () => ({
+    isPending: false,
+    isError: false,
+    data: { ...entry, postings: [] },
+    refetch: vi.fn(),
+  }),
 }));
 
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
@@ -236,6 +256,37 @@ describe("FinanceEntriesScreen", () => {
     await waitFor(() =>
       expect(issuedQueries).toEqual([{}, { status: "POSTED" }]),
     );
+  });
+
+  it("opens the row drawer instead of leaving the list", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getAllByRole("row")[1]!);
+
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByRole("heading", { name: "FIN-001" })).toBeTruthy();
+    // The summary is the real field list, not a placeholder.
+    expect(
+      within(drawer).getByText("finance.entries.detail.paymentMethod"),
+    ).toBeTruthy();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("hands the entry to its own route from the drawer's full-screen action", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getAllByRole("row")[1]!);
+    await screen.findByRole("dialog");
+    await user.click(
+      screen.getByRole("button", { name: "finance.entries.viewer.fullScreen" }),
+    );
+
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({
+      to: "/finance/entries/$entryId",
+      params: { entryId: entry.id },
+    });
   });
 
   it("pages the cursor through load more without changing the filter params", async () => {

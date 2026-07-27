@@ -1,14 +1,14 @@
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, FileText } from "lucide-react";
-import { formatMoney, formatDate, formatDateTime, localizedLabel, formatPaymentMethod } from "@/lib/format.js";
+import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { EntrySummary } from "@/finance/EntrySummary.js";
 import {
   Dialog,
   DialogClose,
@@ -122,100 +122,7 @@ export function FinanceEntryDetailScreen() {
         <div className="mt-6 space-y-6">
           <Card>
             <CardContent>
-              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("finance.entries.detail.entryNumber")}
-                </dt>
-                <dd className="mt-1 font-mono">{entryQuery.data.entryNumber}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("finance.entries.detail.status")}
-                </dt>
-                <dd className="mt-1">
-                  <FinanceStatusBadge status={entryQuery.data.status}>
-                    {t(`finance.entries.status.${entryQuery.data.status}`)}
-                  </FinanceStatusBadge>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("finance.entries.detail.category")}
-                </dt>
-                <dd className="mt-1">{labelOf(entryQuery.data.category)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("finance.entries.detail.amount")}
-                </dt>
-                <dd className="mt-1 font-mono text-lg font-semibold">
-                  {formatMoney(entryQuery.data.amountMinor, { currency: entryQuery.data.currency, signDisplay: "always" })}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("finance.entries.detail.date")}
-                </dt>
-                <dd className="mt-1">{formatDate(entryQuery.data.economicDate)}</dd>
-              </div>
-              {entryQuery.data.postedAt && (
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("finance.entries.detail.postingDate")}
-                  </dt>
-                  <dd className="mt-1">
-                    {formatDate(entryQuery.data.postedAt)}
-                  </dd>
-                </div>
-              )}
-              {entryQuery.data.counterpartyName && (
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("finance.entries.detail.counterparty")}
-                  </dt>
-                  <dd className="mt-1">{entryQuery.data.counterpartyName}</dd>
-                </div>
-              )}
-              <div>
-                <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                  {t("finance.entries.detail.paymentMethod")}
-                </dt>
-                <dd className="mt-1">{formatPaymentMethod(entryQuery.data.paymentMethod, t)}</dd>
-              </div>
-              {entryQuery.data.description && (
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("finance.entries.detail.description")}
-                  </dt>
-                  <dd className="mt-1">{entryQuery.data.description}</dd>
-                </div>
-              )}
-              {entryQuery.data.paymentReference && (
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("finance.entries.detail.paymentReference")}
-                  </dt>
-                  <dd className="mt-1 font-mono text-sm">{entryQuery.data.paymentReference}</dd>
-                </div>
-              )}
-              {entryQuery.data.sourceReference && (
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("finance.entries.detail.sourceReference")}
-                  </dt>
-                  <dd className="mt-1 font-mono text-sm">{entryQuery.data.sourceReference}</dd>
-                </div>
-              )}
-              {entryQuery.data.rejectedReason && (
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    {t("finance.entries.detail.rejectedReason")}
-                  </dt>
-                  <dd className="mt-1">{entryQuery.data.rejectedReason}</dd>
-                </div>
-              )}
-              </dl>
+              <EntrySummary entryId={entryId} />
             </CardContent>
           </Card>
 

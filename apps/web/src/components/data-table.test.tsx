@@ -8,7 +8,7 @@ import { DataTable, type DataTableFilter } from "./data-table.js";
 // Mock react-i18next
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { count?: number }) => {
+    t: (key: string, options?: Record<string, unknown>) => {
       const translations: Record<string, string> = {
         "dataTable.loading": "Loading…",
         "dataTable.loadMore": "Load more",
@@ -20,11 +20,19 @@ vi.mock("react-i18next", () => ({
         "dataTable.columns": "Columns",
         "dataTable.clearFilters": "Clear filters",
         "dataTable.filterAll": "All",
+        "dataTable.rowsPerPage": "Rows per page",
+        "dataTable.pageOf": "Page {page} of {pages}",
+        "dataTable.firstPage": "Go to first page",
+        "dataTable.previousPage": "Go to previous page",
+        "dataTable.nextPage": "Go to next page",
+        "dataTable.lastPage": "Go to last page",
+        "dataTable.viewer.close": "Close",
       };
       const template = translations[key] ?? key;
-      return typeof options?.count === "number"
-        ? template.replace("{count}", String(options.count))
-        : template;
+      return Object.entries(options ?? {}).reduce(
+        (message, [name, value]) => message.replace(`{${name}}`, String(value)),
+        template,
+      );
     },
     i18n: { resolvedLanguage: "en" },
   }),
@@ -338,6 +346,204 @@ describe("DataTable", () => {
       expect(screen.getByText("Ada Lovelace").classList.contains("font-medium")).toBe(true);
       expect(screen.getByText("ada@example.com")).toBeTruthy();
       expect(screen.queryByText("person-1")).toBeNull();
+    });
+  });
+
+  describe("dashboard-01 table chrome", () => {
+    it("pins the header to the top of the scroll container", () => {
+      const { container } = render(<DataTable columns={columns} data={data} />);
+
+      const header = container.querySelector("thead");
+      expect(header?.className).toContain("sticky");
+      expect(header?.className).toContain("top-0");
+      expect(header?.className).toContain("bg-muted");
+    });
+  });
+
+  describe("pagination footer", () => {
+    const manyPeople: Person[] = Array.from({ length: 12 }, (_, index) => ({
+      name: `Person ${String(index).padStart(2, "0")}`,
+      email: `person${index}@example.com`,
+      internalId: `person-${index}`,
+    }));
+
+    it("slices the rows client-side and walks the pages", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          pagination={{ defaultPageSize: 10 }}
+        />,
+      );
+
+      expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+      expect(renderedNames()).toHaveLength(10);
+      expect(screen.getByText("Person 00")).toBeTruthy();
+      expect(screen.queryByText("Person 10")).toBeNull();
+
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+
+      expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+      expect(renderedNames()).toHaveLength(2);
+      expect(screen.getByText("Person 10")).toBeTruthy();
+      expect(screen.queryByText("Person 00")).toBeNull();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Go to first page" }),
+      );
+      expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    });
+
+    it("disables the edges of the pager at the ends of the data", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          pagination={{ defaultPageSize: 10 }}
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Go to previous page" }).hasAttribute("disabled"),
+      ).toBe(true);
+
+      await userEvent.click(screen.getByRole("button", { name: "Go to last page" }));
+
+      expect(
+        screen.getByRole("button", { name: "Go to next page" }).hasAttribute("disabled"),
+      ).toBe(true);
+    });
+
+    it("repaginates when the operator changes the page size", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          pagination={{ defaultPageSize: 10 }}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("combobox", { name: "Rows per page" }));
+      await userEvent.click(await screen.findByRole("option", { name: "20" }));
+
+      expect(screen.getByText("Page 1 of 1")).toBeTruthy();
+      expect(renderedNames()).toHaveLength(12);
+    });
+
+    it("keeps the selection count next to the pager", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          enableRowSelection
+          pagination={{ defaultPageSize: 10 }}
+        />,
+      );
+
+      expect(screen.getByText("0 rows selected")).toBeTruthy();
+      await userEvent.click(screen.getAllByRole("checkbox", { name: "Select row" })[0]!);
+      expect(screen.getByText("1 rows selected")).toBeTruthy();
+    });
+
+    it("stays away from keyset reads, which have no page count to show", () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={manyPeople}
+          loadMore={{ hasNextPage: true, isFetching: false, onLoadMore: vi.fn() }}
+        />,
+      );
+
+      expect(screen.queryByText(/^Page \d+ of/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Go to next page" })).toBeNull();
+      // Nothing is sliced away either: every loaded row stays on screen.
+      expect(renderedNames()).toHaveLength(12);
+      expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+    });
+  });
+
+  describe("row viewer drawer", () => {
+    const viewer = {
+      title: (person: Person) => person.name,
+      description: (person: Person) => person.email,
+      render: (person: Person) => <p>Internal ID {person.internalId}</p>,
+    };
+
+    it("opens on row click with the activated row's detail", async () => {
+      render(<DataTable columns={columns} data={data} rowViewer={viewer} />);
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+
+      await userEvent.click(screen.getAllByRole("row")[1]!);
+
+      const drawer = await screen.findByRole("dialog");
+      expect(within(drawer).getByText("Ada Lovelace")).toBeTruthy();
+      expect(within(drawer).getByText("ada@example.com")).toBeTruthy();
+      expect(within(drawer).getByText("Internal ID person-1")).toBeTruthy();
+    });
+
+    it("opens on keyboard activation and closes on Escape", async () => {
+      render(<DataTable columns={columns} data={data} rowViewer={viewer} />);
+
+      const secondRow = screen.getAllByRole("row")[2]!;
+      expect(secondRow.getAttribute("aria-haspopup")).toBe("dialog");
+      secondRow.focus();
+      await userEvent.keyboard("{Enter}");
+
+      const drawer = await screen.findByRole("dialog");
+      expect(within(drawer).getByText("Grace Hopper")).toBeTruthy();
+
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    });
+
+    it("closes through the drawer's own close action", async () => {
+      render(<DataTable columns={columns} data={data} rowViewer={viewer} />);
+
+      await userEvent.click(screen.getAllByRole("row")[1]!);
+      await screen.findByRole("dialog");
+
+      await userEvent.click(screen.getByRole("button", { name: "Close" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    });
+
+    it("hands the row to the full-screen action", async () => {
+      const onOpen = vi.fn();
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          rowViewer={{
+            ...viewer,
+            fullScreen: { label: "Open full screen", onOpen },
+          }}
+        />,
+      );
+
+      await userEvent.click(screen.getAllByRole("row")[1]!);
+      await screen.findByRole("dialog");
+      await userEvent.click(screen.getByRole("button", { name: "Open full screen" }));
+
+      expect(onOpen).toHaveBeenCalledExactlyOnceWith(data[0]);
+    });
+
+    it("opens from a mobile card too", async () => {
+      mockDesktop(false);
+      render(<DataTable columns={columns} data={[data[0]!]} rowViewer={viewer} />);
+
+      await userEvent.click(screen.getByRole("button", { name: /Ada Lovelace/ }));
+
+      expect(await screen.findByRole("dialog")).toBeTruthy();
+    });
+
+    it("stays shut for screens that navigate instead", async () => {
+      const onRowClick = vi.fn();
+      render(<DataTable columns={columns} data={data} onRowClick={onRowClick} />);
+
+      await userEvent.click(screen.getAllByRole("row")[1]!);
+
+      expect(onRowClick).toHaveBeenCalledExactlyOnceWith(data[0]);
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
   });
 

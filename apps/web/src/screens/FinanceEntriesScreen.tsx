@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/model.js";
 import { useAssets } from "@/assets/useAssets.js";
+import { EntrySummary } from "@/finance/EntrySummary.js";
 import { FinanceNav } from "@/finance/FinanceNav.js";
 import { canRecordFinance } from "@/finance/permissions.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
@@ -206,12 +207,22 @@ export function FinanceEntriesScreen() {
             filterValues={filterValues}
             onFilterChange={setFilterValues}
             enableColumnVisibility
-            onRowClick={(entry) =>
-              void navigate({
-                to: "/finance/entries/$entryId",
-                params: { entryId: entry.id },
-              })
-            }
+            rowViewer={{
+              title: (entry) => entry.entryNumber,
+              description: (entry) =>
+                t("finance.entries.viewer.description", {
+                  date: formatDate(entry.economicDate),
+                }),
+              render: (entry) => <EntrySummary entryId={entry.id} />,
+              fullScreen: {
+                label: t("finance.entries.viewer.fullScreen"),
+                onOpen: (entry) =>
+                  void navigate({
+                    to: "/finance/entries/$entryId",
+                    params: { entryId: entry.id },
+                  }),
+              },
+            }}
             loadMore={{
               hasNextPage: entriesQuery.hasNextPage,
               isFetching: entriesQuery.isFetchingNextPage,

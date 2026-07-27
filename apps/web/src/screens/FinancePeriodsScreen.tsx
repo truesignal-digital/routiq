@@ -235,6 +235,8 @@ export function FinancePeriodsScreen() {
             getRowId={(period) => period.periodCode}
             defaultSorting={[{ id: "periodCode", desc: true }]}
             enableColumnVisibility
+            // The periods read is unpaginated, so the page count is real.
+            pagination={{ defaultPageSize: 10 }}
             emptyState={
               <EmptyState
                 icon={<CalendarRange className="size-7" aria-hidden />}

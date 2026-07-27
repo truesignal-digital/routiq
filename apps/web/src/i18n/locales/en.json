@@ -330,6 +330,10 @@
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting"
       },
+      "viewer": {
+        "description": "Economic date {date}",
+        "fullScreen": "Open full screen"
+      },
       "reversal": {
         "title": "Reverse entry",
         "reasonLabel": "Reason for reversal",
@@ -421,6 +425,15 @@
     "view": "View",
     "columns": "Columns",
     "clearFilters": "Clear filters",
-    "filterAll": "All"
+    "filterAll": "All",
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {page} of {pages}",
+    "firstPage": "Go to first page",
+    "previousPage": "Go to previous page",
+    "nextPage": "Go to next page",
+    "lastPage": "Go to last page",
+    "viewer": {
+      "close": "Close"
+    }
   }
 }
