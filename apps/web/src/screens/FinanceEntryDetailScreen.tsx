@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useMeContext } from "@/auth/me.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
@@ -227,14 +228,7 @@ function ReverseDialog({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="reason">{t("finance.entries.reversal.reasonLabel")}</Label>
-          <textarea
-            id="reason"
-            placeholder={t("finance.entries.reversal.reasonPlaceholder")}
-            value={reason}
-            onChange={(e) => onReasonChange(e.target.value)}
-            className="min-h-24 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-            required
-          />
+          <Textarea id="reason" placeholder={t("finance.entries.reversal.reasonPlaceholder")} value={reason} onChange={(e) => onReasonChange(e.target.value)} />
         </div>
 
         <DialogFooter>

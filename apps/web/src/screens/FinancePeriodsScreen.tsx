@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useMeContext } from "@/auth/me.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
@@ -349,14 +350,12 @@ function ActionDialog({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="reason">{t("finance.periods.reasonLabel")}</Label>
-          <textarea
+          <Textarea
             id="reason"
             placeholder={t("finance.periods.reasonPlaceholder")}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-          />
-        </div>
+          />        </div>
 
         <DialogFooter>
           <DialogClose

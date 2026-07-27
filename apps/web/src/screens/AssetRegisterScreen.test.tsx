@@ -46,14 +46,22 @@ vi.mock("../assets/reference.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
 
-vi.mock("../artifacts/AttachmentField.js", () => ({
-  AttachmentField: () => null,
+vi.mock("../components/ui/file-upload.js", () => ({
+  FileUpload: () => null,
 }));
 
 async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>, code: string) {
   await user.type(screen.getByLabelText("Asset code"), code);
-  await user.selectOptions(screen.getByLabelText("Asset class"), "TRUCK");
-  await user.selectOptions(screen.getByLabelText("Branch"), "DLA");
+  
+  // Select Asset class using keyboard navigation on Base UI Select
+  const assetClassSelect = screen.getByLabelText("Asset class");
+  await user.click(assetClassSelect);
+  await user.keyboard("{ArrowDown}{Enter}");
+  
+  // Select Branch using keyboard navigation on Base UI Select
+  const branchSelect = screen.getByLabelText("Branch");
+  await user.click(branchSelect);
+  await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
 }
 
 function submittedPayload() {
@@ -153,7 +161,8 @@ describe("asset register form", () => {
     await fillRequiredFields(user, "TR-003");
     const capacity = screen.getByLabelText("Capacity");
     await user.type(capacity, "12.5");
-    await user.selectOptions(screen.getByLabelText("Capacity unit"), "TONNE");
+    await user.click(screen.getByLabelText("Capacity unit"));
+    await user.keyboard("t{Enter}");
 
     expect((capacity as HTMLInputElement).value).toBe("12.5");
 

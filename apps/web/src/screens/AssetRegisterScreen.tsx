@@ -25,12 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetRegistrationReference } from "@/assets/reference";
 import { useActiveSession } from "@/auth/store";
 import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/field-errors";
 import { commandClient, commandStatusStore } from "@/commands/instance";
 import { createCommandIntent } from "@/commands/intent";
-import { AttachmentField } from "@/artifacts/AttachmentField";
+import { FileUpload } from "@/components/ui/file-upload";
 import { errorMessage } from "@/lib/error-message";
 import { formatXAF } from "@routiq/domain";
 import { ErrorBanner } from "@/components/error-banner.js";
@@ -150,18 +151,19 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.assetClass")}</FormLabel>
                   <FormControl>
-                    <select
-                      className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                      {...field}
-                    >
-                      <option value="">{t("assets.form.choose")}</option>
-                      {reference.data?.assetClasses.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {labelFor(c)}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
+                    <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
+                      <SelectTrigger className="min-h-11 w-full">
+                        <SelectValue placeholder={t("assets.form.choose")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {reference.data?.assetClasses.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {labelFor(c)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -174,18 +176,19 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.branch")}</FormLabel>
                   <FormControl>
-                    <select
-                      className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                      {...field}
-                    >
-                      <option value="">{t("assets.form.choose")}</option>
-                      {reference.data?.branches.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.name} ({b.code})
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
+                    <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
+                      <SelectTrigger className="min-h-11 w-full">
+                        <SelectValue placeholder={t("assets.form.choose")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {reference.data?.branches.map((b) => (
+                          <SelectItem key={b.code} value={b.code}>
+                            {b.name} ({b.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -199,17 +202,19 @@ export function AssetRegisterScreen() {
               <FormItem>
                 <FormLabel>{t("assets.form.template")}</FormLabel>
                 <FormControl>
-                  <select
-                    className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                    {...field}
-                  >
-                    {TEMPLATE_CODES.map((code) => (
-                      <option key={code} value={code}>
-                        {t(`assets.form.templates.${code}`)}
-                      </option>
-                    ))}
-                  </select>
-                </FormControl>
+                  <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
+                    <SelectTrigger className="min-h-11 w-full">
+                      <SelectValue placeholder={t("assets.form.choose")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_CODES.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {t(`assets.form.templates.${code}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -354,18 +359,19 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.capacityUnit")}</FormLabel>
                   <FormControl>
-                    <select
-                      className="min-h-11 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                      {...textFieldProps(field)}
-                    >
-                      <option value="">{t("assets.form.choose")}</option>
-                      {CAPACITY_UNITS.map((unit) => (
-                        <option key={unit} value={unit}>
-                          {t(`assets.form.units.${unit}`)}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
+                    <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
+                      <SelectTrigger className="min-h-11 w-full">
+                        <SelectValue placeholder={t("assets.form.choose")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CAPACITY_UNITS.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {t(`assets.form.units.${unit}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -409,9 +415,9 @@ export function AssetRegisterScreen() {
           )}
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium">{t("attachments.label")}</span>
-            <AttachmentField onChange={setArtifactIds} />
-          </div>
+          <span className="text-sm font-medium">{t("finance.record.evidenceLabel")}</span>
+          <FileUpload onChange={setArtifactIds} accept="image/jpeg,image/png,image/webp,application/pdf" />
+        </div>
 
           {errorCode !== undefined && (
             <ErrorBanner code={errorCode} />

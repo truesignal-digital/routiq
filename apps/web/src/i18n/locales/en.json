@@ -166,13 +166,6 @@
       "invalid": "Invalid value."
     }
   },
-  "attachments": {
-    "label": "Supporting evidence",
-    "add": "Add a photo or document",
-    "uploading": "Uploading…",
-    "retry": "Retry",
-    "remove": "Remove"
-  },
   "fileUpload": {
     "dropzone": "Drop files here or click to choose",
     "remove": "Remove",
@@ -183,7 +176,9 @@
       "bytes": "B",
       "kilobytes": "KB",
       "megabytes": "MB"
-    }
+    },
+    "add": "Add a photo or document",
+    "retry": "Retry"
   },
   "documents": {
     "link": "Documents",

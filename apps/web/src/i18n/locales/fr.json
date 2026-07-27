@@ -166,13 +166,6 @@
       "invalid": "Valeur invalide."
     }
   },
-  "attachments": {
-    "label": "Pièces justificatives",
-    "add": "Ajouter une photo ou un document",
-    "uploading": "Téléversement…",
-    "retry": "Réessayer",
-    "remove": "Retirer"
-  },
   "fileUpload": {
     "dropzone": "Déposez les fichiers ici ou cliquez pour choisir",
     "remove": "Retirer",
@@ -183,7 +176,9 @@
       "bytes": "o",
       "kilobytes": "ko",
       "megabytes": "Mo"
-    }
+    },
+    "add": "Ajouter une photo ou un document",
+    "retry": "Réessayer"
   },
   "documents": {
     "link": "Documents",

@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
@@ -351,22 +352,12 @@ function ActionDialog({
         {action === "approve" ? (
           <div className="flex flex-col gap-2">
             <Label htmlFor="note">{t("finance.approvals.noteLabel")} {t("finance.approvals.optional")}</Label>
-            <textarea
-              id="note"
-              placeholder={t("finance.approvals.notePlaceholder")}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-            />
+            <Textarea id="note" placeholder={t("finance.approvals.notePlaceholder")} value={text} onChange={(e) => setText(e.target.value)} />
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             <Label htmlFor="reason">{t("finance.approvals.reasonLabel")}</Label>
-            <textarea
-              id="reason"
-              placeholder={t("finance.approvals.reasonPlaceholder")}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
+            <Textarea id="reason" placeholder={t("finance.approvals.reasonPlaceholder")} value={text} onChange={(e) => setText(e.target.value)}
               className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             />
           </div>

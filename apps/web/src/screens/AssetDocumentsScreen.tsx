@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   expiryState,
   groupDocuments,
@@ -305,21 +306,22 @@ function DocumentForm({
         {documentTypesFailed && (
           <ErrorBanner message={t("documents.typesFailed")} />
         )}
-        <select
-          id="doc-type"
-          className="min-h-11 rounded-md border border-input bg-transparent px-3 text-sm"
-          value={typeCode}
-          onChange={(e) => setTypeCode(e.target.value)}
+        <Select
+          value={typeCode || null}
+          onValueChange={(value) => setTypeCode(value ?? "")}
           disabled={renews !== undefined || documentTypesFailed}
-          required
         >
-          <option value="">{t("assets.form.choose")}</option>
-          {documentTypes.map((c) => (
-            <option key={c.code} value={c.code}>
-              {labelOf(c)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="min-h-11" id="doc-type">
+            <SelectValue placeholder={t("assets.form.choose")} />
+          </SelectTrigger>
+          <SelectContent>
+            {documentTypes.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {labelOf(c)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -359,7 +361,7 @@ function DocumentForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium">{t("attachments.label")}</span>
+        <span className="text-sm font-medium">{t("finance.record.evidenceLabel")}</span>
         <FileUpload
           accept="image/jpeg,image/png,image/webp,application/pdf"
           onChange={setArtifactIds}

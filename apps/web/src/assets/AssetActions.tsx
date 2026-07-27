@@ -6,6 +6,7 @@ import type {
 } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isReadOnlyRole, useMeContext } from "../auth/me.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -123,19 +124,21 @@ export function AssetActions({
         </>
       ) : panel.kind === "assign" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label={t("assets.actions.assignTo")}
-            className="min-h-9 flex-1 rounded-md border border-input bg-transparent px-2 text-xs"
-            value={assignBranch}
-            onChange={(e) => setAssignBranch(e.target.value)}
+          <Select
+            value={assignBranch || null}
+            onValueChange={(value) => setAssignBranch(value ?? "")}
           >
-            <option value="">{t("assets.form.choose")}</option>
-            {reference.data?.branches.map((b) => (
-              <option key={b.code} value={b.code}>
-                {b.name} ({b.code})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="flex-1" size="sm" aria-label={t("assets.actions.assignTo")}>
+              <SelectValue placeholder={t("assets.form.choose")} />
+            </SelectTrigger>
+            <SelectContent>
+              {reference.data?.branches.map((b) => (
+                <SelectItem key={b.code} value={b.code}>
+                  {b.name} ({b.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button className="min-h-9" disabled={submitting || assignBranch === ""} onClick={onAssign}>
             {submitting ? t("assets.actions.working") : t("assets.actions.confirm")}
           </Button>
