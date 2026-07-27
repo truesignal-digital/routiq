@@ -45,8 +45,11 @@ vi.mock("../auth/me.js", () => ({
   }),
 }));
 
-vi.mock("./useApprovals.js", () => ({
-  useApprovals: () => ({ data: { total: 0 } }),
+vi.mock("./useApprovals.js", async () => ({
+  ...(await vi.importActual("./useApprovals.js")),
+  useApprovals: () => ({
+    data: { pages: [{ entries: [], nextCursor: null, total: 0 }] },
+  }),
 }));
 
 import { FinanceToolbar } from "./FinanceToolbar.js";

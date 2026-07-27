@@ -381,17 +381,27 @@ describe("DashboardScreen — recent entries", () => {
     expect(screen.getByText("Fuel")).toBeTruthy();
   });
 
-  it("opens the entry detail route when a row is activated", async () => {
+  it("opens the entry detail route from the entry number", async () => {
     installFetch();
     const router = await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
 
-    await userEvent.click(await screen.findByText("ENT-0042"));
+    // The entry number is the primary cell, so it is the row's one trigger.
+    await userEvent.click(await screen.findByRole("button", { name: "ENT-0042" }));
 
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(
         "/finance/entries/11111111-1111-4111-8111-111111111111",
       ),
     );
+  });
+
+  it("leaves the rest of the recent row inert, as on the entries screen", async () => {
+    installFetch();
+    const router = await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+
+    await userEvent.click(await screen.findByText("Fuel"));
+
+    expect(router.state.location.pathname).toBe("/");
   });
 });
 

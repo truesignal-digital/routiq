@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,7 +18,6 @@ import {
   type ColumnDef,
   type OnChangeFn,
   type PaginationState,
-  type Row,
   type RowData,
   type RowSelectionState,
   type SortingState,
@@ -193,9 +191,8 @@ interface DataTableBaseProps<TData> {
   getRowId?: (row: TData, index: number) => string;
 
   /**
-   * Names the row's sole click target. Until a screen sets it the whole row
-   * stays clickable, which is the old behaviour and is deprecated — a row
-   * without a primary column cannot hold action controls.
+   * Names the row's sole click target. A table that configures `rowViewer` or
+   * `onRowClick` needs one, or nothing on the row will open anything.
    *
    * @see DataTablePrimaryColumn
    */
@@ -309,8 +306,6 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
 
   const primaryColumnId = primaryColumn?.columnId;
   const hasRowActions = rowActions !== undefined;
-  // Deprecated fallback for screens that have not named a primary column yet.
-  const legacyRowActivation = primaryColumnId === undefined ? activateRow : undefined;
 
   const tableColumns = useMemo<ColumnDef<TData>[]>(() => {
     // Pin the primary column first and take away its hide switch: it is the
@@ -593,22 +588,11 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                // With a primary column the row is inert by design — only the
-                // primary cell acts, freeing the rest to hold controls. The
-                // whole-row fallback is the deprecated path.
+                // Inert by design: only the primary cell and the row's own
+                // controls act, so the rest of the row can hold buttons.
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
-                  {...(legacyRowActivation
-                    ? {
-                        className: "cursor-pointer",
-                        tabIndex: 0,
-                        ...(rowViewer ? { "aria-haspopup": "dialog" as const } : {}),
-                        onClick: () => legacyRowActivation(row.original),
-                        onKeyDown: (event: KeyboardEvent<HTMLElement>) =>
-                          handleRowKeyDown(event, row, legacyRowActivation),
-                      }
-                    : {})}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
@@ -646,20 +630,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
               // menu sits in the corner.
               <div
                 key={row.id}
-                className={cn(
-                  "rounded-xl border border-border bg-card p-4",
-                  legacyRowActivation && "cursor-pointer hover:bg-accent",
-                )}
-                {...(legacyRowActivation
-                  ? {
-                      role: "button",
-                      tabIndex: 0,
-                      ...(rowViewer ? { "aria-haspopup": "dialog" as const } : {}),
-                      onClick: () => legacyRowActivation(row.original),
-                      onKeyDown: (event: KeyboardEvent<HTMLElement>) =>
-                        handleRowKeyDown(event, row, legacyRowActivation),
-                    }
-                  : {})}
+                className="rounded-xl border border-border bg-card p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   {selectionCell &&
@@ -1084,16 +1055,22 @@ export function DataTableViewOptions<TData>({
   columns,
   value,
   onChange,
+  primaryColumn,
   className,
 }: {
   columns: ColumnDef<TData>[];
   value: VisibilityState;
   onChange: (visibility: VisibilityState) => void;
+  /** Pass the table's own, or the menu will offer to hide the row's way in. */
+  primaryColumn?: DataTablePrimaryColumn;
   className?: string;
 }) {
   const entries = columns
     .map((column, index) => ({ column, id: columnDefId(column, index) }))
-    .filter(({ column }) => column.enableHiding !== false)
+    .filter(
+      ({ column, id }) =>
+        column.enableHiding !== false && id !== primaryColumn?.columnId,
+    )
     .map(({ column, id }) => ({
       id,
       label: column.meta?.label ?? id,
@@ -1232,17 +1209,6 @@ function columnLabel<TData>(column: Column<TData, unknown>): string {
   return column.columnDef.meta?.label ?? column.id;
 }
 
-function handleRowKeyDown<TData>(
-  event: KeyboardEvent<HTMLElement>,
-  row: Row<TData>,
-  activateRow: (row: TData) => void,
-) {
-  const key = event.key.toLowerCase();
-  if (key === "enter" || key === " ") {
-    event.preventDefault();
-    activateRow(row.original);
-  }
-}
 
 function useDesktopMediaQuery() {
   const [isDesktop, setIsDesktop] = useState(() => {

@@ -9,6 +9,7 @@ export async function fetchFinanceEntries(
     periodCode?: string;
     assetId?: string;
     branchId?: string;
+    sort?: string;
     cursor?: string;
   },
   signal?: AbortSignal,
@@ -19,6 +20,7 @@ export async function fetchFinanceEntries(
   if (params?.periodCode) url.searchParams.append("periodCode", params.periodCode);
   if (params?.assetId) url.searchParams.append("assetId", params.assetId);
   if (params?.branchId) url.searchParams.append("branchId", params.branchId);
+  if (params?.sort) url.searchParams.append("sort", params.sort);
   if (params?.cursor) url.searchParams.append("cursor", params.cursor);
 
   const response = await fetchImpl(url.pathname + url.search, {
@@ -34,6 +36,8 @@ export interface UseEntriesParams {
   periodCode?: string;
   assetId?: string;
   branchId?: string;
+  /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
+  sort?: string;
 }
 
 export function useEntries(params: UseEntriesParams = {}) {

@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ClipboardCheck } from "lucide-react";
+import { Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { z } from "zod";
 import { useMeContext } from "@/auth/me.js";
 import { useActiveSession } from "@/auth/store.js";
@@ -30,6 +30,7 @@ import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import { useApprovals } from "@/finance/useApprovals.js";
+import { toSortParam } from "@/lib/sort-param.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import {
@@ -45,6 +46,12 @@ type ActionDialogState =
   | { open: false }
   | { open: true; entryId: string; action: "approve" | "reject"; rowVersion: number };
 
+/** Mirrors the read's own default — oldest first is the queue's honest order. */
+const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
+
+/** The queue's fixed page size (apps/api/src/reads/finance.ts). */
+const APPROVALS_PAGE_SIZE = 100;
+
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -52,14 +59,17 @@ export function FinanceApprovalsScreen() {
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
-  const approvalsQuery = useApprovals(canApprove);
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  const sort = toSortParam(sorting);
+  // `sort` rides in the query key, so reordering starts a fresh cursor.
+  const approvalsQuery = useApprovals(canApprove, sort ? { sort } : {});
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
   const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
-  const entries = approvalsQuery.data?.entries ?? [];
+  const entries = approvalsQuery.data?.pages.flatMap((page) => page.entries) ?? [];
 
   // ADR-0001: a decided entry leaves the queue because the server says so, not
   // because the client crossed it off locally.
@@ -71,12 +81,21 @@ export function FinanceApprovalsScreen() {
       queryKey: ["ws", session?.workspaceSlug, "finance", "entries"],
     });
   };
-  // The queue carries no toolbar: `/v1/finance/approvals` takes no filter or
-  // sort params, and it answers with at most 100 rows next to a separate
-  // `total`. Both a filter and a sort control would therefore act on a prefix
-  // of the queue while looking like they act on all of it.
+  // The queue takes no filters, but it does declare `sortFields`, so the
+  // sortable headers below drive the read rather than the loaded page.
   const columns = useMemo<ColumnDef<PendingApprovalItem>[]>(
     () => [
+      {
+        accessorKey: "entryNumber",
+        header: t("finance.entries.detail.entryNumber"),
+        enableSorting: true,
+        meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
+        cell: ({ row }) => (
+          <span className="font-mono whitespace-nowrap">
+            {row.original.entryNumber}
+          </span>
+        ),
+      },
       {
         accessorKey: "status",
         header: t("finance.entries.detail.status"),
@@ -90,6 +109,7 @@ export function FinanceApprovalsScreen() {
       {
         accessorKey: "submittedAt",
         header: t("finance.entries.detail.date"),
+        enableSorting: true,
         meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
       },
@@ -102,7 +122,11 @@ export function FinanceApprovalsScreen() {
       },
       {
         id: "amount",
+        // TanStack refuses to sort a display column, so the accessor is what
+        // makes the header interactive; the id stays the read's field name.
+        accessorKey: "amountMinor",
         header: t("finance.entries.detail.amount"),
+        enableSorting: true,
         meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap font-mono font-semibold">
@@ -120,10 +144,11 @@ export function FinanceApprovalsScreen() {
         cell: ({ row }) => row.original.counterpartyName ?? "—",
       },
       {
-        id: "actions",
+        id: "guard",
         header: t("finance.approvals.columns.actions"),
-        // Hiding the decision buttons would leave an approver a queue they
-        // cannot act on.
+        enableSorting: false,
+        // The decisions moved to the row's ⋯ menu; this column only explains
+        // the rows that offer none.
         enableHiding: false,
         meta: {
           mobile: "primary",
@@ -134,42 +159,46 @@ export function FinanceApprovalsScreen() {
             <StatusBadge tone="warning">
               {t("finance.approvals.makerGuard")}
             </StatusBadge>
-          ) : (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  setActionDialog({
-                    open: true,
-                    entryId: row.original.id,
-                    action: "approve",
-                    rowVersion: row.original.rowVersion,
-                  })
-                }
-              >
-                {t("finance.approvals.approve")}
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() =>
-                  setActionDialog({
-                    open: true,
-                    entryId: row.original.id,
-                    action: "reject",
-                    rowVersion: row.original.rowVersion,
-                  })
-                }
-              >
-                {t("finance.approvals.reject")}
-              </Button>
-            </div>
-          ),
+          ) : null,
       },
     ],
     [i18n.resolvedLanguage, me?.principalId, t],
   );
+
+  const rowActions = (entry: PendingApprovalItem) => {
+    // role-config: deciding is an approver's call, and never on your own
+    // submission — the maker guard the server also enforces.
+    if (!canApprove) return [];
+    if (isOwnSubmission(entry.submittedByPrincipalId, me?.principalId)) return [];
+
+    return [
+      {
+        key: "approve",
+        label: t("finance.approvals.approve"),
+        icon: Check,
+        onSelect: () =>
+          setActionDialog({
+            open: true,
+            entryId: entry.id,
+            action: "approve" as const,
+            rowVersion: entry.rowVersion,
+          }),
+      },
+      {
+        key: "reject",
+        label: t("finance.approvals.reject"),
+        icon: X,
+        destructive: true,
+        onSelect: () =>
+          setActionDialog({
+            open: true,
+            entryId: entry.id,
+            action: "reject" as const,
+            rowVersion: entry.rowVersion,
+          }),
+      },
+    ];
+  };
 
   const handleApprove = async (entryId: string, rowVersion: number, note: string) => {
     setActionError(undefined);
@@ -254,6 +283,7 @@ export function FinanceApprovalsScreen() {
             columns={columns}
             value={columnVisibility}
             onChange={setColumnVisibility}
+            primaryColumn={{ columnId: "entryNumber" }}
           />
         )}
       </FinanceToolbar>
@@ -275,6 +305,16 @@ export function FinanceApprovalsScreen() {
             getRowId={(entry) => entry.id}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
+            sorting={sorting}
+            onSortingChange={setSorting}
+            primaryColumn={{ columnId: "entryNumber" }}
+            rowActions={rowActions}
+            loadMore={{
+              hasNextPage: approvalsQuery.hasNextPage,
+              isFetching: approvalsQuery.isFetchingNextPage,
+              onLoadMore: () => void approvalsQuery.fetchNextPage(),
+              pageSize: APPROVALS_PAGE_SIZE,
+            }}
             emptyState={
               <EmptyState
                 icon={<ClipboardCheck className="size-7" aria-hidden />}

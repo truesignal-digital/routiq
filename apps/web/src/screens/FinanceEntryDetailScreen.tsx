@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
@@ -47,7 +47,16 @@ export function FinanceEntryDetailScreen() {
   const me = useMeContext();
 
   const entryQuery = useEntry(entryId);
-  const [reverseDialog, setReverseDialog] = useState<ReverseDialogState>({ open: false, reason: "", submitting: false });
+  // `?reverse=1` is how the entries list's ⋯ menu hands an operator straight
+  // into the dialog instead of duplicating it there.
+  const { reverse: openReverse } = useSearch({
+    from: "/app/finance/entries/$entryId",
+  });
+  const [reverseDialog, setReverseDialog] = useState<ReverseDialogState>(() => ({
+    open: openReverse === true,
+    reason: "",
+    submitting: false,
+  }));
   const intentRef = useRef<CommandIntent<z.infer<typeof reverseEntryPayload>> | undefined>(undefined);
   const [reverseError, setReverseError] = useState<string>();
 

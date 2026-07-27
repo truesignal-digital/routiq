@@ -10,6 +10,7 @@ export type FinanceEntryColumnId =
   | "entryNumber"
   | "status"
   | "economicDate"
+  | "postedAt"
   | "category"
   | "amount"
   | "counterpartyName";
@@ -19,9 +20,11 @@ export type FinanceEntryColumnId =
  * home screen and the entries list cannot drift on what a status chip or an
  * amount looks like.
  *
- * No column is sortable: the read is keyset-paginated on `postedAt` and takes
- * no `sort` param (apps/api/src/reads/finance.ts), so a header control could
- * only reorder the rows already loaded and would misrepresent the rest.
+ * `enableSorting` marks the columns `/v1/finance/entries` declares as
+ * `sortFields`; their ids are the field names the read expects, and a screen
+ * that turns sorting on must forward it as the `sort` param. The rest are not
+ * sortable — a header control over them could only reorder the loaded page and
+ * would misrepresent everything past the cursor.
  */
 function buildColumns(
   t: (key: string) => string,
@@ -30,6 +33,7 @@ function buildColumns(
     entryNumber: {
       accessorKey: "entryNumber",
       header: t("finance.entries.detail.entryNumber"),
+      enableSorting: true,
       meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
       cell: ({ row }) => (
         <span className="font-mono whitespace-nowrap">{row.original.entryNumber}</span>
@@ -55,8 +59,18 @@ function buildColumns(
     economicDate: {
       accessorKey: "economicDate",
       header: t("finance.entries.detail.date"),
+      enableSorting: true,
       meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
       cell: ({ row }) => formatDate(row.original.economicDate),
+    },
+    postedAt: {
+      accessorKey: "postedAt",
+      header: t("finance.entries.detail.postingDate"),
+      enableSorting: true,
+      // Off the mobile card: it is the read's default order, not something an
+      // operator scans a phone for.
+      meta: { mobile: "hidden", label: t("finance.entries.detail.postingDate") },
+      cell: ({ row }) => formatDate(row.original.postedAt),
     },
     category: {
       id: "category",
@@ -66,7 +80,12 @@ function buildColumns(
     },
     amount: {
       id: "amount",
+      // The accessor is what makes the column sortable at all — TanStack
+      // refuses to sort a display column. The id stays `amount` because that
+      // is the field name the read declares.
+      accessorKey: "amountMinor",
       header: t("finance.entries.detail.amount"),
+      enableSorting: true,
       meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
       cell: ({ row }) => (
         <span className="text-right font-mono font-semibold whitespace-nowrap">

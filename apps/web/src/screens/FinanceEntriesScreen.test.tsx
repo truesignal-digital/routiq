@@ -71,6 +71,7 @@ vi.mock("../auth/me.js", () => ({
 
 vi.mock("../finance/permissions.js", () => ({
   canRecordFinance: vi.fn(() => true),
+  canReverseEntry: vi.fn(() => false),
   canManagePeriods: () => false,
 }));
 
@@ -159,10 +160,13 @@ vi.mock("../finance/useEntry.js", () => ({
   }),
 }));
 
-import { canRecordFinance } from "../finance/permissions.js";
+import { canRecordFinance, canReverseEntry } from "../finance/permissions.js";
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
 
 const DEBOUNCE_MS = 300;
+
+/** The screen states the read's own default order rather than leaving it implicit. */
+const DEFAULT_SORT = "postedAt:desc";
 
 /** jsdom never matches a width query; the table needs a nudge to render desktop. */
 function mockDesktop() {
@@ -187,6 +191,7 @@ beforeEach(() => {
   // clearAllMocks keeps implementations, so an opt-out set by one test would
   // otherwise follow the next one.
   vi.mocked(canRecordFinance).mockReturnValue(true);
+  vi.mocked(canReverseEntry).mockReturnValue(false);
   mockDesktop();
   issuedQueries.length = 0;
 });
@@ -201,7 +206,7 @@ describe("FinanceEntriesScreen", () => {
       const periodInput = screen.getByPlaceholderText(
         "finance.entries.filters.periodPlaceholder",
       );
-      expect(issuedQueries).toEqual([{}]);
+      expect(issuedQueries).toEqual([{ sort: DEFAULT_SORT }]);
 
       // A controlled input sees the whole value on each keystroke.
       for (const value of ["2", "20", "202", "2026", "2026-", "2026-0", "2026-07"]) {
@@ -213,18 +218,24 @@ describe("FinanceEntriesScreen", () => {
       act(() => {
         vi.advanceTimersByTime(DEBOUNCE_MS - 1);
       });
-      expect(issuedQueries).toEqual([{}]);
+      expect(issuedQueries).toEqual([{ sort: DEFAULT_SORT }]);
 
       act(() => {
         vi.advanceTimersByTime(1);
       });
-      expect(issuedQueries).toEqual([{}, { periodCode: "2026-07" }]);
+      expect(issuedQueries).toEqual([
+        { sort: DEFAULT_SORT },
+        { periodCode: "2026-07", sort: DEFAULT_SORT },
+      ]);
 
       // Nothing else may settle onto the same tick and issue a second query.
       act(() => {
         vi.advanceTimersByTime(DEBOUNCE_MS * 2);
       });
-      expect(issuedQueries).toEqual([{}, { periodCode: "2026-07" }]);
+      expect(issuedQueries).toEqual([
+        { sort: DEFAULT_SORT },
+        { periodCode: "2026-07", sort: DEFAULT_SORT },
+      ]);
     } finally {
       vi.useRealTimers();
     }
@@ -249,7 +260,10 @@ describe("FinanceEntriesScreen", () => {
     );
 
     await waitFor(() =>
-      expect(issuedQueries).toEqual([{}, { assetId: assets[0]!.id }]),
+      expect(issuedQueries).toEqual([
+        { sort: DEFAULT_SORT },
+        { assetId: assets[0]!.id, sort: DEFAULT_SORT },
+      ]),
     );
   });
 
@@ -265,7 +279,10 @@ describe("FinanceEntriesScreen", () => {
     );
 
     await waitFor(() =>
-      expect(issuedQueries).toEqual([{}, { status: "POSTED" }]),
+      expect(issuedQueries).toEqual([
+        { sort: DEFAULT_SORT },
+        { status: "POSTED", sort: DEFAULT_SORT },
+      ]),
     );
   });
 
@@ -292,11 +309,103 @@ describe("FinanceEntriesScreen", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
+  it("sends the chosen order to the read, restarting the cursor", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(
+      screen.getByRole("button", { name: /finance\.entries\.detail\.amount/ }),
+    );
+
+    // A new sort is a new query key, so react-query drops the old pages rather
+    // than stitching two orders together. Amounts open largest-first, which is
+    // TanStack's default for a numeric column and the useful end for money.
+    await waitFor(() =>
+      expect(issuedQueries).toEqual([
+        { sort: DEFAULT_SORT },
+        { sort: "amount:desc" },
+      ]),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /finance\.entries\.detail\.amount/ }),
+    );
+    await waitFor(() =>
+      expect(issuedQueries.at(-1)).toEqual({ sort: "amount:asc" }),
+    );
+  });
+
+  it("never lets the view menu hide the column that opens a row", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "dataTable.view" }));
+
+    const items = (await screen.findAllByRole("menuitemcheckbox")).map(
+      (item) => item.textContent,
+    );
+    expect(items).not.toContain("finance.entries.detail.entryNumber");
+    expect(items).toContain("finance.entries.detail.category");
+  });
+
+  it("leaves the row body inert so it can carry controls", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByText("Carburant"));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("offers reversal in the row menu only to a role that may reverse", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
+    expect(
+      (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
+    ).toEqual(["finance.entries.viewer.fullScreen"]);
+
+    cleanup();
+    // role-config: approver on a posted entry.
+    vi.mocked(canReverseEntry).mockReturnValue(true);
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
+    expect(
+      (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
+    ).toEqual([
+      "finance.entries.viewer.fullScreen",
+      "finance.entries.detail.reverseAction",
+    ]);
+  });
+
+  it("sends a reversal to the detail route with the dialog already open", async () => {
+    vi.mocked(canReverseEntry).mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "finance.entries.detail.reverseAction",
+      }),
+    );
+
+    // The dialog is not re-implemented here; the route opens it.
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({
+      to: "/finance/entries/$entryId",
+      params: { entryId: entry.id },
+      search: { reverse: true },
+    });
+  });
+
   it("opens the row drawer instead of leaving the list", async () => {
     const user = userEvent.setup();
     render(<FinanceEntriesScreen />);
 
-    await user.click(screen.getAllByRole("row")[1]!);
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
 
     const drawer = await screen.findByRole("dialog");
     expect(within(drawer).getByRole("heading", { name: "FIN-001" })).toBeTruthy();
@@ -311,7 +420,7 @@ describe("FinanceEntriesScreen", () => {
     const user = userEvent.setup();
     render(<FinanceEntriesScreen />);
 
-    await user.click(screen.getAllByRole("row")[1]!);
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
     await screen.findByRole("dialog");
     await user.click(
       screen.getByRole("button", { name: "finance.entries.viewer.fullScreen" }),
@@ -333,7 +442,7 @@ describe("FinanceEntriesScreen", () => {
 
       // Advancing the cursor is a fetch, not a new query key.
       expect(mockUseEntriesValue.fetchNextPage).toHaveBeenCalledOnce();
-      expect(issuedQueries).toEqual([{}]);
+      expect(issuedQueries).toEqual([{ sort: DEFAULT_SORT }]);
     } finally {
       mockUseEntriesValue.hasNextPage = false;
     }

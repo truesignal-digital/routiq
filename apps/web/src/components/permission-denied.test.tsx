@@ -35,7 +35,10 @@ const pendingInfiniteQuery = {
   fetchNextPage: vi.fn(),
 };
 
-vi.mock("../finance/useApprovals.js", () => ({ useApprovals: () => pendingQuery }));
+vi.mock("../finance/useApprovals.js", async () => ({
+  ...(await vi.importActual("../finance/useApprovals.js")),
+  useApprovals: () => pendingInfiniteQuery,
+}));
 vi.mock("../finance/usePeriods.js", () => ({ usePeriods: () => pendingQuery }));
 vi.mock("../finance/useEntries.js", () => ({ useEntries: () => pendingInfiniteQuery }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: () => pendingInfiniteQuery }));

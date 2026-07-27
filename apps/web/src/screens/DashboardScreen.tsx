@@ -117,6 +117,7 @@ function RecentEntries({ onOpenEntry }: { onOpenEntry: (entryId: string) => void
             columns={columns}
             data={entries}
             showRowCount={false}
+            primaryColumn={{ columnId: "entryNumber" }}
             onRowClick={(entry) => onOpenEntry(entry.id)}
             emptyState={
               entriesQuery.isPending ? (

@@ -93,6 +93,17 @@ function periodCodesInOrder(): string[] {
     .map((row) => within(row).getAllByRole("cell")[0]?.textContent ?? "");
 }
 
+/** Lock and reopen moved off the row into its ⋯ menu. Row 0 is the open
+ * current period, row 1 the locked one. */
+async function chooseRowAction(
+  user: ReturnType<typeof userEvent.setup>,
+  rowIndex: number,
+  name: string,
+) {
+  await user.click(screen.getAllByRole("button", { name: "Actions" })[rowIndex]!);
+  await user.click(await screen.findByRole("menuitem", { name }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockDesktop();
@@ -147,18 +158,18 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await chooseRowAction(user, 0, "Lock");
     expect(screen.getByRole("alertdialog")).toBeDefined();
-    await user.click(screen.getAllByRole("button", { name: "Lock" }).at(-1)!);
+    await user.click(screen.getByRole("button", { name: "Lock" }));
     await waitFor(() => expect(submissionOrder).toEqual(["lock-period"]));
     expect(mocks.toastAdd).toHaveBeenCalledWith({
       type: "success",
       title: "Period locked",
     });
 
-    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    await chooseRowAction(user, 1, "Reopen");
     await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");
-    await user.click(screen.getAllByRole("button", { name: "Reopen" }).at(-1)!);
+    await user.click(screen.getByRole("button", { name: "Reopen" }));
 
     await waitFor(() =>
       expect(submissionOrder).toEqual(["lock-period", "reopen-period"]),
@@ -169,7 +180,7 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    await chooseRowAction(user, 1, "Reopen");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(() =>
@@ -205,7 +216,7 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await chooseRowAction(user, 0, "Lock");
     const overlay = document.querySelector<HTMLElement>(
       '[data-slot="alert-dialog-overlay"]',
     );

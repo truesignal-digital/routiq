@@ -81,6 +81,9 @@ const financeEntriesRoute = createRoute({
 const financeEntryDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries/$entryId",
+  // The entries list's ⋯ menu sends an operator straight into the reversal
+  // dialog rather than carrying a second copy of it.
+  validateSearch: z.object({ reverse: z.boolean().optional() }),
   component: FinanceEntryDetailScreen,
 });
 

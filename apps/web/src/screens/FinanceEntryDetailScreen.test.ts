@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   toastAdd: vi.fn(),
 }));
 
+const searchParams = vi.hoisted(() => ({ current: {} as { reverse?: boolean } }));
+
 vi.mock("@/components/ui/toast.js", () => ({
   toast: { add: mocks.toastAdd },
 }));
@@ -24,6 +26,8 @@ vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({
     entryId: "00000000-0000-4000-8000-000000000010",
   }),
+  // `?reverse=1` opens the dialog on arrival.
+  useSearch: () => searchParams.current,
 }));
 
 vi.mock("../commands/intent.js", () => ({

@@ -52,9 +52,12 @@ vi.mock("../auth/me.js", () => ({
   }),
 }));
 
-let approvalsTotal = 0;
-vi.mock("./useApprovals.js", () => ({
-  useApprovals: () => ({ data: { total: approvalsTotal } }),
+let pendingTotal = 0;
+vi.mock("./useApprovals.js", async () => ({
+  ...(await vi.importActual("./useApprovals.js")),
+  useApprovals: () => ({
+    data: { pages: [{ entries: [], nextCursor: null, total: pendingTotal }] },
+  }),
 }));
 
 import { FinanceNav } from "./FinanceNav.js";
@@ -70,7 +73,7 @@ function activeTabName(): string | undefined {
 beforeEach(() => {
   vi.clearAllMocks();
   pathname = "/finance/entries";
-  approvalsTotal = 0;
+  pendingTotal = 0;
 });
 
 afterEach(cleanup);
@@ -149,7 +152,7 @@ describe("FinanceNav", () => {
   });
 
   it("badges the pending approvals count inside the approvals tab", () => {
-    approvalsTotal = 3;
+    pendingTotal = 3;
     render(<FinanceNav />);
 
     const badge = screen.getByLabelText("finance.navigation.approvalsBadge:3");
@@ -207,7 +210,7 @@ describe("FinanceNav", () => {
   });
 
   it("badges no tab when nothing is pending", () => {
-    approvalsTotal = 0;
+    pendingTotal = 0;
     const { container } = render(<FinanceNav />);
 
     expect(container.querySelector('[data-slot="badge"]')).toBeNull();

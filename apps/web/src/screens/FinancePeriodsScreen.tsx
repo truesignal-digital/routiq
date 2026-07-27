@@ -113,52 +113,43 @@ export function FinancePeriodsScreen() {
         cell: ({ row }) =>
           t("finance.periods.entryCount", { count: row.original.entryCount }),
       },
-      {
-        id: "actions",
-        header: t("finance.periods.columns.actions"),
-        enableSorting: false,
-        // Hiding the lock/reopen buttons would leave the screen with nothing to do.
-        enableHiding: false,
-        meta: { mobile: "primary", label: t("finance.periods.columns.actions") },
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            {row.original.status === "OPEN" ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  setActionDialog({
-                    open: true,
-                    periodCode: row.original.periodCode,
-                    action: "lock",
-                  })
-                }
-              >
-                <Lock className="mr-2 size-4" aria-hidden />
-                {t("finance.periods.lock")}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  setActionDialog({
-                    open: true,
-                    periodCode: row.original.periodCode,
-                    action: "reopen",
-                  })
-                }
-              >
-                <Unlock className="mr-2 size-4" aria-hidden />
-                {t("finance.periods.reopen")}
-              </Button>
-            )}
-          </div>
-        ),
-      },
     ],
     [i18n.resolvedLanguage, t],
   );
+
+  const rowActions = (period: PeriodRead) => {
+    // role-config: locking and reopening are the period manager's calls; a role
+    // without them sees a read-only ledger.
+    if (!canManage) return [];
+
+    return period.status === "OPEN"
+      ? [
+          {
+            key: "lock",
+            label: t("finance.periods.lock"),
+            icon: Lock,
+            onSelect: () =>
+              setActionDialog({
+                open: true,
+                periodCode: period.periodCode,
+                action: "lock" as const,
+              }),
+          },
+        ]
+      : [
+          {
+            key: "reopen",
+            label: t("finance.periods.reopen"),
+            icon: Unlock,
+            onSelect: () =>
+              setActionDialog({
+                open: true,
+                periodCode: period.periodCode,
+                action: "reopen" as const,
+              }),
+          },
+        ];
+  };
 
   const handleLock = async (periodCode: string) => {
     setActionError(undefined);
@@ -221,6 +212,7 @@ export function FinancePeriodsScreen() {
             columns={columns}
             value={columnVisibility}
             onChange={setColumnVisibility}
+            primaryColumn={{ columnId: "periodCode" }}
           />
         )}
       </FinanceToolbar>
@@ -243,6 +235,11 @@ export function FinancePeriodsScreen() {
             defaultSorting={[{ id: "periodCode", desc: true }]}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
+            // A period has no detail view, so its primary cell is emphasis
+            // only — no activation is configured, so the table renders it as
+            // plain text rather than a trigger.
+            primaryColumn={{ columnId: "periodCode" }}
+            rowActions={rowActions}
             // The periods read is unpaginated, so the page count is real.
             pagination={{ defaultPageSize: 10 }}
             emptyState={
