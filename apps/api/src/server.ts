@@ -14,6 +14,7 @@ import "./commands/record-financial-entry.js";
 import "./commands/entry-decisions.js";
 import "./commands/period-commands.js";
 import "./commands/reverse-entry.js";
+import "./commands/register-person.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";

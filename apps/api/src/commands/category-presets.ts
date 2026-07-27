@@ -122,5 +122,66 @@ export function presetCategories(
       profitabilityLayer: "DIRECT",
       evidencePolicy: "RECEIPT_EXPECTED",
     },
+    // Activity types. §3.3: what differs between presets is categories and
+    // labels — never tables, handlers, or profitability math.
+    {
+      workspaceId,
+      kind: "ACTIVITY_TYPE",
+      code: "HAULAGE_JOB",
+      active: true,
+      labelFr: "Job de halage",
+      labelEn: "Haulage job",
+    },
+    {
+      workspaceId,
+      kind: "ACTIVITY_TYPE",
+      code: "SCHEDULED_JOURNEY",
+      active: true,
+      labelFr: "Départ programmé",
+      labelEn: "Scheduled journey",
+    },
+    {
+      workspaceId,
+      kind: "ACTIVITY_TYPE",
+      code: "CHARTER",
+      active: true,
+      labelFr: "Affrètement",
+      labelEn: "Charter",
+    },
+    // Crew pay is an ordinary expense posting carrying person_id (§4.2 decision
+    // 21), not a payroll module. Allowances change hands in cash against a
+    // signature, so no receipt is expected.
+    {
+      workspaceId,
+      kind: "EXPENSE_CATEGORY",
+      code: "DRIVER_ALLOWANCE",
+      active: true,
+      labelFr: "Indemnité chauffeur",
+      labelEn: "Driver allowance",
+      profitabilityLayer: "DIRECT",
+      evidencePolicy: "NO_RECEIPT_EXPECTED",
+    },
+    {
+      workspaceId,
+      kind: "EXPENSE_CATEGORY",
+      code: "CREW_ALLOWANCE",
+      active: true,
+      labelFr: "Indemnité équipage",
+      labelEn: "Crew allowance",
+      profitabilityLayer: "DIRECT",
+      evidencePolicy: "NO_RECEIPT_EXPECTED",
+    },
+    // §5.4 names informal tolls explicitly: declared cash expenses, warned
+    // about rather than blocked.
+    {
+      workspaceId,
+      kind: "EXPENSE_CATEGORY",
+      code: "TOLLS",
+      active: true,
+      labelFr: "Péages",
+      labelEn: "Tolls",
+      profitabilityLayer: "DIRECT",
+      evidencePolicy: "NO_RECEIPT_EXPECTED",
+    },
   ];
 }
