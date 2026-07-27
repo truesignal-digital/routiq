@@ -7,6 +7,12 @@
     "finances": "Finance",
     "more": "More"
   },
+  "shell": {
+    "navLabel": "Navigation",
+    "sidebarDescription": "Displays the navigation menu on mobile.",
+    "sidebarTitle": "Navigation menu",
+    "toggleSidebar": "Show or hide the menu"
+  },
   "login": {
     "subtitle": "Sign in to continue",
     "workspace": "Workspace",

@@ -470,6 +470,44 @@
         "@base-ui/react",
         "lucide-react"
       ]
+    },
+    {
+      "name": "use-mobile",
+      "type": "registry:hook",
+      "files": [
+        {
+          "path": "src/hooks/use-mobile.ts",
+          "type": "registry:file",
+          "target": "hooks/use-mobile.ts"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "sidebar",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/sidebar.tsx",
+          "type": "registry:file",
+          "target": "components/ui/sidebar.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "input",
+        "separator",
+        "sheet",
+        "skeleton",
+        "tooltip",
+        "use-mobile"
+      ],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority",
+        "lucide-react"
+      ]
     }
   ]
 }

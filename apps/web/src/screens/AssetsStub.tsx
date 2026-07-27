@@ -86,7 +86,7 @@ export function AssetsStub() {
   const summary = useMemo(() => summarizeAssets(assets), [assets]);
 
   return (
-    <section className="asset-page min-h-dvh">
+    <section className="asset-page">
       <div className="border-b border-border px-4 pb-5 pt-5 sm:px-7 md:px-10 md:pb-7 md:pt-8">
         <PageContainer width="wide" className="px-0 py-0">
           <p className="mb-2 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.19em] text-muted-foreground">
@@ -116,7 +116,7 @@ export function AssetsStub() {
 
       <PageContainer
         width="wide"
-        className="pb-28 pt-5 sm:px-7 md:px-10 md:pb-10 md:pt-8"
+        className="pb-24 pt-5 sm:px-7 md:px-10 md:pb-10 md:pt-8"
       >
         <dl className="grid grid-cols-3 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_16px_44px_-36px_var(--foreground)]">
           <Metric
@@ -283,7 +283,7 @@ export function AssetsStub() {
         <a
           href="/assets/new"
           aria-label={t("assets.register")}
-          className="fixed bottom-24 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-[var(--signal-foreground)] shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
+          className="fixed bottom-6 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-[var(--signal-foreground)] shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
         >
           <Plus className="size-6" aria-hidden />
         </a>
