@@ -5,29 +5,45 @@ i.e. after ui-registry 26). The main checkout stays on `main` and is untouched �
 is the point: `git worktree list` showed a single working tree, so a branch alone would have let
 each session's edits land on the other's branch unnoticed.
 
-## Status — 33 test files, 288 tests green (baseline 28 / 251)
+## Status — COMPLETE. 118 test files, 1105 tests green across the monorepo
+
+All 11 backend tickets, the reads, and the first UI slice are built and committed.
 
 | Ticket | State |
 |---|---|
 | 01 module code + vocabulary | done |
 | 02 tables, EXCLUDE constraint, isolation | done |
-| 03 extract `writeFinancialEntry` | done (Codex; finance tests unmodified) |
+| 03 extract `writeFinancialEntry` | done (Codex) |
 | 04 persons, places, presets | done |
 | 05 `create-activity.v1` + scoped numbering | done |
 | 06 `record-movement-leg.v1`, `record-meter-reading.v1` | done |
-| 07 `substitute-asset.v1` | not started |
-| 08 close/reopen + `evaluateCompleteness` | not started |
-| 09 `sheet-writer` + journey sheet + `CommandOutcome.children` | not started |
-| 10 haulage job sheet | not started |
-| 11 queueability declarations | not started |
+| 07 `substitute-asset.v1` | done |
+| 08 close/reopen + `evaluateCompleteness` | done |
+| 09/10 `sheet-writer` + both composite sheets | done |
+| 11 queueability declarations | done |
+| phase D reads | done (Codex) |
+| phase E UI — list, detail, completeness banner | done |
 
-Still owed from the plan: the `POSTING_DEFERRED_PERIOD_LOCKED` degradation — an entry that would
-auto-post into a locked period must land SUBMITTED instead of throwing, or a composite command
-would destroy the operational facts sharing its transaction. It belongs with ticket 09, the first
-command that can hit it.
+## Handed back to the UI lane (no longer owed by this branch)
 
-Two sessions are live on this repo. The split below follows the working agreement already recorded
-in `.scratch/web-mtp/spec.md:5,32` — it is not a new invention.
+The warnings i18n namespace and its guard test were built here after all, because
+the UI needed them: `warnings.<CODE>` in both catalogs plus
+`apps/web/src/i18n/warning-map.test.ts`, which asserts every
+`COMMAND_WARNING_CODES` member has words in fr and en. That guard did not exist —
+key parity alone cannot catch a code missing from both files.
+
+`COMMAND_QUEUEABILITY` also shipped here (`packages/contracts/src/commands/queueability.ts`)
+with a registry guard, so offline-outbox ticket 04 can consume it rather than
+redefine it.
+
+## Still not built
+
+- The sheet capture forms. The commands and reads exist; a clerk still cannot
+  record a trip from the browser. This is the screen the <10-minute close target
+  actually lives or dies on.
+- Substitute / close / reopen dialogs on the detail screen (read-only today).
+- Persons admin screen.
+- §9 report 2 (activity contribution) and report 6 (data quality).
 
 ## Ownership
 
