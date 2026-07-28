@@ -163,7 +163,7 @@
       "assetCode": "Code de l'actif",
       "assetClass": "Classe d'actif",
       "branch": "Agence",
-      "template": "Modèle d'activité",
+      "template": "Modèle d'exploitation",
       "templates": {
         "TRUCKING": "Transport de marchandises",
         "PASSENGER_TRANSPORT": "Transport de voyageurs"
