@@ -470,4 +470,65 @@ describe("activity, person and place reads", () => {
     });
     expect(detailResponse.statusCode).toBe(400);
   });
+  /**
+   * Isolation proven by running it, not by reading the WHERE clauses. §3.4
+   * invariant 1 is absolute, and it is the single promise that lets an operator
+   * put real financials into a shared platform (§10) — a review that only reads
+   * the query builder cannot tell you a filter was not dropped.
+   */
+  describe("tenant isolation", () => {
+    let strangerToken: string;
+
+    beforeAll(async () => {
+      const other = await seedWorkspace(ctx.db);
+      const member = await seedMember(ctx.db, {
+        workspaceId: other.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      strangerToken = (
+        await createSession(ctx.db, {
+          workspaceId: other.workspace.id,
+          principalId: member.principal.id,
+        })
+      ).token;
+    });
+
+    it("shows another tenant none of our jobs", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/activities",
+        headers: { authorization: `Bearer ${strangerToken}` },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().items).toEqual([]);
+    });
+
+    it("refuses a direct hit on our activity id", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/activities/${closedActivityId}`,
+        headers: { authorization: `Bearer ${strangerToken}` },
+      });
+      // Knowing the uuid must not be enough.
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("shows another tenant none of our people or places", async () => {
+      const persons = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/persons",
+        headers: { authorization: `Bearer ${strangerToken}` },
+      });
+      expect(persons.json().items).toEqual([]);
+
+      const places = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/places",
+        headers: { authorization: `Bearer ${strangerToken}` },
+      });
+      expect(places.json().items).toEqual([]);
+    });
+  });
+
 });

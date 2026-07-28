@@ -296,6 +296,51 @@ describe("substitute-asset.v1", () => {
     expect(response.statusCode).toBe(422);
   });
 
+  /**
+   * The invariant the whole module rests on, proven by running it rather than by
+   * reading the lock. Two clerks record the same breakdown at the same moment:
+   * exactly one handover may win, and the activity must never be left with two
+   * open carriers — which would double-count the remaining distance across both
+   * trucks (§3.4 inv. 7).
+   */
+  it("survives two clerks recording the same handover at once", async () => {
+    const { activityId, segmentId } = await openJob();
+
+    const [first, second] = await Promise.all([
+      substitute({
+        activityId,
+        outgoingSegmentId: segmentId,
+        newSegmentId: randomUUID(),
+        substituteAssetId: reliefTractorId,
+        handoverAt: "2026-07-14T17:40:00Z",
+      }),
+      substitute({
+        activityId,
+        outgoingSegmentId: segmentId,
+        newSegmentId: randomUUID(),
+        substituteAssetId: trailerId,
+        handoverAt: "2026-07-14T17:45:00Z",
+      }),
+    ]);
+
+    const statuses = [first!.statusCode, second!.statusCode].sort();
+    expect(statuses[0]).toBe(200);
+    // The loser is rejected on the version it read, not silently merged.
+    expect(statuses[1]).toBeGreaterThanOrEqual(400);
+
+    const segments = await ctx.db
+      .select()
+      .from(activityAssetSegments)
+      .where(eq(activityAssetSegments.activityId, activityId));
+    const openCarriers = segments.filter(
+      (segment) =>
+        segment.endedAt === null &&
+        (segment.role === "PRIMARY" || segment.role === "SUBSTITUTE"),
+    );
+    expect(openCarriers).toHaveLength(1);
+    expect(segments).toHaveLength(2);
+  });
+
   it("replays an identical retry rather than opening a third segment", async () => {
     const { activityId, segmentId } = await openJob();
     const newSegmentId = randomUUID();
