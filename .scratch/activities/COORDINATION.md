@@ -47,13 +47,18 @@ redefine it.
 
 ## Ownership
 
-| Lane | Owns | This module touches it? |
+| Lane | Owns | What this branch did to it |
 |---|---|---|
-| UI session | `apps/web/**` | **Only 2 JSON lines** — see below |
-| UI session | `apps/api/src/reads/**` (GET only) | **No** — activity reads are deferred to phase D |
-| UI session | `packages/contracts/src/reads/**` | **No** |
+| UI session | `apps/web/**` | Entered it, on the user's instruction. New: `src/activities/**`, two screens, two routes, the `activities` nav section, `warnings.*` locale keys + guard. Nothing existing was rewritten. |
+| UI session | `apps/api/src/reads/**` (GET only) | Added `reads/activities.ts`; no existing read touched |
+| UI session | `packages/contracts/src/reads/**` | Added `reads/activities.ts` only |
 | Backend (this) | `apps/api/src/commands/**`, `apps/api/src/db/**`, migrations | Yes, exclusively |
 | Backend (this) | `packages/contracts/src/commands/**`, `modules.ts`, `errors.ts` | Yes |
+
+**Merge-conflict surface, if the other lane has been working in parallel:**
+`apps/web/src/i18n/locales/{fr,en}.json` (appended two top-level keys),
+`apps/web/src/router.tsx` (two routes), `apps/web/src/shell/sections.ts` (one nav entry),
+`packages/contracts/src/index.ts` (appended exports). All appends; none rewrite existing lines.
 
 `packages/contracts/src/errors.ts` is the one genuinely shared file. Both lanes append; keep every
 change append-only at the end of the arrays so a rebase is a trivial merge.
@@ -70,28 +75,6 @@ that never mentions `apps/web`.
 Rule adopted here: an error code and its two locale strings land in the same commit, always. That is
 the only reason this branch touches `apps/web` at all — a two-line append inside the existing
 `errors` object, nothing else.
-
-## Deliberately handed over to the UI lane (not built here)
-
-1. **Warnings i18n namespace.** Eight new `COMMAND_WARNING_CODES` ship with no locale strings.
-   They are stable codes over the wire and the API is complete without them. The UI work is: hoist
-   warning strings from `finance.record.warnings.*` to a root `warnings.<CODE>` namespace, add fr +
-   en for all eight, and add a guard test asserting every `COMMAND_WARNING_CODES` member has a key
-   in both catalogs — the guard that does not exist today and is why this gap was invisible.
-
-   New codes: `ACTIVITY_MISSING_START_READING`, `ACTIVITY_MISSING_END_READING`, `ACTIVITY_NO_LEGS`,
-   `ACTIVITY_MISSING_CREW`, `ACTIVITY_NO_REVENUE`, `ACTIVITY_OPEN_SEGMENT_AUTOCLOSED`,
-   `METER_READING_DECREASED`, `POSTING_DEFERRED_PERIOD_LOCKED`.
-
-2. **`commandQueueability` registry** (offline-outbox ticket 04). Its planned meta-test requires an
-   entry per command exported from contracts, so it must account for the activity commands. Intended
-   values — queueable: `record-haulage-job-sheet`, `record-journey-sheet`, `create-activity`,
-   `record-movement-leg`, `record-meter-reading`, `substitute-asset`, `register-person`. Not
-   queueable: `close-activity`, `reopen-activity` (§6 lists activity close among the decisions that
-   always need the server).
-
-3. **`ACTIVITIES` nav section.** `sections.ts`'s `key` union, nav locales and breadcrumbs. Adding
-   the module code alone renders nothing, so there is no half-state.
 
 ## Operational notes
 
