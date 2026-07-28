@@ -27,6 +27,7 @@ import type { Db } from "./db/client.js";
 import { workspaceModules } from "./db/schema.js";
 import { inWorkspace } from "./db/tenant.js";
 import type { ObjectStorage } from "./storage/types.js";
+import { registerActivityReadRoutes } from "./reads/activities.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
@@ -88,6 +89,7 @@ export function buildServer({
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
+  registerActivityReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   app.get("/v1/me", { preHandler: requireAuth }, async (req) => {
     const auth = req.auth;

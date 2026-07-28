@@ -13,6 +13,7 @@ export * from "./reads/list.js";
 export * from "./reads/assets.js";
 export * from "./reads/dashboard.js";
 export * from "./reads/documents.js";
+export * from "./reads/activities.js";
 export * from "./commands/record-financial-entry.js";
 export * from "./commands/approve-entry.js";
 export * from "./commands/reverse-entry.js";
