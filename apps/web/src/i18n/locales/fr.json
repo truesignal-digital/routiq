@@ -6,7 +6,8 @@
     "home": "Accueil",
     "assets": "Actifs",
     "finances": "Finances",
-    "more": "Plus"
+    "more": "Plus",
+    "activities": "Activités"
   },
   "home": {
     "title": "Accueil",
@@ -492,5 +493,78 @@
   "breadcrumb": {
     "label": "Fil d'Ariane",
     "more": "Plus"
+  },
+  "warnings": {
+    "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
+    "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+    "PERIOD_HAS_SUBMITTED_ENTRIES": "Des écritures en attente d'approbation restent sur cette période.",
+    "ACTIVITY_MISSING_START_READING": "Relevé compteur de départ manquant",
+    "ACTIVITY_MISSING_END_READING": "Relevé compteur d'arrivée manquant",
+    "ACTIVITY_NO_LEGS": "Aucun trajet saisi",
+    "ACTIVITY_MISSING_CREW": "Aucun équipage renseigné",
+    "ACTIVITY_NO_REVENUE": "Aucune recette rattachée",
+    "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
+    "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
+    "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée."
+  },
+  "activities": {
+    "title": "Activités",
+    "loadFailed": "Impossible de charger les activités. Veuillez réessayer.",
+    "retry": "Réessayer",
+    "emptyHint": "Aucune activité pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "loadMore": "Charger plus",
+    "status": {
+      "OPEN": "En cours",
+      "CLOSED": "Clôturée"
+    },
+    "completeness": {
+      "COMPLETE": "Complète",
+      "COMPLETE_WITH_EXCEPTIONS": "Clôturée avec réserves",
+      "short": "{count, plural, one {# réserve} other {# réserves}}",
+      "completeHint": "Toutes les informations attendues ont été saisies.",
+      "exceptionsHint": "L'activité est clôturée, mais il manque les éléments suivants :"
+    },
+    "columns": {
+      "activityNumber": "N° d'activité",
+      "status": "Statut",
+      "activityType": "Type",
+      "startedAt": "Départ",
+      "primaryAsset": "Engin principal",
+      "customer": "Client",
+      "legs": "Trajets"
+    },
+    "filters": {
+      "status": "Statut",
+      "completeness": "Complétude"
+    },
+    "viewer": {
+      "open": "Ouvrir l'activité"
+    },
+    "roles": {
+      "PRIMARY": "Porteur",
+      "TRAILER": "Remorque",
+      "SUBSTITUTE": "Remplacement",
+      "RECOVERY": "Dépannage"
+    },
+    "crewRoles": {
+      "DRIVER": "Chauffeur",
+      "CONDUCTOR": "Receveur",
+      "ASSISTANT": "Assistant",
+      "RELIEF": "Relais",
+      "MECHANIC": "Mécanicien",
+      "OTHER": "Autre"
+    },
+    "detail": {
+      "loading": "Chargement de l'activité…",
+      "loadFailed": "Impossible de charger cette activité.",
+      "summary": "Résumé",
+      "clientReference": "Réf. client",
+      "endedAt": "Arrivée",
+      "assets": "Engins et équipage",
+      "stillRunning": "en cours",
+      "legs": "Trajets",
+      "money": "Recettes et dépenses",
+      "km": "{count} km"
+    }
   }
 }

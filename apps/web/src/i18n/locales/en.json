@@ -6,7 +6,8 @@
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More"
+    "more": "More",
+    "activities": "Activities"
   },
   "home": {
     "title": "Home",
@@ -492,5 +493,78 @@
   "breadcrumb": {
     "label": "Breadcrumb",
     "more": "More"
+  },
+  "warnings": {
+    "EVIDENCE_MISSING": "No receipt attached to this expense.",
+    "LATE_POSTING": "Posted late: the economic period was already closed.",
+    "PERIOD_HAS_SUBMITTED_ENTRIES": "Entries awaiting approval remain in this period.",
+    "ACTIVITY_MISSING_START_READING": "Start meter reading missing",
+    "ACTIVITY_MISSING_END_READING": "End meter reading missing",
+    "ACTIVITY_NO_LEGS": "No legs recorded",
+    "ACTIVITY_MISSING_CREW": "No crew recorded",
+    "ACTIVITY_NO_REVENUE": "No revenue attributed",
+    "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
+    "METER_READING_DECREASED": "The reading is lower than the previous one",
+    "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts."
+  },
+  "activities": {
+    "title": "Activities",
+    "loadFailed": "We couldn't load activities. Please retry.",
+    "retry": "Try again",
+    "emptyHint": "No activities yet. Recorded trip sheets will appear here.",
+    "loadMore": "Load more",
+    "status": {
+      "OPEN": "Open",
+      "CLOSED": "Closed"
+    },
+    "completeness": {
+      "COMPLETE": "Complete",
+      "COMPLETE_WITH_EXCEPTIONS": "Closed with exceptions",
+      "short": "{count, plural, one {# exception} other {# exceptions}}",
+      "completeHint": "Every expected detail was recorded.",
+      "exceptionsHint": "The activity is closed, but the following are missing:"
+    },
+    "columns": {
+      "activityNumber": "Activity no.",
+      "status": "Status",
+      "activityType": "Type",
+      "startedAt": "Started",
+      "primaryAsset": "Primary asset",
+      "customer": "Customer",
+      "legs": "Legs"
+    },
+    "filters": {
+      "status": "Status",
+      "completeness": "Completeness"
+    },
+    "viewer": {
+      "open": "Open activity"
+    },
+    "roles": {
+      "PRIMARY": "Carrier",
+      "TRAILER": "Trailer",
+      "SUBSTITUTE": "Substitute",
+      "RECOVERY": "Recovery"
+    },
+    "crewRoles": {
+      "DRIVER": "Driver",
+      "CONDUCTOR": "Conductor",
+      "ASSISTANT": "Assistant",
+      "RELIEF": "Relief",
+      "MECHANIC": "Mechanic",
+      "OTHER": "Other"
+    },
+    "detail": {
+      "loading": "Loading activity…",
+      "loadFailed": "We couldn't load this activity.",
+      "summary": "Summary",
+      "clientReference": "Client ref.",
+      "endedAt": "Ended",
+      "assets": "Assets and crew",
+      "stillRunning": "still running",
+      "legs": "Legs",
+      "money": "Revenue and costs",
+      "km": "{count} km"
+    }
   }
 }

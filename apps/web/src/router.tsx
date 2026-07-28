@@ -14,6 +14,8 @@ import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
 import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
+import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
+import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
 import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
 import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
@@ -78,6 +80,18 @@ const financeEntriesRoute = createRoute({
   component: FinanceEntriesScreen,
 });
 
+const activitiesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/activities",
+  component: ActivitiesScreen,
+});
+
+const activityDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/activities/$activityId",
+  component: ActivityDetailScreen,
+});
+
 const financeEntryDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries/$entryId",
@@ -112,6 +126,8 @@ const routeTree = rootRoute.addChildren([
     assetsRoute,
     assetsNewRoute,
     assetDocumentsRoute,
+    activitiesRoute,
+    activityDetailRoute,
     financeRecordRoute,
     financeEntriesRoute,
     financeEntryDetailRoute,
