@@ -202,7 +202,7 @@ export function defaultApprovalRules(
   }
 
   // Registering a person is back-office work: managers only.
-  for (const commandType of ["register-person"]) {
+  for (const commandType of ["register-person", "reopen-activity"]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
         workspaceId,
@@ -227,6 +227,7 @@ export function defaultApprovalRules(
     "record-movement-leg",
     "record-meter-reading",
     "substitute-asset",
+    "close-activity",
   ]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({
