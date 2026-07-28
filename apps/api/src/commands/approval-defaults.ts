@@ -226,6 +226,7 @@ export function defaultApprovalRules(
     "create-activity",
     "record-movement-leg",
     "record-meter-reading",
+    "substitute-asset",
   ]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({
