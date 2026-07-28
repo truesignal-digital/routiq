@@ -81,7 +81,7 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       });
     }
 
-    const templateMeta = validateCustomValues(payload.templateCode, payload.customValues);
+    const templateMeta = validateCustomValues(payload.templateCode, payload.customValues, "activity");
 
     const crewPersonIds = [...new Set(payload.crew.map((member) => member.personId))];
     if (crewPersonIds.length > 0) {

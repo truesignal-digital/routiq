@@ -30,6 +30,20 @@ import {
 export type CommandContext = AuthContext;
 export type Tx = TenantTx;
 
+/**
+ * Per-child state a composite command's caller cannot infer. Every nested id is
+ * client-generated, so the client already knows what it created — what it cannot
+ * know is which embedded expense cleared the threshold and which is waiting. An
+ * offline outbox has to render "2 lignes en attente d'approbation" from the
+ * response it queued, with no round trip.
+ */
+export interface CommandOutcomeChild {
+  entityType: "financial_entry";
+  id: string;
+  status: string;
+  warnings: CommandWarningCode[];
+}
+
 export interface CommandOutcome {
   commandId: string;
   recordId: string;
@@ -37,6 +51,8 @@ export interface CommandOutcome {
   /** Post-command record state where it matters (POSTED vs SUBMITTED entries). */
   recordStatus?: string;
   warnings: CommandWarningCode[];
+  /** Composite commands only; absent for the single-record majority. */
+  children?: CommandOutcomeChild[];
   idempotentReplay: boolean;
 }
 
@@ -117,6 +133,7 @@ export interface CommandDefinition<P> {
     rowVersion: number;
     recordStatus?: string;
     warnings?: CommandWarningCode[];
+    children?: CommandOutcomeChild[];
   }>;
 }
 
@@ -308,6 +325,7 @@ export async function dispatchCommand(
           rowVersion: result.rowVersion,
           ...(result.recordStatus === undefined ? {} : { recordStatus: result.recordStatus }),
           warnings: result.warnings ?? [],
+          ...(result.children === undefined ? {} : { children: result.children }),
           idempotentReplay: false,
         };
 
@@ -545,6 +563,9 @@ function isCommandOutcome(value: unknown): value is CommandOutcome {
     typeof candidate["rowVersion"] === "number" &&
     (candidate["recordStatus"] === undefined || typeof candidate["recordStatus"] === "string") &&
     Array.isArray(candidate["warnings"]) &&
+    // A stored sheet receipt must round-trip its children, or replaying one
+    // would fail this guard and return 500 instead of the original result.
+    (candidate["children"] === undefined || Array.isArray(candidate["children"])) &&
     typeof candidate["idempotentReplay"] === "boolean"
   );
 }

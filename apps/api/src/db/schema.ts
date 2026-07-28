@@ -23,12 +23,21 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
+export interface StoredCommandOutcomeChild {
+  entityType: "financial_entry";
+  id: string;
+  status: string;
+  warnings: CommandWarningCode[];
+}
+
 export interface StoredCommandOutcome {
   commandId: string;
   recordId: string;
   rowVersion: number;
   recordStatus?: string;
   warnings: CommandWarningCode[];
+  /** Composite commands only — must survive the receipt round trip for replay. */
+  children?: StoredCommandOutcomeChild[];
   idempotentReplay: boolean;
 }
 

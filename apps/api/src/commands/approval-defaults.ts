@@ -228,6 +228,8 @@ export function defaultApprovalRules(
     "record-meter-reading",
     "substitute-asset",
     "close-activity",
+    "record-journey-sheet",
+    "record-haulage-job-sheet",
   ]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({

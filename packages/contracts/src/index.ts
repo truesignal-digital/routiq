@@ -24,3 +24,4 @@ export * from "./commands/create-activity.js";
 export * from "./commands/activity-legs.js";
 export * from "./commands/substitute-asset.js";
 export * from "./commands/activity-close.js";
+export * from "./commands/record-journey-sheet.js";

@@ -6,26 +6,48 @@ interface TemplateField {
   required?: boolean;
 }
 
+/**
+ * §3.3 puts `custom_values` on assets, activities AND legs, so the field list is
+ * keyed by entity as well as template. Without the entity dimension a haulage
+ * sheet's cargo fields would be checked against a truck's axle count and
+ * rejected as unknown.
+ */
+export type TemplateEntity = "asset" | "activity" | "leg";
+
 interface TemplateDefinition {
   version: number;
-  fields: TemplateField[];
+  entities: Record<TemplateEntity, TemplateField[]>;
 }
 
 const TEMPLATES: Record<string, TemplateDefinition> = {
   TRUCKING: {
     version: 1,
-    fields: [
-      { key: "axleCount", type: "number" },
-      { key: "bodyType", type: "string" },
-      { key: "tonnageCapacity", type: "number" },
-    ],
+    entities: {
+      asset: [
+        { key: "axleCount", type: "number" },
+        { key: "bodyType", type: "string" },
+        { key: "tonnageCapacity", type: "number" },
+      ],
+      activity: [
+        { key: "cargoDescription", type: "string" },
+        { key: "cargoWeightKg", type: "number" },
+      ],
+      leg: [],
+    },
   },
   PASSENGER_TRANSPORT: {
     version: 1,
-    fields: [
-      { key: "seatCount", type: "number", required: true },
-      { key: "lineType", type: "string" },
-    ],
+    entities: {
+      asset: [
+        { key: "seatCount", type: "number", required: true },
+        { key: "lineType", type: "string" },
+      ],
+      activity: [
+        { key: "seatsSold", type: "number" },
+        { key: "seatsAvailable", type: "number" },
+      ],
+      leg: [],
+    },
   },
 };
 
@@ -34,13 +56,15 @@ const GLOBAL_KEYS = new Set(["capacityValue", "capacityUnit"]);
 export function validateCustomValues(
   templateCode: string,
   values: Record<string, unknown>,
+  entity: TemplateEntity = "asset",
 ): { version: number } {
   const template = TEMPLATES[templateCode];
   if (!template) {
     throw new CommandError(400, "VALIDATION_FAILED", { templateCode });
   }
 
-  const fieldsByKey = new Map(template.fields.map((f) => [f.key, f]));
+  const fields = template.entities[entity];
+  const fieldsByKey = new Map(fields.map((f) => [f.key, f]));
   const unknownKeys: string[] = [];
   const wrongType: Array<{ key: string; expected: string; got: string }> = [];
   const missingRequired: string[] = [];
@@ -60,7 +84,7 @@ export function validateCustomValues(
     }
   }
 
-  for (const field of template.fields) {
+  for (const field of fields) {
     if (
       field.required &&
       (values[field.key] === undefined || values[field.key] === null)

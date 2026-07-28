@@ -226,16 +226,27 @@ export async function writeFinancialEntry(
     branch,
     request.economicDate,
   );
-  const isPosted = approval.outcome === "AUTO_APPROVED";
-  const period = isPosted
-    ? await resolvePostingPeriod(
-        tx,
-        ctx,
-        request.economicDate,
-        envelope.commandId,
-      )
-    : undefined;
   const warnings: CommandWarningCode[] = [];
+
+  let isPosted = approval.outcome === "AUTO_APPROVED";
+  let period: Awaited<ReturnType<typeof resolvePostingPeriod>> | undefined;
+  if (isPosted) {
+    try {
+      period = await resolvePostingPeriod(tx, ctx, request.economicDate, envelope.commandId);
+    } catch (error) {
+      // §4.3 scopes period lock to financial rows; operational records are
+      // governed by activity close. A composite sheet binds both into one
+      // transaction, so throwing here would destroy the legs, readings and
+      // segments sharing it — the exact opposite of §6's "the server doesn't get
+      // to reject reality". Degrade this entry to SUBMITTED instead and let
+      // approve-entry resolve the period later, which is where it belongs.
+      // Strictly more conservative than posting: SUBMITTED never counts in
+      // default reports (§3.4 inv. 9).
+      if (!(error instanceof CommandError) || error.code !== "PERIOD_LOCKED") throw error;
+      isPosted = false;
+      warnings.push("POSTING_DEFERRED_PERIOD_LOCKED");
+    }
+  }
   const hasVerifiablePaymentReference =
     request.paymentReference !== undefined &&
     ["MOMO", "OM", "BANK"].includes(request.paymentMethod);
