@@ -1,0 +1,56 @@
+/**
+ * §6's facts-vs-decisions rule, as data the client can act on.
+ *
+ * Physical facts captured offline are accepted with a discrepancy flag — a part
+ * already left the shelf and a truck already made the trip; the server does not
+ * get to reject reality. Decisions (approvals, locks, release-to-service,
+ * disposal, activity close) always need a server round trip, so attempting one
+ * offline must render "connexion requise", not an error.
+ */
+export const COMMAND_QUEUEABILITY = {
+  // Facts — safe to hold in the outbox and replay.
+  "register-asset": true,
+  "add-or-renew-document": true,
+  "assign-asset": true,
+  "register-person": true,
+  "create-activity": true,
+  "record-movement-leg": true,
+  "record-meter-reading": true,
+  "substitute-asset": true,
+  "record-journey-sheet": true,
+  "record-haulage-job-sheet": true,
+  "record-expense": true,
+  "record-revenue": true,
+
+  /*
+   * Decisions — never queued.
+   *
+   * close-activity is listed in §6 by name. The sheets are queueable even though
+   * they close the activity they create, and that is not a contradiction worth
+   * rediscovering later: closing a job you did not create in the same
+   * transaction is a judgement on a record whose current state the operator must
+   * see. Transcribing a completed paper waybill is bookkeeping.
+   */
+  "close-activity": false,
+  "reopen-activity": false,
+  "commission-asset": false,
+  "approve-entry": false,
+  "reject-entry": false,
+  "reverse-entry": false,
+  "lock-period": false,
+  "reopen-period": false,
+  "enable-module": false,
+  "disable-module": false,
+  "update-approval-threshold": false,
+} as const satisfies Record<string, boolean>;
+
+export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;
+
+export function isQueueable(commandName: string): boolean {
+  return (
+    COMMAND_QUEUEABILITY[commandName as QueueableCommandName] ??
+    // Unknown commands are decisions until declared otherwise: a command that
+    // slipped through undeclared must not be silently trusted to an outbox.
+    false
+  );
+}
