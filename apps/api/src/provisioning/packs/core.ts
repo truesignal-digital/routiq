@@ -123,6 +123,28 @@ function defaultApprovalRules(): Array<
     },
   ];
 
+  // Workspace configuration, ADMIN only — matching each command's allowedRoles
+  // and the enable-module/disable-module rows above. An OPS_MANAGER default
+  // would be the surprising choice: these edit the vocabulary and the preset set
+  // every other role then records against.
+  for (const commandType of [
+    "create-category",
+    "relabel-category",
+    "deactivate-category",
+    "reactivate-category",
+    "set-template-preset",
+  ]) {
+    rules.push({
+      commandType,
+      categoryCode: null,
+      branchId: null,
+      amountMinMinor: null,
+      amountMaxMinor: null,
+      requiredRole: "ADMIN",
+      createdByCommandId: null,
+    });
+  }
+
   for (const commandType of ["record-expense", "record-revenue"]) {
     rules.push(
       ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const).map(

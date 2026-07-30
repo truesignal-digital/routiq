@@ -21,6 +21,8 @@ import "./commands/substitute-asset.js";
 import "./commands/activity-close.js";
 import "./commands/record-sheet.js";
 import "./commands/provision-workspace.js";
+import "./commands/category.js";
+import "./commands/set-template-preset.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { registerCommandRoutes } from "./commands/routes.js";
