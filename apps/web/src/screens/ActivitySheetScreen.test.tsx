@@ -229,7 +229,7 @@ afterEach(() => {
 
 describe("activity sheet capture", () => {
   it("dispatches a journey sheet the contract accepts", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: 1 });
     renderScreen();
     await fillMinimalSheet(user);
 
@@ -275,7 +275,7 @@ describe("activity sheet capture", () => {
   });
 
   it("dispatches a haulage sheet the contract accepts", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: 1 });
     renderScreen();
 
     await user.click(screen.getByRole("tab", { name: "Haulage job" }));
@@ -314,7 +314,7 @@ describe("activity sheet capture", () => {
         idempotentReplay: false,
       },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: 1 });
     renderScreen();
     await fillMinimalSheet(user);
     await pickFirstOption(user, "Category of line 1");
@@ -349,7 +349,7 @@ describe("activity sheet capture", () => {
    */
   describe("single-preset workspace", () => {
     it("drops the switcher and records the one flavour the workspace runs", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: 1 });
       renderScreen({ ...clerk, enabledPresets: ["TRUCKING"] });
 
       expect(screen.queryByRole("tablist")).toBeNull();
@@ -385,7 +385,7 @@ describe("activity sheet capture", () => {
   });
 
   it("keeps the shared fields across a tab switch and drops the other flavour's", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: 1 });
     renderScreen();
     await fillMinimalSheet(user);
     await user.type(screen.getByLabelText("Seats sold"), "54");
