@@ -1,9 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "./local.js";
-import { credentials } from "../db/schema.js";
+import { resolveOperatorContext } from "./context.js";
+import { dispatchCommand } from "../commands/dispatcher.js";
+import { credentials, principals } from "../db/schema.js";
+import { platformDb } from "../db/platform.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
+import "../server.js";
 
 let ctx: Awaited<ReturnType<typeof createTestApp>>;
 let ws: Awaited<ReturnType<typeof seedWorkspace>>;
@@ -50,7 +55,59 @@ describe("username/PIN login", () => {
       role: "FIELD_SUBMITTER",
       branchScope: [ws.branch.id],
       enabledModules: ["CORE", "ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES"],
+      // Seeded workspaces have no workspace_templates rows, so they are
+      // grandfathered all-enabled exactly as the dispatcher treats them.
+      enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
     });
+  });
+
+  /**
+   * The set the web shapes its UI around, so it is worth proving against a
+   * workspace that was really provisioned rather than one with hand-inserted
+   * rows: a single-preset tenant must not be told the other preset exists.
+   */
+  it("/v1/me returns only the presets a provisioned workspace enabled", async () => {
+    const slug = `tenant-${randomUUID().slice(0, 8)}`;
+    const [vendor] = await ctx.db
+      .insert(principals)
+      .values({ principalType: "VENDOR_OPERATOR", displayName: "vendor-cli" })
+      .returning();
+    if (!vendor) throw new Error("operator principal insert returned no row");
+    const operator = await resolveOperatorContext(ctx.db, vendor.id);
+    if (!operator) throw new Error("operator context did not resolve");
+
+    const provisioned = await dispatchCommand(platformDb(ctx.db), operator, {
+      name: "provision-workspace",
+      version: 1,
+      envelope: {
+        commandId: randomUUID(),
+        idempotencyKey: `idem-${randomUUID()}`,
+        origin: "API",
+      },
+      payload: {
+        workspace: { id: randomUUID(), slug, name: `Transports ${slug}` },
+        branch: { id: randomUUID(), code: "DLA", name: "Douala" },
+        admin: {
+          id: randomUUID(),
+          displayName: "Awa Ndongo",
+          username: "boss",
+          pin: "482913",
+        },
+        enabledPresets: ["TRUCKING"],
+      },
+    });
+    expect(provisioned.status).toBe(200);
+
+    const res = await login({ workspaceSlug: slug, username: "boss", pin: "482913" });
+    expect(res.statusCode).toBe(200);
+
+    const me = await ctx.app.inject({
+      method: "GET",
+      url: "/v1/me",
+      headers: { authorization: `Bearer ${res.json().token}` },
+    });
+    expect(me.statusCode).toBe(200);
+    expect(me.json().enabledPresets).toEqual(["TRUCKING"]);
   });
 
   it("rejects a wrong PIN with a stable code and no message text", async () => {

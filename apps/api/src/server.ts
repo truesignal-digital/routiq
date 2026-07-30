@@ -27,6 +27,7 @@ import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
 import { workspaceModules } from "./db/schema.js";
 import { inWorkspace } from "./db/tenant.js";
+import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
@@ -95,8 +96,8 @@ export function buildServer({
   app.get("/v1/me", { preHandler: requireAuth }, async (req) => {
     const auth = req.auth;
     if (!auth) return req.auth;
-    const disabled = await inWorkspace(db, auth.workspaceId, (tx) =>
-      tx
+    const { disabled, presets } = await inWorkspace(db, auth.workspaceId, async (tx) => ({
+      disabled: await tx
         .select({ moduleCode: workspaceModules.moduleCode })
         .from(workspaceModules)
         .where(
@@ -105,11 +106,15 @@ export function buildServer({
             eq(workspaceModules.enabled, false),
           ),
         ),
-    );
+      // Grandfather clause and ordering both live in the helper, so this set
+      // and the dispatcher's per-command check can never disagree.
+      presets: await enabledPresets(tx, auth.workspaceId),
+    }));
     const disabledCodes = new Set(disabled.map((row) => row.moduleCode));
     return {
       ...auth,
       enabledModules: MODULE_CODES.filter((code) => !disabledCodes.has(code)),
+      enabledPresets: presets,
     };
   });
   app.get("/v1/commands", { preHandler: requireAuth }, async () => ({
