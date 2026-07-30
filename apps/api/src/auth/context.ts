@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { memberships, principals } from "../db/schema.js";
 import type { Db } from "../db/client.js";
-import type { AuthContext, VerifiedIdentity } from "./types.js";
+import type { AuthContext, OperatorContext, VerifiedIdentity } from "./types.js";
 
 export async function resolveAuthContext(
   db: Db,
@@ -26,5 +26,35 @@ export async function resolveAuthContext(
     membershipId: row.membership.id,
     role: row.membership.role,
     branchScope: row.membership.allBranches ? "ALL" : row.membership.branchIds,
+  };
+}
+
+/**
+ * A vendor operator's identity is its principals row alone: no membership, no
+ * credentials — the CLI's database access is the credential (ADR-0004), the row
+ * exists so provisioning has provenance. Any other principal type is refused
+ * here rather than at the command, so the platform path has one entry.
+ */
+export async function resolveOperatorContext(
+  db: Db,
+  principalId: string,
+): Promise<OperatorContext | null> {
+  const [row] = await db
+    .select({ id: principals.id, displayName: principals.displayName })
+    .from(principals)
+    .where(
+      and(
+        eq(principals.id, principalId),
+        eq(principals.principalType, "VENDOR_OPERATOR"),
+        isNull(principals.disabledAt),
+      ),
+    );
+
+  if (!row) return null;
+  return {
+    kind: "platform",
+    principalId: row.id,
+    principalType: "VENDOR_OPERATOR",
+    displayName: row.displayName,
   };
 }

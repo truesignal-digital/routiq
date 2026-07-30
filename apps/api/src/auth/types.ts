@@ -24,3 +24,22 @@ export interface AuthContext {
   role: Role;
   branchScope: BranchScope;
 }
+
+/**
+ * The vendor operator running a platform-scope command. A separate type rather
+ * than an AuthContext with nullable workspace fields: tenant handlers keep a
+ * context whose workspaceId, membership and role always exist, so none of them
+ * has to be defensive about an actor that provisioning invented.
+ */
+export interface OperatorContext {
+  kind: "platform";
+  principalId: string;
+  principalType: "VENDOR_OPERATOR";
+  displayName: string;
+}
+
+export type CommandActorContext = AuthContext | OperatorContext;
+
+export function isOperatorContext(ctx: CommandActorContext): ctx is OperatorContext {
+  return "kind" in ctx && ctx.kind === "platform";
+}

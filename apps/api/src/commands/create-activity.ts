@@ -32,6 +32,8 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
   /** The dispatcher rejects SOLD/RETIRED/WRITTEN_OFF before the handler runs. */
   operationalAssetId: (payload) => payload.primaryAssetId,
 
+  presetCode: (payload) => payload.templateCode,
+
   branchAuthorization: {
     kind: "branches",
     async resolve(tx, ctx, payload) {

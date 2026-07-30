@@ -35,6 +35,9 @@ function sheetCommand<P extends SheetPayload>(
     allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
     payloadSchema: config.payloadSchema,
 
+    /** A sheet IS its preset — the template is the command, not a payload field. */
+    presetCode: () => config.templateCode,
+
     branchAuthorization: {
       kind: "branches",
       async resolve(tx, ctx, payload) {
