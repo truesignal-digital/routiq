@@ -24,7 +24,7 @@ import { serializeMinor } from "./serialize-minor.js";
  * lines, so the pair nets to zero only when both are summed (§3.4). Counting
  * POSTED alone would leave the negated half behind and report a false loss.
  */
-const LEDGER_ENTRY_STATUSES = ["POSTED", "REVERSED"] as const;
+export const LEDGER_ENTRY_STATUSES = ["POSTED", "REVERSED"] as const;
 
 /** Zero-filled so every lifecycle status is reported, including the empty ones. */
 function zeroedStatusCounts(): Record<AssetLifecycleStatus, number> {
