@@ -23,8 +23,17 @@ interface PageTrail {
 const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/assets/new", trail: [{ labelKey: "assets.register" }] },
   {
+    pattern: "/assets/$assetId",
+    trail: [{ labelKey: "assets.detail.breadcrumb" }],
+  },
+  {
     pattern: "/assets/$assetId/documents",
-    trail: [{ labelKey: "documents.link" }],
+    trail: [
+      // Documents hang off one asset, so the trail passes through it — but
+      // the crumb cannot link there without the id, which this module has
+      // no access to; the section crumb remains the way back.
+      { labelKey: "documents.link" },
+    ],
   },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
   { pattern: "/finance/entries", trail: [{ labelKey: "finance.navigation.entries" }] },

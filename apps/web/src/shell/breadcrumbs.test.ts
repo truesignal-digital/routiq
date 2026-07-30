@@ -28,6 +28,18 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
+  it("names an asset detail page under Assets", () => {
+    expect(trailAt("/assets/00000000-0000-4000-8000-000000000001")).toEqual([
+      ["nav.home", "/"],
+      ["nav.assets", "/assets"],
+      ["assets.detail.breadcrumb", undefined],
+    ]);
+  });
+
+  it("keeps the literal /assets/new ahead of the asset id pattern", () => {
+    expect(trailAt("/assets/new").at(-1)).toEqual(["assets.register", undefined]);
+  });
+
   it("resolves a param segment", () => {
     expect(trailAt("/assets/00000000-0000-4000-8000-000000000001/documents")).toEqual([
       ["nav.home", "/"],

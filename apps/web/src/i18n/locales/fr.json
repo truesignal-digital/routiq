@@ -166,6 +166,25 @@
     "errorTitle": "Impossible de charger le parc",
     "errorHint": "La connexion a peut-être été interrompue. Vos données restent en sécurité.",
     "retry": "Réessayer",
+    "detail": {
+      "breadcrumb": "Fiche de l'actif",
+      "loading": "Chargement de la fiche…",
+      "loadFailed": "Impossible de charger cette fiche.",
+      "money": {
+        "title": "Rentabilité",
+        "allTime": "Depuis l'enregistrement",
+        "revenue": "Recettes",
+        "expenses": "Dépenses",
+        "net": "Résultat net",
+        "byCategory": "Dépenses par catégorie",
+        "noExpenses": "Aucune dépense comptabilisée.",
+        "nothingPosted": "Aucun montant comptabilisé pour cet actif."
+      },
+      "activities": {
+        "title": "Activités récentes",
+        "empty": "Aucune activité pour cet actif."
+      }
+    },
     "form": {
       "eyebrow": "Nouvel enregistrement",
       "title": "Enregistrer un actif",

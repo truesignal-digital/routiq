@@ -10,7 +10,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { localizedLabel } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -350,9 +350,15 @@ function AssetCard({ asset, index }: { asset: AssetListItem; index: number }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-base font-semibold tracking-[-0.015em]">
+                {/* The whole name is the target, not a trailing "view" link:
+                    on a phone the row title is what a thumb aims at. */}
+                <Link
+                  to="/assets/$assetId"
+                  params={{ assetId: asset.id }}
+                  className="block truncate text-base font-semibold tracking-[-0.015em] underline-offset-4 hover:underline"
+                >
                   {assetDisplayName(asset)}
-                </p>
+                </Link>
                 <p className="mt-0.5 truncate font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
                   {asset.assetCode}
                   {asset.registrationNumber

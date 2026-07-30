@@ -166,6 +166,25 @@
     "errorTitle": "We couldn't load the fleet",
     "errorHint": "The connection may have dropped. Your data is still safe.",
     "retry": "Try again",
+    "detail": {
+      "breadcrumb": "Asset record",
+      "loading": "Loading the asset…",
+      "loadFailed": "We couldn't load this asset.",
+      "money": {
+        "title": "Profitability",
+        "allTime": "Since registration",
+        "revenue": "Revenue",
+        "expenses": "Expenses",
+        "net": "Net result",
+        "byCategory": "Expenses by category",
+        "noExpenses": "No expenses posted.",
+        "nothingPosted": "Nothing posted against this asset yet."
+      },
+      "activities": {
+        "title": "Recent activities",
+        "empty": "No activities for this asset."
+      }
+    },
     "form": {
       "eyebrow": "New registration",
       "title": "Register an asset",

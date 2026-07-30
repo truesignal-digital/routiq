@@ -227,6 +227,13 @@ afterEach(() => {
   cleanup();
 });
 
+/**
+ * Typing a whole sheet field by field costs most of the default 5s budget, so
+ * a loaded worker pool turns these two into flakes rather than failures. The
+ * headroom is about machine contention, not about what they assert.
+ */
+const FULL_SHEET_TIMEOUT_MS = 20_000;
+
 describe("activity sheet capture", () => {
   it("dispatches a journey sheet the contract accepts", async () => {
     const user = userEvent.setup({ delay: 1 });
@@ -272,7 +279,7 @@ describe("activity sheet capture", () => {
       amountMinor: 480_000,
       attributeToActivity: true,
     });
-  });
+  }, FULL_SHEET_TIMEOUT_MS);
 
   it("dispatches a haulage sheet the contract accepts", async () => {
     const user = userEvent.setup({ delay: 1 });
@@ -296,7 +303,7 @@ describe("activity sheet capture", () => {
     // The untouched trailer row and the untouched leg never reach the payload.
     expect(parsed.data?.extraSegments).toEqual([]);
     expect(parsed.data?.legs).toEqual([]);
-  });
+  }, FULL_SHEET_TIMEOUT_MS);
 
   it("names the money lines still waiting for an approver", async () => {
     mocks.submit.mockResolvedValue({
