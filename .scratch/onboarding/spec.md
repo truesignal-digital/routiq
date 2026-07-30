@@ -2,6 +2,8 @@
 
 Status: draft — captured from design discussion 2026-07-23 (Linus + Claude). Not scheduled; post-MTP except where noted.
 
+> **2026-07-30:** flow steps 1–5 and issue 01 are superseded by `.scratch/provisioning/` (spec + issues for `provision-workspace.v1`, per ADR-0004). Still live here: branding (steps 6, issues 03–04), CSV fleet import (step 7), accompaniment/playbook (step 8, issue 02).
+
 ## Philosophy
 
 - **No config engine yet.** Variance stays config-as-data (categories, required-field lists, `custom_values`, approval thresholds, document lead times, `workspace_modules` flags). ARCHITECTURE.md §13 / decision 24 hold.
