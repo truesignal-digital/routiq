@@ -22,14 +22,14 @@ import {
 } from "./dispatcher.js";
 
 /**
- * Stands in for the admin PIN in the stored receipt. Exported so tests assert
+ * Stands in for every PIN in the stored receipt. Exported so tests assert
  * the exact marker rather than the absence of one particular string.
  */
 export const REDACTED_PIN = "[REDACTED]";
 
 /**
- * Tenant #3 without hand-written SQL (ADR-0004): workspace, first branch, admin
- * credential, enabled presets and their starter packs, in the transaction that
+ * Tenant #3 without hand-written SQL (ADR-0004): workspace, first branch, user
+ * credentials, enabled presets and their starter packs, in the transaction that
  * writes the command receipt. Every row it creates carries this command's id, so
  * a provisioned workspace has the same provenance as one built by daily use.
  *
@@ -44,16 +44,24 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
   payloadSchema: provisionWorkspacePayload,
 
   /**
-   * The admin PIN is the one secret a command payload carries, and a receipt is
-   * kept forever — so it never reaches the row. Only the PIN is replaced: the
+   * PINs are the secrets a command payload carries, and a receipt is kept
+   * forever — so none reaches the row. Only PINs are replaced: the
    * rest stays byte-identical so a genuinely different payload under a reused
-   * key is still caught. The trade is that two runs differing ONLY in the PIN
-   * now replay instead of conflicting, which is correct — the PIN is a
+   * key is still caught. The trade is that two runs differing ONLY in PINs
+   * now replay instead of conflicting, which is correct — a PIN is a
    * credential to set, not part of the tenant's identity.
    */
   redactPayload: (payload) => ({
     ...payload,
     admin: { ...payload.admin, pin: REDACTED_PIN },
+    ...(payload.users === undefined
+      ? {}
+      : {
+          users: payload.users.map((user) => ({
+            ...user,
+            pin: REDACTED_PIN,
+          })),
+        }),
   }),
 
   async createWorkspace(tx, _ctx, _envelope, payload) {
@@ -107,6 +115,38 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
       pinHash: await hashPin(payload.admin.pin),
     });
 
+    for (const user of payload.users ?? []) {
+      const unknownBranchCodes =
+        user.branchScope === "ALL"
+          ? []
+          : user.branchScope.filter((branchCode) => branchCode !== payload.branch.code);
+      if (unknownBranchCodes.length > 0) {
+        throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+          referenceType: "branch",
+          missing: unknownBranchCodes,
+        });
+      }
+
+      await tx.insert(principals).values({
+        id: user.id,
+        principalType: "HUMAN",
+        displayName: user.displayName,
+      });
+      await tx.insert(memberships).values({
+        workspaceId,
+        principalId: user.id,
+        role: user.role,
+        allBranches: user.branchScope === "ALL",
+        branchIds: user.branchScope === "ALL" ? [] : [payload.branch.id],
+      });
+      await tx.insert(credentials).values({
+        workspaceId,
+        principalId: user.id,
+        username: user.username,
+        pinHash: await hashPin(user.pin),
+      });
+    }
+
     await tx.insert(workspaceTemplates).values(
       payload.enabledPresets.map((presetCode) => ({
         workspaceId,
@@ -149,6 +189,13 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
           username: payload.admin.username,
           role: "ADMIN",
         },
+        users: (payload.users ?? []).map((user) => ({
+          principalId: user.id,
+          displayName: user.displayName,
+          username: user.username,
+          role: user.role,
+          branchScope: user.branchScope,
+        })),
         enabledPresets: payload.enabledPresets,
         disabledModules: payload.disabledModules,
         packs: packed,

@@ -97,4 +97,44 @@ describe("provision-workspace contract", () => {
     bad.payload.admin.pin = "a".repeat(65);
     expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
   });
+
+  it("accepts provisioned users with role and branch scopes", () => {
+    const good = structuredClone(valid);
+    (good.payload as any).users = [
+      {
+        id: "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
+        displayName: "Operations Manager",
+        username: "ops",
+        pin: "5678",
+        role: "OPS_MANAGER",
+        branchScope: "ALL",
+      },
+      {
+        id: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
+        displayName: "Field Agent",
+        username: "field",
+        pin: "9012",
+        role: "FIELD_SUBMITTER",
+        branchScope: ["HQ"],
+      },
+    ];
+
+    expect(provisionWorkspaceCommand.safeParse(good).success).toBe(true);
+  });
+
+  it("rejects a provisioned user with an unknown role", () => {
+    const bad = structuredClone(valid);
+    (bad.payload as any).users = [
+      {
+        id: "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
+        displayName: "Unknown Role",
+        username: "unknown",
+        pin: "5678",
+        role: "OWNER",
+        branchScope: "ALL",
+      },
+    ];
+
+    expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
+  });
 });

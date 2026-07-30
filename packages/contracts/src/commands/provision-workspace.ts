@@ -2,6 +2,19 @@ import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
 import { TEMPLATE_CODES } from "../templates.js";
 import { TOGGLEABLE_MODULE_CODES } from "../modules.js";
+import { ROLES } from "../roles.js";
+
+const provisionedUser = z.strictObject({
+  id: z.uuid(),
+  username: z.string().min(1).max(80),
+  displayName: z.string().min(1),
+  pin: z.string().min(4).max(64),
+  role: z.enum(ROLES),
+  branchScope: z.union([
+    z.literal("ALL"),
+    z.array(z.string().min(1).max(40)),
+  ]),
+});
 
 export const provisionWorkspacePayload = z.strictObject({
   workspace: z.strictObject({
@@ -25,6 +38,7 @@ export const provisionWorkspacePayload = z.strictObject({
   }),
   enabledPresets: z.array(z.enum(TEMPLATE_CODES)).min(1, "At least one preset must be enabled"),
   disabledModules: z.array(z.enum(TOGGLEABLE_MODULE_CODES)).default([]),
+  users: z.array(provisionedUser).optional(),
 });
 
 export const provisionWorkspaceCommand = z.object({

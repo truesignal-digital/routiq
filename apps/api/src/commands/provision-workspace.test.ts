@@ -59,6 +59,14 @@ describe("provision-workspace.v1", () => {
       enabledPresets?: string[];
       disabledModules?: string[];
       idempotencyKey?: string;
+      users?: Array<{
+        id: string;
+        displayName: string;
+        username: string;
+        pin: string;
+        role: "ADMIN" | "OPS_MANAGER" | "FIELD_SUBMITTER";
+        branchScope: "ALL" | string[];
+      }>;
     } = {},
   ) {
     const slug = overrides.slug ?? `tenant-${randomUUID().slice(0, 8)}`;
@@ -80,6 +88,7 @@ describe("provision-workspace.v1", () => {
           pin: "482913",
         },
         enabledPresets: overrides.enabledPresets ?? ["TRUCKING", "PASSENGER_TRANSPORT"],
+        ...(overrides.users === undefined ? {} : { users: overrides.users }),
         ...(overrides.disabledModules === undefined
           ? {}
           : { disabledModules: overrides.disabledModules }),
@@ -284,6 +293,84 @@ describe("provision-workspace.v1", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ recordId: assetId });
+  });
+
+  it("creates multiple users with their roles, credentials, and branch scopes", async () => {
+    const allBranchesUser = {
+      id: randomUUID(),
+      displayName: "Boris Nguema",
+      username: `boris-${randomUUID()}`,
+      pin: "ops-pin-222222",
+      role: "OPS_MANAGER" as const,
+      branchScope: "ALL" as const,
+    };
+    const scopedUser = {
+      id: randomUUID(),
+      displayName: "Sali Mbarga",
+      username: `sali-${randomUUID()}`,
+      pin: "field-pin-333333",
+      role: "FIELD_SUBMITTER" as const,
+      branchScope: ["DLA"],
+    };
+    const body = provisionBody({ users: [allBranchesUser, scopedUser] });
+
+    expect((await dispatchCommand(platform, operator, body)).status).toBe(200);
+
+    const principalRows = await db
+      .select()
+      .from(principals)
+      .where(eq(principals.principalType, "HUMAN"));
+    expect(principalRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: allBranchesUser.id,
+          displayName: allBranchesUser.displayName,
+        }),
+        expect.objectContaining({
+          id: scopedUser.id,
+          displayName: scopedUser.displayName,
+        }),
+      ]),
+    );
+
+    const membershipRows = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.workspaceId, body.payload.workspace.id));
+    expect(membershipRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          principalId: allBranchesUser.id,
+          role: "OPS_MANAGER",
+          allBranches: true,
+          branchIds: [],
+        }),
+        expect.objectContaining({
+          principalId: scopedUser.id,
+          role: "FIELD_SUBMITTER",
+          allBranches: false,
+          branchIds: [body.payload.branch.id],
+        }),
+      ]),
+    );
+
+    for (const user of [allBranchesUser, scopedUser]) {
+      const login = await loginWithPin(db, {
+        workspaceSlug: body.payload.workspace.slug,
+        username: user.username,
+        pin: user.pin,
+      });
+      expect(login.ok).toBe(true);
+    }
+
+    const [receipt] = await db
+      .select({ payload: commands.payload })
+      .from(commands)
+      .where(eq(commands.id, body.envelope.commandId));
+    const serializedReceipt = JSON.stringify(receipt);
+    expect(serializedReceipt).not.toContain(allBranchesUser.pin);
+    expect(serializedReceipt).not.toContain(scopedUser.pin);
+    expect(serializedReceipt).toContain(REDACTED_PIN);
   });
 
   it("rejects a duplicate slug with a stable code, not a raw constraint error", async () => {

@@ -68,6 +68,7 @@ export function deterministicProvisionId(name: string): string {
 export async function provisionTenant(
   tenantInput: unknown,
   log: Logger = console.log,
+  options: { commandId?: string; idempotencyKey?: string } = {},
 ): Promise<ProvisionResult> {
   rejectUnknownModuleCodes(tenantInput);
   const payload = parseTenantPayload(withMissingIds(tenantInput));
@@ -77,13 +78,13 @@ export async function provisionTenant(
   );
 
   const operator = await getOrCreateVendorOperator();
-  const commandId = randomUUID();
+  const commandId = options.commandId ?? randomUUID();
   const response = await dispatchCommand(platformDb(authDb), operator, {
     name: "provision-workspace",
     version: 1,
     envelope: {
       commandId,
-      idempotencyKey: `provision-${payload.workspace.slug}`,
+      idempotencyKey: options.idempotencyKey ?? `provision-${payload.workspace.slug}`,
       origin: "API",
     },
     payload,
@@ -125,6 +126,7 @@ function withMissingIds(input: unknown): unknown {
   const workspace = isRecord(input["workspace"]) ? input["workspace"] : {};
   const branch = isRecord(input["branch"]) ? input["branch"] : {};
   const admin = isRecord(input["admin"]) ? input["admin"] : {};
+  const users = Array.isArray(input["users"]) ? input["users"] : undefined;
   const slug = typeof workspace["slug"] === "string" ? workspace["slug"] : "";
   const branchCode = typeof branch["code"] === "string" ? branch["code"] : "";
   const adminUsername = typeof admin["username"] === "string" ? admin["username"] : "";
@@ -149,6 +151,21 @@ function withMissingIds(input: unknown): unknown {
         admin["id"] ??
         deterministicProvisionId(`admin:${slug}:${adminUsername}`),
     },
+    ...(users === undefined
+      ? {}
+      : {
+          users: users.map((candidate) => {
+            if (!isRecord(candidate)) return candidate;
+            const username =
+              typeof candidate["username"] === "string" ? candidate["username"] : "";
+            return {
+              ...candidate,
+              id:
+                candidate["id"] ??
+                deterministicProvisionId(`user:${slug}:${username}`),
+            };
+          }),
+        }),
   };
 }
 
