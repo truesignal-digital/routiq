@@ -13,7 +13,17 @@ export const ROLES = [
 
 export type Role = (typeof ROLES)[number];
 
-export const PRINCIPAL_TYPES = ["HUMAN", "AI_AGENT", "INTEGRATION"] as const;
+/**
+ * VENDOR_OPERATOR is the only workspace-free principal: it holds no membership
+ * and is accepted solely by platform-scope commands (provisioning). Same
+ * restricted-principal seam ARCHITECTURE.md §7 plans for AI.
+ */
+export const PRINCIPAL_TYPES = [
+  "HUMAN",
+  "AI_AGENT",
+  "INTEGRATION",
+  "VENDOR_OPERATOR",
+] as const;
 
 export type PrincipalType = (typeof PRINCIPAL_TYPES)[number];
 

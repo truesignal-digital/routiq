@@ -110,6 +110,9 @@
     "PERIOD_LOCKED": "This period is locked. No postings are possible.",
     "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense).",
     "ACTIVITY_CLOSE_BLOCKED": "Cannot close: the actual dates or at least one assigned asset are missing.",
+    "COMMAND_SCOPE_FORBIDDEN": "This operation is not available from a workspace session.",
+    "DUPLICATE_WORKSPACE_SLUG": "A workspace already uses this identifier.",
+    "PRESET_DISABLED": "This activity type is not enabled for your workspace.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {

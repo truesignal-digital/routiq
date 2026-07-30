@@ -110,6 +110,9 @@
     "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
     "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
     "ACTIVITY_CLOSE_BLOCKED": "Impossible de clôturer : il manque les dates réelles ou au moins un engin affecté.",
+    "COMMAND_SCOPE_FORBIDDEN": "Cette opération n'est pas disponible depuis une session d'espace de travail.",
+    "DUPLICATE_WORKSPACE_SLUG": "Un espace de travail utilise déjà cet identifiant.",
+    "PRESET_DISABLED": "Ce type d'activité n'est pas activé pour votre espace de travail.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {
