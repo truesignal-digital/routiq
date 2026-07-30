@@ -98,13 +98,13 @@ export function AssetsStub() {
             titleClassName="text-balance text-[2rem] leading-none tracking-[-0.045em] sm:text-4xl"
             actions={
               !readOnly ? (
-                <a
-                  href="/assets/new"
+                <Link
+                  to="/assets/new"
                   className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background shadow-[0_8px_24px_-12px_var(--foreground)] transition hover:-translate-y-0.5 hover:bg-primary sm:inline-flex"
                 >
                   <Plus className="size-4" aria-hidden />
                   {t("assets.register")}
-                </a>
+                </Link>
               ) : undefined
             }
           />
@@ -280,13 +280,13 @@ export function AssetsStub() {
       </PageContainer>
 
       {!readOnly && (
-        <a
-          href="/assets/new"
+        <Link
+          to="/assets/new"
           aria-label={t("assets.register")}
           className="fixed bottom-6 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklch,var(--signal),black_45%)] transition active:scale-95 sm:hidden"
         >
           <Plus className="size-6" aria-hidden />
-        </a>
+        </Link>
       )}
     </section>
   );
@@ -297,13 +297,14 @@ function DocumentsLink({ assetId }: { assetId: string }) {
   const me = useMeContext();
   if (!me?.enabledModules.includes("DOCUMENTS")) return null;
   return (
-    <a
-      href={`/assets/${assetId}/documents`}
+    <Link
+      to="/assets/$assetId/documents"
+      params={{ assetId }}
       className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-medium text-primary underline-offset-2 hover:underline"
     >
       <FileText className="size-3.5" aria-hidden />
       {t("documents.link")}
-    </a>
+    </Link>
   );
 }
 
