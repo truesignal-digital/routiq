@@ -1,5 +1,6 @@
 import {
   MODULE_CODES,
+  TEMPLATE_CODES,
   PRINCIPAL_TYPES,
   ROLES,
   type ActivityCompletenessCode,
@@ -147,6 +148,16 @@ export const commands = pgTable(
       .references(() => workspaces.id),
     commandType: text("command_type").notNull(),
     commandVersion: text("command_version").notNull().default("1"),
+    /**
+     * PLATFORM receipts are filed under the workspace their command created and
+     * are initiated by a membership-less vendor operator. The column exists so
+     * both consequences stay checkable in SQL: the tenant-actor FK is skipped
+     * for them (see `tenant_actor_principal_id`) and their idempotency key is
+     * unique per operator instead of per workspace.
+     */
+    scope: text("scope", { enum: ["WORKSPACE", "PLATFORM"] })
+      .notNull()
+      .default("WORKSPACE"),
     origin: text("origin", {
       enum: ["HUMAN_UI", "CSV_IMPORT", "OFFLINE_SYNC", "API", "AI_AGENT"],
     }).notNull(),
@@ -161,6 +172,16 @@ export const commands = pgTable(
      * must stay reusable for the retry); the envelope's commandId lands here.
      */
     clientCommandId: uuid("client_command_id"),
+    /**
+     * NULL exactly for platform receipts. The composite tenant-actor FK hangs
+     * off this column instead of `initiated_by_principal_id`: MATCH SIMPLE
+     * skips a row with a NULL member, so "the actor is a member of the
+     * workspace" stays enforced for every workspace command while a
+     * membership-less vendor operator can still own a receipt.
+     */
+    tenantActorPrincipalId: uuid("tenant_actor_principal_id").generatedAlwaysAs(
+      sql`case when scope = 'PLATFORM' then null else initiated_by_principal_id end`,
+    ),
     idempotencyKey: text("idempotency_key").notNull(),
     clientOccurredAt: timestamp("client_occurred_at", { withTimezone: true }),
     payload: jsonb("payload").notNull(),
@@ -178,6 +199,12 @@ export const commands = pgTable(
     uniqueIndex("commands_ws_idem_uq")
       .on(t.workspaceId, t.idempotencyKey)
       .where(sql`${t.status} = 'EXECUTED'`),
+    // A platform command's workspace is its own output, so a replayed one would
+    // land in a fresh workspace and never collide above. The operator is what
+    // stays constant across the retry, so the key is unique per operator.
+    uniqueIndex("commands_platform_idem_uq")
+      .on(t.initiatedByPrincipalId, t.idempotencyKey)
+      .where(sql`${t.status} = 'EXECUTED' and ${t.scope} = 'PLATFORM'`),
   ],
 );
 
@@ -193,6 +220,13 @@ export const auditEvents = pgTable("audit_events", {
   actorPrincipalId: uuid("actor_principal_id")
     .notNull()
     .references(() => principals.id),
+  /** Mirrors `commands.scope`: a platform command's audit trail has a non-member actor. */
+  scope: text("scope", { enum: ["WORKSPACE", "PLATFORM"] })
+    .notNull()
+    .default("WORKSPACE"),
+  tenantActorPrincipalId: uuid("tenant_actor_principal_id").generatedAlwaysAs(
+    sql`case when scope = 'PLATFORM' then null else actor_principal_id end`,
+  ),
   entityType: text("entity_type").notNull(),
   entityId: uuid("entity_id").notNull(),
   beforeState: jsonb("before_state"),
@@ -217,6 +251,23 @@ export const workspaceModules = pgTable(
     rowVersion: integer("row_version").notNull().default(1),
   },
   (t) => [uniqueIndex("workspace_modules_ws_module_uq").on(t.workspaceId, t.moduleCode)],
+);
+
+export const workspaceTemplates = pgTable(
+  "workspace_templates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    presetCode: text("preset_code", { enum: TEMPLATE_CODES }).notNull(),
+    enabled: boolean("enabled").notNull(),
+    updatedByCommandId: uuid("updated_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [uniqueIndex("workspace_templates_ws_preset_uq").on(t.workspaceId, t.presetCode)],
 );
 
 /** Tenant-editable approval rules (§5.2). Null filter columns are wildcards. */
