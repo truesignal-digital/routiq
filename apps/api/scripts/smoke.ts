@@ -306,6 +306,9 @@ try {
     ),
   );
   const lateBody = (await lateRes.json()) as CommandResult;
+  if (lockBody.rowVersion === undefined) {
+    throw new Error("lock-period response did not include rowVersion");
+  }
   const reopenRes = await authedAs(
     approverToken,
     "/v1/commands",
