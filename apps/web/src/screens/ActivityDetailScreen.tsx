@@ -1,6 +1,7 @@
 import { useParams } from "@tanstack/react-router";
 import { Route as RouteIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ActivityActions } from "@/activities/ActivityActions.js";
 import { CompletenessBanner } from "@/activities/CompletenessBanner.js";
 import { canViewActivities } from "@/activities/permissions.js";
 import { useActivity } from "@/activities/useActivities.js";
@@ -64,7 +65,10 @@ export function ActivityDetailScreen() {
 
   return (
     <PageContainer width="wide">
-      <PageHeader title={activity.activityNumber} />
+      <PageHeader
+        title={activity.activityNumber}
+        actions={<ActivityActions activity={activity} />}
+      />
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <StatusBadge tone={activity.status === "OPEN" ? "info" : "neutral"}>

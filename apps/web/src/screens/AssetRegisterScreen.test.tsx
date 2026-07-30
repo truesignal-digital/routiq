@@ -11,6 +11,8 @@ import {
   it,
   vi,
 } from "vitest";
+import { createElement, type ReactNode } from "react";
+import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { AssetRegisterScreen } from "./AssetRegisterScreen.js";
@@ -68,6 +70,29 @@ function submittedPayload() {
   return mocks.submit.mock.calls[0]?.[0].payload;
 }
 
+const clerk: MeContext = {
+  workspaceId: "00000000-0000-4000-8000-000000000001",
+  principalId: "00000000-0000-4000-8000-000000000002",
+  principalType: "HUMAN",
+  membershipId: "00000000-0000-4000-8000-000000000003",
+  role: "OPS_MANAGER",
+  branchScope: "ALL",
+  enabledModules: ["CORE", "ASSETS"],
+  enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+};
+
+/** The screen reads the enabled preset set off /v1/me; the plain render above
+ * has no provider, which is the still-loading case. */
+function renderWithPresets(enabledPresets: MeContext["enabledPresets"]) {
+  render(
+    createElement(
+      MeCtx.Provider,
+      { value: { ...clerk, enabledPresets } },
+      createElement(AssetRegisterScreen),
+    ) as ReactNode,
+  );
+}
+
 // The screen navigates away before react-hook-form resets isSubmitting; flush
 // that trailing update so it doesn't land outside act().
 async function submitSettled() {
@@ -115,6 +140,30 @@ afterEach(() => {
   sessionStore.logout(sessionIdentity);
   vi.restoreAllMocks();
   cleanup();
+});
+
+describe("template preset", () => {
+  it("hides the picker and registers against the workspace's only preset", async () => {
+    const user = userEvent.setup();
+    renderWithPresets(["PASSENGER_TRANSPORT"]);
+
+    expect(screen.queryByLabelText("Business template")).toBeNull();
+    // The passenger template's own field is proof the code was auto-set.
+    await waitFor(() => expect(screen.queryByLabelText("Seat count *")).not.toBeNull());
+
+    await fillRequiredFields(user, "BUS-001");
+    await user.type(screen.getByLabelText("Seat count *"), "52");
+    await user.click(screen.getByRole("button", { name: "Register asset" }));
+
+    await submitSettled();
+    expect(submittedPayload().templateCode).toBe("PASSENGER_TRANSPORT");
+  });
+
+  it("keeps the picker for a workspace running both", () => {
+    renderWithPresets(["TRUCKING", "PASSENGER_TRANSPORT"]);
+
+    expect(screen.getByLabelText("Business template")).not.toBeNull();
+  });
 });
 
 describe("asset register form", () => {

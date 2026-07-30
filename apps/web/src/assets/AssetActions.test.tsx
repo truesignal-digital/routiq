@@ -52,6 +52,7 @@ const admin: MeContext = {
   role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS"],
+  enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
 function fakeClient(result: SubmitResult): CommandClient & { seen: unknown[] } {

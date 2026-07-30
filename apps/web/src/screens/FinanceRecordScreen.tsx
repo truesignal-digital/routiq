@@ -35,10 +35,8 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
+import { MoneyInput } from "@/components/money-input.js";
 
-function normalizeMoneySpacing(value: string): string {
-  return value.replace(/ /g, " ");
-}
 import {
   parseMoneyXaf,
   toRecordExpensePayload,
@@ -47,8 +45,7 @@ import {
 } from "@/finance/model.js";
 import { canRecordFinance } from "@/finance/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
-import { assetDisplayName } from "@/assets/model.js";
-import { useAssets } from "@/assets/useAssets.js";
+import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
@@ -361,40 +358,16 @@ function RecordForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t("finance.record.amountLabel")}</FormLabel>
-              <div className="relative">
-                <FormControl>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder={t("finance.record.amountPlaceholder")}
-                    name={field.name}
-                    ref={field.ref}
-                    value={field.value}
-                    onChange={(event) => {
-                      field.onChange(event.target.value.replace(/[^\d\s]/g, ""));
-                    }}
-                    onBlur={(event) => {
-                      const parsed = parseMoneyXaf(event.target.value);
-                      if (parsed !== null) {
-                        const formatted = new Intl.NumberFormat("fr-CM", {
-                          style: "decimal",
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        })
-                          .format(parsed);
-                        field.onChange(normalizeMoneySpacing(formatted));
-                      }
-                      field.onBlur();
-                    }}
-                    className="min-h-11"
-                  />
-                </FormControl>
-                {amountInput && amountMinor !== null && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    XAF
-                  </span>
-                )}
-              </div>
+              <FormControl>
+                <MoneyInput
+                  name={field.name}
+                  ref={field.ref}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={t("finance.record.amountPlaceholder")}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -556,38 +529,3 @@ function RecordForm({
   );
 }
 
-
-/**
- * The whole fleet, labelled as the entries filter labels it. Stopping at the
- * first keyset page would hide assets an operator needs to charge a cost to;
- * pilot fleets are tens of rows, so draining the cursor costs a request or two.
- */
-function useAssetOptions(): Array<{ value: string; label: string }> {
-  const { t } = useTranslation();
-  const assetsQuery = useAssets();
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = assetsQuery;
-
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      void fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  return useMemo(
-    () =>
-      (assetsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((asset) => {
-        const name = assetDisplayName(asset);
-        return {
-          value: asset.id,
-          label:
-            name === asset.assetCode
-              ? asset.assetCode
-              : t("finance.entries.filters.assetOption", {
-                  code: asset.assetCode,
-                  name,
-                }),
-        };
-      }),
-    [assetsQuery.data, t],
-  );
-}

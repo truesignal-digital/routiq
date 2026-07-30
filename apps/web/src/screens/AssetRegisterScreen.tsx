@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ChangeEvent,
+} from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -28,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetRegistrationReference } from "@/assets/reference";
 import { useActiveSession } from "@/auth/store";
+import { useMeContext } from "@/auth/me.js";
 import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/field-errors";
 import { commandClient, commandStatusStore } from "@/commands/instance";
 import { createCommandIntent } from "@/commands/intent";
@@ -53,6 +61,7 @@ export function AssetRegisterScreen() {
   const [activeCommandId, setActiveCommandId] = useState<string>();
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [errorCode, setErrorCode] = useState<string>();
+  const me = useMeContext();
 
   const statuses = useSyncExternalStore(
     (onChange) => commandStatusStore.subscribe(onChange),
@@ -88,6 +97,21 @@ export function AssetRegisterScreen() {
   });
   const templateCode = form.watch("templateCode");
   const acquisitionAmount = form.watch("acquisitionAmountMinor");
+
+  /**
+   * ADR-0004: a workspace runs the presets it enabled. Undefined means /v1/me
+   * has not answered, in which case offering all of them matches today's
+   * behaviour and the server stays the enforcement point.
+   */
+  const enabledPresets = me?.enabledPresets;
+  const templateChoices = enabledPresets ?? [...TEMPLATE_CODES];
+  useEffect(() => {
+    // Also corrects the default when /v1/me lands after the form mounts.
+    const [sole] = templateChoices;
+    if (sole !== undefined && !templateChoices.includes(templateCode)) {
+      form.setValue("templateCode", sole);
+    }
+  }, [templateChoices, templateCode, form]);
   const templateFields = useMemo(() => TEMPLATE_FIELDS[templateCode] ?? [], [templateCode]);
 
   async function onSubmit(values: FormOutput) {
@@ -196,30 +220,34 @@ export function AssetRegisterScreen() {
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="templateCode"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("assets.form.template")}</FormLabel>
-                <FormControl>
-                  <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
-                    <SelectTrigger className="min-h-11 w-full">
-                      <SelectValue placeholder={t("assets.form.choose")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TEMPLATE_CODES.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {t(`assets.form.templates.${code}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* A single-preset workspace has nothing to choose: the effect above
+              keeps the field on the one preset it runs (ADR-0004). */}
+          {templateChoices.length > 1 && (
+            <FormField
+              control={form.control}
+              name="templateCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("assets.form.template")}</FormLabel>
+                  <FormControl>
+                    <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
+                      <SelectTrigger className="min-h-11 w-full">
+                        <SelectValue placeholder={t("assets.form.choose")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templateChoices.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {t(`assets.form.templates.${code}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

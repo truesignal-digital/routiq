@@ -44,6 +44,20 @@ export function createSubmission<P>(
   };
 }
 
+/**
+ * One record a composite command created alongside its main record. The client
+ * generated the ids, so what it cannot know is the per-child outcome: which
+ * embedded expense posted and which is waiting for an approver. Rendering
+ * "2 lignes en attente" must not cost a round trip — an offline outbox has only
+ * the queued response to work from.
+ */
+export interface CommandResultChild {
+  entityType: "financial_entry";
+  id: string;
+  status: string;
+  warnings: CommandWarningCode[];
+}
+
 /** Outcome of a successfully committed command, as returned by the API. */
 export interface CommandResult {
   commandId: string;
@@ -51,5 +65,7 @@ export interface CommandResult {
   rowVersion: number;
   recordStatus?: string;
   warnings: CommandWarningCode[];
+  /** Composite commands only; absent for the single-record majority. */
+  children?: CommandResultChild[];
   idempotentReplay: boolean;
 }

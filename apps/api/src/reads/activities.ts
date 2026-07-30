@@ -371,6 +371,7 @@ export function registerActivityReadRoutes(
               startedAt: activityAssetSegments.startedAt,
               endedAt: activityAssetSegments.endedAt,
               substitutesSegmentId: activityAssetSegments.substitutesSegmentId,
+              rowVersion: activityAssetSegments.rowVersion,
             })
             .from(activityAssetSegments)
             .innerJoin(

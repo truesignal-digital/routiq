@@ -159,6 +159,7 @@ function membership(role: Role, enabledModules: ModuleCode[]): MeContext {
     role,
     branchScope: "ALL",
     enabledModules,
+    enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
 }
 

@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
+import { ThemeToggleMenu } from "@/components/theme-toggle";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -58,7 +59,9 @@ export function SiteHeader() {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="ms-auto flex items-center gap-2" />
+      <div className="ms-auto flex items-center gap-2">
+        <ThemeToggleMenu className="-me-1" />
+      </div>
     </header>
   );
 }

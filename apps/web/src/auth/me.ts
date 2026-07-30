@@ -1,6 +1,12 @@
 import { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { BranchScope, ModuleCode, PrincipalType, Role } from "@routiq/contracts";
+import type {
+  BranchScope,
+  ModuleCode,
+  PrincipalType,
+  Role,
+  TemplateCode,
+} from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "./store.js";
 
 export interface MeContext {
@@ -11,6 +17,12 @@ export interface MeContext {
   role: Role;
   branchScope: BranchScope;
   enabledModules: ModuleCode[];
+  /**
+   * The template presets this workspace enabled (ADR-0004). Workspaces
+   * provisioned before `provision-workspace` existed are grandfathered to every
+   * preset by the server, so this is never empty.
+   */
+  enabledPresets: TemplateCode[];
 }
 
 export async function fetchMe(

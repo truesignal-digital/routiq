@@ -366,6 +366,11 @@ describe("activity, person and place reads", () => {
     expect(
       detail.segments.map((segment) => segment.assetCode).sort(),
     ).toEqual(["ACT-TRACTOR", "ACT-TRAILER"].sort());
+    // substitute-asset takes its expectedVersion from the outgoing SEGMENT, so a
+    // detail read that omitted this would make the dialog unbuildable.
+    for (const segment of detail.segments) {
+      expect(segment.rowVersion, segment.assetCode).toBeGreaterThanOrEqual(1);
+    }
     expect(detail.crew).toEqual([
       {
         personId: driverId,
@@ -390,6 +395,19 @@ describe("activity, person and place reads", () => {
         status: "POSTED",
       }),
     ]);
+  });
+
+  it("carries the open segment's rowVersion, the version substitute-asset locks on", async () => {
+    const response = await ctx.app.inject({
+      method: "GET",
+      url: `/v1/activities/${openActivityId}`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(response.statusCode).toBe(200);
+
+    const detail = activityDetail.parse(response.json());
+    const open = detail.segments.find((segment) => segment.endedAt === null);
+    expect(open).toMatchObject({ id: openSegmentId, rowVersion: 1 });
   });
 
   it("enforces branch scope on activity lists and details", async () => {

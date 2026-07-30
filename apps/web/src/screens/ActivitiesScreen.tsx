@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
-import { Maximize2, Route } from "lucide-react";
+import { FilePlus2, Maximize2, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   DataTableViewOptions,
@@ -17,7 +18,7 @@ import {
   useActivityColumns,
   type ActivityColumnId,
 } from "@/activities/activityColumns.js";
-import { canViewActivities } from "@/activities/permissions.js";
+import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
 import { useActivities } from "@/activities/useActivities.js";
 import { toSortParam } from "@/lib/sort-param.js";
 
@@ -43,6 +44,7 @@ export function ActivitiesScreen() {
   const navigate = useNavigate();
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
+  const canRecord = canRecordActivities(me?.role, me?.enabledModules);
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -99,7 +101,21 @@ export function ActivitiesScreen() {
 
   return (
     <PageContainer width="wide">
-      <PageHeader title={t("activities.title")} />
+      <PageHeader
+        title={t("activities.title")}
+        actions={
+          canRecord ? (
+            <Button
+              type="button"
+              className="min-h-11"
+              onClick={() => void navigate({ to: "/activities/record" })}
+            >
+              <FilePlus2 className="size-4" aria-hidden />
+              {t("activities.record.title")}
+            </Button>
+          ) : undefined
+        }
+      />
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions

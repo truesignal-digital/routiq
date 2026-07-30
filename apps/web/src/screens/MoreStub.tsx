@@ -1,9 +1,13 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { useMeContext } from "@/auth/me.js";
 import { sessionStore, useActiveSession } from "@/auth/store.js";
+import { canViewActivities } from "@/activities/permissions.js";
 
 const languages = [
   { code: "fr-CM", base: "fr", label: "Français" },
@@ -14,6 +18,7 @@ export function MoreStub() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const session = useActiveSession();
+  const me = useMeContext();
 
   function onLogout() {
     if (session) sessionStore.logout(session);
@@ -27,6 +32,24 @@ export function MoreStub() {
         <p className="mt-2 text-sm text-muted-foreground">
           {t("more.signedInAs", { username: session.username })}
         </p>
+      )}
+
+      {/* A module the workspace never bought leaves no dead link behind
+          (§3.3a): the whole section goes, rather than greying out. */}
+      {canViewActivities(me?.enabledModules) && (
+        <div className="mt-6">
+          <h2 className="text-sm font-medium">{t("more.manage")}</h2>
+          <nav className="mt-2 overflow-hidden rounded-xl border">
+            <Link
+              to="/more/persons"
+              className="flex min-h-11 items-center gap-3 px-4 py-3 text-sm hover:bg-muted"
+            >
+              <Users className="size-4 text-muted-foreground" aria-hidden />
+              {t("more.persons")}
+              <ChevronRight className="ml-auto size-4 text-muted-foreground" aria-hidden />
+            </Link>
+          </nav>
+        </div>
       )}
 
       <div className="mt-6">
@@ -43,6 +66,11 @@ export function MoreStub() {
             </Button>
           ))}
         </div>
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-sm font-medium">{t("more.theme.label")}</h2>
+        <ThemeToggle className="mt-2" />
       </div>
 
       <div className="mt-8">

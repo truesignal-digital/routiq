@@ -115,6 +115,24 @@ describe("createCommandClient", () => {
     expect(seenKeys[0]).toBe(seenKeys[1]);
   });
 
+  it("carries a composite command's per-child outcomes through untouched", async () => {
+    const submission = createSubmission("record-journey-sheet", 1, {});
+    const outcome = {
+      ...okOutcome("c-sheet"),
+      recordStatus: "OPEN",
+      children: [
+        { entityType: "financial_entry", id: "e1", status: "POSTED", warnings: [] },
+        { entityType: "financial_entry", id: "e2", status: "SUBMITTED", warnings: [] },
+      ],
+    };
+    const { client } = makeClient((async () => jsonResponse(200, outcome)) as typeof fetch);
+
+    const result = await client.submit(submission);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected a committed result");
+    expect(result.outcome.children).toEqual(outcome.children);
+  });
+
   it("a malformed success body resolves rejected, not committed", async () => {
     const submission = createSubmission("register-asset", 1, {});
     const { client, store } = makeClient((async () =>

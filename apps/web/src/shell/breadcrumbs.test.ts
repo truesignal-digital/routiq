@@ -76,6 +76,14 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
+  it("puts the people admin page under Plus", () => {
+    expect(trailAt("/more/persons")).toEqual([
+      ["nav.home", "/"],
+      ["nav.more", "/more"],
+      ["persons.title", undefined],
+    ]);
+  });
+
   it("never links the crumb you are already standing on", () => {
     for (const path of [
       "/",

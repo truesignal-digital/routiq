@@ -43,6 +43,7 @@ const approver: MeContext = {
   role: "FINANCE_APPROVER",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
+  enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
 function renderScreen() {

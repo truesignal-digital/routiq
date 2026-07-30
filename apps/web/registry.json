@@ -633,6 +633,56 @@
         "lucide-react",
         "react-i18next"
       ]
+    },
+    {
+      "name": "theme",
+      "type": "registry:lib",
+      "files": [
+        {
+          "path": "src/lib/theme.ts",
+          "type": "registry:file",
+          "target": "lib/theme.ts"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "use-theme",
+      "type": "registry:hook",
+      "files": [
+        {
+          "path": "src/hooks/use-theme.ts",
+          "type": "registry:file",
+          "target": "hooks/use-theme.ts"
+        }
+      ],
+      "registryDependencies": [
+        "theme"
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "theme-toggle",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/theme-toggle.tsx",
+          "type": "registry:file",
+          "target": "components/theme-toggle.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "dropdown-menu",
+        "theme",
+        "use-theme",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
     }
   ]
 }

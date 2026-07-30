@@ -12,10 +12,12 @@ import { AssetsStub } from "./screens/AssetsStub.js";
 import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
+import { PersonsScreen } from "./screens/PersonsScreen.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
 import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
 import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
 import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
+import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
 import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
 import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
@@ -86,6 +88,16 @@ const activitiesRoute = createRoute({
   component: ActivitiesScreen,
 });
 
+const activityRecordRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/activities/record",
+  // A tile on the home screen can open the sheet already on the right flavour.
+  validateSearch: z.object({
+    template: z.enum(["journey", "haulage"]).optional(),
+  }),
+  component: ActivitySheetScreen,
+});
+
 const activityDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/$activityId",
@@ -119,6 +131,13 @@ const moreRoute = createRoute({
   component: MoreStub,
 });
 
+// Under /more so the shell keeps the Plus tab lit while you administer.
+const personsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/persons",
+  component: PersonsScreen,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
@@ -127,6 +146,8 @@ const routeTree = rootRoute.addChildren([
     assetsNewRoute,
     assetDocumentsRoute,
     activitiesRoute,
+    // Before the $activityId route, or "record" reads as an activity id.
+    activityRecordRoute,
     activityDetailRoute,
     financeRecordRoute,
     financeEntriesRoute,
@@ -134,6 +155,7 @@ const routeTree = rootRoute.addChildren([
     financeApprovalsRoute,
     financePeriodsRoute,
     moreRoute,
+    personsRoute,
   ]),
 ]);
 

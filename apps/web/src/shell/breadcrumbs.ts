@@ -40,6 +40,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "finance.navigation.approvals" }],
   },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
+  { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
 ];
 
 function segments(path: string): string[] {

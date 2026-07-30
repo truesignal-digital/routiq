@@ -1,0 +1,524 @@
+// @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ActivityDetail, CommandWarningCode } from "@routiq/contracts";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { MeCtx, type MeContext } from "../auth/me.js";
+import { sessionStore } from "../auth/store.js";
+import type { CommandClient, SubmitResult } from "../commands/client.js";
+import { i18n } from "../i18n/index.js";
+import { ActivityActions, localOffsetMinutes, toOffsetIso } from "./ActivityActions.js";
+
+const mocks = vi.hoisted(() => ({ toastAdd: vi.fn(), useAssets: vi.fn() }));
+
+vi.mock("@/components/ui/toast.js", () => ({
+  toast: { add: mocks.toastAdd },
+}));
+
+vi.mock("../assets/useAssets.js", () => ({
+  useAssets: mocks.useAssets,
+}));
+
+const ACTIVITY_ID = "00000000-0000-4000-8000-000000000001";
+const OPEN_SEGMENT_ID = "00000000-0000-4000-8000-000000000002";
+const CLOSED_SEGMENT_ID = "00000000-0000-4000-8000-000000000003";
+const PRIMARY_ASSET_ID = "00000000-0000-4000-8000-000000000004";
+const RESCUE_ASSET_ID = "00000000-0000-4000-8000-000000000005";
+const GENERATED_IDS = [
+  "00000000-0000-4000-8000-000000000101",
+  "00000000-0000-4000-8000-000000000102",
+  "00000000-0000-4000-8000-000000000103",
+] as const;
+
+const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
+
+const openActivity: ActivityDetail = {
+  id: ACTIVITY_ID,
+  activityNumber: "ACT-2026-0007",
+  activityType: { code: "HAULAGE_JOB", labelFr: "Transport", labelEn: "Haulage" },
+  status: "OPEN",
+  completeness: null,
+  completenessCodes: [],
+  startedAt: "2026-07-20T06:00:00.000Z",
+  endedAt: null,
+  customerName: "Brasseries du Cameroun",
+  clientReference: "WB-4471",
+  branchId: "00000000-0000-4000-8000-0000000000b1",
+  primaryAssetCode: "DLA-T-001",
+  legCount: 2,
+  crewCount: 1,
+  templateCode: "TRUCKING",
+  templateVersion: 1,
+  customValues: {},
+  description: null,
+  plannedStartAt: null,
+  plannedEndAt: null,
+  closedAt: null,
+  rowVersion: 7,
+  segments: [
+    {
+      id: CLOSED_SEGMENT_ID,
+      assetId: "00000000-0000-4000-8000-0000000000c1",
+      assetCode: "DLA-R-009",
+      role: "TRAILER",
+      startedAt: "2026-07-20T06:00:00.000Z",
+      endedAt: "2026-07-20T10:00:00.000Z",
+      substitutesSegmentId: null,
+      rowVersion: 4,
+    },
+    {
+      id: OPEN_SEGMENT_ID,
+      assetId: PRIMARY_ASSET_ID,
+      assetCode: "DLA-T-001",
+      role: "PRIMARY",
+      startedAt: "2026-07-20T06:00:00.000Z",
+      endedAt: null,
+      substitutesSegmentId: null,
+      rowVersion: 3,
+    },
+  ],
+  crew: [],
+  legs: [],
+  readings: [],
+  financialEntries: [],
+};
+
+const closedActivity: ActivityDetail = {
+  ...openActivity,
+  status: "CLOSED",
+  completeness: "COMPLETE_WITH_EXCEPTIONS",
+  completenessCodes: ["ACTIVITY_NO_REVENUE"],
+  endedAt: "2026-07-21T09:00:00.000Z",
+  closedAt: "2026-07-21T09:30:00.000Z",
+  segments: openActivity.segments.map((segment) => ({
+    ...segment,
+    endedAt: segment.endedAt ?? "2026-07-21T09:00:00.000Z",
+  })),
+};
+
+function meWith(role: MeContext["role"]): MeContext {
+  return {
+    workspaceId: "00000000-0000-4000-8000-0000000000f1",
+    principalId: "00000000-0000-4000-8000-0000000000f2",
+    principalType: "HUMAN",
+    membershipId: "00000000-0000-4000-8000-0000000000f3",
+    role,
+    branchScope: "ALL",
+    enabledModules: ["CORE", "ASSETS", "ACTIVITIES"],
+    enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  };
+}
+
+interface RecordingClient extends CommandClient {
+  seen: Array<{
+    name: string;
+    payload: unknown;
+    envelope: { expectedVersion?: number };
+  }>;
+}
+
+function recordingClient(...results: SubmitResult[]): RecordingClient {
+  const seen: RecordingClient["seen"] = [];
+  let call = 0;
+  return {
+    seen,
+    submit: async (submission) => {
+      seen.push(
+        submission as unknown as {
+          name: string;
+          payload: unknown;
+          envelope: { expectedVersion?: number };
+        },
+      );
+      return results[Math.min(call++, results.length - 1)]!;
+    },
+  };
+}
+
+function committed(warnings: CommandWarningCode[] = []): SubmitResult {
+  return {
+    ok: true,
+    outcome: {
+      commandId: "00000000-0000-4000-8000-0000000000e1",
+      recordId: ACTIVITY_ID,
+      rowVersion: 8,
+      warnings,
+      idempotentReplay: false,
+    },
+  };
+}
+
+const DETAIL_KEY = [
+  "ws",
+  sessionIdentity.workspaceSlug,
+  "activities",
+  "detail",
+  ACTIVITY_ID,
+] as const;
+
+function renderActions(
+  activity: ActivityDetail,
+  client: CommandClient,
+  me: MeContext = meWith("ADMIN"),
+  queryClient = new QueryClient(),
+) {
+  const view = render(
+    <QueryClientProvider client={queryClient}>
+      <MeCtx.Provider value={me}>
+        <ActivityActions activity={activity} client={client} />
+      </MeCtx.Provider>
+    </QueryClientProvider>,
+  );
+  return { ...view, queryClient };
+}
+
+beforeAll(async () => {
+  await i18n.changeLanguage("en");
+});
+
+afterAll(async () => {
+  await i18n.changeLanguage("fr-CM");
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  let generated = 0;
+  vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(
+    () => GENERATED_IDS[Math.min(generated++, GENERATED_IDS.length - 1)]!,
+  );
+  sessionStore.save({
+    ...sessionIdentity,
+    token: "token",
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  });
+  mocks.useAssets.mockReturnValue({
+    data: {
+      pages: [
+        {
+          items: [
+            {
+              id: PRIMARY_ASSET_ID,
+              assetCode: "DLA-T-001",
+              registrationNumber: null,
+              manufacturer: "Mercedes",
+              model: "Actros",
+              lifecycleStatus: "IN_SERVICE",
+              rowVersion: 2,
+              category: { code: "TRUCK", labelFr: "Camion", labelEn: "Truck" },
+              branch: { code: "DLA", name: "Douala" },
+            },
+            {
+              id: RESCUE_ASSET_ID,
+              assetCode: "DLA-T-014",
+              registrationNumber: null,
+              manufacturer: "Renault",
+              model: "Kerax",
+              lifecycleStatus: "IN_SERVICE",
+              rowVersion: 5,
+              category: { code: "TRUCK", labelFr: "Camion", labelEn: "Truck" },
+              branch: { code: "DLA", name: "Douala" },
+            },
+          ],
+          nextCursor: null,
+        },
+      ],
+    },
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+  });
+});
+
+afterEach(() => {
+  sessionStore.logout(sessionIdentity);
+  cleanup();
+});
+
+describe("offset stamping", () => {
+  it("turns a zoneless datetime-local value into an offset-bearing ISO instant", () => {
+    expect(toOffsetIso("2026-07-20T18:30", 60)).toBe("2026-07-20T18:30:00+01:00");
+    expect(toOffsetIso("2026-07-20T18:30", 0)).toBe("2026-07-20T18:30:00+00:00");
+    expect(toOffsetIso("2026-07-20T18:30", -330)).toBe("2026-07-20T18:30:00-05:30");
+    expect(toOffsetIso("2026-07-20T18:30:45", 60)).toBe("2026-07-20T18:30:45+01:00");
+  });
+
+  it("reads the browser zone as minutes east of UTC", () => {
+    expect(localOffsetMinutes("2026-07-20T18:30")).toBe(
+      -new Date("2026-07-20T18:30").getTimezoneOffset(),
+    );
+    expect(localOffsetMinutes("not-a-date")).toBe(0);
+  });
+});
+
+describe("role and status gating", () => {
+  it("FIELD_SUBMITTER may close and substitute an open job but never reopen a closed one", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Substitute asset" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reopen" })).toBeNull();
+
+    cleanup();
+    renderActions(closedActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("OPS_MANAGER gets reopen on a closed job, and nothing else", () => {
+    renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
+    expect(screen.getByRole("button", { name: "Reopen" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
+  });
+
+  it("EXECUTIVE_VIEWER sees no write affordance at all", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("EXECUTIVE_VIEWER"));
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("hides substitute when every segment has already been closed out", () => {
+    renderActions(
+      {
+        ...openActivity,
+        segments: openActivity.segments.map((segment) => ({
+          ...segment,
+          endedAt: "2026-07-20T10:00:00.000Z",
+        })),
+      },
+      recordingClient(committed()),
+    );
+    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
+  });
+});
+
+describe("close", () => {
+  it("requires an end date when the activity has none, then sends it with the activity's rowVersion", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed());
+    renderActions(openActivity, client);
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    const submit = screen.getByRole("button", { name: "Confirm closing" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("End date and time"), {
+      target: { value: "2026-07-21T18:30" },
+    });
+    await user.type(screen.getByLabelText("Note (optional)"), "Client signed off");
+    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    const submission = client.seen[0]!;
+    expect(submission.name).toBe("close-activity");
+    expect(submission.envelope.expectedVersion).toBe(openActivity.rowVersion);
+    const payload = submission.payload as { activityId: string; endedAt: string; note: string };
+    expect(payload.activityId).toBe(ACTIVITY_ID);
+    expect(payload.note).toBe("Client signed off");
+    expect(payload.endedAt).toMatch(/^2026-07-21T18:30:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("leaves end date optional — and omitted from the payload — once the activity already has one", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed());
+    renderActions({ ...openActivity, endedAt: "2026-07-21T09:00:00.000Z" }, client);
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.getByLabelText("End date and time (optional)")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    expect(client.seen[0]!.payload).toEqual({ activityId: ACTIVITY_ID });
+  });
+
+  it("surfaces the completeness codes the server warned about in the success toast", async () => {
+    const user = userEvent.setup();
+    renderActions(
+      { ...openActivity, endedAt: "2026-07-21T09:00:00.000Z" },
+      recordingClient(committed(["ACTIVITY_NO_LEGS", "ACTIVITY_NO_REVENUE"])),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Activity closed",
+        description: "No legs recorded\nNo revenue attributed",
+      }),
+    );
+  });
+
+  it("invalidates the activity detail read so the banner reflects the new verdict", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(DETAIL_KEY, openActivity);
+
+    renderActions(
+      { ...openActivity, endedAt: "2026-07-21T09:00:00.000Z" },
+      recordingClient(committed()),
+      meWith("ADMIN"),
+      queryClient,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+
+    await waitFor(() =>
+      expect(queryClient.getQueryState(DETAIL_KEY)?.isInvalidated).toBe(true),
+    );
+  });
+
+  it("keeps the dialog open and explains a hard block instead of dropping the operator's input", async () => {
+    const user = userEvent.setup();
+    renderActions(
+      { ...openActivity, endedAt: "2026-07-21T09:00:00.000Z" },
+      recordingClient({ ok: false, code: "ACTIVITY_CLOSE_BLOCKED" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Cannot close: the actual dates or at least one assigned asset are missing.",
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.getByRole("button", { name: "Confirm closing" })).toBeTruthy();
+    expect(mocks.toastAdd).not.toHaveBeenCalled();
+  });
+});
+
+describe("reopen", () => {
+  it("refuses to submit without a reason and sends the activity's rowVersion once given one", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed());
+    renderActions(closedActivity, client, meWith("OPS_MANAGER"));
+
+    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    const submit = screen.getByRole("button", { name: "Confirm reopening" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    const reason = screen.getByLabelText("Reason");
+    await user.type(reason, "   ");
+    expect(
+      (screen.getByRole("button", { name: "Confirm reopening" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    await user.clear(reason);
+    await user.type(reason, "  Waybill arrived late  ");
+    await user.click(screen.getByRole("button", { name: "Confirm reopening" }));
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    const submission = client.seen[0]!;
+    expect(submission.name).toBe("reopen-activity");
+    expect(submission.envelope.expectedVersion).toBe(closedActivity.rowVersion);
+    expect(submission.payload).toEqual({
+      activityId: ACTIVITY_ID,
+      reason: "Waybill arrived late",
+    });
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Activity reopened",
+      }),
+    );
+  });
+});
+
+describe("substitute", () => {
+  it("locks on the outgoing SEGMENT's rowVersion, not the activity's", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed());
+    renderActions(openActivity, client);
+
+    await user.click(screen.getByRole("button", { name: "Substitute asset" }));
+    await user.click(screen.getByLabelText("Replacement asset"));
+    await user.keyboard("{ArrowDown}{Enter}");
+    fireEvent.change(screen.getByLabelText("Handover date and time"), {
+      target: { value: "2026-07-20T14:00" },
+    });
+    await user.type(screen.getByLabelText("Outgoing meter reading (optional)"), "412880");
+    await user.click(screen.getByRole("button", { name: "Confirm substitution" }));
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    const submission = client.seen[0]!;
+    expect(submission.name).toBe("substitute-asset");
+    expect(submission.envelope.expectedVersion).toBe(3);
+    expect(submission.envelope.expectedVersion).not.toBe(openActivity.rowVersion);
+
+    const payload = submission.payload as {
+      activityId: string;
+      outgoingSegmentId: string;
+      newSegmentId: string;
+      substituteAssetId: string;
+      handoverAt: string;
+      outgoingReading?: { readingId: string; value: number; observedAt: string };
+      incomingReading?: unknown;
+    };
+    expect(payload.activityId).toBe(ACTIVITY_ID);
+    // Only the still-running segment is offered, so it is the one preselected.
+    expect(payload.outgoingSegmentId).toBe(OPEN_SEGMENT_ID);
+    expect(payload.newSegmentId).toBe(GENERATED_IDS[0]);
+    expect(payload.substituteAssetId).toBe(RESCUE_ASSET_ID);
+    expect(payload.handoverAt).toMatch(/^2026-07-20T14:00:00[+-]\d{2}:\d{2}$/);
+    expect(payload.outgoingReading).toEqual({
+      readingId: GENERATED_IDS[1],
+      readingType: "ODOMETER",
+      value: 412_880,
+      observedAt: payload.handoverAt,
+    });
+    expect(payload.incomingReading).toBeUndefined();
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Asset substituted",
+      }),
+    );
+  });
+
+  it("offers the still-running segment only, and never the outgoing asset as its own replacement", async () => {
+    const user = userEvent.setup();
+    renderActions(openActivity, recordingClient(committed()));
+
+    await user.click(screen.getByRole("button", { name: "Substitute asset" }));
+    // The trailer segment already ended; it is not a handover candidate.
+    expect(screen.getByLabelText("Outgoing asset").textContent).toContain("DLA-T-001");
+
+    await user.click(screen.getByLabelText("Replacement asset"));
+    await waitFor(() => expect(screen.getAllByRole("option").length).toBe(1));
+    expect(screen.getByRole("option").textContent).toContain("DLA-T-014");
+  });
+
+  it("stays disabled until a replacement and a handover time are both chosen", async () => {
+    const user = userEvent.setup();
+    renderActions(openActivity, recordingClient(committed()));
+
+    await user.click(screen.getByRole("button", { name: "Substitute asset" }));
+    const submit = () =>
+      screen.getByRole("button", { name: "Confirm substitution" }) as HTMLButtonElement;
+    expect(submit().disabled).toBe(true);
+
+    await user.click(screen.getByLabelText("Replacement asset"));
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(submit().disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Handover date and time"), {
+      target: { value: "2026-07-20T14:00" },
+    });
+    await waitFor(() => expect(submit().disabled).toBe(false));
+  });
+});

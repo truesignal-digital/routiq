@@ -63,6 +63,7 @@ const manager: MeContext = {
   role: "OPS_MANAGER",
   branchScope: "ALL",
   enabledModules: ["CORE", "DOCUMENTS"],
+  enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
 /** Records every key handed to `invalidateQueries` on a real client. */

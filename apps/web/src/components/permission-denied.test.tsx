@@ -79,6 +79,7 @@ function me(overrides: Partial<MeContext>): MeContext {
     role: "EXECUTIVE_VIEWER",
     branchScope: "ALL",
     enabledModules: [],
+    enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
     ...overrides,
   };
 }

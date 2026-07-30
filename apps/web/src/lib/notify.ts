@@ -6,7 +6,7 @@ import { i18n } from "../i18n/index.js";
  * domain-specific, so each namespace owns its own; warning and error codes are
  * shared vocabulary and fall back to the root `notify.*` block.
  */
-export type NotifyNamespace = "assets" | "documents" | "finance";
+export type NotifyNamespace = "activities" | "assets" | "documents" | "finance";
 
 type NotifyKind = "success" | "warnings" | "errors";
 
@@ -44,13 +44,19 @@ function warningLines(
 /**
  * The single success surface for a committed command. Warnings ride in the same
  * toast rather than stacking their own, so one action produces one notification.
+ * `extraLines` carries what only the caller knows — a composite command's count
+ * of embedded records left waiting for an approver, say — under the warnings.
  */
 export function notifyCommandSuccess(
   namespace: NotifyNamespace,
   messageKey: string,
   warnings: readonly string[] = [],
+  extraLines: readonly string[] = [],
 ): void {
-  const description = warningLines(namespace, warnings);
+  const lines = [warningLines(namespace, warnings), ...extraLines].filter(
+    (line): line is string => line !== undefined && line !== "",
+  );
+  const description = lines.length === 0 ? undefined : lines.join("\n");
   toast.add({
     type: "success",
     title: localizedNotifyMessage(namespace, "success", messageKey),

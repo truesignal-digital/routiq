@@ -63,6 +63,8 @@ export const activitySegmentRead = z.object({
   startedAt: z.iso.datetime(),
   endedAt: z.iso.datetime().nullable(),
   substitutesSegmentId: z.uuid().nullable(),
+  /** substitute-asset locks on the SEGMENT, so its version has to travel with it. */
+  rowVersion: z.number().int().positive(),
 });
 
 export const activityCrewRead = z.object({

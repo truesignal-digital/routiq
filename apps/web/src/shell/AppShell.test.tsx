@@ -45,6 +45,7 @@ function membership(enabledModules: ModuleCode[]): MeContext {
     role: "OPS_MANAGER",
     branchScope: "ALL",
     enabledModules,
+    enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
 }
 

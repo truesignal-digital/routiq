@@ -15,6 +15,7 @@ function renderWithRole(role: MeContext["role"]) {
     role,
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS"],
+    enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
   return render(
     <QueryClientProvider client={new QueryClient()}>

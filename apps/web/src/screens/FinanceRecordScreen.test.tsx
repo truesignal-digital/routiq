@@ -77,6 +77,7 @@ const submitter: MeContext = {
   role: "FIELD_SUBMITTER",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
+  enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
 function renderScreen() {
