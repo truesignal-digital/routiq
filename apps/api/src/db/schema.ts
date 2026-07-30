@@ -1,8 +1,11 @@
 import {
+  CATEGORY_KINDS,
+  EVIDENCE_POLICIES,
   MODULE_CODES,
-  TEMPLATE_CODES,
   PRINCIPAL_TYPES,
+  PROFITABILITY_LAYERS,
   ROLES,
+  TEMPLATE_CODES,
   type ActivityCompletenessCode,
   type CommandWarningCode,
 } from "@routiq/contracts";
@@ -346,14 +349,7 @@ export const categories = pgTable(
       .notNull()
       .references(() => workspaces.id),
     kind: text("kind", {
-      enum: [
-        "ASSET_CLASS",
-        "ACTIVITY_TYPE",
-        "REVENUE_CATEGORY",
-        "EXPENSE_CATEGORY",
-        "DOCUMENT_TYPE",
-        "ISSUE_TYPE",
-      ],
+      enum: CATEGORY_KINDS,
     }).notNull(),
     code: text("code").notNull(),
     labelFr: text("label_fr").notNull(),
@@ -364,11 +360,11 @@ export const categories = pgTable(
      * for REVENUE_CATEGORY/EXPENSE_CATEGORY kinds, null for the rest.
      */
     profitabilityLayer: text("profitability_layer", {
-      enum: ["DIRECT", "MAINTENANCE", "OWNERSHIP", "SHARED"],
+      enum: PROFITABILITY_LAYERS,
     }),
     /** §5.4: NO_RECEIPT_EXPECTED categories become declared cash expenses — warned, never blocked. */
     evidencePolicy: text("evidence_policy", {
-      enum: ["RECEIPT_EXPECTED", "NO_RECEIPT_EXPECTED"],
+      enum: EVIDENCE_POLICIES,
     })
       .notNull()
       .default("RECEIPT_EXPECTED"),

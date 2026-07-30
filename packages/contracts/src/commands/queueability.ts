@@ -42,6 +42,11 @@ export const COMMAND_QUEUEABILITY = {
   "enable-module": false,
   "disable-module": false,
   "update-approval-threshold": false,
+  "create-category": false,
+  "relabel-category": false,
+  "deactivate-category": false,
+  "reactivate-category": false,
+  "set-template-preset": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

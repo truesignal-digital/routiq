@@ -113,6 +113,12 @@
     "COMMAND_SCOPE_FORBIDDEN": "This operation is not available from a workspace session.",
     "DUPLICATE_WORKSPACE_SLUG": "A workspace already uses this identifier.",
     "PRESET_DISABLED": "This activity type is not enabled for your workspace.",
+    "DUPLICATE_CATEGORY_CODE": "A category already uses this code. Choose another one.",
+    "CATEGORY_LAYER_INVALID": "Revenue and expense categories need a profitability layer; the other kinds must not have one.",
+    "CATEGORY_ALREADY_INACTIVE": "This category is already archived. Refresh the list.",
+    "CATEGORY_ALREADY_ACTIVE": "This category is already active. Refresh the list.",
+    "PRESET_ALREADY_SET": "This activity type is already in that state. Refresh the page.",
+    "LAST_PRESET": "At least one activity type must stay enabled.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
