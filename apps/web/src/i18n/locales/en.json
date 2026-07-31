@@ -599,6 +599,15 @@
       "assets": "Assets and crew",
       "stillRunning": "still running",
       "legs": "Legs",
+      "readings": "Meter readings",
+      "superseded": "Corrected",
+      "readingSources": {
+        "ACTIVITY_START": "Departure",
+        "ACTIVITY_END": "Arrival",
+        "SUBSTITUTION": "Handover",
+        "MANUAL": "Manual entry",
+        "WORK_ORDER": "Workshop"
+      },
       "money": "Revenue and costs",
       "km": "{count} km"
     },
@@ -630,7 +639,37 @@
       "incomingReading": "Replacement meter reading (optional)",
       "substituteReason": "Reason (optional)",
       "assetOption": "{code} — {name}",
-      "segmentOption": "{code} — {role}"
+      "segmentOption": "{code} — {role}",
+      "addLeg": "Add leg",
+      "addLegTitle": "Add a leg",
+      "addLegHint": "Leg no. {legNo} of this activity.",
+      "addLegSubmit": "Record the leg",
+      "legOrigin": "From",
+      "legDestination": "To",
+      "legDepartedAt": "Departure time (optional)",
+      "legArrivedAt": "Arrival time (optional)",
+      "legDistanceKm": "Distance in km (optional)",
+      "legLoadState": "Load (optional)",
+      "legSegment": "Asset on this leg (optional)",
+      "addReading": "Record reading",
+      "addReadingTitle": "Record a meter reading",
+      "addReadingHint": "A reading stays as it was captured; a correction adds a new row.",
+      "addReadingSubmit": "Record the reading",
+      "readingAsset": "Asset",
+      "readingType": "Unit",
+      "readingValue": "Value",
+      "readingObservedAt": "Reading date and time",
+      "addExpense": "Record expense",
+      "addExpenseTitle": "Expense on this activity",
+      "addExpenseSubmit": "Record the expense",
+      "addExpenseHint": "The expense is attributed to this activity and to the chosen asset.",
+      "expenseCategory": "Category",
+      "expenseAmount": "Amount",
+      "expenseEconomicDate": "Economic date",
+      "expensePaymentMethod": "Payment method",
+      "expenseAsset": "Asset",
+      "expenseCounterparty": "Counterparty (optional)",
+      "expenseDescription": "Description (optional)"
     },
     "pickers": {
       "person": {
@@ -667,7 +706,11 @@
         "sheetRecorded": "Sheet recorded",
         "closed": "Activity closed",
         "reopened": "Activity reopened",
-        "substituted": "Asset substituted"
+        "substituted": "Asset substituted",
+        "legRecorded": "Leg recorded",
+        "readingRecorded": "Reading recorded",
+        "expenseRecorded": "Expense recorded",
+        "expenseSubmitted": "Expense sent for approval"
       },
       "warnings": {
         "ACTIVITY_MISSING_START_READING": "Start meter reading missing",
@@ -675,7 +718,11 @@
         "ACTIVITY_NO_LEGS": "No legs recorded",
         "ACTIVITY_MISSING_CREW": "No crew recorded",
         "ACTIVITY_NO_REVENUE": "No revenue attributed",
-        "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically"
+        "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
+        "METER_READING_DECREASED": "The reading is lower than the previous one",
+        "EVIDENCE_MISSING": "No receipt attached to this expense.",
+        "LATE_POSTING": "Posted late: the economic period was already closed.",
+        "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts."
       },
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
     },

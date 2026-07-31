@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ActivityDetail, CommandWarningCode } from "@routiq/contracts";
+import {
+  recordExpensePayload,
+  recordMeterReadingPayload,
+  recordMovementLegPayload,
+} from "@routiq/contracts";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -19,7 +24,12 @@ import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { i18n } from "../i18n/index.js";
 import { ActivityActions, localOffsetMinutes, toOffsetIso } from "./ActivityActions.js";
 
-const mocks = vi.hoisted(() => ({ toastAdd: vi.fn(), useAssets: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  toastAdd: vi.fn(),
+  useAssets: vi.fn(),
+  usePlaces: vi.fn(),
+  useCategories: vi.fn(),
+}));
 
 vi.mock("@/components/ui/toast.js", () => ({
   toast: { add: mocks.toastAdd },
@@ -27,6 +37,14 @@ vi.mock("@/components/ui/toast.js", () => ({
 
 vi.mock("../assets/useAssets.js", () => ({
   useAssets: mocks.useAssets,
+}));
+
+vi.mock("./usePlaces.js", () => ({
+  usePlaces: mocks.usePlaces,
+}));
+
+vi.mock("../documents/useCategories.js", () => ({
+  useCategories: mocks.useCategories,
 }));
 
 const ACTIVITY_ID = "00000000-0000-4000-8000-000000000001";
@@ -38,7 +56,10 @@ const GENERATED_IDS = [
   "00000000-0000-4000-8000-000000000101",
   "00000000-0000-4000-8000-000000000102",
   "00000000-0000-4000-8000-000000000103",
+  "00000000-0000-4000-8000-000000000104",
 ] as const;
+const DOUALA_PLACE_ID = "00000000-0000-4000-8000-0000000000d1";
+const EDEA_PLACE_ID = "00000000-0000-4000-8000-0000000000d2";
 
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
@@ -54,6 +75,7 @@ const openActivity: ActivityDetail = {
   customerName: "Brasseries du Cameroun",
   clientReference: "WB-4471",
   branchId: "00000000-0000-4000-8000-0000000000b1",
+  branchCode: "DLA",
   primaryAssetCode: "DLA-T-001",
   legCount: 2,
   crewCount: 1,
@@ -145,7 +167,10 @@ function recordingClient(...results: SubmitResult[]): RecordingClient {
   };
 }
 
-function committed(warnings: CommandWarningCode[] = []): SubmitResult {
+function committed(
+  warnings: CommandWarningCode[] = [],
+  recordStatus?: string,
+): SubmitResult {
   return {
     ok: true,
     outcome: {
@@ -154,6 +179,7 @@ function committed(warnings: CommandWarningCode[] = []): SubmitResult {
       rowVersion: 8,
       warnings,
       idempotentReplay: false,
+      ...(recordStatus === undefined ? {} : { recordStatus }),
     },
   };
 }
@@ -236,6 +262,24 @@ beforeEach(() => {
     hasNextPage: false,
     isFetchingNextPage: false,
     fetchNextPage: vi.fn(),
+  });
+  mocks.usePlaces.mockReturnValue({
+    data: {
+      items: [
+        { id: DOUALA_PLACE_ID, name: "Douala" },
+        { id: EDEA_PLACE_ID, name: "Edéa" },
+      ],
+    },
+    isPending: false,
+    isError: false,
+  });
+  mocks.useCategories.mockReturnValue({
+    data: [
+      { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+      { code: "TOLL", labelFr: "Péage", labelEn: "Toll" },
+    ],
+    isPending: false,
+    isError: false,
   });
 });
 
@@ -520,5 +564,236 @@ describe("substitute", () => {
       target: { value: "2026-07-20T14:00" },
     });
     await waitFor(() => expect(submit().disabled).toBe(false));
+  });
+});
+
+describe("mid-trip capture", () => {
+  const withLegs: ActivityDetail = {
+    ...openActivity,
+    legs: [
+      {
+        id: "00000000-0000-4000-8000-0000000000a1",
+        legNo: 3,
+        segmentId: OPEN_SEGMENT_ID,
+        originPlaceId: DOUALA_PLACE_ID,
+        originName: "Douala",
+        destinationPlaceId: EDEA_PLACE_ID,
+        destinationName: "Edéa",
+        departedAt: null,
+        arrivedAt: null,
+        distanceKm: 68,
+        loadState: "LADEN",
+        passengerCount: null,
+        customValues: {},
+      },
+      {
+        id: "00000000-0000-4000-8000-0000000000a2",
+        legNo: 1,
+        segmentId: OPEN_SEGMENT_ID,
+        originPlaceId: null,
+        originName: "Bonabéri",
+        destinationPlaceId: DOUALA_PLACE_ID,
+        destinationName: "Douala",
+        departedAt: null,
+        arrivedAt: null,
+        distanceKm: null,
+        loadState: null,
+        passengerCount: null,
+        customValues: {},
+      },
+    ],
+  };
+
+  it("offers the three capture actions only while the job is open and writable", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    expect(screen.getByRole("button", { name: "Add leg" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Record reading" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Record expense" })).toBeTruthy();
+
+    cleanup();
+    renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
+    expect(screen.queryByRole("button", { name: "Add leg" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record reading" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record expense" })).toBeNull();
+  });
+
+  it("numbers a new leg from the highest legNo on the job, not from how many there are", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed());
+    renderActions(withLegs, client);
+
+    await user.click(screen.getByRole("button", { name: "Add leg" }));
+    const submit = () =>
+      screen.getByRole("button", { name: "Record the leg" }) as HTMLButtonElement;
+    expect(submit().disabled).toBe(true);
+
+    await user.type(screen.getByLabelText("From"), "Edéa");
+    expect(submit().disabled).toBe(true);
+    await user.type(screen.getByLabelText("To"), "Kribi");
+    fireEvent.change(screen.getByLabelText("Departure time (optional)"), {
+      target: { value: "2026-07-20T14:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Distance in km (optional)"), {
+      target: { value: "116" },
+    });
+    await waitFor(() => expect(submit().disabled).toBe(false));
+    await user.click(submit());
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    const submission = client.seen[0]!;
+    expect(submission.name).toBe("record-movement-leg");
+    // None of these three writes a versioned row of its own.
+    expect(submission.envelope.expectedVersion).toBeUndefined();
+
+    const payload = recordMovementLegPayload.parse(submission.payload);
+    expect(payload.activityId).toBe(ACTIVITY_ID);
+    // Two legs on the job, numbered 1 and 3: a count would have collided with 3.
+    expect(payload.legNo).toBe(4);
+    expect(payload.legId).toBe(GENERATED_IDS[0]);
+    expect(payload.segmentId).toBe(OPEN_SEGMENT_ID);
+    expect(payload.origin).toEqual({
+      kind: "place",
+      placeId: EDEA_PLACE_ID,
+      name: "Edéa",
+    });
+    // Unknown to the workspace, so it travels with a freshly minted place id.
+    expect(payload.destination).toMatchObject({ kind: "place", name: "Kribi" });
+    expect(payload.distanceKm).toBe(116);
+    expect(payload.departedAt).toMatch(/^2026-07-20T14:00:00[+-]\d{2}:\d{2}$/);
+    expect(payload.arrivedAt).toBeUndefined();
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Leg recorded",
+      }),
+    );
+  });
+
+  it("records a manual reading against the activity and surfaces a backwards meter", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed(["METER_READING_DECREASED"]));
+    renderActions(openActivity, client);
+
+    await user.click(screen.getByRole("button", { name: "Record reading" }));
+    const submit = () =>
+      screen.getByRole("button", { name: "Record the reading" }) as HTMLButtonElement;
+    expect(submit().disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Value"), { target: { value: "412000" } });
+    fireEvent.change(screen.getByLabelText("Reading date and time"), {
+      target: { value: "2026-07-20T15:30" },
+    });
+    await waitFor(() => expect(submit().disabled).toBe(false));
+    await user.click(submit());
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    const submission = client.seen[0]!;
+    expect(submission.name).toBe("record-meter-reading");
+    expect(submission.envelope.expectedVersion).toBeUndefined();
+
+    const payload = recordMeterReadingPayload.parse(submission.payload);
+    expect(payload.readingId).toBe(GENERATED_IDS[0]);
+    // The still-running primary is preselected, not the trailer that ended.
+    expect(payload.assetId).toBe(PRIMARY_ASSET_ID);
+    expect(payload.readingType).toBe("ODOMETER");
+    expect(payload.value).toBe(412_000);
+    expect(payload.source).toBe("MANUAL");
+    expect(payload.activityId).toBe(ACTIVITY_ID);
+    expect(payload.observedAt).toMatch(/^2026-07-20T15:30:00[+-]\d{2}:\d{2}$/);
+
+    // Warn, don't block: the reading is kept and the doubt is shown.
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Reading recorded",
+        description: "The reading is lower than the previous one",
+      }),
+    );
+  });
+
+  it("attributes a mid-trip expense to both the truck and the trip", async () => {
+    const user = userEvent.setup();
+    const client = recordingClient(committed());
+    renderActions(openActivity, client);
+
+    await user.click(screen.getByRole("button", { name: "Record expense" }));
+    const submit = () =>
+      screen.getByRole("button", { name: "Record the expense" }) as HTMLButtonElement;
+    expect(submit().disabled).toBe(true);
+
+    await user.click(screen.getByLabelText("Category"));
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.type(screen.getByLabelText("Amount"), "40000");
+    await waitFor(() => expect(submit().disabled).toBe(false));
+    await user.click(submit());
+
+    await waitFor(() => expect(client.seen.length).toBe(1));
+    const submission = client.seen[0]!;
+    expect(submission.name).toBe("record-expense");
+    expect(submission.envelope.expectedVersion).toBeUndefined();
+
+    const payload = recordExpensePayload.parse(submission.payload);
+    expect(payload.entryId).toBe(GENERATED_IDS[0]);
+    expect(payload.branchCode).toBe("DLA");
+    expect(payload.categoryCode).toBe("FUEL");
+    expect(payload.currency).toBe("XAF");
+    // XAF has exponent 0 — 40 000 typed is 40 000 minor units, not 4 000 000.
+    expect(payload.amountMinor).toBe(40_000);
+    expect(payload.postings).toEqual([
+      {
+        assetId: PRIMARY_ASSET_ID,
+        activityId: ACTIVITY_ID,
+        amountMinor: 40_000,
+        assetAttribution: "DIRECT",
+      },
+    ]);
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Expense recorded",
+      }),
+    );
+  });
+
+  it("says an above-threshold expense is waiting for an approver instead of claiming it was posted", async () => {
+    const user = userEvent.setup();
+    renderActions(openActivity, recordingClient(committed([], "SUBMITTED")));
+
+    await user.click(screen.getByRole("button", { name: "Record expense" }));
+    await user.click(screen.getByLabelText("Category"));
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.type(screen.getByLabelText("Amount"), "900000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Expense sent for approval",
+      }),
+    );
+  });
+
+  it("keeps the expense dialog open and names the failure instead of dropping the input", async () => {
+    const user = userEvent.setup();
+    renderActions(
+      openActivity,
+      recordingClient({ ok: false, code: "PERIOD_LOCKED" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Record expense" }));
+    await user.click(screen.getByLabelText("Category"));
+    await user.keyboard("{ArrowDown}{Enter}");
+    await user.type(screen.getByLabelText("Amount"), "40000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("This period is locked. No postings are possible."),
+      ).toBeTruthy(),
+    );
+    expect(screen.getByRole("button", { name: "Record the expense" })).toBeTruthy();
+    expect(mocks.toastAdd).not.toHaveBeenCalled();
   });
 });

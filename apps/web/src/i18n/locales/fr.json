@@ -599,6 +599,15 @@
       "assets": "Engins et équipage",
       "stillRunning": "en cours",
       "legs": "Trajets",
+      "readings": "Relevés compteur",
+      "superseded": "Corrigé",
+      "readingSources": {
+        "ACTIVITY_START": "Départ",
+        "ACTIVITY_END": "Arrivée",
+        "SUBSTITUTION": "Relais",
+        "MANUAL": "Saisie manuelle",
+        "WORK_ORDER": "Atelier"
+      },
       "money": "Recettes et dépenses",
       "km": "{count} km"
     },
@@ -630,7 +639,37 @@
       "incomingReading": "Compteur de l'engin remplaçant (facultatif)",
       "substituteReason": "Motif (facultatif)",
       "assetOption": "{code} — {name}",
-      "segmentOption": "{code} — {role}"
+      "segmentOption": "{code} — {role}",
+      "addLeg": "Ajouter un trajet",
+      "addLegTitle": "Ajouter un trajet",
+      "addLegHint": "Trajet n° {legNo} de cette activité.",
+      "addLegSubmit": "Enregistrer le trajet",
+      "legOrigin": "Départ",
+      "legDestination": "Arrivée",
+      "legDepartedAt": "Heure de départ (facultatif)",
+      "legArrivedAt": "Heure d'arrivée (facultatif)",
+      "legDistanceKm": "Distance en km (facultatif)",
+      "legLoadState": "Charge (facultatif)",
+      "legSegment": "Engin du trajet (facultatif)",
+      "addReading": "Relever le compteur",
+      "addReadingTitle": "Relever le compteur",
+      "addReadingHint": "Le relevé reste tel qu'il a été saisi ; une correction ajoute une nouvelle ligne.",
+      "addReadingSubmit": "Enregistrer le relevé",
+      "readingAsset": "Engin",
+      "readingType": "Unité",
+      "readingValue": "Valeur",
+      "readingObservedAt": "Date et heure du relevé",
+      "addExpense": "Saisir une dépense",
+      "addExpenseTitle": "Dépense de l'activité",
+      "addExpenseHint": "La dépense est rattachée à cette activité et à l'engin choisi.",
+      "addExpenseSubmit": "Enregistrer la dépense",
+      "expenseCategory": "Catégorie",
+      "expenseAmount": "Montant",
+      "expenseEconomicDate": "Date économique",
+      "expensePaymentMethod": "Moyen de paiement",
+      "expenseAsset": "Engin",
+      "expenseCounterparty": "Tiers (facultatif)",
+      "expenseDescription": "Description (facultatif)"
     },
     "pickers": {
       "person": {
@@ -667,7 +706,11 @@
         "sheetRecorded": "Fiche enregistrée",
         "closed": "Activité clôturée",
         "reopened": "Activité rouverte",
-        "substituted": "Engin remplacé"
+        "substituted": "Engin remplacé",
+        "legRecorded": "Trajet enregistré",
+        "readingRecorded": "Relevé enregistré",
+        "expenseRecorded": "Dépense enregistrée",
+        "expenseSubmitted": "Dépense envoyée pour approbation"
       },
       "warnings": {
         "ACTIVITY_MISSING_START_READING": "Relevé compteur de départ manquant",
@@ -675,7 +718,11 @@
         "ACTIVITY_NO_LEGS": "Aucun trajet saisi",
         "ACTIVITY_MISSING_CREW": "Aucun équipage renseigné",
         "ACTIVITY_NO_REVENUE": "Aucune recette rattachée",
-        "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement"
+        "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
+        "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
+        "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
+        "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+        "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée."
       },
       "pendingEntries": "{count, plural, one {# ligne en attente d'approbation} other {# lignes en attente d'approbation}}"
     },

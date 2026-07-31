@@ -184,6 +184,47 @@ export function ActivityDetailScreen() {
         </Card>
       )}
 
+      {activity.readings.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>{t("activities.detail.readings")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {activity.readings.map((reading) => (
+                <li
+                  key={reading.id}
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                >
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono">{reading.assetCode}</span>
+                    <span className="text-muted-foreground">
+                      {t(`activities.record.readings.types.${reading.readingType}`)}
+                    </span>
+                    {/* Readings are never edited — a correction supersedes. The
+                        original stays visible, marked, so the trail is readable. */}
+                    {reading.supersededById !== null && (
+                      <StatusBadge tone="warning">
+                        {t("activities.detail.superseded")}
+                      </StatusBadge>
+                    )}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="tabular-nums">{reading.value}</span>
+                    <span className="text-muted-foreground">
+                      {formatDateTime(reading.observedAt, locale)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {t(`activities.detail.readingSources.${reading.source}`)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
       {activity.financialEntries.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
