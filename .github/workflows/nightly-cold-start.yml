@@ -1,0 +1,48 @@
+name: Nightly Cold Start
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  cold-start:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start appliance stack
+        run: docker compose --profile appliance up -d --build
+
+      - name: Wait for API health
+        run: |
+          attempt=0
+          max_attempts=24
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -f http://localhost:3001/health; then
+              echo "API is healthy"
+              exit 0
+            fi
+            attempt=$((attempt + 1))
+            if [ $attempt -lt $max_attempts ]; then
+              echo "Health check failed (attempt $attempt/$max_attempts), retrying in 5s..."
+              sleep 5
+            fi
+          done
+          echo "API failed to become healthy after $max_attempts attempts"
+          exit 1
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Docker Compose Status ==="
+          docker compose ps
+          echo ""
+          echo "=== Docker Compose Logs (last 100 lines) ==="
+          docker compose logs --tail 100
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v

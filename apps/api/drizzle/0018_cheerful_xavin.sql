@@ -1,0 +1,1 @@
+CREATE INDEX "audit_events_ws_entity_occurred_idx" ON "audit_events" USING btree ("workspace_id","entity_type","entity_id","occurred_at" DESC NULLS FIRST,"id");

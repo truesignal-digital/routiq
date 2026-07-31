@@ -14,6 +14,7 @@ import {
 } from "../db/schema.js";
 import { corePack } from "../provisioning/packs/core.js";
 import { PRESET_PACKS, type StarterPack } from "../provisioning/packs/index.js";
+import { REDACTED_PIN } from "./redaction.js";
 import {
   appendPlatformAuditEvent,
   CommandError,
@@ -21,11 +22,7 @@ import {
   type Tx,
 } from "./dispatcher.js";
 
-/**
- * Stands in for every PIN in the stored receipt. Exported so tests assert
- * the exact marker rather than the absence of one particular string.
- */
-export const REDACTED_PIN = "[REDACTED]";
+export { REDACTED_PIN } from "./redaction.js";
 
 /**
  * Tenant #3 without hand-written SQL (ADR-0004): workspace, first branch, user
@@ -45,11 +42,13 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
 
   /**
    * PINs are the secrets a command payload carries, and a receipt is kept
-   * forever — so none reaches the row. Only PINs are replaced: the
-   * rest stays byte-identical so a genuinely different payload under a reused
-   * key is still caught. The trade is that two runs differing ONLY in PINs
-   * now replay instead of conflicting, which is correct — a PIN is a
-   * credential to set, not part of the tenant's identity.
+   * forever — so none reaches the row. Only PINs are replaced: the rest stays
+   * byte-identical, so a receipt still reads as a record of what ran.
+   *
+   * Redaction no longer costs anything on the idempotency side. The dispatcher
+   * compares `commands.payload_hash`, taken over the raw payload before this
+   * runs, so two runs differing only in their PINs conflict as they should
+   * while an honest re-run of the same file still replays.
    */
   redactPayload: (payload) => ({
     ...payload,

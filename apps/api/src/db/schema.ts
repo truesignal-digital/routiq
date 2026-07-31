@@ -103,6 +103,18 @@ export const memberships = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::uuid[]`),
+    /**
+     * The authorization boundary: `resolveAuthContext` refuses a deactivated
+     * membership, so a revoked member cannot act even holding a live session.
+     * Separate from `credentials.disabled_at` (the login boundary) because the
+     * two are different doors — a principal may hold a membership without ever
+     * holding a credential, and revoking access has to shut both.
+     *
+     * Deactivation is not deletion (§10): every historical row keeps pointing
+     * at the principal.
+     */
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+    rowVersion: integer("row_version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("memberships_ws_principal_uq").on(t.workspaceId, t.principalId)],
@@ -188,6 +200,14 @@ export const commands = pgTable(
     idempotencyKey: text("idempotency_key").notNull(),
     clientOccurredAt: timestamp("client_occurred_at", { withTimezone: true }),
     payload: jsonb("payload").notNull(),
+    /**
+     * Digest of the payload as it arrived, before redaction. It is what decides
+     * whether a reused idempotency key carries the same call again: `payload`
+     * has every secret replaced by one marker, so comparing it would read two
+     * PIN resets under one key as the same request. NULL on rows written before
+     * this column existed, which fall back to comparing payloads.
+     */
+    payloadHash: text("payload_hash"),
     result: jsonb("result").$type<StoredCommandOutcome>(),
     failureCode: text("failure_code"),
     approvalOutcome: text("approval_outcome", {
@@ -211,32 +231,49 @@ export const commands = pgTable(
   ],
 );
 
-export const auditEvents = pgTable("audit_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workspaceId: uuid("workspace_id")
-    .notNull()
-    .references(() => workspaces.id),
-  commandId: uuid("command_id")
-    .notNull()
-    .references(() => commands.id),
-  eventType: text("event_type").notNull(),
-  actorPrincipalId: uuid("actor_principal_id")
-    .notNull()
-    .references(() => principals.id),
-  /** Mirrors `commands.scope`: a platform command's audit trail has a non-member actor. */
-  scope: text("scope", { enum: ["WORKSPACE", "PLATFORM"] })
-    .notNull()
-    .default("WORKSPACE"),
-  tenantActorPrincipalId: uuid("tenant_actor_principal_id").generatedAlwaysAs(
-    sql`case when scope = 'PLATFORM' then null else actor_principal_id end`,
-  ),
-  entityType: text("entity_type").notNull(),
-  entityId: uuid("entity_id").notNull(),
-  beforeState: jsonb("before_state"),
-  afterState: jsonb("after_state"),
-  changedFields: text("changed_fields").array(),
-  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    commandId: uuid("command_id")
+      .notNull()
+      .references(() => commands.id),
+    eventType: text("event_type").notNull(),
+    actorPrincipalId: uuid("actor_principal_id")
+      .notNull()
+      .references(() => principals.id),
+    /** Mirrors `commands.scope`: a platform command's audit trail has a non-member actor. */
+    scope: text("scope", { enum: ["WORKSPACE", "PLATFORM"] })
+      .notNull()
+      .default("WORKSPACE"),
+    tenantActorPrincipalId: uuid("tenant_actor_principal_id").generatedAlwaysAs(
+      sql`case when scope = 'PLATFORM' then null else actor_principal_id end`,
+    ),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    beforeState: jsonb("before_state"),
+    afterState: jsonb("after_state"),
+    changedFields: text("changed_fields").array(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Covers the per-record history read whole: the three equality columns, then
+  // the keyset pair in the order the walk reads them. `nullsFirst` is not
+  // cosmetic — it is Postgres's own default for DESC, and the plain `desc`
+  // `keysetOrderBy` emits only stays sort-free against an index declared the
+  // same way. (`occurred_at` is NOT NULL, so no row ever lands in that tail.)
+  (t) => [
+    index("audit_events_ws_entity_occurred_idx").on(
+      t.workspaceId,
+      t.entityType,
+      t.entityId,
+      t.occurredAt.desc().nullsFirst(),
+      t.id,
+    ),
+  ],
+);
 
 export const workspaceModules = pgTable(
   "workspace_modules",

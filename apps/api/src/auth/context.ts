@@ -15,6 +15,10 @@ export async function resolveAuthContext(
       and(
         eq(memberships.workspaceId, identity.workspaceId),
         eq(memberships.principalId, identity.principalId),
+        // A deactivated member holding an unexpired token resolves to no
+        // context at all, so revocation takes effect on the next request
+        // rather than when the session happens to expire.
+        isNull(memberships.deactivatedAt),
       ),
     );
 

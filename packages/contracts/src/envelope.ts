@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+/** Where a command came in from. Read back on the command receipt, so it is shared. */
+export const COMMAND_ORIGINS = [
+  "HUMAN_UI",
+  "CSV_IMPORT",
+  "OFFLINE_SYNC",
+  "API",
+  "AI_AGENT",
+] as const;
+
+export type CommandOrigin = (typeof COMMAND_ORIGINS)[number];
+
 /**
  * Common envelope carried by every command, regardless of caller
  * (web form, offline sync, CSV import, future AI agent).
@@ -9,7 +20,7 @@ import { z } from "zod";
 export const commandEnvelope = z.object({
   commandId: z.uuid(),
   idempotencyKey: z.string().min(8).max(128),
-  origin: z.enum(["HUMAN_UI", "CSV_IMPORT", "OFFLINE_SYNC", "API", "AI_AGENT"]),
+  origin: z.enum(COMMAND_ORIGINS),
   clientOccurredAt: z.iso.datetime({ offset: true }).optional(),
   expectedVersion: z.number().int().nonnegative().optional(),
   sourceArtifactIds: z.array(z.uuid()).default([]),

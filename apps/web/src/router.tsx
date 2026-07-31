@@ -14,6 +14,7 @@ import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
 import { PersonsScreen } from "./screens/PersonsScreen.js";
+import { UsersScreen } from "./screens/UsersScreen.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
 import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
 import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
@@ -145,6 +146,12 @@ const personsRoute = createRoute({
   component: PersonsScreen,
 });
 
+const usersRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/users",
+  component: UsersScreen,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
@@ -165,6 +172,7 @@ const routeTree = rootRoute.addChildren([
     financePeriodsRoute,
     moreRoute,
     personsRoute,
+    usersRoute,
   ]),
 ]);
 

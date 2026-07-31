@@ -70,6 +70,34 @@ export function formatDateTime(iso: string | null | undefined, locale?: string):
   }).format(date);
 }
 
+const RELATIVE_UNITS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [
+  ["year", 31_536_000_000],
+  ["month", 2_592_000_000],
+  ["day", 86_400_000],
+  ["hour", 3_600_000],
+  ["minute", 60_000],
+];
+
+/** "il y a 2 heures" — the coarsest unit that still says something. */
+export function formatRelativeTime(
+  iso: string | null | undefined,
+  locale?: string,
+): string {
+  if (iso == null) return "";
+
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const elapsed = date.getTime() - Date.now();
+  const formatter = new Intl.RelativeTimeFormat(locale ?? i18n.resolvedLanguage, {
+    numeric: "auto",
+  });
+  for (const [unit, ms] of RELATIVE_UNITS) {
+    if (Math.abs(elapsed) >= ms) return formatter.format(Math.round(elapsed / ms), unit);
+  }
+  return formatter.format(0, "second");
+}
+
 export function localizedLabel(
   labels: LocalizedLabels | null | undefined,
   language: string | null | undefined = i18n.resolvedLanguage,

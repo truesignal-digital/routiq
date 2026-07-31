@@ -1,0 +1,5 @@
+# The demo deploy targets the self-hosted runner on the owner's box; "demo" is
+# that runner's label, not a GitHub-hosted one.
+self-hosted-runner:
+  labels:
+    - demo

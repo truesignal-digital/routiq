@@ -34,6 +34,8 @@ import {
   type ApprovalContext,
   type ApprovalDecision,
 } from "./approvals.js";
+import { fingerprintCanonical } from "./payload-fingerprint.js";
+import { redactSecrets } from "./redaction.js";
 
 export type CommandContext = AuthContext;
 export type Tx = TenantTx;
@@ -137,6 +139,19 @@ export interface CommandDefinition<P> {
           payload: P,
         ): Promise<readonly string[]>;
       };
+  /**
+   * What the receipt stores in place of the payload, for a command whose input
+   * carries a secret (`add-member`, `reset-member-pin`). Used for the stored
+   * row AND the idempotency comparison, so redacting cannot turn an honest
+   * retry into IDEMPOTENCY_KEY_REUSED.
+   *
+   * Deliberately typed over the raw JSON rather than the parsed payload, unlike
+   * the platform hook: a workspace command writes a receipt on the failure path
+   * too (`recordFailureReceipt`), and that path is reached with a payload the
+   * schema has already rejected. A PIN in a malformed payload is still a PIN,
+   * so the seam has to cover input that never parsed.
+   */
+  redactPayload?(payload: unknown): unknown;
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   /**
@@ -349,9 +364,36 @@ export async function dispatchCommand(
     );
   }
 
+  /**
+   * What every receipt for this call stores — success, replay comparison and
+   * failure trail alike.
+   *
+   * It starts redacted rather than raw. Resolving the command is itself a step
+   * that can throw — an unknown name, an unsupported version, a platform
+   * command reached through the workspace route — and each of those still
+   * leaves a REJECTED receipt behind, so a payload that never reached a
+   * definition must already be safe to store. A command that declares its own
+   * `redactPayload` replaces this with the precise version below.
+   */
+  let receiptPayload: unknown = redactSecrets(outer.data.payload);
+
+  /**
+   * Fingerprint of the RAW payload, which is what decides whether a reused
+   * idempotency key carries the same call again. Redaction maps every PIN to
+   * one marker, so comparing stored payloads would read two resets to
+   * different PINs as the same request and replay the first — reporting
+   * success for a PIN it never set, and leaving an admin handing out a code
+   * that does not work. The hash is taken before redaction and only the hash
+   * is stored, so the receipt still holds no secret.
+   */
+  const payloadFingerprint = fingerprint(outer.data.payload);
+
   try {
     const definition = resolveCommand(outer.data.name, outer.data.version);
     const command = commandKey(outer.data.name, outer.data.version);
+    if (!isPlatformCommand(definition) && definition.redactPayload) {
+      receiptPayload = definition.redactPayload(outer.data.payload);
+    }
 
     if (isPlatformCommand(definition)) {
       if (!isOperatorContext(ctx)) {
@@ -430,7 +472,13 @@ export async function dispatchCommand(
           outer.data.envelope.idempotencyKey,
         );
         if (existing) {
-          return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);
+          return replayOrConflict(
+            existing,
+            outer.data.name,
+            outer.data.version,
+            receiptPayload,
+            payloadFingerprint,
+          );
         }
 
         const targetAssetId = definition.operationalAssetId?.(parsedPayload.data);
@@ -475,7 +523,8 @@ export async function dispatchCommand(
           clientOccurredAt: outer.data.envelope.clientOccurredAt
             ? new Date(outer.data.envelope.clientOccurredAt)
             : null,
-          payload: outer.data.payload,
+          payload: receiptPayload,
+          payloadHash: payloadFingerprint,
           result: null,
           approvalOutcome: approval.outcome,
           approvalRuleId: approval.ruleId,
@@ -516,7 +565,13 @@ export async function dispatchCommand(
           ),
         );
         if (existing) {
-          return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);
+          return replayOrConflict(
+            existing,
+            outer.data.name,
+            outer.data.version,
+            receiptPayload,
+            payloadFingerprint,
+          );
         }
       }
       throw error;
@@ -528,15 +583,23 @@ export async function dispatchCommand(
     } else {
       const violation = uniqueViolation(error);
       if (violation) {
-        commandError = new CommandError(
-          409,
-          violation.constraint === "assets_ws_code_uq"
-            ? "DUPLICATE_ASSET_CODE"
-            : "UNIQUE_CONSTRAINT_VIOLATION",
-          {
-            ...(violation.constraint === undefined ? {} : { constraint: violation.constraint }),
-          },
-        );
+        // A username collision losing the race to a concurrent add-member
+        // lands here rather than on the handler's pre-check, and must still
+        // answer with the code the screen renders inline.
+        commandError =
+          violation.constraint === "credentials_ws_username_uq"
+            ? new CommandError(422, "USERNAME_TAKEN")
+            : new CommandError(
+                409,
+                violation.constraint === "assets_ws_code_uq"
+                  ? "DUPLICATE_ASSET_CODE"
+                  : "UNIQUE_CONSTRAINT_VIOLATION",
+                {
+                  ...(violation.constraint === undefined
+                    ? {}
+                    : { constraint: violation.constraint }),
+                },
+              );
       } else {
         log?.error({ err: error, event: "command.failed" });
         reportUnexpectedFailure(error, {
@@ -552,7 +615,13 @@ export async function dispatchCommand(
     // reference rolled back with it, and commands.workspace_id is a real FK.
     // The CLI operator sees the error directly, which is the whole audience.
     if (!isOperatorContext(ctx) && !isPlatformDb(db)) {
-      await recordFailureReceipt(db, ctx, outer.data, commandError, log);
+      await recordFailureReceipt(
+        db,
+        ctx,
+        { ...outer.data, payload: receiptPayload, payloadHash: payloadFingerprint },
+        commandError,
+        log,
+      );
     }
     return commandErrorResponse(commandError);
   }
@@ -580,15 +649,17 @@ async function dispatchPlatform(
       })),
     });
   }
-  /**
-   * Computed once and used for both the stored receipt and the replay
-   * comparison, so the two can never drift apart: redacting only the stored
-   * side would turn every honest re-run of the same file into
-   * IDEMPOTENCY_KEY_REUSED.
-   */
+  /** What the receipt stores: no secret survives into a row kept forever. */
   const receiptPayload = definition.redactPayload
     ? definition.redactPayload(parsedPayload.data)
     : request.payload;
+
+  /**
+   * What decides a replay, taken over the payload as it arrived. Comparing the
+   * stored side instead would let two provisioning runs that differ only in
+   * their PINs replay as one, since redaction maps both to the same marker.
+   */
+  const payloadFingerprint = fingerprint(request.payload);
 
   // Source artifacts are tenant rows, so none can exist to link to.
   if (request.envelope.sourceArtifactIds.length > 0) {
@@ -606,7 +677,13 @@ async function dispatchPlatform(
         request.envelope.idempotencyKey,
       );
       if (existing) {
-        return replayOrConflict(existing, request.name, request.version, receiptPayload);
+        return replayOrConflict(
+          existing,
+          request.name,
+          request.version,
+          receiptPayload,
+          payloadFingerprint,
+        );
       }
 
       const workspaceId = await definition.createWorkspace(
@@ -630,6 +707,7 @@ async function dispatchPlatform(
           ? new Date(request.envelope.clientOccurredAt)
           : null,
         payload: receiptPayload,
+        payloadHash: payloadFingerprint,
         result: null,
         approvalOutcome: null,
         approvalRuleId: null,
@@ -662,7 +740,13 @@ async function dispatchPlatform(
         findPlatformReceipt(tx, ctx.principalId, request.envelope.idempotencyKey),
       );
       if (existing) {
-        return replayOrConflict(existing, request.name, request.version, receiptPayload);
+        return replayOrConflict(
+          existing,
+          request.name,
+          request.version,
+          receiptPayload,
+          payloadFingerprint,
+        );
       }
     }
     throw error;
@@ -698,7 +782,13 @@ function requireTenantDb(db: Db | PlatformDb): Db {
 async function recordFailureReceipt(
   db: Db,
   ctx: CommandContext,
-  request: { name: string; version: number; envelope: CommandEnvelope; payload: unknown },
+  request: {
+    name: string;
+    version: number;
+    envelope: CommandEnvelope;
+    payload: unknown;
+    payloadHash: string;
+  },
   commandError: CommandError,
   log?: CommandLog,
 ): Promise<void> {
@@ -718,6 +808,7 @@ async function recordFailureReceipt(
           ? new Date(request.envelope.clientOccurredAt)
           : null,
         payload: request.payload,
+        payloadHash: request.payloadHash,
         result: null,
         failureCode: commandError.code,
       });
@@ -780,6 +871,8 @@ interface StoredReceipt {
   commandType: string;
   commandVersion: string;
   payload: unknown;
+  /** Null on receipts written before the hash existed; see `replayOrConflict`. */
+  payloadHash: string | null;
   result: unknown;
 }
 
@@ -804,6 +897,7 @@ async function findReceipt(
       commandType: commands.commandType,
       commandVersion: commands.commandVersion,
       payload: commands.payload,
+      payloadHash: commands.payloadHash,
       result: commands.result,
     })
     .from(commands)
@@ -835,6 +929,7 @@ async function findPlatformReceipt(
       commandType: commands.commandType,
       commandVersion: commands.commandVersion,
       payload: commands.payload,
+      payloadHash: commands.payloadHash,
       result: commands.result,
     })
     .from(commands)
@@ -850,16 +945,30 @@ async function findPlatformReceipt(
   return receipt;
 }
 
+/**
+ * `payloadHash` is the comparison, because it is taken over the raw payload
+ * while `payload` is what was safe to store. Two resets under one key to two
+ * different PINs redact to the same row and must still conflict.
+ *
+ * Receipts written before the column existed carry NULL, and fall back to
+ * comparing stored payloads — the old behaviour, which is right for them: their
+ * stored payload is all the evidence that call left.
+ */
 function replayOrConflict(
   receipt: StoredReceipt,
   name: string,
   version: number,
   payload: unknown,
+  payloadHash: string,
 ): { status: number; body: CommandOutcome | ErrorBody } {
+  const samePayload =
+    receipt.payloadHash === null
+      ? canonicalJson(receipt.payload) === canonicalJson(payload)
+      : receipt.payloadHash === payloadHash;
   const isExactRetry =
     receipt.commandType === name &&
     receipt.commandVersion === String(version) &&
-    canonicalJson(receipt.payload) === canonicalJson(payload);
+    samePayload;
 
   if (!isExactRetry) {
     throw new CommandError(409, "IDEMPOTENCY_KEY_REUSED", {
@@ -870,6 +979,15 @@ function replayOrConflict(
     throw new CommandError(500, "COMMAND_FAILED");
   }
   return { status: 200, body: { ...receipt.result, idempotentReplay: true } };
+}
+
+/**
+ * Stable fingerprint of a payload: canonical JSON so key order cannot change
+ * it, then keyed so the digest cannot be brute-forced back into the payload it
+ * came from. See payload-fingerprint.ts for why the key is load-bearing.
+ */
+function fingerprint(value: unknown): string {
+  return fingerprintCanonical(canonicalJson(value));
 }
 
 function canonicalJson(value: unknown): string {

@@ -870,6 +870,35 @@
       "dependencies": [
         "react-i18next"
       ]
+    },
+    {
+      "name": "record-history-sheet",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/record-history-sheet.tsx",
+          "type": "registry:file",
+          "target": "components/record-history-sheet.tsx"
+        },
+        {
+          "path": "src/history/useHistory.ts",
+          "type": "registry:file",
+          "target": "history/useHistory.ts"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "page",
+        "sheet",
+        "status-badge",
+        "use-mobile",
+        "utils"
+      ],
+      "dependencies": [
+        "@tanstack/react-query",
+        "lucide-react",
+        "react-i18next"
+      ]
     }
   ]
 }
