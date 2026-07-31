@@ -1,6 +1,6 @@
 {
-  "id": "3e2cfefe-02e9-4b97-8b0d-f135d72cf86c",
-  "prevId": "9e14e967-c0c9-48b8-9805-a47d555aec81",
+  "id": "9e14e967-c0c9-48b8-9805-a47d555aec81",
+  "prevId": "e6fe8cb1-61f7-4c58-9d39-42be0c856290",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1127,7 +1127,47 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "audit_events_ws_entity_occurred_idx": {
+          "name": "audit_events_ws_entity_occurred_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "first"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "audit_events_workspace_id_workspaces_id_fk": {
           "name": "audit_events_workspace_id_workspaces_id_fk",
@@ -1595,12 +1635,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "payload_hash": {
-          "name": "payload_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "result": {
           "name": "result",
@@ -2671,19 +2705,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::uuid[]"
-        },
-        "deactivated_at": {
-          "name": "deactivated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "row_version": {
-          "name": "row_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
         },
         "created_at": {
           "name": "created_at",
