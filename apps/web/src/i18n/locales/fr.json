@@ -119,6 +119,9 @@
     "CATEGORY_ALREADY_ACTIVE": "Cette catégorie est déjà active. Actualisez la liste.",
     "PRESET_ALREADY_SET": "Ce type d'activité est déjà dans cet état. Actualisez la page.",
     "LAST_PRESET": "Au moins un type d'activité doit rester activé.",
+    "USERNAME_TAKEN": "Ce nom d'utilisateur est déjà pris dans votre espace.",
+    "LAST_ADMIN": "Votre espace doit garder au moins un administrateur actif.",
+    "SELF_DEACTIVATION": "Vous ne pouvez pas désactiver votre propre compte. Demandez à un autre administrateur.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {

@@ -134,6 +134,20 @@
       "when": 1785468789477,
       "tag": "0018_cheerful_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785496009370,
+      "tag": "0019_member_administration",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785496010370,
+      "tag": "0020_member_command_defaults",
+      "breakpoints": true
     }
   ]
 }

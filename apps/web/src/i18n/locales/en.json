@@ -119,6 +119,9 @@
     "CATEGORY_ALREADY_ACTIVE": "This category is already active. Refresh the list.",
     "PRESET_ALREADY_SET": "This activity type is already in that state. Refresh the page.",
     "LAST_PRESET": "At least one activity type must stay enabled.",
+    "USERNAME_TAKEN": "This username is already taken in your workspace.",
+    "LAST_ADMIN": "Your workspace must keep at least one active administrator.",
+    "SELF_DEACTIVATION": "You cannot deactivate your own account. Ask another administrator.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
