@@ -47,6 +47,20 @@ export const COMMAND_QUEUEABILITY = {
   "deactivate-category": false,
   "reactivate-category": false,
   "set-template-preset": false,
+
+  /*
+   * Member administration is decisions all the way down. Granting a login,
+   * changing what someone may approve and revoking access are judgements about
+   * who the workspace trusts, and each is a race only the server can settle: a
+   * queued deactivation replayed an hour later would leave a revoked member
+   * working in the meantime, and a queued role change could demote the last
+   * admin against state the device never saw.
+   */
+  "add-member": false,
+  "update-member-role": false,
+  "deactivate-member": false,
+  "reactivate-member": false,
+  "reset-member-pin": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

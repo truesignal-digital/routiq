@@ -31,3 +31,5 @@ export * from "./commands/substitute-asset.js";
 export * from "./commands/activity-close.js";
 export * from "./commands/record-journey-sheet.js";
 export * from "./commands/queueability.js";
+export * from "./commands/members.js";
+export * from "./reads/members.js";
