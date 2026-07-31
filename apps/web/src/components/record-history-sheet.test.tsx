@@ -227,6 +227,48 @@ describe("record history sheet", () => {
     expect(screen.queryByText("updated")).toBeNull();
   });
 
+  it("names no columns when a PIN was reset, but keeps the event", async () => {
+    stubHistory([
+      event({
+        eventType: "member.pin-reset",
+        changedFields: ["pinHash", "failedAttempts", "lockedUntil"],
+      }),
+    ]);
+    await openSheet();
+
+    // A reset is news; which credential columns it touched is not.
+    expect(screen.getByText("member.pin-reset")).toBeTruthy();
+    expect(screen.queryByText("pinHash")).toBeNull();
+    expect(screen.queryByText("failedAttempts")).toBeNull();
+    expect(screen.queryByText("lockedUntil")).toBeNull();
+  });
+
+  it("still chips lockedAt, which is when a period was locked", async () => {
+    stubHistory([
+      event({
+        eventType: "posting_period.locked",
+        changedFields: ["lockedAt", "status", "lockedByCommandId"],
+      }),
+    ]);
+    await openSheet();
+
+    expect(screen.getByText("locked")).toBeTruthy();
+    expect(screen.getByText("status")).toBeTruthy();
+  });
+
+  it("hides a credential column a later command adds, but not a lookalike", async () => {
+    stubHistory([
+      event({ changedFields: ["passwordHash", "apiSecret", "shippingRef"] }),
+    ]);
+    await openSheet();
+
+    expect(screen.queryByText("passwordHash")).toBeNull();
+    expect(screen.queryByText("apiSecret")).toBeNull();
+    // "shipping" only contains "pin" as a substring, and the field vocabulary
+    // is open — matching whole segments is what keeps this one visible.
+    expect(screen.getByText("shippingRef")).toBeTruthy();
+  });
+
   it("walks the keyset with load more", async () => {
     stubHistory([event()], { hasNextPage: true });
     await openSheet();
