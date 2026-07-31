@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
   activityDetail,
+  HISTORY_ENTITY_TYPES,
+  HISTORY_STATE_KEYS,
+  historyEventDiff,
   historyListResponse,
   type HistoryItem,
 } from "@routiq/contracts";
@@ -10,6 +13,7 @@ import { createSession } from "../auth/local.js";
 import { auditEvents, commands, principals } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { diffStates } from "./history.js";
 
 describe("GET /v1/history/:entityType/:entityId", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -331,6 +335,291 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     const response = await history("activity", activityId, "?cursor=bm90LWEtY3Vyc29y");
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  describe("GET /v1/history/:entityType/:entityId/:eventId", () => {
+    /** A borrowed command receipt: the diff read never looks at one. */
+    async function anchorCommandId(): Promise<string> {
+      const [anchor] = await ctx.db
+        .select({ commandId: auditEvents.commandId })
+        .from(auditEvents)
+        .where(eq(auditEvents.entityId, activityId))
+        .limit(1);
+      if (!anchor) throw new Error("no audit event to borrow a command from");
+      return anchor.commandId;
+    }
+
+    async function seedEvent(input: {
+      entityType: string;
+      entityId: string;
+      eventType: string;
+      beforeState?: Record<string, unknown>;
+      afterState?: Record<string, unknown>;
+    }): Promise<string> {
+      const [row] = await ctx.db
+        .insert(auditEvents)
+        .values({
+          workspaceId,
+          commandId: await anchorCommandId(),
+          eventType: input.eventType,
+          actorPrincipalId: adminPrincipalId,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          beforeState: input.beforeState ?? null,
+          afterState: input.afterState ?? null,
+        })
+        .returning({ id: auditEvents.id });
+      if (!row) throw new Error("audit event insert returned no row");
+      return row.id;
+    }
+
+    async function diff(
+      entityType: string,
+      entityId: string,
+      eventId: string,
+      authToken = token,
+    ) {
+      return ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/${entityType}/${entityId}/${eventId}`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+    }
+
+    async function eventIdOf(eventType: string): Promise<string> {
+      const body = historyListResponse.parse(
+        (await history("activity", activityId)).json(),
+      );
+      const item = body.items.find((row) => row.eventType === eventType);
+      if (!item) throw new Error(`no ${eventType} event on the seeded activity`);
+      return item.eventId;
+    }
+
+    it("shows what a real command moved, and drops the bookkeeping columns", async () => {
+      const eventId = await eventIdOf("activity.reopened");
+      const response = await diff("activity", activityId, eventId);
+      expect(response.statusCode).toBe(200);
+
+      const body = historyEventDiff.parse(response.json());
+      expect(body.eventId).toBe(eventId);
+      expect(body.changes).toContainEqual({
+        field: "status",
+        kind: "VALUE",
+        before: "CLOSED",
+        after: "OPEN",
+      });
+      expect(body.changes).toContainEqual({
+        field: "reason",
+        kind: "VALUE",
+        before: null,
+        after: "Kilométrage de fin corrigé par le bureau",
+      });
+      // `rowVersion` moved on every one of these writes and means nothing here.
+      expect(body.changes.map((change) => change.field)).not.toContain("rowVersion");
+    });
+
+    it("serves no state key the allowlist does not name", async () => {
+      const eventId = await seedEvent({
+        entityType: "activity",
+        entityId: activityId,
+        eventType: "activity.spiked",
+        afterState: {
+          status: "CLOSED",
+          // None of these are on the activity allowlist. Presence in the row is
+          // exactly the case this read exists to survive.
+          pinHash: "argon2id$v=19$m=65536",
+          internalRiskScore: 0.92,
+          workspaceId,
+          rowVersion: 7,
+        },
+      });
+
+      const body = historyEventDiff.parse(
+        (await diff("activity", activityId, eventId)).json(),
+      );
+      expect(body.changes.map((change) => change.field)).toEqual(["status"]);
+      expect(JSON.stringify(body)).not.toContain("argon2id");
+      expect(JSON.stringify(body)).not.toContain("0.92");
+    });
+
+    it("strips credential-shaped keys nested inside an allowed value", async () => {
+      const eventId = await seedEvent({
+        entityType: "activity",
+        entityId: activityId,
+        eventType: "activity.crewed",
+        afterState: {
+          crew: [
+            {
+              personId: "11111111-1111-4111-8111-111111111111",
+              role: "DRIVER",
+              pinHash: "argon2id$v=19$m=65536",
+              apiToken: "rq_live_secret",
+            },
+          ],
+        },
+      });
+
+      const body = historyEventDiff.parse(
+        (await diff("activity", activityId, eventId)).json(),
+      );
+      const crew = body.changes.find((change) => change.field === "crew");
+      expect(crew?.after).toEqual([
+        { personId: "11111111-1111-4111-8111-111111111111", role: "DRIVER" },
+      ]);
+    });
+
+    it("hands money back as minor units with the record's own currency", async () => {
+      const entryId = randomUUID();
+      const eventId = await seedEvent({
+        entityType: "financial_entry",
+        entityId: entryId,
+        eventType: "financial_entry.posted",
+        afterState: { amountMinor: 125_000, currency: "XAF", status: "POSTED" },
+      });
+
+      const body = historyEventDiff.parse(
+        (await diff("financial_entry", entryId, eventId)).json(),
+      );
+      expect(body.currency).toBe("XAF");
+      // XAF has exponent 0: this is 125 000 francs, and nothing divides it.
+      expect(body.changes).toContainEqual({
+        field: "amountMinor",
+        kind: "MONEY",
+        before: null,
+        after: 125_000,
+      });
+    });
+
+    it("falls back to the workspace currency when the state carries none", async () => {
+      const ruleId = randomUUID();
+      const eventId = await seedEvent({
+        entityType: "approval_rule",
+        entityId: ruleId,
+        eventType: "approval-threshold.updated",
+        beforeState: { amountMaxMinor: 50_000 },
+        afterState: { amountMaxMinor: 200_000 },
+      });
+
+      const body = historyEventDiff.parse(
+        (await diff("approval_rule", ruleId, eventId)).json(),
+      );
+      expect(body.currency).toBe("XAF");
+      expect(body.changes).toEqual([
+        {
+          field: "amountMaxMinor",
+          kind: "MONEY",
+          before: 50_000,
+          after: 200_000,
+        },
+      ]);
+    });
+
+    it("treats a creation event as a move from nothing", async () => {
+      const readingId = randomUUID();
+      const eventId = await seedEvent({
+        entityType: "meter_reading",
+        entityId: readingId,
+        eventType: "meter_reading.recorded",
+        afterState: { readingType: "ODOMETER", value: 411_125, source: "FIELD" },
+      });
+
+      const body = historyEventDiff.parse(
+        (await diff("meter_reading", readingId, eventId)).json(),
+      );
+      expect(body.changes).toEqual([
+        { field: "readingType", kind: "VALUE", before: null, after: "ODOMETER" },
+        // An odometer is not money, whatever the digits look like.
+        { field: "value", kind: "VALUE", before: null, after: 411_125 },
+        { field: "source", kind: "VALUE", before: null, after: "FIELD" },
+      ]);
+    });
+
+    it("says nothing changed rather than inventing a diff", async () => {
+      const eventId = await seedEvent({
+        entityType: "activity",
+        entityId: activityId,
+        eventType: "activity.touched",
+        beforeState: { status: "OPEN" },
+        afterState: { status: "OPEN" },
+      });
+
+      const body = historyEventDiff.parse(
+        (await diff("activity", activityId, eventId)).json(),
+      );
+      expect(body.changes).toEqual([]);
+    });
+
+    it("refuses an event that belongs to another record", async () => {
+      const eventId = await eventIdOf("activity.closed");
+      const response = await diff("activity", randomUUID(), eventId);
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({
+        error: { code: "REFERENCE_NOT_FOUND" },
+      });
+    });
+
+    it("shows another tenant nothing for an event id it does not own", async () => {
+      const eventId = await eventIdOf("activity.closed");
+      const response = await diff("activity", activityId, eventId, otherToken);
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("rejects an entity type outside our row vocabulary", async () => {
+      const response = await diff("shipment", activityId, randomUUID());
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
+    it("rejects a malformed event id", async () => {
+      const response = await diff("activity", activityId, "not-a-uuid");
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("lets every allowlisted key through — the two filters never fight", () => {
+      // The credential pattern is defence in depth, not a second vocabulary: if
+      // it ever starts eating a business field, this is where it shows up.
+      for (const entityType of HISTORY_ENTITY_TYPES) {
+        for (const key of HISTORY_STATE_KEYS[entityType]) {
+          const changes = diffStates(entityType, null, { [key]: "x" });
+          expect(
+            changes.map((change) => change.field),
+            `${entityType}.${key}`,
+          ).toEqual([key]);
+        }
+      }
+    });
+
+    it("gates the diff behind the entity's owning module", async () => {
+      const seeded = await seedWorkspace(ctx.db);
+      const admin = await seedMember(ctx.db, {
+        workspaceId: seeded.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      const gatedToken = (
+        await createSession(ctx.db, {
+          workspaceId: seeded.workspace.id,
+          principalId: admin.principal.id,
+        })
+      ).token;
+
+      await command(
+        "disable-module",
+        { moduleCode: "ACTIVITIES" },
+        { token: gatedToken },
+      );
+
+      const response = await diff(
+        "activity",
+        randomUUID(),
+        randomUUID(),
+        gatedToken,
+      );
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toEqual({
+        error: { code: "MODULE_DISABLED", metadata: { module: "ACTIVITIES" } },
+      });
+    });
   });
 
   it("gates the timeline behind the entity's owning module", async () => {
