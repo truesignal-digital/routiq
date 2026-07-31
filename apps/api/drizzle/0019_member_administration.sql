@@ -23,7 +23,12 @@
 --
 -- No new table, so no new GRANT: routiq_app already holds the privileges for
 -- both tables from migration 0004.
+--
+-- IF NOT EXISTS on each column because this migration was numbered 0018 before
+-- record-history claimed that slot. A database that applied the old numbering
+-- already has these columns, and would otherwise fail the replay on a duplicate
+-- rather than skipping work it has already done.
 
-ALTER TABLE "commands" ADD COLUMN "payload_hash" text;--> statement-breakpoint
-ALTER TABLE "memberships" ADD COLUMN "deactivated_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "memberships" ADD COLUMN "row_version" integer DEFAULT 1 NOT NULL;
+ALTER TABLE "commands" ADD COLUMN IF NOT EXISTS "payload_hash" text;--> statement-breakpoint
+ALTER TABLE "memberships" ADD COLUMN IF NOT EXISTS "deactivated_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "memberships" ADD COLUMN IF NOT EXISTS "row_version" integer DEFAULT 1 NOT NULL;
