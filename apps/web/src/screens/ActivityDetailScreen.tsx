@@ -15,6 +15,7 @@ import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { ProvenanceStamp } from "@/components/provenance-stamp.js";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
 
@@ -71,7 +72,12 @@ export function ActivityDetailScreen() {
     <PageContainer width="wide">
       <PageHeader
         title={activity.activityNumber}
-        actions={<ActivityActions activity={activity} />}
+        actions={
+          <>
+            <ActivityActions activity={activity} />
+            <RecordHistorySheet entityType="activity" entityId={activity.id} />
+          </>
+        }
       />
 
       <div className="mt-2 flex flex-wrap items-center gap-2">

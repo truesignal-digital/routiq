@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EntrySummary } from "@/finance/EntrySummary.js";
@@ -118,6 +119,9 @@ export function FinanceEntryDetailScreen() {
     <PageContainer>
       <PageHeader
         title={t("finance.entries.detail.title")}
+        actions={
+          <RecordHistorySheet entityType="financial_entry" entityId={entryId} />
+        }
       />
 
       {entryQuery.isPending ? (
