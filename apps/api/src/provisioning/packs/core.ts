@@ -145,6 +145,27 @@ function defaultApprovalRules(): Array<
     });
   }
 
+  // Member administration, ADMIN only — same reasoning one step further: these
+  // decide who holds a role at all, so anyone who could grant themselves one
+  // could grant themselves every rule above.
+  for (const commandType of [
+    "add-member",
+    "update-member-role",
+    "deactivate-member",
+    "reactivate-member",
+    "reset-member-pin",
+  ]) {
+    rules.push({
+      commandType,
+      categoryCode: null,
+      branchId: null,
+      amountMinMinor: null,
+      amountMaxMinor: null,
+      requiredRole: "ADMIN",
+      createdByCommandId: null,
+    });
+  }
+
   for (const commandType of ["record-expense", "record-revenue"]) {
     rules.push(
       ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const).map(
