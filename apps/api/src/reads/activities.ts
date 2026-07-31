@@ -29,6 +29,7 @@ import {
   activityAssetSegments,
   activityPeople,
   assets,
+  branches,
   categories,
   financialEntries,
   financialPostings,
@@ -338,6 +339,7 @@ export function registerActivityReadRoutes(
               endedAt: activities.endedAt,
               closedAt: activities.closedAt,
               branchId: activities.branchId,
+              branchCode: branches.code,
               rowVersion: activities.rowVersion,
             })
             .from(activities)
@@ -347,6 +349,13 @@ export function registerActivityReadRoutes(
                 eq(categories.workspaceId, activities.workspaceId),
                 eq(categories.id, activities.activityTypeId),
                 eq(categories.kind, "ACTIVITY_TYPE"),
+              ),
+            )
+            .innerJoin(
+              branches,
+              and(
+                eq(branches.workspaceId, activities.workspaceId),
+                eq(branches.id, activities.branchId),
               ),
             )
             .where(and(...conditions))
@@ -455,6 +464,9 @@ export function registerActivityReadRoutes(
 
           const readingRows = await tx
             .select({
+              id: meterReadings.id,
+              assetId: meterReadings.assetId,
+              assetCode: assets.assetCode,
               readingType: meterReadings.readingType,
               value: meterReadings.value,
               observedAt: meterReadings.observedAt,
@@ -462,6 +474,13 @@ export function registerActivityReadRoutes(
               supersededById: meterReadings.supersededById,
             })
             .from(meterReadings)
+            .innerJoin(
+              assets,
+              and(
+                eq(assets.workspaceId, meterReadings.workspaceId),
+                eq(assets.id, meterReadings.assetId),
+              ),
+            )
             .where(
               and(
                 eq(meterReadings.workspaceId, auth.workspaceId),
@@ -559,6 +578,7 @@ export function registerActivityReadRoutes(
           plannedEndAt: header.plannedEndAt?.toISOString() ?? null,
           closedAt: header.closedAt?.toISOString() ?? null,
           branchId: header.branchId,
+          branchCode: header.branchCode,
           primaryAssetCode,
           legCount: legRows.length,
           crewCount: crewRows.length,

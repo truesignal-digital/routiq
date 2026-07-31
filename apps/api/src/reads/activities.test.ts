@@ -362,7 +362,11 @@ describe("activity, person and place reads", () => {
       primaryAssetCode: "ACT-TRACTOR",
       legCount: 2,
       crewCount: 1,
+      // record-expense addresses a branch by code, so the detail has to carry it
+      // — an id would leave the mid-trip expense dialog with nothing to send.
+      branchCode: "DLA",
     });
+    expect(detail.branchId).toBe(doualaBranchId);
     expect(
       detail.segments.map((segment) => segment.assetCode).sort(),
     ).toEqual(["ACT-TRACTOR", "ACT-TRAILER"].sort());
@@ -387,6 +391,14 @@ describe("activity, person and place reads", () => {
       410_000,
       411_125,
     ]);
+    // A reading has to name its own meter: the detail lists several assets, and a
+    // correction supersedes by id, so neither can be inferred from position.
+    for (const reading of detail.readings) {
+      expect(reading.id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(reading.assetId).toBe(primaryAssetId);
+      expect(reading.assetCode).toBe("ACT-TRACTOR");
+    }
+    expect(new Set(detail.readings.map((reading) => reading.id)).size).toBe(2);
     expect(detail.financialEntries).toEqual([
       expect.objectContaining({
         direction: "REVENUE",

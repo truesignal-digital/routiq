@@ -5,6 +5,11 @@ const positiveMoneyMinor = moneyMinor.positive().max(Number.MAX_SAFE_INTEGER);
 
 export const financialEntryPostingPayload = z.object({
   assetId: z.uuid().optional(),
+  /**
+   * Attributes the cost to a job as well as to the truck — the mid-trip expense
+   * a clerk records from the activity, without waiting for the sheet at close.
+   */
+  activityId: z.uuid().optional(),
   amountMinor: positiveMoneyMinor,
   assetAttribution: z.enum(["DIRECT", "ALLOCATED"]).default("DIRECT"),
 });

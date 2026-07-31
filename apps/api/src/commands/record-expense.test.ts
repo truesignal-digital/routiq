@@ -732,6 +732,67 @@ describe("record-expense.v1", () => {
     });
   });
 
+  it("attributes a posting to an activity when the payload names one", async () => {
+    const activityId = randomUUID();
+    const created = await postCommand(adminToken, "create-activity", {
+      activityId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: assetId,
+      startedAt: "2026-07-24T06:00:00Z",
+    });
+    expect(created.statusCode).toBe(200);
+
+    const entryId = randomUUID();
+    const response = await postCommand(token, "record-expense", {
+      entryId,
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: "2026-07-24",
+      amountMinor: 40_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId, activityId, amountMinor: 40_000 }],
+    });
+    expect(response.statusCode).toBe(200);
+
+    const postings = await db
+      .select()
+      .from(financialPostings)
+      .where(eq(financialPostings.financialEntryId, entryId));
+    expect(postings).toHaveLength(1);
+    // Both dimensions on one line: the truck that burned the fuel and the job it
+    // burned it on. §4.2 keeps one canonical posting per economic fact.
+    expect(postings[0]).toMatchObject({
+      assetId,
+      activityId,
+      amountMinor: 40_000n,
+      assetAttribution: "DIRECT",
+      activityAttribution: "DIRECT",
+    });
+  });
+
+  it("refuses an activityId the workspace does not know", async () => {
+    const response = await postCommand(token, "record-expense", {
+      entryId: randomUUID(),
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: "2026-07-24",
+      amountMinor: 12_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId, activityId: randomUUID(), amountMinor: 12_000 }],
+    });
+
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "REFERENCE_NOT_FOUND",
+        metadata: { referenceType: "activity" },
+      },
+    });
+  });
+
   async function postCommand(
     authToken: string,
     name: string,
