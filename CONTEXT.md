@@ -44,6 +44,10 @@ _Avoid_: signup, self-service onboarding
 The software vendor's own principal — no workspace binding, accepted only by provisioning and platform commands, invoked via CLI. Never a tenant user; never used for tenant business commands.
 _Avoid_: super admin (implies an in-app tenant role), root user
 
+**Module Entitlement**:
+The vendor-granted right of a Workspace to use a module (maintenance, stock, …). Platform-scope: only the Vendor Operator changes it (ADR-0005); tenants see it read-only. Distinct from an Entry Role, which governs who *within* an entitled Workspace may act.
+_Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing model yet)
+
 ## Relationships
 
 - A **Workspace** belongs to exactly one **Asset-Operating Business**
