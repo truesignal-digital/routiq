@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Deliberately one job: branch protection needs a single stable required
+  # check name (deployment spec §2).
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      # Not used by the test suite — apps/api tests start their own
+      # postgres:17-alpine via testcontainers (src/test/global-setup.ts).
+      # This container exists to rehearse the deploy-time migration path
+      # (`pnpm db:migrate` through drizzle-kit, spec §3 step 3) against a
+      # real server before a merge can reach the demo box.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: routiq
+          POSTGRES_PASSWORD: routiq
+          POSTGRES_DB: routiq_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U routiq -d routiq_dev"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Version comes from the root package.json "packageManager" field.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - name: Apply migrations (drizzle-kit CLI path)
+        run: pnpm db:migrate
+        env:
+          MIGRATION_DATABASE_URL: postgres://routiq:routiq@localhost:5432/routiq_dev
+
+      # Tests provision their own Postgres per run via testcontainers; Docker is
+      # present on ubuntu-latest, so no DATABASE_URL is needed here.
+      - run: pnpm test
+
+      - run: pnpm --filter @routiq/web build
+
+      # §6a guard 4: docker-compose.yml is the distribution artifact. Cheap
+      # validity check only — the full cold-start boot is a nightly job.
+      - name: Validate docker-compose.yml
+        run: docker compose config -q
