@@ -1,0 +1,362 @@
+import { randomUUID } from "node:crypto";
+import {
+  activityDetail,
+  historyListResponse,
+  type HistoryItem,
+} from "@routiq/contracts";
+import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createSession } from "../auth/local.js";
+import { auditEvents, commands, principals } from "../db/schema.js";
+import { createTestApp } from "../test/fixture.js";
+import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+
+describe("GET /v1/history/:entityType/:entityId", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let token: string;
+  let otherToken: string;
+  let workspaceId: string;
+  let adminPrincipalId: string;
+  let activityId: string;
+
+  async function command(
+    name: string,
+    payload: Record<string, unknown>,
+    options: { token?: string; expectedVersion?: number } = {},
+  ) {
+    const response = await ctx.app.inject({
+      method: "POST",
+      url: `/v1/commands/${name}`,
+      headers: { authorization: `Bearer ${options.token ?? token}` },
+      payload: {
+        version: 1,
+        envelope: {
+          commandId: randomUUID(),
+          idempotencyKey: `history-read-${randomUUID()}`,
+          origin: "HUMAN_UI",
+          ...(options.expectedVersion === undefined
+            ? {}
+            : { expectedVersion: options.expectedVersion }),
+        },
+        payload,
+      },
+    });
+    if (response.statusCode !== 200) {
+      throw new Error(`${name} failed: ${response.statusCode} ${response.body}`);
+    }
+    return response.json();
+  }
+
+  /** Reopen and close both lock on the activity's version, so read it back first. */
+  async function activityRowVersion(): Promise<number> {
+    const response = await ctx.app.inject({
+      method: "GET",
+      url: `/v1/activities/${activityId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    return activityDetail.parse(response.json()).rowVersion;
+  }
+
+  async function history(
+    entityType: string,
+    entityId: string,
+    query = "",
+    authToken = token,
+  ) {
+    return ctx.app.inject({
+      method: "GET",
+      url: `/v1/history/${entityType}/${entityId}${query}`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+  }
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    const admin = await seedMember(ctx.db, {
+      workspaceId,
+      role: "ADMIN",
+      allBranches: true,
+    });
+    adminPrincipalId = admin.principal.id;
+    token = (
+      await createSession(ctx.db, { workspaceId, principalId: adminPrincipalId })
+    ).token;
+
+    const otherSeeded = await seedWorkspace(ctx.db);
+    const otherAdmin = await seedMember(ctx.db, {
+      workspaceId: otherSeeded.workspace.id,
+      role: "ADMIN",
+      allBranches: true,
+    });
+    otherToken = (
+      await createSession(ctx.db, {
+        workspaceId: otherSeeded.workspace.id,
+        principalId: otherAdmin.principal.id,
+      })
+    ).token;
+
+    const assetId = await seedAsset(ctx.app, token, { assetCode: "HIST-TRUCK" });
+    const driverId = randomUUID();
+    await command("register-person", {
+      personId: driverId,
+      displayName: "Abdoulaye Sanda",
+      branchCode: "DLA",
+      defaultRole: "DRIVER",
+    });
+
+    // One activity carrying a chain of events: recorded, reopened (with a
+    // motif), closed again — three commands, three audit rows, one entity.
+    activityId = randomUUID();
+    await command("record-haulage-job-sheet", {
+      activityId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: assetId,
+      startedAt: "2026-07-10T06:10:00Z",
+      endedAt: "2026-07-11T09:00:00Z",
+      customerName: "Brasseries du Cameroun",
+      startReading: {
+        readingId: randomUUID(),
+        readingType: "ODOMETER",
+        value: 410_000,
+        observedAt: "2026-07-10T06:10:00Z",
+      },
+      endReading: {
+        readingId: randomUUID(),
+        readingType: "ODOMETER",
+        value: 411_125,
+        observedAt: "2026-07-11T09:00:00Z",
+      },
+      crew: [
+        {
+          activityPersonId: randomUUID(),
+          personId: driverId,
+          role: "DRIVER",
+        },
+      ],
+      legs: [
+        {
+          legId: randomUUID(),
+          legNo: 1,
+          origin: { kind: "text", text: "Douala" },
+          destination: { kind: "text", text: "Yaoundé" },
+          distanceKm: 245,
+          loadState: "LADEN",
+        },
+      ],
+    });
+    await command(
+      "reopen-activity",
+      { activityId, reason: "Kilométrage de fin corrigé par le bureau" },
+      { expectedVersion: await activityRowVersion() },
+    );
+    await command(
+      "close-activity",
+      { activityId },
+      { expectedVersion: await activityRowVersion() },
+    );
+  });
+
+  afterAll(async () => ctx.close());
+
+  it("returns the record's events newest first", async () => {
+    const response = await history("activity", activityId);
+    expect(response.statusCode).toBe(200);
+
+    const body = historyListResponse.parse(response.json());
+    expect(body.items.map((item) => item.eventType)).toEqual([
+      "activity.closed",
+      "activity.reopened",
+      "activity.sheet_recorded",
+    ]);
+    expect(body.nextCursor).toBeNull();
+
+    const [closed] = body.items;
+    expect(closed).toMatchObject({
+      actor: {
+        principalId: adminPrincipalId,
+        scope: "WORKSPACE",
+      },
+      command: { name: "close-activity", version: "1", origin: "HUMAN_UI" },
+    });
+    expect(closed?.changedFields).toContain("status");
+  });
+
+  it("lifts the reopen motif into `note`, and leaves other events without one", async () => {
+    const response = await history("activity", activityId);
+    const body = historyListResponse.parse(response.json());
+
+    const reopened = body.items.find(
+      (item) => item.eventType === "activity.reopened",
+    );
+    expect(reopened?.note).toBe("Kilométrage de fin corrigé par le bureau");
+
+    const recorded = body.items.find(
+      (item) => item.eventType === "activity.sheet_recorded",
+    );
+    expect(recorded?.note).toBeNull();
+  });
+
+  it("walks the whole timeline through the cursor without skipping or repeating", async () => {
+    const seen: HistoryItem[] = [];
+    let cursor: string | null = null;
+
+    for (let page = 0; page < 5; page += 1) {
+      const query: string = cursor
+        ? `?limit=1&cursor=${encodeURIComponent(cursor)}`
+        : "?limit=1";
+      const response = await history("activity", activityId, query);
+      expect(response.statusCode).toBe(200);
+      const body = historyListResponse.parse(response.json());
+      seen.push(...body.items);
+      cursor = body.nextCursor;
+      if (!cursor) break;
+    }
+
+    expect(cursor).toBeNull();
+    const eventIds = seen.map((item) => item.eventId);
+    expect(new Set(eventIds).size).toBe(eventIds.length);
+
+    const wholePage = historyListResponse.parse(
+      (await history("activity", activityId)).json(),
+    );
+    expect(eventIds).toEqual(wholePage.items.map((item) => item.eventId));
+  });
+
+  it("keeps the walk stable when two events share a timestamp", async () => {
+    const [anchor] = await ctx.db
+      .select({ commandId: auditEvents.commandId })
+      .from(auditEvents)
+      .where(eq(auditEvents.entityId, activityId))
+      .limit(1);
+    if (!anchor) throw new Error("no audit event to borrow a command from");
+
+    const tiedEntityId = randomUUID();
+    const occurredAt = new Date("2026-07-12T08:00:00Z");
+    await ctx.db.insert(auditEvents).values(
+      [1, 2, 3].map(() => ({
+        workspaceId,
+        commandId: anchor.commandId,
+        eventType: "activity.tied",
+        actorPrincipalId: adminPrincipalId,
+        entityType: "activity",
+        entityId: tiedEntityId,
+        changedFields: [],
+        occurredAt,
+      })),
+    );
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let page = 0; page < 5; page += 1) {
+      const query: string = cursor
+        ? `?limit=1&cursor=${encodeURIComponent(cursor)}`
+        : "?limit=1";
+      const body = historyListResponse.parse(
+        (await history("activity", tiedEntityId, query)).json(),
+      );
+      seen.push(...body.items.map((item) => item.eventId));
+      cursor = body.nextCursor;
+      if (!cursor) break;
+    }
+
+    expect(seen).toHaveLength(3);
+    expect(new Set(seen).size).toBe(3);
+  });
+
+  it("renders a PLATFORM event with no principal behind it", async () => {
+    const [operator] = await ctx.db
+      .insert(principals)
+      .values({ principalType: "VENDOR_OPERATOR", displayName: "vendor-cli" })
+      .returning();
+    if (!operator) throw new Error("operator principal insert returned no row");
+
+    const commandId = randomUUID();
+    await ctx.db.insert(commands).values({
+      id: commandId,
+      workspaceId,
+      commandType: "provision-workspace",
+      commandVersion: "1",
+      scope: "PLATFORM",
+      origin: "API",
+      status: "EXECUTED",
+      initiatedByPrincipalId: operator.id,
+      idempotencyKey: `history-platform-${randomUUID()}`,
+      payload: {},
+    });
+    await ctx.db.insert(auditEvents).values({
+      workspaceId,
+      commandId,
+      eventType: "workspace.provisioned",
+      actorPrincipalId: operator.id,
+      scope: "PLATFORM",
+      entityType: "workspace",
+      entityId: workspaceId,
+    });
+
+    const response = await history("workspace", workspaceId);
+    expect(response.statusCode).toBe(200);
+    const body = historyListResponse.parse(response.json());
+    expect(body.items).toEqual([
+      expect.objectContaining({
+        eventType: "workspace.provisioned",
+        actor: { principalId: null, displayName: null, scope: "PLATFORM" },
+      }),
+    ]);
+  });
+
+  it("shows another tenant nothing for the same record id", async () => {
+    const response = await history("activity", activityId, "", otherToken);
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ items: [], nextCursor: null });
+  });
+
+  it("rejects an entity type outside our row vocabulary", async () => {
+    const response = await history("shipment", activityId);
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  it("rejects a malformed entity id", async () => {
+    const response = await history("activity", "not-a-uuid");
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  it("rejects a tampered cursor rather than answering a stale first page", async () => {
+    const response = await history("activity", activityId, "?cursor=bm90LWEtY3Vyc29y");
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  it("gates the timeline behind the entity's owning module", async () => {
+    const seeded = await seedWorkspace(ctx.db);
+    const admin = await seedMember(ctx.db, {
+      workspaceId: seeded.workspace.id,
+      role: "ADMIN",
+      allBranches: true,
+    });
+    const gatedToken = (
+      await createSession(ctx.db, {
+        workspaceId: seeded.workspace.id,
+        principalId: admin.principal.id,
+      })
+    ).token;
+
+    await command(
+      "disable-module",
+      { moduleCode: "ACTIVITIES" },
+      { token: gatedToken },
+    );
+
+    const response = await history("activity", randomUUID(), "", gatedToken);
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      error: { code: "MODULE_DISABLED", metadata: { module: "ACTIVITIES" } },
+    });
+  });
+});
