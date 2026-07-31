@@ -49,6 +49,12 @@ export const COMMAND_ERROR_CODES = [
   "CATEGORY_ALREADY_ACTIVE",
   "PRESET_ALREADY_SET",
   "LAST_PRESET",
+  /** A username already exists in this workspace (`credentials_ws_username_uq`). */
+  "USERNAME_TAKEN",
+  /** Demoting or deactivating the workspace's only remaining active ADMIN. */
+  "LAST_ADMIN",
+  /** An admin deactivating their own membership — the lockout foot-gun. */
+  "SELF_DEACTIVATION",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

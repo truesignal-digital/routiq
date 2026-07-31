@@ -137,6 +137,19 @@ export interface CommandDefinition<P> {
           payload: P,
         ): Promise<readonly string[]>;
       };
+  /**
+   * What the receipt stores in place of the payload, for a command whose input
+   * carries a secret (`add-member`, `reset-member-pin`). Used for the stored
+   * row AND the idempotency comparison, so redacting cannot turn an honest
+   * retry into IDEMPOTENCY_KEY_REUSED.
+   *
+   * Deliberately typed over the raw JSON rather than the parsed payload, unlike
+   * the platform hook: a workspace command writes a receipt on the failure path
+   * too (`recordFailureReceipt`), and that path is reached with a payload the
+   * schema has already rejected. A PIN in a malformed payload is still a PIN,
+   * so the seam has to cover input that never parsed.
+   */
+  redactPayload?(payload: unknown): unknown;
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   /**
@@ -349,9 +362,20 @@ export async function dispatchCommand(
     );
   }
 
+  /**
+   * What every receipt for this call stores — success, replay comparison and
+   * failure trail alike. Set before any step that can throw past the point
+   * where the command is known, so a secret cannot reach the row by way of an
+   * error path that skipped the redaction.
+   */
+  let receiptPayload: unknown = outer.data.payload;
+
   try {
     const definition = resolveCommand(outer.data.name, outer.data.version);
     const command = commandKey(outer.data.name, outer.data.version);
+    if (!isPlatformCommand(definition) && definition.redactPayload) {
+      receiptPayload = definition.redactPayload(outer.data.payload);
+    }
 
     if (isPlatformCommand(definition)) {
       if (!isOperatorContext(ctx)) {
@@ -430,7 +454,7 @@ export async function dispatchCommand(
           outer.data.envelope.idempotencyKey,
         );
         if (existing) {
-          return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);
+          return replayOrConflict(existing, outer.data.name, outer.data.version, receiptPayload);
         }
 
         const targetAssetId = definition.operationalAssetId?.(parsedPayload.data);
@@ -475,7 +499,7 @@ export async function dispatchCommand(
           clientOccurredAt: outer.data.envelope.clientOccurredAt
             ? new Date(outer.data.envelope.clientOccurredAt)
             : null,
-          payload: outer.data.payload,
+          payload: receiptPayload,
           result: null,
           approvalOutcome: approval.outcome,
           approvalRuleId: approval.ruleId,
@@ -516,7 +540,7 @@ export async function dispatchCommand(
           ),
         );
         if (existing) {
-          return replayOrConflict(existing, outer.data.name, outer.data.version, outer.data.payload);
+          return replayOrConflict(existing, outer.data.name, outer.data.version, receiptPayload);
         }
       }
       throw error;
@@ -528,15 +552,23 @@ export async function dispatchCommand(
     } else {
       const violation = uniqueViolation(error);
       if (violation) {
-        commandError = new CommandError(
-          409,
-          violation.constraint === "assets_ws_code_uq"
-            ? "DUPLICATE_ASSET_CODE"
-            : "UNIQUE_CONSTRAINT_VIOLATION",
-          {
-            ...(violation.constraint === undefined ? {} : { constraint: violation.constraint }),
-          },
-        );
+        // A username collision losing the race to a concurrent add-member
+        // lands here rather than on the handler's pre-check, and must still
+        // answer with the code the screen renders inline.
+        commandError =
+          violation.constraint === "credentials_ws_username_uq"
+            ? new CommandError(422, "USERNAME_TAKEN")
+            : new CommandError(
+                409,
+                violation.constraint === "assets_ws_code_uq"
+                  ? "DUPLICATE_ASSET_CODE"
+                  : "UNIQUE_CONSTRAINT_VIOLATION",
+                {
+                  ...(violation.constraint === undefined
+                    ? {}
+                    : { constraint: violation.constraint }),
+                },
+              );
       } else {
         log?.error({ err: error, event: "command.failed" });
         reportUnexpectedFailure(error, {
@@ -552,7 +584,13 @@ export async function dispatchCommand(
     // reference rolled back with it, and commands.workspace_id is a real FK.
     // The CLI operator sees the error directly, which is the whole audience.
     if (!isOperatorContext(ctx) && !isPlatformDb(db)) {
-      await recordFailureReceipt(db, ctx, outer.data, commandError, log);
+      await recordFailureReceipt(
+        db,
+        ctx,
+        { ...outer.data, payload: receiptPayload },
+        commandError,
+        log,
+      );
     }
     return commandErrorResponse(commandError);
   }

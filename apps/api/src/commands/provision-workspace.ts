@@ -14,6 +14,7 @@ import {
 } from "../db/schema.js";
 import { corePack } from "../provisioning/packs/core.js";
 import { PRESET_PACKS, type StarterPack } from "../provisioning/packs/index.js";
+import { REDACTED_PIN } from "./redaction.js";
 import {
   appendPlatformAuditEvent,
   CommandError,
@@ -21,11 +22,7 @@ import {
   type Tx,
 } from "./dispatcher.js";
 
-/**
- * Stands in for every PIN in the stored receipt. Exported so tests assert
- * the exact marker rather than the absence of one particular string.
- */
-export const REDACTED_PIN = "[REDACTED]";
+export { REDACTED_PIN } from "./redaction.js";
 
 /**
  * Tenant #3 without hand-written SQL (ADR-0004): workspace, first branch, user
