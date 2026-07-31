@@ -1,5 +1,5 @@
 {
-  "id": "b337b143-44d3-46fd-ba6c-e2a390fdee27",
+  "id": "3e2cfefe-02e9-4b97-8b0d-f135d72cf86c",
   "prevId": "e6fe8cb1-61f7-4c58-9d39-42be0c856290",
   "version": "7",
   "dialect": "postgresql",
@@ -1595,6 +1595,12 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "result": {
           "name": "result",

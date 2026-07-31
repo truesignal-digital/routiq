@@ -129,10 +129,17 @@
       "breakpoints": true
     },
     {
-      "idx": 18,
+      "idx": 19,
       "version": "7",
-      "when": 1785494100222,
-      "tag": "0018_member_administration",
+      "when": 1785496009370,
+      "tag": "0019_member_administration",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785496010370,
+      "tag": "0020_member_command_defaults",
       "breakpoints": true
     }
   ]

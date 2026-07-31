@@ -200,6 +200,14 @@ export const commands = pgTable(
     idempotencyKey: text("idempotency_key").notNull(),
     clientOccurredAt: timestamp("client_occurred_at", { withTimezone: true }),
     payload: jsonb("payload").notNull(),
+    /**
+     * Digest of the payload as it arrived, before redaction. It is what decides
+     * whether a reused idempotency key carries the same call again: `payload`
+     * has every secret replaced by one marker, so comparing it would read two
+     * PIN resets under one key as the same request. NULL on rows written before
+     * this column existed, which fall back to comparing payloads.
+     */
+    payloadHash: text("payload_hash"),
     result: jsonb("result").$type<StoredCommandOutcome>(),
     failureCode: text("failure_code"),
     approvalOutcome: text("approval_outcome", {
