@@ -271,6 +271,7 @@
     },
     "manage": "Manage",
     "persons": "People",
+    "users": "Users",
     "logout": "Sign out"
   },
   "form": {
@@ -973,6 +974,77 @@
       "MECHANIC": "Mechanic",
       "CLERK": "Clerk",
       "OTHER": "Other"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "loading": "Loading users…",
+    "emptyHint": "No users yet. Add the first member of your team.",
+    "loadFailed": "Could not load the users.",
+    "retry": "Retry",
+    "columns": {
+      "displayName": "Name",
+      "username": "Username",
+      "role": "Role",
+      "branchScope": "Branches",
+      "status": "Status"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "LOCKED": "Locked",
+      "DEACTIVATED": "Deactivated"
+    },
+    "roles": {
+      "ADMIN": "Administrator",
+      "OPS_MANAGER": "Operations manager",
+      "FIELD_SUBMITTER": "Field submitter",
+      "MAINTENANCE": "Maintenance",
+      "FINANCE_APPROVER": "Finance approver",
+      "EXECUTIVE_VIEWER": "Executive (read-only)"
+    },
+    "filters": {
+      "status": "Status",
+      "activeOnly": "Active only",
+      "includeDeactivated": "Include deactivated"
+    },
+    "add": {
+      "open": "Add user",
+      "title": "Add a user",
+      "description": "Create access for a member of your team. Hand them their username and PIN yourself: neither is sent anywhere.",
+      "submit": "Add"
+    },
+    "form": {
+      "displayName": "Full name",
+      "username": "Login username",
+      "role": "Role",
+      "rolePlaceholder": "Choose a role",
+      "branchScope": "Branch scope",
+      "allBranches": "All branches",
+      "pin": "PIN",
+      "confirmPin": "Confirm PIN",
+      "pinMismatch": "The two PINs do not match.",
+      "pinTooShort": "The PIN must be at least {min} digits.",
+      "cancel": "Cancel",
+      "submitting": "Sending…"
+    },
+    "actions": {
+      "role": "Change role",
+      "roleHint": "Role and branch scope for {name}.",
+      "roleConfirm": "Save",
+      "pin": "Reset PIN",
+      "pinHint": "Set a new PIN for {name}. This also unlocks the account and ends their open sessions.",
+      "pinConfirm": "Reset",
+      "deactivate": "Deactivate",
+      "deactivateHint": "{name} will no longer be able to sign in. Their history is kept and the account can be reactivated.",
+      "deactivateConfirm": "Deactivate",
+      "reactivate": "Reactivate",
+      "reactivateHint": "{name} will be able to sign in again with their current PIN.",
+      "reactivateConfirm": "Reactivate",
+      "conflictTitle": "This record changed",
+      "conflictBody": "Someone edited this user while you were working. Reload the list and start again.",
+      "reload": "Reload",
+      "pinResetTitle": "PIN reset",
+      "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
     }
   },
   "provenance": {

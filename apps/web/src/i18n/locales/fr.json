@@ -271,6 +271,7 @@
     },
     "manage": "Gestion",
     "persons": "Personnel",
+    "users": "Utilisateurs",
     "logout": "Se déconnecter"
   },
   "form": {
@@ -973,6 +974,77 @@
       "MECHANIC": "Mécanicien",
       "CLERK": "Agent",
       "OTHER": "Autre"
+    }
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "loading": "Chargement des utilisateurs…",
+    "emptyHint": "Aucun utilisateur pour l'instant. Ajoutez le premier membre de votre équipe.",
+    "loadFailed": "Impossible de charger les utilisateurs.",
+    "retry": "Réessayer",
+    "columns": {
+      "displayName": "Nom",
+      "username": "Identifiant",
+      "role": "Rôle",
+      "branchScope": "Agences",
+      "status": "Statut"
+    },
+    "status": {
+      "ACTIVE": "Actif",
+      "LOCKED": "Verrouillé",
+      "DEACTIVATED": "Désactivé"
+    },
+    "roles": {
+      "ADMIN": "Administrateur",
+      "OPS_MANAGER": "Responsable d'exploitation",
+      "FIELD_SUBMITTER": "Agent de terrain",
+      "MAINTENANCE": "Maintenance",
+      "FINANCE_APPROVER": "Validateur financier",
+      "EXECUTIVE_VIEWER": "Direction (lecture seule)"
+    },
+    "filters": {
+      "status": "Statut",
+      "activeOnly": "Actifs uniquement",
+      "includeDeactivated": "Inclure les désactivés"
+    },
+    "add": {
+      "open": "Ajouter un utilisateur",
+      "title": "Ajouter un utilisateur",
+      "description": "Créez l'accès d'un membre de votre équipe. Remettez-lui vous-même son identifiant et son code : ils ne sont envoyés nulle part.",
+      "submit": "Ajouter"
+    },
+    "form": {
+      "displayName": "Nom complet",
+      "username": "Identifiant de connexion",
+      "role": "Rôle",
+      "rolePlaceholder": "Choisir un rôle",
+      "branchScope": "Portée des agences",
+      "allBranches": "Toutes les agences",
+      "pin": "Code PIN",
+      "confirmPin": "Confirmer le code PIN",
+      "pinMismatch": "Les deux codes ne correspondent pas.",
+      "pinTooShort": "Le code doit contenir au moins {min} chiffres.",
+      "cancel": "Annuler",
+      "submitting": "Envoi en cours…"
+    },
+    "actions": {
+      "role": "Modifier le rôle",
+      "roleHint": "Rôle et portée des agences de {name}.",
+      "roleConfirm": "Enregistrer",
+      "pin": "Réinitialiser le code",
+      "pinHint": "Définissez un nouveau code pour {name}. Cela déverrouille aussi le compte et ferme ses sessions ouvertes.",
+      "pinConfirm": "Réinitialiser",
+      "deactivate": "Désactiver",
+      "deactivateHint": "{name} ne pourra plus se connecter. Son historique est conservé et le compte peut être réactivé.",
+      "deactivateConfirm": "Désactiver",
+      "reactivate": "Réactiver",
+      "reactivateHint": "{name} pourra de nouveau se connecter avec son code actuel.",
+      "reactivateConfirm": "Réactiver",
+      "conflictTitle": "Cette fiche a changé",
+      "conflictBody": "Quelqu'un a modifié cet utilisateur pendant votre saisie. Rechargez la liste et reprenez.",
+      "reload": "Recharger",
+      "pinResetTitle": "Code réinitialisé",
+      "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
     }
   },
   "provenance": {
