@@ -177,7 +177,7 @@ describe("ActivitiesScreen", () => {
     });
   });
 
-  it("sends every activity filter to the server query", async () => {
+  it("sends activityType filter to the server query", async () => {
     render(<ActivitiesScreen />);
     await screen.findByText("DLA-2026-00042");
 
@@ -188,10 +188,30 @@ describe("ActivitiesScreen", () => {
       await screen.findByRole("option", { name: "Haulage job" }),
     );
 
+    await waitFor(() => {
+      expect(issuedQueries.at(-1)?.activityTypeCode).toBe("HAULAGE_JOB");
+    });
+  });
+
+  it("sends branch filter to the server query", async () => {
+    render(<ActivitiesScreen />);
+    await screen.findByText("DLA-2026-00042");
+
     await userEvent.click(
       screen.getByRole("combobox", { name: "activities.filters.branch" }),
     );
     await userEvent.click(await screen.findByRole("option", { name: "Douala" }));
+
+    await waitFor(() => {
+      expect(issuedQueries.at(-1)?.branchId).toBe(
+        "22222222-2222-4222-8222-222222222222",
+      );
+    });
+  });
+
+  it("sends asset filter to the server query", async () => {
+    render(<ActivitiesScreen />);
+    await screen.findByText("DLA-2026-00042");
 
     await userEvent.click(
       screen.getByRole("combobox", { name: "activities.filters.asset" }),
@@ -199,6 +219,17 @@ describe("ActivitiesScreen", () => {
     await userEvent.click(
       await screen.findByRole("option", { name: "CMR-TR-014" }),
     );
+
+    await waitFor(() => {
+      expect(issuedQueries.at(-1)?.assetId).toBe(
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      );
+    });
+  });
+
+  it("sends date range filters to the server query", async () => {
+    render(<ActivitiesScreen />);
+    await screen.findByText("DLA-2026-00042");
 
     await userEvent.click(
       screen.getByRole("button", {
@@ -226,9 +257,6 @@ describe("ActivitiesScreen", () => {
 
     await waitFor(() => {
       expect(issuedQueries.at(-1)).toMatchObject({
-        activityTypeCode: "HAULAGE_JOB",
-        branchId: "22222222-2222-4222-8222-222222222222",
-        assetId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         from: isoDate(rangeFrom),
         to: isoDate(rangeTo),
       });
