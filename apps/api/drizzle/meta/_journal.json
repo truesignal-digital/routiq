@@ -127,6 +127,13 @@
       "when": 1785402920911,
       "tag": "0017_platform_command_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785494100222,
+      "tag": "0018_member_administration",
+      "breakpoints": true
     }
   ]
 }
