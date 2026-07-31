@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,18 +48,33 @@ function item(assetCode: string, manufacturer: string) {
   };
 }
 
+const SUMMARY = { total: 6, inService: 4, attention: 2 };
+
+const REFERENCE = {
+  assetClasses: [{ code: "BUS", labelFr: "Autobus", labelEn: "Bus" }],
+  branches: [{ id: "branch-yde", code: "YDE", name: "Yaoundé" }],
+};
+
 /**
  * Records the `/v1/assets` URLs the screen asks for, one canned body per call.
- * Asset cards also fetch reference data; those requests are answered with an
- * empty body and kept out of the record.
+ * The summary and reference reads answer from their own fixtures — `/v1/assets`
+ * is a prefix of `/v1/assets/summary`, so they are matched first.
  */
 function stubFetch(bodies: unknown[]) {
   const requested: string[] = [];
+  const summaryRequested: string[] = [];
   let call = 0;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: RequestInfo | URL) => {
       const href = String(url);
+      if (href.startsWith("/v1/assets/summary")) {
+        summaryRequested.push(href);
+        return new Response(JSON.stringify(SUMMARY), { status: 200 });
+      }
+      if (href.startsWith("/v1/reference/asset-registration")) {
+        return new Response(JSON.stringify(REFERENCE), { status: 200 });
+      }
       if (!href.startsWith("/v1/assets")) {
         return new Response("{}", { status: 200 });
       }
@@ -69,16 +84,16 @@ function stubFetch(bodies: unknown[]) {
       return new Response(JSON.stringify(body), { status: 200 });
     }),
   );
-  return requested;
+  return { requested, summaryRequested };
 }
 
-function renderScreen() {
+function renderScreen(role: MeContext["role"] = "ADMIN") {
   const me: MeContext = {
     workspaceId: "ws",
     principalId: "p",
     principalType: "HUMAN",
     membershipId: "m",
-    role: "ADMIN",
+    role,
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS"],
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
@@ -98,7 +113,7 @@ function lastQuery(requested: string[]) {
   return new URLSearchParams(requested[requested.length - 1]!.split("?")[1]);
 }
 
-describe("AssetsStub server-side filtering", () => {
+describe("assets explorer server-side filtering", () => {
   beforeEach(() => {
     sessionStore.save({
       username: "ada",
@@ -123,28 +138,29 @@ describe("AssetsStub server-side filtering", () => {
   });
 
   it("sends the search box to the server instead of filtering locally", async () => {
-    const requested = stubFetch([
+    const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
     ]);
     renderScreen();
     await screen.findByText("AST-001");
 
     await userEvent.type(
-      screen.getByRole("searchbox", { name: /rechercher/i }),
+      screen.getByRole("searchbox", { name: /code, plaque/i }),
       "scania",
     );
 
     await waitFor(() => expect(lastQuery(requested).get("search")).toBe("scania"));
   });
 
-  it("maps the ATTENTION tab onto its three lifecycle statuses", async () => {
-    const requested = stubFetch([
+  it("maps the ATTENTION choice onto its three lifecycle statuses", async () => {
+    const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
     ]);
     renderScreen();
     await screen.findByText("AST-001");
 
-    await userEvent.click(screen.getByRole("button", { name: /à surveiller/i }));
+    await userEvent.click(screen.getByRole("combobox", { name: "Statut" }));
+    await userEvent.click(await screen.findByRole("option", { name: "À surveiller" }));
 
     await waitFor(() =>
       expect(lastQuery(requested).getAll("status")).toEqual([
@@ -155,23 +171,59 @@ describe("AssetsStub server-side filtering", () => {
     );
   });
 
-  it("pages with the cursor and appends the next page", async () => {
-    const requested = stubFetch([
+  it("narrows by class and by branch on the server", async () => {
+    const { requested } = stubFetch([
+      { items: [item("AST-001", "Mercedes")], nextCursor: null },
+    ]);
+    renderScreen();
+    await screen.findByText("AST-001");
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Classe" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Autobus" }));
+    await waitFor(() => expect(lastQuery(requested).get("category")).toBe("BUS"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Agence" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Yaoundé" }));
+    await waitFor(() =>
+      expect(lastQuery(requested).get("branchId")).toBe("branch-yde"),
+    );
+  });
+
+  it("sorts through the server, since the cursor is keyed on the order", async () => {
+    const { requested } = stubFetch([
+      { items: [item("AST-001", "Mercedes")], nextCursor: null },
+    ]);
+    renderScreen();
+    await screen.findByText("AST-001");
+
+    // The default is the read's own: asset code ascending.
+    expect(lastQuery(requested).get("sort")).toBe("assetCode:asc");
+
+    await userEvent.click(screen.getByRole("button", { name: /actif/i }));
+
+    await waitFor(() =>
+      expect(lastQuery(requested).get("sort")).toBe("assetCode:desc"),
+    );
+  });
+
+  it("pages with the cursor and steps onto the page it fetched", async () => {
+    const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: "page-2" },
       { items: [item("AST-002", "Scania")], nextCursor: null },
     ]);
     renderScreen();
     await screen.findByText("AST-001");
 
-    await userEvent.click(screen.getByRole("button", { name: /charger plus/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /page suivante/i }),
+    );
 
     expect(await screen.findByText("AST-002")).toBeDefined();
     expect(lastQuery(requested).get("cursor")).toBe("page-2");
-    expect(screen.queryByRole("button", { name: /charger plus/i })).toBeNull();
   });
 
-  it("offers a reset when a narrowed list comes back empty", async () => {
-    const requested = stubFetch([
+  it("offers a way back when a narrowed list comes back empty", async () => {
+    const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
       { items: [], nextCursor: null },
     ]);
@@ -179,13 +231,104 @@ describe("AssetsStub server-side filtering", () => {
     await screen.findByText("AST-001");
 
     await userEvent.type(
-      screen.getByRole("searchbox", { name: /rechercher/i }),
+      screen.getByRole("searchbox", { name: /code, plaque/i }),
       "zzz",
     );
 
     await waitFor(() => expect(lastQuery(requested).get("search")).toBe("zzz"));
+    expect(await screen.findByText(/aucun actif trouvé/i)).toBeDefined();
     expect(
-      await screen.findByRole("button", { name: /effacer les filtres/i }),
+      screen.getByRole("button", { name: /effacer les filtres/i }),
     ).toBeDefined();
+  });
+
+  describe("metric strip", () => {
+    it("shows the counts the server computed, not the rows on screen", async () => {
+      const { summaryRequested } = stubFetch([
+        { items: [item("AST-001", "Mercedes")], nextCursor: "page-2" },
+      ]);
+      renderScreen();
+      await screen.findByText("AST-001");
+
+      const values = await waitFor(() => {
+        const nodes = document.querySelectorAll("[data-slot=metric-value]");
+        expect(nodes).toHaveLength(3);
+        return [...nodes].map((node) => node.textContent);
+      });
+
+      // One row is loaded; the tiles still report the whole fleet.
+      expect(values).toEqual(["6", "4", "2"]);
+      expect(summaryRequested).toHaveLength(1);
+    });
+
+    it("asks the summary to narrow with the table, minus the status bucket", async () => {
+      const { summaryRequested } = stubFetch([
+        { items: [item("AST-001", "Mercedes")], nextCursor: null },
+      ]);
+      renderScreen();
+      await screen.findByText("AST-001");
+
+      await userEvent.click(screen.getByRole("combobox", { name: "Statut" }));
+      await userEvent.click(
+        await screen.findByRole("option", { name: "À surveiller" }),
+      );
+      await userEvent.type(
+        screen.getByRole("searchbox", { name: /code, plaque/i }),
+        "scania",
+      );
+
+      await waitFor(() =>
+        expect(lastQuery(summaryRequested).get("search")).toBe("scania"),
+      );
+      expect(lastQuery(summaryRequested).getAll("status")).toEqual([]);
+    });
+  });
+
+  describe("row actions", () => {
+    it("opens the record and the documents screen from the row menu", async () => {
+      stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
+      renderScreen();
+      await screen.findByText("AST-001");
+
+      await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+      const menu = await screen.findByRole("menu");
+
+      expect(within(menu).getByText("Ouvrir la fiche")).toBeDefined();
+      // DOCUMENTS is off for this workspace, so the row offers no way in.
+      expect(within(menu).queryByText("Documents")).toBeNull();
+    });
+
+    it("offers the asset's commands and opens one as a dialog", async () => {
+      stubFetch([
+        {
+          items: [{ ...item("AST-001", "Mercedes"), lifecycleStatus: "REGISTERED" }],
+          nextCursor: null,
+        },
+      ]);
+      renderScreen();
+      await screen.findByText("AST-001");
+
+      await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+      const menu = await screen.findByRole("menu");
+      expect(within(menu).getByText("Mettre en service")).toBeDefined();
+      expect(within(menu).getByText("Affecter")).toBeDefined();
+
+      await userEvent.click(within(menu).getByText("Mettre en service"));
+
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByRole("button", { name: "Confirmer" })).toBeDefined();
+    });
+
+    it("offers a viewer no commands at all", async () => {
+      stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
+      renderScreen("EXECUTIVE_VIEWER");
+      await screen.findByText("AST-001");
+
+      await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+      const menu = await screen.findByRole("menu");
+
+      expect(within(menu).queryByText("Affecter")).toBeNull();
+      expect(within(menu).getByText("Ouvrir la fiche")).toBeDefined();
+    });
   });
 });

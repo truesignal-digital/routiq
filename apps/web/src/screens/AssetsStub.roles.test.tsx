@@ -32,7 +32,10 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-function renderWithRole(role: MeContext["role"]) {
+function renderWith(
+  role: MeContext["role"],
+  enabledModules: MeContext["enabledModules"] = ["CORE", "ASSETS"],
+) {
   const me: MeContext = {
     workspaceId: "ws",
     principalId: "p",
@@ -40,7 +43,7 @@ function renderWithRole(role: MeContext["role"]) {
     membershipId: "m",
     role,
     branchScope: "ALL",
-    enabledModules: ["CORE", "ASSETS"],
+    enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
   return render(
@@ -56,13 +59,32 @@ afterEach(cleanup);
 
 describe("register affordances by role", () => {
   it("ADMIN sees the register affordance", () => {
-    renderWithRole("ADMIN");
-    expect(screen.getAllByRole("link", { name: /nouvel actif/i }).length).toBeGreaterThan(0);
+    renderWith("ADMIN");
+    expect(
+      screen.getAllByRole("link", { name: /nouvel actif/i }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("EXECUTIVE_VIEWER sees zero mutating affordances", () => {
-    renderWithRole("EXECUTIVE_VIEWER");
+    renderWith("EXECUTIVE_VIEWER");
     expect(screen.queryByRole("link", { name: /nouvel actif/i })).toBeNull();
     expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
+  });
+});
+
+describe("module gating", () => {
+  /** A workspace without the module has no fleet to show, whatever the role. */
+  it("shows the denial instead of an empty table when ASSETS is off", () => {
+    renderWith("ADMIN", ["CORE"]);
+
+    expect(screen.getByText(/module/i)).toBeDefined();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
+  });
+
+  it("serves the fleet to a role that may not register one", () => {
+    renderWith("EXECUTIVE_VIEWER");
+
+    expect(screen.getByRole("searchbox")).toBeDefined();
   });
 });

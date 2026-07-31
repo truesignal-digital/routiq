@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { assetDisplayName } from "./model.js";
+import { assetDisplayName } from "./display.js";
 import { useAssets } from "./useAssets.js";
 
 /**

@@ -1,22 +1,57 @@
 import {
-  ASSET_LIFECYCLE_STATUSES,
+  assetLifecycleStatuses,
   type AssetLifecycleStatus,
   type AssetListItem,
-} from "./model.js";
+  type AssetListResponse,
+  type AssetSummary,
+} from "@routiq/contracts";
 
 export interface AssetListParams {
   status?: readonly AssetLifecycleStatus[];
   category?: string;
   branchId?: string;
   search?: string;
+  /** `field:asc|desc` over the read's declared sortFields; the cursor is keyed on it. */
+  sort?: string;
   cursor?: string;
   limit?: number;
 }
 
-/** The ADR-0003 list envelope: `items` plus the opaque keyset cursor. */
-export interface AssetListResponse {
-  items: AssetListItem[];
-  nextCursor: string | null;
+/** The list filters the summary shares. A status would count inside one bucket. */
+export type AssetSummaryParams = Omit<
+  AssetListParams,
+  "status" | "sort" | "cursor" | "limit"
+>;
+
+export type { AssetListResponse, AssetSummary };
+
+function assetQuery(params: AssetListParams): string {
+  const query = new URLSearchParams();
+  for (const status of params.status ?? []) query.append("status", status);
+  if (params.category) query.append("category", params.category);
+  if (params.branchId) query.append("branchId", params.branchId);
+  if (params.search) query.append("search", params.search);
+  if (params.sort) query.append("sort", params.sort);
+  if (params.cursor) query.append("cursor", params.cursor);
+  if (params.limit !== undefined) query.append("limit", String(params.limit));
+  const search = query.toString();
+  return search === "" ? "" : `?${search}`;
+}
+
+async function readJson(
+  path: string,
+  token: string,
+  errorPrefix: string,
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const response = await fetchImpl(path, {
+    headers: { authorization: `Bearer ${token}` },
+    ...(signal === undefined ? {} : { signal }),
+  });
+
+  if (!response.ok) throw new Error(`${errorPrefix}_${response.status}`);
+  return response.json();
 }
 
 export async function fetchAssets(
@@ -25,29 +60,40 @@ export async function fetchAssets(
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
 ): Promise<AssetListResponse> {
-  const url = new URL("/v1/assets", window.location.origin);
-  for (const status of params.status ?? []) {
-    url.searchParams.append("status", status);
-  }
-  if (params.category) url.searchParams.append("category", params.category);
-  if (params.branchId) url.searchParams.append("branchId", params.branchId);
-  if (params.search) url.searchParams.append("search", params.search);
-  if (params.cursor) url.searchParams.append("cursor", params.cursor);
-  if (params.limit !== undefined) {
-    url.searchParams.append("limit", String(params.limit));
-  }
+  const body = await readJson(
+    `/v1/assets${assetQuery(params)}`,
+    token,
+    "ASSET_LIST",
+    signal,
+    fetchImpl,
+  );
 
-  const response = await fetchImpl(url.pathname + url.search, {
-    headers: { authorization: `Bearer ${token}` },
-    ...(signal === undefined ? {} : { signal }),
-  });
-
-  if (!response.ok) throw new Error(`ASSET_LIST_${response.status}`);
-  const body: unknown = await response.json();
   if (!isAssetListResponse(body)) throw new Error("ASSET_LIST_INVALID_RESPONSE");
   return body;
 }
 
+export async function fetchAssetSummary(
+  token: string,
+  params: AssetSummaryParams = {},
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<AssetSummary> {
+  const body = await readJson(
+    `/v1/assets/summary${assetQuery(params)}`,
+    token,
+    "ASSET_SUMMARY",
+    signal,
+    fetchImpl,
+  );
+
+  if (!isAssetSummary(body)) throw new Error("ASSET_SUMMARY_INVALID_RESPONSE");
+  return body;
+}
+
+/**
+ * Structural checks over the contract's own types: enough to catch a superseded
+ * envelope or a dropped field, without re-policing formats the server owns.
+ */
 function isAssetListResponse(value: unknown): value is AssetListResponse {
   if (!isRecord(value)) return false;
   const nextCursor = value["nextCursor"];
@@ -78,6 +124,20 @@ function isAssetListItem(value: unknown): value is AssetListItem {
   );
 }
 
+/** A missing bucket must never read as zero — a zero is a claim about the fleet. */
+function isAssetSummary(value: unknown): value is AssetSummary {
+  return (
+    isRecord(value) &&
+    isCount(value["total"]) &&
+    isCount(value["inService"]) &&
+    isCount(value["attention"])
+  );
+}
+
+function isCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
 function nullableString(value: unknown): boolean {
   return value === null || typeof value === "string";
 }
@@ -85,7 +145,7 @@ function nullableString(value: unknown): boolean {
 function isLifecycleStatus(value: unknown): value is AssetLifecycleStatus {
   return (
     typeof value === "string" &&
-    ASSET_LIFECYCLE_STATUSES.some((status) => status === value)
+    assetLifecycleStatuses.some((status) => status === value)
   );
 }
 

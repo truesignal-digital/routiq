@@ -3,7 +3,8 @@ import { sessionStore, useActiveSession } from "../auth/store.js";
 
 export interface AssetRegistrationReference {
   assetClasses: Array<{ code: string; labelFr: string; labelEn: string }>;
-  branches: Array<{ code: string; name: string }>;
+  /** `code` names a branch in commands, `id` filters the list reads by one. */
+  branches: Array<{ id: string; code: string; name: string }>;
 }
 
 export async function fetchAssetRegistrationReference(

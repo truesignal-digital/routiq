@@ -1,14 +1,9 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import type { AssetListResponse } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
-import { fetchAssets, type AssetListResponse } from "./api.js";
-import type { AssetLifecycleStatus } from "./model.js";
+import { fetchAssets, type AssetListParams } from "./api.js";
 
-export interface UseAssetsParams {
-  status?: readonly AssetLifecycleStatus[];
-  category?: string;
-  branchId?: string;
-  search?: string;
-}
+export type UseAssetsParams = Omit<AssetListParams, "cursor">;
 
 export function useAssets(params: UseAssetsParams = {}) {
   const session = useActiveSession();

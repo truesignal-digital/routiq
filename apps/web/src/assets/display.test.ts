@@ -1,10 +1,11 @@
+import type { AssetListItem } from "@routiq/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  ASSET_STATUS_TONES,
   assetDisplayName,
   assetFilterStatuses,
-  summarizeAssets,
-  type AssetListItem,
-} from "./model.js";
+  isAssetFilter,
+} from "./display.js";
 
 const assets: AssetListItem[] = [
   {
@@ -31,16 +32,8 @@ const assets: AssetListItem[] = [
   },
 ];
 
-describe("asset list view model", () => {
-  it("summarizes lifecycle state without conflating it with availability", () => {
-    expect(summarizeAssets(assets)).toEqual({
-      total: 2,
-      inService: 1,
-      attention: 1,
-    });
-  });
-
-  it("translates a filter tab into the statuses the server is asked for", () => {
+describe("asset display helpers", () => {
+  it("translates a filter choice into the statuses the server is asked for", () => {
     expect(assetFilterStatuses("ALL")).toBeUndefined();
     expect(assetFilterStatuses("IN_SERVICE")).toEqual(["IN_SERVICE"]);
     expect(assetFilterStatuses("ATTENTION")).toEqual([
@@ -53,5 +46,18 @@ describe("asset list view model", () => {
   it("uses make and model when present, then falls back to asset code", () => {
     expect(assetDisplayName(assets[0]!)).toBe("Mercedes Actros");
     expect(assetDisplayName(assets[1]!)).toBe("BUS-004");
+  });
+
+  it("tones every lifecycle status, and never conflates sold with written off", () => {
+    expect(ASSET_STATUS_TONES.IN_SERVICE).toBe("success");
+    expect(ASSET_STATUS_TONES.UNDER_MAINTENANCE).toBe("warning");
+    expect(ASSET_STATUS_TONES.WRITTEN_OFF).toBe("danger");
+    expect(ASSET_STATUS_TONES.SOLD).toBe("neutral");
+    expect(Object.keys(ASSET_STATUS_TONES)).toHaveLength(6);
+  });
+
+  it("rejects a filter value the screen does not offer", () => {
+    expect(isAssetFilter("ATTENTION")).toBe(true);
+    expect(isAssetFilter("SOLD")).toBe(false);
   });
 });

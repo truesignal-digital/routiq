@@ -7,8 +7,8 @@ import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
-import type { AssetListItem } from "./model.js";
-import { AssetActions } from "./AssetActions.js";
+import type { AssetListItem } from "@routiq/contracts";
+import { AssetActions, assetActions } from "./AssetActions.js";
 
 const mocks = vi.hoisted(() => ({ toastAdd: vi.fn() }));
 
@@ -81,6 +81,12 @@ function renderActions(
   );
 }
 
+/** Opens the dialog the way an operator does, from the button row. */
+async function openDialog(name: RegExp | string) {
+  await userEvent.click(screen.getByRole("button", { name }));
+  return screen.findByRole("dialog");
+}
+
 const committed: SubmitResult = {
   ok: true,
   outcome: {
@@ -91,6 +97,45 @@ const committed: SubmitResult = {
     idempotentReplay: false,
   },
 };
+
+describe("which actions an asset offers", () => {
+  it("REGISTERED offers commission and assign", () => {
+    expect(assetActions(baseAsset, "ADMIN", ["CORE", "ASSETS"])).toEqual([
+      "commission",
+      "assign",
+    ]);
+  });
+
+  it("IN_SERVICE drops commission and keeps assign", () => {
+    expect(
+      assetActions(
+        { ...baseAsset, lifecycleStatus: "IN_SERVICE" },
+        "ADMIN",
+        ["CORE", "ASSETS"],
+      ),
+    ).toEqual(["assign"]);
+  });
+
+  /** §3.4: nothing operational happens to an asset that has left the fleet. */
+  it("offers nothing on a disposed asset, whatever the role", () => {
+    for (const status of ["SOLD", "RETIRED", "WRITTEN_OFF"] as const) {
+      expect(
+        assetActions({ ...baseAsset, lifecycleStatus: status }, "ADMIN", [
+          "CORE",
+          "ASSETS",
+        ]),
+        status,
+      ).toEqual([]);
+    }
+  });
+
+  it("offers nothing to a viewer role, or without the module", () => {
+    expect(assetActions(baseAsset, "EXECUTIVE_VIEWER", ["CORE", "ASSETS"])).toEqual(
+      [],
+    );
+    expect(assetActions(baseAsset, "ADMIN", ["CORE"])).toEqual([]);
+  });
+});
 
 describe("status-gated visibility", () => {
   it("REGISTERED shows commission + assign", () => {
@@ -124,10 +169,11 @@ describe("status-gated visibility", () => {
 });
 
 describe("committed actions", () => {
-  it("confirms a commission with a toast instead of closing the panel in silence", async () => {
+  it("confirms a commission with a toast instead of closing the dialog in silence", async () => {
     renderActions(baseAsset, fakeClient(committed));
 
-    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
+    await openDialog("Mettre en service");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -135,6 +181,7 @@ describe("committed actions", () => {
         title: "Actif mis en service",
       }),
     );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("invalidates the asset list alone, not every workspace read", async () => {
@@ -147,10 +194,25 @@ describe("committed actions", () => {
     }) as QueryClient["invalidateQueries"];
 
     renderActions(baseAsset, fakeClient(committed), admin, queryClient);
-    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
+    await openDialog("Mettre en service");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
 
     await waitFor(() => expect(keys.length).toBe(1));
     expect(keys[0]).toEqual(["ws", "sotrafret", "assets"]);
+  });
+
+  /** A branch nobody picked would be a transfer nobody asked for. */
+  it("holds the assign command until a branch is chosen", async () => {
+    const client = fakeClient(committed);
+    renderActions({ ...baseAsset, lifecycleStatus: "IN_SERVICE" }, client);
+
+    await openDialog("Affecter");
+
+    expect(screen.getByRole("button", { name: "Confirmer" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(client.seen).toHaveLength(0);
   });
 });
 
@@ -158,19 +220,38 @@ describe("designed failure states", () => {
   it("VERSION_CONFLICT shows the modified-elsewhere prompt with reload, and the envelope carried the rendered rowVersion", async () => {
     const client = fakeClient({ ok: false, code: "VERSION_CONFLICT" });
     renderActions(baseAsset, client);
-    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
+
+    await openDialog("Mettre en service");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+
     await waitFor(() => expect(screen.getByText("Modifié ailleurs")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Actualiser" })).toBeTruthy();
     expect(
-      (client.seen[0] as { envelope: { expectedVersion?: number } }).envelope.expectedVersion,
+      (client.seen[0] as { envelope: { expectedVersion?: number } }).envelope
+        .expectedVersion,
     ).toBe(4);
   });
 
   it("APPROVAL_REQUIRED shows the informative approval state, not an error alert", async () => {
     renderActions(baseAsset, fakeClient({ ok: false, code: "APPROVAL_REQUIRED" }));
-    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
+
+    await openDialog("Mettre en service");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+
     await waitFor(() => expect(screen.getByText("Approbation requise")).toBeTruthy());
     expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  /** The outcome stays on screen: a dialog that closed itself would hide it. */
+  it("keeps the failure inside the dialog rather than firing a toast", async () => {
+    renderActions(baseAsset, fakeClient({ ok: false, code: "COMMAND_FAILED" }));
+
+    await openDialog("Mettre en service");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(mocks.toastAdd).not.toHaveBeenCalled();
   });
 });

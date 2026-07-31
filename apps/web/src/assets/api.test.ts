@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { fetchAssets } from "./api.js";
+import { fetchAssets, fetchAssetSummary } from "./api.js";
 
 const validItem = {
   id: "a1",
@@ -124,5 +124,79 @@ describe("fetchAssets", () => {
         fakeFetch(403, { error: { code: "ROLE_FORBIDDEN" } }),
       ),
     ).rejects.toThrow("ASSET_LIST_403");
+  });
+
+  it("passes the sort through, since the cursor is keyed on it", async () => {
+    const requested: string[] = [];
+    await fetchAssets(
+      "tok",
+      { sort: "assetCode:desc" },
+      undefined,
+      fakeFetch(200, { items: [], nextCursor: null }, requested),
+    );
+
+    expect(new URLSearchParams(requested[0]!.split("?")[1]).get("sort")).toBe(
+      "assetCode:desc",
+    );
+  });
+});
+
+describe("fetchAssetSummary", () => {
+  const counts = { total: 6, inService: 2, attention: 3 };
+
+  it("parses the fleet counts", async () => {
+    const result = await fetchAssetSummary(
+      "tok",
+      {},
+      undefined,
+      fakeFetch(200, counts),
+    );
+
+    expect(result).toEqual(counts);
+  });
+
+  it("requests the bare path when nothing narrows the fleet", async () => {
+    const requested: string[] = [];
+    await fetchAssetSummary("tok", {}, undefined, fakeFetch(200, counts, requested));
+
+    expect(requested).toEqual(["/v1/assets/summary"]);
+  });
+
+  it("narrows by the same filters as the list", async () => {
+    const requested: string[] = [];
+    await fetchAssetSummary(
+      "tok",
+      { category: "TRUCK", branchId: "branch-1", search: "actros" },
+      undefined,
+      fakeFetch(200, counts, requested),
+    );
+
+    const query = new URLSearchParams(requested[0]!.split("?")[1]);
+    expect(query.get("category")).toBe("TRUCK");
+    expect(query.get("branchId")).toBe("branch-1");
+    expect(query.get("search")).toBe("actros");
+  });
+
+  /** A tile that rendered a partial body would put an unbacked number on screen. */
+  it("rejects a body missing a bucket rather than reading it as zero", async () => {
+    await expect(
+      fetchAssetSummary(
+        "tok",
+        {},
+        undefined,
+        fakeFetch(200, { total: 6, inService: 2 }),
+      ),
+    ).rejects.toThrow("ASSET_SUMMARY_INVALID_RESPONSE");
+  });
+
+  it("rejects non-ok responses with the status", async () => {
+    await expect(
+      fetchAssetSummary(
+        "tok",
+        {},
+        undefined,
+        fakeFetch(500, { error: { code: "READ_FAILED" } }),
+      ),
+    ).rejects.toThrow("ASSET_SUMMARY_500");
   });
 });

@@ -55,10 +55,9 @@ export function registerReferenceReadRoutes(
             ? visibleBranches
             : visibleBranches.filter((b) => auth.branchScope.includes(b.id));
 
-        return {
-          assetClasses,
-          branches: scoped.map(({ code, name }) => ({ code, name })),
-        };
+        // The id travels too: list reads filter on `branchId`, so a branch
+        // picker built from this would otherwise have nothing to send.
+        return { assetClasses, branches: scoped };
       } catch (error) {
         req.log.error({ err: error }, "asset registration reference read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });

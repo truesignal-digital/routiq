@@ -16,7 +16,7 @@ import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/p
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
-import { assetDisplayName } from "@/assets/model.js";
+import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";

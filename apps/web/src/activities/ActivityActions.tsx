@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorBanner } from "@/components/error-banner.js";
-import { assetDisplayName } from "../assets/model.js";
+import { assetDisplayName } from "../assets/display.js";
 import { useAssets } from "../assets/useAssets.js";
 import { useMeContext } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";

@@ -1,7 +1,8 @@
-import type { AssetDetail } from "@routiq/contracts";
 import { Link, useParams } from "@tanstack/react-router";
 import { ArrowRight, FileText, MapPin, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { AssetActions } from "@/assets/AssetActions.js";
+import { ASSET_STATUS_TONES, assetDisplayName } from "@/assets/display.js";
 import { useAssetDetail } from "@/assets/useAssetDetail.js";
 import { useMeContext } from "@/auth/me.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -11,23 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
-
-const STATUS_TONES: Record<
-  AssetDetail["lifecycleStatus"],
-  "neutral" | "success" | "warning" | "danger"
-> = {
-  REGISTERED: "neutral",
-  IN_SERVICE: "success",
-  UNDER_MAINTENANCE: "warning",
-  SOLD: "neutral",
-  RETIRED: "neutral",
-  WRITTEN_OFF: "danger",
-};
-
-function displayName(asset: AssetDetail): string {
-  const makeAndModel = [asset.manufacturer, asset.model].filter(Boolean).join(" ");
-  return makeAndModel || asset.assetCode;
-}
 
 export function AssetDetailScreen() {
   const { t, i18n } = useTranslation();
@@ -71,9 +55,10 @@ export function AssetDetailScreen() {
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary ring-1 ring-primary/10">
               <Truck className="size-6" strokeWidth={1.7} aria-hidden />
             </span>
-            {displayName(asset)}
+            {assetDisplayName(asset)}
           </span>
         }
+        actions={<AssetActions asset={asset} />}
       />
 
       <p className="mt-2 font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
@@ -82,7 +67,7 @@ export function AssetDetailScreen() {
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <StatusBadge tone={STATUS_TONES[asset.lifecycleStatus]}>
+        <StatusBadge tone={ASSET_STATUS_TONES[asset.lifecycleStatus]}>
           {t(`assets.status.${asset.lifecycleStatus}`)}
         </StatusBadge>
         <span className="inline-flex min-h-7 items-center rounded-full bg-foreground/[0.055] px-2.5 text-xs font-medium text-muted-foreground">
