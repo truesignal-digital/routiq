@@ -683,6 +683,23 @@
         "lucide-react",
         "react-i18next"
       ]
+    },
+    {
+      "name": "metric-strip",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/metric-strip.tsx",
+          "type": "registry:file",
+          "target": "components/metric-strip.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "card",
+        "skeleton",
+        "utils"
+      ],
+      "dependencies": []
     }
   ]
 }
