@@ -143,6 +143,8 @@ function SheetForm({
   );
 
   const [errorCode, setErrorCode] = useState<string>();
+  /** Which of the two submit affordances is running, for its own label. */
+  const [closing, setClosing] = useState(false);
   const [showReadings, setShowReadings] = useState(false);
   const [showSegments, setShowSegments] = useState(initialTemplate === "haulage");
 
@@ -371,14 +373,14 @@ function SheetForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soleTemplate]);
 
-  async function onSubmit(values: SheetFormValues) {
+  async function onSubmit(values: SheetFormValues, close: boolean) {
     setErrorCode(undefined);
     const state = toSheetFormState(values);
 
     const result =
       values.template === "journey"
-        ? await journeyIntent.current.submit(toJourneySheetPayload(state, ids))
-        : await haulageIntent.current.submit(toHaulageSheetPayload(state, ids));
+        ? await journeyIntent.current.submit(toJourneySheetPayload(state, ids, { close }))
+        : await haulageIntent.current.submit(toHaulageSheetPayload(state, ids, { close }));
 
     if (!result.ok) {
       setErrorCode(result.code);
@@ -390,7 +392,7 @@ function SheetForm({
     const pending = pendingChildrenCount(result.outcome);
     notifyCommandSuccess(
       "activities",
-      "sheetRecorded",
+      close ? "sheetRecordedAndClosed" : "sheetRecorded",
       result.outcome.warnings,
       pending > 0 ? [t("activities.notify.pendingEntries", { count: pending })] : [],
     );
@@ -400,11 +402,20 @@ function SheetForm({
     });
   }
 
+  /**
+   * Recording and closing are two acts, so they are two buttons. The default —
+   * and what Enter does — is to record and leave the trip open.
+   */
+  function submitSheet(close: boolean) {
+    setClosing(close);
+    return form.handleSubmit((values) => onSubmit(values, close));
+  }
+
   return (
     <Form {...form}>
       <form
         className="mt-6 flex flex-col gap-4"
-        onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
+        onSubmit={(event) => void submitSheet(false)(event)}
       >
         {/* One preset means one kind of sheet: asking which would be asking a
             question with a single answer (ADR-0004). */}
@@ -863,13 +874,24 @@ function SheetForm({
           </CardContent>
         </Card>
 
-        <div className="sticky bottom-0 -mx-4 mt-2 flex items-center justify-end gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col-reverse items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-full sm:w-auto"
+            disabled={form.formState.isSubmitting}
+            onClick={() => void submitSheet(true)()}
+          >
+            {form.formState.isSubmitting && closing
+              ? t("activities.record.closingSubmitting")
+              : t("activities.record.submitAndClose")}
+          </Button>
           <Button
             type="submit"
             className="min-h-11 w-full sm:w-auto"
             disabled={form.formState.isSubmitting}
           >
-            {form.formState.isSubmitting
+            {form.formState.isSubmitting && !closing
               ? t("activities.record.submitting")
               : t("activities.record.submit")}
           </Button>

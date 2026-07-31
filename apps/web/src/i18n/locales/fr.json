@@ -767,6 +767,7 @@
     "notify": {
       "success": {
         "sheetRecorded": "Fiche enregistrée",
+        "sheetRecordedAndClosed": "Fiche enregistrée et activité clôturée",
         "closed": "Activité clôturée",
         "reopened": "Activité rouverte",
         "substituted": "Engin remplacé",
@@ -945,7 +946,9 @@
         }
       },
       "submit": "Enregistrer la fiche",
-      "submitting": "Enregistrement…"
+      "submitting": "Enregistrement…",
+      "submitAndClose": "Enregistrer et clôturer",
+      "closingSubmitting": "Clôture…"
     }
   },
   "persons": {
