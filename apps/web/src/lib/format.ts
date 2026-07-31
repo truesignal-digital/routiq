@@ -47,6 +47,12 @@ export function formatMoney(
   return normalizeMoneySpacing(formatted);
 }
 
+function toDate(value: string | Date | null | undefined): Date | null {
+  if (value == null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function formatDate(iso: string | null | undefined, locale?: string): string {
   if (iso == null) return "";
 
@@ -56,6 +62,33 @@ export function formatDate(iso: string | null | undefined, locale?: string): str
   return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
     dateStyle: "short",
   }).format(date);
+}
+
+/** "31 juillet 2026" — the heading a day's worth of history sits under. */
+export function formatDayLong(
+  value: string | Date | null | undefined,
+  locale?: string,
+): string {
+  const date = toDate(value);
+  if (date === null) return "";
+
+  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
+    dateStyle: "long",
+  }).format(date);
+}
+
+/**
+ * "2026-07-31" read off the viewer's own clock. Grouping a timeline by day has
+ * to follow the reader's calendar, not UTC — an event logged at 23:30 in Douala
+ * belongs to that evening and not to the next morning.
+ */
+export function localDayKey(value: string | Date | null | undefined): string {
+  const date = toDate(value);
+  if (date === null) return "";
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export function formatDateTime(iso: string | null | undefined, locale?: string): string {

@@ -1059,6 +1059,10 @@
     "loadFailed": "Impossible de charger l'historique.",
     "retry": "Réessayer",
     "empty": "Aucun historique",
+    "emptyChanges": "Aucune modification de données sur ce dossier. Affichez tout pour voir chaque événement.",
+    "showAll": "Tout afficher",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
     "loadMore": "Charger plus",
     "loadingMore": "Chargement…",
     "actor": {
