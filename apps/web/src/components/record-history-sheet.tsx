@@ -1,5 +1,9 @@
-import type { HistoryEntityType, HistoryItem } from "@routiq/contracts";
-import { History } from "lucide-react";
+import type {
+  HistoryEntityType,
+  HistoryFieldChange,
+  HistoryItem,
+} from "@routiq/contracts";
+import { ChevronDown, History } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingState } from "@/components/page";
@@ -13,8 +17,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useHistory } from "@/history/useHistory.js";
-import { formatDateTime, formatRelativeTime } from "@/lib/format.js";
+import { useHistory, useHistoryEvent } from "@/history/useHistory.js";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatRelativeTime,
+} from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 /**
@@ -96,7 +105,13 @@ export function RecordHistorySheet({
           ) : (
             <ol className="flex flex-col">
               {items.map((item) => (
-                <HistoryRow key={item.eventId} item={item} locale={locale} />
+                <HistoryRow
+                  key={item.eventId}
+                  item={item}
+                  entityType={entityType}
+                  entityId={entityId}
+                  locale={locale}
+                />
               ))}
             </ol>
           )}
@@ -119,8 +134,19 @@ export function RecordHistorySheet({
   );
 }
 
-function HistoryRow({ item, locale }: { item: HistoryItem; locale: string }) {
+function HistoryRow({
+  item,
+  entityType,
+  entityId,
+  locale,
+}: {
+  item: HistoryItem;
+  entityType: HistoryEntityType;
+  entityId: string;
+  locale: string;
+}) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
 
   const isPlatform = item.actor.scope === "PLATFORM";
   const actorLabel = isPlatform
@@ -185,6 +211,138 @@ function HistoryRow({ item, locale }: { item: HistoryItem; locale: string }) {
           ))}
         </ul>
       )}
+
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+        className="mt-1.5 -ml-1 flex min-h-8 items-center gap-1 rounded-md px-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ChevronDown
+          className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
+          aria-hidden
+        />
+        {t(expanded ? "history.diff.hide" : "history.diff.show")}
+      </button>
+
+      {expanded && (
+        <HistoryDiff
+          entityType={entityType}
+          entityId={entityId}
+          eventId={item.eventId}
+          locale={locale}
+        />
+      )}
     </li>
   );
+}
+
+/**
+ * The before/after of one event. Mounted only once its row is expanded, so the
+ * fetch is the reader's choice — the timeline itself stays one request.
+ */
+function HistoryDiff({
+  entityType,
+  entityId,
+  eventId,
+  locale,
+}: {
+  entityType: HistoryEntityType;
+  entityId: string;
+  eventId: string;
+  locale: string;
+}) {
+  const { t } = useTranslation();
+  const diffQuery = useHistoryEvent(entityType, entityId, eventId, {
+    enabled: true,
+  });
+
+  if (diffQuery.isPending) {
+    return (
+      <LoadingState
+        label={t("history.diff.loading")}
+        rows={2}
+        className="mt-1.5 gap-1.5"
+        rowClassName="h-6 rounded-md"
+      />
+    );
+  }
+  if (diffQuery.isError) {
+    return (
+      <ErrorState
+        message={t("history.diff.loadFailed")}
+        retryLabel={t("history.retry")}
+        onRetry={() => void diffQuery.refetch()}
+        className="mt-1.5 rounded-md px-3 py-4"
+      />
+    );
+  }
+
+  const { changes, currency } = diffQuery.data;
+  if (changes.length === 0) {
+    return (
+      <p className="mt-1.5 text-xs text-muted-foreground">
+        {t("history.diff.empty")}
+      </p>
+    );
+  }
+
+  return (
+    <dl className="mt-1.5 flex flex-col gap-1.5 rounded-md bg-foreground/[0.035] px-3 py-2">
+      {changes.map((change) => (
+        <div key={change.field} className="flex flex-col gap-0.5">
+          <dt className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+            {t(`history.field.${change.field}`, { defaultValue: change.field })}
+          </dt>
+          <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
+            <span className="text-muted-foreground">
+              {formatChangeValue(change, "before", currency, locale, t)}
+            </span>
+            <span aria-hidden className="text-muted-foreground/60">
+              →
+            </span>
+            <span className="font-medium">
+              {formatChangeValue(change, "after", currency, locale, t)}
+            </span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** ISO-8601 dates and timestamps, which is the only string shape we reinterpret. */
+const ISO_DATE_TIME =
+  /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
+
+/**
+ * Money goes through the money formatter — minor units, never divided. Anything
+ * else renders as it was recorded, because guessing at an unknown field's
+ * meaning is how a timeline starts lying.
+ */
+function formatChangeValue(
+  change: HistoryFieldChange,
+  side: "before" | "after",
+  currency: string,
+  locale: string,
+  t: (key: string) => string,
+): string {
+  const value = change[side];
+
+  if (value === null || value === undefined) return t("history.diff.none");
+  if (change.kind === "MONEY" && typeof value === "number") {
+    return formatMoney(value, { currency, locale });
+  }
+  if (typeof value === "boolean") {
+    return t(value ? "history.diff.yes" : "history.diff.no");
+  }
+  if (typeof value === "string") {
+    if (value === "") return t("history.diff.none");
+    if (!ISO_DATE_TIME.test(value)) return value;
+    return value.length === 10
+      ? formatDate(value, locale)
+      : formatDateTime(value, locale);
+  }
+  if (typeof value === "number") return String(value);
+  return JSON.stringify(value);
 }

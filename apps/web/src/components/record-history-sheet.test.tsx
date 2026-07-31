@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { HistoryItem } from "@routiq/contracts";
+import type { HistoryFieldChange, HistoryItem } from "@routiq/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -20,10 +20,14 @@ const ENTITY_ID = "00000000-0000-4000-8000-000000000010";
 
 const mocks = vi.hoisted(() => ({
   useHistory: vi.fn(),
+  useHistoryEvent: vi.fn(),
   fetchNextPage: vi.fn(),
 }));
 
-vi.mock("../history/useHistory.js", () => ({ useHistory: mocks.useHistory }));
+vi.mock("../history/useHistory.js", () => ({
+  useHistory: mocks.useHistory,
+  useHistoryEvent: mocks.useHistoryEvent,
+}));
 
 const { RecordHistorySheet } = await import("./record-history-sheet.js");
 
@@ -96,9 +100,22 @@ afterAll(async () => {
   await i18n.changeLanguage("fr-CM");
 });
 
+function stubDiff(
+  changes: HistoryFieldChange[],
+  { currency = "XAF" }: { currency?: string } = {},
+) {
+  mocks.useHistoryEvent.mockReturnValue({
+    data: { eventId: event().eventId, currency, changes },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   stubHistory([event()]);
+  stubDiff([]);
 });
 
 afterEach(() => {
@@ -188,5 +205,106 @@ describe("record history sheet", () => {
     await openSheet();
 
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+});
+
+describe("record history diff", () => {
+  async function expandRow() {
+    await openSheet();
+    await userEvent.click(screen.getByRole("button", { name: "Show changes" }));
+  }
+
+  it("asks for a diff only once its row is expanded", async () => {
+    await openSheet();
+    expect(mocks.useHistoryEvent).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show changes" }));
+    expect(mocks.useHistoryEvent).toHaveBeenCalledWith(
+      "activity",
+      ENTITY_ID,
+      event().eventId,
+      { enabled: true },
+    );
+  });
+
+  it("shows each changed field as before then after", async () => {
+    // No chips on this row: the same label would otherwise appear twice.
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([
+      { field: "status", kind: "VALUE", before: "OPEN", after: "CLOSED" },
+    ]);
+    await expandRow();
+
+    const row = screen.getByText("status").closest("div");
+    expect(row?.textContent).toContain("OPEN");
+    expect(row?.textContent).toContain("CLOSED");
+  });
+
+  it("labels a known field and falls back to the raw code for the rest", async () => {
+    stubDiff([
+      { field: "customerName", kind: "VALUE", before: null, after: "Brasseries" },
+      { field: "sprocketTension", kind: "VALUE", before: 1, after: 2 },
+    ]);
+    await expandRow();
+
+    expect(screen.getByText("customer")).toBeTruthy();
+    expect(screen.getByText("sprocketTension")).toBeTruthy();
+  });
+
+  it("renders money through the money formatter, minor units undivided", async () => {
+    stubDiff([
+      { field: "amountMinor", kind: "MONEY", before: null, after: 125_000 },
+    ]);
+    await expandRow();
+
+    // XAF has exponent 0 — 125 000 minor units is 125 000 francs.
+    expect(screen.getByText("FCFA 125,000")).toBeTruthy();
+  });
+
+  it("leaves a non-money number alone however large it looks", async () => {
+    stubDiff([
+      { field: "value", kind: "VALUE", before: 410_000, after: 411_125 },
+    ]);
+    await expandRow();
+
+    expect(screen.getByText("411125")).toBeTruthy();
+  });
+
+  it("marks an absent side rather than printing null", async () => {
+    stubDiff([
+      { field: "reason", kind: "VALUE", before: null, after: "Erreur de saisie" },
+    ]);
+    await expandRow();
+
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.queryByText("null")).toBeNull();
+  });
+
+  it("says nothing changed rather than showing an empty table", async () => {
+    stubDiff([]);
+    await expandRow();
+
+    expect(screen.getByText("No detailed changes")).toBeTruthy();
+  });
+
+  it("collapses again, and stops asking", async () => {
+    await expandRow();
+    await userEvent.click(screen.getByRole("button", { name: "Hide changes" }));
+
+    expect(screen.getByRole("button", { name: "Show changes" })).toBeTruthy();
+  });
+
+  it("offers a retry when the diff fails on its own", async () => {
+    const refetch = vi.fn();
+    mocks.useHistoryEvent.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isError: true,
+      refetch,
+    });
+    await expandRow();
+
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
