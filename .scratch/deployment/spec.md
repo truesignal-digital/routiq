@@ -59,17 +59,29 @@ nothing is pushed until this spec is approved).
 On PR and on `main`:
 
 - pnpm install (frozen lockfile), Node 24, pnpm cached.
-- `pnpm typecheck`, `pnpm test` with a `postgres:17` service container
-  (`DATABASE_URL` pointed at it; migrations applied first via
-  `pnpm db:migrate`).
+- `pnpm typecheck`; `pnpm test` — the API suite self-provisions Postgres via
+  testcontainers (`apps/api/src/test/global-setup.ts`), no service container
+  consumed by tests. A `postgres:17` service container exists anyway to
+  rehearse the deploy-time `pnpm db:migrate` drizzle-kit CLI path
+  (via `MIGRATION_DATABASE_URL`) before a merge can reach the box.
 - Web build (`pnpm --filter @routiq/web build`) so PR failures surface before
   deploy, not during.
+- `docker compose config -q` (§6a guard 4, cheap check; full cold boot is a
+  nightly job).
 - Single required status `ci` so branch protection has one stable name.
+- Built as PR #1; merged reality is authoritative over this bullet list.
 
 ### 3. CD — deploy on merge to `main`
 
-`.github/workflows/deploy-demo.yml`, runs after `ci` succeeds on `main`:
-SSH to the Hetzner box (deploy key secret), then on the box:
+**Mechanism (revised 2026-07-31): self-hosted GitHub Actions runner on the
+box** instead of SSH-from-CI. The runner (dedicated non-root user, docker
+group, systemd service, labels `[self-hosted, demo]`) pulls jobs; no inbound
+secret, no SSH key in GitHub, checkout uses the job's own token. Registration
+uses a short-lived token minted via `gh api`. Private-repo default — PR
+workflows from forks never reach self-hosted runners; same-repo branches do.
+
+`.github/workflows/deploy-demo.yml`, `runs-on: [self-hosted, demo]`, runs
+after `ci` succeeds on `main`, entirely on the box:
 
 1. `git pull` in `/opt/routiq` (shallow clone of `main`).
 2. `docker compose -f docker-compose.demo.yml build` — demo compose derives
@@ -98,21 +110,14 @@ rotated locally (7 dailies), copied off-box weekly by the owner until an
 object-store target exists. Demo data is reseedable; this is cheap insurance,
 not a compliance posture.
 
-### 4. Secrets — owner-only, one-time
+### 4. Secrets
 
-Agent never sees or handles secret values (hard boundary). Owner runs, in
-their own terminal (`!` prefix in a session works):
-
-```
-gh secret set DEMO_SSH_KEY       # dedicated deploy keypair, NOT the personal key
-gh secret set DEMO_SSH_HOST      # 178.156.253.244
-```
-
-The deploy key gets its own `authorized_keys` entry restricted to a deploy
-user (or a forced command); the personal root key never leaves the owner's
-machine. `DATABASE_URL` and API env live in `/opt/routiq/.env` on the box
-(owner-created from `.env.example`, one time). Sentry DSN joins later with
-observability (non-blocking).
+**None in GitHub.** The self-hosted runner eliminates the SSH deploy key;
+checkout uses the job token. Runtime env (`DATABASE_URL` with a generated
+demo password, API port) lives in an env file on the box readable only by the
+runner user. Sentry DSN joins later with observability (non-blocking). The
+owner's personal SSH key never enters CI; agent sessions use it only for
+box preparation, from the owner's machine.
 
 ### 5. Agent working agreement (the "without intervention" part)
 
