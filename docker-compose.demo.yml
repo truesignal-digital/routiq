@@ -1,0 +1,65 @@
+# Demo environment (deployment spec §3), deployed by .github/workflows/deploy-demo.yml
+# onto the owner's box. Derived from docker-compose.yml — the §6a cold-start
+# distribution artifact — which stays the canonical appliance recipe. What
+# differs here: Postgres publishes nothing, runtime config comes from an env
+# file outside the repo, and a static web container fronts the API so the PWA
+# is same-origin.
+#
+# Only the web container is published, on loopback. Public TLS is terminated by
+# the box's existing Caddy, which reaches `routiq-demo-web` over the shared
+# proxy network the deploy workflow attaches it to.
+name: routiq-demo
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file:
+      - ${ROUTIQ_ENV_FILE:-/srv/routiq/demo.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [internal]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${ROUTIQ_ENV_FILE:-/srv/routiq/demo.env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks: [internal]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    # Fixed name so the reverse proxy has a stable upstream across redeploys.
+    container_name: routiq-demo-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_started
+    networks: [internal]
+
+volumes:
+  pgdata:
+    name: routiq_demo_pgdata
+
+networks:
+  internal:
+    name: routiq-demo-internal
