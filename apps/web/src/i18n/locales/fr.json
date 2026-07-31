@@ -139,7 +139,10 @@
     "filters": {
       "ALL": "Tous",
       "IN_SERVICE": "En service",
-      "ATTENTION": "À surveiller"
+      "ATTENTION": "À surveiller",
+      "status": "Statut",
+      "category": "Classe",
+      "branch": "Agence"
     },
     "metrics": {
       "total": "Total",
@@ -240,7 +243,17 @@
       "conflictTitle": "Modifié ailleurs",
       "conflictBody": "Cet actif a été modifié par quelqu'un d'autre. Actualisez, vérifiez, puis réappliquez votre action.",
       "approvalTitle": "Approbation requise",
-      "approvalBody": "Un transfert vers une autre agence nécessite une approbation. Cette étape arrive avec le circuit d'approbation."
+      "approvalBody": "Un transfert vers une autre agence nécessite une approbation. Cette étape arrive avec le circuit d'approbation.",
+      "open": "Ouvrir la fiche",
+      "commissionHint": "Met l'actif en service. Son historique d'exploitation démarre ici.",
+      "assignHint": "Rattache l'actif à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies."
+    },
+    "columns": {
+      "asset": "Actif",
+      "status": "Statut",
+      "category": "Classe",
+      "branch": "Agence",
+      "registration": "Immatriculation"
     }
   },
   "more": {
@@ -565,13 +578,20 @@
       "status": "Statut",
       "activityType": "Type",
       "startedAt": "Départ",
+      "endedAt": "Arrivée",
       "primaryAsset": "Engin principal",
       "customer": "Client",
-      "legs": "Trajets"
+      "legs": "Trajets",
+      "crewCount": "Équipage"
     },
     "filters": {
       "status": "Statut",
-      "completeness": "Complétude"
+      "completeness": "Complétude",
+      "activityType": "Type d'activité",
+      "branch": "Agence",
+      "asset": "Engin",
+      "from": "Du",
+      "to": "Au"
     },
     "viewer": {
       "open": "Ouvrir l'activité"
@@ -600,7 +620,55 @@
       "stillRunning": "en cours",
       "legs": "Trajets",
       "money": "Recettes et dépenses",
-      "km": "{count} km"
+      "km": "{count} km",
+      "closedAt": "Clôturée le {date}",
+      "overview": {
+        "started": "Départ",
+        "ended": "Arrivée",
+        "running": "En cours",
+        "net": "Résultat",
+        "postedOnly": "lignes comptabilisées seulement",
+        "legs": "Trajets"
+      },
+      "timeline": {
+        "title": "Prévu et réalisé",
+        "planned": "Prévu",
+        "actual": "Réalisé",
+        "notRecorded": "Non renseigné",
+        "openEnd": "fin non renseignée"
+      },
+      "readings": {
+        "title": "Relevés compteur",
+        "delta": "({value} {unit})",
+        "corrected": "{count, plural, one {# relevé corrigé} other {# relevés corrigés}}",
+        "allSuperseded": "Tous les relevés de cette activité ont été corrigés.",
+        "units": {
+          "ODOMETER": "km",
+          "HOURS": "h"
+        },
+        "sources": {
+          "ACTIVITY_START": "Au départ",
+          "ACTIVITY_END": "À l'arrivée",
+          "SUBSTITUTION": "Au relais",
+          "MANUAL": "Saisi à la main",
+          "WORK_ORDER": "Depuis un ordre de travail"
+        }
+      },
+      "legsTable": {
+        "number": "N°",
+        "route": "Trajet",
+        "departed": "Départ",
+        "arrived": "Arrivée",
+        "load": "Charge",
+        "distance": "Distance",
+        "passengers": "Passagers"
+      },
+      "moneySummary": {
+        "net": "Résultat",
+        "postedOnly": "comptabilisé seulement",
+        "pending": "En attente d'approbation",
+        "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat."
+      }
     },
     "actions": {
       "close": "Clôturer",
@@ -865,5 +933,10 @@
       "CLERK": "Agent",
       "OTHER": "Autre"
     }
+  },
+  "provenance": {
+    "template": "{code} v{version}",
+    "created": "créée le {date}",
+    "command": "commande {id}"
   }
 }

@@ -139,7 +139,10 @@
     "filters": {
       "ALL": "All",
       "IN_SERVICE": "In service",
-      "ATTENTION": "Needs attention"
+      "ATTENTION": "Needs attention",
+      "status": "Status",
+      "category": "Class",
+      "branch": "Branch"
     },
     "metrics": {
       "total": "Total",
@@ -240,7 +243,17 @@
       "conflictTitle": "Modified elsewhere",
       "conflictBody": "Someone else modified this asset. Refresh, review, then reapply your action.",
       "approvalTitle": "Approval required",
-      "approvalBody": "A transfer to another branch needs an approval. That step arrives with the approval flow."
+      "approvalBody": "A transfer to another branch needs an approval. That step arrives with the approval flow.",
+      "open": "Open asset record",
+      "commissionHint": "Puts the asset into service. Its operating history starts counting from here.",
+      "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them."
+    },
+    "columns": {
+      "asset": "Asset",
+      "status": "Status",
+      "category": "Class",
+      "branch": "Branch",
+      "registration": "Plate"
     }
   },
   "more": {
@@ -565,13 +578,20 @@
       "status": "Status",
       "activityType": "Type",
       "startedAt": "Started",
+      "endedAt": "Ended",
       "primaryAsset": "Primary asset",
       "customer": "Customer",
-      "legs": "Legs"
+      "legs": "Legs",
+      "crewCount": "Crew"
     },
     "filters": {
       "status": "Status",
-      "completeness": "Completeness"
+      "completeness": "Completeness",
+      "activityType": "Activity type",
+      "branch": "Branch",
+      "asset": "Asset",
+      "from": "From",
+      "to": "To"
     },
     "viewer": {
       "open": "Open activity"
@@ -600,7 +620,55 @@
       "stillRunning": "still running",
       "legs": "Legs",
       "money": "Revenue and costs",
-      "km": "{count} km"
+      "km": "{count} km",
+      "closedAt": "Closed {date}",
+      "overview": {
+        "started": "Started",
+        "ended": "Ended",
+        "running": "Running",
+        "net": "Net",
+        "postedOnly": "posted lines only",
+        "legs": "Legs"
+      },
+      "timeline": {
+        "title": "Planned vs actual",
+        "planned": "Planned",
+        "actual": "Actual",
+        "notRecorded": "Not recorded",
+        "openEnd": "no end recorded"
+      },
+      "readings": {
+        "title": "Meter readings",
+        "delta": "({value} {unit})",
+        "corrected": "{count, plural, one {# corrected reading} other {# corrected readings}}",
+        "allSuperseded": "Every reading on this activity has been corrected.",
+        "units": {
+          "ODOMETER": "km",
+          "HOURS": "h"
+        },
+        "sources": {
+          "ACTIVITY_START": "At departure",
+          "ACTIVITY_END": "At arrival",
+          "SUBSTITUTION": "At handover",
+          "MANUAL": "Entered by hand",
+          "WORK_ORDER": "From a work order"
+        }
+      },
+      "legsTable": {
+        "number": "No.",
+        "route": "Route",
+        "departed": "Departed",
+        "arrived": "Arrived",
+        "load": "Load",
+        "distance": "Distance",
+        "passengers": "Passengers"
+      },
+      "moneySummary": {
+        "net": "Net",
+        "postedOnly": "posted only",
+        "pending": "Awaiting approval",
+        "pendingHint": "Lines awaiting approval are listed but stay out of the net."
+      }
     },
     "actions": {
       "close": "Close",
@@ -865,5 +933,10 @@
       "CLERK": "Clerk",
       "OTHER": "Other"
     }
+  },
+  "provenance": {
+    "template": "{code} v{version}",
+    "created": "created {date}",
+    "command": "command {id}"
   }
 }

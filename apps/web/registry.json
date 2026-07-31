@@ -700,6 +700,141 @@
         "utils"
       ],
       "dependencies": []
+    },
+    {
+      "name": "provenance-stamp",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/provenance-stamp.tsx",
+          "type": "registry:file",
+          "target": "components/provenance-stamp.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "activity-detail",
+      "type": "registry:block",
+      "files": [
+        {
+          "path": "src/screens/ActivityDetailScreen.tsx",
+          "type": "registry:file",
+          "target": "screens/ActivityDetailScreen.tsx"
+        },
+        {
+          "path": "src/activities/detail/ActivityOverview.tsx",
+          "type": "registry:file",
+          "target": "activities/detail/ActivityOverview.tsx"
+        },
+        {
+          "path": "src/activities/detail/ActivityTimeline.tsx",
+          "type": "registry:file",
+          "target": "activities/detail/ActivityTimeline.tsx"
+        },
+        {
+          "path": "src/activities/detail/ActivityAssetsPanel.tsx",
+          "type": "registry:file",
+          "target": "activities/detail/ActivityAssetsPanel.tsx"
+        },
+        {
+          "path": "src/activities/detail/ActivityLegs.tsx",
+          "type": "registry:file",
+          "target": "activities/detail/ActivityLegs.tsx"
+        },
+        {
+          "path": "src/activities/detail/ActivityMoney.tsx",
+          "type": "registry:file",
+          "target": "activities/detail/ActivityMoney.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "card",
+        "separator",
+        "table",
+        "status-badge",
+        "metric-strip",
+        "page",
+        "page-container",
+        "permission-denied",
+        "provenance-stamp",
+        "utils"
+      ],
+      "dependencies": [
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "assets-explorer",
+      "type": "registry:block",
+      "files": [
+        {
+          "path": "src/screens/AssetsStub.tsx",
+          "type": "registry:file",
+          "target": "screens/AssetsStub.tsx"
+        },
+        {
+          "path": "src/assets/assetColumns.tsx",
+          "type": "registry:file",
+          "target": "assets/assetColumns.tsx"
+        },
+        {
+          "path": "src/assets/AssetActions.tsx",
+          "type": "registry:file",
+          "target": "assets/AssetActions.tsx"
+        },
+        {
+          "path": "src/assets/display.ts",
+          "type": "registry:file",
+          "target": "assets/display.ts"
+        },
+        {
+          "path": "src/assets/permissions.ts",
+          "type": "registry:file",
+          "target": "assets/permissions.ts"
+        },
+        {
+          "path": "src/assets/api.ts",
+          "type": "registry:file",
+          "target": "assets/api.ts"
+        },
+        {
+          "path": "src/assets/useAssets.ts",
+          "type": "registry:file",
+          "target": "assets/useAssets.ts"
+        },
+        {
+          "path": "src/assets/useAssetSummary.ts",
+          "type": "registry:file",
+          "target": "assets/useAssetSummary.ts"
+        }
+      ],
+      "registryDependencies": [
+        "data-table",
+        "metric-strip",
+        "page",
+        "page-container",
+        "permission-denied",
+        "status-badge",
+        "dialog",
+        "error-banner",
+        "select"
+      ],
+      "dependencies": [
+        "@tanstack/react-query",
+        "@tanstack/react-router",
+        "@tanstack/react-table",
+        "lucide-react",
+        "react-i18next"
+      ]
     }
   ]
 }
