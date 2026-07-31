@@ -335,6 +335,7 @@ try {
 
   const garoua = await runCommand(boris, "record-haulage-job-sheet:douala-garoua", {
     activityId: ids.garouaJourney,
+    close: true,
     branchCode,
     activityTypeCode: "HAULAGE_JOB",
     primarySegmentId: ids.garouaPrimarySegment,

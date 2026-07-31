@@ -1,4 +1,5 @@
 import type {
+  ActivityCompletenessCode,
   ActivityCrewMember,
   CommandWarningCode,
   MeterReadingCapture,
@@ -52,12 +53,17 @@ export interface SheetWrite {
   clientReference?: string | undefined;
   description?: string | undefined;
   customValues: Record<string, unknown>;
+  /** Whether this submission also closes the activity — see writeSheet. */
+  close: boolean;
 }
 
 export interface SheetResult {
   activityId: string;
   activityNumber: string;
-  completeness: "COMPLETE" | "COMPLETE_WITH_EXCEPTIONS";
+  status: "OPEN" | "CLOSED";
+  /** NULL while OPEN: a verdict exists only once someone has closed the record. */
+  completeness: "COMPLETE" | "COMPLETE_WITH_EXCEPTIONS" | null;
+  rowVersion: number;
   warnings: CommandWarningCode[];
   children: CommandOutcomeChild[];
 }
@@ -99,10 +105,12 @@ async function assertAssetsOperational(
  * and money. One implementation for every flavour — what differs between a
  * journey and a haulage job is the payload schema and its mapper, never this.
  *
- * The activity is created AND closed here. A paper trip sheet is transcribed
- * after the trip, so the <10-minute close criterion (§5.1) means one submission
- * has to do both. The granular commands remain the path for a trip recorded live
- * or corrected afterwards.
+ * The activity is created OPEN. Closing it is a separate decision the submitter
+ * has to make — `close: true` runs the completeness verdict in the same
+ * transaction, which is what the office clerk transcribing a finished paper
+ * sheet wants. Recording facts must never decide on its own that the record is
+ * finished: a field agent who writes down what happened would find the trip
+ * marked "closed with exceptions" without having said so.
  */
 export async function writeSheet(
   tx: Tx,
@@ -386,51 +394,62 @@ export async function writeSheet(
     if (entry.direction === "REVENUE" && entry.attributeToActivity) revenueEntryCount += 1;
   }
 
-  const segments = await tx
-    .select({
-      role: activityAssetSegments.role,
-      endedAt: activityAssetSegments.endedAt,
-      startReadingId: activityAssetSegments.startReadingId,
-      endReadingId: activityAssetSegments.endReadingId,
-    })
-    .from(activityAssetSegments)
-    .where(
-      and(
-        eq(activityAssetSegments.workspaceId, ctx.workspaceId),
-        eq(activityAssetSegments.activityId, write.activityId),
-      ),
-    );
+  // Only a closing sheet gets a verdict: an OPEN activity has nothing to be
+  // complete about yet, and §3.4 keeps `completeness` NULL until someone closes.
+  let completeness: SheetResult["completeness"] = null;
+  let completenessCodes: ActivityCompletenessCode[] = [];
 
-  const verdict = evaluateCompleteness({
-    startedAt,
-    endedAt,
-    segments,
-    legCount: write.legs.length,
-    crewCount: write.crew.length,
-    revenueEntryCount,
-    requirements: activityRequirements(write.templateCode),
-  });
-  if (!verdict.closeable) {
-    // Unreachable through a sheet — dates and the primary segment are required
-    // by the schema — but the evaluator is the single source of truth and must
-    // not be second-guessed here.
-    throw new CommandError(422, "ACTIVITY_CLOSE_BLOCKED", { blockedBy: verdict.blockedBy });
+  if (write.close) {
+    const segments = await tx
+      .select({
+        role: activityAssetSegments.role,
+        endedAt: activityAssetSegments.endedAt,
+        startReadingId: activityAssetSegments.startReadingId,
+        endReadingId: activityAssetSegments.endReadingId,
+      })
+      .from(activityAssetSegments)
+      .where(
+        and(
+          eq(activityAssetSegments.workspaceId, ctx.workspaceId),
+          eq(activityAssetSegments.activityId, write.activityId),
+        ),
+      );
+
+    const verdict = evaluateCompleteness({
+      startedAt,
+      endedAt,
+      segments,
+      legCount: write.legs.length,
+      crewCount: write.crew.length,
+      revenueEntryCount,
+      requirements: activityRequirements(write.templateCode),
+    });
+    if (!verdict.closeable) {
+      // Unreachable through a sheet — dates and the primary segment are required
+      // by the schema — but the evaluator is the single source of truth and must
+      // not be second-guessed here.
+      throw new CommandError(422, "ACTIVITY_CLOSE_BLOCKED", { blockedBy: verdict.blockedBy });
+    }
+    for (const code of verdict.codes) warnings.add(code);
+    completeness = verdict.completeness;
+    completenessCodes = verdict.codes;
+
+    await tx
+      .update(activities)
+      .set({
+        status: "CLOSED",
+        completeness: verdict.completeness,
+        completenessCodes: verdict.codes,
+        closedAt: new Date(),
+        closedByCommandId: envelope.commandId,
+        rowVersion: 2,
+      })
+      .where(
+        and(eq(activities.workspaceId, ctx.workspaceId), eq(activities.id, write.activityId)),
+      );
   }
-  for (const code of verdict.codes) warnings.add(code);
 
-  await tx
-    .update(activities)
-    .set({
-      status: "CLOSED",
-      completeness: verdict.completeness,
-      completenessCodes: verdict.codes,
-      closedAt: new Date(),
-      closedByCommandId: envelope.commandId,
-      rowVersion: 2,
-    })
-    .where(
-      and(eq(activities.workspaceId, ctx.workspaceId), eq(activities.id, write.activityId)),
-    );
+  const status = write.close ? "CLOSED" : "OPEN";
 
   await appendAuditEvent(tx, ctx, envelope, {
     eventType: "activity.sheet_recorded",
@@ -442,9 +461,9 @@ export async function writeSheet(
       branchId: branch.id,
       activityTypeCode: write.activityTypeCode,
       templateCode: write.templateCode,
-      status: "CLOSED",
-      completeness: verdict.completeness,
-      completenessCodes: verdict.codes,
+      status,
+      completeness,
+      completenessCodes,
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
       customerName: write.customerName ?? null,
@@ -463,8 +482,7 @@ export async function writeSheet(
       "id",
       "activityNumber",
       "status",
-      "completeness",
-      "completenessCodes",
+      ...(write.close ? ["completeness", "completenessCodes"] : []),
       "startedAt",
       "endedAt",
       "segmentIds",
@@ -478,7 +496,9 @@ export async function writeSheet(
   return {
     activityId: write.activityId,
     activityNumber,
-    completeness: verdict.completeness,
+    status,
+    completeness,
+    rowVersion: write.close ? 2 : 1,
     warnings: [...warnings],
     children,
   };

@@ -139,6 +139,7 @@ describe("activity, person and place reads", () => {
     closedActivityId = randomUUID();
     await command("record-haulage-job-sheet", {
       activityId: closedActivityId,
+      close: true,
       branchCode: "DLA",
       activityTypeCode: "HAULAGE_JOB",
       primarySegmentId: randomUUID(),
