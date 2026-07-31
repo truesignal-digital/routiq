@@ -28,6 +28,11 @@ services:
     environment:
       DATABASE_URL: postgres://routiq:routiq@postgres:5432/routiq_dev
       PORT: 3001
+      # Keys the fingerprint of command payloads (payload-fingerprint.ts); the
+      # API will not start without it. This literal is a demo default, like the
+      # postgres password above — a real box supplies its own from the deploy
+      # env file, generated with `openssl rand -hex 32`.
+      COMMAND_PAYLOAD_HMAC_KEY: ${COMMAND_PAYLOAD_HMAC_KEY:-appliance-demo-command-payload-hmac-key-change-me}
     ports:
       - "3001:3001"
     depends_on:

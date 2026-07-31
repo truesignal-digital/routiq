@@ -8,7 +8,6 @@ import {
   type TemplateCode,
   type ValidationErrorCode,
 } from "@routiq/contracts";
-import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -35,6 +34,7 @@ import {
   type ApprovalContext,
   type ApprovalDecision,
 } from "./approvals.js";
+import { fingerprintCanonical } from "./payload-fingerprint.js";
 import { redactSecrets } from "./redaction.js";
 
 export type CommandContext = AuthContext;
@@ -981,9 +981,13 @@ function replayOrConflict(
   return { status: 200, body: { ...receipt.result, idempotentReplay: true } };
 }
 
-/** Stable digest of a payload: canonical JSON so key order cannot change it. */
+/**
+ * Stable fingerprint of a payload: canonical JSON so key order cannot change
+ * it, then keyed so the digest cannot be brute-forced back into the payload it
+ * came from. See payload-fingerprint.ts for why the key is load-bearing.
+ */
 function fingerprint(value: unknown): string {
-  return createHash("sha256").update(canonicalJson(value)).digest("hex");
+  return fingerprintCanonical(canonicalJson(value));
 }
 
 function canonicalJson(value: unknown): string {

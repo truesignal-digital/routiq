@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession, loginWithPin } from "../auth/local.js";
@@ -368,6 +368,37 @@ describe("member commands", () => {
       expect(second.json()).toMatchObject({
         error: { code: "IDEMPOTENCY_KEY_REUSED" },
       });
+    });
+
+    /**
+     * The stored fingerprint must not be recoverable back into the PIN it
+     * stands in for. A receipt keeps the principal id and the payload shape is
+     * in this repository, so an unkeyed digest would leave an attacker holding
+     * a database copy with ten thousand guesses to hash and compare — handing
+     * back precisely what redaction removed. This reproduces that attack
+     * against a real receipt and requires it to miss.
+     */
+    it("stores a fingerprint that a database copy cannot brute-force", async () => {
+      const pin = "4821";
+      const principalId = randomUUID();
+      const response = await send("reset-member-pin", {
+        principalId: (await addMember({ principalId })).principalId,
+        pin,
+      });
+      expect(response.statusCode).toBe(200);
+
+      const [receipt] = await ctx.db
+        .select({ payloadHash: commands.payloadHash })
+        .from(commands)
+        .where(eq(commands.id, response.json().commandId as string));
+
+      // Canonical JSON is key-sorted, so this is exactly what the dispatcher
+      // hashed — the attacker's guess is otherwise perfect.
+      const guess = createHash("sha256")
+        .update(JSON.stringify({ pin, principalId }))
+        .digest("hex");
+      expect(receipt?.payloadHash).toBeTypeOf("string");
+      expect(receipt?.payloadHash).not.toBe(guess);
     });
 
     it("still replays a genuine retry of the same PIN under one key", async () => {

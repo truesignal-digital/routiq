@@ -26,6 +26,7 @@ import "./commands/set-template-preset.js";
 import "./commands/members.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
+import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
 import { workspaceModules } from "./db/schema.js";
@@ -72,6 +73,11 @@ export function buildServer({
         "runtime database role must be non-superuser without BYPASSRLS",
       );
     }
+
+    // Checked at boot rather than on the first write: a box missing the key
+    // would otherwise come up healthy and fail on the first command an
+    // operator ran, which is the worst moment to discover a config gap.
+    commandPayloadHmacKey();
   });
 
   app.addHook("onResponse", (req, reply, done) => {
