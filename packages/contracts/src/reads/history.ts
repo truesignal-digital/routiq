@@ -99,7 +99,217 @@ export const historyItem = z.object({
 
 export const historyListResponse = listResponse(historyItem);
 
+/**
+ * The state keys a single event may surface, per entity type — an allowlist, not
+ * a filter. `before_state`/`after_state` are row snapshots written by whatever
+ * command touched the row, so a passthrough would ship whatever a future command
+ * decides to snapshot; user-management events will put principal state in there,
+ * and a PIN hash must never reach a client. A key missing here is invisible, so
+ * auditing a new field is deliberately two steps: write it, then allow it.
+ *
+ * Populated from what the `appendAuditEvent` call sites in
+ * `apps/api/src/commands/` actually write today. Bookkeeping columns (`id`,
+ * `workspaceId`, `rowVersion`, `*ByCommandId`) are left out on purpose: they are
+ * in every snapshot, they say nothing to an operator, and omitting them keeps
+ * the payload small on 2G. The diff renders in the order listed here.
+ */
+export const HISTORY_STATE_KEYS = {
+  activity: [
+    "status",
+    "completeness",
+    "completenessCodes",
+    "activityNumber",
+    "activityTypeCode",
+    "activityTypeId",
+    "branchId",
+    "startedAt",
+    "endedAt",
+    "plannedEndAt",
+    "customerName",
+    "clientReference",
+    "description",
+    "note",
+    "reason",
+    "customValues",
+    "crew",
+    "segments",
+    "segmentIds",
+    "legIds",
+    "readingIds",
+    "entries",
+    "role",
+    "outgoingSegmentId",
+    "outgoingAssetId",
+    "outgoingEndedAt",
+    "outgoingReadingId",
+    "incomingReadingId",
+    "newSegmentId",
+    "substituteAssetId",
+    "templateCode",
+    "templateVersion",
+  ],
+  /**
+   * Empty on purpose: no command writes an audit event against a segment today —
+   * substitution is audited on the activity. Populate it the day one does.
+   */
+  activity_asset_segment: [],
+  approval_rule: ["commandType", "amountMaxMinor"],
+  asset: [
+    "assetCode",
+    "assetClassCode",
+    "lifecycleStatus",
+    "registrationNumber",
+    "chassisNumber",
+    "manufacturer",
+    "model",
+    "modelYear",
+    "branchId",
+    "custodianMembershipId",
+    "commissionedAt",
+    "acquisitionDate",
+    "acquisitionAmountMinor",
+    "currency",
+    "customValues",
+    "templateCode",
+    "templateVersion",
+  ],
+  category: [
+    "kind",
+    "code",
+    "labelFr",
+    "labelEn",
+    "profitabilityLayer",
+    "evidencePolicy",
+    "active",
+  ],
+  document: [
+    "documentTypeCode",
+    "documentNumber",
+    "title",
+    "assetId",
+    "issuedAt",
+    "expiresAt",
+    "supersedesDocumentId",
+  ],
+  financial_entry: [
+    "status",
+    "entryNumber",
+    "direction",
+    "categoryId",
+    "branchId",
+    "amountMinor",
+    "currency",
+    "economicDate",
+    "counterpartyName",
+    "description",
+    "paymentMethod",
+    "paymentReference",
+    "sourceReference",
+    "estimateStatus",
+    "postingPeriodId",
+    "isLatePosting",
+    "postedAt",
+    "createdAt",
+    "postings",
+    "approvalNote",
+    "rejectedReason",
+    "reason",
+    "reversesEntryId",
+    "reversedByEntryId",
+  ],
+  meter_reading: [
+    "readingType",
+    "value",
+    "observedAt",
+    "source",
+    "assetId",
+    "activityId",
+    "supersedesReadingId",
+    "supersedeReason",
+  ],
+  movement_leg: [
+    "legNo",
+    "segmentId",
+    "activityId",
+    "originText",
+    "originPlaceId",
+    "destinationText",
+    "destinationPlaceId",
+    "departedAt",
+    "arrivedAt",
+    "distanceKm",
+    "loadState",
+    "passengerCount",
+    "customValues",
+  ],
+  person: [
+    "displayName",
+    "personCode",
+    "phone",
+    "defaultRole",
+    "branchId",
+    "membershipId",
+    "active",
+  ],
+  posting_period: ["status", "lockedAt", "reason"],
+  /**
+   * `admin` and `users` from `workspace.provisioned` are deliberately absent:
+   * they are principal snapshots carrying login usernames, and CORE entitles
+   * every member to this timeline.
+   */
+  workspace: [
+    "slug",
+    "name",
+    "defaultCurrency",
+    "defaultLocale",
+    "timezone",
+    "branch",
+    "enabledPresets",
+    "disabledModules",
+    "packs",
+  ],
+  workspace_module: ["moduleCode", "enabled", "updatedAt"],
+  workspace_template: ["presetCode", "enabled"],
+} as const satisfies Record<HistoryEntityType, readonly string[]>;
+
+/**
+ * Allowlisted keys whose value is money in minor units. XAF has exponent 0, so
+ * the number is the amount — the client formats it, never divides it.
+ */
+export const HISTORY_MONEY_STATE_KEYS = [
+  "amountMinor",
+  "amountMaxMinor",
+  "acquisitionAmountMinor",
+] as const;
+
+export const historyValueKinds = ["MONEY", "VALUE"] as const;
+export const historyValueKind = z.enum(historyValueKinds);
+
+export const historyFieldChange = z.object({
+  field: z.string(),
+  /** MONEY pairs the value with the diff's `currency`; VALUE renders as it came. */
+  kind: historyValueKind,
+  before: z.json(),
+  after: z.json(),
+});
+
+/**
+ * What a single event changed — the only shape `before_state`/`after_state` are
+ * ever served through. The list item already carries who, when and through which
+ * command, so the diff repeats none of it: on 2G the expansion pays for the
+ * changes alone.
+ */
+export const historyEventDiff = z.object({
+  eventId: z.uuid(),
+  /** For MONEY changes: the state's own currency, else the workspace default. */
+  currency: z.string().length(3),
+  changes: z.array(historyFieldChange),
+});
+
 export type HistoryListQuery = z.infer<typeof historyListQuery>;
 export type HistoryActor = z.infer<typeof historyActor>;
 export type HistoryItem = z.infer<typeof historyItem>;
 export type HistoryListResponse = z.infer<typeof historyListResponse>;
+export type HistoryValueKind = z.infer<typeof historyValueKind>;
+export type HistoryFieldChange = z.infer<typeof historyFieldChange>;
+export type HistoryEventDiff = z.infer<typeof historyEventDiff>;
