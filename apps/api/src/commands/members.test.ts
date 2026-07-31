@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession, loginWithPin } from "../auth/local.js";
 import { auditEvents, commands, credentials, memberships, principals, sessions } from "../db/schema.js";
+import { inWorkspace } from "../db/tenant.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
+import { beginMemberAdministration } from "./members.js";
 import { REDACTED_PIN } from "./redaction.js";
 
 /**
@@ -301,6 +303,82 @@ describe("member commands", () => {
       };
       expect((await send("add-member", payload, { idempotencyKey: key })).statusCode).toBe(200);
       const replay = await send("add-member", payload, { idempotencyKey: key });
+      expect(replay.statusCode).toBe(200);
+      expect(replay.json()).toMatchObject({ idempotentReplay: true });
+    });
+
+    /**
+     * The receipt of a command that never resolved. An unsupported version or a
+     * misspelled name fails before any definition — and therefore before any
+     * declared redaction — but still leaves a REJECTED row carrying whatever
+     * the caller sent.
+     */
+    it("redacts the PIN of a command version that does not exist", async () => {
+      const pin = "19731973";
+      const response = await ctx.app.inject({
+        method: "POST",
+        url: "/v1/commands/reset-member-pin",
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          version: 9,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `idem-${randomUUID()}`,
+            origin: "HUMAN_UI",
+          },
+          payload: { principalId: randomUUID(), pin },
+        },
+      });
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toMatchObject({ error: { code: "COMMAND_NOT_FOUND" } });
+
+      const rejected = await ctx.db
+        .select({ payload: commands.payload })
+        .from(commands)
+        .where(eq(commands.commandVersion, "9"));
+      expect(rejected.length).toBeGreaterThan(0);
+      expect(JSON.stringify(rejected)).not.toContain(pin);
+      expect((rejected[0]!.payload as { pin: string }).pin).toBe(REDACTED_PIN);
+    });
+
+    /**
+     * Redaction maps every PIN to one marker, so a receipt comparison would read
+     * these two calls as identical and replay the first — answering 200 for a
+     * PIN it never set, and leaving the admin handing out a code that does not
+     * work. The stored hash is taken over the raw payload precisely so this
+     * still conflicts.
+     */
+    it("conflicts when one key is reused for two different PINs", async () => {
+      const { principalId } = await addMember();
+      const key = `idem-${randomUUID()}`;
+
+      const first = await send(
+        "reset-member-pin",
+        { principalId, pin: "11112222" },
+        { idempotencyKey: key },
+      );
+      expect(first.statusCode).toBe(200);
+
+      const second = await send(
+        "reset-member-pin",
+        { principalId, pin: "33334444" },
+        { idempotencyKey: key },
+      );
+      expect(second.statusCode).toBe(409);
+      expect(second.json()).toMatchObject({
+        error: { code: "IDEMPOTENCY_KEY_REUSED" },
+      });
+    });
+
+    it("still replays a genuine retry of the same PIN under one key", async () => {
+      const { principalId } = await addMember();
+      const key = `idem-${randomUUID()}`;
+      const payload = { principalId, pin: "55556666" };
+
+      expect(
+        (await send("reset-member-pin", payload, { idempotencyKey: key })).statusCode,
+      ).toBe(200);
+      const replay = await send("reset-member-pin", payload, { idempotencyKey: key });
       expect(replay.statusCode).toBe(200);
       expect(replay.json()).toMatchObject({ idempotentReplay: true });
     });
@@ -662,6 +740,41 @@ describe("member commands", () => {
       expect(response.statusCode).toBe(403);
       expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
     });
+
+    /**
+     * A login that verified the old PIN must not be able to insert its session
+     * after the reset deleted this principal's sessions — that session would
+     * outlive the reset carrying the authority of a PIN that no longer opens
+     * anything. `loginWithPin` mints under a row lock on the credential, so
+     * whichever order the two land in, no session survives on the old PIN.
+     */
+    it("leaves no session standing on the old PIN when a login races the reset", async () => {
+      const { principalId, username, pin } = await addMember();
+      const newPin = "97539753";
+
+      const [login] = await Promise.all([
+        loginWithPin(ctx.db, { workspaceSlug, username, pin }),
+        send("reset-member-pin", { principalId, pin: newPin }),
+      ]);
+
+      if (login.ok) {
+        // The login won the race; the reset must then have deleted its session.
+        const probe = await ctx.app.inject({
+          method: "GET",
+          url: "/v1/me",
+          headers: { authorization: `Bearer ${login.session.token}` },
+        });
+        expect(probe.statusCode).toBe(401);
+      }
+
+      // And the old PIN is dead either way.
+      expect(await loginWithPin(ctx.db, { workspaceSlug, username, pin })).toMatchObject({
+        ok: false,
+      });
+      expect(
+        await loginWithPin(ctx.db, { workspaceSlug, username, pin: newPin }),
+      ).toMatchObject({ ok: true });
+    });
   });
 
   describe("tenant isolation", () => {
@@ -732,6 +845,169 @@ describe("member commands", () => {
         { token: otherToken },
       );
       expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe("concurrent administration", () => {
+    /**
+     * The lock's actual job, tested directly because it is the only way to pin
+     * the interleaving down. Two transactions enter member administration for
+     * one workspace; the second must wait for the first to finish rather than
+     * reading state the first is midway through changing.
+     *
+     * The end-to-end version below asserts the invariant but cannot force the
+     * overlap — two injected requests happen to serialize on their own — so it
+     * would pass with the lock removed. This one does not.
+     */
+    it("makes a second administrator wait for the first", async () => {
+      const arena = await seedWorkspace(ctx.db, `ws-lock-${randomUUID().slice(0, 8)}`);
+      const admin = await seedMember(ctx.db, {
+        workspaceId: arena.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      const actorContext = {
+        workspaceId: arena.workspace.id,
+        principalId: admin.principal.id,
+        principalType: "HUMAN" as const,
+        membershipId: admin.membership.id,
+        role: "ADMIN" as const,
+        branchScope: "ALL" as const,
+      };
+      const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+      let releaseFirst = () => {};
+      const firstHolds = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      let secondEntered = false;
+
+      const first = inWorkspace(ctx.runtimeDb, arena.workspace.id, async (tx) => {
+        await beginMemberAdministration(tx, actorContext);
+        await firstHolds;
+      });
+      await settle();
+
+      const second = inWorkspace(ctx.runtimeDb, arena.workspace.id, async (tx) => {
+        await beginMemberAdministration(tx, actorContext);
+        secondEntered = true;
+      });
+      await settle();
+
+      // Still held by the first transaction, so the second cannot be inside.
+      expect(secondEntered).toBe(false);
+
+      releaseFirst();
+      await first;
+      await second;
+      expect(secondEntered).toBe(true);
+    });
+
+    /**
+     * The same invariant through the HTTP surface. It cannot force the two
+     * transactions to overlap, so treat it as a statement of what must hold
+     * rather than as the regression test for the lock — that is the case above.
+     */
+    it("cannot be raced into a workspace with no admin", async () => {
+      const arena = await seedWorkspace(ctx.db, `ws-race-${randomUUID().slice(0, 8)}`);
+      const first = await seedMember(ctx.db, {
+        workspaceId: arena.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      const second = await seedMember(ctx.db, {
+        workspaceId: arena.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      const tokenOf = async (principalId: string) =>
+        (await createSession(ctx.db, { workspaceId: arena.workspace.id, principalId }))
+          .token;
+      const firstToken = await tokenOf(first.principal.id);
+      const secondToken = await tokenOf(second.principal.id);
+
+      // Each admin demotes the other, at the same time.
+      const [a, b] = await Promise.all([
+        send(
+          "update-member-role",
+          { principalId: second.principal.id, role: "OPS_MANAGER" },
+          { token: firstToken, expectedVersion: 1 },
+        ),
+        send(
+          "update-member-role",
+          { principalId: first.principal.id, role: "OPS_MANAGER" },
+          { token: secondToken, expectedVersion: 1 },
+        ),
+      ]);
+
+      const codes = [a.statusCode, b.statusCode].sort();
+      expect(codes[0]).toBe(200);
+      // The loser is refused either as the last admin or as an actor who is no
+      // longer one; which depends on commit order, and both are correct.
+      expect([403, 422]).toContain(codes[1]);
+
+      const survivors = await ctx.db
+        .select()
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.workspaceId, arena.workspace.id),
+            eq(memberships.role, "ADMIN"),
+            isNull(memberships.deactivatedAt),
+          ),
+        );
+      expect(survivors.length).toBeGreaterThanOrEqual(1);
+    });
+
+    /**
+     * The stale-auth window: `requireAuth` resolves the caller's role before the
+     * command transaction opens, so a concurrent demotion or deactivation can
+     * land in between. Hitting that window through the HTTP surface would need
+     * the two requests to interleave on demand, so the guard is exercised
+     * directly instead — same code, deterministic.
+     */
+    it("refuses an actor whose own membership stopped being an active admin", async () => {
+      const arena = await seedWorkspace(ctx.db, `ws-stale-${randomUUID().slice(0, 8)}`);
+      const actor = await seedMember(ctx.db, {
+        workspaceId: arena.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      const staleContext = {
+        workspaceId: arena.workspace.id,
+        principalId: actor.principal.id,
+        principalType: "HUMAN" as const,
+        membershipId: actor.membership.id,
+        // What the request started with, and what the row no longer says.
+        role: "ADMIN" as const,
+        branchScope: "ALL" as const,
+      };
+
+      await inWorkspace(ctx.runtimeDb, arena.workspace.id, (tx) =>
+        beginMemberAdministration(tx, staleContext),
+      );
+
+      await ctx.db
+        .update(memberships)
+        .set({ role: "OPS_MANAGER" })
+        .where(eq(memberships.principalId, actor.principal.id));
+
+      await expect(
+        inWorkspace(ctx.runtimeDb, arena.workspace.id, (tx) =>
+          beginMemberAdministration(tx, staleContext),
+        ),
+      ).rejects.toMatchObject({ httpStatus: 403, code: "ROLE_FORBIDDEN" });
+
+      await ctx.db
+        .update(memberships)
+        .set({ role: "ADMIN", deactivatedAt: new Date() })
+        .where(eq(memberships.principalId, actor.principal.id));
+
+      await expect(
+        inWorkspace(ctx.runtimeDb, arena.workspace.id, (tx) =>
+          beginMemberAdministration(tx, staleContext),
+        ),
+      ).rejects.toMatchObject({ httpStatus: 403, code: "ROLE_FORBIDDEN" });
     });
   });
 });
