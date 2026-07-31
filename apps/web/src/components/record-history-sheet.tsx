@@ -21,8 +21,10 @@ import { useHistory, useHistoryEvent } from "@/history/useHistory.js";
 import {
   formatDate,
   formatDateTime,
+  formatDayLong,
   formatMoney,
   formatRelativeTime,
+  localDayKey,
 } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
@@ -36,11 +38,15 @@ export function historyEventLabelKey(eventType: string): string {
 }
 
 /**
- * Bookkeeping columns every write touches. They are true, they are in the audit
- * row, and they tell an operator nothing about what happened — so they stay out
- * of the chips instead of burying the fields that matter.
+ * Bookkeeping columns every write touches: the row's own identity, the version
+ * counter, the command-id provenance columns and the insert/update timestamps.
+ * Read off the `changedFields` the write path actually sends — the
+ * `appendAuditEvent` call sites under `apps/api/src/commands` — rather than
+ * guessed at. They are true, they are in the audit row, and they tell an
+ * operator nothing about what happened, so they stay out of the chips and an
+ * event left with nothing else drops out of the default view.
  */
-const PLUMBING_FIELDS = new Set([
+export const BOOKKEEPING_FIELDS = new Set([
   "id",
   "workspaceId",
   "rowVersion",
@@ -48,7 +54,63 @@ const PLUMBING_FIELDS = new Set([
   "createdByCommandId",
   "updatedByCommandId",
   "lockedByCommandId",
+  "createdAt",
+  "updatedAt",
 ]);
+
+/**
+ * Actions whose entire content is the field list they carry. Strip the
+ * bookkeeping out of one of those and nothing is left to report, so the default
+ * view drops it. Every other action — created, closed, approved, provisioned,
+ * and whatever a future command invents — names a step that stands on its own
+ * and always shows: the vocabulary is open, so hiding is only ever a decision
+ * about codes this file already recognises.
+ */
+const FIELD_EDIT_ACTIONS = ["updated", "relabeled", "corrected"];
+
+/** "activity.closed" → "closed"; "member.role-updated" → "role-updated". */
+function eventAction(eventType: string): string {
+  const dot = eventType.indexOf(".");
+  return dot === -1 ? eventType : eventType.slice(dot + 1);
+}
+
+export function isLifecycleEvent(eventType: string): boolean {
+  const action = eventAction(eventType);
+  return !FIELD_EDIT_ACTIONS.some(
+    (verb) =>
+      action === verb ||
+      action.endsWith(`-${verb}`) ||
+      action.endsWith(`_${verb}`),
+  );
+}
+
+function dataFields(changedFields: readonly string[]): string[] {
+  return changedFields.filter((field) => !BOOKKEEPING_FIELDS.has(field));
+}
+
+/** A row earns its place if data moved, or if its type alone is the news. */
+function isDataChange(item: HistoryItem): boolean {
+  return dataFields(item.changedFields).length > 0 || isLifecycleEvent(item.eventType);
+}
+
+type HistoryDay = { key: string; occurredAt: string; items: HistoryItem[] };
+
+/**
+ * The server returns the feed newest-first and we never reorder it, so a day
+ * only ever ends where the local calendar date changes. Breaking on that
+ * boundary alone is also what lets an appended page continue the run it belongs
+ * to instead of raising a second heading for the same date.
+ */
+function groupByDay(items: HistoryItem[]): HistoryDay[] {
+  const days: HistoryDay[] = [];
+  for (const item of items) {
+    const key = localDayKey(item.occurredAt);
+    const current = days.at(-1);
+    if (current !== undefined && current.key === key) current.items.push(item);
+    else days.push({ key, occurredAt: item.occurredAt, items: [item] });
+  }
+  return days;
+}
 
 export interface RecordHistorySheetProps {
   entityType: HistoryEntityType;
@@ -60,6 +122,11 @@ export interface RecordHistorySheetProps {
  * Who did what to this record, from the audit trail the write path already
  * keeps. One component for every record type: a bottom sheet on a phone, a side
  * drawer on a desktop, and no fetch at all until it is opened.
+ *
+ * It opens on the data changes only. Every write emits an event and many of
+ * them move a version counter and nothing else, so the unfiltered feed buries
+ * the handful of lines an operator came to read; the full trail stays one
+ * button away and is never the thing you land on.
  */
 export function RecordHistorySheet({
   entityType,
@@ -68,14 +135,36 @@ export function RecordHistorySheet({
 }: RecordHistorySheetProps) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const isMobile = useIsMobile();
   const historyQuery = useHistory(entityType, entityId, { enabled: open });
 
   const locale = i18n.language;
   const items = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const days = groupByDay(showAll ? items : items.filter(isDataChange));
+
+  const today = new Date();
+  const todayKey = localDayKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = localDayKey(yesterday);
+
+  function dayHeading(day: HistoryDay): string {
+    if (day.key === todayKey) return t("history.today");
+    if (day.key === yesterdayKey) return t("history.yesterday");
+    return formatDayLong(day.occurredAt, locale);
+  }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(next: boolean) => {
+        setOpen(next);
+        // Someone who asked for the full trail asked it of that record, not of
+        // the next one they open.
+        if (next) setShowAll(false);
+      }}
+    >
       <SheetTrigger
         render={<Button variant="outline" className={cn("min-h-9", className)} />}
       >
@@ -103,17 +192,46 @@ export function RecordHistorySheet({
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("history.empty")}</p>
           ) : (
-            <ol className="flex flex-col">
-              {items.map((item) => (
-                <HistoryRow
-                  key={item.eventId}
-                  item={item}
-                  entityType={entityType}
-                  entityId={entityId}
-                  locale={locale}
-                />
-              ))}
-            </ol>
+            <>
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-pressed={showAll}
+                  onClick={() => setShowAll((value) => !value)}
+                  className="aria-pressed:bg-muted aria-pressed:text-foreground"
+                >
+                  {t("history.showAll")}
+                </Button>
+              </div>
+
+              {days.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("history.emptyChanges")}
+                </p>
+              ) : (
+                <ol className="flex flex-col gap-4">
+                  {days.map((day) => (
+                    <li key={day.key}>
+                      <h3 className="pb-2 text-xs font-semibold text-muted-foreground">
+                        {dayHeading(day)}
+                      </h3>
+                      <ol className="flex flex-col">
+                        {day.items.map((item) => (
+                          <HistoryRow
+                            key={item.eventId}
+                            item={item}
+                            entityType={entityType}
+                            entityId={entityId}
+                            locale={locale}
+                          />
+                        ))}
+                      </ol>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </>
           )}
 
           {historyQuery.hasNextPage === true && (
@@ -152,9 +270,8 @@ function HistoryRow({
   const actorLabel = isPlatform
     ? t("history.actor.platform")
     : (item.actor.displayName ?? t("history.actor.unknown"));
-  const changedFields = item.changedFields.filter(
-    (field) => !PLUMBING_FIELDS.has(field),
-  );
+  const changedFields = dataFields(item.changedFields);
+  const hasNote = item.note !== null && item.note !== "";
 
   return (
     <li className="relative border-l border-border pb-5 pl-4 last:pb-0">
@@ -163,10 +280,31 @@ function HistoryRow({
         aria-hidden
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium">
-          {t(historyEventLabelKey(item.eventType), { defaultValue: item.eventType })}
-        </span>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        {/* One sentence, assembled from elements rather than from glued-together
+            translations: fr and en both read actor, act, motif in that order,
+            and each part stays a message of its own. */}
+        <p className="text-sm">
+          <span
+            className={cn(
+              "font-medium",
+              isPlatform && "rounded-full bg-primary/10 px-2 py-0.5 text-primary",
+            )}
+          >
+            {actorLabel}
+          </span>{" "}
+          <span className="text-muted-foreground">
+            {t(historyEventLabelKey(item.eventType), {
+              defaultValue: item.eventType,
+            })}
+          </span>
+          {hasNote && (
+            <>
+              {" — "}
+              <span className="italic text-muted-foreground">{item.note}</span>
+            </>
+          )}
+        </p>
         {/* Plain web is the norm and needs no label; anything else changes how
             much the line can be trusted, so it is stamped. */}
         {item.command.origin !== "HUMAN_UI" && (
@@ -179,14 +317,6 @@ function HistoryRow({
       </div>
 
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <span
-          className={cn(
-            isPlatform &&
-              "rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary",
-          )}
-        >
-          {actorLabel}
-        </span>
         <time dateTime={item.occurredAt} className="tabular-nums">
           {formatDateTime(item.occurredAt, locale)}
         </time>
@@ -194,10 +324,6 @@ function HistoryRow({
           {formatRelativeTime(item.occurredAt, locale)}
         </span>
       </div>
-
-      {item.note !== null && item.note !== "" && (
-        <p className="mt-1 text-xs text-muted-foreground">{item.note}</p>
-      )}
 
       {changedFields.length > 0 && (
         <ul className="mt-1.5 flex flex-wrap gap-1">
