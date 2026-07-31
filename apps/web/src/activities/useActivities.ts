@@ -10,6 +10,8 @@ export async function fetchActivities(
     branchId?: string;
     assetId?: string;
     activityTypeCode?: string;
+    from?: string;
+    to?: string;
     sort?: string;
     cursor?: string;
   } = {},
@@ -18,7 +20,14 @@ export async function fetchActivities(
 ): Promise<ActivityListResponse> {
   const url = new URL("/v1/activities", window.location.origin);
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== "") url.searchParams.append(key, value);
+    if (value === undefined || value === "") continue;
+    const normalizedValue =
+      key === "from" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? `${value}T00:00:00.000Z`
+        : key === "to" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+          ? `${value}T23:59:59.999Z`
+          : value;
+    url.searchParams.append(key, normalizedValue);
   }
 
   const response = await fetchImpl(url.pathname + url.search, {
@@ -35,6 +44,8 @@ export interface UseActivitiesParams {
   branchId?: string;
   assetId?: string;
   activityTypeCode?: string;
+  from?: string;
+  to?: string;
   /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
   sort?: string;
 }

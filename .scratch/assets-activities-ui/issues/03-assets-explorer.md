@@ -1,6 +1,6 @@
 # 03 — Assets list on DataTable (`assets-explorer` block)
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01, 02
 
 ## Task
@@ -22,3 +22,7 @@ Replace AssetsStub's hand-rolled card grid with the DataTable basis per the desi
 
 - [ ] `pnpm typecheck` && full `pnpm --filter @routiq/web test` green (registry.test.ts includes assets-explorer)
 - [ ] No client-side asset counting remains
+
+## Comments
+
+2026-07-31 — Done (ui-api/Opus + review). Committed ea47dd7 (with 04). DataTable + metric strip + server filters + assetCode sort; model.ts deleted for contract types; module gating added (old screen had none); reference read now carries branch ids (ticket 05 reuses). AssetsStub.tsx filename kept — rename deferred to a quiet moment (router.tsx contention).

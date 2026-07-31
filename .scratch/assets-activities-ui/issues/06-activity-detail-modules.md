@@ -1,6 +1,6 @@
 # 06 — Activity detail: comprehensive modular sections
 
-Status: ready-for-agent
+Status: resolved
 
 ## Task
 
@@ -28,3 +28,7 @@ Also surface: `description` (under header when present), `closedAt` (overview or
 
 - [ ] `pnpm typecheck` && full `pnpm --filter @routiq/web test` green (registry entries present)
 - [ ] Sparse-data fixture renders without empty-shell sections
+
+## Comments
+
+2026-07-31 — Done (Opus 5 worker ui-detail + review). Committed 0b7ee13 (registry/locale entries follow with the 03 commit — shared files). Decisions approved: deterministic CSS timeline (pure timelineBar(), unfinished spans run to scale edge not Date.now, motion-safe pulse only); readings via pure readingSpans(), superseded rows in a <details> disclosure struck through (read lacks reading ids — true chain rendering needs them, noted); net = direction-signed POSTED only with separate pending line; overview cut to 4 metric-strip tiles (crew dropped as duplicate of the named crew list); provenance required adding createdAt/createdByCommandId to the detail read (additive, tested). Sparse-journey fixture proves no empty-shell sections. 264 tests across the modules; typecheck green; concurrent assets failures confirmed foreign via stash isolation.

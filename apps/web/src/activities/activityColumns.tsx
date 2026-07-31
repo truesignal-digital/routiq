@@ -10,9 +10,11 @@ export type ActivityColumnId =
   | "status"
   | "activityType"
   | "startedAt"
+  | "endedAt"
   | "primaryAssetCode"
   | "customerName"
-  | "legCount";
+  | "legCount"
+  | "crewCount";
 
 /**
  * One definition per column, shared by every screen that lists jobs.
@@ -72,6 +74,14 @@ function buildColumns(
       cell: ({ row }) =>
         row.original.startedAt === null ? "—" : formatDate(row.original.startedAt, locale),
     },
+    endedAt: {
+      accessorKey: "endedAt",
+      header: t("activities.columns.endedAt"),
+      enableSorting: false,
+      meta: { mobile: "hidden", label: t("activities.columns.endedAt") },
+      cell: ({ row }) =>
+        row.original.endedAt === null ? "—" : formatDate(row.original.endedAt, locale),
+    },
     primaryAssetCode: {
       accessorKey: "primaryAssetCode",
       header: t("activities.columns.primaryAsset"),
@@ -94,6 +104,15 @@ function buildColumns(
       meta: { mobile: "hidden", label: t("activities.columns.legs") },
       cell: ({ row }) => (
         <span className="tabular-nums">{row.original.legCount}</span>
+      ),
+    },
+    crewCount: {
+      accessorKey: "crewCount",
+      header: t("activities.columns.crewCount"),
+      enableSorting: false,
+      meta: { mobile: "hidden", label: t("activities.columns.crewCount") },
+      cell: ({ row }) => (
+        <span className="tabular-nums">{row.original.crewCount}</span>
       ),
     },
   };

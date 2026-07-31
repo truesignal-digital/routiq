@@ -101,14 +101,22 @@ export interface DataTableFilterOption {
   label: string;
 }
 
-export type DataTableFilter =
+export type DataTableFilter = {
+  columnId: string;
+  /** Every value key controlled by the filter. Defaults to `columnId`. */
+  columnIds?: string[];
+} & (
   | {
-      columnId: string;
       type: "select";
       options: DataTableFilterOption[];
       placeholder: string;
     }
-  | { columnId: string; type: "search"; placeholder: string };
+  | { type: "search"; placeholder: string }
+  | {
+      type: "custom";
+      render: ReactNode;
+    }
+);
 
 /** Filter state keyed by `columnId`. An absent key means the filter is unset. */
 export type DataTableFilterValues = Record<string, string>;
@@ -443,13 +451,17 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   const clearFilters = () => {
     const next = { ...filterValues };
     for (const filter of filters) {
-      delete next[filter.columnId];
+      for (const columnId of filter.columnIds ?? [filter.columnId]) {
+        delete next[columnId];
+      }
     }
     onFilterChange?.(next);
   };
 
-  const hasActiveFilter = filters.some(
-    (filter) => (filterValues[filter.columnId] ?? "") !== "",
+  const hasActiveFilter = filters.some((filter) =>
+    (filter.columnIds ?? [filter.columnId]).some(
+      (columnId) => (filterValues[columnId] ?? "") !== "",
+    ),
   );
   const hideableColumns = table
     .getAllLeafColumns()
@@ -459,7 +471,9 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   const toolbar = showToolbar ? (
     <div className="flex flex-wrap items-center gap-2">
       {filters.map((filter) =>
-        filter.type === "search" ? (
+        filter.type === "custom" ? (
+          <div key={filter.columnId}>{filter.render}</div>
+        ) : filter.type === "search" ? (
           <DataTableSearchFilter
             key={filter.columnId}
             placeholder={filter.placeholder}

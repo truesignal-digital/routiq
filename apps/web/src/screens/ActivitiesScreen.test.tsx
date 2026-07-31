@@ -91,6 +91,42 @@ vi.mock("../activities/useActivities.js", () => ({
   },
 }));
 
+vi.mock("../documents/useCategories.js", () => ({
+  useCategories: () => ({
+    data: [
+      {
+        code: "HAULAGE_JOB",
+        labelFr: "Job de halage",
+        labelEn: "Haulage job",
+      },
+    ],
+  }),
+}));
+
+vi.mock("../assets/reference.js", () => ({
+  useAssetRegistrationReference: () => ({
+    data: {
+      assetClasses: [],
+      branches: [
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          code: "DLA",
+          name: "Douala",
+        },
+      ],
+    },
+  }),
+}));
+
+vi.mock("../assets/useAssetOptions.js", () => ({
+  useAssetOptions: () => [
+    {
+      value: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      label: "CMR-TR-014",
+    },
+  ],
+}));
+
 const me = {
   role: "OPS_MANAGER" as const,
   enabledModules: ["CORE", "ACTIVITIES"] as const,
@@ -139,6 +175,95 @@ describe("ActivitiesScreen", () => {
     await waitFor(() => {
       expect(issuedQueries.some((query) => query.status === "OPEN")).toBe(true);
     });
+  });
+
+  it("sends every activity filter to the server query", async () => {
+    render(<ActivitiesScreen />);
+    await screen.findByText("DLA-2026-00042");
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "activities.filters.activityType" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Haulage job" }),
+    );
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "activities.filters.branch" }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "Douala" }));
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "activities.filters.asset" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "CMR-TR-014" }),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "activities.filters.from – activities.filters.to",
+      }),
+    );
+
+    const current = new Date();
+    const rangeFrom = new Date(current.getFullYear(), current.getMonth(), 1);
+    const rangeTo = new Date(current.getFullYear(), current.getMonth(), 2);
+    const fullDate = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
+    const isoDate = (date: Date) =>
+      [
+        String(date.getFullYear()).padStart(4, "0"),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: fullDate.format(rangeFrom) }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: fullDate.format(rangeTo) }),
+    );
+
+    await waitFor(() => {
+      expect(issuedQueries.at(-1)).toMatchObject({
+        activityTypeCode: "HAULAGE_JOB",
+        branchId: "22222222-2222-4222-8222-222222222222",
+        assetId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        from: isoDate(rangeFrom),
+        to: isoDate(rangeTo),
+      });
+    });
+  });
+
+  it("offers ended date and crew count as toggleable columns", async () => {
+    render(<ActivitiesScreen />);
+    expect(
+      await screen.findByRole("columnheader", { name: "activities.columns.endedAt" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "activities.columns.crewCount" }),
+    ).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "dataTable.view" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitemcheckbox", {
+        name: "activities.columns.endedAt",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitemcheckbox", {
+        name: "activities.columns.crewCount",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("columnheader", { name: "activities.columns.endedAt" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("columnheader", { name: "activities.columns.crewCount" }),
+    ).toBeNull();
   });
 
   it("sorts on the read's default order", () => {

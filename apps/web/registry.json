@@ -835,6 +835,41 @@
         "lucide-react",
         "react-i18next"
       ]
+    },
+    {
+      "name": "calendar",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/calendar.tsx",
+          "type": "registry:file",
+          "target": "components/ui/calendar.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react",
+        "lucide-react"
+      ]
+    },
+    {
+      "name": "date-range-picker",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/date-range-picker.tsx",
+          "type": "registry:file",
+          "target": "components/date-range-picker.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "calendar",
+        "input",
+        "popover"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
     }
   ]
 }

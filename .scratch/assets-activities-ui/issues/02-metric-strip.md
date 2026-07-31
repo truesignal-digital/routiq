@@ -1,6 +1,6 @@
 # 02 — `metric-strip` registry component
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 01
 
 ## Task
@@ -12,3 +12,7 @@ Wire nothing yet — issue 03 consumes it. A small screen-agnostic test (renders
 ## Acceptance
 
 - [ ] `pnpm typecheck` && `pnpm --filter @routiq/web test` green (incl. registry.test.ts)
+
+## Comments
+
+2026-07-31 — Done (ui-api/Opus + review). Committed 2741ecd. Copy-free tile band, null→em-dash (§3.4), 2-4 tuple-capped, skeleton keeps labels. 10 tests.

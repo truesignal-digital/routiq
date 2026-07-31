@@ -10,6 +10,7 @@ Design doc: claude.ai/code/artifact/88c01434-8a24-4dbe-89b8-869061b4caf1 (approv
 - Activity detail = stacked conditional section modules: overview band, planned-vs-actual CSS timeline, assets+crew+readings panel, full legs table, money with signed POSTED-only net, provenance stamp footer.
 - Activities list: wire the 4 unwired server filters (type, branch, asset, from/to), expose endedAt/crewCount as hidden-priority columns.
 - Everything registers in `registry.json` same-change (registry.test.ts enforces). Vendor any missing primitives only via shadcn CLI (base-nova → Base UI). No new chart deps; timeline is CSS.
+- Date/time fields across this effort (and future forms) use the shadcn Base UI date picker (Popover + Calendar composition) — vendor calendar via the CLI, wrap as registry components. User directive 2026-07-31.
 - Excluded: inline editing, drag-reorder, client-side aggregation beyond on-screen rows, card-grid toggle.
 
 ## Conventions that bind every issue
@@ -21,3 +22,9 @@ Design doc: claude.ai/code/artifact/88c01434-8a24-4dbe-89b8-869061b4caf1 (approv
 ## Ordering
 
 01 api → 02 metric-strip → 03 assets-explorer → 04 asset actions; 05 activities filters ∥ 06 activity detail modules (both independent of 01–04).
+
+## Follow-ups surfaced during build
+
+- Native date inputs remain in FinanceRecordScreen, AssetDocumentsScreen, AssetRegisterScreen — migrate to `date-range-picker`/single-date variant per the 2026-07-31 date-picker convention (separate effort).
+- `activityReadingRead` lacks reading ids — true supersede-chain rendering in ActivityAssetsPanel needs them (read change).
+- AssetsStub.tsx → AssetsExplorerScreen.tsx rename in a quiet moment (router.tsx contention during this effort).

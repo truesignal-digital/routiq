@@ -1,6 +1,6 @@
 # 04 — AssetActions → rowActions + dialogs
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 03
 
 ## Task
@@ -19,3 +19,7 @@ Retire the inline expanding panel strip. Commission and Assign-branch become ent
 
 - [ ] `pnpm typecheck` && full `pnpm --filter @routiq/web test` green
 - [ ] No inline panel remnants; registry entry updated if the component file moved
+
+## Comments
+
+2026-07-31 — Done (ui-api/Opus + review). Committed ea47dd7 (with 03 — commission/assign would have been unreachable between). One parameterized AssetActionDialog; pure assetActions() gating shared by row menu + detail header, unit-tested; conflict=alert / approval=status semantics preserved; failures pinned to the dialog, never a toast.

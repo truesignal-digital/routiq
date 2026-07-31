@@ -4,6 +4,7 @@ import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { FilePlus2, Maximize2, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "@/components/date-range-picker";
 import {
   DataTable,
   DataTableViewOptions,
@@ -20,6 +21,10 @@ import {
 } from "@/activities/activityColumns.js";
 import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
 import { useActivities } from "@/activities/useActivities.js";
+import { useAssetOptions } from "@/assets/useAssetOptions.js";
+import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useCategories } from "@/documents/useCategories.js";
+import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
 
 const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
@@ -31,20 +36,27 @@ const LIST_COLUMNS: readonly ActivityColumnId[] = [
   "status",
   "activityType",
   "startedAt",
+  "endedAt",
   "primaryAssetCode",
   "customerName",
   "legCount",
+  "crewCount",
 ];
 
 /** Mirrors the read's own default so the header shows the order in force. */
 const DEFAULT_SORTING: SortingState = [{ id: "startedAt", desc: true }];
 
 export function ActivitiesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
+  const activityTypesQuery = useCategories("ACTIVITY_TYPE");
+  const reference = useAssetRegistrationReference();
+  // `useAssetOptions` drains the full asset cursor so the filter covers the
+  // fleet; pilot workspaces are intentionally small enough for that tradeoff.
+  const assetOptions = useAssetOptions();
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -58,6 +70,13 @@ export function ActivitiesScreen() {
     ...(filterValues["completeness"]
       ? { completeness: filterValues["completeness"] }
       : {}),
+    ...(filterValues["activityTypeCode"]
+      ? { activityTypeCode: filterValues["activityTypeCode"] }
+      : {}),
+    ...(filterValues["branchId"] ? { branchId: filterValues["branchId"] } : {}),
+    ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
+    ...(filterValues["from"] ? { from: filterValues["from"] } : {}),
+    ...(filterValues["to"] ? { to: filterValues["to"] } : {}),
     ...(sort ? { sort } : {}),
   });
 
@@ -81,8 +100,66 @@ export function ActivitiesScreen() {
           label: t(`activities.completeness.${value}`),
         })),
       },
+      {
+        columnId: "activityTypeCode",
+        type: "select",
+        placeholder: t("activities.filters.activityType"),
+        options: (activityTypesQuery.data ?? []).map((activityType) => ({
+          value: activityType.code,
+          label: localizedLabel(activityType, i18n.language),
+        })),
+      },
+      {
+        columnId: "branchId",
+        type: "select",
+        placeholder: t("activities.filters.branch"),
+        options: (reference.data?.branches ?? []).map((branch) => ({
+          value: branch.id,
+          label: branch.name,
+        })),
+      },
+      {
+        columnId: "assetId",
+        type: "select",
+        placeholder: t("activities.filters.asset"),
+        options: assetOptions,
+      },
+      {
+        columnId: "from",
+        columnIds: ["from", "to"],
+        type: "custom",
+        render: (
+          <DateRangePicker
+            fromValue={filterValues["from"]}
+            toValue={filterValues["to"]}
+            onFromChange={(from) =>
+              setFilterValues((values) => {
+                const next = { ...values };
+                if (from === "") delete next["from"];
+                else next["from"] = from;
+                return next;
+              })
+            }
+            onToChange={(to) =>
+              setFilterValues((values) => {
+                const next = { ...values };
+                if (to === "") delete next["to"];
+                else next["to"] = to;
+                return next;
+              })
+            }
+          />
+        ),
+      },
     ],
-    [t],
+    [
+      activityTypesQuery.data,
+      assetOptions,
+      i18n.language,
+      reference.data?.branches,
+      filterValues,
+      t,
+    ],
   );
 
   const columns = useActivityColumns(LIST_COLUMNS);
