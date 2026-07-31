@@ -42,11 +42,13 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
 
   /**
    * PINs are the secrets a command payload carries, and a receipt is kept
-   * forever — so none reaches the row. Only PINs are replaced: the
-   * rest stays byte-identical so a genuinely different payload under a reused
-   * key is still caught. The trade is that two runs differing ONLY in PINs
-   * now replay instead of conflicting, which is correct — a PIN is a
-   * credential to set, not part of the tenant's identity.
+   * forever — so none reaches the row. Only PINs are replaced: the rest stays
+   * byte-identical, so a receipt still reads as a record of what ran.
+   *
+   * Redaction no longer costs anything on the idempotency side. The dispatcher
+   * compares `commands.payload_hash`, taken over the raw payload before this
+   * runs, so two runs differing only in their PINs conflict as they should
+   * while an honest re-run of the same file still replays.
    */
   redactPayload: (payload) => ({
     ...payload,
