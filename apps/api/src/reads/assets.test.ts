@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { assetListResponse, type AssetLifecycleStatus } from "@routiq/contracts";
+import {
+  assetListResponse,
+  assetSummary,
+  type AssetLifecycleStatus,
+} from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
@@ -397,7 +401,7 @@ describe("GET /v1/assets", () => {
       expect(pages).toEqual([["AST-001", "AST-002"], ["AST-006"]]);
     });
 
-    it("encodes the sort key and the row id in the cursor", async () => {
+    it("encodes the sort, the key and the row id in the cursor", async () => {
       const page = await list(adminToken, "limit=2");
       expect(page.nextCursor).not.toBeNull();
 
@@ -405,7 +409,9 @@ describe("GET /v1/assets", () => {
         Buffer.from(page.nextCursor!, "base64url").toString("utf8"),
       );
       expect(decoded).toEqual({
-        key: "AST-002",
+        field: "assetCode",
+        direction: "asc",
+        value: "AST-002",
         id: page.items[1]!.id,
       });
     });
@@ -429,6 +435,205 @@ describe("GET /v1/assets", () => {
 
     it("rejects a non-positive limit", async () => {
       await rejects(adminToken, "limit=0");
+    });
+  });
+
+  describe("sorting", () => {
+    it("defaults to asset code ascending when sort is omitted", async () => {
+      expect(await codes(adminToken)).toEqual([
+        "AST-001",
+        "AST-002",
+        "AST-003",
+        "AST-004",
+        "AST-005",
+        "AST-006",
+      ]);
+    });
+
+    it("reverses on assetCode:desc", async () => {
+      expect(await codes(adminToken, "sort=assetCode%3Adesc")).toEqual([
+        "AST-006",
+        "AST-005",
+        "AST-004",
+        "AST-003",
+        "AST-002",
+        "AST-001",
+      ]);
+    });
+
+    it("walks a descending sort across pages without gaps or duplicates", async () => {
+      const walked: string[] = [];
+      let cursor: string | null = null;
+      do {
+        const query = new URLSearchParams({ sort: "assetCode:desc", limit: "2" });
+        if (cursor !== null) query.set("cursor", cursor);
+        const page = await list(adminToken, query.toString());
+        walked.push(...page.items.map((item) => item.assetCode));
+        cursor = page.nextCursor;
+        if (walked.length > 12) throw new Error("cursor walk did not terminate");
+      } while (cursor !== null);
+
+      expect(walked).toEqual([
+        "AST-006",
+        "AST-005",
+        "AST-004",
+        "AST-003",
+        "AST-002",
+        "AST-001",
+      ]);
+    });
+
+    it("rejects a field the resource does not declare as sortable", async () => {
+      await rejects(adminToken, "sort=registrationNumber%3Aasc");
+      await rejects(adminToken, "sort=assetCode%3Asideways");
+    });
+
+    /**
+     * The boundary and the ordering have to agree: replaying an ascending
+     * cursor under a descending sort would silently skip and repeat rows, so
+     * the cursor carries its sort and the mismatch is refused outright.
+     */
+    it("rejects a cursor minted under a different sort", async () => {
+      const ascending = await list(adminToken, "limit=2");
+      expect(ascending.nextCursor).not.toBeNull();
+
+      await rejects(
+        adminToken,
+        `sort=assetCode%3Adesc&cursor=${encodeURIComponent(ascending.nextCursor!)}`,
+      );
+
+      // The same cursor under the sort that minted it still pages.
+      const next = await list(
+        adminToken,
+        `limit=2&cursor=${encodeURIComponent(ascending.nextCursor!)}`,
+      );
+      expect(next.items.map((item) => item.assetCode)).toEqual([
+        "AST-003",
+        "AST-004",
+      ]);
+    });
+  });
+
+  describe("GET /v1/assets/summary", () => {
+    async function summary(token: string, query: string = "") {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: query === "" ? "/v1/assets/summary" : `/v1/assets/summary?${query}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.statusCode).toBe(200);
+      return assetSummary.parse(response.json());
+    }
+
+    it("requires authentication", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/assets/summary",
+      });
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: { code: "AUTH_REQUIRED" } });
+    });
+
+    it("counts the workspace fleet by lifecycle bucket", async () => {
+      // Workspace B's AST-000 sorts first of all seeded codes; if it were
+      // counted, total would be 7.
+      expect(await summary(adminToken)).toEqual({
+        total: 6,
+        inService: 2,
+        attention: 3,
+      });
+    });
+
+    /**
+     * The point of the read: counting the rows a client has loaded answers a
+     * different question than counting the fleet.
+     */
+    it("counts every row, not the page the client happens to hold", async () => {
+      const firstPage = await list(adminToken, "limit=2");
+      expect(firstPage.items).toHaveLength(2);
+      expect(firstPage.nextCursor).not.toBeNull();
+
+      const walked: string[] = [];
+      let cursor: string | null = firstPage.nextCursor;
+      walked.push(...firstPage.items.map((item) => item.assetCode));
+      while (cursor !== null) {
+        const page = await list(
+          adminToken,
+          `limit=2&cursor=${encodeURIComponent(cursor)}`,
+        );
+        walked.push(...page.items.map((item) => item.assetCode));
+        cursor = page.nextCursor;
+        if (walked.length > 12) throw new Error("cursor walk did not terminate");
+      }
+
+      const counts = await summary(adminToken);
+      expect(counts.total).toBe(walked.length);
+      expect(counts.total).toBeGreaterThan(firstPage.items.length);
+    });
+
+    it("agrees with the list filters it mirrors", async () => {
+      const counts = await summary(adminToken);
+      expect(await codes(adminToken, "status=IN_SERVICE")).toHaveLength(
+        counts.inService,
+      );
+      expect(
+        await codes(
+          adminToken,
+          "status=UNDER_MAINTENANCE&status=RETIRED&status=WRITTEN_OFF",
+        ),
+      ).toHaveLength(counts.attention);
+    });
+
+    it("counts only the branches a scoped member may see", async () => {
+      expect(await summary(branchToken)).toEqual({
+        total: 3,
+        inService: 1,
+        attention: 1,
+      });
+    });
+
+    it("cannot be widened by a branchId outside the scope", async () => {
+      expect(await summary(branchToken, `branchId=${yaoundeId}`)).toEqual({
+        total: 0,
+        inService: 0,
+        attention: 0,
+      });
+    });
+
+    it("narrows by the same branch, category and search filters as the list", async () => {
+      expect(await summary(adminToken, `branchId=${yaoundeId}`)).toEqual({
+        total: 3,
+        inService: 1,
+        attention: 2,
+      });
+      expect(await summary(adminToken, "category=BUS")).toEqual({
+        total: 2,
+        inService: 1,
+        attention: 1,
+      });
+      expect(await summary(adminToken, "search=mercedes")).toEqual({
+        total: 2,
+        inService: 1,
+        attention: 0,
+      });
+    });
+
+    it("ignores a status filter rather than counting inside one bucket", async () => {
+      expect(await summary(adminToken, "status=IN_SERVICE")).toEqual({
+        total: 6,
+        inService: 2,
+        attention: 3,
+      });
+    });
+
+    it("rejects a malformed branchId", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/assets/summary?branchId=not-a-uuid",
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
     });
   });
 });

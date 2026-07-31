@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { assetListItem, assetListResponse } from "./assets.js";
+import {
+  assetAttentionStatuses,
+  assetListItem,
+  assetListResponse,
+  assetSummary,
+} from "./assets.js";
 
 const item = {
   id: "3f6b2a7c-9d41-4a52-8b0e-2c1d5e6f7a8b",
@@ -32,5 +37,40 @@ describe("asset list contract", () => {
     expect(
       assetListResponse.safeParse({ entries: [item], nextCursor: null }).success,
     ).toBe(false);
+  });
+});
+
+describe("asset summary contract", () => {
+  const summary = { total: 6, inService: 2, attention: 3 };
+
+  it("accepts the three fleet buckets", () => {
+    expect(assetSummary.parse(summary)).toEqual(summary);
+  });
+
+  it("accepts an empty fleet", () => {
+    expect(assetSummary.parse({ total: 0, inService: 0, attention: 0 })).toEqual({
+      total: 0,
+      inService: 0,
+      attention: 0,
+    });
+  });
+
+  it("rejects counts that are not whole and non-negative", () => {
+    expect(assetSummary.safeParse({ ...summary, total: -1 }).success).toBe(false);
+    expect(assetSummary.safeParse({ ...summary, inService: 1.5 }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a bucket left out — a missing tile must not read as zero", () => {
+    expect(assetSummary.safeParse({ total: 6, inService: 2 }).success).toBe(false);
+  });
+
+  it("groups the same statuses the ATTENTION filter selects", () => {
+    expect([...assetAttentionStatuses]).toEqual([
+      "UNDER_MAINTENANCE",
+      "RETIRED",
+      "WRITTEN_OFF",
+    ]);
   });
 });

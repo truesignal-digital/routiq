@@ -13,6 +13,20 @@ export const assetLifecycleStatuses = [
 
 export const assetLifecycleStatus = z.enum(assetLifecycleStatuses);
 
+/**
+ * The statuses the assets screen groups as needing attention. The ATTENTION
+ * filter and the summary bucket read the same set, so a tile's number is what
+ * filtering on it returns.
+ */
+export const assetAttentionStatuses = [
+  "UNDER_MAINTENANCE",
+  "RETIRED",
+  "WRITTEN_OFF",
+] as const satisfies readonly (typeof assetLifecycleStatuses)[number][];
+
+/** Fields `/v1/assets` may be sorted by; `sort` outside this set is rejected. */
+export const assetListSortFields = ["assetCode"] as const;
+
 export const assetListItem = z.object({
   id: z.uuid(),
   assetCode: z.string(),
@@ -34,6 +48,18 @@ export const assetListItem = z.object({
 
 /** `items`, the default key — the legacy `entries` escape hatch is finance-only. */
 export const assetListResponse = listResponse(assetListItem);
+
+/**
+ * Fleet counts aggregated in SQL over the caller's workspace and branch scope,
+ * not over the rows a client happens to have paged in. `total` counts every
+ * lifecycle status; `inService` and `attention` are the two subsets the list's
+ * status filter offers, so each count equals what selecting that filter lists.
+ */
+export const assetSummary = z.object({
+  total: z.number().int().nonnegative(),
+  inService: z.number().int().nonnegative(),
+  attention: z.number().int().nonnegative(),
+});
 
 /** One expense category's signed total for the asset. */
 export const assetExpenseCategoryTotal = z.object({
@@ -89,8 +115,10 @@ export const assetDetail = assetListItem.extend({
 });
 
 export type AssetLifecycleStatus = z.infer<typeof assetLifecycleStatus>;
+export type AssetListSortField = (typeof assetListSortFields)[number];
 export type AssetListItem = z.infer<typeof assetListItem>;
 export type AssetListResponse = z.infer<typeof assetListResponse>;
+export type AssetSummary = z.infer<typeof assetSummary>;
 export type AssetExpenseCategoryTotal = z.infer<typeof assetExpenseCategoryTotal>;
 export type AssetFinancialSummary = z.infer<typeof assetFinancialSummary>;
 export type AssetRecentActivity = z.infer<typeof assetRecentActivity>;

@@ -1,8 +1,14 @@
 import {
+  assetAttentionStatuses,
   assetDetail,
   assetLifecycleStatus,
   assetListResponse,
+  assetListSortFields,
+  assetSummary,
   listQuery,
+  type AssetLifecycleStatus,
+  type AssetListSortField,
+  type ListSort,
 } from "@routiq/contracts";
 import {
   and,
@@ -35,24 +41,107 @@ import { registerCategoryReadRoutes } from "./categories.js";
 import { LEDGER_ENTRY_STATUSES } from "./dashboard.js";
 import { registerDocumentReadRoutes } from "./documents.js";
 import { registerReferenceReadRoutes } from "./reference.js";
-import { afterTextKeyset, textKeysetCodec } from "./cursor.js";
+import {
+  afterKeyset,
+  bindText,
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  keysetOrderBy,
+  type KeysetColumn,
+} from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+import type { AuthContext } from "../auth/types.js";
 
-// Read-side list conventions live in ADR-0003: Zod-validated filters, keyset
-// pagination on a stable sort key, server-bounded limits.
-const listQuerySchema = listQuery({
-  // Repeated query params arrive as an array, a single one as a scalar; both
-  // mean "one or more lifecycle statuses".
-  status: z
-    .union([assetLifecycleStatus, z.array(assetLifecycleStatus).min(1)])
-    .optional()
-    .transform((value) =>
-      value === undefined ? undefined : Array.isArray(value) ? value : [value],
-    ),
+/** The filters both the list and the summary narrow the fleet by. */
+const assetFilters = {
   category: z.string().min(1).optional(),
   branchId: z.uuid().optional(),
   search: z.string().min(1).optional(),
-});
+} as const;
+
+// Read-side list conventions live in ADR-0003: Zod-validated filters, keyset
+// pagination on a stable sort key, server-bounded limits.
+const listQuerySchema = listQuery(
+  {
+    ...assetFilters,
+    // Repeated query params arrive as an array, a single one as a scalar; both
+    // mean "one or more lifecycle statuses".
+    status: z
+      .union([assetLifecycleStatus, z.array(assetLifecycleStatus).min(1)])
+      .optional()
+      .transform((value) =>
+        value === undefined ? undefined : Array.isArray(value) ? value : [value],
+      ),
+  },
+  { sortFields: assetListSortFields },
+);
+
+// A status filter would leave the buckets counting inside themselves, so the
+// summary takes every list filter except that one.
+const summaryQuerySchema = z.object(assetFilters);
+
+const defaultAssetSort: ListSort<AssetListSortField> = {
+  field: "assetCode",
+  direction: "asc",
+};
+
+const assetSortColumns: Record<AssetListSortField, KeysetColumn> = {
+  assetCode: { column: assets.assetCode, bind: bindText },
+};
+
+interface AssetScopeFilters {
+  status?: readonly AssetLifecycleStatus[] | undefined;
+  category?: string | undefined;
+  branchId?: string | undefined;
+  search?: string | undefined;
+}
+
+/**
+ * What "the caller's assets" means, in one place: the list pages exactly the
+ * rows the summary counts, so a tile can never disagree with the table under it.
+ */
+function assetScopeConditions(
+  auth: AuthContext,
+  filters: AssetScopeFilters,
+): SQL[] {
+  const conditions: SQL[] = [eq(assets.workspaceId, auth.workspaceId)];
+
+  // Branch scope comes from the session, never the client; a branchId
+  // filter narrows inside it and can never widen it.
+  if (auth.branchScope !== "ALL") {
+    conditions.push(inArray(assets.branchId, auth.branchScope));
+  }
+  if (filters.branchId) {
+    conditions.push(eq(assets.branchId, filters.branchId));
+  }
+
+  if (filters.status) {
+    conditions.push(inArray(assets.lifecycleStatus, [...filters.status]));
+  }
+
+  if (filters.category) {
+    conditions.push(eq(assets.assetClassCode, filters.category));
+  }
+
+  // Operational identifiers plus the bilingual class labels the join
+  // already carries. Branch code and name were searchable client-side and
+  // are deliberately dropped here (ticket 13).
+  if (filters.search) {
+    const pattern = likePattern(filters.search);
+    conditions.push(
+      or(
+        ilike(assets.assetCode, pattern),
+        ilike(assets.registrationNumber, pattern),
+        ilike(assets.manufacturer, pattern),
+        ilike(assets.model, pattern),
+        ilike(categories.labelFr, pattern),
+        ilike(categories.labelEn, pattern),
+      )!,
+    );
+  }
+
+  return conditions;
+}
 
 /** The asset page shows a recent slice, not a history; /v1/activities?assetId= pages the rest. */
 const RECENT_ACTIVITY_LIMIT = 10;
@@ -82,50 +171,29 @@ export function registerAssetReadRoutes(
       }
       const { status, category, branchId, search, cursor, limit } =
         parsedQuery.data;
+      const sort = parsedQuery.data.sort ?? defaultAssetSort;
+      const sortColumn = assetSortColumns[sort.field];
 
-      const decodedCursor = cursor ? textKeysetCodec.decode(cursor) : undefined;
+      // The sort rides inside the cursor, so a boundary minted under one
+      // ordering is refused rather than replayed against another (ADR-0003).
+      const decodedCursor = cursor
+        ? decodeKeysetCursor(cursor, sort)
+        : undefined;
       if (cursor && !decodedCursor) {
         return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
       }
 
-      const conditions: SQL[] = [eq(assets.workspaceId, auth.workspaceId)];
-
-      // Branch scope comes from the session, never the client; a branchId
-      // filter narrows inside it and can never widen it.
-      if (auth.branchScope !== "ALL") {
-        conditions.push(inArray(assets.branchId, auth.branchScope));
-      }
-      if (branchId) {
-        conditions.push(eq(assets.branchId, branchId));
-      }
-
-      if (status) {
-        conditions.push(inArray(assets.lifecycleStatus, status));
-      }
-
-      if (category) {
-        conditions.push(eq(assets.assetClassCode, category));
-      }
-
-      // Operational identifiers plus the bilingual class labels the join
-      // already carries. Branch code and name were searchable client-side and
-      // are deliberately dropped here (ticket 13).
-      if (search) {
-        const pattern = likePattern(search);
-        conditions.push(
-          or(
-            ilike(assets.assetCode, pattern),
-            ilike(assets.registrationNumber, pattern),
-            ilike(assets.manufacturer, pattern),
-            ilike(assets.model, pattern),
-            ilike(categories.labelFr, pattern),
-            ilike(categories.labelEn, pattern),
-          )!,
-        );
-      }
+      const conditions = assetScopeConditions(auth, {
+        status,
+        category,
+        branchId,
+        search,
+      });
 
       if (decodedCursor) {
-        conditions.push(afterTextKeyset(assets.assetCode, assets.id, decodedCursor));
+        conditions.push(
+          afterKeyset(sortColumn, sort.direction, assets.id, decodedCursor),
+        );
       }
 
       const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
@@ -161,7 +229,7 @@ export function registerAssetReadRoutes(
             ),
           )
           .where(and(...conditions))
-          .orderBy(asc(assets.assetCode), asc(assets.id))
+          .orderBy(...keysetOrderBy(sortColumn, sort.direction, assets.id))
           // One extra row is the has-next probe, never returned.
           .limit(limit + 1),
       );
@@ -189,7 +257,7 @@ export function registerAssetReadRoutes(
       let nextCursor: string | null = null;
       if (hasNextPage && items.length > 0) {
         const last = items[items.length - 1]!;
-        nextCursor = textKeysetCodec.encode({ key: last.assetCode, id: last.id });
+        nextCursor = encodeKeysetCursor(sort, last.assetCode, last.id);
       }
 
       return assetListResponse.parse({ items, nextCursor });
@@ -198,6 +266,63 @@ export function registerAssetReadRoutes(
       return reply.status(500).send({ error: { code: "READ_FAILED" } });
     }
   });
+
+  // Registered ahead of `/v1/assets/:assetId` so the static segment reads as
+  // the route it is, not as an asset id that happens to spell "summary".
+  app.get(
+    "/v1/assets/summary",
+    { preHandler: requireAuth },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const auth = req.auth!;
+        const parsedQuery = summaryQuerySchema.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+
+        const conditions = assetScopeConditions(auth, parsedQuery.data);
+
+        // Counted in one aggregate over the whole scope, so the numbers do not
+        // depend on how far a client has paged.
+        const countAll = sql<number>`count(*)::int`;
+        const countWhere = (statuses: readonly AssetLifecycleStatus[]) =>
+          sql<number>`count(*) filter (where ${inArray(assets.lifecycleStatus, [...statuses])})::int`;
+
+        const [totals] = await inWorkspace(db, auth.workspaceId, (tx) =>
+          tx
+            .select({
+              total: countAll,
+              inService: countWhere(["IN_SERVICE"]),
+              attention: countWhere(assetAttentionStatuses),
+            })
+            .from(assets)
+            .innerJoin(
+              branches,
+              and(
+                eq(branches.workspaceId, assets.workspaceId),
+                eq(branches.id, assets.branchId),
+              ),
+            )
+            .leftJoin(
+              categories,
+              and(
+                eq(categories.workspaceId, assets.workspaceId),
+                eq(categories.kind, "ASSET_CLASS"),
+                eq(categories.code, assets.assetClassCode),
+              ),
+            )
+            .where(and(...conditions)),
+        );
+
+        return assetSummary.parse(
+          totals ?? { total: 0, inService: 0, attention: 0 },
+        );
+      } catch (error) {
+        req.log.error({ err: error }, "asset summary read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
 
   app.get(
     "/v1/assets/:assetId",
