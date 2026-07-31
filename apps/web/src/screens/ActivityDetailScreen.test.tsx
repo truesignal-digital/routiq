@@ -281,6 +281,9 @@ describe("activity detail — a full haulage job", () => {
 
     expect(screen.getByRole("heading", { name: "DLA-2026-00042" })).toBeTruthy();
     expect(screen.getByTestId("activity-actions")).toBeTruthy();
+    // The timeline is one action away from every record, and costs nothing
+    // until it is opened.
+    expect(screen.getByRole("button", { name: "History" })).toBeTruthy();
     expect(sectionTitles()).toEqual([
       "Planned vs actual",
       "Assets and crew",

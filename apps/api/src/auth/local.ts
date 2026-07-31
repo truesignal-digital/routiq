@@ -20,19 +20,27 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function createSession(
-  db: Db,
+/** The insert itself, over anything that can run one — a pool or a transaction. */
+async function createSessionIn(
+  executor: Pick<Db, "insert">,
   opts: { principalId: string; workspaceId: string; ttlMs?: number },
 ) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + (opts.ttlMs ?? SESSION_TTL_MS));
-  await db.insert(sessions).values({
+  await executor.insert(sessions).values({
     principalId: opts.principalId,
     workspaceId: opts.workspaceId,
     tokenHash: hashToken(token),
     expiresAt,
   });
   return { token, expiresAt };
+}
+
+export function createSession(
+  db: Db,
+  opts: { principalId: string; workspaceId: string; ttlMs?: number },
+) {
+  return createSessionIn(db, opts);
 }
 
 export type LoginResult =
@@ -81,17 +89,50 @@ export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginRe
     return { ok: false as const, code: "AUTH_INVALID_CREDENTIALS" as const };
   }
 
-  if (row.credential.failedAttempts > 0 || row.credential.lockedUntil) {
-    await db
-      .update(credentials)
-      .set({ failedAttempts: 0, lockedUntil: null })
-      .where(eq(credentials.id, row.credential.id));
-  }
+  /**
+   * The PIN was verified against a row read outside any transaction, and
+   * `reset-member-pin` may have replaced that row since — deleting this
+   * principal's sessions as it went. A session inserted afterwards would
+   * outlive the reset while carrying the authority of a PIN that no longer
+   * opens anything, which is exactly what resetting a forgotten or leaked PIN
+   * is meant to end.
+   *
+   * So the session is minted under a row lock on the credential, after
+   * re-reading it. `SELECT ... FOR UPDATE` closes the window rather than
+   * narrowing it: the reset's UPDATE of that row either lands before this lock
+   * is taken, in which case the re-read sees a different `pin_hash` and the
+   * login fails, or it waits behind this transaction and then deletes the
+   * session this one just minted. Either order leaves no session standing on
+   * the old PIN.
+   *
+   * Lock order matches the reset command's — credential first, then sessions —
+   * so the two cannot deadlock.
+   */
+  const session = await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(credentials)
+      .where(eq(credentials.id, row.credential.id))
+      .for("update");
 
-  const session = await createSession(db, {
-    principalId: row.credential.principalId,
-    workspaceId: row.workspaceId,
+    if (!current || current.disabledAt || current.pinHash !== row.credential.pinHash) {
+      return null;
+    }
+
+    if (current.failedAttempts > 0 || current.lockedUntil) {
+      await tx
+        .update(credentials)
+        .set({ failedAttempts: 0, lockedUntil: null })
+        .where(eq(credentials.id, current.id));
+    }
+
+    return createSessionIn(tx, {
+      principalId: current.principalId,
+      workspaceId: row.workspaceId,
+    });
   });
+
+  if (!session) return { ok: false as const, code: "AUTH_INVALID_CREDENTIALS" as const };
   return { ok: true as const, session };
 }
 

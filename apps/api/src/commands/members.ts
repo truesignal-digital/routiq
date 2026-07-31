@@ -45,6 +45,56 @@ import { redactPin } from "./redaction.js";
 
 type MembershipRow = typeof memberships.$inferSelect;
 
+/**
+ * Advisory-lock class for member administration. Postgres advisory locks share
+ * one global space, so the two-int form namespaces ours: a future lock picks a
+ * different class and cannot collide with a workspace id that happens to hash
+ * into the same bucket. First advisory lock in the codebase — follow this shape.
+ */
+const MEMBER_ADMIN_LOCK_CLASS = 8241;
+
+/**
+ * Serializes member administration within one workspace, then re-reads the
+ * caller's own membership now that it is serialized. Every member command opens
+ * with this.
+ *
+ * The lock is what makes the last-admin invariant true rather than merely
+ * checked. Under READ COMMITTED two admins demoting each other both see the
+ * other still standing, both pass the guard, and both commit — leaving a
+ * workspace nobody can administer. Counting rows cannot detect a sibling
+ * transaction that has not committed yet, so the guard has to be serialized
+ * rather than made cleverer. The lock is transaction-scoped: it releases on
+ * commit or rollback with nothing to unwind.
+ *
+ * The re-read closes the other half. `requireAuth` resolved the caller's role
+ * before this transaction opened, and a concurrent command may have demoted or
+ * deactivated them in between — the window in which a stale ADMIN context could
+ * still perform exactly the powers being taken away from it.
+ */
+export async function beginMemberAdministration(
+  tx: Tx,
+  ctx: CommandContext,
+): Promise<void> {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(${MEMBER_ADMIN_LOCK_CLASS}, hashtext(${ctx.workspaceId}))`,
+  );
+
+  const [actor] = await tx
+    .select({ role: memberships.role, deactivatedAt: memberships.deactivatedAt })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.workspaceId, ctx.workspaceId),
+        eq(memberships.principalId, ctx.principalId),
+      ),
+    )
+    .limit(1);
+
+  if (!actor || actor.deactivatedAt !== null || actor.role !== "ADMIN") {
+    throw new CommandError(403, "ROLE_FORBIDDEN", { reason: "actor-no-longer-admin" });
+  }
+}
+
 /** The member's own principal id — the one stable handle across all three rows. */
 async function loadMembership(
   tx: Tx,
@@ -206,6 +256,7 @@ registerCommand<AddMemberPayload>({
   redactPayload: redactPin,
 
   async execute(tx, ctx, envelope, payload) {
+    await beginMemberAdministration(tx, ctx);
     const scope = await resolveBranchScope(tx, ctx, payload.branchScope);
 
     /*
@@ -281,6 +332,7 @@ registerCommand<UpdateMemberRolePayload>({
   branchAuthorization: { kind: "workspace" },
 
   async execute(tx, ctx, envelope, payload) {
+    await beginMemberAdministration(tx, ctx);
     const expectedVersion = envelope.expectedVersion;
     if (expectedVersion === undefined) {
       throw new CommandError(400, "EXPECTED_VERSION_REQUIRED");
@@ -338,6 +390,8 @@ registerCommand<DeactivateMemberPayload>({
   branchAuthorization: { kind: "workspace" },
 
   async execute(tx, ctx, envelope, payload) {
+    await beginMemberAdministration(tx, ctx);
+
     // Ordered ahead of the last-admin count so the lone admin who clicks their
     // own row is told what they actually did, not that a rule about other
     // people was violated.
@@ -400,6 +454,8 @@ registerCommand<ReactivateMemberPayload>({
   branchAuthorization: { kind: "workspace" },
 
   async execute(tx, ctx, envelope, payload) {
+    await beginMemberAdministration(tx, ctx);
+
     const before = await loadMembership(tx, ctx, payload.principalId);
     if (before.deactivatedAt === null) {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
@@ -444,6 +500,7 @@ registerCommand<ResetMemberPinPayload>({
   redactPayload: redactPin,
 
   async execute(tx, ctx, envelope, payload) {
+    await beginMemberAdministration(tx, ctx);
     const membership = await loadMembership(tx, ctx, payload.principalId);
 
     const [credential] = await tx
