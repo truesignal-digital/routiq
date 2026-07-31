@@ -7,6 +7,7 @@ import { useAssetDetail } from "@/assets/useAssetDetail.js";
 import { useMeContext } from "@/auth/me.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -58,7 +59,12 @@ export function AssetDetailScreen() {
             {assetDisplayName(asset)}
           </span>
         }
-        actions={<AssetActions asset={asset} />}
+        actions={
+          <>
+            <AssetActions asset={asset} />
+            <RecordHistorySheet entityType="asset" entityId={asset.id} />
+          </>
+        }
       />
 
       <p className="mt-2 font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
