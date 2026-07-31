@@ -70,6 +70,15 @@ const sheetBase = {
   clientReference: z.string().max(60).optional(),
   description: z.string().max(500).optional(),
   customValues: z.record(z.string(), z.unknown()).default({}),
+  /**
+   * Whether this submission also closes the activity. Recording a sheet states
+   * facts; closing is a human decision about whether the record is finished, and
+   * the two are not the same act — a field agent transcribing what happened must
+   * not find the trip declared "clôturée avec réserves" behind their back. Hence
+   * the default: record open, close only when asked. The office clerk copying a
+   * finished paper sheet sends `true` and gets the completeness verdict.
+   */
+  close: z.boolean().default(false),
 };
 
 /**
