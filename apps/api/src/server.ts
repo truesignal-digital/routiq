@@ -35,6 +35,7 @@ import { registerActivityReadRoutes } from "./reads/activities.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
+import { registerHistoryReadRoutes } from "./reads/history.js";
 
 export interface ServerDeps {
   db: Db;
@@ -94,6 +95,7 @@ export function buildServer({
   registerFinanceReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
   registerActivityReadRoutes(app, db, requireAuth);
+  registerHistoryReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   app.get("/v1/me", { preHandler: requireAuth }, async (req) => {
     const auth = req.auth;
