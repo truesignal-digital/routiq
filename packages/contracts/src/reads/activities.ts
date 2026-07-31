@@ -90,6 +90,10 @@ export const activityLegRead = z.object({
 });
 
 export const activityReadingRead = z.object({
+  id: z.uuid(),
+  /** Which of the activity's assets the meter belongs to — a job can carry several. */
+  assetId: z.uuid(),
+  assetCode: z.string(),
   readingType: z.enum(["ODOMETER", "HOURS"]),
   value: z.number().int().nonnegative(),
   observedAt: z.iso.datetime(),
@@ -113,6 +117,8 @@ export const activityFinancialEntryRead = z.object({
 });
 
 export const activityDetail = activityListItem.extend({
+  /** Financial commands address branches by code, not id; the detail has to carry it. */
+  branchCode: z.string(),
   templateCode: z.enum(["TRUCKING", "PASSENGER_TRANSPORT"]),
   templateVersion: z.number().int().positive(),
   customValues: z.record(z.string(), z.unknown()),

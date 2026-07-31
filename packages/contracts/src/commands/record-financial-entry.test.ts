@@ -53,6 +53,34 @@ describe("record-expense contract", () => {
     },
   );
 
+  it("carries an optional activityId so a mid-trip cost lands on the job as well as the truck", () => {
+    const activityId = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
+    const command = {
+      ...valid,
+      payload: {
+        ...valid.payload,
+        postings: [{ ...valid.payload.postings[0], activityId }],
+      },
+    };
+
+    const parsed = recordExpenseCommand.parse(command);
+    expect(parsed.payload.postings[0]?.activityId).toBe(activityId);
+    // Absent is the shape the finance screen still sends; it must stay legal.
+    expect(recordExpenseCommand.parse(valid).payload.postings[0]?.activityId).toBeUndefined();
+  });
+
+  it("rejects an activityId that is not a uuid", () => {
+    const command = {
+      ...valid,
+      payload: {
+        ...valid.payload,
+        postings: [{ ...valid.payload.postings[0], activityId: "ACT-2026-0007" }],
+      },
+    };
+
+    expect(recordExpenseCommand.safeParse(command).success).toBe(false);
+  });
+
   it("rejects an empty postings array", () => {
     const command = {
       ...valid,

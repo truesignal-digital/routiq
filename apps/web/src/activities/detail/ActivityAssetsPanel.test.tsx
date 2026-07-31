@@ -17,6 +17,9 @@ const PERSON_ID = "00000000-0000-4000-8000-000000000013";
 
 function reading(overrides: Partial<Reading> = {}): Reading {
   return {
+    id: "00000000-0000-4000-8000-000000000014",
+    assetId: ASSET_ID,
+    assetCode: "CAMION-03",
     readingType: "ODOMETER",
     value: 128_400,
     observedAt: "2026-07-18T06:00:00.000Z",

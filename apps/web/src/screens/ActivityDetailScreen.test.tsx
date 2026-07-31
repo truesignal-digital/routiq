@@ -84,6 +84,7 @@ function fullHaulage(): ActivityDetail {
     customerName: "Cimencam",
     clientReference: "BC-8842",
     branchId: "00000000-0000-4000-8000-000000000004",
+    branchCode: "DLA",
     primaryAssetCode: "CAMION-03",
     legCount: 2,
     crewCount: 2,
@@ -155,6 +156,9 @@ function fullHaulage(): ActivityDetail {
     ],
     readings: [
       {
+        id: "00000000-0000-4000-8000-000000000091",
+        assetId: "00000000-0000-4000-8000-000000000051",
+        assetCode: "CAMION-03",
         readingType: "ODOMETER",
         value: 128_400,
         observedAt: "2026-07-18T06:00:00.000Z",
@@ -162,6 +166,9 @@ function fullHaulage(): ActivityDetail {
         supersededById: null,
       },
       {
+        id: "00000000-0000-4000-8000-000000000092",
+        assetId: "00000000-0000-4000-8000-000000000051",
+        assetCode: "CAMION-03",
         readingType: "ODOMETER",
         value: 128_880,
         observedAt: "2026-07-18T18:00:00.000Z",
