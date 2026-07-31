@@ -116,6 +116,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     activityId = randomUUID();
     await command("record-haulage-job-sheet", {
       activityId,
+      close: true,
       branchCode: "DLA",
       activityTypeCode: "HAULAGE_JOB",
       primarySegmentId: randomUUID(),

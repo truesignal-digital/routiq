@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { recordHaulageJobSheetCommand, recordJourneySheetCommand } from "@routiq/contracts";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   activities,
@@ -202,7 +202,9 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
   }
 
   it("writes the whole waybill in one commit", async () => {
-    const sheet = haulageSheet();
+    // The office clerk's path: a finished paper waybill, recorded and closed in
+    // the one submission.
+    const sheet = haulageSheet({ close: true });
     const response = await postHaulage(sheet);
     expect(response.statusCode).toBe(200);
 
@@ -283,7 +285,115 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
       .select()
       .from(activities)
       .where(eq(activities.id, sheet.activityId));
-    expect(activity?.status).toBe("CLOSED");
+    expect(activity?.activityNumber).toBeTruthy();
+  });
+
+  it("leaves the activity open when the sheet does not ask to close it", async () => {
+    const sheet = haulageSheet();
+    const response = await postHaulage(sheet);
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ recordStatus: "OPEN", rowVersion: 1 });
+
+    const [activity] = await ctx.db
+      .select()
+      .from(activities)
+      .where(eq(activities.id, sheet.activityId));
+    // Recording facts is not deciding the record is finished — no verdict, no
+    // close stamp, and the row is still on its first version.
+    expect(activity).toMatchObject({
+      status: "OPEN",
+      completeness: null,
+      completenessCodes: [],
+      closedAt: null,
+      closedByCommandId: null,
+      rowVersion: 1,
+    });
+
+    // Everything the sheet stated is still written.
+    const legs = await ctx.db
+      .select()
+      .from(movementLegs)
+      .where(eq(movementLegs.activityId, sheet.activityId));
+    expect(legs).toHaveLength(2);
+    const readings = await ctx.db
+      .select()
+      .from(meterReadings)
+      .where(eq(meterReadings.activityId, sheet.activityId));
+    expect(readings).toHaveLength(2);
+  });
+
+  it("never hands a field agent a completeness verdict they did not ask for", async () => {
+    // The sheet that broke trust: no crew, no readings, no revenue. Closed, it
+    // lands "with exceptions"; recorded, it is simply an open trip.
+    const thin = {
+      crew: [],
+      entries: [],
+      extraSegments: [],
+      startReading: undefined,
+      endReading: undefined,
+    };
+
+    const open = haulageSheet(thin);
+    const openBody = (await postHaulage(open)).json();
+    expect(openBody.recordStatus).toBe("OPEN");
+    expect(openBody.warnings).toEqual([]);
+
+    const closed = haulageSheet({ ...thin, close: true });
+    const closedBody = (await postHaulage(closed)).json();
+    expect(closedBody.recordStatus).toBe("COMPLETE_WITH_EXCEPTIONS");
+    expect(closedBody.warnings).toEqual(
+      expect.arrayContaining([
+        "ACTIVITY_MISSING_START_READING",
+        "ACTIVITY_MISSING_END_READING",
+        "ACTIVITY_MISSING_CREW",
+        "ACTIVITY_NO_REVENUE",
+      ]),
+    );
+
+    const rows = await ctx.db
+      .select({ id: activities.id, status: activities.status, completeness: activities.completeness })
+      .from(activities)
+      .where(
+        inArray(activities.id, [open.activityId as string, closed.activityId as string]),
+      );
+    expect(rows.find((row) => row.id === open.activityId)).toMatchObject({
+      status: "OPEN",
+      completeness: null,
+    });
+    expect(rows.find((row) => row.id === closed.activityId)).toMatchObject({
+      status: "CLOSED",
+      completeness: "COMPLETE_WITH_EXCEPTIONS",
+    });
+  });
+
+  it("closes through the separate command after an open sheet", async () => {
+    const sheet = haulageSheet();
+    expect((await postHaulage(sheet)).statusCode).toBe(200);
+
+    const close = await ctx.app.inject({
+      method: "POST",
+      url: "/v1/commands/close-activity",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: "close-activity",
+        version: 1,
+        envelope: {
+          commandId: randomUUID(),
+          idempotencyKey: `idem-${randomUUID()}`,
+          origin: "HUMAN_UI",
+          expectedVersion: 1,
+          sourceArtifactIds: [],
+        },
+        payload: { activityId: sheet.activityId },
+      },
+    });
+    expect(close.statusCode).toBe(200);
+
+    const [activity] = await ctx.db
+      .select()
+      .from(activities)
+      .where(eq(activities.id, sheet.activityId));
+    expect(activity).toMatchObject({ status: "CLOSED", completeness: "COMPLETE" });
   });
 
   it("attributes every cost to the job except the repair to the failed truck", async () => {
@@ -417,6 +527,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     expect((await lock(currentPeriod)).statusCode).toBe(200);
 
     const sheet = haulageSheet({
+      close: true,
       startedAt: "2026-03-02T06:00:00Z",
       endedAt: "2026-03-03T09:00:00Z",
       extraSegments: [
@@ -506,6 +617,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
           primaryAssetId: tractorId,
           startedAt: "2026-07-16T06:00:00Z",
           endedAt: "2026-07-16T11:00:00Z",
+          close: true,
           seatsSold: 68,
           seatsAvailable: 70,
           crew: [

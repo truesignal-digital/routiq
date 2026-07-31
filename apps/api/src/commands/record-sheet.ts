@@ -81,14 +81,16 @@ function sheetCommand<P extends SheetPayload>(
         clientReference: payload.clientReference,
         description: payload.description,
         customValues: { ...payload.customValues, ...config.flavourValues(payload) },
+        close: payload.close,
       };
 
       const result = await writeSheet(tx, ctx, envelope, write);
 
       return {
         recordId: result.activityId,
-        rowVersion: 2,
-        recordStatus: result.completeness,
+        rowVersion: result.rowVersion,
+        // A closed sheet reports its verdict; an open one has none to report.
+        recordStatus: result.completeness ?? result.status,
         warnings: result.warnings,
         children: result.children,
       };

@@ -767,6 +767,7 @@
     "notify": {
       "success": {
         "sheetRecorded": "Sheet recorded",
+        "sheetRecordedAndClosed": "Sheet recorded and activity closed",
         "closed": "Activity closed",
         "reopened": "Activity reopened",
         "substituted": "Asset substituted",
@@ -945,7 +946,9 @@
         }
       },
       "submit": "Record sheet",
-      "submitting": "Recording…"
+      "submitting": "Recording…",
+      "submitAndClose": "Record and close",
+      "closingSubmitting": "Closing…"
     }
   },
   "persons": {

@@ -279,6 +279,8 @@ describe("activity sheet capture", () => {
       amountMinor: 480_000,
       attributeToActivity: true,
     });
+    // Recording states what happened; the trip stays open until someone closes it.
+    expect(parsed.data?.close).toBe(false);
   }, FULL_SHEET_TIMEOUT_MS);
 
   it("dispatches a haulage sheet the contract accepts", async () => {
@@ -300,6 +302,7 @@ describe("activity sheet capture", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.data?.cargoDescription).toBe("Bagged cement");
     expect(parsed.data?.cargoWeightKg).toBe(28_000);
+    expect(parsed.data?.close).toBe(false);
     // The untouched trailer row and the untouched leg never reach the payload.
     expect(parsed.data?.extraSegments).toEqual([]);
     expect(parsed.data?.legs).toEqual([]);
@@ -342,10 +345,37 @@ describe("activity sheet capture", () => {
     });
   });
 
+  it("closes the activity only through the second, explicit action", async () => {
+    const user = userEvent.setup({ delay: 1 });
+    renderScreen();
+    await fillMinimalSheet(user);
+
+    await user.click(screen.getByRole("button", { name: "Record and close" }));
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
+    expect(mocks.submit.mock.calls[0]?.[0]?.name).toBe("record-journey-sheet");
+
+    const parsed = recordJourneySheetPayload.safeParse(submittedPayload());
+    expect(parsed.error?.issues ?? []).toEqual([]);
+    expect(parsed.data?.close).toBe(true);
+
+    await waitFor(() =>
+      expect(mocks.toastAdd).toHaveBeenCalledWith({
+        type: "success",
+        title: "Sheet recorded and activity closed",
+      }),
+    );
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: "/activities/$activityId",
+      params: { activityId: UUID },
+    });
+  });
+
   it("offers no capture surface to a viewer", () => {
     renderScreen({ ...clerk, role: "EXECUTIVE_VIEWER" });
 
     expect(screen.queryByRole("button", { name: "Record sheet" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record and close" })).toBeNull();
     expect(screen.queryByRole("tab", { name: "Journey" })).toBeNull();
   });
 

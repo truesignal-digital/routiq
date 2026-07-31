@@ -84,7 +84,7 @@ describe("toLocalOffsetIso", () => {
 
 describe("toJourneySheetPayload", () => {
   it("a minimal sheet parses against the contract", () => {
-    const payload = toJourneySheetPayload(minimalState(), ids, DOUALA);
+    const payload = toJourneySheetPayload(minimalState(), ids, { offsetMinutes: DOUALA });
     const parsed = recordJourneySheetPayload.safeParse(payload);
     expect(parsed.success).toBe(true);
     expect(payload.startedAt).toBe("2026-07-28T06:00:00+01:00");
@@ -93,11 +93,23 @@ describe("toJourneySheetPayload", () => {
     expect(payload.customValues).toEqual({});
   });
 
+  it("records without closing unless the close action asked for it", () => {
+    const state = minimalState();
+    expect(toJourneySheetPayload(state, ids, { offsetMinutes: DOUALA }).close).toBe(false);
+    expect(toHaulageSheetPayload(state, ids, { offsetMinutes: DOUALA }).close).toBe(false);
+    expect(
+      toJourneySheetPayload(state, ids, { offsetMinutes: DOUALA, close: true }).close,
+    ).toBe(true);
+    expect(
+      toHaulageSheetPayload(state, ids, { offsetMinutes: DOUALA, close: true }).close,
+    ).toBe(true);
+  });
+
   it("omits blank optionals rather than sending empty strings", () => {
     const payload = toJourneySheetPayload(
       minimalState({ customerName: "  ", clientReference: "", seatsSold: "" }),
       ids,
-      DOUALA,
+      { offsetMinutes: DOUALA },
     );
     expect("customerName" in payload).toBe(false);
     expect("clientReference" in payload).toBe(false);
@@ -112,7 +124,7 @@ describe("toJourneySheetPayload", () => {
         endReading: { value: "142 300", readingType: "ODOMETER" },
       }),
       ids,
-      DOUALA,
+      { offsetMinutes: DOUALA },
     );
     expect(payload.startReading).toBeUndefined();
     expect(payload.endReading).toEqual({
@@ -139,7 +151,7 @@ describe("toJourneySheetPayload", () => {
         ],
       }),
       ids,
-      DOUALA,
+      { offsetMinutes: DOUALA },
     );
     expect(payload.legs.map((l) => l.legNo)).toEqual([1, 2]);
     expect(recordJourneySheetPayload.safeParse(payload).success).toBe(true);
@@ -169,7 +181,7 @@ describe("toJourneySheetPayload", () => {
         ],
       }),
       ids,
-      DOUALA,
+      { offsetMinutes: DOUALA },
     );
 
     expect(payload.entries[0]?.attributeToActivity).toBe(true);
@@ -248,7 +260,7 @@ describe("toHaulageSheetPayload", () => {
       ],
     });
 
-    const payload = toHaulageSheetPayload(state, ids, DOUALA);
+    const payload = toHaulageSheetPayload(state, ids, { offsetMinutes: DOUALA });
     const parsed = recordHaulageJobSheetPayload.safeParse(payload);
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
 

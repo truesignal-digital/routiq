@@ -217,6 +217,23 @@ function toReading(
 }
 
 /**
+ * What the submission asks for beyond the sheet itself.
+ */
+export interface SheetPayloadOptions {
+  /**
+   * Whether recording also closes the activity. Two buttons, two intents: the
+   * field agent records what happened and the trip stays open, the office clerk
+   * copying a finished paper sheet closes it and gets the completeness verdict.
+   */
+  close?: boolean;
+  /**
+   * `Date.prototype.getTimezoneOffset` semantics — see toLocalOffsetIso. A
+   * parameter only so tests need not depend on the runner's zone.
+   */
+  offsetMinutes?: number;
+}
+
+/**
  * Everything both flavours share. One function rather than two copies: the
  * flavour difference is seats versus cargo, and nothing else about a sheet
  * changes with it.
@@ -224,7 +241,7 @@ function toReading(
 function toSheetBase(
   state: SheetFormState,
   ids: SheetIds,
-  offsetMinutes?: number,
+  { close = false, offsetMinutes }: SheetPayloadOptions,
 ): Omit<JourneySheetPayload, "seatsSold" | "seatsAvailable"> {
   const startedAt = toLocalOffsetIso(state.startedAt, offsetMinutes);
   const endedAt = toLocalOffsetIso(state.endedAt, offsetMinutes);
@@ -317,18 +334,19 @@ function toSheetBase(
     ...(clientReference === undefined ? {} : { clientReference }),
     ...(description === undefined ? {} : { description }),
     customValues: {},
+    close,
   };
 }
 
 export function toJourneySheetPayload(
   state: SheetFormState,
   ids: SheetIds,
-  offsetMinutes?: number,
+  options: SheetPayloadOptions = {},
 ): JourneySheetPayload {
   const seatsSold = parseCount(state.seatsSold);
   const seatsAvailable = parseCount(state.seatsAvailable);
   return {
-    ...toSheetBase(state, ids, offsetMinutes),
+    ...toSheetBase(state, ids, options),
     ...(seatsSold === undefined ? {} : { seatsSold }),
     ...(seatsAvailable === undefined ? {} : { seatsAvailable }),
   };
@@ -337,12 +355,12 @@ export function toJourneySheetPayload(
 export function toHaulageSheetPayload(
   state: SheetFormState,
   ids: SheetIds,
-  offsetMinutes?: number,
+  options: SheetPayloadOptions = {},
 ): HaulageSheetPayload {
   const cargoDescription = text(state.cargoDescription);
   const cargoWeightKg = parseCount(state.cargoWeightKg);
   return {
-    ...toSheetBase(state, ids, offsetMinutes),
+    ...toSheetBase(state, ids, options),
     ...(cargoDescription === undefined ? {} : { cargoDescription }),
     ...(cargoWeightKg === undefined ? {} : { cargoWeightKg }),
   };
