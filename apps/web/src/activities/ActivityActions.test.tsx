@@ -64,6 +64,8 @@ const openActivity: ActivityDetail = {
   plannedStartAt: null,
   plannedEndAt: null,
   closedAt: null,
+  createdAt: "2026-07-20T05:45:00.000Z",
+  createdByCommandId: "00000000-0000-4000-8000-0000000000d1",
   rowVersion: 7,
   segments: [
     {

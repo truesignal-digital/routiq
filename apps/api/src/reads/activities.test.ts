@@ -363,6 +363,10 @@ describe("activity, person and place reads", () => {
       legCount: 2,
       crewCount: 1,
     });
+    // §3.4 provenance: the detail read is where a record says which command
+    // wrote it, so the stamp on the screen has something to name.
+    expect(detail.createdByCommandId).not.toBeNull();
+    expect(Date.parse(detail.createdAt)).not.toBeNaN();
     expect(
       detail.segments.map((segment) => segment.assetCode).sort(),
     ).toEqual(["ACT-TRACTOR", "ACT-TRAILER"].sort());

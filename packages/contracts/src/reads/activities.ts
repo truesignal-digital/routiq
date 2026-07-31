@@ -120,6 +120,9 @@ export const activityDetail = activityListItem.extend({
   plannedStartAt: z.iso.datetime().nullable(),
   plannedEndAt: z.iso.datetime().nullable(),
   closedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  /** §3.4 provenance: the command that first wrote the row, shown on the record. */
+  createdByCommandId: z.uuid().nullable(),
   rowVersion: z.number().int().positive(),
   segments: z.array(activitySegmentRead),
   crew: z.array(activityCrewRead),

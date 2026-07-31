@@ -337,6 +337,8 @@ export function registerActivityReadRoutes(
               startedAt: activities.startedAt,
               endedAt: activities.endedAt,
               closedAt: activities.closedAt,
+              createdAt: activities.createdAt,
+              createdByCommandId: activities.createdByCommandId,
               branchId: activities.branchId,
               rowVersion: activities.rowVersion,
             })
@@ -558,6 +560,8 @@ export function registerActivityReadRoutes(
           plannedStartAt: header.plannedStartAt?.toISOString() ?? null,
           plannedEndAt: header.plannedEndAt?.toISOString() ?? null,
           closedAt: header.closedAt?.toISOString() ?? null,
+          createdAt: header.createdAt.toISOString(),
+          createdByCommandId: header.createdByCommandId,
           branchId: header.branchId,
           primaryAssetCode,
           legCount: legRows.length,
