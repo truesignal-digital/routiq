@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { formatMoney, formatDate, formatDateTime, localizedLabel } from "./format.js";
+import {
+  formatMoney,
+  formatDate,
+  formatDateTime,
+  formatDayLong,
+  localDayKey,
+  localizedLabel,
+} from "./format.js";
 import { i18n } from "../i18n/index.js";
 
 describe("format", () => {
@@ -162,6 +169,54 @@ describe("format", () => {
       const enResult = formatDateTime("2026-07-26T14:30:00Z", "en-US");
       expect(frResult).toBeTruthy();
       expect(enResult).toBeTruthy();
+    });
+  });
+
+  describe("formatDayLong", () => {
+    it("spells the month out for a day heading", () => {
+      expect(formatDayLong("2026-07-31T12:00:00Z", "fr-CM")).toBe("31 juillet 2026");
+      expect(formatDayLong("2026-07-31T12:00:00Z", "en-US")).toBe("July 31, 2026");
+    });
+
+    it("accepts a Date as readily as an ISO string", () => {
+      const iso = "2026-07-31T12:00:00Z";
+      expect(formatDayLong(new Date(iso), "en-US")).toBe(formatDayLong(iso, "en-US"));
+    });
+
+    it("returns empty string for null, undefined or nonsense", () => {
+      expect(formatDayLong(null)).toBe("");
+      expect(formatDayLong(undefined)).toBe("");
+      expect(formatDayLong("invalid")).toBe("");
+    });
+
+    it("says more than the short form", () => {
+      expect(formatDayLong("2026-07-31T12:00:00Z", "fr-CM").length).toBeGreaterThan(
+        formatDate("2026-07-31T12:00:00Z", "fr-CM").length
+      );
+    });
+  });
+
+  describe("localDayKey", () => {
+    it("keys a timestamp by the viewer's own calendar day", () => {
+      const local = new Date(2026, 6, 31, 23, 30);
+      expect(localDayKey(local)).toBe("2026-07-31");
+      expect(localDayKey(local.toISOString())).toBe("2026-07-31");
+    });
+
+    it("pads month and day to two digits", () => {
+      expect(localDayKey(new Date(2026, 0, 5, 9, 0))).toBe("2026-01-05");
+    });
+
+    it("gives two instants on the same local day the same key", () => {
+      expect(localDayKey(new Date(2026, 6, 31, 0, 1))).toBe(
+        localDayKey(new Date(2026, 6, 31, 23, 59))
+      );
+    });
+
+    it("returns empty string for null, undefined or nonsense", () => {
+      expect(localDayKey(null)).toBe("");
+      expect(localDayKey(undefined)).toBe("");
+      expect(localDayKey("invalid")).toBe("");
     });
   });
 

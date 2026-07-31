@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { HistoryFieldChange, HistoryItem } from "@routiq/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import {
@@ -17,6 +17,8 @@ import {
 import { i18n } from "../i18n/index.js";
 
 const ENTITY_ID = "00000000-0000-4000-8000-000000000010";
+const SECOND_EVENT_ID = "00000000-0000-4000-8000-000000000022";
+const THIRD_EVENT_ID = "00000000-0000-4000-8000-000000000023";
 
 const mocks = vi.hoisted(() => ({
   useHistory: vi.fn(),
@@ -52,6 +54,14 @@ function event(overrides: Partial<HistoryItem> = {}): HistoryItem {
     note: null,
     ...overrides,
   };
+}
+
+/** A role change that ended up moving nothing but the version counter. */
+function bookkeepingOnlyEvent(): HistoryItem {
+  return event({
+    eventType: "member.role-updated",
+    changedFields: ["rowVersion", "updatedAt"],
+  });
 }
 
 function stubHistory(
@@ -135,7 +145,7 @@ describe("record history sheet", () => {
     stubHistory([
       event(),
       event({
-        eventId: "00000000-0000-4000-8000-000000000022",
+        eventId: SECOND_EVENT_ID,
         eventType: "widget.frobnicated",
       }),
     ]);
@@ -186,11 +196,77 @@ describe("record history sheet", () => {
     expect(screen.getByText("Kilométrage saisi à l'envers")).toBeTruthy();
   });
 
+  it("reads as one line: who, what, and the motif", async () => {
+    stubHistory([event({ note: "Fin de mission" })]);
+    await openSheet();
+
+    const line = screen.getByText("Activity closed").closest("p");
+    expect(line?.textContent).toContain("Amadou Bello");
+    expect(line?.textContent).toContain("Fin de mission");
+  });
+
   it("chips the fields that changed and drops the bookkeeping ones", async () => {
+    stubHistory([
+      event({
+        changedFields: [
+          "status",
+          "rowVersion",
+          "createdAt",
+          "updatedAt",
+          "createdByCommandId",
+        ],
+      }),
+    ]);
     await openSheet();
 
     expect(screen.getByText("status")).toBeTruthy();
     expect(screen.queryByText("rowVersion")).toBeNull();
+    expect(screen.queryByText("createdByCommandId")).toBeNull();
+    // Labelled bookkeeping is still bookkeeping.
+    expect(screen.queryByText("created")).toBeNull();
+    expect(screen.queryByText("updated")).toBeNull();
+  });
+
+  it("names no columns when a PIN was reset, but keeps the event", async () => {
+    stubHistory([
+      event({
+        eventType: "member.pin-reset",
+        changedFields: ["pinHash", "failedAttempts", "lockedUntil"],
+      }),
+    ]);
+    await openSheet();
+
+    // A reset is news; which credential columns it touched is not.
+    expect(screen.getByText("member.pin-reset")).toBeTruthy();
+    expect(screen.queryByText("pinHash")).toBeNull();
+    expect(screen.queryByText("failedAttempts")).toBeNull();
+    expect(screen.queryByText("lockedUntil")).toBeNull();
+  });
+
+  it("still chips lockedAt, which is when a period was locked", async () => {
+    stubHistory([
+      event({
+        eventType: "posting_period.locked",
+        changedFields: ["lockedAt", "status", "lockedByCommandId"],
+      }),
+    ]);
+    await openSheet();
+
+    expect(screen.getByText("locked")).toBeTruthy();
+    expect(screen.getByText("status")).toBeTruthy();
+  });
+
+  it("hides a credential column a later command adds, but not a lookalike", async () => {
+    stubHistory([
+      event({ changedFields: ["passwordHash", "apiSecret", "shippingRef"] }),
+    ]);
+    await openSheet();
+
+    expect(screen.queryByText("passwordHash")).toBeNull();
+    expect(screen.queryByText("apiSecret")).toBeNull();
+    // "shipping" only contains "pin" as a substring, and the field vocabulary
+    // is open — matching whole segments is what keeps this one visible.
+    expect(screen.getByText("shippingRef")).toBeTruthy();
   });
 
   it("walks the keyset with load more", async () => {
@@ -205,6 +281,108 @@ describe("record history sheet", () => {
     await openSheet();
 
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+});
+
+describe("record history, changes only", () => {
+  it("hides an event that moved nothing but bookkeeping", async () => {
+    stubHistory([bookkeepingOnlyEvent()]);
+    await openSheet();
+
+    expect(screen.queryByText("member.role-updated")).toBeNull();
+  });
+
+  it("says so rather than looking empty when the filter hid everything", async () => {
+    stubHistory([bookkeepingOnlyEvent()]);
+    await openSheet();
+
+    expect(
+      screen.getByText(
+        "No data changes on this record. Show all to see every event.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("No history")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show all" })).toBeTruthy();
+  });
+
+  it("brings the hidden event back when show all is pressed", async () => {
+    stubHistory([bookkeepingOnlyEvent()]);
+    await openSheet();
+
+    const toggle = screen.getByRole("button", { name: "Show all" });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+
+    await userEvent.click(toggle);
+    expect(screen.getByText("member.role-updated")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Show all" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("keeps a lifecycle event whose fields are all bookkeeping", async () => {
+    stubHistory([event({ changedFields: ["rowVersion"] })]);
+    await openSheet();
+
+    expect(screen.getByText("Activity closed")).toBeTruthy();
+  });
+
+  it("keeps an event type it has never seen before", async () => {
+    stubHistory([
+      event({ eventType: "widget.frobnicated", changedFields: ["rowVersion"] }),
+    ]);
+    await openSheet();
+
+    expect(screen.getByText("widget.frobnicated")).toBeTruthy();
+  });
+
+  it("forgets show all once the sheet is closed and opened again", async () => {
+    stubHistory([bookkeepingOnlyEvent()]);
+    await openSheet();
+    await userEvent.click(screen.getByRole("button", { name: "Show all" }));
+    expect(screen.getByText("member.role-updated")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Show all" })).toBeNull(),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "History" }));
+    expect(screen.queryByText("member.role-updated")).toBeNull();
+  });
+});
+
+describe("record history days", () => {
+  it("puts each calendar day under its own heading", async () => {
+    stubHistory([
+      event({ occurredAt: new Date().toISOString() }),
+      event({ eventId: SECOND_EVENT_ID, occurredAt: "2026-01-15T12:00:00.000Z" }),
+    ]);
+    await openSheet();
+
+    const headings = screen.getAllByRole("heading", { level: 3 });
+    expect(headings).toHaveLength(2);
+    expect(headings[0]?.textContent).toBe("Today");
+    expect(headings[1]?.textContent).toMatch(/January 1[45], 2026/);
+  });
+
+  it("keeps a run of same-day events under a single heading", async () => {
+    stubHistory([
+      event({ occurredAt: "2026-07-29T14:05:00.000Z" }),
+      event({ eventId: SECOND_EVENT_ID, occurredAt: "2026-07-29T18:00:00.000Z" }),
+      event({ eventId: THIRD_EVENT_ID, occurredAt: "2026-07-28T18:00:00.000Z" }),
+    ]);
+    await openSheet();
+
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(2);
+  });
+
+  it("names yesterday rather than dating it", async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    stubHistory([event({ occurredAt: yesterday.toISOString() })]);
+    await openSheet();
+
+    expect(screen.getByRole("heading", { level: 3 }).textContent).toBe("Yesterday");
   });
 });
 
