@@ -5,15 +5,19 @@ import {
   type DashboardResponse,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useAmbientBranchId } from "../shell/branch-context.js";
 
 export async function fetchDashboard(
   token: string,
   days: number,
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
+  branchId?: string,
 ): Promise<DashboardResponse> {
   const url = new URL("/v1/dashboard", window.location.origin);
   url.searchParams.set("days", String(days));
+  // Narrows inside the caller's branch scope; it can never widen it (ADR-0003).
+  if (branchId !== undefined) url.searchParams.set("branchId", branchId);
 
   const response = await fetchImpl(url.pathname + url.search, {
     headers: { authorization: `Bearer ${token}` },
@@ -26,17 +30,18 @@ export async function fetchDashboard(
   return dashboardResponse.parse(await response.json());
 }
 
-/** `days` is part of the key: each range is its own cached window. */
+/** `days` and the ambient branch are part of the key: each is its own window. */
 export function useDashboard(days: number = DASHBOARD_SERIES_DAYS_DEFAULT) {
   const session = useActiveSession();
+  const branchId = useAmbientBranchId();
 
   return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "dashboard", days],
+    queryKey: ["ws", session?.workspaceSlug, "dashboard", days, branchId ?? "ALL"],
     enabled: session !== undefined,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchDashboard(token, days, signal);
+      return fetchDashboard(token, days, signal, fetch, branchId);
     },
   });
 }

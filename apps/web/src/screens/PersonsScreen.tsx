@@ -23,6 +23,7 @@ import { deniedCode, PermissionDenied } from "@/components/permission-denied.js"
 import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useCurrentBranchCode } from "@/shell/branch-context.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
 import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
@@ -51,12 +52,16 @@ export function PersonsScreen() {
   // screen has to know which one before it can offer to register anyone.
   const reference = useAssetRegistrationReference();
   const branches = useMemo(() => reference.data?.branches ?? [], [reference.data]);
+  const currentBranchCode = useCurrentBranchCode();
+  // The shell's current agency answers it by default, the only branch there is
+  // otherwise; either way the picker stays editable.
+  const preselectedBranchCode =
+    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
   useEffect(() => {
-    const soleBranch = branches.length === 1 ? branches[0] : undefined;
-    if (soleBranch !== undefined && branchCode === "") {
-      setBranchCode(soleBranch.code);
+    if (preselectedBranchCode !== undefined && branchCode === "") {
+      setBranchCode(preselectedBranchCode);
     }
-  }, [branches, branchCode]);
+  }, [preselectedBranchCode, branchCode]);
 
   const filters = useMemo<DataTableFilter[]>(
     () => [

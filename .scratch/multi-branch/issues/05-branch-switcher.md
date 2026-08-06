@@ -1,6 +1,6 @@
 # 05 — shell branch switcher + ambient current branch
 
-Status: open
+Status: done (2026-08-06) — visually verified: switcher in header, selection narrows + persists across nav/reload (localStorage per workspace), asset form preselects current branch. Screenshot: visual-05-switcher.png
 Depends: 04 (multi-branch workspace exists to test against)
 
 ## Goal

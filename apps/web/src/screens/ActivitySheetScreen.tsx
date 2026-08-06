@@ -36,6 +36,7 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useCurrentBranchCode } from "@/shell/branch-context.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
@@ -305,17 +306,26 @@ function SheetForm({
 
   const reference = useAssetRegistrationReference();
   const branches = useMemo(() => reference.data?.branches ?? [], [reference.data]);
+  const currentBranchCode = useCurrentBranchCode();
   const activityTypes = useCategories("ACTIVITY_TYPE");
   const assetOptions = useAssetOptions();
-  const personsQuery = usePersons({ active: true });
+  // The sheet's own branch, not the shell's: changing the branch field changes
+  // whose people the crew rows offer.
+  const sheetBranchId = branches.find((branch) => branch.code === branchCode)?.id;
+  const personsQuery = usePersons({
+    active: true,
+    ...(sheetBranchId === undefined ? {} : { branchId: sheetBranchId }),
+  });
 
-  // A single-branch workspace should never ask which branch.
+  // The shell's current agency, or the only branch there is — a single-branch
+  // workspace should never ask which branch. Editable in both cases.
+  const preselectedBranchCode =
+    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
   useEffect(() => {
-    const soleBranch = branches.length === 1 ? branches[0] : undefined;
-    if (soleBranch !== undefined && branchCode === "") {
-      setValue("branchCode", soleBranch.code);
+    if (preselectedBranchCode !== undefined && branchCode === "") {
+      setValue("branchCode", preselectedBranchCode);
     }
-  }, [branches, branchCode, setValue]);
+  }, [preselectedBranchCode, branchCode, setValue]);
 
   const personOptions = useMemo<Option[]>(() => {
     const persons = personsQuery.data?.items ?? [];
@@ -748,7 +758,11 @@ function SheetForm({
             <CardTitle>{t("activities.record.sections.crew")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <CrewRows control={control} branchCode={branchCode} />
+            <CrewRows
+              control={control}
+              branchCode={branchCode}
+              branchId={sheetBranchId}
+            />
           </CardContent>
         </Card>
 

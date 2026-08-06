@@ -47,6 +47,7 @@ import { canRecordFinance } from "@/finance/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useCurrentBranchCode } from "@/shell/branch-context.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
@@ -125,6 +126,7 @@ function RecordForm({
   onRecorded: (outcome: CommandResult) => void;
 }) {
   const { t } = useTranslation();
+  const currentBranchCode = useCurrentBranchCode();
   const [entryId] = useState(() => crypto.randomUUID());
   const intentExpenseRef = useRef(createCommandIntent<RecordPayload>(commandClient, "record-expense", 1));
   const intentRevenueRef = useRef(createCommandIntent<RecordPayload>(commandClient, "record-revenue", 1));
@@ -184,15 +186,15 @@ function RecordForm({
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [attachmentsUploading, setAttachmentsUploading] = useState(false);
 
-  // Preselect branch if only one is available
+  // Preselect the shell's current agency, or the only branch there is. Still
+  // editable: the server authorizes the branch either way.
+  const preselectedBranchCode =
+    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
   useEffect(() => {
-    if (branches.length === 1 && branchCode === "") {
-      const firstBranch = branches[0];
-      if (firstBranch) {
-        form.setValue("branchCode", firstBranch.code, { shouldValidate: true });
-      }
+    if (preselectedBranchCode !== undefined && branchCode === "") {
+      form.setValue("branchCode", preselectedBranchCode, { shouldValidate: true });
     }
-  }, [branches, branchCode, form]);
+  }, [preselectedBranchCode, branchCode, form]);
 
   const amountMinor = parseMoneyXaf(amountInput);
   const isValid =

@@ -26,6 +26,7 @@ import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
+import { useAmbientBranchId } from "@/shell/branch-context.js";
 
 const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
 const COMPLETENESS_OPTIONS = ["COMPLETE", "COMPLETE_WITH_EXCEPTIONS"] as const;
@@ -62,6 +63,8 @@ export function ActivitiesScreen() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const sort = toSortParam(sorting);
+  // The shell's current agency is the default; the toolbar filter overrides it.
+  const branchId = useAmbientBranchId(filterValues["branchId"]);
 
   // `/v1/activities` does the filtering; the table never narrows rows itself,
   // or the counts would describe the page instead of the fleet.
@@ -73,7 +76,7 @@ export function ActivitiesScreen() {
     ...(filterValues["activityTypeCode"]
       ? { activityTypeCode: filterValues["activityTypeCode"] }
       : {}),
-    ...(filterValues["branchId"] ? { branchId: filterValues["branchId"] } : {}),
+    ...(branchId ? { branchId } : {}),
     ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
     ...(filterValues["from"] ? { from: filterValues["from"] } : {}),
     ...(filterValues["to"] ? { to: filterValues["to"] } : {}),

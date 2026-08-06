@@ -8,9 +8,13 @@ import { financialEntries } from "../db/schema.js";
  * `/v1/dashboard` counts them — a second copy of this predicate is how the
  * dashboard card and the queue end up showing different numbers.
  *
- * Scope comes from the session (ADR-0003); no filter here is client-supplied.
+ * Scope comes from the session (ADR-0003). The optional `branchId` is the
+ * client's own narrowing, applied on top of that scope and never instead of it.
  */
-export function pendingApprovalConditions(auth: AuthContext): SQL[] {
+export function pendingApprovalConditions(
+  auth: AuthContext,
+  branchId?: string,
+): SQL[] {
   const conditions: SQL[] = [
     eq(financialEntries.workspaceId, auth.workspaceId),
     eq(financialEntries.status, "SUBMITTED"),
@@ -18,6 +22,9 @@ export function pendingApprovalConditions(auth: AuthContext): SQL[] {
 
   if (auth.branchScope !== "ALL") {
     conditions.push(inArray(financialEntries.branchId, auth.branchScope));
+  }
+  if (branchId !== undefined) {
+    conditions.push(eq(financialEntries.branchId, branchId));
   }
 
   return conditions;

@@ -56,7 +56,11 @@
     "navLabel": "Navigation",
     "sidebarDescription": "Affiche le menu de navigation sur mobile.",
     "sidebarTitle": "Menu de navigation",
-    "toggleSidebar": "Afficher ou masquer le menu"
+    "toggleSidebar": "Afficher ou masquer le menu",
+    "branch": {
+      "label": "Agence courante",
+      "all": "Toutes mes agences"
+    }
   },
   "login": {
     "subtitle": "Connectez-vous pour continuer",

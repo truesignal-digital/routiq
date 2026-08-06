@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useAmbientBranchId } from "../shell/branch-context.js";
 import type { FinancialEntryListResponse } from "@routiq/contracts";
 
 export async function fetchFinanceEntries(
@@ -42,9 +43,16 @@ export interface UseEntriesParams {
 
 export function useEntries(params: UseEntriesParams = {}) {
   const session = useActiveSession();
+  // The shell's current agency is the default narrowing; a caller that names a
+  // branch itself keeps it.
+  const branchId = useAmbientBranchId(params.branchId);
+  const query: UseEntriesParams = {
+    ...params,
+    ...(branchId === undefined ? {} : { branchId }),
+  };
 
   return useInfiniteQuery<FinancialEntryListResponse>({
-    queryKey: ["ws", session?.workspaceSlug, "finance", "entries", params],
+    queryKey: ["ws", session?.workspaceSlug, "finance", "entries", query],
     enabled: session !== undefined,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage: FinancialEntryListResponse) => lastPage.nextCursor ?? undefined,
@@ -52,7 +60,7 @@ export function useEntries(params: UseEntriesParams = {}) {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
       const cursor = pageParam as string | undefined;
-      return fetchFinanceEntries(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
+      return fetchFinanceEntries(token, { ...query, ...(cursor ? { cursor } : {}) }, signal);
     },
   });
 }

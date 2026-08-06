@@ -24,12 +24,15 @@ export interface CrewRowsProps {
   control: Control<SheetFormValues>;
   /** Where a person registered from inside a row is filed. */
   branchCode: string;
+  /** The same branch, as the persons read filters it — undefined until known. */
+  branchId: string | undefined;
 }
 
 interface CrewRowProps {
   control: Control<SheetFormValues>;
   index: number;
   branchCode: string;
+  branchId: string | undefined;
   onRemove: (index: number) => void;
 }
 
@@ -42,6 +45,7 @@ const CrewRow = memo(function CrewRow({
   control,
   index,
   branchCode,
+  branchId,
   onRemove,
 }: CrewRowProps) {
   const { t } = useTranslation();
@@ -62,6 +66,7 @@ const CrewRow = memo(function CrewRow({
                 value={field.value}
                 onChange={field.onChange}
                 branchCode={branchCode}
+                {...(branchId === undefined ? {} : { branchId })}
                 label={t("activities.record.crew.rowPerson", { position })}
               />
             </FormControl>
@@ -119,7 +124,7 @@ const CrewRow = memo(function CrewRow({
   );
 });
 
-export function CrewRows({ control, branchCode }: CrewRowsProps) {
+export function CrewRows({ control, branchCode, branchId }: CrewRowsProps) {
   const { t } = useTranslation();
   const { fields, append, remove } = useFieldArray({ control, name: "crew" });
   const onRemove = useCallback((index: number) => remove(index), [remove]);
@@ -138,6 +143,7 @@ export function CrewRows({ control, branchCode }: CrewRowsProps) {
           control={control}
           index={index}
           branchCode={branchCode}
+          branchId={branchId}
           onRemove={onRemove}
         />
       ))}

@@ -142,4 +142,14 @@ describe("dashboard query", () => {
   it("rejects a non-numeric window", () => {
     expect(dashboardQuery.safeParse({ days: "ninety" }).success).toBe(false);
   });
+
+  it("accepts an optional branch narrowing", () => {
+    const branchId = "3f6b2a7c-9d41-4a52-8b0e-2c1d5e6f7a8b";
+    expect(dashboardQuery.parse({ branchId }).branchId).toBe(branchId);
+    expect(dashboardQuery.parse({}).branchId).toBeUndefined();
+  });
+
+  it("rejects a branchId that is not a uuid", () => {
+    expect(dashboardQuery.safeParse({ branchId: "DLA" }).success).toBe(false);
+  });
 });

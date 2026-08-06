@@ -32,7 +32,12 @@ export const DASHBOARD_SERIES_DAYS_MIN = 7;
 export const DASHBOARD_SERIES_DAYS_MAX = 365;
 export const DASHBOARD_SERIES_DAYS_DEFAULT = 90;
 
-/** `GET /v1/dashboard` — only the chart window is client-chosen; scope never is (ADR-0003). */
+/**
+ * `GET /v1/dashboard` — the chart window and an optional branch narrowing are
+ * client-chosen; scope never is (ADR-0003). `branchId` narrows *within* the
+ * caller's branch scope and can never widen it: a branch outside that scope
+ * simply matches nothing.
+ */
 export const dashboardQuery = z.object({
   days: z.coerce
     .number()
@@ -40,6 +45,7 @@ export const dashboardQuery = z.object({
     .min(DASHBOARD_SERIES_DAYS_MIN)
     .max(DASHBOARD_SERIES_DAYS_MAX)
     .default(DASHBOARD_SERIES_DAYS_DEFAULT),
+  branchId: z.uuid().optional(),
 });
 
 /**

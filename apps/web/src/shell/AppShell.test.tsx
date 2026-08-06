@@ -30,8 +30,19 @@ const session = {
 const logout = vi.fn();
 
 vi.mock("../auth/store.js", () => ({
-  sessionStore: { logout, getActive: () => session },
+  sessionStore: { logout, getActive: () => session, getToken: () => "token" },
   useActiveSession: () => session,
+}));
+
+/** The shell's branch switcher reads its options from here; no Query client. */
+const branches: { current: Array<{ id: string; code: string; name: string }> } = {
+  current: [],
+};
+
+vi.mock("../assets/reference.js", () => ({
+  useAssetRegistrationReference: () => ({
+    data: { assetClasses: [], branches: branches.current },
+  }),
 }));
 
 const { AppShell } = await import("./AppShell.js");
@@ -130,7 +141,9 @@ function activeNavName(): string | undefined {
 
 beforeEach(async () => {
   logout.mockClear();
+  localStorage.clear();
   me.current = membership(["CORE", "ASSETS", "FINANCE"]);
+  branches.current = [{ id: "branch-dla", code: "DLA", name: "Douala" }];
   setViewport(1280);
   await i18n.changeLanguage("en");
 });
@@ -211,6 +224,24 @@ describe("AppShell (sidebar frame)", () => {
     }
     const rail = document.querySelector("[data-slot='sidebar-rail']");
     expect(rail?.getAttribute("title")).toBe("Show or hide the menu");
+  });
+
+  it("puts the branch switcher in the site header when the scope spans branches", async () => {
+    branches.current = [
+      { id: "branch-dla", code: "DLA", name: "Douala" },
+      { id: "branch-yde", code: "YDE", name: "Yaoundé" },
+    ];
+    await renderShell("/assets");
+
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+    const switcher = screen.getByRole("combobox", { name: "Current branch" });
+    expect(header?.contains(switcher)).toBe(true);
+    expect(switcher.textContent).toContain("All my branches");
+  });
+
+  it("renders no switcher for a member scoped to a single branch", async () => {
+    await renderShell("/assets");
+    expect(screen.queryByRole("combobox", { name: "Current branch" })).toBeNull();
   });
 
   it("logs out from the sidebar footer", async () => {

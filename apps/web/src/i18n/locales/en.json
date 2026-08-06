@@ -56,7 +56,11 @@
     "navLabel": "Navigation",
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
-    "toggleSidebar": "Show or hide the menu"
+    "toggleSidebar": "Show or hide the menu",
+    "branch": {
+      "label": "Current branch",
+      "all": "All my branches"
+    }
   },
   "login": {
     "subtitle": "Sign in to continue",

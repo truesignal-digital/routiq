@@ -74,17 +74,20 @@ describe("GET /v1/dashboard", () => {
     let scopedToken: string;
     let submitterToken: string;
     let dlaAssetId: string;
+    let dlaBranchId: string;
+    let ydeBranchId: string;
 
     beforeAll(async () => {
       const seeded = await seedWorkspace(db);
       const workspaceId = seeded.workspace.id;
-      const dlaBranchId = seeded.branch.id;
+      dlaBranchId = seeded.branch.id;
 
       const [yde] = await db
         .insert(branches)
         .values({ workspaceId, code: "YDE", name: "Yaoundé" })
         .returning();
       if (!yde) throw new Error("branch insert returned no row");
+      ydeBranchId = yde.id;
 
       const admin = await seedMember(db, {
         workspaceId,
@@ -270,6 +273,50 @@ describe("GET /v1/dashboard", () => {
       );
     });
 
+    it("narrows every count to the branch the client asked for", async () => {
+      const body = await fetchDashboard(adminToken, undefined, dlaBranchId);
+
+      expect(body.assets).toEqual({
+        total: 3,
+        byStatus: {
+          REGISTERED: 2,
+          IN_SERVICE: 1,
+          UNDER_MAINTENANCE: 0,
+          SOLD: 0,
+          RETIRED: 0,
+          WRITTEN_OFF: 0,
+        },
+      });
+      expect(body.openPeriod).toMatchObject({
+        postedExpenseMinor: 50_000,
+        postedRevenueMinor: 200_000,
+      });
+      expect(body.pendingApprovals.count).toBe(1);
+    });
+
+    it("narrows within branch scope and never widens past it", async () => {
+      // The member is scoped to DLA and asks for YDE: the answer is an empty
+      // dashboard, not YDE's numbers (ADR-0003).
+      const body = await fetchDashboard(scopedToken, undefined, ydeBranchId);
+
+      expect(body.assets.total).toBe(0);
+      expect(body.openPeriod).toMatchObject({
+        postedExpenseMinor: 0,
+        postedRevenueMinor: 0,
+      });
+      expect(body.pendingApprovals.count).toBe(0);
+    });
+
+    it("rejects a branchId that is not a uuid with VALIDATION_FAILED", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/dashboard?branchId=DLA",
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+    });
+
     it("counts pending approvals with the same predicate as the approvals queue", async () => {
       for (const token of [adminToken, scopedToken, submitterToken]) {
         const [dashboard, queue] = await Promise.all([
@@ -299,11 +346,12 @@ describe("GET /v1/dashboard", () => {
     let today: string;
     let adminToken: string;
     let scopedToken: string;
+    let dlaBranchId: string;
 
     beforeAll(async () => {
       const seeded = await seedWorkspace(db);
       const workspaceId = seeded.workspace.id;
-      const dlaBranchId = seeded.branch.id;
+      dlaBranchId = seeded.branch.id;
       await db
         .insert(branches)
         .values({ workspaceId, code: "YDE", name: "Yaoundé" });
@@ -478,6 +526,18 @@ describe("GET /v1/dashboard", () => {
       });
     });
 
+    it("narrows the series to the branch the client asked for", async () => {
+      const { series } = await fetchDashboard(adminToken, undefined, dlaBranchId);
+
+      expect(dayOf(series, today)).toMatchObject({ expenseMinor: 50_000 });
+      // YDE's 30_000 is filtered out, and its day is still a zero, not a gap.
+      expect(dayOf(series, addDays(today, -2))).toEqual({
+        date: addDays(today, -2),
+        expenseMinor: 0,
+        revenueMinor: 0,
+      });
+    });
+
     it.each([6, 366, 0, -30, "ninety"])(
       "rejects days=%s with VALIDATION_FAILED",
       async (days) => {
@@ -501,11 +561,18 @@ describe("GET /v1/dashboard", () => {
     return series.find((point) => point.date === date);
   }
 
-  async function fetchDashboard(token: string, days?: number | string) {
+  async function fetchDashboard(
+    token: string,
+    days?: number | string,
+    branchId?: string,
+  ) {
+    const query = new URLSearchParams();
+    if (days !== undefined) query.append("days", String(days));
+    if (branchId !== undefined) query.append("branchId", branchId);
+    const search = query.toString();
     const response = await ctx.app.inject({
       method: "GET",
-      url:
-        days === undefined ? "/v1/dashboard" : `/v1/dashboard?days=${days}`,
+      url: search === "" ? "/v1/dashboard" : `/v1/dashboard?${search}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.statusCode).toBe(200);

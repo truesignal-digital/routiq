@@ -38,11 +38,21 @@ function zeroedStatusCounts(): Record<AssetLifecycleStatus, number> {
   };
 }
 
-/** Branch scope comes from the session, never the query string (ADR-0003). */
-function branchScoped(auth: AuthContext, branchIdColumn: AnyPgColumn): SQL[] {
-  return auth.branchScope === "ALL"
-    ? []
-    : [inArray(branchIdColumn, auth.branchScope)];
+/**
+ * Branch scope comes from the session, never the query string (ADR-0003). The
+ * optional `branchId` is applied on top of that scope, never instead of it, so
+ * asking for a branch outside the caller's scope narrows to nothing rather than
+ * widening to it.
+ */
+function branchScoped(
+  auth: AuthContext,
+  branchIdColumn: AnyPgColumn,
+  branchId?: string,
+): SQL[] {
+  const conditions: SQL[] =
+    auth.branchScope === "ALL" ? [] : [inArray(branchIdColumn, auth.branchScope)];
+  if (branchId !== undefined) conditions.push(eq(branchIdColumn, branchId));
+  return conditions;
 }
 
 export function registerDashboardReadRoutes(
@@ -60,7 +70,7 @@ export function registerDashboardReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { days } = parsedQuery.data;
+        const { days, branchId } = parsedQuery.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           const assetRows = await tx
@@ -72,7 +82,7 @@ export function registerDashboardReadRoutes(
             .where(
               and(
                 eq(assets.workspaceId, auth.workspaceId),
-                ...branchScoped(auth, assets.branchId),
+                ...branchScoped(auth, assets.branchId, branchId),
               ),
             )
             .groupBy(assets.lifecycleStatus);
@@ -80,7 +90,7 @@ export function registerDashboardReadRoutes(
           const [approvalsCount] = await tx
             .select({ count: sql<number>`count(*)::integer` })
             .from(financialEntries)
-            .where(and(...pendingApprovalConditions(auth)));
+            .where(and(...pendingApprovalConditions(auth, branchId)));
 
           const [workspace] = await tx
             .select({
@@ -123,7 +133,7 @@ export function registerDashboardReadRoutes(
                 eq(financialEntries.currency, currency),
                 gte(financialEntries.economicDate, windowStart),
                 lte(financialEntries.economicDate, windowEnd),
-                ...branchScoped(auth, financialEntries.branchId),
+                ...branchScoped(auth, financialEntries.branchId, branchId),
               ),
             )
             .groupBy(financialEntries.economicDate);
@@ -177,7 +187,7 @@ export function registerDashboardReadRoutes(
                 eq(financialEntries.postingPeriodId, openPeriod.id),
                 inArray(financialEntries.status, [...LEDGER_ENTRY_STATUSES]),
                 eq(financialEntries.currency, currency),
-                ...branchScoped(auth, financialEntries.branchId),
+                ...branchScoped(auth, financialEntries.branchId, branchId),
               ),
             );
 

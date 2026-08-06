@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PersonListItem } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useAmbientBranchId } from "../shell/branch-context.js";
 
 export interface PersonListResponse {
   items: PersonListItem[];
@@ -40,14 +41,21 @@ export interface UsePersonsParams {
  */
 export function usePersons(params: UsePersonsParams = {}) {
   const session = useActiveSession();
+  // The shell's current agency narrows the list unless the caller named a
+  // branch itself (a crew picker follows the sheet's branch, not the shell's).
+  const branchId = useAmbientBranchId(params.branchId);
+  const query: UsePersonsParams = {
+    ...params,
+    ...(branchId === undefined ? {} : { branchId }),
+  };
 
   return useQuery<PersonListResponse>({
-    queryKey: ["ws", session?.workspaceSlug, "persons", params],
+    queryKey: ["ws", session?.workspaceSlug, "persons", query],
     enabled: session !== undefined,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchPersons(token, params, signal);
+      return fetchPersons(token, query, signal);
     },
   });
 }

@@ -38,6 +38,7 @@ import { useAssets } from "@/assets/useAssets.js";
 import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
+import { useAmbientBranchId } from "@/shell/branch-context.js";
 
 /** Module-level so the column memo holds across renders. */
 const LIST_COLUMNS: readonly AssetColumnId[] = [
@@ -78,7 +79,9 @@ export function AssetsStub() {
 
   const search = filterValues["search"] ?? "";
   const category = filterValues["category"] ?? "";
-  const branchId = filterValues["branchId"] ?? "";
+  // The shell's current agency is the default; picking one in the toolbar
+  // overrides it for this table.
+  const branchId = useAmbientBranchId(filterValues["branchId"]) ?? "";
   const statusChoice = filterValues["status"] ?? "";
   const statuses = assetFilterStatuses(
     isAssetFilter(statusChoice) ? statusChoice : "ALL",
@@ -104,7 +107,9 @@ export function AssetsStub() {
   const summaryQuery = useAssetSummary(scope);
 
   const assets = assetsQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const narrowed = Object.keys(scope).length > 0 || statuses !== undefined;
+  // User-set filters only: "clear filters" cannot undo the shell's current
+  // agency, so a branch with no assets is an empty state, not a failed search.
+  const narrowed = Object.values(filterValues).some((value) => value !== "");
 
   const filters = useMemo<DataTableFilter[]>(
     () => [

@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetRegistrationReference } from "@/assets/reference";
+import { useCurrentBranchCode } from "@/shell/branch-context.js";
 import { useActiveSession } from "@/auth/store";
 import { useMeContext } from "@/auth/me.js";
 import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/field-errors";
@@ -97,6 +98,19 @@ export function AssetRegisterScreen() {
   });
   const templateCode = form.watch("templateCode");
   const acquisitionAmount = form.watch("acquisitionAmountMinor");
+  const branchCode = form.watch("branchCode");
+
+  // The shell's current agency, or the only branch in scope — still editable,
+  // and the server authorizes the branch either way.
+  const branches = reference.data?.branches ?? [];
+  const currentBranchCode = useCurrentBranchCode();
+  const preselectedBranchCode =
+    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
+  useEffect(() => {
+    if (preselectedBranchCode !== undefined && branchCode === "") {
+      form.setValue("branchCode", preselectedBranchCode);
+    }
+  }, [preselectedBranchCode, branchCode, form]);
 
   /**
    * ADR-0004: a workspace runs the presets it enabled. Undefined means /v1/me
