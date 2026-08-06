@@ -1,8 +1,11 @@
+import { useEffect } from "react";
 import { Outlet } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toast.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MeCtx, useMe } from "../auth/me.js";
+import { i18n } from "../i18n/index.js";
+import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overlay.js";
 import { AppSidebar } from "./AppSidebar.js";
 import { BranchProvider, useCurrentBranch } from "./branch-context.js";
 import { SiteHeader } from "./SiteHeader.js";
@@ -23,6 +26,14 @@ function BranchScopeAnnouncer() {
 
 export function AppShell() {
   const me = useMe();
+  const preset = presetVocabularyFor(me.data?.enabledPresets);
+
+  // The overlay mutates a shared store, so it is cleared on unmount: logging
+  // out or switching workspace must never leak the last tenant's vocabulary.
+  useEffect(() => {
+    applyPresetVocabulary(i18n, preset);
+    return () => applyPresetVocabulary(i18n, undefined);
+  }, [preset]);
 
   return (
     <MeCtx.Provider value={me.data}>

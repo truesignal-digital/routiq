@@ -25,6 +25,11 @@ first-party guidance):
   keyed by symbolic id never source text). Per-tenant renames are not built:
   four of five surveyed competitors offer at most a two-value toggle. Category
   labels (already per-workspace rows) carry the real tenant vocabulary.
+  Implemented 2026-08-06: the overlays live in `apps/web/src/i18n/presets/`
+  (one sparse file per preset per locale, merged over the base catalog at
+  runtime), and they apply only when a workspace has exactly one preset
+  enabled — a mixed fleet keeps the base vocabulary, because it must not be
+  told its buses are camions.
 - **Categories are runtime tenant data** edited via audited commands
   (create / relabel / deactivate — never delete; records reference codes as
   plain text). Seeded per enabled preset via starter packs.

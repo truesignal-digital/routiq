@@ -13,14 +13,26 @@ void i18n
   .use(initReactI18next)
   .init({
     lng: "fr-CM",
-    fallbackLng: "fr",
+    fallbackLng: ["fr", "en"],
     resources: {
-      fr: { translation: fr },
-      en: { translation: en },
+      // Cloned: the store keeps the object it is handed, and preset overlays
+      // merge into it — the imported catalogs must stay the pristine base.
+      fr: { translation: structuredClone(fr) },
+      en: { translation: structuredClone(en) },
     },
     interpolation: {
       // React already escapes rendered strings.
       escapeValue: false,
+    },
+    react: {
+      // Preset terminology overlays land as resource-bundle writes after the
+      // first render; without this react-i18next ignores store mutations.
+      bindI18nStore: "added",
+    },
+    i18nFormat: {
+      // i18next-icu memoizes compiled messages per lng.ns.key, so an overlay
+      // would keep serving the pre-overlay wording until the cache is dropped.
+      bindI18nStore: "added",
     },
   });
 

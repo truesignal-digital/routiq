@@ -1,0 +1,120 @@
+{
+  "nav": {
+    "assets": "Camions",
+    "activities": "Voyages"
+  },
+  "home": {
+    "cards": {
+      "assets": {
+        "title": "Camions en service",
+        "description": "{count, plural, one {sur # camion enregistré} other {sur # camions enregistrés}}"
+      }
+    }
+  },
+  "assets": {
+    "notify": {
+      "success": {
+        "registered": "Camion enregistré",
+        "commissioned": "Camion mis en service",
+        "assigned": "Camion affecté"
+      }
+    },
+    "title": "Vos camions",
+    "subtitle": "Suivez chaque camion, de son enregistrement à sa mise hors service.",
+    "register": "Nouveau camion",
+    "searchLabel": "Rechercher dans les camions",
+    "filterLabel": "Filtrer les camions",
+    "emptyTitle": "Enregistrez votre premier camion",
+    "emptyHint": "Ajoutez un camion ou une remorque. Son historique fiable se construira dès le premier jour.",
+    "emptyAction": "Enregistrer un camion",
+    "loading": "Chargement des camions…",
+    "noResultsTitle": "Aucun camion trouvé",
+    "detail": {
+      "breadcrumb": "Fiche du camion",
+      "money": {
+        "nothingPosted": "Aucun montant comptabilisé pour ce camion."
+      },
+      "activities": {
+        "title": "Voyages récents",
+        "empty": "Aucun voyage pour ce camion."
+      }
+    },
+    "form": {
+      "title": "Enregistrer un camion",
+      "assetCode": "Code du camion",
+      "submit": "Enregistrer le camion"
+    },
+    "actions": {
+      "commissionHint": "Met le camion en service. Son historique d'exploitation démarre ici.",
+      "assignHint": "Rattache le camion à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies."
+    },
+    "columns": {
+      "asset": "Camion"
+    }
+  },
+  "documents": {
+    "title": "Documents du camion",
+    "empty": "Aucun document pour ce camion."
+  },
+  "finance": {
+    "record": {
+      "assetLabel": "Camion (optionnel)"
+    },
+    "entries": {
+      "detail": {
+        "asset": "Camion"
+      },
+      "filters": {
+        "asset": "Camion"
+      }
+    }
+  },
+  "activities": {
+    "title": "Voyages",
+    "emptyHint": "Aucun voyage pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "completeness": {
+      "exceptionsHint": "Le voyage est clôturé, mais il manque les éléments suivants :"
+    },
+    "columns": {
+      "activityNumber": "N° de voyage",
+      "primaryAsset": "Camion principal"
+    },
+    "filters": {
+      "activityType": "Type de voyage",
+      "asset": "Camion"
+    },
+    "viewer": {
+      "open": "Ouvrir le voyage"
+    },
+    "detail": {
+      "loading": "Chargement du voyage…",
+      "readings": {
+        "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
+      }
+    },
+    "actions": {
+      "closeTitle": "Clôturer le voyage",
+      "reopenTitle": "Rouvrir le voyage",
+      "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
+      "addLegHint": "Trajet n° {legNo} de ce voyage.",
+      "addExpenseTitle": "Dépense du voyage",
+      "addExpenseHint": "La dépense est rattachée à ce voyage et au camion choisi."
+    },
+    "notify": {
+      "success": {
+        "sheetRecordedAndClosed": "Fiche enregistrée et voyage clôturé",
+        "closed": "Voyage clôturé",
+        "reopened": "Voyage rouvert"
+      }
+    },
+    "record": {
+      "activityTypeLabel": "Type de voyage",
+      "primaryAssetLabel": "Camion principal",
+      "chooseAsset": "Choisir un camion",
+      "entries": {
+        "attributeLabel": "Imputer à ce voyage",
+        "rowAttribute": "Imputer la ligne {position} à ce voyage"
+      }
+    }
+  }
+}

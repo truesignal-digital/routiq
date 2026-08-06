@@ -1,0 +1,118 @@
+{
+  "nav": {
+    "assets": "Véhicules",
+    "activities": "Voyages"
+  },
+  "home": {
+    "cards": {
+      "assets": {
+        "title": "Véhicules en service",
+        "description": "{count, plural, one {sur # véhicule enregistré} other {sur # véhicules enregistrés}}"
+      }
+    }
+  },
+  "assets": {
+    "notify": {
+      "success": {
+        "registered": "Véhicule enregistré",
+        "commissioned": "Véhicule mis en service",
+        "assigned": "Véhicule affecté"
+      }
+    },
+    "title": "Vos véhicules",
+    "register": "Nouveau véhicule",
+    "searchLabel": "Rechercher dans les véhicules",
+    "filterLabel": "Filtrer les véhicules",
+    "emptyHint": "Ajoutez un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
+    "emptyAction": "Enregistrer un véhicule",
+    "loading": "Chargement des véhicules…",
+    "noResultsTitle": "Aucun véhicule trouvé",
+    "detail": {
+      "breadcrumb": "Fiche du véhicule",
+      "money": {
+        "nothingPosted": "Aucun montant comptabilisé pour ce véhicule."
+      },
+      "activities": {
+        "title": "Voyages récents",
+        "empty": "Aucun voyage pour ce véhicule."
+      }
+    },
+    "form": {
+      "title": "Enregistrer un véhicule",
+      "assetCode": "Code du véhicule",
+      "submit": "Enregistrer le véhicule"
+    },
+    "actions": {
+      "commissionHint": "Met le véhicule en service. Son historique d'exploitation démarre ici.",
+      "assignHint": "Rattache le véhicule à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies."
+    },
+    "columns": {
+      "asset": "Véhicule"
+    }
+  },
+  "documents": {
+    "title": "Documents du véhicule",
+    "empty": "Aucun document pour ce véhicule."
+  },
+  "finance": {
+    "record": {
+      "assetLabel": "Véhicule (optionnel)"
+    },
+    "entries": {
+      "detail": {
+        "asset": "Véhicule"
+      },
+      "filters": {
+        "asset": "Véhicule"
+      }
+    }
+  },
+  "activities": {
+    "title": "Voyages",
+    "emptyHint": "Aucun voyage pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "completeness": {
+      "exceptionsHint": "Le voyage est clôturé, mais il manque les éléments suivants :"
+    },
+    "columns": {
+      "activityNumber": "N° de voyage",
+      "primaryAsset": "Véhicule principal"
+    },
+    "filters": {
+      "activityType": "Type de voyage",
+      "asset": "Véhicule"
+    },
+    "viewer": {
+      "open": "Ouvrir le voyage"
+    },
+    "detail": {
+      "loading": "Chargement du voyage…",
+      "readings": {
+        "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
+      }
+    },
+    "actions": {
+      "closeTitle": "Clôturer le voyage",
+      "reopenTitle": "Rouvrir le voyage",
+      "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
+      "addLegHint": "Trajet n° {legNo} de ce voyage.",
+      "addExpenseTitle": "Dépense du voyage",
+      "addExpenseHint": "La dépense est rattachée à ce voyage et au véhicule choisi."
+    },
+    "notify": {
+      "success": {
+        "sheetRecordedAndClosed": "Fiche enregistrée et voyage clôturé",
+        "closed": "Voyage clôturé",
+        "reopened": "Voyage rouvert"
+      }
+    },
+    "record": {
+      "activityTypeLabel": "Type de voyage",
+      "primaryAssetLabel": "Véhicule principal",
+      "chooseAsset": "Choisir un véhicule",
+      "entries": {
+        "attributeLabel": "Imputer à ce voyage",
+        "rowAttribute": "Imputer la ligne {position} à ce voyage"
+      }
+    }
+  }
+}

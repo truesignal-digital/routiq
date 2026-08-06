@@ -1,0 +1,118 @@
+{
+  "nav": {
+    "assets": "Vehicles",
+    "activities": "Trips"
+  },
+  "home": {
+    "cards": {
+      "assets": {
+        "title": "Vehicles in service",
+        "description": "{count, plural, one {of # registered vehicle} other {of # registered vehicles}}"
+      }
+    }
+  },
+  "assets": {
+    "notify": {
+      "success": {
+        "registered": "Vehicle registered",
+        "commissioned": "Vehicle commissioned",
+        "assigned": "Vehicle assigned"
+      }
+    },
+    "title": "Your vehicles",
+    "register": "New vehicle",
+    "searchLabel": "Search vehicles",
+    "filterLabel": "Filter vehicles",
+    "emptyHint": "Add a bus or a minibus. Its trustworthy history starts building from day one.",
+    "emptyAction": "Register a vehicle",
+    "loading": "Loading vehicles…",
+    "noResultsTitle": "No vehicles found",
+    "detail": {
+      "breadcrumb": "Vehicle record",
+      "money": {
+        "nothingPosted": "Nothing posted against this vehicle yet."
+      },
+      "activities": {
+        "title": "Recent trips",
+        "empty": "No trips for this vehicle."
+      }
+    },
+    "form": {
+      "title": "Register a vehicle",
+      "assetCode": "Vehicle code",
+      "submit": "Register vehicle"
+    },
+    "actions": {
+      "commissionHint": "Puts the vehicle into service. Its operating history starts counting from here.",
+      "assignHint": "Moves the vehicle to another branch. Records already booked stay with the branch that made them."
+    },
+    "columns": {
+      "asset": "Vehicle"
+    }
+  },
+  "documents": {
+    "title": "Vehicle documents",
+    "empty": "No documents for this vehicle."
+  },
+  "finance": {
+    "record": {
+      "assetLabel": "Vehicle (optional)"
+    },
+    "entries": {
+      "detail": {
+        "asset": "Vehicle"
+      },
+      "filters": {
+        "asset": "Vehicle"
+      }
+    }
+  },
+  "activities": {
+    "title": "Trips",
+    "emptyHint": "No trips yet. Recorded trip sheets will appear here.",
+    "completeness": {
+      "exceptionsHint": "The trip is closed, but the following are missing:"
+    },
+    "columns": {
+      "activityNumber": "Trip no.",
+      "primaryAsset": "Primary vehicle"
+    },
+    "filters": {
+      "activityType": "Trip type",
+      "asset": "Vehicle"
+    },
+    "viewer": {
+      "open": "Open trip"
+    },
+    "detail": {
+      "loading": "Loading trip…",
+      "readings": {
+        "allSuperseded": "Every reading on this trip has been corrected."
+      }
+    },
+    "actions": {
+      "closeTitle": "Close the trip",
+      "reopenTitle": "Reopen the trip",
+      "reasonPlaceholder": "Why reopen this trip?",
+      "addLegHint": "Leg no. {legNo} of this trip.",
+      "addExpenseTitle": "Expense on this trip",
+      "addExpenseHint": "The expense is attributed to this trip and to the chosen vehicle."
+    },
+    "notify": {
+      "success": {
+        "sheetRecordedAndClosed": "Sheet recorded and trip closed",
+        "closed": "Trip closed",
+        "reopened": "Trip reopened"
+      }
+    },
+    "record": {
+      "activityTypeLabel": "Trip type",
+      "primaryAssetLabel": "Primary vehicle",
+      "chooseAsset": "Choose a vehicle",
+      "entries": {
+        "attributeLabel": "Charge to this trip",
+        "rowAttribute": "Charge line {position} to this trip"
+      }
+    }
+  }
+}

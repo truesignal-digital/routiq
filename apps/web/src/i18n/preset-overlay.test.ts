@@ -1,0 +1,177 @@
+import i18next from "i18next";
+import ICU from "i18next-icu";
+import { describe, expect, it } from "vitest";
+import type { TemplateCode } from "@routiq/contracts";
+import { TEMPLATE_CODES } from "@routiq/contracts";
+import en from "./locales/en.json";
+import fr from "./locales/fr.json";
+import { PRESET_VOCABULARIES } from "./presets/index.js";
+import { applyPresetVocabulary, presetVocabularyFor } from "./preset-overlay.js";
+
+function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === "object" && value !== null) {
+      return flattenKeys(value as Record<string, unknown>, path);
+    }
+    return [path];
+  });
+}
+
+function at(catalog: Record<string, unknown>, key: string): unknown {
+  return key
+    .split(".")
+    .reduce<unknown>(
+      (acc, part) => (acc === undefined ? undefined : (acc as Record<string, unknown>)[part]),
+      catalog,
+    );
+}
+
+const LOCALES = ["fr", "en"] as const;
+const BASE = { fr, en } as const;
+
+/** A throwaway instance: the app-wide singleton must not bleed across files. */
+function freshInstance() {
+  const instance = i18next.createInstance();
+  void instance.use(ICU).init({
+    lng: "fr-CM",
+    fallbackLng: ["fr", "en"],
+    resources: {
+      fr: { translation: structuredClone(fr) },
+      en: { translation: structuredClone(en) },
+    },
+    interpolation: { escapeValue: false },
+    i18nFormat: { bindI18nStore: "added" },
+  });
+  return instance;
+}
+
+describe("preset overlays", () => {
+  for (const preset of TEMPLATE_CODES) {
+    describe(preset, () => {
+      const overlay = PRESET_VOCABULARIES[preset];
+
+      for (const locale of LOCALES) {
+        it(`${locale}: every key exists in both base catalogs`, () => {
+          for (const key of flattenKeys(overlay[locale])) {
+            expect(at(fr, key), `${key} missing from base fr.json`).toBeTypeOf("string");
+            expect(at(en, key), `${key} missing from base en.json`).toBeTypeOf("string");
+          }
+        });
+
+        it(`${locale}: no message is empty`, () => {
+          for (const key of flattenKeys(overlay[locale])) {
+            expect(at(overlay[locale], key), key).toBeTruthy();
+          }
+        });
+
+        it(`${locale}: no entry repeats the base wording`, () => {
+          for (const key of flattenKeys(overlay[locale])) {
+            expect(at(overlay[locale], key), `${key} is a no-op overlay entry`).not.toEqual(
+              at(BASE[locale], key),
+            );
+          }
+        });
+      }
+
+      it("fr and en overlay the same keys", () => {
+        expect(flattenKeys(overlay.en).sort()).toEqual(flattenKeys(overlay.fr).sort());
+      });
+
+      // French already calls a leg a "trajet"; an activity renamed to the same
+      // word would leave one noun for two nested concepts. English is safe
+      // (Leg vs Trip), so this only guards fr.
+      it("fr: does not rename an activity to the base word for a leg", () => {
+        const legLabels = new Set(
+          ["activities.detail.legs", "activities.columns.legs"].map((key) => at(fr, key)),
+        );
+        for (const key of ["nav.activities", "activities.title"]) {
+          const renamed = at(overlay.fr, key);
+          if (renamed === undefined) continue;
+          expect(legLabels.has(renamed), `${key} collides with the base leg label`).toBe(false);
+        }
+      });
+    });
+  }
+});
+
+describe("presetVocabularyFor", () => {
+  it("returns nothing while /v1/me is loading", () => {
+    expect(presetVocabularyFor(undefined)).toBeUndefined();
+  });
+
+  it("returns nothing for a workspace with no preset", () => {
+    expect(presetVocabularyFor([])).toBeUndefined();
+  });
+
+  it("returns the only enabled preset", () => {
+    expect(presetVocabularyFor(["TRUCKING"])).toBe("TRUCKING");
+    expect(presetVocabularyFor(["PASSENGER_TRANSPORT"])).toBe("PASSENGER_TRANSPORT");
+  });
+
+  it("keeps the base vocabulary for a mixed fleet", () => {
+    expect(presetVocabularyFor(["TRUCKING", "PASSENGER_TRANSPORT"])).toBeUndefined();
+  });
+});
+
+describe("applyPresetVocabulary", () => {
+  it("renames the chrome of a single-preset workspace", () => {
+    const instance = freshInstance();
+
+    applyPresetVocabulary(instance, presetVocabularyFor(["TRUCKING"]));
+    expect(instance.t("nav.assets")).toBe("Camions");
+    expect(instance.t("activities.title")).toBe("Voyages");
+
+    applyPresetVocabulary(instance, presetVocabularyFor(["PASSENGER_TRANSPORT"]));
+    expect(instance.t("nav.assets")).toBe("Véhicules");
+    expect(instance.t("activities.columns.primaryAsset")).toBe("Véhicule principal");
+  });
+
+  it("leaves a mixed fleet on the base vocabulary", () => {
+    const instance = freshInstance();
+
+    applyPresetVocabulary(instance, presetVocabularyFor(["TRUCKING", "PASSENGER_TRANSPORT"]));
+    expect(instance.t("nav.assets")).toBe("Actifs");
+    expect(instance.t("activities.title")).toBe("Activités");
+  });
+
+  it("restores the base vocabulary when the overlay is cleared", () => {
+    const instance = freshInstance();
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    applyPresetVocabulary(instance, undefined);
+
+    expect(instance.t("nav.assets")).toBe("Actifs");
+    expect(instance.t("assets.form.submit")).toBe("Enregistrer l'actif");
+  });
+
+  it("survives a language switch", async () => {
+    const instance = freshInstance();
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+
+    await instance.changeLanguage("en");
+    expect(instance.t("nav.assets")).toBe("Vehicles");
+    expect(instance.t("activities.title")).toBe("Trips");
+  });
+
+  it("keeps ICU placeholders intact", () => {
+    const instance = freshInstance();
+    applyPresetVocabulary(instance, "TRUCKING");
+
+    expect(instance.t("home.cards.assets.description", { count: 3 })).toBe(
+      "sur 3 camions enregistrés",
+    );
+    expect(instance.t("activities.record.entries.rowAttribute", { position: 2 })).toBe(
+      "Imputer la ligne 2 à ce voyage",
+    );
+    expect(instance.t("activities.actions.addLegHint", { legNo: 3 })).toBe(
+      "Trajet n° 3 de ce voyage.",
+    );
+  });
+
+  it("covers every preset code", () => {
+    expect(Object.keys(PRESET_VOCABULARIES).sort()).toEqual(
+      ([...TEMPLATE_CODES] as TemplateCode[]).sort(),
+    );
+  });
+});

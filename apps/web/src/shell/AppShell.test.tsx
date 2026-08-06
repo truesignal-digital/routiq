@@ -287,6 +287,20 @@ describe("AppShell (sidebar frame)", () => {
     expect(logout).toHaveBeenCalledWith(session);
   });
 
+  describe("preset vocabulary", () => {
+    it("renames the chrome of a single-preset workspace", async () => {
+      me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
+      await renderShell("/assets");
+      expect(navLinkNames()).toEqual(["Home", "Trucks", "Finance", "More"]);
+    });
+
+    // Runs after the overlay above: also proves unmounting clears it.
+    it("keeps the base vocabulary for a mixed fleet", async () => {
+      await renderShell("/assets");
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+    });
+  });
+
   describe("mobile", () => {
     beforeEach(() => setViewport(390));
 

@@ -1,0 +1,120 @@
+{
+  "nav": {
+    "assets": "Trucks",
+    "activities": "Trips"
+  },
+  "home": {
+    "cards": {
+      "assets": {
+        "title": "Trucks in service",
+        "description": "{count, plural, one {of # registered truck} other {of # registered trucks}}"
+      }
+    }
+  },
+  "assets": {
+    "notify": {
+      "success": {
+        "registered": "Truck registered",
+        "commissioned": "Truck commissioned",
+        "assigned": "Truck assigned"
+      }
+    },
+    "title": "Your trucks",
+    "subtitle": "Track every truck from registration through retirement.",
+    "register": "New truck",
+    "searchLabel": "Search trucks",
+    "filterLabel": "Filter trucks",
+    "emptyTitle": "Register your first truck",
+    "emptyHint": "Add a truck or a trailer. Its trustworthy history starts building from day one.",
+    "emptyAction": "Register a truck",
+    "loading": "Loading trucks…",
+    "noResultsTitle": "No trucks found",
+    "detail": {
+      "breadcrumb": "Truck record",
+      "money": {
+        "nothingPosted": "Nothing posted against this truck yet."
+      },
+      "activities": {
+        "title": "Recent trips",
+        "empty": "No trips for this truck."
+      }
+    },
+    "form": {
+      "title": "Register a truck",
+      "assetCode": "Truck code",
+      "submit": "Register truck"
+    },
+    "actions": {
+      "commissionHint": "Puts the truck into service. Its operating history starts counting from here.",
+      "assignHint": "Moves the truck to another branch. Records already booked stay with the branch that made them."
+    },
+    "columns": {
+      "asset": "Truck"
+    }
+  },
+  "documents": {
+    "title": "Truck documents",
+    "empty": "No documents for this truck."
+  },
+  "finance": {
+    "record": {
+      "assetLabel": "Truck (optional)"
+    },
+    "entries": {
+      "detail": {
+        "asset": "Truck"
+      },
+      "filters": {
+        "asset": "Truck"
+      }
+    }
+  },
+  "activities": {
+    "title": "Trips",
+    "emptyHint": "No trips yet. Recorded trip sheets will appear here.",
+    "completeness": {
+      "exceptionsHint": "The trip is closed, but the following are missing:"
+    },
+    "columns": {
+      "activityNumber": "Trip no.",
+      "primaryAsset": "Primary truck"
+    },
+    "filters": {
+      "activityType": "Trip type",
+      "asset": "Truck"
+    },
+    "viewer": {
+      "open": "Open trip"
+    },
+    "detail": {
+      "loading": "Loading trip…",
+      "readings": {
+        "allSuperseded": "Every reading on this trip has been corrected."
+      }
+    },
+    "actions": {
+      "closeTitle": "Close the trip",
+      "reopenTitle": "Reopen the trip",
+      "reasonPlaceholder": "Why reopen this trip?",
+      "addLegHint": "Leg no. {legNo} of this trip.",
+      "addExpenseTitle": "Expense on this trip",
+      "addExpenseHint": "The expense is attributed to this trip and to the chosen truck."
+    },
+    "notify": {
+      "success": {
+        "sheetRecordedAndClosed": "Sheet recorded and trip closed",
+        "closed": "Trip closed",
+        "reopened": "Trip reopened"
+      }
+    },
+    "record": {
+      "activityTypeLabel": "Trip type",
+      "primaryAssetLabel": "Primary truck",
+      "chooseAsset": "Choose a truck",
+      "entries": {
+        "attributeLabel": "Charge to this trip",
+        "rowAttribute": "Charge line {position} to this trip"
+      }
+    }
+  }
+}
