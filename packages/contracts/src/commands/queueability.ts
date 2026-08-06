@@ -47,6 +47,7 @@ export const COMMAND_QUEUEABILITY = {
   "deactivate-category": false,
   "reactivate-category": false,
   "set-template-preset": false,
+  "create-branch": false,
 
   /*
    * Member administration is decisions all the way down. Granting a login,

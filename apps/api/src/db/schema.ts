@@ -75,6 +75,8 @@ export const branches = pgTable(
     name: text("name").notNull(),
     timezone: text("timezone").notNull().default("Africa/Douala"),
     active: boolean("active").notNull().default(true),
+    createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
   },
   (t) => [uniqueIndex("branches_ws_code_uq").on(t.workspaceId, t.code)],
 );

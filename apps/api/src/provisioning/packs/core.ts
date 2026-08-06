@@ -133,6 +133,7 @@ function defaultApprovalRules(): Array<
     "deactivate-category",
     "reactivate-category",
     "set-template-preset",
+    "create-branch",
   ]) {
     rules.push({
       commandType,

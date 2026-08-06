@@ -92,6 +92,7 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
       workspaceId,
       code: payload.branch.code,
       name: payload.branch.name,
+      createdByCommandId: commandId,
     });
 
     // Order is load-bearing: credentials carry a composite FK to memberships, so

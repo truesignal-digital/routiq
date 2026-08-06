@@ -589,6 +589,8 @@ export async function dispatchCommand(
         commandError =
           violation.constraint === "credentials_ws_username_uq"
             ? new CommandError(422, "USERNAME_TAKEN")
+            : violation.constraint === "branches_ws_code_uq"
+              ? new CommandError(409, "DUPLICATE_BRANCH_CODE")
             : new CommandError(
                 409,
                 violation.constraint === "assets_ws_code_uq"

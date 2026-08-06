@@ -83,6 +83,7 @@
     "NETWORK_ERROR": "Connexion impossible. Vérifiez votre réseau et réessayez.",
     "generic": "Une erreur est survenue. Réessayez ou contactez votre administrateur.",
     "DUPLICATE_ASSET_CODE": "Ce code d'actif existe déjà dans votre espace.",
+    "DUPLICATE_BRANCH_CODE": "Ce code d'agence existe déjà dans votre espace.",
     "TEMPLATE_FIELD_INVALID": "Un champ spécifique au modèle est invalide ou manquant.",
     "APPROVAL_REQUIRED": "Cette action nécessite une approbation. Elle sera disponible prochainement.",
     "IDEMPOTENCY_KEY_REUSED": "Cette soumission entre en conflit avec un envoi précédent. Vérifiez la liste puis réessayez.",
