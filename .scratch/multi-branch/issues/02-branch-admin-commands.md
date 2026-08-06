@@ -1,6 +1,6 @@
 # 02 — rename-branch.v1 + set-branch-status.v1 + inactive-branch guard
 
-Status: open
+Status: done (2026-08-06)
 Depends: 01
 
 ## Goal

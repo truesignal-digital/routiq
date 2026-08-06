@@ -123,6 +123,9 @@
     "USERNAME_TAKEN": "This username is already taken in your workspace.",
     "LAST_ADMIN": "Your workspace must keep at least one active administrator.",
     "SELF_DEACTIVATION": "You cannot deactivate your own account. Ask another administrator.",
+    "LAST_BRANCH": "Your workspace must keep at least one active branch.",
+    "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
+    "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {

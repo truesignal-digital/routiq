@@ -169,6 +169,20 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
         });
       }
 
+      /*
+       * The target of a move is a new write into that branch, so a deactivated
+       * one refuses it — the same rule `branchIdsByCode` applies to every other
+       * branch-targeting command. It is checked here rather than in the resolver
+       * because assign-asset resolves the SOURCE branch for scope (the target is
+       * governed by the CROSS_BRANCH approval rule), and moving an asset OUT of
+       * a deactivated branch is exactly what deactivation is for.
+       */
+      if (branch.id !== asset.branchId && !branch.active) {
+        throw new CommandError(422, "BRANCH_INACTIVE", {
+          branchCode: payload.branchCode,
+        });
+      }
+
       newBranchId = branch.id;
     }
 

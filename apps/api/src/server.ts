@@ -16,6 +16,7 @@ import "./commands/period-commands.js";
 import "./commands/reverse-entry.js";
 import "./commands/register-person.js";
 import "./commands/create-branch.js";
+import "./commands/branch-admin.js";
 import "./commands/create-activity.js";
 import "./commands/activity-legs.js";
 import "./commands/substitute-asset.js";

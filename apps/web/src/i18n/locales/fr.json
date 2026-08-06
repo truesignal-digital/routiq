@@ -123,6 +123,9 @@
     "USERNAME_TAKEN": "Ce nom d'utilisateur est déjà pris dans votre espace.",
     "LAST_ADMIN": "Votre espace doit garder au moins un administrateur actif.",
     "SELF_DEACTIVATION": "Vous ne pouvez pas désactiver votre propre compte. Demandez à un autre administrateur.",
+    "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
+    "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
+    "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {

@@ -56,6 +56,12 @@ export const COMMAND_ERROR_CODES = [
   "LAST_ADMIN",
   /** An admin deactivating their own membership — the lockout foot-gun. */
   "SELF_DEACTIVATION",
+  /** Deactivating the workspace's only remaining active branch. */
+  "LAST_BRANCH",
+  /** A new record targeting a branch that has been deactivated. */
+  "BRANCH_INACTIVE",
+  /** A branch status flip that would change nothing — the caller's list is stale. */
+  "BRANCH_STATUS_ALREADY_SET",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

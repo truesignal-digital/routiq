@@ -48,6 +48,15 @@ export const COMMAND_QUEUEABILITY = {
   "reactivate-category": false,
   "set-template-preset": false,
   "create-branch": false,
+  /*
+   * Branch administration is a decision about where the workspace operates, and
+   * a queued one settles the wrong way round: a deactivation replayed an hour
+   * later would accept records into a branch the admin had already closed, and
+   * the last-active-branch invariant is counted against state the device never
+   * saw.
+   */
+  "rename-branch": false,
+  "set-branch-status": false,
 
   /*
    * Member administration is decisions all the way down. Granting a login,
