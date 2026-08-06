@@ -94,7 +94,7 @@
       "closeTitle": "Clôturer le voyage",
       "reopenTitle": "Rouvrir le voyage",
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
-      "addLegHint": "Trajet n° {legNo} de ce voyage.",
+      "addLegHint": "Étape n° {legNo} de ce voyage.",
       "addExpenseTitle": "Dépense du voyage",
       "addExpenseHint": "La dépense est rattachée à ce voyage et au véhicule choisi."
     },

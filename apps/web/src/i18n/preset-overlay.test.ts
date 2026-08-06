@@ -78,9 +78,10 @@ describe("preset overlays", () => {
         expect(flattenKeys(overlay.en).sort()).toEqual(flattenKeys(overlay.fr).sort());
       });
 
-      // French already calls a leg a "trajet"; an activity renamed to the same
-      // word would leave one noun for two nested concepts. English is safe
-      // (Leg vs Trip), so this only guards fr.
+      // An activity renamed to whatever French calls a leg would leave one
+      // noun for two nested concepts — the reason the base catalog moved legs
+      // from "trajet" to "étape". English is safe (Leg vs Trip), so this only
+      // guards fr, and it reads the base leg labels so it follows a rename.
       it("fr: does not rename an activity to the base word for a leg", () => {
         const legLabels = new Set(
           ["activities.detail.legs", "activities.columns.legs"].map((key) => at(fr, key)),
@@ -120,7 +121,7 @@ describe("applyPresetVocabulary", () => {
 
     applyPresetVocabulary(instance, presetVocabularyFor(["TRUCKING"]));
     expect(instance.t("nav.assets")).toBe("Camions");
-    expect(instance.t("activities.title")).toBe("Voyages");
+    expect(instance.t("activities.title")).toBe("Trajets");
 
     applyPresetVocabulary(instance, presetVocabularyFor(["PASSENGER_TRANSPORT"]));
     expect(instance.t("nav.assets")).toBe("Véhicules");
@@ -162,10 +163,10 @@ describe("applyPresetVocabulary", () => {
       "sur 3 camions enregistrés",
     );
     expect(instance.t("activities.record.entries.rowAttribute", { position: 2 })).toBe(
-      "Imputer la ligne 2 à ce voyage",
+      "Imputer la ligne 2 à ce trajet",
     );
     expect(instance.t("activities.actions.addLegHint", { legNo: 3 })).toBe(
-      "Trajet n° 3 de ce voyage.",
+      "Étape n° 3 de ce trajet.",
     );
   });
 

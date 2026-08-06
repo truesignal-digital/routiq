@@ -1,7 +1,7 @@
 {
   "nav": {
     "assets": "Camions",
-    "activities": "Voyages"
+    "activities": "Trajets"
   },
   "home": {
     "cards": {
@@ -35,8 +35,8 @@
         "nothingPosted": "Aucun montant comptabilisé pour ce camion."
       },
       "activities": {
-        "title": "Voyages récents",
-        "empty": "Aucun voyage pour ce camion."
+        "title": "Trajets récents",
+        "empty": "Aucun trajet pour ce camion."
       }
     },
     "form": {
@@ -70,50 +70,50 @@
     }
   },
   "activities": {
-    "title": "Voyages",
-    "emptyHint": "Aucun voyage pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "title": "Trajets",
+    "emptyHint": "Aucun trajet pour l'instant. Les feuilles de route saisies apparaîtront ici.",
     "completeness": {
-      "exceptionsHint": "Le voyage est clôturé, mais il manque les éléments suivants :"
+      "exceptionsHint": "Le trajet est clôturé, mais il manque les éléments suivants :"
     },
     "columns": {
-      "activityNumber": "N° de voyage",
+      "activityNumber": "N° de trajet",
       "primaryAsset": "Camion principal"
     },
     "filters": {
-      "activityType": "Type de voyage",
+      "activityType": "Type de trajet",
       "asset": "Camion"
     },
     "viewer": {
-      "open": "Ouvrir le voyage"
+      "open": "Ouvrir le trajet"
     },
     "detail": {
-      "loading": "Chargement du voyage…",
+      "loading": "Chargement du trajet…",
       "readings": {
-        "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
+        "allSuperseded": "Tous les relevés de ce trajet ont été corrigés."
       }
     },
     "actions": {
-      "closeTitle": "Clôturer le voyage",
-      "reopenTitle": "Rouvrir le voyage",
-      "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
-      "addLegHint": "Trajet n° {legNo} de ce voyage.",
-      "addExpenseTitle": "Dépense du voyage",
-      "addExpenseHint": "La dépense est rattachée à ce voyage et au camion choisi."
+      "closeTitle": "Clôturer le trajet",
+      "reopenTitle": "Rouvrir le trajet",
+      "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",
+      "addLegHint": "Étape n° {legNo} de ce trajet.",
+      "addExpenseTitle": "Dépense du trajet",
+      "addExpenseHint": "La dépense est rattachée à ce trajet et au camion choisi."
     },
     "notify": {
       "success": {
-        "sheetRecordedAndClosed": "Fiche enregistrée et voyage clôturé",
-        "closed": "Voyage clôturé",
-        "reopened": "Voyage rouvert"
+        "sheetRecordedAndClosed": "Fiche enregistrée et trajet clôturé",
+        "closed": "Trajet clôturé",
+        "reopened": "Trajet rouvert"
       }
     },
     "record": {
-      "activityTypeLabel": "Type de voyage",
+      "activityTypeLabel": "Type de trajet",
       "primaryAssetLabel": "Camion principal",
       "chooseAsset": "Choisir un camion",
       "entries": {
-        "attributeLabel": "Imputer à ce voyage",
-        "rowAttribute": "Imputer la ligne {position} à ce voyage"
+        "attributeLabel": "Imputer à ce trajet",
+        "rowAttribute": "Imputer la ligne {position} à ce trajet"
       }
     }
   }
