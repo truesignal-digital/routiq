@@ -276,6 +276,7 @@
     "manage": "Manage",
     "persons": "People",
     "users": "Users",
+    "branches": "Branches",
     "logout": "Sign out"
   },
   "form": {
@@ -1052,6 +1053,52 @@
       "reload": "Reload",
       "pinResetTitle": "PIN reset",
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
+    }
+  },
+  "branches": {
+    "title": "Branches",
+    "loading": "Loading branches…",
+    "emptyHint": "No branches yet. Create the first one.",
+    "loadFailed": "Could not load the branches.",
+    "retry": "Retry",
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "timezone": "Time zone",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Deactivated"
+    },
+    "add": {
+      "open": "New branch",
+      "title": "New branch",
+      "description": "Create a branch in your workspace. It becomes available in the forms and in user scope straight away.",
+      "submit": "Create"
+    },
+    "form": {
+      "code": "Code",
+      "codeHint": "The code appears in record numbers and cannot change.",
+      "codeInvalid": "2 to 8 characters, uppercase letters or digits (e.g. DLA).",
+      "name": "Name",
+      "timezone": "Time zone",
+      "cancel": "Cancel",
+      "submitting": "Sending…"
+    },
+    "actions": {
+      "rename": "Rename",
+      "renameHint": "New name for “{name}”. The code stays as it is.",
+      "renameConfirm": "Save",
+      "deactivate": "Deactivate",
+      "deactivateHint": "No new operation will be able to target “{name}”. Existing records and history are kept.",
+      "deactivateConfirm": "Deactivate",
+      "reactivate": "Reactivate",
+      "reactivateHint": "“{name}” will be able to receive operations again.",
+      "reactivateConfirm": "Reactivate",
+      "conflictTitle": "This branch changed",
+      "conflictBody": "Someone edited this branch while you were working. Reload the list and start again.",
+      "reload": "Reload"
     }
   },
   "provenance": {

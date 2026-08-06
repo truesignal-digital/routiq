@@ -1,6 +1,6 @@
 # 04 — branches read + branch management UI
 
-Status: open
+Status: done (2026-08-06) — visually verified: create (uppercase transform, DUPLICATE_BRANCH_CODE on field), rename (code locked + hint), deactivate/reactivate badges, LAST_BRANCH alert in-dialog. Screenshot: visual-04-branches-screen.png
 Depends: 01, 02
 
 ## Goal

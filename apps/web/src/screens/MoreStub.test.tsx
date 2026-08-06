@@ -84,6 +84,20 @@ describe("MoreStub administration links", () => {
     expect(screen.queryByRole("link", { name: /Utilisateurs/ })).toBeNull();
   });
 
+  it("offers an admin the Branches screen", async () => {
+    renderMore(membership("ADMIN", ["CORE", "ACTIVITIES"]));
+
+    const link = await screen.findByRole("link", { name: /Agences/ });
+    expect(link.getAttribute("href")).toBe("/more/branches");
+  });
+
+  it("leaves no Branches entry for a role that could not use it", async () => {
+    renderMore(membership("OPS_MANAGER", ["CORE", "ACTIVITIES"]));
+
+    await screen.findByRole("link", { name: /Personnel/ });
+    expect(screen.queryByRole("link", { name: /Agences/ })).toBeNull();
+  });
+
   it("keeps the Users entry when the workspace bought no other module", async () => {
     // CORE cannot be disabled, so member administration never disappears with
     // a module the way Personnel does.

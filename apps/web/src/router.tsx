@@ -10,6 +10,7 @@ import { AssetDetailScreen } from "./screens/AssetDetailScreen.js";
 import { AssetDocumentsScreen } from "./screens/AssetDocumentsScreen.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
+import { BranchesScreen } from "./screens/BranchesScreen.js";
 import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
@@ -152,6 +153,12 @@ const usersRoute = createRoute({
   component: UsersScreen,
 });
 
+const branchesRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/branches",
+  component: BranchesScreen,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
@@ -173,6 +180,7 @@ const routeTree = rootRoute.addChildren([
     moreRoute,
     personsRoute,
     usersRoute,
+    branchesRoute,
   ]),
 ]);
 

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, ShieldUser, Users } from "lucide-react";
+import { Building2, ChevronRight, ShieldUser, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useMeContext } from "@/auth/me.js";
 import { sessionStore, useActiveSession } from "@/auth/store.js";
 import { canViewActivities } from "@/activities/permissions.js";
+import { canAdministerBranches } from "@/branches/permissions.js";
 import { canAdministerMembers } from "@/members/permissions.js";
 
 const languages = [
@@ -39,7 +40,9 @@ export function MoreStub() {
           (§3.3a): the whole section goes, rather than greying out. Users is
           gated on the role instead — CORE is never off, but who the workspace
           trusts is the admin's question alone. */}
-      {(canViewActivities(me?.enabledModules) || canAdministerMembers(me?.role)) && (
+      {(canViewActivities(me?.enabledModules) ||
+        canAdministerMembers(me?.role) ||
+        canAdministerBranches(me?.role)) && (
         <div className="mt-6">
           <h2 className="text-sm font-medium">{t("more.manage")}</h2>
           <nav className="mt-2 overflow-hidden rounded-xl border">
@@ -60,6 +63,16 @@ export function MoreStub() {
               >
                 <ShieldUser className="size-4 text-muted-foreground" aria-hidden />
                 {t("more.users")}
+                <ChevronRight className="ml-auto size-4 text-muted-foreground" aria-hidden />
+              </Link>
+            )}
+            {canAdministerBranches(me?.role) && (
+              <Link
+                to="/more/branches"
+                className="flex min-h-11 items-center gap-3 border-t px-4 py-3 text-sm first:border-t-0 hover:bg-muted"
+              >
+                <Building2 className="size-4 text-muted-foreground" aria-hidden />
+                {t("more.branches")}
                 <ChevronRight className="ml-auto size-4 text-muted-foreground" aria-hidden />
               </Link>
             )}

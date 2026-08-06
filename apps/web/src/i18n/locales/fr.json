@@ -276,6 +276,7 @@
     "manage": "Gestion",
     "persons": "Personnel",
     "users": "Utilisateurs",
+    "branches": "Agences",
     "logout": "Se déconnecter"
   },
   "form": {
@@ -1052,6 +1053,52 @@
       "reload": "Recharger",
       "pinResetTitle": "Code réinitialisé",
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
+    }
+  },
+  "branches": {
+    "title": "Agences",
+    "loading": "Chargement des agences…",
+    "emptyHint": "Aucune agence pour l'instant. Créez la première.",
+    "loadFailed": "Impossible de charger les agences.",
+    "retry": "Réessayer",
+    "columns": {
+      "code": "Code",
+      "name": "Nom",
+      "timezone": "Fuseau horaire",
+      "status": "Statut"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Désactivée"
+    },
+    "add": {
+      "open": "Nouvelle agence",
+      "title": "Nouvelle agence",
+      "description": "Créez une agence de votre espace. Elle devient aussitôt disponible dans les formulaires et la portée des utilisateurs.",
+      "submit": "Créer"
+    },
+    "form": {
+      "code": "Code",
+      "codeHint": "Le code apparaît dans les numéros de pièces et ne peut pas changer.",
+      "codeInvalid": "2 à 8 caractères, en majuscules ou chiffres (ex. DLA).",
+      "name": "Nom",
+      "timezone": "Fuseau horaire",
+      "cancel": "Annuler",
+      "submitting": "Envoi en cours…"
+    },
+    "actions": {
+      "rename": "Renommer",
+      "renameHint": "Nouveau nom pour « {name} ». Le code reste inchangé.",
+      "renameConfirm": "Enregistrer",
+      "deactivate": "Désactiver",
+      "deactivateHint": "Aucune nouvelle opération ne pourra viser « {name} ». Les enregistrements existants et l'historique sont conservés.",
+      "deactivateConfirm": "Désactiver",
+      "reactivate": "Réactiver",
+      "reactivateHint": "« {name} » pourra de nouveau recevoir des opérations.",
+      "reactivateConfirm": "Réactiver",
+      "conflictTitle": "Cette agence a changé",
+      "conflictBody": "Quelqu'un a modifié cette agence pendant votre saisie. Rechargez la liste et reprenez.",
+      "reload": "Recharger"
     }
   },
   "provenance": {

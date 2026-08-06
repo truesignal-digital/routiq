@@ -51,6 +51,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
+  { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },
 ];
 
 function segments(path: string): string[] {
