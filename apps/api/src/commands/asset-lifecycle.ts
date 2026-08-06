@@ -91,6 +91,29 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   },
 };
 
+/**
+ * A move INTO a branch is a new write into it, so a deactivated one refuses the
+ * arrival — the rule `branchIdsByCode` applies to every other branch-targeting
+ * command, reaching the one command whose resolver cannot carry it. Moving an
+ * asset OUT of a deactivated branch stays untouched: that transfer is the reason
+ * a branch is deactivated in the first place.
+ *
+ * Checked from `approvalContext` rather than only from `execute` so a doomed
+ * move never has an approval computed for it. Under the catalog defaults a
+ * cross-branch transfer matches the CROSS_BRANCH rule and answers
+ * APPROVAL_REQUIRED before the handler runs at all, which would send a human
+ * approver chasing a move that could never commit.
+ */
+function assertBranchAcceptsArrival(
+  target: typeof branches.$inferSelect,
+  currentBranchId: string,
+  branchCode: string,
+): void {
+  if (target.id !== currentBranchId && !target.active) {
+    throw new CommandError(422, "BRANCH_INACTIVE", { branchCode });
+  }
+}
+
 export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   name: "assign-asset",
   module: "ASSETS",
@@ -127,6 +150,7 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
       });
 
       if (targetBranch && asset.branchId !== targetBranch.id) {
+        assertBranchAcceptsArrival(targetBranch, asset.branchId, payload.branchCode);
         return { branchCode: payload.branchCode, categoryCode: "CROSS_BRANCH" };
       }
     }
@@ -169,19 +193,9 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
         });
       }
 
-      /*
-       * The target of a move is a new write into that branch, so a deactivated
-       * one refuses it — the same rule `branchIdsByCode` applies to every other
-       * branch-targeting command. It is checked here rather than in the resolver
-       * because assign-asset resolves the SOURCE branch for scope (the target is
-       * governed by the CROSS_BRANCH approval rule), and moving an asset OUT of
-       * a deactivated branch is exactly what deactivation is for.
-       */
-      if (branch.id !== asset.branchId && !branch.active) {
-        throw new CommandError(422, "BRANCH_INACTIVE", {
-          branchCode: payload.branchCode,
-        });
-      }
+      // Already refused in approvalContext; repeated on the write path so the
+      // invariant does not depend on an optional hook staying declared.
+      assertBranchAcceptsArrival(branch, asset.branchId, payload.branchCode);
 
       newBranchId = branch.id;
     }

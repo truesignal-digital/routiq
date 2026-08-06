@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { approvalRules, assets, auditEvents, branches } from "../db/schema.js";
+import { assets, auditEvents, branches, commands } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
@@ -267,46 +267,56 @@ describe("branch administration", () => {
       });
     });
 
-    it("refuses moving an asset INTO a deactivated branch", async () => {
-      // Its own workspace, with a CROSS_BRANCH rule this admin satisfies, so the
-      // handler is reached at all — the default rule requires FINANCE_APPROVER,
-      // which assign-asset does not admit.
+    it("refuses moving an asset INTO a deactivated branch before approval is evaluated", async () => {
       const seeded = await seedWorkspace(ctx.db);
-      const crossToken = await adminToken(seeded.workspace.id);
-      await ctx.db.insert(approvalRules).values({
-        workspaceId: seeded.workspace.id,
-        commandType: "assign-asset",
-        categoryCode: "CROSS_BRANCH",
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole: "ADMIN",
-        createdByCommandId: null,
-      });
-
-      const targetId = await createBranch("INTO1", "Sangmélima", crossToken);
-      const assetId = await seedAsset(ctx.app, crossToken, { branchCode: "DLA" });
+      const moveToken = await adminToken(seeded.workspace.id);
+      const targetId = await createBranch("INTO1", "Sangmélima", moveToken);
+      const assetId = await seedAsset(ctx.app, moveToken, { branchCode: "DLA" });
       expect(
         (
           await post(
             "set-branch-status",
             { branchId: targetId, active: false },
-            { token: crossToken },
+            { token: moveToken },
           )
         ).statusCode,
       ).toBe(200);
 
+      const commandId = randomUUID();
       const response = await postCommand(
-        crossToken,
+        moveToken,
         "assign-asset",
         { assetId, branchCode: "INTO1" },
         1,
+        commandId,
       );
 
       expect(response.statusCode).toBe(422);
       expect(response.json()).toMatchObject({
         error: { code: "BRANCH_INACTIVE", metadata: { branchCode: "INTO1" } },
       });
+
+      /*
+       * The point of the test: under the catalog defaults a cross-branch move
+       * matches the CROSS_BRANCH rule, so evaluating approval first would answer
+       * APPROVAL_REQUIRED and put a doomed transfer in front of an approver. The
+       * only receipt this call leaves is its rejection, carrying no approval
+       * outcome and no rule id.
+       */
+      const receipts = await ctx.db
+        .select()
+        .from(commands)
+        .where(eq(commands.clientCommandId, commandId));
+      expect(receipts).toHaveLength(1);
+      expect(receipts[0]).toMatchObject({
+        status: "REJECTED",
+        failureCode: "BRANCH_INACTIVE",
+        approvalOutcome: null,
+        approvalRuleId: null,
+      });
+      expect(await ctx.db.select().from(commands).where(eq(commands.id, commandId))).toHaveLength(
+        0,
+      );
 
       const [asset] = await ctx.db.select().from(assets).where(eq(assets.id, assetId));
       expect(asset?.branchId).toBe(seeded.branch.id);
@@ -385,6 +395,7 @@ describe("branch administration", () => {
     name: string,
     payload: Record<string, unknown>,
     expectedVersion?: number,
+    commandId?: string,
   ) {
     return ctx.app.inject({
       method: "POST",
@@ -394,7 +405,7 @@ describe("branch administration", () => {
         name,
         version: 1,
         envelope: {
-          commandId: randomUUID(),
+          commandId: commandId ?? randomUUID(),
           idempotencyKey: `branch-admin-${randomUUID()}`,
           origin: "HUMAN_UI",
           ...(expectedVersion === undefined ? {} : { expectedVersion }),

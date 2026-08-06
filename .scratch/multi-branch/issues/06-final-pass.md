@@ -1,6 +1,6 @@
 # 06 — final pass
 
-Status: open
+Status: done (2026-08-06) — full workspace suite 1715 tests green; independent codex review: 1 MINOR (assign-asset approval ordering) found and fixed; E2E browser walkthrough passed incl. inactive-branch UX and switcher collapse; ARCHITECTURE.md needed no changes, CONTEXT.md updated in issue 03.
 Depends: 01–05
 
 ## Scope
