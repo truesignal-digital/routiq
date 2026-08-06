@@ -37,7 +37,7 @@ A versioned data file of categories and approval defaults for one Template Prese
 _Avoid_: seed script, fixture (packs go through the command pipeline; fixtures bypass it)
 
 **Provisioning**:
-The vendor-only act of creating a Workspace: workspace + branch + admin user + module flags + enabled presets + starter pack replay, as one audited command. Tenants never provision.
+The vendor-only act of creating a Workspace: workspace + its branches (one or many) + admin user + module flags + enabled presets + starter pack replay, as one audited command. Tenants never provision.
 _Avoid_: signup, self-service onboarding
 
 **Vendor Operator**:

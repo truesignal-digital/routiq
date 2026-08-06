@@ -59,7 +59,7 @@ describe("template preset enforcement", () => {
       },
       payload: {
         workspace: { id: workspaceId, slug, name: `Transports ${slug}` },
-        branch: { id: randomUUID(), code: "DLA", name: "Douala" },
+        branches: [{ id: randomUUID(), code: "DLA", name: "Douala" }],
         admin: { id: randomUUID(), displayName: "Awa Ndongo", username, pin },
         enabledPresets,
       },

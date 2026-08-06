@@ -16,11 +16,13 @@ const valid = {
       slug: "tenant3",
       name: "Tenant 3",
     },
-    branch: {
-      id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
-      code: "HQ",
-      name: "Headquarters",
-    },
+    branches: [
+      {
+        id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        code: "HQ",
+        name: "Headquarters",
+      },
+    ],
     admin: {
       id: "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
       displayName: "Admin User",
@@ -120,6 +122,61 @@ describe("provision-workspace contract", () => {
     ];
 
     expect(provisionWorkspaceCommand.safeParse(good).success).toBe(true);
+  });
+
+  it("accepts several branches, each with its own timezone", () => {
+    const good = structuredClone(valid);
+    (good.payload as any).branches = [
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "DLA", name: "Douala" },
+      { id: "6ba7b815-9dad-11d1-80b4-00c04fd430c8", code: "YDE", name: "Yaoundé" },
+      {
+        id: "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
+        code: "BAF",
+        name: "Bafoussam",
+        timezone: "Africa/Douala",
+      },
+    ];
+
+    const result = provisionWorkspaceCommand.safeParse(good);
+    expect(result.success).toBe(true);
+  });
+
+  it("requires at least one branch", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches = [];
+    expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejects more than 20 branches", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches = Array.from({ length: 21 }, (_, index) => ({
+      id: `6ba7b811-9dad-11d1-80b4-00c04fd4${String(index).padStart(4, "0")}`,
+      code: `B${String(index).padStart(2, "0")}`,
+      name: `Branch ${index}`,
+    }));
+    expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
+  });
+
+  /** The payload-side half of the (workspace_id, code) unique index. */
+  it("rejects duplicate branch codes within the payload", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches = [
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "DLA", name: "Douala" },
+      { id: "6ba7b815-9dad-11d1-80b4-00c04fd430c8", code: "DLA", name: "Douala Bonabéri" },
+    ];
+
+    const result = provisionWorkspaceCommand.safeParse(bad);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues.some((issue) => issue.path.join(".") === "payload.branches.1.code")).toBe(
+      true,
+    );
+  });
+
+  it("rejects a lowercase branch code", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches[0]!.code = "dla";
+    expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
   });
 
   it("rejects a provisioned user with an unknown role", () => {

@@ -1,6 +1,6 @@
 # 03 — provision-workspace accepts multiple branches
 
-Status: open
+Status: done (2026-08-06)
 Depends: 01 (schema columns exist)
 
 ## Goal

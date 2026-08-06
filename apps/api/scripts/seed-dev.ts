@@ -13,11 +13,13 @@ try {
       slug: "sotrafret",
       name: "SotraFret Douala",
     },
-    branch: {
-      id: branchId,
-      code: "DLA",
-      name: "Douala",
-    },
+    branches: [
+      {
+        id: branchId,
+        code: "DLA",
+        name: "Douala",
+      },
+    ],
     admin: {
       id: adminId,
       displayName: "Amina Njoya",
@@ -28,7 +30,7 @@ try {
   });
 
   console.log(
-    `Seed complete: workspace=${result.workspaceSlug} (${result.workspaceId}) branch=${result.branchCode}`,
+    `Seed complete: workspace=${result.workspaceSlug} (${result.workspaceId}) branches=${result.branchCodes.join(", ")}`,
   );
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

@@ -25,7 +25,7 @@ import {
 export { REDACTED_PIN } from "./redaction.js";
 
 /**
- * Tenant #3 without hand-written SQL (ADR-0004): workspace, first branch, user
+ * Tenant #3 without hand-written SQL (ADR-0004): workspace, branches, user
  * credentials, enabled presets and their starter packs, in the transaction that
  * writes the command receipt. Every row it creates carries this command's id, so
  * a provisioned workspace has the same provenance as one built by daily use.
@@ -87,13 +87,17 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
   async execute(tx, ctx, envelope, payload, workspaceId) {
     const commandId = envelope.commandId;
 
-    await tx.insert(branches).values({
-      id: payload.branch.id,
-      workspaceId,
-      code: payload.branch.code,
-      name: payload.branch.name,
-      createdByCommandId: commandId,
-    });
+    await tx.insert(branches).values(
+      payload.branches.map((branch) => ({
+        id: branch.id,
+        workspaceId,
+        code: branch.code,
+        name: branch.name,
+        ...(branch.timezone === undefined ? {} : { timezone: branch.timezone }),
+        createdByCommandId: commandId,
+      })),
+    );
+    const branchIdByCode = new Map(payload.branches.map((branch) => [branch.code, branch.id]));
 
     // Order is load-bearing: credentials carry a composite FK to memberships, so
     // the admin must be a member before it can hold a PIN.
@@ -116,16 +120,8 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
     });
 
     for (const user of payload.users ?? []) {
-      const unknownBranchCodes =
-        user.branchScope === "ALL"
-          ? []
-          : user.branchScope.filter((branchCode) => branchCode !== payload.branch.code);
-      if (unknownBranchCodes.length > 0) {
-        throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-          referenceType: "branch",
-          missing: unknownBranchCodes,
-        });
-      }
+      const scopedBranchIds =
+        user.branchScope === "ALL" ? [] : resolveBranchIds(user.branchScope, branchIdByCode);
 
       await tx.insert(principals).values({
         id: user.id,
@@ -137,7 +133,7 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
         principalId: user.id,
         role: user.role,
         allBranches: user.branchScope === "ALL",
-        branchIds: user.branchScope === "ALL" ? [] : [payload.branch.id],
+        branchIds: scopedBranchIds,
       });
       await tx.insert(credentials).values({
         workspaceId,
@@ -181,7 +177,12 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
         defaultCurrency: payload.workspace.defaultCurrency,
         timezone: payload.workspace.timezone,
         defaultLocale: payload.workspace.defaultLocale,
-        branch: { id: payload.branch.id, code: payload.branch.code, name: payload.branch.name },
+        branches: payload.branches.map((branch) => ({
+          id: branch.id,
+          code: branch.code,
+          name: branch.name,
+          ...(branch.timezone === undefined ? {} : { timezone: branch.timezone }),
+        })),
         // Username and display name only — a PIN or its hash never reaches the trail.
         admin: {
           principalId: payload.admin.id,
@@ -205,6 +206,32 @@ registerPlatformCommand<ProvisionWorkspacePayload>({
     return { recordId: workspaceId, rowVersion: 1 };
   },
 });
+
+/**
+ * A provisioned user's scope is written in branch codes, because the file a
+ * vendor hands over names branches the way people do. The branches it can name
+ * are exactly the ones this same command creates — nothing else exists yet — so
+ * an unknown code is a bad file, reported as such before anything is inserted.
+ */
+function resolveBranchIds(
+  branchCodes: readonly string[],
+  branchIdByCode: ReadonlyMap<string, string>,
+): string[] {
+  const ids: string[] = [];
+  const missing: string[] = [];
+  for (const branchCode of branchCodes) {
+    const id = branchIdByCode.get(branchCode);
+    if (id === undefined) missing.push(branchCode);
+    else if (!ids.includes(id)) ids.push(id);
+  }
+  if (missing.length > 0) {
+    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+      referenceType: "branch",
+      missing,
+    });
+  }
+  return ids;
+}
 
 /**
  * Core pack plus one pack per enabled preset. A single-preset workspace gets the

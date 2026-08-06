@@ -271,11 +271,13 @@ try {
         slug: workspaceSlug,
         name: "Transports Ngwa",
       },
-      branch: {
-        id: ids.branch,
-        code: branchCode,
-        name: "Douala",
-      },
+      branches: [
+        {
+          id: ids.branch,
+          code: branchCode,
+          name: "Douala",
+        },
+      ],
       admin: {
         id: ids.emilienne,
         displayName: "Émilienne",
@@ -536,7 +538,7 @@ try {
         workspace: {
           id: provisioned.workspaceId,
           slug: provisioned.workspaceSlug,
-          branch: provisioned.branchCode,
+          branches: provisioned.branchCodes,
           idempotentReplay: provisioned.idempotentReplay,
         },
         users: users.map(({ pin, ...user }) => ({

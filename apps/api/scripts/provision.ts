@@ -28,7 +28,7 @@ type Logger = (message: string) => void;
 export interface ProvisionResult {
   workspaceId: string;
   workspaceSlug: string;
-  branchCode: string;
+  branchCodes: string[];
   adminUsername: string;
   commandId: string;
   idempotentReplay: boolean;
@@ -73,8 +73,11 @@ export async function provisionTenant(
   rejectUnknownModuleCodes(tenantInput);
   const payload = parseTenantPayload(withMissingIds(tenantInput));
 
+  const branchIds = payload.branches
+    .map((branch) => `${branch.code}=${branch.id}`)
+    .join(" ");
   log(
-    `Loaded tenant IDs: workspace=${payload.workspace.id} branch=${payload.branch.id} admin=${payload.admin.id}`,
+    `Loaded tenant IDs: workspace=${payload.workspace.id} branches[${branchIds}] admin=${payload.admin.id}`,
   );
 
   const operator = await getOrCreateVendorOperator();
@@ -124,11 +127,10 @@ function withMissingIds(input: unknown): unknown {
   if (!isRecord(input)) return input;
 
   const workspace = isRecord(input["workspace"]) ? input["workspace"] : {};
-  const branch = isRecord(input["branch"]) ? input["branch"] : {};
+  const branchList = Array.isArray(input["branches"]) ? input["branches"] : undefined;
   const admin = isRecord(input["admin"]) ? input["admin"] : {};
   const users = Array.isArray(input["users"]) ? input["users"] : undefined;
   const slug = typeof workspace["slug"] === "string" ? workspace["slug"] : "";
-  const branchCode = typeof branch["code"] === "string" ? branch["code"] : "";
   const adminUsername = typeof admin["username"] === "string" ? admin["username"] : "";
 
   return {
@@ -139,12 +141,21 @@ function withMissingIds(input: unknown): unknown {
         workspace["id"] ??
         deterministicProvisionId(`workspace:${slug}`),
     },
-    branch: {
-      ...branch,
-      id:
-        branch["id"] ??
-        deterministicProvisionId(`branch:${slug}:${branchCode}`),
-    },
+    ...(branchList === undefined
+      ? {}
+      : {
+          branches: branchList.map((candidate) => {
+            if (!isRecord(candidate)) return candidate;
+            const branchCode =
+              typeof candidate["code"] === "string" ? candidate["code"] : "";
+            return {
+              ...candidate,
+              id:
+                candidate["id"] ??
+                deterministicProvisionId(`branch:${slug}:${branchCode}`),
+            };
+          }),
+        }),
     admin: {
       ...admin,
       id:
@@ -235,14 +246,15 @@ function presentResult(
   } else {
     log(`Provisioned workspace: id=${outcome.recordId} slug=${payload.workspace.slug}`);
   }
-  log(`Branch: code=${payload.branch.code}`);
+  const branchCodes = payload.branches.map((branch) => branch.code);
+  log(`Branches: ${branchCodes.join(", ")}`);
   log(`Admin: username=${payload.admin.username}`);
   log(`Command: id=${outcome.commandId}`);
 
   return {
     workspaceId: outcome.recordId,
     workspaceSlug: payload.workspace.slug,
-    branchCode: payload.branch.code,
+    branchCodes,
     adminUsername: payload.admin.username,
     commandId: outcome.commandId,
     idempotentReplay: outcome.idempotentReplay,

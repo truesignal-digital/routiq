@@ -14,6 +14,7 @@ import {
   categories,
   commands,
   credentials,
+  financialEntries,
   memberships,
   principals,
   workspaceModules,
@@ -59,6 +60,7 @@ describe("provision-workspace.v1", () => {
       enabledPresets?: string[];
       disabledModules?: string[];
       idempotencyKey?: string;
+      branches?: Array<{ id: string; code: string; name: string; timezone?: string }>;
       users?: Array<{
         id: string;
         displayName: string;
@@ -80,7 +82,7 @@ describe("provision-workspace.v1", () => {
       },
       payload: {
         workspace: { id: randomUUID(), slug, name: `Transports ${slug}` },
-        branch: { id: randomUUID(), code: "DLA", name: "Douala" },
+        branches: overrides.branches ?? [{ id: randomUUID(), code: "DLA", name: "Douala" }],
         admin: {
           id: randomUUID(),
           displayName: "Awa Ndongo",
@@ -124,7 +126,13 @@ describe("provision-workspace.v1", () => {
     });
 
     const [branch] = await db.select().from(branches).where(eq(branches.workspaceId, workspaceId));
-    expect(branch).toMatchObject({ id: body.payload.branch.id, code: "DLA", active: true });
+    expect(branch).toMatchObject({
+      id: body.payload.branches[0]!.id,
+      code: "DLA",
+      active: true,
+      createdByCommandId: commandId,
+      rowVersion: 1,
+    });
 
     const [membership] = await db
       .select()
@@ -220,7 +228,7 @@ describe("provision-workspace.v1", () => {
     expect((await dispatchCommand(platform, operator, first)).status).toBe(200);
 
     const different = provisionBody({ idempotencyKey });
-    different.payload.branch.code = "YDE";
+    different.payload.branches[0]!.code = "YDE";
 
     const result = await dispatchCommand(platform, operator, different);
 
@@ -349,7 +357,7 @@ describe("provision-workspace.v1", () => {
           principalId: scopedUser.id,
           role: "FIELD_SUBMITTER",
           allBranches: false,
-          branchIds: [body.payload.branch.id],
+          branchIds: [body.payload.branches[0]!.id],
         }),
       ]),
     );
@@ -371,6 +379,154 @@ describe("provision-workspace.v1", () => {
     expect(serializedReceipt).not.toContain(allBranchesUser.pin);
     expect(serializedReceipt).not.toContain(scopedUser.pin);
     expect(serializedReceipt).toContain(REDACTED_PIN);
+  });
+
+  /** A travel agency arrives with Douala, Yaoundé and Bafoussam on day one. */
+  it("creates every branch in the payload, each numbering its own records", async () => {
+    const branchList = [
+      { id: randomUUID(), code: "DLA", name: "Douala" },
+      { id: randomUUID(), code: "YDE", name: "Yaoundé", timezone: "Africa/Douala" },
+      { id: randomUUID(), code: "BAF", name: "Bafoussam" },
+    ];
+    const body = provisionBody({ branches: branchList, enabledPresets: ["TRUCKING"] });
+    const commandId = body.envelope.commandId;
+
+    expect((await dispatchCommand(platform, operator, body)).status).toBe(200);
+
+    const rows = await db
+      .select()
+      .from(branches)
+      .where(eq(branches.workspaceId, body.payload.workspace.id));
+    expect(rows.map((row) => row.code).sort()).toEqual(["BAF", "DLA", "YDE"]);
+    expect(new Set(rows.map((row) => row.id))).toEqual(new Set(branchList.map((b) => b.id)));
+    expect(
+      rows.every(
+        (row) => row.active && row.rowVersion === 1 && row.createdByCommandId === commandId,
+      ),
+    ).toBe(true);
+
+    const login = await loginWithPin(db, {
+      workspaceSlug: body.payload.workspace.slug,
+      username: body.payload.admin.username,
+      pin: body.payload.admin.pin,
+    });
+    expect(login.ok).toBe(true);
+    if (!login.ok) return;
+
+    const entryNumbers: string[] = [];
+    for (const branchCode of ["DLA", "YDE", "DLA"]) {
+      const entryId = randomUUID();
+      const response = await testApp.app.inject({
+        method: "POST",
+        url: "/v1/commands/record-expense",
+        headers: { authorization: `Bearer ${login.session.token}` },
+        payload: {
+          version: 1,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `idem-${randomUUID()}`,
+            origin: "HUMAN_UI",
+          },
+          payload: {
+            entryId,
+            branchCode,
+            categoryCode: "FUEL",
+            economicDate: "2026-03-04",
+            amountMinor: 50_000,
+            paymentMethod: "CASH",
+            postings: [{ amountMinor: 50_000 }],
+          },
+        },
+      });
+      expect(response.statusCode).toBe(200);
+
+      const [entry] = await db
+        .select({ entryNumber: financialEntries.entryNumber })
+        .from(financialEntries)
+        .where(eq(financialEntries.id, entryId));
+      entryNumbers.push(entry?.entryNumber ?? "");
+    }
+
+    // Counters are scoped per branch, so Yaoundé opens its own series at 1.
+    expect(entryNumbers).toEqual(["DLA-2026-00001", "YDE-2026-00001", "DLA-2026-00002"]);
+  });
+
+  it("gives a scoped user exactly the branch ids its codes name", async () => {
+    const branchList = [
+      { id: randomUUID(), code: "DLA", name: "Douala" },
+      { id: randomUUID(), code: "YDE", name: "Yaoundé" },
+      { id: randomUUID(), code: "BAF", name: "Bafoussam" },
+    ];
+    const scopedUser = {
+      id: randomUUID(),
+      displayName: "Sali Mbarga",
+      username: `sali-${randomUUID()}`,
+      pin: "field-pin-333333",
+      role: "FIELD_SUBMITTER" as const,
+      branchScope: ["DLA", "BAF"],
+    };
+    const body = provisionBody({ branches: branchList, users: [scopedUser] });
+
+    expect((await dispatchCommand(platform, operator, body)).status).toBe(200);
+
+    const [membership] = await db
+      .select()
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.workspaceId, body.payload.workspace.id),
+          eq(memberships.principalId, scopedUser.id),
+        ),
+      );
+    expect(membership).toMatchObject({
+      role: "FIELD_SUBMITTER",
+      allBranches: false,
+      branchIds: [branchList[0]!.id, branchList[2]!.id],
+    });
+  });
+
+  it("rejects a user scoped to a branch code the payload never creates", async () => {
+    const scopedUser = {
+      id: randomUUID(),
+      displayName: "Sali Mbarga",
+      username: `sali-${randomUUID()}`,
+      pin: "field-pin-333333",
+      role: "FIELD_SUBMITTER" as const,
+      branchScope: ["DLA", "KRB"],
+    };
+    const body = provisionBody({
+      branches: [{ id: randomUUID(), code: "DLA", name: "Douala" }],
+      users: [scopedUser],
+    });
+
+    const result = await dispatchCommand(platform, operator, body);
+
+    expect(result.status).toBe(422);
+    expect(result.body).toMatchObject({
+      error: { code: "REFERENCE_NOT_FOUND", metadata: { referenceType: "branch", missing: ["KRB"] } },
+    });
+
+    // Nothing half-provisioned: the workspace insert rolls back with the rest.
+    expect(
+      await db.select().from(workspaces).where(eq(workspaces.id, body.payload.workspace.id)),
+    ).toEqual([]);
+  });
+
+  it("rejects duplicate branch codes before any row is written", async () => {
+    const body = provisionBody({
+      branches: [
+        { id: randomUUID(), code: "DLA", name: "Douala" },
+        { id: randomUUID(), code: "DLA", name: "Douala Bonabéri" },
+      ],
+    });
+
+    const result = await dispatchCommand(platform, operator, body);
+
+    expect(result.status).toBe(400);
+    expect(result.body).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+    expect(
+      await db.select().from(workspaces).where(eq(workspaces.id, body.payload.workspace.id)),
+    ).toEqual([]);
   });
 
   it("rejects a duplicate slug with a stable code, not a raw constraint error", async () => {
