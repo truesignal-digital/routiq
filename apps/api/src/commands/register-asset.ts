@@ -1,14 +1,14 @@
 import { registerAssetPayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { assets, branches, categories } from "../db/schema.js";
+import { assets, categories } from "../db/schema.js";
 import {
   appendAuditEvent,
   CommandError,
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
-import { branchIdsByCode } from "./branch-authorization.js";
+import { branchIdsByCode, resolveTargetBranch } from "./branch-authorization.js";
 import { validateCustomValues } from "./templates.js";
 
 type RegisterAssetPayload = z.infer<typeof registerAssetPayload>;
@@ -35,18 +35,12 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
     };
   },
   async execute(tx, ctx, envelope, payload) {
-    const [branch] = await tx
-      .select({ id: branches.id })
-      .from(branches)
-      .where(and(eq(branches.workspaceId, ctx.workspaceId), eq(branches.code, payload.branchCode)))
-      .limit(1);
-
-    if (!branch) {
-      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-        referenceType: "branch",
-        referenceCode: payload.branchCode,
-      });
-    }
+    const { branch, warnings } = await resolveTargetBranch(
+      tx,
+      ctx,
+      envelope,
+      payload.branchCode,
+    );
 
     const customValues: Record<string, unknown> = { ...payload.customValues };
     if (payload.capacityValue !== undefined) customValues["capacityValue"] = payload.capacityValue;
@@ -141,7 +135,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
       ],
     });
 
-    return { recordId: payload.assetId, rowVersion: 1 };
+    return { recordId: payload.assetId, rowVersion: 1, warnings };
   },
 };
 

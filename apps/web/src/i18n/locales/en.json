@@ -567,7 +567,8 @@
     "ACTIVITY_NO_REVENUE": "No revenue attributed",
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
     "METER_READING_DECREASED": "The reading is lower than the previous one",
-    "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts."
+    "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
+    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated."
   },
   "activities": {
     "title": "Activities",

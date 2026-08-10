@@ -5,12 +5,15 @@ import {
   activities,
   activityAssetSegments,
   activityPeople,
-  branches,
   categories,
   meterReadings,
   persons,
 } from "../db/schema.js";
-import { assetBranchIds, branchIdsByCode } from "./branch-authorization.js";
+import {
+  assetBranchIds,
+  branchIdsByCode,
+  resolveTargetBranch,
+} from "./branch-authorization.js";
 import {
   appendAuditEvent,
   CommandError,
@@ -50,19 +53,12 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
   },
 
   async execute(tx, ctx, envelope, payload) {
-    const [branch] = await tx
-      .select({ id: branches.id, code: branches.code })
-      .from(branches)
-      .where(
-        and(eq(branches.workspaceId, ctx.workspaceId), eq(branches.code, payload.branchCode)),
-      )
-      .limit(1);
-    if (!branch) {
-      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-        referenceType: "branch",
-        referenceCode: payload.branchCode,
-      });
-    }
+    const { branch, warnings } = await resolveTargetBranch(
+      tx,
+      ctx,
+      envelope,
+      payload.branchCode,
+    );
 
     const [activityType] = await tx
       .select({ id: categories.id })
@@ -233,7 +229,7 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       ],
     });
 
-    return { recordId: payload.activityId, rowVersion: 1, recordStatus: "OPEN" };
+    return { recordId: payload.activityId, rowVersion: 1, recordStatus: "OPEN", warnings };
   },
 };
 

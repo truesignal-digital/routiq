@@ -3,13 +3,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   activities,
   assets,
-  branches,
   categories,
   financialEntries,
   financialPostings,
   persons,
 } from "../db/schema.js";
 import type { ApprovalDecision } from "./approvals.js";
+import { resolveTargetBranch } from "./branch-authorization.js";
 import {
   appendAuditEvent,
   CommandError,
@@ -74,22 +74,12 @@ export async function writeFinancialEntry(
     });
   }
 
-  const [branch] = await tx
-    .select({ id: branches.id, code: branches.code })
-    .from(branches)
-    .where(
-      and(
-        eq(branches.workspaceId, ctx.workspaceId),
-        eq(branches.code, request.branchCode),
-      ),
-    )
-    .limit(1);
-  if (!branch) {
-    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-      referenceType: "branch",
-      referenceCode: request.branchCode,
-    });
-  }
+  const { branch, warnings: branchWarnings } = await resolveTargetBranch(
+    tx,
+    ctx,
+    envelope,
+    request.branchCode,
+  );
   const categoryMatches = await tx
     .select({
       id: categories.id,
@@ -226,7 +216,7 @@ export async function writeFinancialEntry(
     branch,
     request.economicDate,
   );
-  const warnings: CommandWarningCode[] = [];
+  const warnings: CommandWarningCode[] = [...branchWarnings];
 
   let isPosted = approval.outcome === "AUTO_APPROVED";
   let period: Awaited<ReturnType<typeof resolvePostingPeriod>> | undefined;

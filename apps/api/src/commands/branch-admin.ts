@@ -25,8 +25,9 @@ import {
  * every record number the branch has ever printed (`DLA-2026-00004`) — so rename
  * touches `name` and nothing else. And a branch is never deleted: records keep
  * pointing at it forever, so retiring one flips `active`, which stops NEW writes
- * targeting it (`branchIdsByCode`, 422 BRANCH_INACTIVE) while leaving every
- * existing record, report and asset transfer OUT of it working.
+ * targeting it (`resolveTargetBranch`, 422 BRANCH_INACTIVE) while leaving every
+ * existing record, report and asset transfer OUT of it working — and yielding to
+ * an idempotent replay or a fact captured before the flip.
  */
 
 type BranchRow = typeof branches.$inferSelect;

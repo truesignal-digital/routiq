@@ -567,7 +567,8 @@
     "ACTIVITY_NO_REVENUE": "Aucune recette rattachée",
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
-    "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée."
+    "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
+    "BRANCH_INACTIVE_AT_COMMIT": "Succursale fermée : cette saisie a été effectuée avant sa désactivation."
   },
   "activities": {
     "title": "Activités",

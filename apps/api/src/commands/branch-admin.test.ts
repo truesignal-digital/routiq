@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
+import type { CommandOrigin } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { assets, auditEvents, branches, commands } from "../db/schema.js";
+import { assets, auditEvents, branches, commands, persons } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
@@ -10,10 +11,13 @@ import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
  * rename-branch.v1 / set-branch-status.v1, and the write guard deactivation
  * exists to impose.
  *
- * The pair of guards worth reading together: a deactivated branch takes no NEW
- * record (BRANCH_INACTIVE), but an asset already standing in one can still be
- * moved out — that transfer is the reason an admin deactivates a branch at all,
- * so the two tests around `assign-asset` are the load-bearing ones here.
+ * The guards worth reading together: a deactivated branch takes no NEW record
+ * (BRANCH_INACTIVE), but an asset already standing in one can still be moved out
+ * — that transfer is the reason an admin deactivates a branch at all — and the
+ * guard yields entirely to two things it must never outrank: an idempotent
+ * replay (§5.3) and a fact a device captured while the branch was still open
+ * (§6). The `assign-asset` tests and the last three here are the load-bearing
+ * ones.
  */
 describe("branch administration", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -252,7 +256,7 @@ describe("branch administration", () => {
         token,
         "assign-asset",
         { assetId, branchCode: "DLA" },
-        1,
+        { expectedVersion: 1 },
       );
 
       /*
@@ -287,8 +291,7 @@ describe("branch administration", () => {
         moveToken,
         "assign-asset",
         { assetId, branchCode: "INTO1" },
-        1,
-        commandId,
+        { expectedVersion: 1, commandId },
       );
 
       expect(response.statusCode).toBe(422);
@@ -321,6 +324,96 @@ describe("branch administration", () => {
       const [asset] = await ctx.db.select().from(assets).where(eq(assets.id, assetId));
       expect(asset?.branchId).toBe(seeded.branch.id);
       expect(asset?.rowVersion).toBe(1);
+    });
+
+    it("still refuses a move INTO a deactivated branch replayed from an outbox", async () => {
+      // The offline latitude below is for facts. A transfer is a decision about
+      // where the fleet stands now, and no origin buys it a way in.
+      const seeded = await seedWorkspace(ctx.db);
+      const moveToken = await adminToken(seeded.workspace.id);
+      const targetId = await createBranch("INTO2", "Mbalmayo", moveToken);
+      const assetId = await seedAsset(ctx.app, moveToken, { branchCode: "DLA" });
+      expect(
+        (
+          await post(
+            "set-branch-status",
+            { branchId: targetId, active: false },
+            { token: moveToken },
+          )
+        ).statusCode,
+      ).toBe(200);
+
+      const response = await postCommand(
+        moveToken,
+        "assign-asset",
+        { assetId, branchCode: "INTO2" },
+        { expectedVersion: 1, origin: "OFFLINE_SYNC" },
+      );
+
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: "BRANCH_INACTIVE", metadata: { branchCode: "INTO2" } },
+      });
+    });
+
+    it("accepts a fact replayed from an outbox into a branch deactivated since capture", async () => {
+      const branchId = await createBranch("OFF1", "Kumba");
+      expect((await post("set-branch-status", { branchId, active: false })).statusCode).toBe(200);
+
+      const personId = randomUUID();
+      const commandId = randomUUID();
+      const response = await postCommand(
+        token,
+        "register-person",
+        { personId, displayName: "Chauffeur", branchCode: "OFF1" },
+        { commandId, origin: "OFFLINE_SYNC" },
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        recordId: personId,
+        warnings: ["BRANCH_INACTIVE_AT_COMMIT"],
+      });
+
+      const [person] = await ctx.db.select().from(persons).where(eq(persons.id, personId));
+      expect(person?.branchId).toBe(branchId);
+
+      /*
+       * The discrepancy has to outlive the response, or reconciliation has
+       * nothing to work from. The receipt is where it lives: every row reaches
+       * its own through `created_by_command_id`, so no column of its own.
+       */
+      const [receipt] = await ctx.db.select().from(commands).where(eq(commands.id, commandId));
+      expect(receipt?.result).toMatchObject({ warnings: ["BRANCH_INACTIVE_AT_COMMIT"] });
+    });
+
+    it("replays the original result for an exact retry sent after deactivation", async () => {
+      /*
+       * §5.3: an exact retry answers with what the first call committed. The
+       * write guard used to run before the receipt lookup, so deactivating the
+       * branch in between turned a plain retry — which the web submission cache
+       * sends on any network wobble — into a 422 for a record that already
+       * exists, with nothing in the response naming it.
+       */
+      const branchId = await createBranch("RPL1", "Foumban");
+      const personId = randomUUID();
+      const envelope = {
+        commandId: randomUUID(),
+        idempotencyKey: `branch-admin-replay-${randomUUID()}`,
+      };
+      const payload = { personId, displayName: "Chauffeur", branchCode: "RPL1" };
+
+      const first = await postCommand(token, "register-person", payload, envelope);
+      expect(first.statusCode).toBe(200);
+      expect(first.json()).toMatchObject({ recordId: personId, idempotentReplay: false });
+
+      expect((await post("set-branch-status", { branchId, active: false })).statusCode).toBe(200);
+
+      const retry = await postCommand(token, "register-person", payload, envelope);
+
+      expect(retry.statusCode).toBe(200);
+      expect(retry.json()).toMatchObject({ recordId: personId, idempotentReplay: true });
+      expect(await ctx.db.select().from(persons).where(eq(persons.id, personId))).toHaveLength(1);
     });
 
     it("accepts writes again once the branch is reactivated", async () => {
@@ -387,15 +480,22 @@ describe("branch administration", () => {
     payload: Record<string, unknown>,
     opts: { token?: string; expectedVersion?: number } = {},
   ) {
-    return postCommand(opts.token ?? token, name, payload, opts.expectedVersion);
+    const { token: asToken, ...envelope } = opts;
+    return postCommand(asToken ?? token, name, payload, envelope);
+  }
+
+  interface EnvelopeOverrides {
+    expectedVersion?: number;
+    commandId?: string;
+    idempotencyKey?: string;
+    origin?: CommandOrigin;
   }
 
   function postCommand(
     asToken: string,
     name: string,
     payload: Record<string, unknown>,
-    expectedVersion?: number,
-    commandId?: string,
+    envelope: EnvelopeOverrides = {},
   ) {
     return ctx.app.inject({
       method: "POST",
@@ -405,10 +505,12 @@ describe("branch administration", () => {
         name,
         version: 1,
         envelope: {
-          commandId: commandId ?? randomUUID(),
-          idempotencyKey: `branch-admin-${randomUUID()}`,
-          origin: "HUMAN_UI",
-          ...(expectedVersion === undefined ? {} : { expectedVersion }),
+          commandId: envelope.commandId ?? randomUUID(),
+          idempotencyKey: envelope.idempotencyKey ?? `branch-admin-${randomUUID()}`,
+          origin: envelope.origin ?? "HUMAN_UI",
+          ...(envelope.expectedVersion === undefined
+            ? {}
+            : { expectedVersion: envelope.expectedVersion }),
         },
         payload,
       },

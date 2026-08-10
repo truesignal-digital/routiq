@@ -79,6 +79,12 @@ export const COMMAND_WARNING_CODES = [
   "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED",
   "METER_READING_DECREASED",
   "POSTING_DEFERRED_PERIOD_LOCKED",
+  /**
+   * A fact replayed from an outbox landed in a branch that was deactivated
+   * between capture and commit (§6). The record commits; this code is how the
+   * command receipt keeps the discrepancy for reconciliation.
+   */
+  "BRANCH_INACTIVE_AT_COMMIT",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];

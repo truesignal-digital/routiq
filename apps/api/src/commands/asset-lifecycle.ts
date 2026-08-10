@@ -93,10 +93,12 @@ export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
 
 /**
  * A move INTO a branch is a new write into it, so a deactivated one refuses the
- * arrival — the rule `branchIdsByCode` applies to every other branch-targeting
- * command, reaching the one command whose resolver cannot carry it. Moving an
- * asset OUT of a deactivated branch stays untouched: that transfer is the reason
- * a branch is deactivated in the first place.
+ * arrival — the rule `resolveTargetBranch` applies to every branch-targeting
+ * FACT, reaching the one command whose target is a decision. No offline latitude
+ * here for the same reason: a transfer is a judgement about where the fleet
+ * stands now, not a fact from the past. Moving an asset OUT of a deactivated
+ * branch stays untouched: that transfer is the reason a branch is deactivated in
+ * the first place.
  *
  * Checked from `approvalContext` rather than only from `execute` so a doomed
  * move never has an approval computed for it. Under the catalog defaults a

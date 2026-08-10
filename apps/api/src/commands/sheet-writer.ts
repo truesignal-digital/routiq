@@ -14,13 +14,13 @@ import {
   activityAssetSegments,
   activityPeople,
   assets,
-  branches,
   categories,
   meterReadings,
   movementLegs,
   persons,
 } from "../db/schema.js";
 import { evaluateApproval } from "./approvals.js";
+import { resolveTargetBranch } from "./branch-authorization.js";
 import { activityRequirements, evaluateCompleteness } from "./completeness.js";
 import {
   appendAuditEvent,
@@ -118,17 +118,12 @@ export async function writeSheet(
   envelope: CommandEnvelope,
   write: SheetWrite,
 ): Promise<SheetResult> {
-  const [branch] = await tx
-    .select({ id: branches.id, code: branches.code })
-    .from(branches)
-    .where(and(eq(branches.workspaceId, ctx.workspaceId), eq(branches.code, write.branchCode)))
-    .limit(1);
-  if (!branch) {
-    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-      referenceType: "branch",
-      referenceCode: write.branchCode,
-    });
-  }
+  const { branch, warnings: branchWarnings } = await resolveTargetBranch(
+    tx,
+    ctx,
+    envelope,
+    write.branchCode,
+  );
 
   const [activityType] = await tx
     .select({ id: categories.id })
@@ -329,7 +324,7 @@ export async function writeSheet(
   }
 
   const children: CommandOutcomeChild[] = [];
-  const warnings = new Set<CommandWarningCode>();
+  const warnings = new Set<CommandWarningCode>(branchWarnings);
   let revenueEntryCount = 0;
 
   for (const entry of write.entries) {

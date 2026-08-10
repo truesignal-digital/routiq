@@ -1,11 +1,9 @@
 import { registerPersonPayload } from "@routiq/contracts";
-import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
-import { branches, persons } from "../db/schema.js";
-import { branchIdsByCode } from "./branch-authorization.js";
+import { persons } from "../db/schema.js";
+import { branchIdsByCode, resolveTargetBranch } from "./branch-authorization.js";
 import {
   appendAuditEvent,
-  CommandError,
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
@@ -28,19 +26,12 @@ const registerPerson: CommandDefinition<RegisterPersonPayload> = {
   },
 
   async execute(tx, ctx, envelope, payload) {
-    const [branch] = await tx
-      .select({ id: branches.id })
-      .from(branches)
-      .where(
-        and(eq(branches.workspaceId, ctx.workspaceId), eq(branches.code, payload.branchCode)),
-      )
-      .limit(1);
-    if (!branch) {
-      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-        referenceType: "branch",
-        referenceCode: payload.branchCode,
-      });
-    }
+    const { branch, warnings } = await resolveTargetBranch(
+      tx,
+      ctx,
+      envelope,
+      payload.branchCode,
+    );
 
     await tx.insert(persons).values({
       id: payload.personId,
@@ -83,7 +74,7 @@ const registerPerson: CommandDefinition<RegisterPersonPayload> = {
       ],
     });
 
-    return { recordId: payload.personId, rowVersion: 1 };
+    return { recordId: payload.personId, rowVersion: 1, warnings };
   },
 };
 
