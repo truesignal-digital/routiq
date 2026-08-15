@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
-import { branchName } from "./create-branch.js";
+import { branchName } from "./branch-fields.js";
 
 /**
  * `code` is deliberately absent: it is the natural key embedded in record

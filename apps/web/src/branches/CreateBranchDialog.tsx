@@ -36,8 +36,8 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BRANCH_TIMEZONES, DEFAULT_BRANCH_TIMEZONE } from "./timezones.js";
 import {
   BRANCH_NAME_MAX_LENGTH,
-  branchCodeProblem,
   branchNameProblem,
+  isValidBranchCode,
 } from "./validation.js";
 import { useInvalidateBranches } from "./useBranches.js";
 
@@ -84,10 +84,7 @@ export function CreateBranchDialog({
           .string()
           .trim()
           .toUpperCase()
-          .refine(
-            (value) => branchCodeProblem(value) === undefined,
-            t("branches.form.codeInvalid"),
-          ),
+          .refine(isValidBranchCode, t("branches.form.codeInvalid")),
         name: z.string().superRefine((value, ctx) => {
           const problem = branchNameProblem(value);
           if (problem === undefined) return;
@@ -198,12 +195,7 @@ export function CreateBranchDialog({
                 <FormItem>
                   <FormLabel>{t("branches.form.name")}</FormLabel>
                   <FormControl>
-                    <Input
-                      type="text"
-                      className="min-h-11"
-                      maxLength={BRANCH_NAME_MAX_LENGTH}
-                      {...field}
-                    />
+                    <Input type="text" className="min-h-11" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

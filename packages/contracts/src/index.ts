@@ -26,6 +26,7 @@ export * from "./commands/lock-period.js";
 export * from "./reads/finance.js";
 export * from "./commands/update-approval-threshold.js";
 export * from "./commands/register-person.js";
+export * from "./commands/branch-fields.js";
 export * from "./commands/create-branch.js";
 export * from "./commands/rename-branch.js";
 export * from "./commands/set-branch-status.js";

@@ -192,7 +192,6 @@ export function BranchActionDialog({
                     id="branch-name"
                     type="text"
                     className="min-h-11"
-                    maxLength={BRANCH_NAME_MAX_LENGTH}
                     aria-invalid={nameError !== undefined}
                     aria-describedby={nameError === undefined ? undefined : "branch-name-error"}
                     value={name}

@@ -6,7 +6,13 @@ import { branchCode, branchName } from "@routiq/contracts";
  * decided here — the rule lives in `packages/contracts`, and the API answers a
  * stable code that the dialog turns into the same sentence.
  */
-export const BRANCH_NAME_MAX_LENGTH = branchName.maxLength ?? 120;
+
+const declaredNameMax = branchName.maxLength;
+if (declaredNameMax === null) {
+  throw new Error("branchName no longer declares a maximum length");
+}
+
+export const BRANCH_NAME_MAX_LENGTH = declaredNameMax;
 
 export type BranchNameProblem = "required" | "tooLong";
 
@@ -16,6 +22,6 @@ export function branchNameProblem(value: string): BranchNameProblem | undefined 
   return result.error.issues.some((issue) => issue.code === "too_big") ? "tooLong" : "required";
 }
 
-export function branchCodeProblem(value: string): "invalid" | undefined {
-  return branchCode.safeParse(value).success ? undefined : "invalid";
+export function isValidBranchCode(value: string): boolean {
+  return branchCode.safeParse(value).success;
 }

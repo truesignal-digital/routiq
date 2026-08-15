@@ -81,6 +81,20 @@ afterEach(() => {
   cleanup();
 });
 
+/**
+ * The point of the field-level answer is that it is attached to the input, not
+ * merely present on screen: the same sentence rendered in the banner would
+ * satisfy a text query while telling the admin nothing about which field to fix.
+ */
+function messageDescribing(label: string): string {
+  const input = screen.getByLabelText(label);
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  return (input.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
+}
+
 describe("branchActions", () => {
   it("offers a deactivated branch the way back and nothing else", () => {
     expect(branchActions({ ...branch, active: false })).toEqual(["reactivate"]);
@@ -136,14 +150,24 @@ describe("BranchActionDialog", () => {
     expect(client.seen).toHaveLength(0);
   });
 
-  it("stops the name at the length the command schema accepts", async () => {
-    renderDialog("rename", fakeClient(committed));
+  /**
+   * The failure the issue described: a long agency name pasted into the rename
+   * dialog reached the server and came back as an unattributed
+   * VALIDATION_FAILED banner. The input deliberately does not cap the length —
+   * truncating the paste would hide the rule rather than explain it.
+   */
+  it("explains the length rule when an over-long name is pasted", async () => {
+    const client = fakeClient(committed);
+    renderDialog("rename", client);
 
-    const input = screen.getByLabelText("Nom");
-    await userEvent.clear(input);
-    await userEvent.type(input, "a".repeat(130));
+    await userEvent.clear(screen.getByLabelText("Nom"));
+    await userEvent.paste("a".repeat(121));
 
-    expect((input as HTMLInputElement).value).toHaveLength(120);
+    expect(messageDescribing("Nom")).toContain(
+      "Le nom ne doit pas dépasser 120 caractères.",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(client.seen).toHaveLength(0);
   });
 
   /**
@@ -171,9 +195,10 @@ describe("BranchActionDialog", () => {
     await userEvent.type(screen.getByLabelText("Nom"), "Yaoundé");
     await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(
-      await screen.findByText("Ce nom d'agence existe déjà dans votre espace."),
-    ).toBeTruthy();
+    await screen.findByText("Ce nom d'agence existe déjà dans votre espace.");
+    expect(messageDescribing("Nom")).toContain(
+      "Ce nom d'agence existe déjà dans votre espace.",
+    );
     expect(onDismiss).not.toHaveBeenCalled();
   });
 

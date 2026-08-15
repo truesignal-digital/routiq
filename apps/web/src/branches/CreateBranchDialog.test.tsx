@@ -70,6 +70,20 @@ afterEach(() => {
   cleanup();
 });
 
+/**
+ * The point of the field-level answer is that it is attached to the input, not
+ * merely present on screen: the same sentence rendered in the banner would
+ * satisfy a text query while telling the admin nothing about which field to fix.
+ */
+function messageDescribing(label: string): string {
+  const input = screen.getByLabelText(label);
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  return (input.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
+}
+
 describe("CreateBranchDialog", () => {
   it("sends create-branch with a client-generated id and the default time zone", async () => {
     const client = fakeClient(committed);
@@ -132,13 +146,24 @@ describe("CreateBranchDialog", () => {
     expect(client.seen).toHaveLength(0);
   });
 
-  it("stops the name at the length the command schema accepts", async () => {
-    renderDialog(fakeClient(committed));
+  /**
+   * Pasted, not typed, and the input does not cap the length: truncating the
+   * paste would silently drop characters the admin can still see in their
+   * clipboard. The rule is explained instead.
+   */
+  it("explains the length rule when an over-long name is pasted", async () => {
+    const client = fakeClient(committed);
+    renderDialog(client);
 
-    const input = screen.getByLabelText("Nom");
-    await userEvent.type(input, "a".repeat(130));
+    await userEvent.type(screen.getByLabelText("Code"), "YDE");
+    await userEvent.click(screen.getByLabelText("Nom"));
+    await userEvent.paste("a".repeat(121));
+    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
 
-    expect((input as HTMLInputElement).value).toHaveLength(120);
+    expect(messageDescribing("Nom")).toContain(
+      "Le nom ne doit pas dépasser 120 caractères.",
+    );
+    expect(client.seen).toHaveLength(0);
   });
 
   it("answers a taken name on the name field rather than as a banner", async () => {
@@ -148,9 +173,10 @@ describe("CreateBranchDialog", () => {
     await fillForm("CTR", "Centre");
     await userEvent.click(screen.getByRole("button", { name: "Créer" }));
 
-    expect(
-      await screen.findByText("Ce nom d'agence existe déjà dans votre espace."),
-    ).toBeTruthy();
+    await screen.findByText("Ce nom d'agence existe déjà dans votre espace.");
+    expect(messageDescribing("Nom")).toContain(
+      "Ce nom d'agence existe déjà dans votre espace.",
+    );
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 

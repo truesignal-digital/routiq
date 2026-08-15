@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
-import { branchCode, branchName } from "./create-branch.js";
+import { branchCode, branchName } from "./branch-fields.js";
 import { TEMPLATE_CODES } from "../templates.js";
 import { TOGGLEABLE_MODULE_CODES } from "../modules.js";
 import { ROLES } from "../roles.js";
