@@ -29,7 +29,10 @@ const mocks = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   useAssetRegistrationReference: vi.fn(),
   statuses: new Map<string, unknown>(),
+  toastAdd: vi.fn(),
 }));
+
+vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
@@ -276,6 +279,32 @@ describe("branch field under the shell's agency", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Branch").textContent).toContain("Yaoundé"),
     );
+  });
+
+  it("says what happened before it says where, for a branch off the lens", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(branchStorageKey(sessionIdentity.workspaceSlug), DLA.id);
+    renderUnderShell();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("Douala"),
+    );
+    await user.type(screen.getByLabelText("Asset code"), "TR-009");
+    await openSelect(user, screen.getByLabelText("Asset class"));
+    await user.keyboard("{ArrowDown}{Enter}");
+    await openSelect(user, screen.getByLabelText("Branch"));
+    await user.click(await screen.findByRole("option", { name: /Yaoundé/ }));
+    await user.click(screen.getByRole("button", { name: "Register asset" }));
+
+    await submitSettled();
+    // The domain owns the title; the agency it landed in is a line under it,
+    // not a replacement for what the operator just did.
+    expect(mocks.toastAdd).toHaveBeenCalledWith({
+      type: "success",
+      title: "Asset registered",
+      description: "Saved in Yaoundé",
+      actionProps: { children: "View", onClick: expect.any(Function) },
+    });
   });
 
   it("keeps an explicit choice against the shell's preset", async () => {

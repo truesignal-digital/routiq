@@ -128,6 +128,26 @@ describe("applyPresetVocabulary", () => {
     expect(instance.t("activities.columns.primaryAsset")).toBe("Véhicule principal");
   });
 
+  it("keeps the branch-empty hint in each fleet's own word for a vehicle", () => {
+    const instance = freshInstance();
+
+    // The base catalog had leaked "véhicule" here while every other base asset
+    // string said "actif", which left passenger transport nothing to overlay.
+    expect(instance.t("assets.branchEmptyHint")).toBe(
+      "Aucun actif n'est rattaché à cette agence.",
+    );
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(instance.t("assets.branchEmptyHint")).toBe(
+      "Aucun camion n'est rattaché à cette agence.",
+    );
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(instance.t("assets.branchEmptyHint")).toBe(
+      "Aucun véhicule n'est rattaché à cette agence.",
+    );
+  });
+
   it("leaves a mixed fleet on the base vocabulary", () => {
     const instance = freshInstance();
 
