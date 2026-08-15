@@ -20,6 +20,7 @@ import {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
+import { openSelect } from "../test-select.js";
 import { ActivitySheetScreen } from "./ActivitySheetScreen.js";
 
 const UUID = "00000000-0000-4000-8000-000000000010";
@@ -104,7 +105,7 @@ async function pickFirstOption(
   user: ReturnType<typeof userEvent.setup>,
   label: string,
 ): Promise<void> {
-  await user.click(screen.getByLabelText(label));
+  await openSelect(user, screen.getByLabelText(label));
   await user.keyboard("{ArrowDown}{Enter}");
 }
 

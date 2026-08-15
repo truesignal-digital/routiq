@@ -22,6 +22,7 @@ import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { i18n } from "../i18n/index.js";
+import { openSelect } from "../test-select.js";
 import { ActivityActions, localOffsetMinutes, toOffsetIso } from "./ActivityActions.js";
 
 const mocks = vi.hoisted(() => ({
@@ -491,7 +492,7 @@ describe("substitute", () => {
     renderActions(openActivity, client);
 
     await user.click(screen.getByRole("button", { name: "Substitute asset" }));
-    await user.click(screen.getByLabelText("Replacement asset"));
+    await openSelect(user, screen.getByLabelText("Replacement asset"));
     await user.keyboard("{ArrowDown}{Enter}");
     fireEvent.change(screen.getByLabelText("Handover date and time"), {
       target: { value: "2026-07-20T14:00" },
@@ -558,7 +559,7 @@ describe("substitute", () => {
       screen.getByRole("button", { name: "Confirm substitution" }) as HTMLButtonElement;
     expect(submit().disabled).toBe(true);
 
-    await user.click(screen.getByLabelText("Replacement asset"));
+    await openSelect(user, screen.getByLabelText("Replacement asset"));
     await user.keyboard("{ArrowDown}{Enter}");
     expect(submit().disabled).toBe(true);
 
@@ -724,7 +725,7 @@ describe("mid-trip capture", () => {
       screen.getByRole("button", { name: "Record the expense" }) as HTMLButtonElement;
     expect(submit().disabled).toBe(true);
 
-    await user.click(screen.getByLabelText("Category"));
+    await openSelect(user, screen.getByLabelText("Category"));
     await user.keyboard("{ArrowDown}{Enter}");
     await user.type(screen.getByLabelText("Amount"), "40000");
     await waitFor(() => expect(submit().disabled).toBe(false));
@@ -764,7 +765,7 @@ describe("mid-trip capture", () => {
     renderActions(openActivity, recordingClient(committed([], "SUBMITTED")));
 
     await user.click(screen.getByRole("button", { name: "Record expense" }));
-    await user.click(screen.getByLabelText("Category"));
+    await openSelect(user, screen.getByLabelText("Category"));
     await user.keyboard("{ArrowDown}{Enter}");
     await user.type(screen.getByLabelText("Amount"), "900000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
@@ -785,7 +786,7 @@ describe("mid-trip capture", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Record expense" }));
-    await user.click(screen.getByLabelText("Category"));
+    await openSelect(user, screen.getByLabelText("Category"));
     await user.keyboard("{ArrowDown}{Enter}");
     await user.type(screen.getByLabelText("Amount"), "40000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));

@@ -17,6 +17,7 @@ import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { BranchProvider, branchStorageKey } from "../shell/branch-context.js";
 import { BranchSwitcher } from "../shell/BranchSwitcher.js";
+import { openSelect } from "../test-select.js";
 import { AssetRegisterScreen } from "./AssetRegisterScreen.js";
 
 const ASSET_ID = "00000000-0000-4000-8000-000000000010";
@@ -59,12 +60,12 @@ async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>, code
   
   // Select Asset class using keyboard navigation on Base UI Select
   const assetClassSelect = screen.getByLabelText("Asset class");
-  await user.click(assetClassSelect);
+  await openSelect(user, assetClassSelect);
   await user.keyboard("{ArrowDown}{Enter}");
   
   // Select Branch using keyboard navigation on Base UI Select
   const branchSelect = screen.getByLabelText("Branch");
-  await user.click(branchSelect);
+  await openSelect(user, branchSelect);
   await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
 }
 

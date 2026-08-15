@@ -16,6 +16,7 @@ import {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
+import { openSelect } from "../test-select.js";
 
 const ASSET_ID = "00000000-0000-4000-8000-000000000010";
 const DOCUMENT_ID = "00000000-0000-4000-8000-000000000020";
@@ -95,7 +96,7 @@ function renderScreen(client = new QueryClient()) {
 async function fillAndSave(user: ReturnType<typeof userEvent.setup>) {
   // The header action and the empty state both offer it.
   await user.click(screen.getAllByRole("button", { name: "Add a document" })[0]!);
-  await user.click(screen.getByLabelText("Document type"));
+  await openSelect(user, screen.getByLabelText("Document type"));
   await user.keyboard("{ArrowDown}{Enter}");
   await user.click(screen.getByRole("button", { name: "Save" }));
 }

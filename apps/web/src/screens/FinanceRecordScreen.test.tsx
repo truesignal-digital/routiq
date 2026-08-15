@@ -16,6 +16,7 @@ import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { toRecordExpensePayload } from "../finance/model.js";
 import { i18n } from "../i18n/index.js";
+import { openSelect } from "../test-select.js";
 import { FinanceRecordScreen } from "./FinanceRecordScreen.js";
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000010";
@@ -92,7 +93,7 @@ function renderScreen() {
 
 async function chooseFuelCategory(user: ReturnType<typeof userEvent.setup>) {
   const category = screen.getByLabelText("Category");
-  await user.click(category);
+  await openSelect(user, category);
   await user.keyboard("{ArrowDown}{Enter}");
 }
 
@@ -199,7 +200,7 @@ describe("finance record form", () => {
     await user.type(screen.getByLabelText("Counterparty (optional)"), "Fuel Station");
     await user.type(screen.getByLabelText("Description (optional)"), "Diesel");
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");
-    await user.click(screen.getByLabelText("Asset (optional)"));
+    await openSelect(user, screen.getByLabelText("Asset (optional)"));
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("button", { name: "Record" }));
 
