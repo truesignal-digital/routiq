@@ -69,7 +69,9 @@
   },
   "activities": {
     "title": "Voyages",
+    "loading": "Chargement des voyages…",
     "emptyHint": "Aucun voyage pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "branchEmptyHint": "Aucun voyage pour cette agence.",
     "completeness": {
       "exceptionsHint": "Le voyage est clôturé, mais il manque les éléments suivants :"
     },

@@ -29,6 +29,7 @@
     "emptyAction": "Enregistrer un camion",
     "loading": "Chargement des camions…",
     "noResultsTitle": "Aucun camion trouvé",
+    "branchEmptyHint": "Aucun camion n'est rattaché à cette agence.",
     "detail": {
       "breadcrumb": "Fiche du camion",
       "money": {
@@ -71,7 +72,9 @@
   },
   "activities": {
     "title": "Trajets",
+    "loading": "Chargement des trajets…",
     "emptyHint": "Aucun trajet pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "branchEmptyHint": "Aucun trajet pour cette agence.",
     "completeness": {
       "exceptionsHint": "Le trajet est clôturé, mais il manque les éléments suivants :"
     },

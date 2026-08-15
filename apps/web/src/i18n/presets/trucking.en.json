@@ -29,6 +29,7 @@
     "emptyAction": "Register a truck",
     "loading": "Loading trucks…",
     "noResultsTitle": "No trucks found",
+    "branchEmptyHint": "No truck is attached to this branch.",
     "detail": {
       "breadcrumb": "Truck record",
       "money": {
@@ -71,7 +72,9 @@
   },
   "activities": {
     "title": "Trips",
+    "loading": "Loading trips…",
     "emptyHint": "No trips yet. Recorded trip sheets will appear here.",
+    "branchEmptyHint": "No trip for this branch.",
     "completeness": {
       "exceptionsHint": "The trip is closed, but the following are missing:"
     },
