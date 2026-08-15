@@ -12,7 +12,7 @@ import {
   type DataTableFilterValues,
 } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
@@ -29,7 +29,6 @@ import {
 import { useEntries } from "@/finance/useEntries.js";
 import { formatDate } from "@/lib/format.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
-import { useBranchScope } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
 
@@ -61,7 +60,6 @@ export function FinanceEntriesScreen() {
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
   const sort = toSortParam(sorting);
-  const { scoped } = useBranchScope();
 
   // `sort` rides in the query key, so reordering starts a fresh cursor rather
   // than stitching pages from two different orders together.
@@ -254,15 +252,11 @@ export function FinanceEntriesScreen() {
             emptyState={
               entriesQuery.isPending ? (
                 <LoadingState label={t("finance.entries.loading")} />
-              ) : scoped ? (
+              ) : (
                 <BranchScopedEmptyState
                   icon={<FileText className="size-7" aria-hidden />}
                   message={t("finance.entries.branchEmpty")}
-                />
-              ) : (
-                <EmptyState
-                  icon={<FileText className="size-7" aria-hidden />}
-                  message={t("finance.entries.empty")}
+                  firstRun={{ message: t("finance.entries.empty") }}
                 />
               )
             }

@@ -34,8 +34,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetRegistrationReference } from "@/assets/reference";
-import { useCurrentBranchCode } from "@/shell/branch-context.js";
-import { useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
+import {
+  useCreatedElsewhereNotice,
+  useFollowedBranchCode,
+} from "@/shell/branch-scope.js";
 import { useActiveSession } from "@/auth/store";
 import { useMeContext } from "@/auth/me.js";
 import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/field-errors";
@@ -101,26 +103,10 @@ export function AssetRegisterScreen() {
   const acquisitionAmount = form.watch("acquisitionAmountMinor");
   const branchCode = form.watch("branchCode");
 
-  // The shell's current agency, or the only branch in scope — still editable,
-  // and the server authorizes the branch either way.
   const branches = reference.data?.branches ?? [];
-  const currentBranchCode = useCurrentBranchCode();
-  const preselectedBranchCode =
-    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
-  // Followed, not latched. Filling a blank field is the preselect; re-filling
-  // it when the shell's agency *moves* is the part that matters — an operator
-  // who sets this once and keeps registering would otherwise go on filing into
-  // the agency the shell has since left. Between moves the effect only repairs
-  // a blank, so an explicit pick here stands.
-  const lastPreselectedBranchCode = useRef<string>(undefined);
-  useEffect(() => {
-    if (preselectedBranchCode === undefined) return;
-    const shellMoved = preselectedBranchCode !== lastPreselectedBranchCode.current;
-    lastPreselectedBranchCode.current = preselectedBranchCode;
-    if (shellMoved || branchCode === "") {
-      form.setValue("branchCode", preselectedBranchCode);
-    }
-  }, [preselectedBranchCode, branchCode, form]);
+  useFollowedBranchCode(branches, branchCode, (code) =>
+    form.setValue("branchCode", code),
+  );
   // The assets list this navigates to is narrowed by the shell, so an asset
   // registered into another agency would land off screen unannounced.
   const createdElsewhereNotice = useCreatedElsewhereNotice();

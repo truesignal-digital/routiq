@@ -40,6 +40,10 @@ const persons = [
 
 const refetch = vi.fn();
 
+const mocks = vi.hoisted(() => ({ toastAdd: vi.fn() }));
+
+vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
+
 vi.mock("../activities/usePersons.js", () => ({
   usePersons: (params: UsePersonsParams) => {
     const previous = issuedQueries[issuedQueries.length - 1];
@@ -102,6 +106,7 @@ describe("PersonsScreen", () => {
   beforeEach(() => {
     issuedQueries.length = 0;
     refetch.mockClear();
+    mocks.toastAdd.mockClear();
     meValue = me;
   });
   afterEach(cleanup);
@@ -142,6 +147,19 @@ describe("PersonsScreen", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "confirm" }));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it("confirms the registration with a toast, as the other capture forms do", async () => {
+    render(<PersonsScreen />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /persons.register/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "confirm" }));
+
+    // The row lands in the branch on screen, so nothing is added about where.
+    expect(mocks.toastAdd).toHaveBeenCalledWith({
+      type: "success",
+      title: "Personne enregistrée",
+    });
   });
 
   it("a read-only role reads the list but is offered no way to add", async () => {

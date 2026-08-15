@@ -39,7 +39,6 @@ import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
-import { useBranchScope } from "@/shell/branch-scope.js";
 
 /** Module-level so the column memo holds across renders. */
 const LIST_COLUMNS: readonly AssetColumnId[] = [
@@ -108,7 +107,6 @@ export function AssetsStub() {
   // Toolbar filters only. The shell's agency is the other way a list can come
   // back empty, and it has its own empty state: "clear filters" cannot reach it.
   const narrowed = Object.values(filterValues).some((value) => value !== "");
-  const { scoped } = useBranchScope();
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -311,31 +309,28 @@ export function AssetsStub() {
                     </span>
                   }
                 />
-              ) : scoped ? (
+              ) : (
                 // A branch with no assets is not a workspace with no assets:
                 // the first-run state would claim the fleet is empty while it
                 // sits in another agency.
                 <BranchScopedEmptyState
                   icon={<Truck className="size-7" aria-hidden />}
                   message={t("assets.branchEmptyHint")}
-                />
-              ) : (
-                <EmptyState
-                  icon={
-                    <span className="grid size-16 place-items-center rounded-2xl bg-primary/10 text-primary">
-                      <Truck className="size-8" strokeWidth={1.55} aria-hidden />
-                    </span>
-                  }
-                  message={
-                    <span className="flex flex-col items-center">
-                      <strong className="text-lg font-semibold text-foreground">
-                        {t("assets.emptyTitle")}
-                      </strong>
-                      <span className="mt-2">{t("assets.emptyHint")}</span>
-                    </span>
-                  }
-                  action={
-                    canManage
+                  firstRun={{
+                    icon: (
+                      <span className="grid size-16 place-items-center rounded-2xl bg-primary/10 text-primary">
+                        <Truck className="size-8" strokeWidth={1.55} aria-hidden />
+                      </span>
+                    ),
+                    message: (
+                      <span className="flex flex-col items-center">
+                        <strong className="text-lg font-semibold text-foreground">
+                          {t("assets.emptyTitle")}
+                        </strong>
+                        <span className="mt-2">{t("assets.emptyHint")}</span>
+                      </span>
+                    ),
+                    action: canManage
                       ? {
                           label: (
                             <span className="flex items-center gap-2">
@@ -345,8 +340,8 @@ export function AssetsStub() {
                           ),
                           onClick: () => void navigate({ to: "/assets/new" }),
                         }
-                      : undefined
-                  }
+                      : undefined,
+                  }}
                 />
               )
             }

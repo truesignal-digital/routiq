@@ -1,9 +1,11 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { NotifySuccessOptions } from "@/lib/notify.js";
 import {
   ALL_BRANCHES,
   useAmbientBranchId,
   useCurrentBranch,
+  useCurrentBranchCode,
   type BranchOption,
 } from "./branch-context.js";
 
@@ -53,17 +55,61 @@ export function useBranchScope(): BranchScopeState {
   };
 }
 
+/**
+ * Keeps a creation form's branch field on the shell's current agency — or on
+ * the only branch there is, when the workspace has one.
+ *
+ * Followed, not latched. Filling a blank field is the preselect; re-filling it
+ * when the shell's agency *moves* is the part that matters — an operator who
+ * sets this once and keeps capturing would otherwise go on filing into the
+ * agency the shell has since left. Between moves it only repairs a blank, so an
+ * explicit pick stands. The field stays editable throughout: the server
+ * authorizes the branch either way.
+ */
+export function useFollowedBranchCode(
+  branches: readonly { code: string }[],
+  current: string,
+  fill: (branchCode: string) => void,
+): void {
+  const currentBranchCode = useCurrentBranchCode();
+  const preselected =
+    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
+
+  // Read through a ref so a caller writing its setter inline does not re-run
+  // the follow on every render.
+  const fillRef = useRef(fill);
+  fillRef.current = fill;
+
+  const lastPreselected = useRef<string>(undefined);
+  useEffect(() => {
+    if (preselected === undefined) return;
+    const shellMoved = preselected !== lastPreselected.current;
+    lastPreselected.current = preselected;
+    if (shellMoved || current === "") fillRef.current(preselected);
+  }, [preselected, current]);
+}
+
 /** A record's branch, by whichever of the two names the caller holds. */
 export interface BranchBearing {
   branchId?: string | undefined;
   branchCode?: string | undefined;
 }
 
+/**
+ * A branch the shell's lens is not currently on. `known` separates one the
+ * switcher can still hold — nameable, and worth offering to follow — from one
+ * that is deactivated or gone from this member's scope, which a record can name
+ * by code at best and often not at all.
+ */
+export type OtherBranch =
+  | { known: true; branch: BranchOption }
+  | { known: false; code: string | undefined };
+
 function branchOutsideLens(
   record: BranchBearing,
   currentBranch: BranchOption | undefined,
   options: readonly BranchOption[],
-): BranchOption | undefined {
+): OtherBranch | undefined {
   if (currentBranch === undefined) return undefined;
 
   // A form field that has not been answered yet names no branch at all.
@@ -76,13 +122,8 @@ function branchOutsideLens(
   const known = options.find(
     (option) => option.id === branchId || option.code === branchCode,
   );
-  if (known !== undefined) return known;
-  // Outside the caller's own branch list — deactivated, or gone from this
-  // member's scope. Named by the code when the record carries one; `name` is
-  // empty when only the id is known, and callers phrase that case themselves
-  // rather than interpolating a blank into a sentence.
-  const code = branchCode ?? "";
-  return { id: branchId ?? "", code, name: code };
+  if (known !== undefined) return { known: true, branch: known };
+  return { known: false, code: branchCode };
 }
 
 /**
@@ -90,21 +131,24 @@ function branchOutsideLens(
  * identity is workspace-scoped, so this is a note on a detail page, never a
  * reason to redirect (design point 3).
  */
-export function useOtherBranch(record: BranchBearing): BranchOption | undefined {
+export function useOtherBranch(record: BranchBearing): OtherBranch | undefined {
   const { currentBranch, options } = useCurrentBranch();
   return branchOutsideLens(record, currentBranch, options);
 }
 
-/** A success toast that names where the record actually landed. */
-export interface CreatedElsewhereNotice extends NotifySuccessOptions {
-  title: string;
-}
+/** What a creation form's success toast adds when the record landed elsewhere. */
+export type CreatedElsewhereNotice = Pick<
+  NotifySuccessOptions,
+  "extraLines" | "action"
+>;
 
 /**
  * Builds what a creation form's success toast adds when the record landed
- * outside the shell's current agency: the branch named, and an offer to follow
- * it. A row that never appears in the list it was captured from otherwise reads
- * as a save that failed.
+ * outside the shell's current agency: a line naming the branch, and an offer to
+ * follow it. A row that never appears in the list it was captured from
+ * otherwise reads as a save that failed. It rides under the domain's own
+ * success title rather than replacing it — where a record landed does not
+ * cancel what happened to it.
  *
  * A builder rather than a value, because the branch is only settled once the
  * command commits. It returns `undefined` when the record landed in the current
@@ -120,19 +164,25 @@ export function useCreatedElsewhereNotice(): (
     const other = branchOutsideLens(record, currentBranch, options);
     if (other === undefined) return undefined;
 
-    const title =
-      other.name === ""
-        ? t("shell.branch.createdInOtherBranch")
-        : t("shell.branch.createdInBranch", { branch: other.name });
-    // Only a branch the switcher can actually hold is worth offering: an id
+    // Only a branch the switcher can actually hold is worth offering: one
     // outside `options` is dropped on the next resolve (`branch-context.tsx`),
     // so the offer would take the operator nowhere.
-    if (!options.some((option) => option.id === other.id)) return { title };
+    if (!other.known) {
+      return {
+        extraLines: [
+          other.code === undefined
+            ? t("shell.branch.createdInOtherBranch")
+            : t("shell.branch.createdInBranch", { branch: other.code }),
+        ],
+      };
+    }
+
+    const { id, name } = other.branch;
     return {
-      title,
+      extraLines: [t("shell.branch.createdInBranch", { branch: name })],
       action: {
         label: t("shell.branch.view"),
-        onClick: () => setCurrentBranchId(other.id),
+        onClick: () => setCurrentBranchId(id),
       },
     };
   };

@@ -26,7 +26,7 @@ export function BranchSwitcher({ className }: { className?: string }) {
 
   // 44px: the shell's touch-target standard, and this is a header control on a
   // phone held one-handed.
-  const pill = cn("h-11 w-auto max-w-44 gap-2 rounded-full", className);
+  const pill = cn("h-11 w-auto max-w-44 gap-2 rounded-full md:h-9", className);
 
   if (status === "error") {
     return (

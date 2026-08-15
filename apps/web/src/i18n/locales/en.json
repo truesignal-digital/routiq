@@ -189,7 +189,7 @@
     "loading": "Loading assets…",
     "noResultsTitle": "No assets found",
     "noResultsHint": "Try another search or clear the filters.",
-    "branchEmptyHint": "No vehicle is attached to this branch.",
+    "branchEmptyHint": "No asset is attached to this branch.",
     "resetFilters": "Clear filters",
     "loadMore": "Load more",
     "errorTitle": "We couldn't load the fleet",
@@ -808,7 +808,8 @@
         "legRecorded": "Leg recorded",
         "readingRecorded": "Reading recorded",
         "expenseRecorded": "Expense recorded",
-        "expenseSubmitted": "Expense sent for approval"
+        "expenseSubmitted": "Expense sent for approval",
+        "personRegistered": "Person registered"
       },
       "warnings": {
         "ACTIVITY_MISSING_START_READING": "Start meter reading missing",

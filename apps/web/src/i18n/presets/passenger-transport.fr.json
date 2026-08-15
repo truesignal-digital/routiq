@@ -27,6 +27,7 @@
     "emptyAction": "Enregistrer un véhicule",
     "loading": "Chargement des véhicules…",
     "noResultsTitle": "Aucun véhicule trouvé",
+    "branchEmptyHint": "Aucun véhicule n'est rattaché à cette agence.",
     "detail": {
       "breadcrumb": "Fiche du véhicule",
       "money": {

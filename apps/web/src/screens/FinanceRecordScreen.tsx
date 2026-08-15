@@ -35,7 +35,10 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
-import { useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
+import {
+  useCreatedElsewhereNotice,
+  useFollowedBranchCode,
+} from "@/shell/branch-scope.js";
 import { MoneyInput } from "@/components/money-input.js";
 
 import {
@@ -48,7 +51,7 @@ import { canRecordFinance } from "@/finance/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { ALL_BRANCHES, useCurrentBranchCode } from "@/shell/branch-context.js";
+import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
@@ -137,7 +140,6 @@ function RecordForm({
   onRecorded: (outcome: CommandResult, branchCode: string) => void;
 }) {
   const { t } = useTranslation();
-  const currentBranchCode = useCurrentBranchCode();
   const [entryId] = useState(() => crypto.randomUUID());
   const intentExpenseRef = useRef(createCommandIntent<RecordPayload>(commandClient, "record-expense", 1));
   const intentRevenueRef = useRef(createCommandIntent<RecordPayload>(commandClient, "record-revenue", 1));
@@ -200,24 +202,9 @@ function RecordForm({
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [attachmentsUploading, setAttachmentsUploading] = useState(false);
 
-  // Preselect the shell's current agency, or the only branch there is. Still
-  // editable: the server authorizes the branch either way.
-  const preselectedBranchCode =
-    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
-  // Followed, not latched. Filling a blank field is the preselect; re-filling
-  // it when the shell's agency *moves* is the part that matters — an operator
-  // who sets this once and keeps recording would otherwise go on booking into
-  // the agency the shell has since left. Between moves the effect only repairs
-  // a blank, so an explicit pick here stands.
-  const lastPreselectedBranchCode = useRef<string>(undefined);
-  useEffect(() => {
-    if (preselectedBranchCode === undefined) return;
-    const shellMoved = preselectedBranchCode !== lastPreselectedBranchCode.current;
-    lastPreselectedBranchCode.current = preselectedBranchCode;
-    if (shellMoved || branchCode === "") {
-      form.setValue("branchCode", preselectedBranchCode, { shouldValidate: true });
-    }
-  }, [preselectedBranchCode, branchCode, form]);
+  useFollowedBranchCode(branches, branchCode, (code) =>
+    form.setValue("branchCode", code, { shouldValidate: true }),
+  );
 
   const amountMinor = parseMoneyXaf(amountInput);
   const isValid =

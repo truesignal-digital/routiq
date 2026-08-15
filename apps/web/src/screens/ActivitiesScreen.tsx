@@ -11,7 +11,7 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
@@ -26,7 +26,6 @@ import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
-import { useBranchScope } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
 const COMPLETENESS_OPTIONS = ["COMPLETE", "COMPLETE_WITH_EXCEPTIONS"] as const;
@@ -64,7 +63,6 @@ export function ActivitiesScreen() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const sort = toSortParam(sorting);
-  const { scoped } = useBranchScope();
 
   // `/v1/activities` does the filtering; the table never narrows rows itself,
   // or the counts would describe the page instead of the fleet. The branch is
@@ -246,15 +244,11 @@ export function ActivitiesScreen() {
             emptyState={
               activitiesQuery.isPending ? (
                 <LoadingState label={t("activities.loading")} />
-              ) : scoped ? (
+              ) : (
                 <BranchScopedEmptyState
                   icon={<Route className="size-7" aria-hidden />}
                   message={t("activities.branchEmptyHint")}
-                />
-              ) : (
-                <EmptyState
-                  icon={<Route className="size-7" aria-hidden />}
-                  message={t("activities.emptyHint")}
+                  firstRun={{ message: t("activities.emptyHint") }}
                 />
               )
             }

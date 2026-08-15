@@ -27,6 +27,7 @@
     "emptyAction": "Register a vehicle",
     "loading": "Loading vehicles…",
     "noResultsTitle": "No vehicles found",
+    "branchEmptyHint": "No vehicle is attached to this branch.",
     "detail": {
       "breadcrumb": "Vehicle record",
       "money": {

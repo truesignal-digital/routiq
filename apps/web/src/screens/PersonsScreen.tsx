@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -17,16 +17,18 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { useCurrentBranchCode } from "@/shell/branch-context.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
-import { useBranchScope, useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
-import { notifySuccess } from "@/lib/notify.js";
+import {
+  useCreatedElsewhereNotice,
+  useFollowedBranchCode,
+} from "@/shell/branch-scope.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
 import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
@@ -43,35 +45,23 @@ export function PersonsScreen() {
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [registering, setRegistering] = useState(false);
-  /** An explicit choice on this screen; cleared when the shell's agency moves. */
-  const [picked, setPicked] = useState<string>();
 
   const search = filterValues[SEARCH_FILTER_ID] ?? "";
   // `/v1/persons` does the matching; narrowing the loaded rows here would
   // describe the page instead of the payroll.
   const personsQuery = usePersons(search === "" ? {} : { search });
   const persons = personsQuery.data?.items ?? [];
-  const { scoped } = useBranchScope();
 
   // A new person joins a branch, and the command names it by code — so the
-  // screen has to know which one before it can offer to register anyone.
+  // screen has to know which one before it can offer to register anyone. The
+  // dialog never asks, so this picker is the only place the branch is said.
   const reference = useAssetRegistrationReference();
   const branches = useMemo(() => reference.data?.branches ?? [], [reference.data]);
-  const currentBranchCode = useCurrentBranchCode();
-  // The shell's current agency answers it by default, the only branch there is
-  // otherwise; either way the picker stays editable.
-  const preselectedBranchCode =
-    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
-  // Derived, not latched: an untouched default that stopped following the shell
-  // would register people into the agency the list is no longer showing, and
-  // the dialog never asks which branch it is writing to.
-  const branchCode = picked ?? preselectedBranchCode ?? "";
-  useEffect(() => {
-    setPicked(undefined);
-  }, [preselectedBranchCode]);
-  // Registering into the agency on screen needs no confirmation — the new row
-  // is the confirmation. Registering into another one does: that row lands
-  // where this list cannot show it.
+  const [branchCode, setBranchCode] = useState("");
+  useFollowedBranchCode(branches, branchCode, setBranchCode);
+  // Registering into the agency on screen is confirmed by the new row itself;
+  // registering into another one lands where this list cannot show it, so the
+  // toast says which.
   const createdElsewhereNotice = useCreatedElsewhereNotice();
 
   const filters = useMemo<DataTableFilter[]>(
@@ -153,7 +143,7 @@ export function PersonsScreen() {
                     label: branch.name,
                   }))}
                   value={branchCode === "" ? null : branchCode}
-                  onValueChange={(value: string | null) => setPicked(value ?? "")}
+                  onValueChange={(value: string | null) => setBranchCode(value ?? "")}
                 >
                   <SelectTrigger
                     aria-label={t("persons.branchLabel")}
@@ -223,15 +213,11 @@ export function PersonsScreen() {
             emptyState={
               personsQuery.isPending ? (
                 <LoadingState label={t("persons.loading")} />
-              ) : scoped ? (
+              ) : (
                 <BranchScopedEmptyState
                   icon={<Users className="size-7" aria-hidden />}
                   message={t("persons.branchEmptyHint")}
-                />
-              ) : (
-                <EmptyState
-                  icon={<Users className="size-7" aria-hidden />}
-                  message={t("persons.emptyHint")}
+                  firstRun={{ message: t("persons.emptyHint") }}
                 />
               )
             }
@@ -245,8 +231,12 @@ export function PersonsScreen() {
           onOpenChange={setRegistering}
           branchCode={branchCode}
           onRegistered={() => {
-            const elsewhere = createdElsewhereNotice({ branchCode });
-            if (elsewhere !== undefined) notifySuccess(elsewhere);
+            notifyCommandSuccess(
+              "activities",
+              "personRegistered",
+              [],
+              createdElsewhereNotice({ branchCode }) ?? {},
+            );
             void personsQuery.refetch();
           }}
         />

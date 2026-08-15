@@ -42,6 +42,7 @@ import {
 } from "@/finance/useApprovals.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { useAmbientBranchId, useCurrentBranch } from "@/shell/branch-context.js";
+import { BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import {
@@ -354,12 +355,7 @@ export function FinanceApprovalsScreen() {
 
       {branchName !== undefined && !approvalsQuery.isPending && (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <p className="text-sm text-muted-foreground">
-            {t("shell.branch.scopeLine", {
-              branch: branchName,
-              count: pendingTotal,
-            })}
-          </p>
+          <BranchScopeLine branch={branchName} count={pendingTotal} />
           {/* A filtered queue is not the whole queue: the work it leaves out
               is named here, and the same line widens back to every branch. */}
           {pendingElsewhere > 0 && (

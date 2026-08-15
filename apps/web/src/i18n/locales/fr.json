@@ -189,7 +189,7 @@
     "loading": "Chargement des actifs…",
     "noResultsTitle": "Aucun actif trouvé",
     "noResultsHint": "Essayez un autre terme ou retirez les filtres.",
-    "branchEmptyHint": "Aucun véhicule n'est rattaché à cette agence.",
+    "branchEmptyHint": "Aucun actif n'est rattaché à cette agence.",
     "resetFilters": "Effacer les filtres",
     "loadMore": "Charger plus",
     "errorTitle": "Impossible de charger le parc",
@@ -808,7 +808,8 @@
         "legRecorded": "Étape enregistrée",
         "readingRecorded": "Relevé enregistré",
         "expenseRecorded": "Dépense enregistrée",
-        "expenseSubmitted": "Dépense envoyée pour approbation"
+        "expenseSubmitted": "Dépense envoyée pour approbation",
+        "personRegistered": "Personne enregistrée"
       },
       "warnings": {
         "ACTIVITY_MISSING_START_READING": "Relevé compteur de départ manquant",

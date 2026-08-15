@@ -47,11 +47,6 @@ export interface NotifySuccessOptions {
    * count of embedded records left waiting for an approver, say.
    */
   extraLines?: readonly string[];
-  /**
-   * Replaces the domain's success title. For where a record landed rather than
-   * what happened to it: the outcome is the same, the surprise is not.
-   */
-  title?: string;
   /** One follow-up the toast offers, already localized. */
   action?: { label: string; onClick: () => void };
 }
@@ -85,21 +80,10 @@ export function notifyCommandSuccess(
   options: NotifySuccessOptions = {},
 ): void {
   addSuccessToast(
-    options.title ?? localizedNotifyMessage(namespace, "success", messageKey),
+    localizedNotifyMessage(namespace, "success", messageKey),
     [warningLines(namespace, warnings), ...(options.extraLines ?? [])],
     options.action,
   );
-}
-
-/**
- * A success the caller has already phrased — where a record landed, say, which
- * no namespace owns a code for. Same toast, no message catalogue lookup: there
- * is no key to miss, so nothing can fall back to a generic line.
- */
-export function notifySuccess(
-  options: NotifySuccessOptions & { title: string },
-): void {
-  addSuccessToast(options.title, options.extraLines ?? [], options.action);
 }
 
 export function notifyCommandError(

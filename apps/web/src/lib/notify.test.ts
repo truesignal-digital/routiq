@@ -78,19 +78,21 @@ describe("command notifications", () => {
     });
   });
 
-  it("lets a caller name the outcome itself and offer one follow-up", () => {
+  it("lets a caller add a line of its own and offer one follow-up", () => {
     const onClick = vi.fn();
     notifyCommandSuccess("finance", "posted", ["LATE_POSTING"], {
-      title: "Saved in Yaoundé",
+      extraLines: ["Saved in Yaoundé"],
       action: { label: "View", onClick },
     });
 
     expect(mocks.add).toHaveBeenCalledWith({
       type: "success",
-      // The caller's title replaces the domain's, and the warnings still ride
-      // along: where it landed does not cancel what happened to it.
-      title: "Saved in Yaoundé",
-      description: "This transaction was posted to a previous accounting period.",
+      // The domain still names the outcome: where a record landed does not
+      // cancel what happened to it, so the caller's line joins the warnings.
+      title: "Transaction recorded and posted",
+      description:
+        "This transaction was posted to a previous accounting period.\n" +
+        "Saved in Yaoundé",
       actionProps: { children: "View", onClick },
     });
   });

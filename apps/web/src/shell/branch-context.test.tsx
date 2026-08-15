@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import type { BranchBearing } from "./branch-scope.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nextProvider } from "react-i18next";
 import { i18n } from "../i18n/index.js";
@@ -44,6 +45,7 @@ const {
 } = await import("./branch-context.js");
 const { BranchSwitcher } = await import("./BranchSwitcher.js");
 const { useCreatedElsewhereNotice } = await import("./branch-scope.js");
+const { OtherBranchNotice } = await import("./BranchScopeNotices.js");
 
 const DLA = { id: "branch-dla", code: "DLA", name: "Douala" };
 const YDE = { id: "branch-yde", code: "YDE", name: "Yaoundé" };
@@ -245,12 +247,12 @@ describe("BranchProvider", () => {
 });
 
 /** Stands in for a creation form that has settled on a branch. */
-function CreationProbe({ branchCode }: { branchCode: string }) {
+function CreationProbe({ record }: { record: BranchBearing }) {
   const noticeFor = useCreatedElsewhereNotice();
-  const notice = noticeFor({ branchCode });
+  const notice = noticeFor(record);
   return (
     <>
-      <span data-testid="notice">{notice?.title ?? "none"}</span>
+      <span data-testid="notice">{notice?.extraLines?.join("\n") ?? "none"}</span>
       {notice?.action !== undefined && (
         <button type="button" onClick={notice.action.onClick}>
           {notice.action.label}
@@ -263,27 +265,27 @@ function CreationProbe({ branchCode }: { branchCode: string }) {
 describe("useCreatedElsewhereNotice", () => {
   it("says nothing when the record lands in the agency on screen", () => {
     localStorage.setItem(KEY, DLA.id);
-    renderProvider(<CreationProbe branchCode="DLA" />);
+    renderProvider(<CreationProbe record={{ branchCode: "DLA" }} />);
 
     expect(screen.getByTestId("notice").textContent).toBe("none");
   });
 
   it("says nothing while the lens spans every agency", () => {
-    renderProvider(<CreationProbe branchCode="YDE" />);
+    renderProvider(<CreationProbe record={{ branchCode: "YDE" }} />);
 
     expect(screen.getByTestId("notice").textContent).toBe("none");
   });
 
   it("says nothing before the form has answered which agency", () => {
     localStorage.setItem(KEY, DLA.id);
-    renderProvider(<CreationProbe branchCode="" />);
+    renderProvider(<CreationProbe record={{ branchCode: "" }} />);
 
     expect(screen.getByTestId("notice").textContent).toBe("none");
   });
 
   it("names the agency a record landed in outside the current lens", () => {
     localStorage.setItem(KEY, DLA.id);
-    renderProvider(<CreationProbe branchCode="YDE" />);
+    renderProvider(<CreationProbe record={{ branchCode: "YDE" }} />);
 
     expect(screen.getByTestId("notice").textContent).toBe(
       "Enregistré dans Yaoundé",
@@ -296,13 +298,48 @@ describe("useCreatedElsewhereNotice", () => {
     renderProvider(
       <>
         <Probe />
-        <CreationProbe branchCode="YDE" />
+        <CreationProbe record={{ branchCode: "YDE" }} />
       </>,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Voir" }));
 
     expect(screen.getByTestId("current").textContent).toBe(YDE.id);
+  });
+
+  it("offers no follow-up to an agency the switcher cannot hold", () => {
+    localStorage.setItem(KEY, DLA.id);
+    renderProvider(<CreationProbe record={{ branchId: "branch-gone" }} />);
+
+    // Deactivated, or gone from this member's scope: nothing names it, and
+    // switching there would be undone on the next resolve.
+    expect(screen.getByTestId("notice").textContent).toBe(
+      "Enregistré dans une autre agence",
+    );
+    expect(screen.queryByRole("button", { name: "Voir" })).toBeNull();
+  });
+});
+
+describe("OtherBranchNotice", () => {
+  it("names the agency a record belongs to", () => {
+    localStorage.setItem(KEY, DLA.id);
+    renderProvider(<OtherBranchNotice branchCode="YDE" />);
+
+    expect(screen.getByText("Autre agence : Yaoundé")).toBeTruthy();
+  });
+
+  it("says only that an unnamed agency holds it, never a blank name", () => {
+    localStorage.setItem(KEY, DLA.id);
+    renderProvider(<OtherBranchNotice branchId="branch-gone" />);
+
+    expect(screen.getByText("Autre agence")).toBeTruthy();
+  });
+
+  it("says nothing about a record the current lens already covers", () => {
+    localStorage.setItem(KEY, DLA.id);
+    const { container } = renderProvider(<OtherBranchNotice branchCode="DLA" />);
+
+    expect(container.textContent).toBe("");
   });
 });
 

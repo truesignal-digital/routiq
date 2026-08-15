@@ -1,7 +1,7 @@
 import { Building2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { EmptyState } from "@/components/page";
+import { EmptyState, type EmptyStateProps } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
 import { cn } from "@/lib/utils";
 import { useBranchScope, useOtherBranch } from "./branch-scope.js";
@@ -13,10 +13,16 @@ import { useBranchScope, useOtherBranch } from "./branch-scope.js";
  * per-branch palette does not scale and would collide with the status tones.
  */
 export function BranchScopeLine({
+  branch,
   count,
   hasMore = false,
   className,
 }: {
+  /**
+   * The branch to name, for a screen whose own visible filter decides the
+   * narrowing rather than the shell. Omitted, the line follows the shell.
+   */
+  branch?: string | undefined;
   /** Rows the read returned. Omit while the query is still pending. */
   count?: number | undefined;
   /**
@@ -29,8 +35,9 @@ export function BranchScopeLine({
 }) {
   const { t } = useTranslation();
   const { scoped, label } = useBranchScope();
+  const name = branch ?? (scoped ? label : undefined);
 
-  if (!scoped) return null;
+  if (name === undefined) return null;
 
   return (
     <p
@@ -38,10 +45,10 @@ export function BranchScopeLine({
       className={cn("text-sm text-muted-foreground", className)}
     >
       {count === undefined
-        ? t("shell.branch.scopeLineLoading", { branch: label })
+        ? t("shell.branch.scopeLineLoading", { branch: name })
         : hasMore
-          ? t("shell.branch.scopeLineAtLeast", { branch: label, count })
-          : t("shell.branch.scopeLine", { branch: label, count })}
+          ? t("shell.branch.scopeLineAtLeast", { branch: name, count })
+          : t("shell.branch.scopeLine", { branch: name, count })}
     </p>
   );
 }
@@ -49,17 +56,26 @@ export function BranchScopeLine({
 /**
  * What an empty collection means while a branch is in force: this agency holds
  * none, not "you have never recorded one". The first-run state claims something
- * about the whole workspace, and a scoped list cannot see the whole workspace.
+ * about the whole workspace, and a scoped list cannot see the whole workspace —
+ * so this decides between the two itself, as `BranchScopeLine` does, rather
+ * than leaving every list to remember the distinction.
  */
 export function BranchScopedEmptyState({
   icon,
   message,
+  firstRun,
 }: {
+  /** Shared by both states; `firstRun.icon` overrides it for the unscoped one. */
   icon: ReactNode;
+  /** What this agency holding none means. */
   message?: ReactNode;
+  /** The whole-workspace state, shown while the lens spans every branch. */
+  firstRun: Omit<EmptyStateProps, "icon"> & { icon?: ReactNode };
 }) {
   const { t } = useTranslation();
-  const { label, showAllBranches } = useBranchScope();
+  const { scoped, label, showAllBranches } = useBranchScope();
+
+  if (!scoped) return <EmptyState {...firstRun} icon={firstRun.icon ?? icon} />;
 
   return (
     <EmptyState
@@ -99,13 +115,15 @@ export function OtherBranchNotice({
 
   if (other === undefined) return null;
 
+  // A deactivated branch reaches here known only by id. Saying "another agency"
+  // is honest; interpolating its missing name is not.
+  const name = other.known ? other.branch.name : other.code;
+
   return (
     <StatusBadge tone="info" icon={Building2} className={className}>
-      {/* A deactivated branch reaches here known only by id. Saying "another
-          agency" is honest; interpolating its missing name is not. */}
-      {other.name === ""
+      {name === undefined
         ? t("shell.branch.otherBranchUnnamed")
-        : t("shell.branch.otherBranch", { branch: other.name })}
+        : t("shell.branch.otherBranch", { branch: name })}
     </StatusBadge>
   );
 }
