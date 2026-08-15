@@ -72,7 +72,7 @@ Adding a command touches three places:
 
 ### Issue tracker
 
-Local markdown under `.scratch/<feature-slug>/` (spec + `issues/NN-slug.md`). See `docs/agents/issue-tracker.md`.
+GitHub Issues on `truesignal-digital/routiq` via `gh` CLI. See `docs/agents/issue-tracker.md`. Legacy specs remain under `.scratch/`.
 
 ### Triage labels
 

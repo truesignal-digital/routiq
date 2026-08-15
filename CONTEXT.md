@@ -44,6 +44,18 @@ _Avoid_: signup, self-service onboarding
 The software vendor's own principal — no workspace binding, accepted only by provisioning and platform commands, invoked via CLI. Never a tenant user; never used for tenant business commands.
 _Avoid_: super admin (implies an in-app tenant role), root user
 
+**Branch**:
+An operating location of a Workspace (fr: **Agence**); every operational record belongs to exactly one. Deactivated, never deleted; codes are immutable.
+_Avoid_: site, location, department, git-style branch
+
+**Branch Scope**:
+The set of Branches a user's membership grants access to — the server-derived authorization boundary. Reads and commands can never reach outside it; the client never chooses it.
+_Avoid_: branch filter, current branch
+
+**Ambient Branch**:
+The single Branch a user is currently viewing through, chosen in the shell switcher — a client-side lens that narrows collections *within* their Branch Scope. Never an access boundary: switching grants nothing, and record identity stays workspace-scoped.
+_Avoid_: active branch, selected branch (implies per-screen state), branch scope
+
 **Module Entitlement**:
 The vendor-granted right of a Workspace to use a module (maintenance, stock, …). Platform-scope: only the Vendor Operator changes it (ADR-0005); tenants see it read-only. Distinct from an Entry Role, which governs who *within* an entitled Workspace may act.
 _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing model yet)
@@ -53,6 +65,7 @@ _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing
 - A **Workspace** belongs to exactly one **Asset-Operating Business**
 - A **Workspace** enables one or more **Template Presets**; forms and commands accept only enabled ones
 - Every asset and activity stamps the single **Template Preset** it was created under
+- A **Workspace** has one or more **Branches**; a user's **Branch Scope** is a subset of them, and the **Ambient Branch** is always one Branch within that scope (or none = whole scope)
 
 ## Example dialogue
 
