@@ -162,6 +162,13 @@
       "when": 1786020389698,
       "tag": "0022_branch_admin_command_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786825713074,
+      "tag": "0023_branch_command_tenant_fk",
+      "breakpoints": true
     }
   ]
 }
