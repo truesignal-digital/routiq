@@ -273,7 +273,7 @@ describe("branch administration", () => {
       const assetId = await seedAsset(ctx.app, token, { branchCode: "OUT1" });
       expect((await post("set-branch-status", { branchId, active: false })).statusCode).toBe(200);
 
-      const response = await postCommand(
+      const asAdmin = await postCommand(
         token,
         "assign-asset",
         { assetId, branchCode: "DLA" },
@@ -286,6 +286,40 @@ describe("branch administration", () => {
        * business (FINANCE_APPROVER by default), not the inactive-branch guard's.
        * BRANCH_INACTIVE here would mean assets were stranded by deactivation.
        */
+      expect(asAdmin.statusCode).toBe(403);
+      expect(asAdmin.json()).toMatchObject({
+        error: { code: "APPROVAL_REQUIRED", metadata: { commandType: "assign-asset" } },
+      });
+
+      /*
+       * And the approver the rule names can complete it. Until FINANCE_APPROVER
+       * was added to assign-asset's allowedRoles they were rejected
+       * ROLE_FORBIDDEN before approval ran, which left the transfer a dead end
+       * for every role — an asset in a deactivated branch could never leave it.
+       */
+      const asApprover = await postCommand(
+        await financeApproverToken(workspaceId),
+        "assign-asset",
+        { assetId, branchCode: "DLA" },
+        { expectedVersion: 1 },
+      );
+
+      expect(asApprover.statusCode).toBe(200);
+      const [moved] = await ctx.db.select().from(assets).where(eq(assets.id, assetId));
+      expect(moved?.branchId).not.toBe(branchId);
+    });
+
+    it("does not let the finance approver make an ordinary same-branch assignment", async () => {
+      const assetId = await seedAsset(ctx.app, token, { branchCode: "DLA" });
+
+      const response = await postCommand(
+        await financeApproverToken(workspaceId),
+        "assign-asset",
+        { assetId, branchCode: "DLA" },
+        { expectedVersion: 1 },
+      );
+
+      // No CROSS_BRANCH context, so only the ADMIN and OPS_MANAGER rules match.
       expect(response.statusCode).toBe(403);
       expect(response.json()).toMatchObject({
         error: { code: "APPROVAL_REQUIRED", metadata: { commandType: "assign-asset" } },
@@ -482,6 +516,17 @@ describe("branch administration", () => {
     });
     return (
       await createSession(ctx.db, { workspaceId: workspace, principalId: admin.principal.id })
+    ).token;
+  }
+
+  async function financeApproverToken(workspace: string): Promise<string> {
+    const approver = await seedMember(ctx.db, {
+      workspaceId: workspace,
+      role: "FINANCE_APPROVER",
+      allBranches: true,
+    });
+    return (
+      await createSession(ctx.db, { workspaceId: workspace, principalId: approver.principal.id })
     ).token;
   }
 

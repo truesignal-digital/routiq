@@ -120,7 +120,18 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   name: "assign-asset",
   module: "ASSETS",
   version: 1,
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  /**
+   * FINANCE_APPROVER is here for the cross-branch transfer alone. The seeded
+   * CROSS_BRANCH rule names them as the approving role, and `allowedRoles` is
+   * checked before approval is ever evaluated — so without this the rule was
+   * unsatisfiable by every role in the workspace and a transfer between branches
+   * could not be completed by anyone.
+   *
+   * It does not widen ordinary assignment: a same-branch move matches only the
+   * two wildcard rules (ADMIN, OPS_MANAGER), neither of which authorizes
+   * FINANCE_APPROVER, so they are answered APPROVAL_REQUIRED as before.
+   */
+  allowedRoles: ["ADMIN", "OPS_MANAGER", "FINANCE_APPROVER"],
   payloadSchema: assignAssetPayload,
   operationalAssetId: (payload) => payload.assetId,
   branchAuthorization: {
