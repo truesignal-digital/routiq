@@ -51,7 +51,7 @@ describe("template preset enforcement", () => {
 
     const result = await dispatchCommand(platform, operator, {
       name: "provision-workspace",
-      version: 1,
+      version: 2,
       envelope: {
         commandId: randomUUID(),
         idempotencyKey: `idem-${randomUUID()}`,

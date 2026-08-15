@@ -29,7 +29,7 @@ import { dispatchCommand } from "./dispatcher.js";
 import { REDACTED_PIN } from "./provision-workspace.js";
 import "../server.js";
 
-describe("provision-workspace.v1", () => {
+describe("provision-workspace.v2", () => {
   let testApp: Awaited<ReturnType<typeof createTestApp>>;
   let db: Db;
   let platform: PlatformDb;
@@ -74,7 +74,7 @@ describe("provision-workspace.v1", () => {
     const slug = overrides.slug ?? `tenant-${randomUUID().slice(0, 8)}`;
     return {
       name: "provision-workspace",
-      version: 1,
+      version: 2,
       envelope: {
         commandId: randomUUID(),
         idempotencyKey: overrides.idempotencyKey ?? `idem-${randomUUID()}`,
@@ -609,5 +609,99 @@ describe("provision-workspace.v1", () => {
           ),
         ),
     ).toHaveLength(1);
+  });
+
+  /**
+   * The compatibility path (issue #20). v1 is what already-authored tenant files
+   * say, so it must still provision — through the same execution path, with its
+   * own receipt shape.
+   */
+  describe("v1 compatibility", () => {
+    function legacyBody(
+      overrides: { code?: string; idempotencyKey?: string } = {},
+    ) {
+      const v2 = provisionBody(overrides.idempotencyKey === undefined
+        ? {}
+        : { idempotencyKey: overrides.idempotencyKey });
+      const { branches: _branches, ...payload } = v2.payload;
+      return {
+        ...v2,
+        version: 1,
+        payload: {
+          ...payload,
+          branch: {
+            id: randomUUID(),
+            code: overrides.code ?? "DLA",
+            name: "Douala",
+          },
+        },
+      };
+    }
+
+    it("provisions from the singular branch object", async () => {
+      const body = legacyBody();
+      const workspaceId = body.payload.workspace.id;
+
+      const result = await dispatchCommand(platform, operator, body);
+
+      expect(result.status).toBe(200);
+      expect(result.body).toMatchObject({ recordId: workspaceId, idempotentReplay: false });
+
+      const rows = await db.select().from(branches).where(eq(branches.workspaceId, workspaceId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        id: body.payload.branch.id,
+        code: "DLA",
+        name: "Douala",
+        active: true,
+        createdByCommandId: body.envelope.commandId,
+      });
+    });
+
+    it("keeps the loose code rule v2 tightened", async () => {
+      const body = legacyBody({ code: "douala-bonaberi" });
+
+      const result = await dispatchCommand(platform, operator, body);
+
+      expect(result.status).toBe(200);
+      const [row] = await db
+        .select()
+        .from(branches)
+        .where(eq(branches.workspaceId, body.payload.workspace.id));
+      expect(row?.code).toBe("douala-bonaberi");
+    });
+
+    it("files its receipt at version 1, in the shape it arrived in", async () => {
+      const body = legacyBody();
+
+      await dispatchCommand(platform, operator, body);
+
+      const [receipt] = await db
+        .select()
+        .from(commands)
+        .where(eq(commands.idempotencyKey, body.envelope.idempotencyKey));
+      expect(receipt?.commandVersion).toBe("1");
+      expect(receipt?.payload).toMatchObject({
+        branch: { code: "DLA", name: "Douala" },
+        // The receipt is kept forever; the PIN never reaches it.
+        admin: { pin: REDACTED_PIN },
+      });
+    });
+
+    /**
+     * Why the seed and the CLI moved to new idempotency keys rather than
+     * reusing theirs: the fingerprint is over the raw payload, so no version
+     * choice can make a v2 payload replay a v1 receipt.
+     */
+    it("conflicts when a v2 payload reuses a v1 receipt's idempotency key", async () => {
+      const key = `idem-${randomUUID()}`;
+      expect((await dispatchCommand(platform, operator, legacyBody({ idempotencyKey: key }))).status)
+        .toBe(200);
+
+      const retry = await dispatchCommand(platform, operator, provisionBody({ idempotencyKey: key }));
+
+      expect(retry.status).toBe(409);
+      expect(retry.body).toMatchObject({ error: { code: "IDEMPOTENCY_KEY_REUSED" } });
+    });
   });
 });

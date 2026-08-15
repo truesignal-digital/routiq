@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { provisionWorkspaceCommand } from "./provision-workspace.js";
+import {
+  provisionWorkspaceCommand,
+  provisionWorkspaceV1Command,
+  provisionWorkspaceV1ToV2,
+} from "./provision-workspace.js";
 
 const valid = {
   name: "provision-workspace",
-  version: 1,
+  version: 2,
   envelope: {
     commandId: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     idempotencyKey: "tenant3-initial",
@@ -252,5 +256,65 @@ describe("provision-workspace contract", () => {
     ];
 
     expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejects the legacy singular branch shape at v2", () => {
+    const { branches: _branches, ...withoutBranches } = valid.payload;
+    expect(
+      provisionWorkspaceCommand.safeParse({
+        ...valid,
+        payload: {
+          ...withoutBranches,
+          branch: { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "HQ", name: "Headquarters" },
+        },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+/**
+ * The compatibility half of the version bump. These pin what v1 must keep
+ * accepting: change one of them and an already-authored tenant file stops
+ * validating.
+ */
+describe("provision-workspace v1 compatibility", () => {
+  const { branches: _branches, ...common } = valid.payload;
+
+  const legacy = {
+    name: "provision-workspace",
+    version: 1,
+    envelope: valid.envelope,
+    payload: {
+      ...common,
+      branch: { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "HQ", name: "Headquarters" },
+    },
+  };
+
+  it("accepts the singular branch object", () => {
+    const result = provisionWorkspaceV1Command.safeParse(legacy);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a lowercase branch code, which v2 refuses", () => {
+    const relaxed = structuredClone(legacy);
+    relaxed.payload.branch.code = "hq-douala";
+    expect(provisionWorkspaceV1Command.safeParse(relaxed).success).toBe(true);
+  });
+
+  it("rejects the v2 array shape", () => {
+    expect(provisionWorkspaceV1Command.safeParse({ ...valid, version: 1 }).success).toBe(false);
+  });
+
+  it("maps the singular branch to a one-element array a v2 payload accepts", () => {
+    const parsed = provisionWorkspaceV1Command.parse(legacy);
+    const migrated = provisionWorkspaceV1ToV2(parsed.payload);
+
+    expect(migrated.branches).toEqual([
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "HQ", name: "Headquarters" },
+    ]);
+    expect(migrated).not.toHaveProperty("branch");
+    expect(
+      provisionWorkspaceCommand.safeParse({ ...valid, payload: migrated }).success,
+    ).toBe(true);
   });
 });

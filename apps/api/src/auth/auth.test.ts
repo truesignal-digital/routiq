@@ -78,7 +78,7 @@ describe("username/PIN login", () => {
 
     const provisioned = await dispatchCommand(platformDb(ctx.db), operator, {
       name: "provision-workspace",
-      version: 1,
+      version: 2,
       envelope: {
         commandId: randomUUID(),
         idempotencyKey: `idem-${randomUUID()}`,

@@ -65,7 +65,7 @@ describe("set-template-preset.v1", () => {
 
     const result = await dispatchCommand(platform, operator, {
       name: "provision-workspace",
-      version: 1,
+      version: 2,
       envelope: {
         commandId: randomUUID(),
         idempotencyKey: `idem-${randomUUID()}`,

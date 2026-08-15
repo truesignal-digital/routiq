@@ -92,12 +92,72 @@ export const provisionWorkspacePayload = z.strictObject({
   users: z.array(provisionedUser).optional(),
 });
 
+/**
+ * v2 is the array shape above. v1 took a single `branch` object and a loose code
+ * rule; a receipt filed under v1 can never match a v2 payload hash, and a tenant
+ * file whose code is lowercase or longer than eight characters no longer even
+ * validates. Both versions stay registered, per ARCHITECTURE.md §6 — the server
+ * accepts the previous payload version for at least the refresh window.
+ */
 export const provisionWorkspaceCommand = z.object({
   name: z.literal("provision-workspace"),
-  version: z.literal(1),
+  version: z.literal(2),
   envelope: commandEnvelope,
   payload: provisionWorkspacePayload,
 });
 
+/**
+ * Frozen: this is what already-written receipts and already-authored tenant
+ * files say. Tightening it would change what an old file means, which is the
+ * one thing a compatibility schema may not do — so the loose `code` rule and the
+ * untrimmed name stay exactly as v1 shipped them.
+ */
+const legacyProvisionedBranch = z.strictObject({
+  id: z.uuid(),
+  code: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export const provisionWorkspaceV1Payload = z.strictObject({
+  workspace: z.strictObject({
+    id: z.uuid(),
+    slug: z.string().min(1).max(80).regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "Slug must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"),
+    name: z.string().min(1),
+    defaultCurrency: z.enum(["XAF"]).optional().default("XAF"),
+    timezone: z.string().optional().default("Africa/Douala"),
+    defaultLocale: z.string().optional().default("fr-CM"),
+  }),
+  branch: legacyProvisionedBranch,
+  admin: z.strictObject({
+    id: z.uuid(),
+    displayName: z.string().min(1),
+    username: z.string().min(1).max(80),
+    pin: z.string().min(4).max(64),
+  }),
+  enabledPresets: z.array(z.enum(TEMPLATE_CODES)).min(1, "At least one preset must be enabled"),
+  disabledModules: z.array(z.enum(TOGGLEABLE_MODULE_CODES)).default([]),
+  users: z.array(provisionedUser).optional(),
+});
+
+export const provisionWorkspaceV1Command = z.object({
+  name: z.literal("provision-workspace"),
+  version: z.literal(1),
+  envelope: commandEnvelope,
+  payload: provisionWorkspaceV1Payload,
+});
+
+/**
+ * The whole of the version difference: one branch becomes a one-element set, and
+ * everything downstream — handler, packs, audit trail — sees only the v2 shape.
+ */
+export function provisionWorkspaceV1ToV2(
+  payload: ProvisionWorkspaceV1Payload,
+): ProvisionWorkspacePayload {
+  const { branch, ...rest } = payload;
+  return { ...rest, branches: [branch] };
+}
+
 export type ProvisionWorkspacePayload = z.infer<typeof provisionWorkspacePayload>;
 export type ProvisionWorkspaceCommand = z.infer<typeof provisionWorkspaceCommand>;
+export type ProvisionWorkspaceV1Payload = z.infer<typeof provisionWorkspaceV1Payload>;
+export type ProvisionWorkspaceV1Command = z.infer<typeof provisionWorkspaceV1Command>;

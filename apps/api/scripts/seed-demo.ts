@@ -293,7 +293,13 @@ try {
     console.log,
     {
       commandId: commandId("provision-workspace"),
-      idempotencyKey: idempotencyKey("provision-workspace"),
+      /**
+       * `.v2` only on this one command: provisioning is the only payload whose
+       * shape changed (issue #20), and reusing a key across a shape change is a
+       * 409 rather than a replay. Every other seed command keeps its key, or a
+       * re-seed would write its records a second time.
+       */
+      idempotencyKey: idempotencyKey("provision-workspace.v2"),
     },
   );
 

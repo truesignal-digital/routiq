@@ -84,10 +84,16 @@ export async function provisionTenant(
   const commandId = options.commandId ?? randomUUID();
   const response = await dispatchCommand(platformDb(authDb), operator, {
     name: "provision-workspace",
-    version: 1,
+    version: 2,
     envelope: {
       commandId,
-      idempotencyKey: options.idempotencyKey ?? `provision-${payload.workspace.slug}`,
+      /**
+       * `:v2` and not the bare slug: a workspace provisioned before the array
+       * shape holds a receipt under the old key, and the fingerprint is taken
+       * over the raw payload — so reusing the key would answer 409
+       * IDEMPOTENCY_KEY_REUSED rather than replaying (issue #20).
+       */
+      idempotencyKey: options.idempotencyKey ?? `provision-${payload.workspace.slug}:v2`,
       origin: "API",
     },
     payload,
