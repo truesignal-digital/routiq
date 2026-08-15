@@ -204,6 +204,18 @@ describe("provision-workspace contract", () => {
     expect(paths).toContain("payload.branches.1.id");
   });
 
+  it("rejects a whitespace-only branch name", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches[0]!.name = "   ";
+    expect(provisionWorkspaceCommand.safeParse(bad).success).toBe(false);
+  });
+
+  it("trims a padded branch name rather than persisting the padding", () => {
+    const good = structuredClone(valid);
+    good.payload.branches[0]!.name = "  Headquarters  ";
+    expect(provisionWorkspaceCommand.parse(good).payload.branches[0]!.name).toBe("Headquarters");
+  });
+
   it("rejects a lowercase branch code", () => {
     const bad = structuredClone(valid);
     bad.payload.branches[0]!.code = "dla";

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
+import { branchName } from "./create-branch.js";
 
 /**
  * `code` is deliberately absent: it is the natural key embedded in record
@@ -8,7 +9,7 @@ import { commandEnvelope } from "../envelope.js";
  */
 export const renameBranchPayload = z.strictObject({
   branchId: z.uuid(),
-  name: z.string().min(1).max(120),
+  name: branchName,
 });
 
 export const renameBranchCommand = z.strictObject({

@@ -1,18 +1,15 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
+import { branchCode, branchName } from "./create-branch.js";
 import { TEMPLATE_CODES } from "../templates.js";
 import { TOGGLEABLE_MODULE_CODES } from "../modules.js";
 import { ROLES } from "../roles.js";
 
-/**
- * Same field rules as create-branch.v1: a branch born at provisioning and one
- * added later are the same row, and the code is immutable once numbering has
- * embedded it (`DLA-2026-00004`).
- */
+/** Same field rules as create-branch.v1 — literally, via the shared spellings. */
 const provisionedBranch = z.strictObject({
   id: z.uuid(),
-  code: z.string().regex(/^[A-Z0-9]{2,8}$/),
-  name: z.string().min(1).max(120),
+  code: branchCode,
+  name: branchName,
   timezone: z.string().min(1).max(100).optional(),
 });
 

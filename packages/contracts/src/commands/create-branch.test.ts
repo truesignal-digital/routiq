@@ -62,6 +62,33 @@ describe("createBranchCommand", () => {
     ).toBe(false);
   });
 
+  it("rejects a whitespace-only name", () => {
+    expect(
+      createBranchCommand.safeParse({
+        ...validCreateCommand,
+        payload: { ...validCreateCommand.payload, name: "   " },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("trims a padded name rather than persisting the padding", () => {
+    expect(
+      createBranchCommand.parse({
+        ...validCreateCommand,
+        payload: { ...validCreateCommand.payload, name: "  Yaoundé  " },
+      }).payload.name,
+    ).toBe("Yaoundé");
+  });
+
+  it("rejects a name over 120 characters", () => {
+    expect(
+      createBranchCommand.safeParse({
+        ...validCreateCommand,
+        payload: { ...validCreateCommand.payload, name: "a".repeat(121) },
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects missing name", () => {
     const { name: _name, ...withoutName } = validCreateCommand.payload;
 

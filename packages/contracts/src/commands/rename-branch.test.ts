@@ -44,6 +44,24 @@ describe("renameBranchCommand", () => {
     ).toBe(false);
   });
 
+  it("rejects a whitespace-only name", () => {
+    expect(
+      renameBranchCommand.safeParse({
+        ...validRenameCommand,
+        payload: { ...validRenameCommand.payload, name: "   " },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("trims a padded name rather than persisting the padding", () => {
+    expect(
+      renameBranchCommand.parse({
+        ...validRenameCommand,
+        payload: { ...validRenameCommand.payload, name: "  Douala  " },
+      }).payload.name,
+    ).toBe("Douala");
+  });
+
   it("rejects a name over 120 characters", () => {
     expect(
       renameBranchCommand.safeParse({
