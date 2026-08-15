@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { useMeContext } from "../auth/me.js";
+import { useBranchScope } from "./branch-scope.js";
 import { BranchSwitcher } from "./BranchSwitcher.js";
 import { breadcrumbTrail } from "./breadcrumbs.js";
 import { visibleSections } from "./sections.js";
@@ -22,9 +24,19 @@ export function SiteHeader() {
   const me = useMeContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const crumbs = breadcrumbTrail(visibleSections(me?.enabledModules), pathname);
+  const { scoped } = useBranchScope();
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4">
+    // One accent for "a branch is in force", the same whichever branch it is:
+    // per-branch colours stop scaling past a handful and would be a colour-only
+    // signal. The branch's name in the pill is what identifies it.
+    <header
+      data-branch-scoped={scoped ? "true" : undefined}
+      className={cn(
+        "sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4",
+        scoped && "border-b-2 border-b-primary bg-primary/5",
+      )}
+    >
       <SidebarTrigger
         aria-label={t("shell.toggleSidebar")}
         className="-ms-1 size-11 md:size-7"

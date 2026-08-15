@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PersonListItem } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
-import { useAmbientBranchId } from "../shell/branch-context.js";
+import { useBranchScopedParams } from "../shell/branch-scope.js";
 
 export interface PersonListResponse {
   items: PersonListItem[];
@@ -38,16 +38,13 @@ export interface UsePersonsParams {
  * The branch's people, one unpaginated list. A pilot branch has tens of
  * drivers, so the picker filters what it already holds rather than round-
  * tripping every keystroke over an intermittent link.
+ *
+ * Branch-scoped: the shell's current agency narrows it unless the caller named
+ * a branch itself (a crew picker follows the sheet's branch, not the shell's).
  */
 export function usePersons(params: UsePersonsParams = {}) {
   const session = useActiveSession();
-  // The shell's current agency narrows the list unless the caller named a
-  // branch itself (a crew picker follows the sheet's branch, not the shell's).
-  const branchId = useAmbientBranchId(params.branchId);
-  const query: UsePersonsParams = {
-    ...params,
-    ...(branchId === undefined ? {} : { branchId }),
-  };
+  const query = useBranchScopedParams(params);
 
   return useQuery<PersonListResponse>({
     queryKey: ["ws", session?.workspaceSlug, "persons", query],

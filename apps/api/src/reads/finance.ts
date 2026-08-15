@@ -20,7 +20,10 @@ import {
   postingPeriods,
 } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
-import { pendingApprovalConditions } from "./approvals-queue.js";
+import {
+  countPendingOutsideBranch,
+  pendingApprovalConditions,
+} from "./approvals-queue.js";
 import {
   afterKeyset,
   bindBigint,
@@ -136,8 +139,11 @@ function approvalSortValue(
  * paramless call is byte-for-byte what it was before pagination landed. */
 const APPROVALS_PAGE_SIZE = 100;
 
+// `branchId` is the client's own narrowing of a queue that otherwise spans the
+// caller's whole scope — a decision queue defaults to every branch, because
+// pending work hidden by an ambient filter is work nobody decides.
 const approvalsQuerySchema = listQuery(
-  {},
+  { branchId: z.uuid().optional() },
   {
     sortFields: approvalSortFields,
     defaultLimit: APPROVALS_PAGE_SIZE,
@@ -520,7 +526,7 @@ export function registerFinanceReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { cursor, limit } = parsedQuery.data;
+        const { branchId, cursor, limit } = parsedQuery.data;
         const sort = parsedQuery.data.sort ?? defaultApprovalSort;
         const sortColumn = approvalSortColumns[sort.field];
 
@@ -533,15 +539,25 @@ export function registerFinanceReadRoutes(
           }
 
           // Shared with the dashboard's pendingApprovals count — one definition
-          // of the queue, so the two can never disagree on screen.
-          const conditions = pendingApprovalConditions(auth);
+          // of the queue, so the two can never disagree on screen. The same
+          // `branchId` the dashboard card carries narrows it here too.
+          const conditions = pendingApprovalConditions(auth, branchId);
 
-          // Counts the queue, not the page: the cursor never reaches this.
+          // Counts the queue, not the page: the cursor never reaches this. Under
+          // a branch filter it counts that branch, so `total` always describes
+          // exactly the rows the caller asked for.
           const [countResult] = await tx
             .select({ count: sql<number>`count(*)::integer` })
             .from(financialEntries)
             .where(and(...conditions));
           const total = countResult?.count ?? 0;
+
+          // What the filter is hiding — zero when there is no filter.
+          const outsideBranchCount = await countPendingOutsideBranch(
+            tx,
+            auth,
+            branchId,
+          );
 
           const pageConditions = decodedCursor
             ? [
@@ -602,14 +618,18 @@ export function registerFinanceReadRoutes(
             // One extra row is the has-next probe, never returned.
             .limit(limit + 1);
 
-          return { rows, total };
+          return { rows, total, outsideBranchCount };
         });
 
         if (result && "error" in result) {
           return reply.status(400).send({ error: { code: result.error } });
         }
 
-        const { rows, total } = result || { rows: [], total: 0 };
+        const { rows, total, outsideBranchCount } = result || {
+          rows: [],
+          total: 0,
+          outsideBranchCount: 0,
+        };
         const hasNextPage = rows.length > limit;
         const pageRows = rows.slice(0, limit);
 
@@ -648,7 +668,12 @@ export function registerFinanceReadRoutes(
           );
         }
 
-        return pendingApprovalsResponse.parse({ entries, nextCursor, total });
+        return pendingApprovalsResponse.parse({
+          entries,
+          nextCursor,
+          total,
+          outsideBranchCount,
+        });
       } catch (error) {
         req.log.error({ err: error }, "finance approvals read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });

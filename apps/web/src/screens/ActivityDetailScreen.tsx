@@ -18,6 +18,7 @@ import { ProvenanceStamp } from "@/components/provenance-stamp.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
+import { OtherBranchNotice } from "@/shell/BranchScope.js";
 
 export function ActivityDetailScreen() {
   const { t, i18n } = useTranslation();
@@ -84,6 +85,9 @@ export function ActivityDetailScreen() {
         <StatusBadge tone={activity.status === "OPEN" ? "info" : "neutral"}>
           {t(`activities.status.${activity.status}`)}
         </StatusBadge>
+        {/* The record stays open: identity is workspace-scoped, so the ambient
+            branch is a list lens and never an access boundary. */}
+        <OtherBranchNotice branchId={activity.branchId} />
         <span className="text-muted-foreground text-sm">
           {localizedLabel(activity.activityType, locale)}
         </span>

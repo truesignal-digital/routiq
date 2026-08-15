@@ -17,6 +17,7 @@ import { i18n } from "../i18n/index.js";
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
   useParams: () => ({ assetId: "00000000-0000-4000-8000-000000000099" }),
+  useSearch: () => ({}),
   Link: ({ children }: { children?: ReactNode }) => children,
 }));
 

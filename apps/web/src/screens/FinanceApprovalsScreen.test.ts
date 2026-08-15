@@ -22,13 +22,15 @@ vi.mock("@/components/ui/toast.js", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
+  useSearch: () => ({}),
 }));
 
 vi.mock("../commands/intent.js", () => ({
   createCommandIntent: mocks.createCommandIntent,
 }));
 
-vi.mock("../finance/useApprovals.js", () => ({
+vi.mock("../finance/useApprovals.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../finance/useApprovals.js")>()),
   useApprovals: mocks.useApprovals,
 }));
 

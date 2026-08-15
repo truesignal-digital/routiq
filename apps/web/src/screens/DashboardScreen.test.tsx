@@ -62,7 +62,7 @@ const dashboard: DashboardResponse = {
     postedRevenueMinor: 1200000,
     currency: "XAF",
   },
-  pendingApprovals: { count: 3 },
+  pendingApprovals: { count: 3, outsideBranchCount: 0 },
   series: [
     { date: "2026-07-20", expenseMinor: 0, revenueMinor: 0 },
     { date: "2026-07-21", expenseMinor: 15000, revenueMinor: 42000 },
@@ -274,8 +274,45 @@ describe("DashboardScreen — KPI cards", () => {
     expect(screen.getAllByText("No open period yet").length).toBe(2);
   });
 
+  it("names the pending work the branch narrowing left out of the count", async () => {
+    installFetch({
+      dashboard: {
+        ...dashboard,
+        pendingApprovals: { count: 3, outsideBranchCount: 2 },
+      },
+    });
+    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+
+    await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
+    const overflow = screen.getByRole("link", {
+      name: "+2 pending in other branches",
+    });
+    // Landing on the queue as preset would re-apply the very narrowing this
+    // line is counting around, so it carries the widening with it.
+    expect(overflow.getAttribute("href")).toBe("/finance/approvals?branch=all");
+    // The card itself still lands preset.
+    expect(
+      screen
+        .getByRole("link", { name: "Pending approvals" })
+        .getAttribute("href"),
+    ).toBe("/finance/approvals");
+  });
+
+  it("says nothing about other branches when the count is the whole queue", async () => {
+    installFetch();
+    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+
+    await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
+    expect(document.querySelector("[data-slot='kpi-secondary']")).toBeNull();
+  });
+
   it("phrases an empty approvals queue rather than pluralizing zero", async () => {
-    installFetch({ dashboard: { ...dashboard, pendingApprovals: { count: 0 } } });
+    installFetch({
+      dashboard: {
+        ...dashboard,
+        pendingApprovals: { count: 0, outsideBranchCount: 0 },
+      },
+    });
     await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("0"));

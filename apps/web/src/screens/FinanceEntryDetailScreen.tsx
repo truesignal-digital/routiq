@@ -32,6 +32,7 @@ import { z } from "zod";
 import { ReversalLink } from "@/finance/ReversalLink.js";
 import { reverseEntryPayload } from "@routiq/contracts";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { OtherBranchNotice } from "@/shell/BranchScope.js";
 
 interface ReverseDialogState {
   open: boolean;
@@ -135,6 +136,9 @@ export function FinanceEntryDetailScreen() {
         />
       ) : entryQuery.data ? (
         <div className="mt-6 space-y-6">
+          {/* The record stays open: identity is workspace-scoped, so the ambient
+              branch is a list lens and never an access boundary. */}
+          <OtherBranchNotice branchId={entryQuery.data.branchId} />
           <Card>
             <CardContent>
               <EntrySummary entryId={entryId} />

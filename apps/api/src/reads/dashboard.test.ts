@@ -58,7 +58,7 @@ describe("GET /v1/dashboard", () => {
         },
       });
       expect(body.openPeriod).toBeNull();
-      expect(body.pendingApprovals).toEqual({ count: 0 });
+      expect(body.pendingApprovals).toEqual({ count: 0, outsideBranchCount: 0 });
       // A workspace with nothing posted still gets a full window of explicit
       // zeros — an empty array would leave the chart with nothing to draw.
       expect(body.series).toHaveLength(DASHBOARD_SERIES_DAYS_DEFAULT);
@@ -307,6 +307,29 @@ describe("GET /v1/dashboard", () => {
       expect(body.pendingApprovals.count).toBe(0);
     });
 
+    it("reports the pending work the branch narrowing is hiding", async () => {
+      const body = await fetchDashboard(adminToken, undefined, dlaBranchId);
+
+      // YDE's submission never reaches the card's count; the overflow is the
+      // only thing that says it exists.
+      expect(body.pendingApprovals.count).toBe(1);
+      expect(body.pendingApprovals.outsideBranchCount).toBe(1);
+    });
+
+    it("reports no overflow without a branch narrowing", async () => {
+      const body = await fetchDashboard(adminToken);
+
+      expect(body.pendingApprovals.outsideBranchCount).toBe(0);
+    });
+
+    it("counts the overflow inside the caller's branch scope only", async () => {
+      const body = await fetchDashboard(scopedToken, undefined, dlaBranchId);
+
+      // Scoped to DLA: YDE's submission is not work this member can widen to.
+      expect(body.pendingApprovals.count).toBe(1);
+      expect(body.pendingApprovals.outsideBranchCount).toBe(0);
+    });
+
     it("rejects a branchId that is not a uuid with VALIDATION_FAILED", async () => {
       const response = await ctx.app.inject({
         method: "GET",
@@ -325,6 +348,18 @@ describe("GET /v1/dashboard", () => {
         ]);
         expect(dashboard.pendingApprovals.count).toBe(queue.total);
         expect(dashboard.pendingApprovals.count).toBe(queue.entries.length);
+      }
+    });
+
+    it("agrees with the queue on the overflow a branch narrowing hides", async () => {
+      for (const token of [adminToken, scopedToken, submitterToken]) {
+        const [dashboard, queue] = await Promise.all([
+          fetchDashboard(token, undefined, dlaBranchId),
+          fetchApprovals(token, dlaBranchId),
+        ]);
+        expect(dashboard.pendingApprovals.outsideBranchCount).toBe(
+          queue.outsideBranchCount,
+        );
       }
     });
 
@@ -579,10 +614,11 @@ describe("GET /v1/dashboard", () => {
     return dashboardResponse.parse(response.json());
   }
 
-  async function fetchApprovals(token: string) {
+  async function fetchApprovals(token: string, branchId?: string) {
+    const search = branchId === undefined ? "" : `?branchId=${branchId}`;
     const response = await ctx.app.inject({
       method: "GET",
-      url: "/v1/finance/approvals",
+      url: `/v1/finance/approvals${search}`,
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.statusCode).toBe(200);

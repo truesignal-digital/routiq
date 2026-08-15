@@ -41,27 +41,65 @@ function warningLines(
     .join("\n");
 }
 
+export interface NotifySuccessOptions {
+  /**
+   * What only the caller knows, under the warnings — a composite command's
+   * count of embedded records left waiting for an approver, say.
+   */
+  extraLines?: readonly string[];
+  /**
+   * Replaces the domain's success title. For where a record landed rather than
+   * what happened to it: the outcome is the same, the surprise is not.
+   */
+  title?: string;
+  /** One follow-up the toast offers, already localized. */
+  action?: { label: string; onClick: () => void };
+}
+
+function addSuccessToast(
+  title: string,
+  lines: readonly (string | undefined)[],
+  action: NotifySuccessOptions["action"],
+): void {
+  const description = lines
+    .filter((line): line is string => line !== undefined && line !== "")
+    .join("\n");
+  toast.add({
+    type: "success",
+    title,
+    ...(description === "" ? {} : { description }),
+    ...(action === undefined
+      ? {}
+      : { actionProps: { children: action.label, onClick: action.onClick } }),
+  });
+}
+
 /**
  * The single success surface for a committed command. Warnings ride in the same
  * toast rather than stacking their own, so one action produces one notification.
- * `extraLines` carries what only the caller knows — a composite command's count
- * of embedded records left waiting for an approver, say — under the warnings.
  */
 export function notifyCommandSuccess(
   namespace: NotifyNamespace,
   messageKey: string,
   warnings: readonly string[] = [],
-  extraLines: readonly string[] = [],
+  options: NotifySuccessOptions = {},
 ): void {
-  const lines = [warningLines(namespace, warnings), ...extraLines].filter(
-    (line): line is string => line !== undefined && line !== "",
+  addSuccessToast(
+    options.title ?? localizedNotifyMessage(namespace, "success", messageKey),
+    [warningLines(namespace, warnings), ...(options.extraLines ?? [])],
+    options.action,
   );
-  const description = lines.length === 0 ? undefined : lines.join("\n");
-  toast.add({
-    type: "success",
-    title: localizedNotifyMessage(namespace, "success", messageKey),
-    ...(description === undefined ? {} : { description }),
-  });
+}
+
+/**
+ * A success the caller has already phrased — where a record landed, say, which
+ * no namespace owns a code for. Same toast, no message catalogue lookup: there
+ * is no key to miss, so nothing can fall back to a generic line.
+ */
+export function notifySuccess(
+  options: NotifySuccessOptions & { title: string },
+): void {
+  addSuccessToast(options.title, options.extraLines ?? [], options.action);
 }
 
 export function notifyCommandError(

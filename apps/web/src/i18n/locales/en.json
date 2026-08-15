@@ -16,7 +16,8 @@
     "cards": {
       "pendingApprovals": {
         "title": "Pending approvals",
-        "description": "{count, plural, =0 {Nothing awaiting your decision} one {# entry awaiting your decision} other {# entries awaiting your decision}}"
+        "description": "{count, plural, =0 {Nothing awaiting your decision} one {# entry awaiting your decision} other {# entries awaiting your decision}}",
+        "outsideBranch": "{count, plural, one {+# pending in another branch} other {+# pending in other branches}}"
       },
       "assets": {
         "title": "Assets in service",
@@ -59,7 +60,21 @@
     "toggleSidebar": "Show or hide the menu",
     "branch": {
       "label": "Current branch",
-      "all": "All my branches"
+      "all": "All my branches",
+      "loading": "Branches…",
+      "loadFailed": "Branches unavailable",
+      "switched": "You are viewing: {branch}",
+      "scopeLine": "Filtered: {branch} — {count, plural, one {# result} other {# results}}",
+      "scopeLineAtLeast": "Filtered: {branch} — at least {count, plural, one {# result} other {# results}}",
+      "scopeLineLoading": "Filtered: {branch}",
+      "emptyTitle": "Nothing to show for {branch}",
+      "emptyHint": "This branch holds no records here. Other branches may.",
+      "showAll": "Show all my branches",
+      "otherBranch": "Other branch: {branch}",
+      "otherBranchUnnamed": "Other branch",
+      "createdInBranch": "Saved in {branch}",
+      "createdInOtherBranch": "Saved in another branch",
+      "view": "View"
     }
   },
   "login": {
@@ -152,8 +167,7 @@
       "IN_SERVICE": "In service",
       "ATTENTION": "Needs attention",
       "status": "Status",
-      "category": "Class",
-      "branch": "Branch"
+      "category": "Class"
     },
     "metrics": {
       "total": "Total",
@@ -175,6 +189,7 @@
     "loading": "Loading assets…",
     "noResultsTitle": "No assets found",
     "noResultsHint": "Try another search or clear the filters.",
+    "branchEmptyHint": "No vehicle is attached to this branch.",
     "resetFilters": "Clear filters",
     "loadMore": "Load more",
     "errorTitle": "We couldn't load the fleet",
@@ -415,7 +430,8 @@
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "retry": "Try again",
-      "empty": "No entries for this branch.",
+      "empty": "No entries recorded yet.",
+      "branchEmpty": "No entry recorded for this branch.",
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
@@ -478,8 +494,15 @@
       "retry": "Try again",
       "empty": "No entries awaiting approval.",
       "columns": {
-        "actions": "Actions"
+        "actions": "Actions",
+        "branch": "Branch"
       },
+      "filters": {
+        "branch": "Branch",
+        "allBranches": "All my branches"
+      },
+      "branchEmpty": "Nothing awaiting approval for {branch}.",
+      "outsideBranch": "{count, plural, one {+# pending in another branch} other {+# pending in other branches}}",
       "makerGuard": "Your submission — another approver must decide",
       "approve": "Approve",
       "reject": "Reject",
@@ -575,6 +598,7 @@
     "loadFailed": "We couldn't load activities. Please retry.",
     "retry": "Try again",
     "emptyHint": "No activities yet. Recorded trip sheets will appear here.",
+    "branchEmptyHint": "No activity for this branch.",
     "loadMore": "Load more",
     "status": {
       "OPEN": "Open",
@@ -602,7 +626,6 @@
       "status": "Status",
       "completeness": "Completeness",
       "activityType": "Activity type",
-      "branch": "Branch",
       "asset": "Asset",
       "from": "From",
       "to": "To"
@@ -971,6 +994,7 @@
     "loadFailed": "We couldn't load your people. Please retry.",
     "retry": "Try again",
     "emptyHint": "No one registered yet. Add your drivers and conductors so you can assign them to sheets.",
+    "branchEmptyHint": "No one is attached to this branch.",
     "active": "Active",
     "inactive": "Inactive",
     "columns": {

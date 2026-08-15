@@ -21,7 +21,7 @@ const RESPONSE: DashboardResponse = {
     postedRevenueMinor: 1200000,
     currency: "XAF",
   },
-  pendingApprovals: { count: 3 },
+  pendingApprovals: { count: 3, outsideBranchCount: 0 },
   series: [
     { date: "2026-07-25", expenseMinor: 0, revenueMinor: 0 },
     { date: "2026-07-26", expenseMinor: 15000, revenueMinor: 42000 },

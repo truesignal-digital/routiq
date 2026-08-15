@@ -42,6 +42,8 @@ const branches: { current: Array<{ id: string; code: string; name: string }> } =
 vi.mock("../assets/reference.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: branches.current },
+    isError: false,
+    refetch: vi.fn(),
   }),
 }));
 
@@ -239,9 +241,44 @@ describe("AppShell (sidebar frame)", () => {
     expect(switcher.textContent).toContain("All my branches");
   });
 
-  it("renders no switcher for a member scoped to a single branch", async () => {
+  it("names the sole branch of a single-branch member without offering a choice", async () => {
     await renderShell("/assets");
+
     expect(screen.queryByRole("combobox", { name: "Current branch" })).toBeNull();
+    // Still on screen: the scope is in force either way, and the shell is where
+    // that is said.
+    expect(screen.getByLabelText("Current branch").textContent).toBe("Douala");
+  });
+
+  it("marks the shell while a single branch is in force, and drops it on all", async () => {
+    branches.current = [
+      { id: "branch-dla", code: "DLA", name: "Douala" },
+      { id: "branch-yde", code: "YDE", name: "Yaoundé" },
+    ];
+    await renderShell("/assets");
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+
+    expect(header?.getAttribute("data-branch-scoped")).toBeNull();
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Current branch" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Douala" }));
+
+    // One accent for "scoped", whichever branch it is — never a per-branch colour.
+    expect(header?.getAttribute("data-branch-scoped")).toBe("true");
+  });
+
+  it("announces a branch switch to screen readers", async () => {
+    branches.current = [
+      { id: "branch-dla", code: "DLA", name: "Douala" },
+      { id: "branch-yde", code: "YDE", name: "Yaoundé" },
+    ];
+    await renderShell("/assets");
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Current branch" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Yaoundé" }));
+
+    const live = document.querySelector("[aria-live='polite']");
+    expect(live?.textContent).toBe("You are viewing: Yaoundé");
   });
 
   it("logs out from the sidebar footer", async () => {

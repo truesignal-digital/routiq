@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { ActivityDetail, ActivityListResponse } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useBranchScopedParams } from "../shell/branch-scope.js";
 
 export async function fetchActivities(
   token: string,
@@ -50,8 +51,10 @@ export interface UseActivitiesParams {
   sort?: string;
 }
 
-export function useActivities(params: UseActivitiesParams = {}) {
+/** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
+export function useActivities(callerParams: UseActivitiesParams = {}) {
   const session = useActiveSession();
+  const params = useBranchScopedParams(callerParams);
 
   return useInfiniteQuery<ActivityListResponse>({
     queryKey: ["ws", session?.workspaceSlug, "activities", params],

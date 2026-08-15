@@ -14,7 +14,10 @@ import {
   workspaces,
 } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
-import { pendingApprovalConditions } from "./approvals-queue.js";
+import {
+  countPendingOutsideBranch,
+  pendingApprovalConditions,
+} from "./approvals-queue.js";
 import { currentBusinessDate, dayWindow } from "./business-date.js";
 import { serializeMinor } from "./serialize-minor.js";
 
@@ -92,6 +95,15 @@ export function registerDashboardReadRoutes(
             .from(financialEntries)
             .where(and(...pendingApprovalConditions(auth, branchId)));
 
+          // The same overflow the approvals queue reports, from the same
+          // helper: the card and the queue cannot disagree about the work the
+          // branch narrowing leaves off screen.
+          const approvalsOutsideBranch = await countPendingOutsideBranch(
+            tx,
+            auth,
+            branchId,
+          );
+
           const [workspace] = await tx
             .select({
               defaultCurrency: workspaces.defaultCurrency,
@@ -159,6 +171,7 @@ export function registerDashboardReadRoutes(
             return {
               assetRows,
               approvalsCount,
+              approvalsOutsideBranch,
               openPeriod: null,
               window: windowDates,
               seriesRows,
@@ -194,6 +207,7 @@ export function registerDashboardReadRoutes(
           return {
             assetRows,
             approvalsCount,
+            approvalsOutsideBranch,
             openPeriod: {
               periodCode: openPeriod.periodCode,
               currency,
@@ -242,7 +256,10 @@ export function registerDashboardReadRoutes(
                   ),
                   currency: result.openPeriod.currency,
                 },
-          pendingApprovals: { count: result.approvalsCount?.count ?? 0 },
+          pendingApprovals: {
+            count: result.approvalsCount?.count ?? 0,
+            outsideBranchCount: result.approvalsOutsideBranch,
+          },
           series,
         });
       } catch (error) {

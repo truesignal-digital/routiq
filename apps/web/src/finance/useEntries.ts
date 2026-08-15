@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { sessionStore, useActiveSession } from "../auth/store.js";
-import { useAmbientBranchId } from "../shell/branch-context.js";
+import { useBranchScopedParams } from "../shell/branch-scope.js";
 import type { FinancialEntryListResponse } from "@routiq/contracts";
 
 export async function fetchFinanceEntries(
@@ -41,15 +41,10 @@ export interface UseEntriesParams {
   sort?: string;
 }
 
+/** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
 export function useEntries(params: UseEntriesParams = {}) {
   const session = useActiveSession();
-  // The shell's current agency is the default narrowing; a caller that names a
-  // branch itself keeps it.
-  const branchId = useAmbientBranchId(params.branchId);
-  const query: UseEntriesParams = {
-    ...params,
-    ...(branchId === undefined ? {} : { branchId }),
-  };
+  const query = useBranchScopedParams(params);
 
   return useInfiniteQuery<FinancialEntryListResponse>({
     queryKey: ["ws", session?.workspaceSlug, "finance", "entries", query],

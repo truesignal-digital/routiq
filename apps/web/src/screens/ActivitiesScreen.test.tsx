@@ -193,20 +193,16 @@ describe("ActivitiesScreen", () => {
     });
   });
 
-  it("sends branch filter to the server query", async () => {
+  it("owns no branch filter: the shell's switcher is the only branch state", async () => {
     render(<ActivitiesScreen />);
     await screen.findByText("DLA-2026-00042");
 
-    await userEvent.click(
-      screen.getByRole("combobox", { name: "activities.filters.branch" }),
-    );
-    await userEvent.click(await screen.findByRole("option", { name: "Douala" }));
-
-    await waitFor(() => {
-      expect(issuedQueries.at(-1)?.branchId).toBe(
-        "22222222-2222-4222-8222-222222222222",
-      );
-    });
+    // `useActivities` is a branch-scoped read, so the ambient agency reaches it
+    // through the shared query layer; a toolbar copy could only contradict it.
+    expect(
+      screen.queryByRole("combobox", { name: "activities.filters.branch" }),
+    ).toBeNull();
+    expect(issuedQueries.at(-1)?.branchId).toBeUndefined();
   });
 
   it("sends asset filter to the server query", async () => {

@@ -171,7 +171,7 @@ describe("assets explorer server-side filtering", () => {
     );
   });
 
-  it("narrows by class and by branch on the server", async () => {
+  it("narrows by class on the server", async () => {
     const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
     ]);
@@ -182,11 +182,9 @@ describe("assets explorer server-side filtering", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Autobus" }));
     await waitFor(() => expect(lastQuery(requested).get("category")).toBe("BUS"));
 
-    await userEvent.click(screen.getByRole("combobox", { name: "Agence" }));
-    await userEvent.click(await screen.findByRole("option", { name: "Yaoundé" }));
-    await waitFor(() =>
-      expect(lastQuery(requested).get("branchId")).toBe("branch-yde"),
-    );
+    // Branch is not one of them: it comes from the shell's switcher, through
+    // the branch-scoped read (see AssetsStub.branch.test.tsx).
+    expect(screen.queryByRole("combobox", { name: "Agence" })).toBeNull();
   });
 
   it("sorts through the server, since the cursor is keyed on the order", async () => {

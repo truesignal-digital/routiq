@@ -15,6 +15,8 @@ import { createElement, type ReactNode } from "react";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
+import { BranchProvider, branchStorageKey } from "../shell/branch-context.js";
+import { BranchSwitcher } from "../shell/BranchSwitcher.js";
 import { AssetRegisterScreen } from "./AssetRegisterScreen.js";
 
 const ASSET_ID = "00000000-0000-4000-8000-000000000010";
@@ -221,5 +223,75 @@ describe("asset register form", () => {
     expect(mocks.submit).toHaveBeenCalledOnce();
     expect(submittedPayload().capacityValue).toBe(12.5);
     expect(submittedPayload().capacityUnit).toBe("TONNE");
+  });
+});
+
+describe("branch field under the shell's agency", () => {
+  const DLA = { id: "branch-dla", code: "DLA", name: "Douala" };
+  const YDE = { id: "branch-yde", code: "YDE", name: "Yaoundé" };
+
+  function renderUnderShell() {
+    mocks.useAssetRegistrationReference.mockReturnValue({
+      data: {
+        assetClasses: [{ code: "TRUCK", labelFr: "Camion", labelEn: "Truck" }],
+        branches: [DLA, YDE],
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(
+      createElement(BranchProvider, {
+        children: [
+          createElement(BranchSwitcher, { key: "switcher" }),
+          createElement(AssetRegisterScreen, { key: "screen" }),
+        ],
+      }) as ReactNode,
+    );
+  }
+
+  async function moveShellTo(user: ReturnType<typeof userEvent.setup>, name: string) {
+    await user.click(screen.getByRole("combobox", { name: "Current branch" }));
+    await user.click(await screen.findByRole("option", { name }));
+  }
+
+  afterEach(() => {
+    localStorage.removeItem(branchStorageKey(sessionIdentity.workspaceSlug));
+  });
+
+  it("follows the shell's agency rather than latching the first fill", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(branchStorageKey(sessionIdentity.workspaceSlug), DLA.id);
+    renderUnderShell();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("Douala"),
+    );
+
+    await moveShellTo(user, "Yaoundé");
+
+    // The bug this guards: a field filled once kept registering into Douala
+    // long after the shell had moved on.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("Yaoundé"),
+    );
+  });
+
+  it("keeps an explicit choice against the shell's preset", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(branchStorageKey(sessionIdentity.workspaceSlug), DLA.id);
+    renderUnderShell();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("Douala"),
+    );
+
+    await user.click(screen.getByLabelText("Branch"));
+    await user.click(await screen.findByRole("option", { name: /Yaoundé/ }));
+
+    // The preset is a default, not a lock — the operator's own pick stands.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Branch").textContent).toContain("Yaoundé"),
+    );
   });
 });

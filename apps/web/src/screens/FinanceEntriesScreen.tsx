@@ -28,6 +28,8 @@ import {
 } from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
 import { formatDate } from "@/lib/format.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { useBranchScope } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
 
@@ -59,6 +61,7 @@ export function FinanceEntriesScreen() {
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
   const sort = toSortParam(sorting);
+  const { scoped } = useBranchScope();
 
   // `sort` rides in the query key, so reordering starts a fresh cursor rather
   // than stitching pages from two different orders together.
@@ -164,6 +167,12 @@ export function FinanceEntriesScreen() {
         )}
       </FinanceToolbar>
 
+      <BranchScopeLine
+        className="mt-3"
+        count={entriesQuery.isPending ? undefined : allEntries.length}
+        hasMore={entriesQuery.hasNextPage}
+      />
+
       {entriesQuery.isError ? (
         <ErrorState
           className="mt-6"
@@ -245,6 +254,11 @@ export function FinanceEntriesScreen() {
             emptyState={
               entriesQuery.isPending ? (
                 <LoadingState label={t("finance.entries.loading")} />
+              ) : scoped ? (
+                <BranchScopedEmptyState
+                  icon={<FileText className="size-7" aria-hidden />}
+                  message={t("finance.entries.branchEmpty")}
+                />
               ) : (
                 <EmptyState
                   icon={<FileText className="size-7" aria-hidden />}

@@ -25,6 +25,13 @@ export const dashboardOpenPeriod = z.object({
 
 export const dashboardPendingApprovals = z.object({
   count: z.number().int().nonnegative(),
+  /**
+   * Pending work the `branchId` narrowing leaves out, inside the caller's own
+   * scope — zero without a narrowing. The card reports it because work hidden
+   * by an ambient lens is work nobody decides. Defaulted so a payload from
+   * before it existed still parses as "nothing hidden".
+   */
+  outsideBranchCount: z.number().int().nonnegative().default(0),
 });
 
 /** A week is the tightest chart worth drawing; a year the widest we zero-fill per day. */

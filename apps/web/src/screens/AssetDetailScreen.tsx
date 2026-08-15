@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
+import { OtherBranchNotice } from "@/shell/BranchScope.js";
 
 export function AssetDetailScreen() {
   const { t, i18n } = useTranslation();
@@ -84,6 +85,9 @@ export function AssetDetailScreen() {
           {asset.branch.name}
           <span className="font-mono">{asset.branch.code}</span>
         </span>
+        {/* The record stays open: identity is workspace-scoped, so the ambient
+            branch is a list lens and never an access boundary. */}
+        <OtherBranchNotice branchCode={asset.branch.code} />
       </div>
 
       <Card className="mt-6">

@@ -35,6 +35,7 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
+import { useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
 import { MoneyInput } from "@/components/money-input.js";
 
 import {
@@ -65,6 +66,7 @@ export function FinanceRecordScreen() {
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
   const reference = useAssetRegistrationReference();
+  const createdElsewhereNotice = useCreatedElsewhereNotice();
 
   if (me !== undefined && !canRecord) {
     return (
@@ -87,8 +89,16 @@ export function FinanceRecordScreen() {
           branches={reference.data?.branches ?? []}
           branchesLoading={reference.isPending}
           branchesFailed={reference.isError}
-          onRecorded={(outcome) => {
-            notifyCommandSuccess("finance", successKey(outcome), outcome.warnings);
+          onRecorded={(outcome, branchCode) => {
+            // The entries list this navigates to is narrowed by the shell, so a
+            // transaction recorded into another agency would land off screen
+            // with nothing said about it.
+            notifyCommandSuccess(
+              "finance",
+              successKey(outcome),
+              outcome.warnings,
+              createdElsewhereNotice({ branchCode }) ?? {},
+            );
             void navigate({ to: "/finance/entries" });
           }}
         />
@@ -123,7 +133,8 @@ function RecordForm({
   branches: Array<{ code: string; name: string }>;
   branchesLoading: boolean;
   branchesFailed: boolean;
-  onRecorded: (outcome: CommandResult) => void;
+  /** The branch is the form's own field, and the caller has to know which. */
+  onRecorded: (outcome: CommandResult, branchCode: string) => void;
 }) {
   const { t } = useTranslation();
   const currentBranchCode = useCurrentBranchCode();
@@ -190,8 +201,17 @@ function RecordForm({
   // editable: the server authorizes the branch either way.
   const preselectedBranchCode =
     currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
+  // Followed, not latched. Filling a blank field is the preselect; re-filling
+  // it when the shell's agency *moves* is the part that matters — an operator
+  // who sets this once and keeps recording would otherwise go on booking into
+  // the agency the shell has since left. Between moves the effect only repairs
+  // a blank, so an explicit pick here stands.
+  const lastPreselectedBranchCode = useRef<string>(undefined);
   useEffect(() => {
-    if (preselectedBranchCode !== undefined && branchCode === "") {
+    if (preselectedBranchCode === undefined) return;
+    const shellMoved = preselectedBranchCode !== lastPreselectedBranchCode.current;
+    lastPreselectedBranchCode.current = preselectedBranchCode;
+    if (shellMoved || branchCode === "") {
       form.setValue("branchCode", preselectedBranchCode, { shouldValidate: true });
     }
   }, [preselectedBranchCode, branchCode, form]);
@@ -241,7 +261,7 @@ function RecordForm({
       return;
     }
 
-    onRecorded(result.outcome);
+    onRecorded(result.outcome, values.branchCode);
   }
 
   return (

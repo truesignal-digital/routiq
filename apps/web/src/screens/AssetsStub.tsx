@@ -38,7 +38,8 @@ import { useAssets } from "@/assets/useAssets.js";
 import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
-import { useAmbientBranchId } from "@/shell/branch-context.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { useBranchScope } from "@/shell/branch-scope.js";
 
 /** Module-level so the column memo holds across renders. */
 const LIST_COLUMNS: readonly AssetColumnId[] = [
@@ -79,9 +80,6 @@ export function AssetsStub() {
 
   const search = filterValues["search"] ?? "";
   const category = filterValues["category"] ?? "";
-  // The shell's current agency is the default; picking one in the toolbar
-  // overrides it for this table.
-  const branchId = useAmbientBranchId(filterValues["branchId"]) ?? "";
   const statusChoice = filterValues["status"] ?? "";
   const statuses = assetFilterStatuses(
     isAssetFilter(statusChoice) ? statusChoice : "ALL",
@@ -89,14 +87,14 @@ export function AssetsStub() {
 
   // Everything but the lifecycle bucket: the tiles count inside the same
   // narrowing the table shows, and a status filter would make each bucket
-  // count itself.
+  // count itself. The branch is not in here — `useAssets` and `useAssetSummary`
+  // are branch-scoped reads, so the shell's agency reaches both by itself.
   const scope = useMemo(
     () => ({
       ...(search === "" ? {} : { search }),
       ...(category === "" ? {} : { category }),
-      ...(branchId === "" ? {} : { branchId }),
     }),
-    [search, category, branchId],
+    [search, category],
   );
 
   const assetsQuery = useAssets({
@@ -107,9 +105,10 @@ export function AssetsStub() {
   const summaryQuery = useAssetSummary(scope);
 
   const assets = assetsQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  // User-set filters only: "clear filters" cannot undo the shell's current
-  // agency, so a branch with no assets is an empty state, not a failed search.
+  // Toolbar filters only. The shell's agency is the other way a list can come
+  // back empty, and it has its own empty state: "clear filters" cannot reach it.
   const narrowed = Object.values(filterValues).some((value) => value !== "");
+  const { scoped } = useBranchScope();
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -127,6 +126,8 @@ export function AssetsStub() {
           label: t(`assets.filters.${value}`),
         })),
       },
+      // No branch filter: the header switcher is the one place branch scope is
+      // set, so a second control here could only contradict it.
       {
         columnId: "category",
         type: "select",
@@ -134,15 +135,6 @@ export function AssetsStub() {
         options: (reference.data?.assetClasses ?? []).map((assetClass) => ({
           value: assetClass.code,
           label: localizedLabel(assetClass, i18n.language),
-        })),
-      },
-      {
-        columnId: "branchId",
-        type: "select",
-        placeholder: t("assets.filters.branch"),
-        options: (reference.data?.branches ?? []).map((branch) => ({
-          value: branch.id,
-          label: branch.name,
         })),
       },
     ],
@@ -206,8 +198,13 @@ export function AssetsStub() {
         isError={summaryQuery.isError}
       />
 
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <BranchScopeLine
+          count={assetsQuery.isPending ? undefined : assets.length}
+          hasMore={assetsQuery.hasNextPage ?? false}
+        />
         <DataTableViewOptions
+          className="ms-auto"
           columns={columns}
           value={columnVisibility}
           onChange={setColumnVisibility}
@@ -311,6 +308,14 @@ export function AssetsStub() {
                       <span>{t("assets.noResultsHint")}</span>
                     </span>
                   }
+                />
+              ) : scoped ? (
+                // A branch with no assets is not a workspace with no assets:
+                // the first-run state would claim the fleet is empty while it
+                // sits in another agency.
+                <BranchScopedEmptyState
+                  icon={<Truck className="size-7" aria-hidden />}
+                  message={t("assets.branchEmptyHint")}
                 />
               ) : (
                 <EmptyState

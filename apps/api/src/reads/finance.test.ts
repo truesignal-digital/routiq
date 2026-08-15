@@ -993,6 +993,59 @@ describe("finance reads", () => {
       );
     });
 
+    it("narrows entries and total to a client-chosen branch", async () => {
+      const body = await fetchApprovals(approverAllToken, {
+        branchId: dlaBranchId,
+      });
+
+      // The queue defaults to every branch in scope; this filter is the
+      // approver's own visible narrowing, and `total` follows it exactly so the
+      // dashboard card and the queue cannot disagree.
+      expect(body.total).toBe(2);
+      expect(body.entries.map((entry) => entry.id)).toEqual(inScopeIds);
+      expect(body.entries.every((entry) => entry.branchId === dlaBranchId)).toBe(
+        true,
+      );
+    });
+
+    it("cannot widen a scoped approver past their membership", async () => {
+      const body = await fetchApprovals(approverScopedToken, {
+        branchId: ydeBranchId,
+      });
+
+      // The client filter intersects `auth.branchScope`; it never replaces it.
+      expect(body.total).toBe(0);
+      expect(body.entries).toEqual([]);
+    });
+
+    it("reports the pending work its branch filter is hiding", async () => {
+      const body = await fetchApprovals(approverAllToken, {
+        branchId: dlaBranchId,
+      });
+
+      // The queue narrowed to DLA, so YDE's submission is off screen. Counting
+      // it is what keeps the narrowing from hiding work nobody decides.
+      expect(body.total).toBe(2);
+      expect(body.outsideBranchCount).toBe(1);
+    });
+
+    it("reports no overflow when the queue spans every branch in scope", async () => {
+      const body = await fetchApprovals(approverAllToken);
+
+      expect(body.outsideBranchCount).toBe(0);
+    });
+
+    it("counts the overflow inside the caller's scope only", async () => {
+      const body = await fetchApprovals(approverScopedToken, {
+        branchId: dlaBranchId,
+      });
+
+      // YDE is outside this approver's membership: it is not work they could
+      // widen to, so it is not work the queue offers to show them.
+      expect(body.total).toBe(2);
+      expect(body.outsideBranchCount).toBe(0);
+    });
+
     it("does not hide the caller's own submissions (maker guard is client-side)", async () => {
       const body = await fetchApprovals(submitterToken);
 

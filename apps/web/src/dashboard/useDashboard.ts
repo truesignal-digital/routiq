@@ -5,7 +5,10 @@ import {
   type DashboardResponse,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
-import { useAmbientBranchId } from "../shell/branch-context.js";
+import {
+  useBranchScopedParams,
+  type BranchScopedParams,
+} from "../shell/branch-scope.js";
 
 export async function fetchDashboard(
   token: string,
@@ -30,10 +33,13 @@ export async function fetchDashboard(
   return dashboardResponse.parse(await response.json());
 }
 
-/** `days` and the ambient branch are part of the key: each is its own window. */
+/**
+ * `days` and the ambient branch are part of the key: each is its own window.
+ * Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`).
+ */
 export function useDashboard(days: number = DASHBOARD_SERIES_DAYS_DEFAULT) {
   const session = useActiveSession();
-  const branchId = useAmbientBranchId();
+  const { branchId } = useBranchScopedParams<BranchScopedParams>({});
 
   return useQuery({
     queryKey: ["ws", session?.workspaceSlug, "dashboard", days, branchId ?? "ALL"],

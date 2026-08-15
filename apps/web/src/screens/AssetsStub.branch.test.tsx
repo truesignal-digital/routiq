@@ -39,8 +39,9 @@ const PAGE = {
   ],
   nextCursor: null,
 };
+const EMPTY_PAGE = { items: [], nextCursor: null };
 
-function stubFetch() {
+function stubFetch(page: unknown = PAGE) {
   const listed: string[] = [];
   const summarized: string[] = [];
   vi.stubGlobal(
@@ -56,7 +57,7 @@ function stubFetch() {
       }
       if (href.startsWith("/v1/assets")) {
         listed.push(href);
-        return new Response(JSON.stringify(PAGE), { status: 200 });
+        return new Response(JSON.stringify(page), { status: 200 });
       }
       return new Response("{}", { status: 200 });
     }),
@@ -116,8 +117,9 @@ describe("assets explorer under the shell's current branch", () => {
     renderScreen();
     await screen.findByText("AST-001");
 
+    // Neither call passes a branch: `useAssets` and `useAssetSummary` declare
+    // themselves branch-scoped, and the shared layer injects it.
     await waitFor(() => expect(lastQuery(listed).get("branchId")).toBe(DLA.id));
-    // The tiles count inside the same narrowing the table shows.
     await waitFor(() => expect(lastQuery(summarized).get("branchId")).toBe(DLA.id));
   });
 
@@ -130,17 +132,85 @@ describe("assets explorer under the shell's current branch", () => {
     expect(lastQuery(listed).get("branchId")).toBeNull();
   });
 
-  it("lets the table's own branch filter override the current branch", async () => {
-    localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
+  it("offers no branch filter of its own", async () => {
     const { listed } = stubFetch();
 
     renderScreen();
     await screen.findByText("AST-001");
-    await waitFor(() => expect(lastQuery(listed).get("branchId")).toBe(DLA.id));
 
-    await userEvent.click(screen.getByRole("combobox", { name: "Agence" }));
-    await userEvent.click(await screen.findByRole("option", { name: "Yaoundé" }));
+    // Two controls over one scope could only contradict each other; the header
+    // switcher is the single piece of state.
+    expect(lastQuery(listed).get("branchId")).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Agence" })).toBeNull();
+  });
 
-    await waitFor(() => expect(lastQuery(listed).get("branchId")).toBe(YDE.id));
+  it("says which agency the rows came from, and how many there are", async () => {
+    localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
+    stubFetch();
+
+    renderScreen();
+    await screen.findByText("AST-001");
+
+    expect(await screen.findByText("Filtré : Douala — 1 résultat")).toBeTruthy();
+  });
+
+  it("does not pass a loaded page off as the branch's total", async () => {
+    localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
+    stubFetch({ ...PAGE, nextCursor: "opaque" });
+
+    renderScreen();
+    await screen.findByText("AST-001");
+
+    // A cursor never learns how many rows are behind it (ADR-0003).
+    expect(
+      await screen.findByText("Filtré : Douala — au moins 1 résultat"),
+    ).toBeTruthy();
+  });
+
+  it("shows no scope line while every agency is in view", async () => {
+    stubFetch();
+
+    renderScreen();
+    await screen.findByText("AST-001");
+
+    expect(document.querySelector("[data-slot='branch-scope-line']")).toBeNull();
+  });
+
+  it("calls an agency with no assets empty, not a workspace with no assets", async () => {
+    localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
+    stubFetch(EMPTY_PAGE);
+
+    renderScreen();
+
+    // The first-run state would claim the fleet is unregistered while it sits
+    // in another agency.
+    expect(
+      await screen.findByText("Rien à afficher pour Douala"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Enregistrez votre premier véhicule")).toBeNull();
+  });
+
+  it("offers the way back to every agency from the empty state", async () => {
+    localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
+    const { listed } = stubFetch(EMPTY_PAGE);
+
+    renderScreen();
+    await screen.findByText("Rien à afficher pour Douala");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Voir toutes mes agences" }),
+    );
+
+    await waitFor(() => expect(lastQuery(listed).get("branchId")).toBeNull());
+  });
+
+  it("keeps the first-run state for a workspace with no assets at all", async () => {
+    stubFetch(EMPTY_PAGE);
+
+    renderScreen();
+
+    expect(
+      await screen.findByText("Enregistrez votre premier véhicule"),
+    ).toBeTruthy();
   });
 });

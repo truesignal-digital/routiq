@@ -404,7 +404,9 @@ function SheetForm({
       "activities",
       close ? "sheetRecordedAndClosed" : "sheetRecorded",
       result.outcome.warnings,
-      pending > 0 ? [t("activities.notify.pendingEntries", { count: pending })] : [],
+      pending > 0
+        ? { extraLines: [t("activities.notify.pendingEntries", { count: pending })] }
+        : {},
     );
     void navigate({
       to: "/activities/$activityId",

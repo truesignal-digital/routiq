@@ -58,6 +58,12 @@ function cardTarget(key: DashboardCardKey, entriesReachable: boolean): string | 
 interface CardBody {
   value: string;
   description: string;
+  /**
+   * A second line the card only sometimes has to say, with its own destination
+   * — the overflow is about work the card's own number excludes, so it cannot
+   * land on the same preset view the card links to.
+   */
+  secondary?: { label: string; to: string; search: Record<string, string> };
 }
 
 type Translate = ReturnType<typeof useTranslation>["t"];
@@ -68,11 +74,25 @@ function cardBody(
   t: Translate,
 ): CardBody {
   if (key === "pendingApprovals") {
+    // The count follows the shell's agency, so the card has to say what that
+    // narrowing leaves out or the rest of the queue goes unmentioned.
+    const { count, outsideBranchCount } = data.pendingApprovals;
     return {
-      value: String(data.pendingApprovals.count),
-      description: t("home.cards.pendingApprovals.description", {
-        count: data.pendingApprovals.count,
-      }),
+      value: String(count),
+      description: t("home.cards.pendingApprovals.description", { count }),
+      ...(outsideBranchCount === 0
+        ? {}
+        : {
+            secondary: {
+              label: t("home.cards.pendingApprovals.outsideBranch", {
+                count: outsideBranchCount,
+              }),
+              // Widened on arrival: the queue would otherwise preset itself to
+              // the very agency this line is counting around.
+              to: "/finance/approvals",
+              search: { branch: "all" },
+            },
+          }),
     };
   }
 
@@ -115,12 +135,16 @@ function KpiCard({
   children: CardBody | undefined;
 }) {
   const Icon = CARD_ICONS[cardKey];
+  const secondary = children?.secondary;
 
-  const card = (
+  return (
     <Card
       data-slot="kpi-card"
       data-kpi={cardKey}
-      className={cn("h-full", to !== undefined && "transition-colors hover:bg-accent")}
+      className={cn(
+        "relative h-full",
+        to !== undefined && "transition-colors hover:bg-accent",
+      )}
     >
       <CardHeader>
         <CardDescription className="flex items-center gap-2">
@@ -137,18 +161,31 @@ function KpiCard({
               {children.value}
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">{children.description}</p>
+            {secondary !== undefined && (
+              // Lifted above the card-wide overlay below, so this line keeps
+              // its own destination instead of inheriting the card's.
+              <Link
+                to={secondary.to}
+                search={secondary.search}
+                data-slot="kpi-secondary"
+                className="relative z-10 mt-1 inline-block text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                {secondary.label}
+              </Link>
+            )}
           </>
         )}
       </CardContent>
+      {/* The whole card is the primary target. A stretched overlay says that
+          without nesting the line above inside another link. */}
+      {to !== undefined && (
+        <Link
+          to={to}
+          aria-label={title}
+          className="absolute inset-0 rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        />
+      )}
     </Card>
-  );
-
-  if (to === undefined) return card;
-
-  return (
-    <Link to={to} className="rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50">
-      {card}
-    </Link>
   );
 }
 

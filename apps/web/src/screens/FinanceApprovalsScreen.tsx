@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ClipboardCheck, X } from "lucide-react";
+import { useSearch } from "@tanstack/react-router";
+import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { z } from "zod";
@@ -8,7 +9,12 @@ import { useMeContext } from "@/auth/me.js";
 import { useActiveSession } from "@/auth/store.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
-import { DataTable, DataTableViewOptions } from "@/components/data-table";
+import {
+  DataTable,
+  DataTableViewOptions,
+  type DataTableFilter,
+  type DataTableFilterValues,
+} from "@/components/data-table";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -29,8 +35,13 @@ import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
-import { useApprovals } from "@/finance/useApprovals.js";
+import {
+  approvalsOutsideBranch,
+  approvalsTotal,
+  useApprovals,
+} from "@/finance/useApprovals.js";
 import { toSortParam } from "@/lib/sort-param.js";
+import { useAmbientBranchId, useCurrentBranch } from "@/shell/branch-context.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import {
@@ -61,8 +72,34 @@ export function FinanceApprovalsScreen() {
 
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const sort = toSortParam(sorting);
+  // A decision queue spans every branch in scope; the shell's agency only
+  // presets this filter, which stays visible and can be widened back to all of
+  // them. `undefined` means "still following the shell".
+  //
+  // `?branch=all` arrives from an overflow line elsewhere in the app, which has
+  // already told the operator how much sits outside the ambient agency: landing
+  // them back on that same narrowing would answer the wrong question.
+  const { branch: arrivingWidened } = useSearch({ strict: false }) as {
+    branch?: string;
+  };
+  const [branchOverride, setBranchOverride] = useState<string | undefined>(
+    arrivingWidened === "all" ? "" : undefined,
+  );
+  const { options: branchOptions } = useCurrentBranch();
+  const ambientBranchId = useAmbientBranchId();
+  const branchId = branchOverride ?? ambientBranchId ?? "";
+  const filterValues = useMemo<DataTableFilterValues>(
+    () => (branchId === "" ? {} : { branchId }),
+    [branchId],
+  );
+  const branchName = branchOptions.find((branch) => branch.id === branchId)?.name;
   // `sort` rides in the query key, so reordering starts a fresh cursor.
-  const approvalsQuery = useApprovals(canApprove, sort ? { sort } : {});
+  const approvalsQuery = useApprovals(canApprove, {
+    ...(branchId === "" ? {} : { branchId }),
+    ...(sort ? { sort } : {}),
+  });
+  const pendingTotal = approvalsTotal(approvalsQuery.data);
+  const pendingElsewhere = approvalsOutsideBranch(approvalsQuery.data);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
@@ -81,8 +118,23 @@ export function FinanceApprovalsScreen() {
       queryKey: ["ws", session?.workspaceSlug, "finance", "entries"],
     });
   };
-  // The queue takes no filters, but it does declare `sortFields`, so the
-  // sortable headers below drive the read rather than the loaded page.
+  const filters = useMemo<DataTableFilter[]>(
+    () => [
+      {
+        columnId: "branchId",
+        type: "select",
+        placeholder: t("finance.approvals.filters.branch"),
+        options: branchOptions.map((branch) => ({
+          value: branch.id,
+          label: branch.name,
+        })),
+      },
+    ],
+    [branchOptions, t],
+  );
+
+  // The read declares `sortFields`, so the sortable headers below drive it
+  // rather than reordering the loaded page.
   const columns = useMemo<ColumnDef<PendingApprovalItem>[]>(
     () => [
       {
@@ -112,6 +164,20 @@ export function FinanceApprovalsScreen() {
         enableSorting: true,
         meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
+      },
+      {
+        // The queue spans branches by default, so each row has to say which one
+        // it came from or an approver cannot tell them apart.
+        id: "branch",
+        header: t("finance.approvals.columns.branch"),
+        enableSorting: false,
+        meta: { mobile: "secondary", label: t("finance.approvals.columns.branch") },
+        cell: ({ row }) => (
+          <StatusBadge tone="neutral" icon={Building2}>
+            {branchOptions.find((branch) => branch.id === row.original.branchId)
+              ?.name ?? "—"}
+          </StatusBadge>
+        ),
       },
       {
         id: "category",
@@ -162,7 +228,7 @@ export function FinanceApprovalsScreen() {
           ) : null,
       },
     ],
-    [i18n.resolvedLanguage, me?.principalId, t],
+    [branchOptions, i18n.resolvedLanguage, me?.principalId, t],
   );
 
   const rowActions = (entry: PendingApprovalItem) => {
@@ -278,7 +344,7 @@ export function FinanceApprovalsScreen() {
         title={t("finance.approvals.title")}
       />
       <FinanceToolbar>
-        {!approvalsQuery.isPending && !approvalsQuery.isError && (
+        {!approvalsQuery.isError && (
           <DataTableViewOptions
             columns={columns}
             value={columnVisibility}
@@ -288,9 +354,30 @@ export function FinanceApprovalsScreen() {
         )}
       </FinanceToolbar>
 
-      {approvalsQuery.isPending ? (
-        <LoadingState className="mt-6" label={t("finance.approvals.loading")} />
-      ) : approvalsQuery.isError ? (
+      {branchName !== undefined && !approvalsQuery.isPending && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-sm text-muted-foreground">
+            {t("shell.branch.scopeLine", {
+              branch: branchName,
+              count: pendingTotal,
+            })}
+          </p>
+          {/* A filtered queue is not the whole queue: the work it leaves out
+              is named here, and the same line widens back to every branch. */}
+          {pendingElsewhere > 0 && (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-sm"
+              onClick={() => setBranchOverride("")}
+            >
+              {t("finance.approvals.outsideBranch", { count: pendingElsewhere })}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {approvalsQuery.isError ? (
         <ErrorState
           className="mt-6"
           message={t("finance.approvals.loadFailed")}
@@ -299,10 +386,16 @@ export function FinanceApprovalsScreen() {
         />
       ) : (
         <div className="mt-6">
+          {/* Changing the branch filter starts a new query, so the queue reports
+              `isPending` again. The table renders through it: a full-page loader
+              would take the filter away from the approver mid-refinement. */}
           <DataTable
             columns={columns}
             data={entries}
             getRowId={(entry) => entry.id}
+            filters={filters}
+            filterValues={filterValues}
+            onFilterChange={(values) => setBranchOverride(values["branchId"] ?? "")}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
@@ -316,10 +409,28 @@ export function FinanceApprovalsScreen() {
               pageSize: APPROVALS_PAGE_SIZE,
             }}
             emptyState={
-              <EmptyState
-                icon={<ClipboardCheck className="size-7" aria-hidden />}
-                message={t("finance.approvals.empty")}
-              />
+              approvalsQuery.isPending ? (
+                <LoadingState label={t("finance.approvals.loading")} />
+              ) : (
+                <EmptyState
+                  icon={<ClipboardCheck className="size-7" aria-hidden />}
+                  message={
+                    branchName === undefined
+                      ? t("finance.approvals.empty")
+                      : t("finance.approvals.branchEmpty", { branch: branchName })
+                  }
+                  action={
+                    // Nothing pending here says nothing about the other
+                    // branches, and the queue is where that has to be reachable.
+                    branchName === undefined
+                      ? undefined
+                      : {
+                          label: t("finance.approvals.filters.allBranches"),
+                          onClick: () => setBranchOverride(""),
+                        }
+                  }
+                />
+              )
             }
           />
         </div>

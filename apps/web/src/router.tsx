@@ -125,6 +125,10 @@ const financeEntryDetailRoute = createRoute({
 const financeApprovalsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/approvals",
+  // The dashboard's overflow line sends an approver to the queue already
+  // widened; without it the queue presets itself to the shell's agency, which
+  // is exactly the narrowing that line is reporting around.
+  validateSearch: z.object({ branch: z.literal("all").optional() }),
   component: FinanceApprovalsScreen,
 });
 

@@ -4,11 +4,12 @@ import type { PendingApprovalsResponse } from "@routiq/contracts";
 
 export async function fetchApprovals(
   token: string,
-  params?: { sort?: string; cursor?: string },
+  params?: { branchId?: string; sort?: string; cursor?: string },
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
 ): Promise<PendingApprovalsResponse> {
   const url = new URL("/v1/finance/approvals", window.location.origin);
+  if (params?.branchId) url.searchParams.append("branchId", params.branchId);
   if (params?.sort) url.searchParams.append("sort", params.sort);
   if (params?.cursor) url.searchParams.append("cursor", params.cursor);
 
@@ -21,6 +22,8 @@ export async function fetchApprovals(
 }
 
 export interface UseApprovalsParams {
+  /** The queue's own visible filter. Absent means every branch in scope. */
+  branchId?: string;
   /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
   sort?: string;
 }
@@ -29,6 +32,11 @@ export interface UseApprovalsParams {
  * The pending queue, keyset-paginated. Every page carries the queue's `total`,
  * so a caller that only wants the badge count can read it off the first page
  * without draining the cursor.
+ *
+ * Deliberately *not* a branch-scoped read (`branch-scope.ts`): a decision queue
+ * that silently followed the shell would leave work pending in a branch nobody
+ * is looking at. The screen presets its own visible filter from the ambient
+ * branch instead, and the operator can widen it back to every branch.
  */
 export function useApprovals(enabled = true, params: UseApprovalsParams = {}) {
   const session = useActiveSession();
@@ -52,4 +60,15 @@ export function approvalsTotal(
   data: { pages: PendingApprovalsResponse[] } | undefined,
 ): number {
   return data?.pages[0]?.total ?? 0;
+}
+
+/**
+ * Pending work the queue's own branch filter is leaving out, inside the
+ * caller's scope. Zero without a filter — and the only trace on screen that a
+ * narrowed queue is not the whole queue.
+ */
+export function approvalsOutsideBranch(
+  data: { pages: PendingApprovalsResponse[] } | undefined,
+): number {
+  return data?.pages[0]?.outsideBranchCount ?? 0;
 }

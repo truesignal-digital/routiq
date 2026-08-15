@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAssetRegistrationReference } from "@/assets/reference";
 import { useCurrentBranchCode } from "@/shell/branch-context.js";
+import { useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
 import { useActiveSession } from "@/auth/store";
 import { useMeContext } from "@/auth/me.js";
 import { applyTemplateFieldMetadata, applyValidationMetadata } from "@/commands/field-errors";
@@ -106,11 +107,23 @@ export function AssetRegisterScreen() {
   const currentBranchCode = useCurrentBranchCode();
   const preselectedBranchCode =
     currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
+  // Followed, not latched. Filling a blank field is the preselect; re-filling
+  // it when the shell's agency *moves* is the part that matters — an operator
+  // who sets this once and keeps registering would otherwise go on filing into
+  // the agency the shell has since left. Between moves the effect only repairs
+  // a blank, so an explicit pick here stands.
+  const lastPreselectedBranchCode = useRef<string>(undefined);
   useEffect(() => {
-    if (preselectedBranchCode !== undefined && branchCode === "") {
+    if (preselectedBranchCode === undefined) return;
+    const shellMoved = preselectedBranchCode !== lastPreselectedBranchCode.current;
+    lastPreselectedBranchCode.current = preselectedBranchCode;
+    if (shellMoved || branchCode === "") {
       form.setValue("branchCode", preselectedBranchCode);
     }
   }, [preselectedBranchCode, branchCode, form]);
+  // The assets list this navigates to is narrowed by the shell, so an asset
+  // registered into another agency would land off screen unannounced.
+  const createdElsewhereNotice = useCreatedElsewhereNotice();
 
   /**
    * ADR-0004: a workspace runs the presets it enabled. Undefined means /v1/me
@@ -146,7 +159,12 @@ export function AssetRegisterScreen() {
       setErrorCode(result.code);
       return;
     }
-    notifyCommandSuccess("assets", "registered", result.outcome.warnings);
+    notifyCommandSuccess(
+      "assets",
+      "registered",
+      result.outcome.warnings,
+      createdElsewhereNotice({ branchCode: values.branchCode }) ?? {},
+    );
     await queryClient.invalidateQueries({
       queryKey: ["ws", session?.workspaceSlug, "assets"],
     });

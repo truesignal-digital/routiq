@@ -29,7 +29,7 @@ const response = {
     postedRevenueMinor: 420000,
     currency: "XAF",
   },
-  pendingApprovals: { count: 4 },
+  pendingApprovals: { count: 4, outsideBranchCount: 2 },
   series,
 };
 
@@ -52,10 +52,19 @@ describe("dashboard contract", () => {
         },
       },
       openPeriod: null,
-      pendingApprovals: { count: 0 },
+      pendingApprovals: { count: 0, outsideBranchCount: 0 },
       series: [],
     };
     expect(dashboardResponse.parse(empty)).toEqual(empty);
+  });
+
+  it("reads a payload without the overflow as nothing hidden", () => {
+    const parsed = dashboardResponse.parse({
+      ...response,
+      pendingApprovals: { count: 4 },
+    });
+
+    expect(parsed.pendingApprovals).toEqual({ count: 4, outsideBranchCount: 0 });
   });
 
   it("requires every lifecycle status, so a zero can never arrive as a gap", () => {

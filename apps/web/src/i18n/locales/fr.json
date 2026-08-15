@@ -16,7 +16,8 @@
     "cards": {
       "pendingApprovals": {
         "title": "Approbations en attente",
-        "description": "{count, plural, =0 {Aucune écriture à décider} one {# écriture attend votre décision} other {# écritures attendent votre décision}}"
+        "description": "{count, plural, =0 {Aucune écriture à décider} one {# écriture attend votre décision} other {# écritures attendent votre décision}}",
+        "outsideBranch": "{count, plural, one {+# en attente dans une autre agence} other {+# en attente dans d'autres agences}}"
       },
       "assets": {
         "title": "Actifs en service",
@@ -59,7 +60,21 @@
     "toggleSidebar": "Afficher ou masquer le menu",
     "branch": {
       "label": "Agence courante",
-      "all": "Toutes mes agences"
+      "all": "Toutes mes agences",
+      "loading": "Agences…",
+      "loadFailed": "Agences indisponibles",
+      "switched": "Vous consultez : {branch}",
+      "scopeLine": "Filtré : {branch} — {count, plural, one {# résultat} other {# résultats}}",
+      "scopeLineAtLeast": "Filtré : {branch} — au moins {count, plural, one {# résultat} other {# résultats}}",
+      "scopeLineLoading": "Filtré : {branch}",
+      "emptyTitle": "Rien à afficher pour {branch}",
+      "emptyHint": "Cette agence n'a aucun élément ici. Les autres agences peuvent en avoir.",
+      "showAll": "Voir toutes mes agences",
+      "otherBranch": "Autre agence : {branch}",
+      "otherBranchUnnamed": "Autre agence",
+      "createdInBranch": "Enregistré dans {branch}",
+      "createdInOtherBranch": "Enregistré dans une autre agence",
+      "view": "Voir"
     }
   },
   "login": {
@@ -152,8 +167,7 @@
       "IN_SERVICE": "En service",
       "ATTENTION": "À surveiller",
       "status": "Statut",
-      "category": "Classe",
-      "branch": "Agence"
+      "category": "Classe"
     },
     "metrics": {
       "total": "Total",
@@ -175,6 +189,7 @@
     "loading": "Chargement des actifs…",
     "noResultsTitle": "Aucun actif trouvé",
     "noResultsHint": "Essayez un autre terme ou retirez les filtres.",
+    "branchEmptyHint": "Aucun véhicule n'est rattaché à cette agence.",
     "resetFilters": "Effacer les filtres",
     "loadMore": "Charger plus",
     "errorTitle": "Impossible de charger le parc",
@@ -406,16 +421,17 @@
       "evidenceLabel": "Justificatif (optionnel)",
       "submit": "Enregistrer",
       "submitting": "Enregistrement…",
-      "branchLabel": "Succursale",
-      "chooseBranch": "Choisir une succursale…",
-      "branchesFailed": "Impossible de charger les succursales. Actualisez cette page."
+      "branchLabel": "Agence",
+      "chooseBranch": "Choisir une agence…",
+      "branchesFailed": "Impossible de charger les agences. Actualisez cette page."
     },
     "entries": {
       "title": "Écritures comptables",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les écritures. Réessayez.",
       "retry": "Réessayer",
-      "empty": "Aucune écriture pour cette succursale.",
+      "empty": "Aucune écriture enregistrée pour l'instant.",
+      "branchEmpty": "Aucune écriture pour cette agence.",
       "loadMore": "Charger plus",
       "recordAction": "Saisir une écriture",
       "status": {
@@ -478,8 +494,15 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
-        "actions": "Actions"
+        "actions": "Actions",
+        "branch": "Agence"
       },
+      "filters": {
+        "branch": "Agence",
+        "allBranches": "Toutes mes agences"
+      },
+      "branchEmpty": "Aucune écriture en attente pour {branch}.",
+      "outsideBranch": "{count, plural, one {+# en attente dans une autre agence} other {+# en attente dans d'autres agences}}",
       "makerGuard": "Votre saisie — un autre approbateur doit décider",
       "approve": "Approuver",
       "reject": "Rejeter",
@@ -568,13 +591,14 @@
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
-    "BRANCH_INACTIVE_AT_COMMIT": "Succursale fermée : cette saisie a été effectuée avant sa désactivation."
+    "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation."
   },
   "activities": {
     "title": "Activités",
     "loadFailed": "Impossible de charger les activités. Veuillez réessayer.",
     "retry": "Réessayer",
     "emptyHint": "Aucune activité pour l'instant. Les feuilles de route saisies apparaîtront ici.",
+    "branchEmptyHint": "Aucune activité pour cette agence.",
     "loadMore": "Charger plus",
     "status": {
       "OPEN": "En cours",
@@ -602,7 +626,6 @@
       "status": "Statut",
       "completeness": "Complétude",
       "activityType": "Type d'activité",
-      "branch": "Agence",
       "asset": "Engin",
       "from": "Du",
       "to": "Au"
@@ -971,6 +994,7 @@
     "loadFailed": "Impossible de charger le personnel.",
     "retry": "Réessayer",
     "emptyHint": "Aucune personne enregistrée. Ajoutez vos chauffeurs et receveurs pour les affecter aux fiches.",
+    "branchEmptyHint": "Aucune personne rattachée à cette agence.",
     "active": "Actif",
     "inactive": "Inactif",
     "columns": {

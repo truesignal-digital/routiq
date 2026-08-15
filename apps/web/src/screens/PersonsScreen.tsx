@@ -24,6 +24,9 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useCurrentBranchCode } from "@/shell/branch-context.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { useBranchScope, useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
+import { notifySuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
 import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
@@ -40,13 +43,15 @@ export function PersonsScreen() {
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [registering, setRegistering] = useState(false);
-  const [branchCode, setBranchCode] = useState("");
+  /** An explicit choice on this screen; cleared when the shell's agency moves. */
+  const [picked, setPicked] = useState<string>();
 
   const search = filterValues[SEARCH_FILTER_ID] ?? "";
   // `/v1/persons` does the matching; narrowing the loaded rows here would
   // describe the page instead of the payroll.
   const personsQuery = usePersons(search === "" ? {} : { search });
   const persons = personsQuery.data?.items ?? [];
+  const { scoped } = useBranchScope();
 
   // A new person joins a branch, and the command names it by code — so the
   // screen has to know which one before it can offer to register anyone.
@@ -57,11 +62,17 @@ export function PersonsScreen() {
   // otherwise; either way the picker stays editable.
   const preselectedBranchCode =
     currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
+  // Derived, not latched: an untouched default that stopped following the shell
+  // would register people into the agency the list is no longer showing, and
+  // the dialog never asks which branch it is writing to.
+  const branchCode = picked ?? preselectedBranchCode ?? "";
   useEffect(() => {
-    if (preselectedBranchCode !== undefined && branchCode === "") {
-      setBranchCode(preselectedBranchCode);
-    }
-  }, [preselectedBranchCode, branchCode]);
+    setPicked(undefined);
+  }, [preselectedBranchCode]);
+  // Registering into the agency on screen needs no confirmation — the new row
+  // is the confirmation. Registering into another one does: that row lands
+  // where this list cannot show it.
+  const createdElsewhereNotice = useCreatedElsewhereNotice();
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -142,7 +153,7 @@ export function PersonsScreen() {
                     label: branch.name,
                   }))}
                   value={branchCode === "" ? null : branchCode}
-                  onValueChange={(value: string | null) => setBranchCode(value ?? "")}
+                  onValueChange={(value: string | null) => setPicked(value ?? "")}
                 >
                   <SelectTrigger
                     aria-label={t("persons.branchLabel")}
@@ -173,8 +184,12 @@ export function PersonsScreen() {
         }
       />
 
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <BranchScopeLine
+          count={personsQuery.isPending ? undefined : persons.length}
+        />
         <DataTableViewOptions
+          className="ms-auto"
           columns={columns}
           value={columnVisibility}
           onChange={setColumnVisibility}
@@ -208,6 +223,11 @@ export function PersonsScreen() {
             emptyState={
               personsQuery.isPending ? (
                 <LoadingState label={t("persons.loading")} />
+              ) : scoped ? (
+                <BranchScopedEmptyState
+                  icon={<Users className="size-7" aria-hidden />}
+                  message={t("persons.branchEmptyHint")}
+                />
               ) : (
                 <EmptyState
                   icon={<Users className="size-7" aria-hidden />}
@@ -224,7 +244,11 @@ export function PersonsScreen() {
           open={registering}
           onOpenChange={setRegistering}
           branchCode={branchCode}
-          onRegistered={() => void personsQuery.refetch()}
+          onRegistered={() => {
+            const elsewhere = createdElsewhereNotice({ branchCode });
+            if (elsewhere !== undefined) notifySuccess(elsewhere);
+            void personsQuery.refetch();
+          }}
         />
       )}
     </PageContainer>

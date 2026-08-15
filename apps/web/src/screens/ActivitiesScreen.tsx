@@ -22,11 +22,11 @@ import {
 import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
 import { useActivities } from "@/activities/useActivities.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
-import { useAmbientBranchId } from "@/shell/branch-context.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { useBranchScope } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
 const COMPLETENESS_OPTIONS = ["COMPLETE", "COMPLETE_WITH_EXCEPTIONS"] as const;
@@ -54,7 +54,6 @@ export function ActivitiesScreen() {
   const canView = canViewActivities(me?.enabledModules);
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
   const activityTypesQuery = useCategories("ACTIVITY_TYPE");
-  const reference = useAssetRegistrationReference();
   // `useAssetOptions` drains the full asset cursor so the filter covers the
   // fleet; pilot workspaces are intentionally small enough for that tradeoff.
   const assetOptions = useAssetOptions();
@@ -63,11 +62,12 @@ export function ActivitiesScreen() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const sort = toSortParam(sorting);
-  // The shell's current agency is the default; the toolbar filter overrides it.
-  const branchId = useAmbientBranchId(filterValues["branchId"]);
+  const { scoped } = useBranchScope();
 
   // `/v1/activities` does the filtering; the table never narrows rows itself,
-  // or the counts would describe the page instead of the fleet.
+  // or the counts would describe the page instead of the fleet. The branch is
+  // absent on purpose: `useActivities` is a branch-scoped read, so the shell's
+  // agency reaches it without this screen passing anything.
   const activitiesQuery = useActivities({
     ...(filterValues["status"] ? { status: filterValues["status"] } : {}),
     ...(filterValues["completeness"]
@@ -76,7 +76,6 @@ export function ActivitiesScreen() {
     ...(filterValues["activityTypeCode"]
       ? { activityTypeCode: filterValues["activityTypeCode"] }
       : {}),
-    ...(branchId ? { branchId } : {}),
     ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
     ...(filterValues["from"] ? { from: filterValues["from"] } : {}),
     ...(filterValues["to"] ? { to: filterValues["to"] } : {}),
@@ -112,15 +111,8 @@ export function ActivitiesScreen() {
           label: localizedLabel(activityType, i18n.language),
         })),
       },
-      {
-        columnId: "branchId",
-        type: "select",
-        placeholder: t("activities.filters.branch"),
-        options: (reference.data?.branches ?? []).map((branch) => ({
-          value: branch.id,
-          label: branch.name,
-        })),
-      },
+      // No branch filter: the header switcher is the one place branch scope is
+      // set, so a second control here could only contradict it.
       {
         columnId: "assetId",
         type: "select",
@@ -155,14 +147,7 @@ export function ActivitiesScreen() {
         ),
       },
     ],
-    [
-      activityTypesQuery.data,
-      assetOptions,
-      i18n.language,
-      reference.data?.branches,
-      filterValues,
-      t,
-    ],
+    [activityTypesQuery.data, assetOptions, i18n.language, filterValues, t],
   );
 
   const columns = useActivityColumns(LIST_COLUMNS);
@@ -197,8 +182,13 @@ export function ActivitiesScreen() {
         }
       />
 
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <BranchScopeLine
+          count={activitiesQuery.isPending ? undefined : allActivities.length}
+          hasMore={activitiesQuery.hasNextPage ?? false}
+        />
         <DataTableViewOptions
+          className="ms-auto"
           columns={columns}
           value={columnVisibility}
           onChange={setColumnVisibility}
@@ -252,10 +242,17 @@ export function ActivitiesScreen() {
               onLoadMore: () => void activitiesQuery.fetchNextPage(),
             }}
             emptyState={
-              <EmptyState
-                icon={<Route className="size-7" aria-hidden />}
-                message={t("activities.emptyHint")}
-              />
+              scoped ? (
+                <BranchScopedEmptyState
+                  icon={<Route className="size-7" aria-hidden />}
+                  message={t("activities.branchEmptyHint")}
+                />
+              ) : (
+                <EmptyState
+                  icon={<Route className="size-7" aria-hidden />}
+                  message={t("activities.emptyHint")}
+                />
+              )
             }
           />
         </div>

@@ -1,12 +1,15 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { AssetListResponse } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useBranchScopedParams } from "../shell/branch-scope.js";
 import { fetchAssets, type AssetListParams } from "./api.js";
 
 export type UseAssetsParams = Omit<AssetListParams, "cursor">;
 
-export function useAssets(params: UseAssetsParams = {}) {
+/** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
+export function useAssets(callerParams: UseAssetsParams = {}) {
   const session = useActiveSession();
+  const params = useBranchScopedParams(callerParams);
 
   return useInfiniteQuery<AssetListResponse>({
     // Workspace-scoped key: the cache can never leak across a workspace switch.

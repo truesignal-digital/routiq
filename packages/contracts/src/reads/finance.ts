@@ -67,7 +67,15 @@ export const pendingApprovalItem = financialEntryListItem.extend({
  */
 export const pendingApprovalsResponse = listResponse(pendingApprovalItem, {
   key: "entries",
-}).extend({ total: z.number() });
+}).extend({
+  total: z.number(),
+  /**
+   * Pending entries the `branchId` filter excludes, inside the caller's branch
+   * scope — zero when the queue already spans every branch. A decision queue
+   * may narrow, but never silently: this is what the narrowing is hiding.
+   */
+  outsideBranchCount: z.number().int().nonnegative().default(0),
+});
 
 export const periodRead = z.object({
   periodCode: z.string(),
