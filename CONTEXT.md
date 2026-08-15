@@ -45,7 +45,7 @@ The software vendor's own principal — no workspace binding, accepted only by p
 _Avoid_: super admin (implies an in-app tenant role), root user
 
 **Branch**:
-An operating location of a Workspace (fr: **Agence**); every operational record belongs to exactly one. Deactivated, never deleted; codes are immutable.
+An operating location of a Workspace (fr: **Agence**); every operational record belongs to exactly one. Deactivated, never deleted; codes are immutable. Both code and name identify a Branch uniquely within its Workspace — codes never change, names may be renamed but never collide.
 _Avoid_: site, location, department, git-style branch
 
 **Branch Scope**:
