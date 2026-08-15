@@ -39,26 +39,38 @@ export const provisionWorkspacePayload = z.strictObject({
   }),
   /**
    * A tenant is multi-branch from day one (Douala + Yaoundé + Bafoussam), so
-   * provisioning takes the whole set. The unique-code check is the payload-side
-   * half of the `(workspace_id, code)` index: a duplicate must be a validation
-   * error naming the offending entry, not a constraint violation mid-insert.
+   * provisioning takes the whole set. The uniqueness checks are the payload-side
+   * half of the `(workspace_id, code)` index and of `branches_pkey`: a duplicate
+   * must be a validation error naming the offending entry, not a constraint
+   * violation part-way through the batch insert. Hand-authored tenant files get
+   * their branch entries copy-pasted, and an operator who edits the code but not
+   * the UUID would otherwise see a raw Postgres constraint name.
    */
   branches: z
     .array(provisionedBranch)
     .min(1, "At least one branch is required")
     .max(20, "At most 20 branches can be provisioned")
     .superRefine((entries, ctx) => {
-      const seen = new Set<string>();
+      const seenCodes = new Set<string>();
+      const seenIds = new Set<string>();
       entries.forEach((branch, index) => {
-        if (seen.has(branch.code)) {
+        if (seenCodes.has(branch.code)) {
           ctx.addIssue({
             code: "custom",
             message: "Branch codes must be unique within the payload",
             path: [index, "code"],
           });
-          return;
         }
-        seen.add(branch.code);
+        seenCodes.add(branch.code);
+
+        if (seenIds.has(branch.id)) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Branch ids must be unique within the payload",
+            path: [index, "id"],
+          });
+        }
+        seenIds.add(branch.id);
       });
     }),
   admin: z.strictObject({

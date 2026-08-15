@@ -173,6 +173,37 @@ describe("provision-workspace contract", () => {
     );
   });
 
+  /** The payload-side half of `branches_pkey`. */
+  it("rejects duplicate branch ids within the payload", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches = [
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "DLA", name: "Douala" },
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "YDE", name: "Yaoundé" },
+    ];
+
+    const result = provisionWorkspaceCommand.safeParse(bad);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues.some((issue) => issue.path.join(".") === "payload.branches.1.id")).toBe(
+      true,
+    );
+  });
+
+  it("names both the duplicated id and the duplicated code on the same entry", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches = [
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "DLA", name: "Douala" },
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "DLA", name: "Douala" },
+    ];
+
+    const result = provisionWorkspaceCommand.safeParse(bad);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    const paths = result.error.issues.map((issue) => issue.path.join("."));
+    expect(paths).toContain("payload.branches.1.code");
+    expect(paths).toContain("payload.branches.1.id");
+  });
+
   it("rejects a lowercase branch code", () => {
     const bad = structuredClone(valid);
     bad.payload.branches[0]!.code = "dla";
