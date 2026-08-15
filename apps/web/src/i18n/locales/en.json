@@ -1113,6 +1113,7 @@
       "code": "Code",
       "codeHint": "The code appears in record numbers and cannot change.",
       "codeInvalid": "2 to 8 characters, uppercase letters or digits (e.g. DLA).",
+      "nameTooLong": "The name must be at most {max} characters.",
       "name": "Name",
       "timezone": "Time zone",
       "cancel": "Cancel",

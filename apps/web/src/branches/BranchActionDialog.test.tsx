@@ -125,6 +125,58 @@ describe("BranchActionDialog", () => {
     expect(client.seen).toHaveLength(0);
   });
 
+  it("will not send a rename the command schema would reject as blank", async () => {
+    const client = fakeClient(committed);
+    renderDialog("rename", client);
+
+    await userEvent.clear(screen.getByLabelText("Nom"));
+    await userEvent.type(screen.getByLabelText("Nom"), "   ");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(client.seen).toHaveLength(0);
+  });
+
+  it("stops the name at the length the command schema accepts", async () => {
+    renderDialog("rename", fakeClient(committed));
+
+    const input = screen.getByLabelText("Nom");
+    await userEvent.clear(input);
+    await userEvent.type(input, "a".repeat(130));
+
+    expect((input as HTMLInputElement).value).toHaveLength(120);
+  });
+
+  /**
+   * A name longer than the schema allows can only arrive from a row written
+   * before the rule existed — the input caps typing, so the field error is what
+   * tells the admin why the button is dead.
+   */
+  it("attributes an over-long inherited name to the name field", async () => {
+    renderDialog("rename", fakeClient(committed), { ...branch, name: "a".repeat(121) });
+
+    expect(
+      await screen.findByText("Le nom ne doit pas dépasser 120 caractères."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("answers a taken name on the name field rather than as a banner", async () => {
+    const client = fakeClient({ ok: false, code: "DUPLICATE_BRANCH_NAME" });
+    const { onDismiss } = renderDialog("rename", client);
+
+    await userEvent.clear(screen.getByLabelText("Nom"));
+    await userEvent.type(screen.getByLabelText("Nom"), "Yaoundé");
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(
+      await screen.findByText("Ce nom d'agence existe déjà dans votre espace."),
+    ).toBeTruthy();
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   it("names the branch before retiring it, then commits on confirm", async () => {
     const client = fakeClient(committed);
     const { onDismiss } = renderDialog("deactivate", client);

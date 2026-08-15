@@ -121,6 +121,39 @@ describe("CreateBranchDialog", () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
+  it("refuses a whitespace-only name, as the command schema does", async () => {
+    const client = fakeClient(committed);
+    renderDialog(client);
+
+    await fillForm("YDE", "   ");
+    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    expect(await screen.findByText("Ce champ est obligatoire.")).toBeTruthy();
+    expect(client.seen).toHaveLength(0);
+  });
+
+  it("stops the name at the length the command schema accepts", async () => {
+    renderDialog(fakeClient(committed));
+
+    const input = screen.getByLabelText("Nom");
+    await userEvent.type(input, "a".repeat(130));
+
+    expect((input as HTMLInputElement).value).toHaveLength(120);
+  });
+
+  it("answers a taken name on the name field rather than as a banner", async () => {
+    const client = fakeClient({ ok: false, code: "DUPLICATE_BRANCH_NAME" });
+    const { onOpenChange } = renderDialog(client);
+
+    await fillForm("CTR", "Centre");
+    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+
+    expect(
+      await screen.findByText("Ce nom d'agence existe déjà dans votre espace."),
+    ).toBeTruthy();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
   it("explains the code will never change", async () => {
     renderDialog(fakeClient(committed));
 

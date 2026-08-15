@@ -20,6 +20,7 @@ import { ErrorBanner } from "@/components/error-banner.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { useInvalidateBranches } from "./useBranches.js";
+import { BRANCH_NAME_MAX_LENGTH, branchNameProblem } from "./validation.js";
 
 export type BranchActionKey = "rename" | "deactivate" | "reactivate";
 
@@ -60,6 +61,7 @@ export function BranchActionDialog({
   const [outcome, setOutcome] = useState<Outcome>({ kind: "form" });
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState(branch.name);
+  const [duplicateName, setDuplicateName] = useState(false);
 
   // One intent per dialog, minted on first submit: a retry of the same edit
   // replays the same envelope instead of writing a second audit event.
@@ -68,14 +70,28 @@ export function BranchActionDialog({
     undefined,
   );
 
+  /*
+   * The same rule the command schema applies, asked of the schema itself: a name
+   * the dialog accepts is a name `rename-branch` accepts. Without this a
+   * 121-character paste reached the server and came back as an unattributed
+   * VALIDATION_FAILED banner with no indication that length was the problem.
+   */
   const trimmedName = name.trim();
-  const nameChanged = trimmedName !== "" && trimmedName !== branch.name;
+  const nameProblem = branchNameProblem(name);
+  const nameError =
+    nameProblem === "tooLong"
+      ? t("branches.form.nameTooLong", { max: BRANCH_NAME_MAX_LENGTH })
+      : duplicateName
+        ? t("errors.DUPLICATE_BRANCH_NAME")
+        : undefined;
+  const nameChanged = nameProblem === undefined && trimmedName !== branch.name;
   const ready = !submitting && (action === "rename" ? nameChanged : true);
 
   async function submit() {
     if (!ready) return;
     setSubmitting(true);
     setOutcome({ kind: "form" });
+    setDuplicateName(false);
 
     let result;
     if (action === "rename") {
@@ -109,6 +125,9 @@ export function BranchActionDialog({
 
     if (!result.ok) {
       if (result.code === "VERSION_CONFLICT") setOutcome({ kind: "conflict" });
+      // A name already in use is about one field, so it is answered on that
+      // field rather than as a banner the admin has to translate into an edit.
+      else if (result.code === "DUPLICATE_BRANCH_NAME") setDuplicateName(true);
       else setOutcome({ kind: "error", code: result.code });
       return;
     }
@@ -173,9 +192,20 @@ export function BranchActionDialog({
                     id="branch-name"
                     type="text"
                     className="min-h-11"
+                    maxLength={BRANCH_NAME_MAX_LENGTH}
+                    aria-invalid={nameError !== undefined}
+                    aria-describedby={nameError === undefined ? undefined : "branch-name-error"}
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) => {
+                      setDuplicateName(false);
+                      setName(event.target.value);
+                    }}
                   />
+                  {nameError && (
+                    <p id="branch-name-error" role="alert" className="text-sm text-destructive">
+                      {nameError}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

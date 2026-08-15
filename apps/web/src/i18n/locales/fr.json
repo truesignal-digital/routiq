@@ -1113,6 +1113,7 @@
       "code": "Code",
       "codeHint": "Le code apparaît dans les numéros de pièces et ne peut pas changer.",
       "codeInvalid": "2 à 8 caractères, en majuscules ou chiffres (ex. DLA).",
+      "nameTooLong": "Le nom ne doit pas dépasser {max} caractères.",
       "name": "Nom",
       "timezone": "Fuseau horaire",
       "cancel": "Annuler",

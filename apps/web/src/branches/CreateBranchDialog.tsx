@@ -34,6 +34,11 @@ import { ErrorBanner } from "@/components/error-banner.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BRANCH_TIMEZONES, DEFAULT_BRANCH_TIMEZONE } from "./timezones.js";
+import {
+  BRANCH_NAME_MAX_LENGTH,
+  branchCodeProblem,
+  branchNameProblem,
+} from "./validation.js";
 import { useInvalidateBranches } from "./useBranches.js";
 
 interface CreateBranchValues {
@@ -48,7 +53,6 @@ const EMPTY: CreateBranchValues = {
   timezone: DEFAULT_BRANCH_TIMEZONE,
 };
 
-const CODE_PATTERN = /^[A-Z0-9]{2,8}$/;
 
 /**
  * Opening a branch, as one command. The id is minted here rather than by the
@@ -80,8 +84,21 @@ export function CreateBranchDialog({
           .string()
           .trim()
           .toUpperCase()
-          .regex(CODE_PATTERN, t("branches.form.codeInvalid")),
-        name: z.string().trim().min(1, t("form.errors.required")).max(120),
+          .refine(
+            (value) => branchCodeProblem(value) === undefined,
+            t("branches.form.codeInvalid"),
+          ),
+        name: z.string().superRefine((value, ctx) => {
+          const problem = branchNameProblem(value);
+          if (problem === undefined) return;
+          ctx.addIssue({
+            code: "custom",
+            message:
+              problem === "tooLong"
+                ? t("branches.form.nameTooLong", { max: BRANCH_NAME_MAX_LENGTH })
+                : t("form.errors.required"),
+          });
+        }),
         timezone: z.string().min(1, t("form.errors.required")),
       }),
     [t],
@@ -120,6 +137,10 @@ export function CreateBranchDialog({
         form.setError("code", { message: t("errors.DUPLICATE_BRANCH_CODE") });
         return;
       }
+      if (result.code === "DUPLICATE_BRANCH_NAME") {
+        form.setError("name", { message: t("errors.DUPLICATE_BRANCH_NAME") });
+        return;
+      }
       setErrorCode(result.code);
       return;
     }
@@ -156,6 +177,7 @@ export function CreateBranchDialog({
                       type="text"
                       autoComplete="off"
                       autoCapitalize="characters"
+                      maxLength={8}
                       className="min-h-11 font-mono uppercase"
                       {...field}
                       onChange={(event) =>
@@ -176,7 +198,12 @@ export function CreateBranchDialog({
                 <FormItem>
                   <FormLabel>{t("branches.form.name")}</FormLabel>
                   <FormControl>
-                    <Input type="text" className="min-h-11" {...field} />
+                    <Input
+                      type="text"
+                      className="min-h-11"
+                      maxLength={BRANCH_NAME_MAX_LENGTH}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
