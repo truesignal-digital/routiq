@@ -103,6 +103,7 @@
     "generic": "Something went wrong. Retry or contact your administrator.",
     "DUPLICATE_ASSET_CODE": "This asset code already exists in your workspace.",
     "DUPLICATE_BRANCH_CODE": "This branch code already exists in your workspace.",
+    "DUPLICATE_BRANCH_NAME": "This branch name already exists in your workspace.",
     "TEMPLATE_FIELD_INVALID": "A template-specific field is invalid or missing.",
     "APPROVAL_REQUIRED": "This action requires an approval. It will be available soon.",
     "IDEMPOTENCY_KEY_REUSED": "This submission conflicts with a previous one. Check the list, then retry.",

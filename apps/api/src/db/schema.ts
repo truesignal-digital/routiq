@@ -78,7 +78,16 @@ export const branches = pgTable(
     createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
     rowVersion: integer("row_version").notNull().default(1),
   },
-  (t) => [uniqueIndex("branches_ws_code_uq").on(t.workspaceId, t.code)],
+  /**
+   * Code and name both identify a branch within its workspace. The name is not
+   * merely a label: the ambient-branch shell names the current lens by it (the
+   * switcher, the scope line, the switch toast), so two branches called "Centre"
+   * would leave a user unable to tell which agency they are scoped to.
+   */
+  (t) => [
+    uniqueIndex("branches_ws_code_uq").on(t.workspaceId, t.code),
+    uniqueIndex("branches_ws_name_uq").on(t.workspaceId, t.name),
+  ],
 );
 
 export const principals = pgTable("principals", {

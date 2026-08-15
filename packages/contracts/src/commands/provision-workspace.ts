@@ -37,7 +37,8 @@ export const provisionWorkspacePayload = z.strictObject({
   /**
    * A tenant is multi-branch from day one (Douala + Yaoundé + Bafoussam), so
    * provisioning takes the whole set. The uniqueness checks are the payload-side
-   * half of the `(workspace_id, code)` index and of `branches_pkey`: a duplicate
+   * half of the `(workspace_id, code)` and `(workspace_id, name)` indexes and of
+   * `branches_pkey`: a duplicate
    * must be a validation error naming the offending entry, not a constraint
    * violation part-way through the batch insert. Hand-authored tenant files get
    * their branch entries copy-pasted, and an operator who edits the code but not
@@ -50,6 +51,7 @@ export const provisionWorkspacePayload = z.strictObject({
     .superRefine((entries, ctx) => {
       const seenCodes = new Set<string>();
       const seenIds = new Set<string>();
+      const seenNames = new Set<string>();
       entries.forEach((branch, index) => {
         if (seenCodes.has(branch.code)) {
           ctx.addIssue({
@@ -68,6 +70,15 @@ export const provisionWorkspacePayload = z.strictObject({
           });
         }
         seenIds.add(branch.id);
+
+        if (seenNames.has(branch.name)) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Branch names must be unique within the payload",
+            path: [index, "name"],
+          });
+        }
+        seenNames.add(branch.name);
       });
     }),
   admin: z.strictObject({

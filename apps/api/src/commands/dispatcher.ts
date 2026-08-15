@@ -591,6 +591,8 @@ export async function dispatchCommand(
             ? new CommandError(422, "USERNAME_TAKEN")
             : violation.constraint === "branches_ws_code_uq"
               ? new CommandError(409, "DUPLICATE_BRANCH_CODE")
+            : violation.constraint === "branches_ws_name_uq"
+              ? new CommandError(409, "DUPLICATE_BRANCH_NAME")
             : new CommandError(
                 409,
                 violation.constraint === "assets_ws_code_uq"

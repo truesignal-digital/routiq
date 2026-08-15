@@ -47,7 +47,7 @@ describe("branch administration", () => {
 
   describe("rename-branch", () => {
     it("renames a branch, bumps its version and audits both states", async () => {
-      const branchId = await createBranch("RN1", "Douala");
+      const branchId = await createBranch("RN1", "Douala Akwa");
 
       const response = await post("rename-branch", { branchId, name: "Douala — Bonabéri" }, {
         expectedVersion: 1,
@@ -75,7 +75,7 @@ describe("branch administration", () => {
         entityType: "branch",
         changedFields: ["name", "rowVersion"],
       });
-      expect(audit?.beforeState).toMatchObject({ name: "Douala", rowVersion: 1 });
+      expect(audit?.beforeState).toMatchObject({ name: "Douala Akwa", rowVersion: 1 });
       expect(audit?.afterState).toMatchObject({ name: "Douala — Bonabéri", rowVersion: 2 });
     });
 
@@ -97,6 +97,27 @@ describe("branch administration", () => {
 
       const [row] = await ctx.db.select().from(branches).where(eq(branches.id, branchId));
       expect(row?.name).toBe("Kribi Centre");
+    });
+
+    /**
+     * The name is what the shell shows for the current lens, so it identifies a
+     * branch as strictly as the code does (`branches_ws_name_uq`).
+     */
+    it("refuses a rename onto a name another branch already holds", async () => {
+      const taken = await createBranch("RN4", "Édéa");
+      const branchId = await createBranch("RN5", "Nkongsamba");
+
+      const response = await post("rename-branch", { branchId, name: "Édéa" }, {
+        expectedVersion: 1,
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toMatchObject({ error: { code: "DUPLICATE_BRANCH_NAME" } });
+
+      const [row] = await ctx.db.select().from(branches).where(eq(branches.id, branchId));
+      expect(row).toMatchObject({ name: "Nkongsamba", rowVersion: 1 });
+      const [untouched] = await ctx.db.select().from(branches).where(eq(branches.id, taken));
+      expect(untouched?.name).toBe("Édéa");
     });
 
     it("requires an expected version", async () => {

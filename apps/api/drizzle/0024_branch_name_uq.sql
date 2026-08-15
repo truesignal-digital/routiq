@@ -1,0 +1,11 @@
+-- A branch name identifies a branch within its workspace, the same way its code
+-- does. The ambient-branch shell names the current lens by name — switcher,
+-- scope line, switch toast — so two branches called "Centre" leave a user unable
+-- to tell which agency they are scoped to, and UI disambiguation cannot reach
+-- every surface.
+--
+-- This migration fails loudly on a workspace that already holds duplicate branch
+-- names. That is the intended behaviour: renaming a tenant's branches without
+-- an audit event would be a silent edit to data an operator reads off a screen.
+-- The recovery is a `rename-branch` command on the offending branch, then re-run.
+CREATE UNIQUE INDEX "branches_ws_name_uq" ON "branches" USING btree ("workspace_id","name");

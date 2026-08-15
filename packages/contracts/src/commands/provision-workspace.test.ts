@@ -204,6 +204,22 @@ describe("provision-workspace contract", () => {
     expect(paths).toContain("payload.branches.1.id");
   });
 
+  /** The payload-side half of the (workspace_id, name) unique index. */
+  it("rejects duplicate branch names within the payload", () => {
+    const bad = structuredClone(valid);
+    bad.payload.branches = [
+      { id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8", code: "CTR", name: "Centre" },
+      { id: "6ba7b815-9dad-11d1-80b4-00c04fd430c8", code: "CTR2", name: "Centre" },
+    ];
+
+    const result = provisionWorkspaceCommand.safeParse(bad);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues.some((issue) => issue.path.join(".") === "payload.branches.1.name")).toBe(
+      true,
+    );
+  });
+
   it("rejects a whitespace-only branch name", () => {
     const bad = structuredClone(valid);
     bad.payload.branches[0]!.name = "   ";

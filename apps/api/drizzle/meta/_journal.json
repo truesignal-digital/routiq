@@ -169,6 +169,13 @@
       "when": 1786825713074,
       "tag": "0023_branch_command_tenant_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786825947084,
+      "tag": "0024_branch_name_uq",
+      "breakpoints": true
     }
   ]
 }

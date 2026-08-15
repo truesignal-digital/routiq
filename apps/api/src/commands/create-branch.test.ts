@@ -123,6 +123,24 @@ describe("create-branch.v1", () => {
     expect(rows).toHaveLength(1);
   });
 
+  it("returns DUPLICATE_BRANCH_NAME when the workspace already uses the name", async () => {
+    const name = "Agence du Centre";
+    const first = await post({ branchId: randomUUID(), code: "CTR", name });
+    expect(first.statusCode).toBe(200);
+
+    const second = await post({ branchId: randomUUID(), code: "CTR2", name });
+    expect(second.statusCode).toBe(409);
+    expect(second.json()).toMatchObject({
+      error: { code: "DUPLICATE_BRANCH_NAME" },
+    });
+
+    const rows = await ctx.db
+      .select()
+      .from(branches)
+      .where(and(eq(branches.workspaceId, workspaceId), eq(branches.name, name)));
+    expect(rows).toHaveLength(1);
+  });
+
   it("replays an identical retry instead of creating a second branch", async () => {
     const branchId = randomUUID();
     const key = `idem-${randomUUID()}`;

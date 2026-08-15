@@ -24,6 +24,12 @@ export const COMMAND_ERROR_CODES = [
   "REFERENCE_NOT_FOUND",
   "DUPLICATE_ASSET_CODE",
   "DUPLICATE_BRANCH_CODE",
+  /**
+   * A branch name already in use in this workspace (`branches_ws_name_uq`). The
+   * name identifies the branch across the shell — switcher, scope line, toast —
+   * so it has to be as unique as the code.
+   */
+  "DUPLICATE_BRANCH_NAME",
   "UNIQUE_CONSTRAINT_VIOLATION",
   "COMMAND_FAILED",
   "EXPECTED_VERSION_REQUIRED",
