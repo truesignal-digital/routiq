@@ -36,7 +36,8 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { ALL_BRANCHES, useCurrentBranchCode } from "@/shell/branch-context.js";
+import { ALL_BRANCHES } from "@/shell/branch-context.js";
+import { useFollowShellBranch } from "@/shell/branch-scope.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
@@ -306,7 +307,6 @@ function SheetForm({
 
   const reference = useAssetRegistrationReference();
   const branches = useMemo(() => reference.data?.branches ?? [], [reference.data]);
-  const currentBranchCode = useCurrentBranchCode();
   const activityTypes = useCategories("ACTIVITY_TYPE");
   // Every asset in scope. Unlike the crew rows below, the vehicle picker does
   // not follow the sheet's branch: a truck lent from another agency is exactly
@@ -321,15 +321,7 @@ function SheetForm({
     ...(sheetBranchId === undefined ? {} : { branchId: sheetBranchId }),
   });
 
-  // The shell's current agency, or the only branch there is — a single-branch
-  // workspace should never ask which branch. Editable in both cases.
-  const preselectedBranchCode =
-    currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
-  useEffect(() => {
-    if (preselectedBranchCode !== undefined && branchCode === "") {
-      setValue("branchCode", preselectedBranchCode);
-    }
-  }, [preselectedBranchCode, branchCode, setValue]);
+  useFollowShellBranch(branches, branchCode, (code) => setValue("branchCode", code));
 
   const personOptions = useMemo<Option[]>(() => {
     const persons = personsQuery.data?.items ?? [];

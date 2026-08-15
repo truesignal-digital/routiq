@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "@tanstack/react-router";
 import type { CommandResult } from "@routiq/contracts";
@@ -37,7 +37,7 @@ import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import {
   useCreatedElsewhereNotice,
-  useFollowedBranchCode,
+  useFollowShellBranch,
 } from "@/shell/branch-scope.js";
 import { MoneyInput } from "@/components/money-input.js";
 
@@ -202,7 +202,7 @@ function RecordForm({
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [attachmentsUploading, setAttachmentsUploading] = useState(false);
 
-  useFollowedBranchCode(branches, branchCode, (code) =>
+  useFollowShellBranch(branches, branchCode, (code) =>
     form.setValue("branchCode", code, { shouldValidate: true }),
   );
 

@@ -26,7 +26,7 @@ import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import {
   useCreatedElsewhereNotice,
-  useFollowedBranchCode,
+  useFollowShellBranch,
 } from "@/shell/branch-scope.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
@@ -58,7 +58,7 @@ export function PersonsScreen() {
   const reference = useAssetRegistrationReference();
   const branches = useMemo(() => reference.data?.branches ?? [], [reference.data]);
   const [branchCode, setBranchCode] = useState("");
-  useFollowedBranchCode(branches, branchCode, setBranchCode);
+  useFollowShellBranch(branches, branchCode, setBranchCode);
   // Registering into the agency on screen is confirmed by the new row itself;
   // registering into another one lands where this list cannot show it, so the
   // toast says which.

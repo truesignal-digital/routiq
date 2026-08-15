@@ -66,7 +66,7 @@ export function useBranchScope(): BranchScopeState {
  * explicit pick stands. The field stays editable throughout: the server
  * authorizes the branch either way.
  */
-export function useFollowedBranchCode(
+export function useFollowShellBranch(
   branches: readonly { code: string }[],
   current: string,
   fill: (branchCode: string) => void,
@@ -75,8 +75,10 @@ export function useFollowedBranchCode(
   const preselected =
     currentBranchCode ?? (branches.length === 1 ? branches[0]?.code : undefined);
 
-  // Read through a ref so a caller writing its setter inline does not re-run
-  // the follow on every render.
+  // `fill` is deliberately out of the effect's deps, so a caller writing its
+  // setter inline does not re-run the follow every render — which leaves the
+  // effect holding whichever closure the last dep change captured. The ref is
+  // what keeps it calling the current one.
   const fillRef = useRef(fill);
   fillRef.current = fill;
 

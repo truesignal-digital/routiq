@@ -20,6 +20,8 @@ import {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
+import { BranchProvider, branchStorageKey } from "../shell/branch-context.js";
+import { BranchSwitcher } from "../shell/BranchSwitcher.js";
 import { openSelect } from "../test-select.js";
 import { ActivitySheetScreen } from "./ActivitySheetScreen.js";
 
@@ -419,6 +421,62 @@ describe("activity sheet capture", () => {
 
       expect(screen.getByRole("tab", { name: "Journey" })).not.toBeNull();
       expect(screen.getByRole("tab", { name: "Haulage job" })).not.toBeNull();
+    });
+  });
+
+  describe("branch field under the shell's agency", () => {
+    const DLA = { id: "branch-dla", code: "DLA", name: "Douala" };
+    const YDE = { id: "branch-yde", code: "YDE", name: "Yaound\u00e9" };
+
+    function renderUnderShell(): void {
+      mocks.useAssetRegistrationReference.mockReturnValue({
+        data: { assetClasses: [], branches: [DLA, YDE] },
+        isPending: false,
+        isError: false,
+        refetch: vi.fn(),
+      });
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          createElement(
+            MeCtx.Provider,
+            { value: clerk },
+            createElement(BranchProvider, {
+              children: [
+                createElement(BranchSwitcher, { key: "switcher" }),
+                createElement(ActivitySheetScreen, { key: "screen" }),
+              ],
+            }),
+          ),
+        ) as ReactNode,
+      );
+    }
+
+    afterEach(() => {
+      localStorage.removeItem(branchStorageKey(sessionIdentity.workspaceSlug));
+    });
+
+    it("follows the shell's agency rather than latching the first fill", async () => {
+      const user = userEvent.setup();
+      localStorage.setItem(branchStorageKey(sessionIdentity.workspaceSlug), DLA.id);
+      renderUnderShell();
+
+      await waitFor(() =>
+        expect(screen.getByLabelText("Branch").textContent).toContain("Douala"),
+      );
+
+      await openSelect(user, screen.getByRole("combobox", { name: "Current branch" }));
+      await user.click(await screen.findByRole("option", { name: "Yaound\u00e9" }));
+
+      // A sheet started in Douala and left open would otherwise keep filing
+      // there after the operator moved the shell on.
+      await waitFor(() =>
+        expect(screen.getByLabelText("Branch").textContent).toContain("Yaound\u00e9"),
+      );
     });
   });
 

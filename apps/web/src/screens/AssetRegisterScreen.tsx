@@ -36,7 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAssetRegistrationReference } from "@/assets/reference";
 import {
   useCreatedElsewhereNotice,
-  useFollowedBranchCode,
+  useFollowShellBranch,
 } from "@/shell/branch-scope.js";
 import { useActiveSession } from "@/auth/store";
 import { useMeContext } from "@/auth/me.js";
@@ -104,7 +104,7 @@ export function AssetRegisterScreen() {
   const branchCode = form.watch("branchCode");
 
   const branches = reference.data?.branches ?? [];
-  useFollowedBranchCode(branches, branchCode, (code) =>
+  useFollowShellBranch(branches, branchCode, (code) =>
     form.setValue("branchCode", code),
   );
   // The assets list this navigates to is narrowed by the shell, so an asset
