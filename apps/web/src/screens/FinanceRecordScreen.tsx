@@ -48,7 +48,7 @@ import { canRecordFinance } from "@/finance/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { useCurrentBranchCode } from "@/shell/branch-context.js";
+import { ALL_BRANCHES, useCurrentBranchCode } from "@/shell/branch-context.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type Direction = "EXPENSE" | "REVENUE";
@@ -191,7 +191,10 @@ function RecordForm({
   const categoriesQuery = useCategories(
     direction === "EXPENSE" ? "EXPENSE_CATEGORY" : "REVENUE_CATEGORY",
   );
-  const assetOptions = useAssetOptions();
+  // Every asset in scope, not the shell's current agency: an entry may charge a
+  // cost to a truck the operator is not currently looking at, and the server
+  // does not require the entry's branch to match the asset's.
+  const assetOptions = useAssetOptions(ALL_BRANCHES);
 
   const [errorCode, setErrorCode] = useState<string>();
   const [artifactIds, setArtifactIds] = useState<string[]>([]);

@@ -36,7 +36,7 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { useCurrentBranchCode } from "@/shell/branch-context.js";
+import { ALL_BRANCHES, useCurrentBranchCode } from "@/shell/branch-context.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
@@ -308,7 +308,11 @@ function SheetForm({
   const branches = useMemo(() => reference.data?.branches ?? [], [reference.data]);
   const currentBranchCode = useCurrentBranchCode();
   const activityTypes = useCategories("ACTIVITY_TYPE");
-  const assetOptions = useAssetOptions();
+  // Every asset in scope. Unlike the crew rows below, the vehicle picker does
+  // not follow the sheet's branch: a truck lent from another agency is exactly
+  // the trip worth recording, and the ambient branch narrows lists, not what a
+  // command may reference.
+  const assetOptions = useAssetOptions(ALL_BRANCHES);
   // The sheet's own branch, not the shell's: changing the branch field changes
   // whose people the crew rows offer.
   const sheetBranchId = branches.find((branch) => branch.code === branchCode)?.id;

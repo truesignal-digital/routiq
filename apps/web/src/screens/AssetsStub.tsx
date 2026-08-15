@@ -21,7 +21,7 @@ import {
   type DataTableRowAction,
 } from "@/components/data-table";
 import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
-import { EmptyState, ErrorState, PageHeader } from "@/components/page";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
@@ -38,7 +38,7 @@ import { useAssets } from "@/assets/useAssets.js";
 import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
-import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { useBranchScope } from "@/shell/branch-scope.js";
 
 /** Module-level so the column memo holds across renders. */
@@ -297,7 +297,9 @@ export function AssetsStub() {
               onLoadMore: () => void assetsQuery.fetchNextPage(),
             }}
             emptyState={
-              narrowed ? (
+              assetsQuery.isPending ? (
+                <LoadingState label={t("assets.loading")} />
+              ) : narrowed ? (
                 <EmptyState
                   icon={<Search className="size-7" aria-hidden />}
                   message={

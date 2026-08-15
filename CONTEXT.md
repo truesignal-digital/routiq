@@ -53,7 +53,7 @@ The set of Branches a user's membership grants access to — the server-derived 
 _Avoid_: branch filter, current branch
 
 **Ambient Branch**:
-The single Branch a user is currently viewing through, chosen in the shell switcher — a client-side lens that narrows collections *within* their Branch Scope. Never an access boundary: switching grants nothing, and record identity stays workspace-scoped.
+The single Branch a user is currently viewing through, chosen in the shell switcher — a client-side lens that narrows collections *within* their Branch Scope. Never an access boundary: switching grants nothing, and record identity stays workspace-scoped. It narrows collections and their filters only — never what a command may reference, and never attention signals (badges count the whole Branch Scope).
 _Avoid_: active branch, selected branch (implies per-screen state), branch scope
 
 **Module Entitlement**:

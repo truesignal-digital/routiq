@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
-import { OtherBranchNotice } from "@/shell/BranchScope.js";
+import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 
 export function AssetDetailScreen() {
   const { t, i18n } = useTranslation();

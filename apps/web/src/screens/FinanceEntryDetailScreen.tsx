@@ -32,7 +32,7 @@ import { z } from "zod";
 import { ReversalLink } from "@/finance/ReversalLink.js";
 import { reverseEntryPayload } from "@routiq/contracts";
 import { ErrorBanner } from "@/components/error-banner.js";
-import { OtherBranchNotice } from "@/shell/BranchScope.js";
+import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 
 interface ReverseDialogState {
   open: boolean;

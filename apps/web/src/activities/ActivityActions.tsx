@@ -43,6 +43,7 @@ import { useCategories } from "../documents/useCategories.js";
 import { parseMoneyXaf } from "../finance/model.js";
 import { localizedLabel } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
+import { ALL_BRANCHES } from "../shell/branch-context.js";
 import { canRecordActivities, canReopenActivity } from "./permissions.js";
 import { PlaceEndpointField } from "./PlaceEndpointField.js";
 import { LOAD_STATES, PAYMENT_METHODS, READING_TYPES } from "./sheet/form.js";
@@ -482,12 +483,14 @@ function ReopenDialog({
 /**
  * The whole fleet, drained page by page. Stopping at the first keyset page would
  * hide the very truck that came to the rescue; pilot fleets are tens of rows.
+ * The shell's agency is excluded on purpose — the rescue most worth recording is
+ * the one that came from the next branch over.
  */
 function useAssetOptions(
   excludeAssetId: string | undefined,
 ): Array<{ value: string; label: string }> {
   const { t } = useTranslation();
-  const assetsQuery = useAssets();
+  const assetsQuery = useAssets({ branchId: ALL_BRANCHES });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = assetsQuery;
 
   useEffect(() => {

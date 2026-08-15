@@ -79,9 +79,7 @@ export function FinanceApprovalsScreen() {
   // `?branch=all` arrives from an overflow line elsewhere in the app, which has
   // already told the operator how much sits outside the ambient agency: landing
   // them back on that same narrowing would answer the wrong question.
-  const { branch: arrivingWidened } = useSearch({ strict: false }) as {
-    branch?: string;
-  };
+  const { branch: arrivingWidened } = useSearch({ from: "/app/finance/approvals" });
   const [branchOverride, setBranchOverride] = useState<string | undefined>(
     arrivingWidened === "all" ? "" : undefined,
   );

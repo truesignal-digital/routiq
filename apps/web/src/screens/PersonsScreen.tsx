@@ -24,7 +24,7 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useCurrentBranchCode } from "@/shell/branch-context.js";
-import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { useBranchScope, useCreatedElsewhereNotice } from "@/shell/branch-scope.js";
 import { notifySuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";

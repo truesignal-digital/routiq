@@ -204,6 +204,51 @@ describe("assets explorer under the shell's current branch", () => {
     await waitFor(() => expect(lastQuery(listed).get("branchId")).toBeNull());
   });
 
+  it("shows the list loading, not an empty workspace, while a switch re-queries", async () => {
+    localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
+    // The widened read is held open, which is exactly the window an operator
+    // sees between switching agency and the rows arriving.
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL) => {
+        const href = String(url);
+        if (href.startsWith("/v1/assets/summary")) {
+          return new Response(JSON.stringify(SUMMARY), { status: 200 });
+        }
+        if (href.startsWith("/v1/reference/asset-registration")) {
+          return new Response(JSON.stringify(REFERENCE), { status: 200 });
+        }
+        if (href.startsWith("/v1/assets")) {
+          const scoped = new URLSearchParams(href.split("?")[1]).has("branchId");
+          if (!scoped) await held;
+          return new Response(JSON.stringify(scoped ? EMPTY_PAGE : PAGE), {
+            status: 200,
+          });
+        }
+        return new Response("{}", { status: 200 });
+      }),
+    );
+
+    renderScreen();
+    await screen.findByText("Rien à afficher pour Douala");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Voir toutes mes agences" }),
+    );
+
+    // Without a pending check the table falls straight through to an empty
+    // state, and the first-run copy claims a fleet that was never counted.
+    expect(await screen.findByText("Chargement des actifs…")).toBeTruthy();
+    expect(screen.queryByText("Enregistrez votre premier véhicule")).toBeNull();
+
+    release();
+    expect(await screen.findByText("AST-001")).toBeTruthy();
+  });
+
   it("keeps the first-run state for a workspace with no assets at all", async () => {
     stubFetch(EMPTY_PAGE);
 

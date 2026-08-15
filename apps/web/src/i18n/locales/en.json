@@ -596,6 +596,7 @@
   "activities": {
     "title": "Activities",
     "loadFailed": "We couldn't load activities. Please retry.",
+    "loading": "Loading activities…",
     "retry": "Try again",
     "emptyHint": "No activities yet. Recorded trip sheets will appear here.",
     "branchEmptyHint": "No activity for this branch.",

@@ -18,7 +18,7 @@ import { ProvenanceStamp } from "@/components/provenance-stamp.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
-import { OtherBranchNotice } from "@/shell/BranchScope.js";
+import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 
 export function ActivityDetailScreen() {
   const { t, i18n } = useTranslation();

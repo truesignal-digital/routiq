@@ -191,9 +191,14 @@ export function useCurrentBranch(): BranchContextValue {
  * The exception is a screen whose filter is its own visible control rather than
  * a narrowing: the approvals queue reads the ambient branch to *preset* that
  * filter, then lets the approver widen it back (`FinanceApprovalsScreen.tsx`).
+ *
+ * `ALL_BRANCHES` is how a caller opts out of the lens altogether — a command
+ * form's asset picker offers the whole fleet whatever the shell is filtered to.
+ * It resolves to `undefined`, since "every branch" is the absence of a filter.
  */
 export function useAmbientBranchId(explicit?: string): string | undefined {
   const { currentBranchId } = useCurrentBranch();
+  if (explicit === ALL_BRANCHES) return undefined;
   if (explicit !== undefined && explicit !== "") return explicit;
   return currentBranchId === ALL_BRANCHES ? undefined : currentBranchId;
 }

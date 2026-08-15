@@ -15,6 +15,8 @@ import {
  *
  * A caller that names `branchId` itself keeps it — a crew picker follows the
  * sheet's branch, and a decision queue follows its own visible filter.
+ * `ALL_BRANCHES` names the opposite: a command form's picker offers the whole
+ * scope however the shell is filtered.
  */
 export interface BranchScopedParams {
   branchId?: string;
@@ -22,9 +24,13 @@ export interface BranchScopedParams {
 
 export function useBranchScopedParams<T extends BranchScopedParams>(params: T): T {
   const branchId = useAmbientBranchId(params.branchId);
-  // A fresh object every render is what the callers already build; query keys
-  // are hashed structurally, so identity never enters the cache decision.
-  return { ...params, ...(branchId === undefined ? {} : { branchId }) };
+  // `ALL_BRANCHES` resolves to `undefined`, and "every branch" is the absence of
+  // the param — so the caller's own `branchId` is dropped before the rebuild
+  // rather than spread back over the result as a sentinel the API would filter
+  // on. A fresh object every render is what the callers already build; query
+  // keys are hashed structurally, so identity never enters the cache decision.
+  const { branchId: _requested, ...rest } = params;
+  return { ...rest, ...(branchId === undefined ? {} : { branchId }) } as T;
 }
 
 export interface BranchScopeState {

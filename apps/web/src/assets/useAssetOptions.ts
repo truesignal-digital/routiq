@@ -7,10 +7,17 @@ import { useAssets } from "./useAssets.js";
  * The whole fleet, labelled as the entries filter labels it. Stopping at the
  * first keyset page would hide assets an operator needs to charge a cost to;
  * pilot fleets are tens of rows, so draining the cursor costs a request or two.
+ *
+ * `branchId` is what the caller means by "fleet": omitted, the picker follows
+ * the shell's agency like the list it filters; `ALL_BRANCHES` covers the whole
+ * scope, which is what a command form needs — the ambient branch narrows
+ * collections, never what a command may reference.
  */
-export function useAssetOptions(): Array<{ value: string; label: string }> {
+export function useAssetOptions(
+  branchId?: string,
+): Array<{ value: string; label: string }> {
   const { t } = useTranslation();
-  const assetsQuery = useAssets();
+  const assetsQuery = useAssets(branchId === undefined ? {} : { branchId });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = assetsQuery;
 
   useEffect(() => {

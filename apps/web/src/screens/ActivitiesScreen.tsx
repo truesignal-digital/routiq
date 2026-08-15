@@ -11,7 +11,7 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { EmptyState, ErrorState, PageHeader } from "@/components/page";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
@@ -25,7 +25,7 @@ import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
-import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { useBranchScope } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
@@ -54,8 +54,10 @@ export function ActivitiesScreen() {
   const canView = canViewActivities(me?.enabledModules);
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
   const activityTypesQuery = useCategories("ACTIVITY_TYPE");
-  // `useAssetOptions` drains the full asset cursor so the filter covers the
-  // fleet; pilot workspaces are intentionally small enough for that tradeoff.
+  // No branch named, so the picker follows the shell's agency like the list it
+  // filters — offering a truck whose activities this list can never show would
+  // only produce an empty table. It drains the full asset cursor; pilot
+  // workspaces are intentionally small enough for that tradeoff.
   const assetOptions = useAssetOptions();
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
@@ -242,7 +244,9 @@ export function ActivitiesScreen() {
               onLoadMore: () => void activitiesQuery.fetchNextPage(),
             }}
             emptyState={
-              scoped ? (
+              activitiesQuery.isPending ? (
+                <LoadingState label={t("activities.loading")} />
+              ) : scoped ? (
                 <BranchScopedEmptyState
                   icon={<Route className="size-7" aria-hidden />}
                   message={t("activities.branchEmptyHint")}

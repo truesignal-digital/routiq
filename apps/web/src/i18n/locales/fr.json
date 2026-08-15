@@ -596,6 +596,7 @@
   "activities": {
     "title": "Activités",
     "loadFailed": "Impossible de charger les activités. Veuillez réessayer.",
+    "loading": "Chargement des activités…",
     "retry": "Réessayer",
     "emptyHint": "Aucune activité pour l'instant. Les feuilles de route saisies apparaîtront ici.",
     "branchEmptyHint": "Aucune activité pour cette agence.",

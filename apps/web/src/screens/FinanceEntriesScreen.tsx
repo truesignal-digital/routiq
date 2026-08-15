@@ -28,7 +28,7 @@ import {
 } from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
 import { formatDate } from "@/lib/format.js";
-import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScope.js";
+import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { useBranchScope } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
