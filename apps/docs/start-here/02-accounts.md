@@ -76,6 +76,10 @@ Three personas are available in each test workspace: an owner/admin who configur
 2. Choose your workspace (TRUCKING or PASSENGER).
 3. You log in with that account's role and branch scope already active.
 
+![ROUTIQ login screen used to select a test persona and workspace](/tour-login.png)
+
+*Use the workspace slug and credentials for the persona whose permissions you are testing.*
+
 Each account has full access to its workspace's data within its assigned branches. If a test account is scoped to a single branch, it will only see data from that branch.
 
 ---

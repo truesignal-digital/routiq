@@ -25,9 +25,17 @@ The sheet needs at least one **commissioned** truck (lesson 03) and at least one
 
 1. Click **Trips** in the navigation.
 
+![Empty Trips list with Record a sheet action](/activities-01-empty-state.png)
+
+*The empty list provides the Record a sheet action for the first trip.*
+
 > ✅ Expected: the page header reads **Trips**, with a **Record a sheet** button beside it. An empty workspace shows *No trips yet. Recorded trip sheets will appear here.*
 
 2. Click **Record a sheet**.
+
+![Blank trucking trip sheet](/activities-01-sheet-form.png)
+
+*The trucking sheet is arranged in paper-form sections from references through money.*
 
 > ✅ Expected: the page header reads **Record a sheet** with the line *Work down the paper trip sheet. Anything it does not say can stay empty.* below it. The form is a stack of cards: **References**, **Vehicle and meters**, **Crew**, **Legs**, **Cargo**, **Revenue and expenses**.
 
@@ -42,7 +50,15 @@ The sheet needs at least one **commissioned** truck (lesson 03) and at least one
 6. Still in **Vehicle and meters**, look at the **Trailer** block. Set an **Asset** and its **Role** if the truck pulled a trailer; leave the row untouched if it did not.
 7. In **Crew**: pick a **Person** and their **Role** (Driver, Conductor, Assistant, Relief, Mechanic, Other). If the driver is not in the list, open the person picker and choose **New person**, fill **Full name**, **Usual role** and **Phone**, and click **Register**.
 
+![New person dialog opened from the crew picker](/activities-01-new-person-dialog.png)
+
+*The crew picker can open the compact New person registration dialog in place.*
+
 > ✅ Expected: registering from inside the sheet shows a toast **Person registered** and drops the new person straight into the crew row you were filling. Nothing you had already typed on the sheet is lost.
+
+![Trip sheet crew row with Jean Tester selected as Driver](/activities-01-crew-selected.png)
+
+*A selected person and role stay attached to the sheet's crew row.*
 
 8. In **Legs**: fill the first leg's **From** and **To**, and optionally **Departure time**, **Arrival time**, **Distance (km)** and **Load**. Click **Add a leg** and fill a second one, so the trip has a real route.
 
@@ -52,11 +68,23 @@ The sheet needs at least one **commissioned** truck (lesson 03) and at least one
 10. Leave **Revenue and expenses** empty for now — lesson 02 covers it.
 11. Click **Record sheet** (**not** **Record and close**).
 
+![Completed two-leg trucking trip sheet](/activities-01-sheet-filled.png)
+
+*The completed sheet includes truck, times, readings, crew, two legs, and cargo.*
+
 > ✅ Expected: a toast **Sheet recorded**, and you land on the new trip's own page. Its header is the generated trip number, with an **Open** status chip. The page shows the overview, the planned-vs-actual timeline, the assets and crew, the **Legs** table with both of your legs, and **Revenue and costs**.
+
+![Open trucking trip record with legs, crew, and readings](/activities-01-trip-record.png)
+
+*The new Open trip record consolidates the route, crew, meter readings, and costs.*
 
 12. Go back to **Trips**.
 
 > ✅ Expected: the trip is in the table with its **Trip no.**, **Open** status, type, **Started** / **Ended**, **Primary truck**, **Legs** count and **Crew** count.
+
+![Open trip in the Trips table](/activities-01-trip-row.png)
+
+*The list row summarizes the recorded sheet and links back to its record.*
 
 ## Try to break it
 

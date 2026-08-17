@@ -6,6 +6,8 @@ After logging in, you'll see the ROUTIQ interface organized around a left sideba
 
 ![Screenshot: Login screen](/tour-login.png)
 
+*Enter the workspace slug, persona username, and PIN before signing in.*
+
 Enter your username and password, then choose a workspace. You're authenticated via email and optional two-factor setup — test accounts skip both for speed.
 
 ---
@@ -13,6 +15,8 @@ Enter your username and password, then choose a workspace. You're authenticated 
 ## Dashboard (home)
 
 ![Screenshot: Workspace and nav overview](/tour-nav-overview.png)
+
+*The home screen combines the main navigation, branch context, and operational summary.*
 
 The Dashboard is your landing page after login. It shows summary cards: trucks (or vehicles) in service, recent trips, and financial summaries. Each card is a quick way to jump into a section. Your branch scope and workspace are visible in the top-right header; a branch selector (if multiple branches are assigned) lets you narrow your view to one location.
 
@@ -30,6 +34,8 @@ The left sidebar holds the main navigation:
 
 ![Screenshot: Trucks/vehicles list](/tour-assets-list.png)
 
+*The fleet list exposes identity, branch, and lifecycle status at a glance.*
+
 Click **Assets** (or **Trucks**/**Vehicles**) in the sidebar. You see a table of all assets in your branch scope, with columns for asset code, status (in service, decommissioned), and recent activity.
 
 **What you can do here:**
@@ -46,6 +52,8 @@ Each asset record holds its lifecycle (draft → active → sold/retired), linke
 
 ![Screenshot: Trips list](/tour-activities-list.png)
 
+*The trips table keeps each recorded sheet and its current status visible.*
+
 Click **Activities** (or **Trips**) in the sidebar. You see a table of all trips, with trip number, assigned truck or vehicle, status, and dates.
 
 **What you can do here:**
@@ -61,6 +69,8 @@ Trips move through a lifecycle: draft (open for edit) → closed (finalized but 
 ## Approvals queue (Finances)
 
 ![Screenshot: Approvals queue](/tour-approvals-queue.png)
+
+*The approval queue shows pending entries and the context needed for a decision.*
 
 Click **Finances** in the sidebar, then select **Approvals**. This page is only visible to FINANCE_APPROVER and ADMIN roles.
 
@@ -98,6 +108,8 @@ Click **Finances** > **Periods** to view monthly financial periods. Each period 
 ## More menu (Settings)
 
 ![Screenshot: Settings and admin menu](/tour-more-menu.png)
+
+*The More screen groups administration, language, theme, and sign-out controls.*
 
 Click **More** (three horizontal lines) in the sidebar.
 

@@ -21,9 +21,17 @@ flowchart LR
 
 1. In the left navigation (bottom bar on a phone), click **Trucks**.
 
+![Empty Your trucks page with the first-run registration action](/assets-01-empty-state.png)
+
+*An empty trucking workspace leads directly into the first registration.*
+
 > ✅ Expected: the page header reads **Your trucks**, under the eyebrow **OPERATIONAL FLEET**. If the workspace is empty you get the first-run panel **Register your first truck** with a **Register a truck** button; otherwise you get the truck table plus a **New truck** button in the header.
 
 2. Click **New truck** (or **Register a truck** on the empty state).
+
+![Blank Register a truck form](/assets-01-register-form.png)
+
+*The registration form separates identity, acquisition, capacity, and preset fields.*
 
 > ✅ Expected: you land on the form page titled **Register a truck**, with the small heading **NEW REGISTRATION** above it. The URL ends in `/assets/new`.
 
@@ -45,11 +53,23 @@ flowchart LR
 9. Optionally drag a photo or a PDF of the carte grise into **Supporting document (optional)**.
 10. Click **Register truck**.
 
+![Completed truck registration form for TRK-001](/assets-01-register-form-filled.png)
+
+*A completed registration includes the truck identity, branch, acquisition, and optional trucking fields.*
+
 > ✅ Expected: a green toast **Truck registered**, and you are sent back to **Your trucks**. The new truck appears as a row showing its code, plate, class, branch, and a grey **Registered** status chip.
+
+![TRK-001 in the Your trucks table with Registered status](/assets-01-truck-row.png)
+
+*The new truck appears in the fleet table with its branch and Registered chip.*
 
 11. Click the new row to open the truck.
 
 > ✅ Expected: the record page shows the truck's name, its code and plate in mono type underneath, the **Registered** chip, its class and branch. A **Profitability** card says **Nothing posted against this truck yet.** A **Recent trips** card says **No trips for this truck.** In the header you have **Commission**, **Assign** and **History**.
+
+![Registered truck record with lifecycle actions](/assets-01-truck-record.png)
+
+*The truck record begins in Registered state with Commission, Assign, and History actions.*
 
 ## Try to break it
 

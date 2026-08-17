@@ -19,6 +19,10 @@ The app supports both English and French. **While testing, use the English inter
 2. Look for the language picker (usually a globe or flag icon).
 3. Select English.
 
+![More screen with English and French language controls](/start-03-more-menu.png)
+
+*Language controls are on the More screen alongside theme and sign-out options.*
+
 If you see French labels appearing where English is expected, that is a bug worth reporting.
 
 ## Login steps
@@ -27,6 +31,10 @@ If you see French labels appearing where English is expected, that is a bug wort
 2. Enter your username and password (from the pinned chat message).
 3. Choose a workspace (TRUCKING or PASSENGER).
 4. You land on the Dashboard with your role and branch scope already active.
+
+![ROUTIQ login screen with workspace, username, and PIN fields](/login.png)
+
+*The login screen keeps the workspace and account identity explicit before the session starts.*
 
 That's it — no two-factor authentication, no email confirmation. The test environment is open.
 

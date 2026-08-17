@@ -30,9 +30,17 @@ Note that **status is not availability**. A truck being **In service** says it h
 
 > ✅ Expected: a dialog titled **Commission** with the explanation *Puts the truck into service. Its operating history starts counting from here.* and two buttons, **Cancel** and **Confirm**.
 
+![Commission confirmation dialog for TRK-001](/assets-03-commission-dialog.png)
+
+*Commissioning is a deliberate one-time lifecycle transition.*
+
 3. Click **Confirm**.
 
 > ✅ Expected: a toast **Truck commissioned**. The dialog closes, and the status chip on the record changes to **In service**.
+
+![Truck record after commissioning with In service status](/assets-03-in-service.png)
+
+*After confirmation the truck is In service and Commission is no longer offered.*
 
 4. Look at the header actions again.
 
@@ -42,21 +50,41 @@ Note that **status is not availability**. A truck being **In service** says it h
 
 > ✅ Expected: a dialog titled **Assign** with the note *Moves the truck to another branch. Records already booked stay with the branch that made them.*, a dropdown labelled **Assign to branch** listing branches as `Name (CODE)`, and **Cancel** / **Confirm**.
 
+![Assign truck dialog with branch selector](/assets-03-assign-dialog.png)
+
+*Assignment changes the truck's current branch without moving prior records.*
+
 6. Choose the branch the truck is **already** in, and click **Confirm**.
 
 > ✅ Expected: a toast **Truck assigned**. A same-branch assignment is an ordinary command that an admin completes on the spot.
+
+![Truck record after a same-branch assignment](/assets-03-same-branch-assigned.png)
+
+*A same-branch assignment completes immediately for an administrator.*
 
 7. Now click **Assign** again and pick a **different** branch. Click **Confirm**.
 
 > ✅ Expected: the dialog does **not** close with a toast. It is replaced in place by a blue notice **Approval required** — *A transfer to another branch needs an approval. That step arrives with the approval flow.* — with a **Close** button. The truck stays in its original branch.
 
+![Approval required notice for a cross-branch assignment](/assets-03-approval-required.png)
+
+*The administrator's cross-branch attempt stops at the Approval required notice.*
+
 8. Sign out. Sign in as the **Finance approver**, open the same truck, click **Assign**, choose the other branch, and click **Confirm**.
 
 > ✅ Expected: this time a toast **Truck assigned**, and the branch chip on the record now shows the new branch. Moving a truck between branches is a finance decision; the finance approver is the only role the seeded rule authorises for it.
 
+![Truck record after the finance approver completes the transfer](/assets-03-cross-branch-complete.png)
+
+*The finance approver completes the cross-branch move and the branch chip updates.*
+
 9. Open **History** on the truck.
 
 > ✅ Expected: **Asset registered**, **Asset commissioned** and one **Asset assigned** row per successful assignment, each stamped with its author. The refused cross-branch attempt from step 7 left no record — it never committed.
+
+![Truck history showing registration, commission, and assignments](/assets-03-history.png)
+
+*History contains only successful lifecycle commands, with the actor for each event.*
 
 ## Try to break it
 

@@ -26,23 +26,51 @@ flowchart LR
 
 > ✅ Expected: you see **Commission**, **Assign** and **History** — and nothing else. There is no **Edit**, no **Delete**, and no pencil icon anywhere on the record. This is deliberate: a truck's identity fields are written once by the registration command, and the audit trail is what makes the numbers hanging off that truck trustworthy.
 
+![Registered truck record without edit or delete controls](/assets-01-truck-record.png)
+
+*Identity is immutable on the truck record; only lifecycle and history actions are offered.*
+
 ### Corrections that are supported: documents supersede
 
 3. On the truck record, click the **Documents** link near the bottom of the page.
 
 > ✅ Expected: the page header reads **Truck documents**. With nothing recorded yet you get **No documents for this truck.** and an **Add a document** button.
 
+![Empty Truck documents page](/assets-02-documents-empty.png)
+
+*The document register starts with an explicit empty state and Add a document action.*
+
 4. Click **Add a document**. Choose a **Document type**, and fill **Title**, **Number**, **Issued** and **Expires**. Put an expiry a few months out. Click **Save**.
 
+![Add a document form with insurance details](/assets-02-add-document-form.png)
+
+*A document version records its type, title, number, issue date, and expiry date.*
+
 > ✅ Expected: a toast **Document saved**, and the document appears in the list with a green-ish validity chip reading **Valid → `date`**.
+
+![Current insurance document with a Valid badge](/assets-02-document-valid.png)
+
+*The saved document is the live version and displays its current validity.*
 
 5. Now pretend the number was typed wrong. Click **Renew** on that document.
 
 > ✅ Expected: a form opens titled **Renew `document name`**, pre-filled from the document you are replacing.
 
+![Renew document form pre-filled from the current version](/assets-02-renew-document-form.png)
+
+*Renewal starts from the current version while allowing corrected values and dates.*
+
 6. Change the **Number**, set a new **Expires** date, and click **Save**.
 
 > ✅ Expected: a toast **Document renewed**. The list now shows the new document as the live one. The old one drops into a separate group carrying a **Superseded** badge and a **Replaced by** line pointing at its replacement. **The wrong value is still on screen** — it was not deleted, it was superseded.
+
+![Document list showing current and superseded versions](/assets-02-document-superseded.png)
+
+*The replacement stays current while the earlier version remains visible as Superseded.*
+
+![Expanded superseded document details with replacement link](/assets-02-document-superseded-details.png)
+
+*The superseded version retains its original values and points to the replacement.*
 
 ### The trail: History
 
@@ -50,9 +78,17 @@ flowchart LR
 
 > ✅ Expected: a panel slides in titled **Record history**, listing events oldest-relevant-first with a date grouping (**Today**, **Yesterday**, then dates). You should at least see **Asset registered**.
 
+![Record history panel for the truck](/assets-02-history-panel.png)
+
+*Record history groups committed events by date and identifies their authors.*
+
 8. Click **Show changes** on the **Asset registered** row.
 
 > ✅ Expected: the field-by-field values written by that command appear, using business names (`asset code`, `registration`, `chassis no.`, `acquisition price`, …), not database columns. Each event also names who did it and when.
+
+![Expanded Asset registered event showing field changes](/assets-02-history-changes.png)
+
+*Show changes reveals the business fields written by the registration command.*
 
 9. If the history looks empty, click **Show all**.
 

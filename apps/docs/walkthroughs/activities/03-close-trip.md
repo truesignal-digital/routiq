@@ -30,6 +30,10 @@ On the trucking preset a closed trip is expected to carry legs, crew, revenue, a
 
 > ✅ Expected: a dialog titled **Close the trip** with the note *Anything missing is flagged on the record, never invented.*, a field **End date and time (optional)** and a **Note (optional)** box, plus **Cancel** and **Confirm closing**. The end date is optional here because your sheet already recorded an **Arrival**.
 
+![Close the trip confirmation dialog](/activities-03-close-dialog.png)
+
+*Closing accepts an optional end time and note before calculating completeness.*
+
 3. Leave the end date alone, type a short note, and click **Confirm closing**.
 
 > ✅ Expected: a toast **Trip closed**, and the trip's status chip changes from **Open** to **Closed**.
@@ -37,6 +41,10 @@ On the trucking preset a closed trip is expected to carry legs, crew, revenue, a
 4. Read the banner that appears above the trip's panels.
 
 > ✅ Expected: because lessons 01 and 02 never attributed **revenue** to this trip, the banner reads **Closed with exceptions** with the line *The trip is closed, but the following are missing:* and the item **No revenue attributed**. (Revenue only counts towards a trip when it is entered on the sheet with **Charge to this trip** ticked — a revenue line recorded from **Finance → Record** is attached to the truck, not to the trip.)
+
+![Closed trip record with No revenue attributed exception](/activities-03-closed-exceptions.png)
+
+*The trip closes successfully while preserving the missing-revenue exception.*
 
 > ✅ If you did attribute revenue on the sheet, the banner reads **Complete** with the hint *Every expected detail was recorded.* instead.
 
@@ -48,19 +56,39 @@ On the trucking preset a closed trip is expected to carry legs, crew, revenue, a
 
 > ✅ Expected: a **Reopen** button is now in the header. Reopening is a manager's call, not a clerk's.
 
+![Closed trip record as Admin with Reopen action](/activities-03-admin-reopen-action.png)
+
+*An administrator sees Reopen where the Entry operator saw only History.*
+
 7. Click **Reopen**.
 
 > ✅ Expected: a dialog titled **Reopen the trip** with the note *Reopening clears the completeness verdict. The reason stays in the audit trail.*, a required **Reason** field placeholdered *Why reopen this trip?*, and **Confirm reopening**.
+
+![Reopen the trip dialog with required reason](/activities-03-reopen-dialog.png)
+
+*The reopen command requires a reason that remains in the audit trail.*
 
 8. Type a reason and confirm.
 
 > ✅ Expected: a toast **Trip reopened**, the chip returns to **Open**, and the completeness banner disappears — the verdict is cleared, not kept stale.
 
+![Trip record after reopening](/activities-03-reopened.png)
+
+*The reopened trip returns to Open state and no longer carries a completeness verdict.*
+
 9. Open **History** on the trip.
 
 > ✅ Expected: **Trip sheet recorded**, **Activity closed** and **Activity reopened** all listed in order, each with its author and the reopen reason preserved.
 
+![Trip history with recorded, closed, and reopened events](/activities-03-history.png)
+
+*Trip history preserves the full close-and-reopen sequence and its actors.*
+
 10. Close the trip again so it is left tidy for the next tester.
+
+![Trip left in its final Closed state](/activities-03-final-closed.png)
+
+*The walkthrough fixture is left closed and ready for the next tester.*
 
 ## Try to break it
 
