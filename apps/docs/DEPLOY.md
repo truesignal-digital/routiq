@@ -1,120 +1,177 @@
 # Deploying the tester handbook
 
-The handbook is a static VitePress site served by the box's existing Caddy under an obscure path on
-the demo vhost. It is **not** part of the demo app's container, is not built by CI, and is not in the
-root `typecheck`/`test` pipelines — publishing it is a manual step.
+The tester handbook is a static VitePress site served by the box's shared `edge-caddy` proxy. It is
+available on both ROUTIQ demo hostnames:
 
-This file is excluded from the site build (`srcExclude` in `.vitepress/config.ts`), so it never ships
-to the box.
+- `https://demo.truesignaldigital.com/team-docs-k4v9w2/`
+- `https://routiq.178.156.253.244.nip.io/team-docs-k4v9w2/`
 
-## 1. Build
+The path is public but unlisted. Caddy sends `X-Robots-Tag: noindex, nofollow`, and the pages carry the
+same robots directive in their HTML. This is not authentication; anyone with the URL can open it.
+
+`DEPLOY.md` and `CREDENTIALS.md` are excluded from the VitePress build through `srcExclude` in
+`.vitepress/config.ts`.
+
+## Deployment layout
+
+- Server: `root@178.156.253.244`
+- Static files: `/srv/routiq/team-docs/`
+- Shared proxy container: `edge-caddy`
+- Shared proxy compose file: `/srv/edge/compose.yml`
+- Global Caddyfile: `/srv/edge/Caddyfile` — never edit it for a project deployment
+- ROUTIQ site file: `/srv/edge/sites/routiq-demo.caddy`
+- Files and Servo site files: do not edit `files.caddy` or `servo.caddy`
+
+The shared proxy compose service mounts the handbook read-only:
+
+```yaml
+volumes:
+  - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  - ./sites:/etc/caddy/sites:ro
+  - /srv/routiq/team-docs:/srv/routiq/team-docs:ro
+  - caddy_data:/data
+  - caddy_config:/config
+```
+
+The mount is one-time proxy configuration. Ordinary handbook deployments only rebuild and synchronize
+the static files.
+
+## Build the site
+
+From the `docs/tester-handbook` worktree:
 
 ```bash
-pnpm install
 pnpm --filter @routiq/docs build
 ```
 
-Output: **`apps/docs/.vitepress/dist/`**
+The build output is `apps/docs/.vitepress/dist/`. VitePress bakes `/team-docs-k4v9w2/` into links,
+assets, and the local search index through `base` in `.vitepress/config.ts`.
 
-Every link, asset, and search-index URL in that output is prefixed with `/team-docs-k4v9w2/`, because
-`base` is set in `.vitepress/config.ts`. Change `base` and you must rebuild — the path is baked into
-the HTML, not resolved at request time. Sanity check before shipping:
-
-```bash
-grep -o '/team-docs-k4v9w2/[^"]*' apps/docs/.vitepress/dist/index.html | head
-```
-
-To preview the built output locally (serves at the base path):
+Preview the production output locally when needed:
 
 ```bash
 pnpm --filter @routiq/docs preview
 ```
 
-## 2. Copy to the box
+## Synchronize the build
 
-The demo box is the owner's Hetzner server (`178.156.253.244`, hostname `jarvis-us`). Put the site
-next to the other ROUTIQ runtime files:
+Create the destination and synchronize the contents of `dist/`:
 
 ```bash
+ssh root@178.156.253.244 'mkdir -p /srv/routiq/team-docs'
+
 rsync -avz --delete \
   apps/docs/.vitepress/dist/ \
-  <you>@178.156.253.244:/srv/routiq/team-docs/
+  root@178.156.253.244:/srv/routiq/team-docs/
 ```
 
-`--delete` is deliberate: stale pages from a previous build would otherwise stay reachable and stay
-in the search index. The trailing slash on the source is what copies the *contents* of `dist/`
-rather than a nested `dist/` directory — getting this wrong lands the site at
-`/srv/routiq/team-docs/dist/` and every URL 404s.
+The trailing slash on `dist/` copies its contents directly into `/srv/routiq/team-docs/`. `--delete`
+removes pages and search assets left by an older build.
 
-Caddy runs in the `servo-staging-caddy` container, so `/srv/routiq/team-docs` must be visible inside
-it. Add a read-only bind mount to that project's compose service (once, not per deploy):
+## Configure shared proxy access
+
+This section is only needed if the read-only mount is absent from `/srv/edge/compose.yml`.
+
+Add this line to the `caddy` service's `volumes`:
 
 ```yaml
-volumes:
-  - /srv/routiq/team-docs:/srv/routiq/team-docs:ro
+- /srv/routiq/team-docs:/srv/routiq/team-docs:ro
 ```
 
-## 3. Caddy site block
+Recreate the shared proxy:
 
-This edit belongs to the **servo-staging** Caddyfile — the owner's other project, which owns 80/443
-on the box. Propose it, get approval, apply it once; the deploy workflow must never touch it.
+```bash
+ssh root@178.156.253.244 'cd /srv/edge && docker compose up -d'
+```
+
+This briefly interrupts every vhost on the box. Confirm the unrelated files host and the demo app have
+recovered before changing a site rule:
+
+```bash
+curl -sI https://files.truesignaldigital.com/
+curl -sI https://demo.truesignaldigital.com/
+```
+
+Both must return `200`.
+
+## Configure the ROUTIQ site
+
+Back up the project site file before editing it:
+
+```bash
+ssh root@178.156.253.244 \
+  'cp /srv/edge/sites/routiq-demo.caddy /srv/edge/sites/routiq-demo.caddy.bak'
+```
+
+Keep the existing comment header and both hostnames in `/srv/edge/sites/routiq-demo.caddy`. The site
+block must be:
 
 ```caddyfile
-routiq.178.156.253.244.nip.io {
-	# The handbook is internal. Keep it out of search indexes at the edge as
-	# well as in the page <head>, since crawlers that ignore the meta tag
-	# still honour the header.
+routiq.178.156.253.244.nip.io, demo.truesignaldigital.com {
 	handle_path /team-docs-k4v9w2/* {
 		root * /srv/routiq/team-docs
 		header X-Robots-Tag "noindex, nofollow"
 		file_server
 	}
-
-	# MUST stay below the handle_path block above. This is the demo PWA's
-	# catch-all: the web container answers any unmatched path with the SPA's
-	# index.html so client-side routing works. If it were matched first, a
-	# request for /team-docs-k4v9w2/ would be proxied into the SPA and come
-	# back as HTTP 200 with the app shell — the handbook would silently never
-	# be served, and there would be no 404 to point at the cause.
 	handle {
 		reverse_proxy routiq-demo-web:80
 	}
 }
 ```
 
-Notes:
+The `handle_path` must remain above the SPA catch-all `handle`. It strips the handbook prefix before
+the file server resolves a path. If the reverse proxy runs first, the demo PWA returns its own app shell
+for handbook URLs instead.
 
-- `handle_path` (not `handle`) strips the `/team-docs-k4v9w2` prefix before `file_server` resolves
-  the file, so `root` points at the directory holding `index.html` directly. Pair it with the
-  matching `base` in the VitePress config — the prefix has to be stripped on the way in and re-added
-  on the way out, and those two settings are the two halves of that.
-- Both blocks are `handle` blocks so they are mutually exclusive and evaluated in written order. If
-  the site block ever grows other path rules and the ordering gets hard to reason about, wrap the
-  whole thing in `route { … }`, which forces literal top-to-bottom evaluation.
-- Reload without dropping connections: `docker exec servo-staging-caddy caddy reload --config /etc/caddy/Caddyfile`.
-- The public hostname actually in use comes from `PUBLIC_URL` in `/srv/routiq/demo.env`; use that
-  hostname if it differs from the nip.io default above.
+Do not edit `/srv/edge/Caddyfile`, `files.caddy`, or `servo.caddy`.
 
-## 4. Verify
+## Validate and reload Caddy
+
+Validate the assembled configuration inside the running container before reloading it:
 
 ```bash
-curl -sI https://routiq.178.156.253.244.nip.io/team-docs-k4v9w2/ | grep -i 'HTTP/\|x-robots-tag'
+ssh root@178.156.253.244 \
+  'docker exec edge-caddy caddy validate --config /etc/caddy/Caddyfile'
 ```
 
-Expect `200` and `X-Robots-Tag: noindex, nofollow`. Then open the URL in a browser and confirm the
-sidebar navigates, local search returns results, and a mermaid diagram renders. Also confirm the demo
-app itself still loads at `/` — a misordered Caddy block breaks the app, not just the docs.
+If validation fails, restore `/srv/edge/sites/routiq-demo.caddy.bak` and stop. Do not reload or retry by
+guessing.
 
-## Checklist
+After a successful validation:
 
-- [ ] `pnpm --filter @routiq/docs build` passes locally.
-- [ ] **Capture the Start Here screenshots against the live demo app and drop them into
-      `apps/docs/public/`.** Several pages reference image slots that are empty until this is done.
-      Files in `public/` are copied to the site root, so `public/login.png` is referenced in markdown
-      as `![…](/login.png)` — VitePress adds the base path at build time, do not write it yourself.
-      Use the English UI (app language switched to English) so the screenshots match the handbook's
-      steps.
-- [ ] `rsync` with `--delete` completed.
-- [ ] Caddy block present, ordered above the SPA catch-all, config reloaded.
-- [ ] `curl` shows 200 + `X-Robots-Tag`.
-- [ ] Demo app still serves at `/`.
+```bash
+ssh root@178.156.253.244 \
+  'docker exec edge-caddy caddy reload --config /etc/caddy/Caddyfile'
+```
+
+## Verify the deployment
+
+Check both handbook hostnames and the two services that must remain unaffected:
+
+```bash
+curl -sI https://demo.truesignaldigital.com/team-docs-k4v9w2/
+curl -sI https://routiq.178.156.253.244.nip.io/team-docs-k4v9w2/
+curl -sI https://demo.truesignaldigital.com/
+curl -sI https://files.truesignaldigital.com/
+```
+
+Expected results:
+
+- Both handbook URLs return `200`.
+- The handbook response includes `X-Robots-Tag: noindex, nofollow`.
+- The demo app still returns `200` at `/`.
+- The files host still returns `200`.
+
+Finally, open a walkthrough page in a real browser and confirm:
+
+- Screenshots load.
+- Local search returns results.
+- The Mermaid workflow diagram renders.
+
+## Repeat deployment checklist
+
+- [ ] `pnpm --filter @routiq/docs build` passes.
+- [ ] The `dist/` contents are synchronized with the trailing source slash and `--delete`.
+- [ ] Both handbook hostnames return `200` with the noindex header.
+- [ ] The demo app and files host still return `200`.
+- [ ] Screenshots, local search, and Mermaid render in a browser.
