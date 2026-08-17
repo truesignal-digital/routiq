@@ -13,8 +13,8 @@ Copy and paste this template into the team chat. Fill in each field with the exa
 Did: ...
 Expected: ...
 Got: ...
-Workspace: TRUCKING | PASSENGER
-Account: Admin | Entry | Approver
+Workspace: trucking-test | passenger-test
+Account: Owner/Admin | Operations Director | Branch Manager | Entry Clerk | Maintenance | Finance Controller | Executive
 Device/browser: ...
 Screenshot: attach
 ```
@@ -39,9 +39,9 @@ Screenshot: attach
   - ✓ "A red error banner appeared saying: 'Code must be unique within this workspace'"
   - ✗ "It didn't work"
 
-- **Workspace:** Say which test workspace: TRUCKING or PASSENGER. (This matters because terminology changes.)
+- **Workspace:** Use the exact slug: `trucking-test` or `passenger-test`. This matters because terminology and data are isolated by workspace.
 
-- **Account:** Which account you were logged in as: Admin, Entry, or Approver.
+- **Account:** The company job you were using, including its branch when local—for example, Douala Entry Clerk or Kribi Branch Manager.
 
 - **Device/browser:** The specific device and browser, plus OS if relevant.
   - ✓ "MacBook Pro, Chrome 130, macOS 15.0"
@@ -77,8 +77,8 @@ After your initial report, if you can reproduce it a second time, add a follow-u
 Did: Entered "ABC123" in the Truck Code field, entered "My Truck" in the Name field, and clicked the Register button.
 Expected: A green toast saying "Truck registered" should appear at the top of the screen.
 Got: No toast appeared. I see the truck in the list immediately without confirmation.
-Workspace: TRUCKING
-Account: Entry
+Workspace: trucking-test
+Account: Douala Entry Clerk
 Device/browser: MacBook Pro, Chrome 129, macOS 15.0
 Screenshot: [screenshot showing the truck list with no toast visible]
 Reproduced ✓
@@ -88,11 +88,11 @@ Reproduced ✓
 
 ```
 🐞 [Assets page]
-Did: Logged in as Entry account to TRUCKING workspace and opened the Assets page.
+Did: Logged in as Douala Entry Clerk to the Trucking Test workspace and opened the Assets page.
 Expected: The navigation item should say "Trucks".
 Got: The navigation item says "Vehicles".
-Workspace: TRUCKING
-Account: Entry
+Workspace: trucking-test
+Account: Douala Entry Clerk
 Device/browser: Pixel 6a, Chrome, Android 14
 Screenshot: [screenshot showing sidebar with "Vehicles" label]
 ```
@@ -104,8 +104,8 @@ Screenshot: [screenshot showing sidebar with "Vehicles" label]
 Did: Opened a trip record, left the "Trip Type" field blank, and clicked Save.
 Expected: The form should show "Trip Type is required" and prevent submission.
 Got: The form saved and the trip shows with an empty Trip Type.
-Workspace: PASSENGER
-Account: Entry
+Workspace: passenger-test
+Account: Yaoundé Entry Clerk
 Device/browser: iPhone 14, Safari, iOS 18.1
 Screenshot: [screenshot showing trip with empty Trip Type field]
 ```

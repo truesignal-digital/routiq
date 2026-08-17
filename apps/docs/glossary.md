@@ -63,13 +63,18 @@ An approver always reviews submissions; the person who recorded the entry cannot
 
 The amount boundary in XAF (whole francs — XAF has no cents). Entries at or under the threshold post immediately; over it, they're SUBMITTED and wait for an approver's decision. The threshold is stored in `approval_rules` and can be changed via the `update-approval-threshold` command (audited like everything else).
 
-### Entry role
+### Application role and company job
 
-Your role in the system, which determines what you can do. The main roles are:
+An **application role** is ROUTIQ's fixed permission category. A **company job** is the real-world responsibility represented by a role plus branch scope.
 
-- **ADMIN** — Workspace owner. Configures settings, manages users, approves entries, locks periods.
-- **FIELD_SUBMITTER** — Operator who records trucks, trips, and expenses. Cannot approve.
-- **FINANCE_APPROVER** — Finance manager. Reviews and approves submitted entries. Cannot configure the workspace.
+- **ADMIN** — Owner / Admin. Governs workspace configuration, branches, members, and finance controls.
+- **OPS_MANAGER** — Operations Director with all branches, or Branch Manager with one branch. Registers assets and people, supervises activities, and handles operational exceptions.
+- **FIELD_SUBMITTER** — Entry Clerk. Captures trips, documents, revenue, and costs inside one branch.
+- **MAINTENANCE** — Mechanic or workshop recorder. The server permits meter readings and local operating reads; the current web UI still hides the meter-reading control for this role.
+- **FINANCE_APPROVER** — Finance Controller. Decides submitted entries, reversals, cross-branch transfers, and period locks.
+- **EXECUTIVE_VIEWER** — Executive. Reviews company data without any write permission.
+
+See [Accounts and responsibilities](/start-here/02-accounts) for the exact boundaries and [How the test company operates](/start-here/04-company-flow) for the handoffs between them.
 
 ### Preset
 

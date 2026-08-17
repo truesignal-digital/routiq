@@ -2,7 +2,9 @@
 
 **Goal** — Close the trip, read the completeness verdict it produces, and confirm that missing data is flagged rather than blocked.
 
-**Log in as** — **Entry operator** for the close. You will need **Admin** for the reopen at the end.
+**Log in as** — the local **Entry Clerk** for the close. You will hand the closed trip to the **Branch Manager** for the reopen.
+
+**Handoff** — the clerk completes the ordinary trip; the manager owns the audited exception when it must be reopened.
 
 ## Where you are
 
@@ -22,6 +24,12 @@ flowchart LR
 Closing a trip **warns, it does not block**. Only two things stop a close outright: no actual dates, and no truck assigned. Everything else that is missing becomes a stable code stored on the trip and shown as an exception. A system that refuses the close only makes the clerk invent a number.
 
 On the trucking preset a closed trip is expected to carry legs, crew, revenue, a departure reading and an arrival reading.
+
+## Maintenance checkpoint
+
+Before the close, sign in as **Douala Maintenance** and open this trip. It should be readable because it belongs to Douala, while Bafoussam-only records stay outside the account's scope. General capture and finance actions must be absent.
+
+The current web app also hides **Record reading** from Maintenance even though the server authorizes that command. Record this as the known maintenance UI gap, then return as the Entry Clerk. Use **Record reading** as the clerk if this test run still needs a meter value.
 
 ## Steps
 
@@ -50,15 +58,15 @@ On the trucking preset a closed trip is expected to carry legs, crew, revenue, a
 
 5. Look at the header actions now.
 
-> ✅ Expected: **Close**, **Add leg**, **Record reading** and **Record expense** have all disappeared — a closed trip takes no more capture. As the Entry operator you should see **no** action buttons at all except **History**.
+> ✅ Expected: **Close**, **Add leg**, **Record reading** and **Record expense** have all disappeared — a closed trip takes no more capture. As the Entry Clerk you should see **no** action buttons at all except **History**.
 
-6. Sign out and sign in as **Admin**. Open the same trip.
+6. Sign out and sign in as the local **Branch Manager**. Open the same trip.
 
 > ✅ Expected: a **Reopen** button is now in the header. Reopening is a manager's call, not a clerk's.
 
-![Closed trip record as Admin with Reopen action](/activities-03-admin-reopen-action.png)
+![Closed trip record with the manager-only Reopen action](/activities-03-admin-reopen-action.png)
 
-*An administrator sees Reopen where the Entry operator saw only History.*
+*A Branch Manager sees Reopen where the Entry Clerk saw only History.*
 
 7. Click **Reopen**.
 
@@ -95,7 +103,7 @@ On the trucking preset a closed trip is expected to carry legs, crew, revenue, a
 - **Force a hard block.** From **Trips**, use **Record a sheet** to start a trip and — if your workspace lets you get that far — try to close a trip with no **Arrival** recorded. Expect *Cannot close: the actual dates or at least one assigned asset are missing.* These are the only two hard stops.
 - **Close a trip with no crew and no legs.** Record a sheet with the crew row and both leg rows left blank, then close it. Expect the close to **succeed** with **Closed with exceptions** listing **No crew recorded** and **No legs recorded** — never a refusal.
 - **Close without meter readings.** Record a sheet without clicking **Add meter readings**, then close it. Expect exceptions **Start meter reading missing** and **End meter reading missing**.
-- **Reopen as the Entry operator.** Sign in as the Entry operator and open a closed trip. Expect **no Reopen button** at all.
+- **Reopen as the Entry Clerk.** Sign in as the Entry Clerk and open a closed trip. Expect **no Reopen button** at all.
 - **Record a reading that goes backwards.** On an open trip click **Record reading** and enter an odometer value lower than one already captured. Expect the reading to be **accepted**, with the warning *The reading is lower than the previous one* riding along in the same toast. Then check the trip's **Meter readings** panel — the earlier reading is still there. A correction adds a row; it never overwrites one.
 - **Close a trip twice.** Open the same closed trip in two tabs and confirm the close in both. Expect the second attempt to fail rather than double-stamp the record.
 

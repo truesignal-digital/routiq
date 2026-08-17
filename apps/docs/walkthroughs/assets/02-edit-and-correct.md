@@ -2,7 +2,9 @@
 
 **Goal** — Learn what a truck record lets you change, and how ROUTIQ corrects a mistake when it won't let you edit: by superseding and by leaving a visible trail.
 
-**Log in as** — **Admin**. (The Entry operator can add and renew documents too, and you will check that.)
+**Log in as** — the same **Branch Manager** who registered the asset. The Entry Clerk can add and renew documents too, and you will check that boundary.
+
+**Handoff** — after reviewing identity and history, give routine document capture back to the local Entry Clerk.
 
 ## Where you are
 
@@ -99,7 +101,7 @@ flowchart LR
 - **Look for an edit path via the list.** Open the `⋯` menu on the truck's row in **Your trucks**. Expect only the lifecycle actions the record itself offers (**Commission** and/or **Assign**) plus **Open asset record** — no edit, no delete.
 - **Renew the same document twice.** Renew a document, then find the now-superseded original and try to renew *that* one. If the UI lets you reach it, expect the command to fail with *This document was already renewed. Renew the latest version.* A document supersedes exactly once.
 - **Save a document with no type.** Open **Add a document** and submit with **Document type** empty. Expect a required-field error and no toast.
-- **Renew as the Entry operator.** Sign in as the Entry operator and open the same truck's **Documents**. Expect **Add a document** and **Renew** to be available and to work — documents are one of the things the Entry role genuinely owns.
+- **Renew as the Entry Clerk.** Sign in as the Entry Clerk and open the same truck's **Documents**. Expect **Add a document** and **Renew** to be available and to work — documents are one of the things the Entry role genuinely owns.
 - **Check the audit is append-only.** Do a renewal, then reopen **History**. Expect both **Document added** and **Document renewed** to be listed. Nothing you do in the UI should ever make an earlier event disappear or change.
 
 > ⚠️ Note for maintainers: there is no correction path at all for a truck's own identity fields — a wrong **Truck code**, plate or chassis number registered by mistake can only be dealt with by registering a second truck, and the register keeps the wrong one forever with no way to retire it (see lesson 03: `DisposeAsset` from ARCHITECTURE.md §5.1 is not built in the web app). Worth confirming this is the intended pilot behaviour before testers report it as a bug each time.

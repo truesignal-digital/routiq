@@ -2,7 +2,9 @@
 
 **Goal** — Record a trip sheet end to end, including its legs, and leave the trip **Open** so the next two lessons can work on it.
 
-**Log in as** — **Entry operator**. This is the role the sheet was designed for. The Admin account works too.
+**Log in as** — the **Douala Entry Clerk**. This is the daily-capture job the sheet was designed for.
+
+**Handoff** — use the truck prepared by the Douala Branch Manager and leave the new trip open for Maintenance and Finance-related lessons.
 
 ## Where you are
 

@@ -2,7 +2,9 @@
 
 **Goal** — Charge money to the open trip two different ways, and watch the approval threshold decide whether an entry posts immediately or goes to an approver.
 
-**Log in as** — **Entry operator**. The threshold behaviour in this lesson is specific to this role; the Admin and Finance approver accounts post large amounts straight through.
+**Log in as** — the same **Entry Clerk** who created the trip. The threshold behavior in this lesson shows how branch capture hands high-value entries to Finance.
+
+**Handoff** — small entries finish immediately; leave the large entries Pending for the Finance Controller walkthrough.
 
 ## Where you are
 
@@ -19,7 +21,7 @@ flowchart LR
 
 ## The rule you are testing
 
-The pilot approval threshold is **100 000 XAF** per entry. At or below it, an entry posts on the spot. Above it, the Entry operator's entry is saved as **Pending** and waits for a decision. That is a success, not a failure — the record is safe, it is just not final. Amounts are whole XAF: **1 XAF is the smallest unit, there are no centimes.**
+The pilot approval threshold is **100 000 XAF** per entry. At or below it, an entry posts on the spot. Above it, the Entry Clerk's entry is saved as **Pending** and waits for a decision. That is a success, not a failure — the record is safe, it is just not final. Amounts are whole XAF: **1 XAF is the smallest unit, there are no centimes.**
 
 ## Steps
 
@@ -57,7 +59,7 @@ The pilot approval threshold is **100 000 XAF** per entry. At or below it, an en
 
 6. Click **Finance** in the navigation. You land on **Entries**. Click **Record an entry**.
 
-> ✅ Expected: the page header reads **Record a transaction**, with an **Expense** / **Revenue** choice at the top and **Expense** selected. (Recording is a button on **Entries**, not a tab in the finance sub-navigation — as the Entry operator, **Entries** is the only finance tab you have.)
+> ✅ Expected: the page header reads **Record a transaction**, with an **Expense** / **Revenue** choice at the top and **Expense** selected. (Recording is a button on **Entries**, not a tab in the finance sub-navigation — as the Entry Clerk, **Entries** is the only finance tab you have.)
 
 ![Finance Record a transaction form with Expense selected](/activities-02-finance-record-form.png)
 
@@ -106,8 +108,8 @@ The pilot approval threshold is **100 000 XAF** per entry. At or below it, an en
 - **Record zero.** Put `0` in the amount. Expect the same refusal — an entry must be strictly positive.
 - **Use a category from the wrong side.** On the **Record** screen note which categories appear under **Expense** and under **Revenue**. They must never overlap; if one list offers a category belonging to the other kind, that is a bug worth reporting (the server answers *The selected category does not match the entry type (revenue / expense).*).
 - **Skip the receipt on a category that expects one.** Record an expense in a receipt-expected category with no **Payment reference** and no attachment. Expect the entry to **post anyway**, with a warning line in the same toast: *Missing evidence: this category requires supporting documentation or a photo.* ROUTIQ warns, it does not block — the one hard boundary is a locked period.
-- **Post into a locked period.** Have the Finance approver lock last month under **Finance → Periods**, then record an entry with a **Date** inside it. Expect a refusal: *This period is locked. No postings are possible.*
-- **Compare roles on the same amount.** Sign in as **Admin** and record an expense of `250000`. Expect **Transaction recorded and posted** — not pending. Above the threshold the seeded rules authorise `ADMIN` and `FINANCE_APPROVER` directly, so only the Entry operator's large entries queue up.
+- **Post into a locked period.** Have the Finance Controller lock last month under **Finance → Periods**, then record an entry with a **Date** inside it. Expect a refusal: *This period is locked. No postings are possible.*
+- **Compare roles on the same amount.** Sign in as **Admin** and record an expense of `250000`. Expect **Transaction recorded and posted** — not pending. Above the threshold the seeded rules authorise `ADMIN` and `FINANCE_APPROVER` directly, so only the Entry Clerk's large entries queue up.
 
 > ⚠️ Note for maintainers: two wording issues on these screens.
 >

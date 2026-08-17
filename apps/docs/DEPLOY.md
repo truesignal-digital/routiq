@@ -10,7 +10,8 @@ The path is public but unlisted. Caddy sends `X-Robots-Tag: noindex, nofollow`, 
 same robots directive in their HTML. This is not authentication; anyone with the URL can open it.
 
 `DEPLOY.md` and `CREDENTIALS.md` are excluded from the VitePress build through `srcExclude` in
-`.vitepress/config.ts`.
+`.vitepress/config.ts`. `CREDENTIALS.md` is an operator-side mirror; the same disposable test
+credentials are intentionally published once on `start-here/01-access.md`.
 
 ## Deployment layout
 

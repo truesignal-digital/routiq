@@ -2,7 +2,9 @@
 
 **Goal** — Move a truck from **Registered** to **In service**, move it between branches, and see which actions a truck stops offering once it has left the fleet.
 
-**Log in as** — **Admin** for commissioning and for a move within the same branch. You will need the **Finance approver** account for the cross-branch transfer at the end.
+**Log in as** — the local **Branch Manager** for commissioning and the same-branch check. You will then hand the asset to the all-branch **Operations Director** and **Finance Controller** for a cross-branch transfer.
+
+**Handoff** — Branch Manager prepares the asset; Operations requests the branch move; Finance completes the approval-controlled transfer; the receiving Branch Manager verifies access.
 
 ## Where you are
 
@@ -56,31 +58,31 @@ Note that **status is not availability**. A truck being **In service** says it h
 
 6. Choose the branch the truck is **already** in, and click **Confirm**.
 
-> ✅ Expected: a toast **Truck assigned**. A same-branch assignment is an ordinary command that an admin completes on the spot.
+> ✅ Expected: a toast **Truck assigned**. A same-branch assignment is an ordinary command that the Branch Manager completes on the spot.
 
 ![Truck record after a same-branch assignment](/assets-03-same-branch-assigned.png)
 
-*A same-branch assignment completes immediately for an administrator.*
+*A same-branch assignment completes immediately for the local Branch Manager.*
 
-7. Now click **Assign** again and pick a **different** branch. Click **Confirm**.
+7. Sign out and sign in as the **Operations Director**. Find the same truck under **All my branches**, click **Assign**, pick the other branch, and click **Confirm**.
 
 > ✅ Expected: the dialog does **not** close with a toast. It is replaced in place by a blue notice **Approval required** — *A transfer to another branch needs an approval. That step arrives with the approval flow.* — with a **Close** button. The truck stays in its original branch.
 
 ![Approval required notice for a cross-branch assignment](/assets-03-approval-required.png)
 
-*The administrator's cross-branch attempt stops at the Approval required notice.*
+*The Operations Director's cross-branch attempt stops at the Approval required notice.*
 
-8. Sign out. Sign in as the **Finance approver**, open the same truck, click **Assign**, choose the other branch, and click **Confirm**.
+8. Sign out. Sign in as the **Finance Controller**, open the same truck, click **Assign**, choose the other branch, and click **Confirm**.
 
-> ✅ Expected: this time a toast **Truck assigned**, and the branch chip on the record now shows the new branch. Moving a truck between branches is a finance decision; the finance approver is the only role the seeded rule authorises for it.
+> ✅ Expected: this time a toast **Truck assigned**, and the branch chip on the record now shows the new branch. Moving a truck between branches is a finance decision; `FINANCE_APPROVER` is the only role the seeded rule authorizes for it.
 
-![Truck record after the finance approver completes the transfer](/assets-03-cross-branch-complete.png)
+![Truck record after the Finance Controller completes the transfer](/assets-03-cross-branch-complete.png)
 
-*The finance approver completes the cross-branch move and the branch chip updates.*
+*The Finance Controller completes the cross-branch move and the branch chip updates.*
 
-9. Open **History** on the truck.
+9. Open **History** on the truck, then sign in as the receiving Branch Manager and confirm the transferred truck is visible there.
 
-> ✅ Expected: **Asset registered**, **Asset commissioned** and one **Asset assigned** row per successful assignment, each stamped with its author. The refused cross-branch attempt from step 7 left no record — it never committed.
+> ✅ Expected: **Asset registered**, **Asset commissioned** and one **Asset assigned** row per successful assignment, each stamped with its author. The refused cross-branch attempt from step 7 left no record—it never committed. The receiving manager sees the truck; the original manager no longer does.
 
 ![Truck history showing registration, commission, and assignments](/assets-03-history.png)
 
@@ -90,7 +92,7 @@ Note that **status is not availability**. A truck being **In service** says it h
 
 - **Commission twice.** Open the truck in two browser tabs before commissioning. Commission it in tab A, then press **Confirm** in tab B. Expect tab B to swap the dialog for **Modified elsewhere** — *Someone else modified this asset. Refresh, review, then reapply your action.* — with a **Refresh** button. Every lifecycle command carries the row version it was rendered from, so a stale screen can never overwrite a fresh change.
 - **Assign to a deactivated branch.** Have an admin deactivate a branch (see **More → Branches**), then try to assign a truck into it. Expect a refusal: a deactivated branch accepts no new arrivals. Moving a truck *out* of a deactivated branch is still allowed — that is the reason branches get deactivated.
-- **Cross-branch as the Entry operator.** Sign in as the Entry operator and try **Assign**. Expect the button to be visible but the command to be refused with *Your role does not allow this action.*
+- **Cross-branch as the Entry Clerk.** Sign in as the Entry Clerk and try **Assign**. Expect the button to be visible but the command to be refused with *Your role does not allow this action.*
 - **Look for a way to sell or scrap a truck.** Search the record page and the row `⋯` menu for anything that would set **Sold**, **Retired** or **Written off**. Expect to find nothing — that command is not built in the web app yet. Report it as a gap, not as a bug, if it comes up in testing.
 - **Check that a disposed truck offers nothing.** If a truck in your test workspace already sits at **Sold**, **Retired** or **Written off**, open it. Expect **no** action buttons at all: no **Commission**, no **Assign**. A truck that has left the fleet takes no new operational records.
 

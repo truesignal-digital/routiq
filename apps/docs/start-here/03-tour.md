@@ -8,7 +8,7 @@ After logging in, you'll see the ROUTIQ interface organized around a left sideba
 
 *Enter the workspace slug, persona username, and PIN before signing in.*
 
-Enter your username and password, then choose a workspace. You're authenticated via email and optional two-factor setup — test accounts skip both for speed.
+Enter the workspace slug, username, and six-digit PIN from the [public credential table](./01-access.md). There is no email confirmation or two-factor setup in the test environment.
 
 ---
 
@@ -38,11 +38,11 @@ The left sidebar holds the main navigation:
 
 Click **Assets** (or **Trucks**/**Vehicles**) in the sidebar. You see a table of all assets in your branch scope, with columns for asset code, status (in service, decommissioned), and recent activity.
 
-**What you can do here:**
+**What an operating manager can do here:**
 - Search by asset code or name
 - Filter by status
 - Click an asset to view its full record and transaction history
-- If you're an ADMIN or FIELD_SUBMITTER, register a new asset
+- If you're an ADMIN or OPS_MANAGER, register a new asset
 
 Each asset record holds its lifecycle (draft → active → sold/retired), linked expenses, and recent trips.
 
@@ -62,7 +62,7 @@ Click **Activities** (or **Trips**) in the sidebar. You see a table of all trips
 - Click a trip to view details: mileage, fuel consumption, linked expenses, and any missing data flags
 - If you have entry permissions, add or edit trip details
 
-Trips move through a lifecycle: draft (open for edit) → closed (finalized but not locked) → locked (immutable).
+Trips move from **Open** to **Closed**. A manager can reopen a closed trip with an audited reason. Financial period locking is separate from the trip lifecycle.
 
 ---
 
@@ -78,7 +78,7 @@ You see a list of submitted entries waiting for your decision. Each row shows th
 
 **What you can do here:**
 - Click an entry to view full details
-- Approve it (it posts immediately, if below threshold, or waits for lock)
+- Approve it (a submitted entry becomes posted)
 - Reject it (requires a written reason)
 - Reverse an already-approved entry (creates a mirror negative entry, flags the original as REVERSED)
 
@@ -138,4 +138,4 @@ Click **Settings** > **Language** (or look for a globe icon in the sidebar foote
 
 ---
 
-Next: [How to test](../testing/how-to-test.md)
+Next: [How the test company operates](./04-company-flow.md)

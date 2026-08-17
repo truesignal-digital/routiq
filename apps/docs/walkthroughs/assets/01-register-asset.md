@@ -2,7 +2,9 @@
 
 **Goal** — Put a new truck into the register and confirm it lands with the status `Registered`.
 
-**Log in as** — **Admin**. Registering a truck is an admin/ops action; the Entry operator account can see the button but the server refuses the command (you will test that at the end of this lesson).
+**Log in as** — the **Douala Branch Manager**. Registering a truck is an operations-management action; the Entry Clerk account may still see the button, but the server refuses its command (you will test that at the end).
+
+**Handoff** — this manager creates the asset the Douala Entry Clerk will use in the activity lessons.
 
 ## Where you are
 
@@ -38,7 +40,7 @@ flowchart LR
 3. Fill in **Truck code** with something unique and readable, e.g. `TRK-001`.
 4. Choose an **Asset class** from the dropdown, and choose the **Branch** the truck belongs to.
 
-> ⚠️ If the branch switcher at the top of the shell is set to a specific branch, **Branch** is pre-filled with it. Changing it here is allowed.
+> ⚠️ **Branch** is pre-filled from the shell when possible. A branch-scoped manager can save only inside their authorized branch.
 
 5. Fill in the identity fields the sheet gives you: **Registration number** (the plate), **Year**, **Make**, **Model**, **Chassis number**.
 6. Fill in **Acquisition date** and **Acquisition amount (XAF)**.
@@ -77,8 +79,8 @@ flowchart LR
 - **Reuse a truck code.** Register a second truck with the same **Truck code** as the first. Expect a red banner and an inline error on **Truck code**: *This asset code already exists in your workspace.* The first truck is untouched.
 - **Type centimes into the money field.** Put `18500000.50` into **Acquisition amount (XAF)**. Expect the form to refuse it — amounts in ROUTIQ are whole XAF, there is no sub-unit to divide by 100.
 - **Double-click Register truck.** Click the submit button twice in quick succession. Expect exactly **one** truck in the list. A repeat of an unchanged form replays the same command envelope, so the retry lands on the original result instead of creating a twin.
-- **Try it as the Entry operator.** Sign out, sign in as the Entry operator, go to **Trucks** and press **New truck**, fill the form and submit. Expect the command to fail with *Your role does not allow this action.*
+- **Try it as the Entry Clerk.** Sign out, sign in as the Entry Clerk, go to **Trucks** and press **New truck**, fill the form and submit. Expect the command to fail with *Your role does not allow this action.*
 
-> ⚠️ Note for maintainers: the **New truck** button, the empty-state action and the floating add button are all shown to the Entry operator (`FIELD_SUBMITTER`), but `register-asset` only allows `ADMIN` and `OPS_MANAGER` — so the role discovers the refusal after filling the whole form. `apps/web/src/assets/permissions.ts` gates on "not a read-only role" while `apps/api/src/commands/register-asset.ts` gates on the two manager roles. `start-here/02-accounts.md` also lists "Register and commission trucks" under what the Entry operator *can* do, which the server contradicts.
+> ⚠️ Note for maintainers: the **New truck** button, the empty-state action and the floating add button are all shown to the Entry Clerk (`FIELD_SUBMITTER`), but `register-asset` only allows `ADMIN` and `OPS_MANAGER` — so the role discovers the refusal after filling the whole form. `apps/web/src/assets/permissions.ts` gates on "not a read-only role" while `apps/api/src/commands/register-asset.ts` gates on the two manager roles.
 
 Next: [02 — Edit and correct](/walkthroughs/assets/02-edit-and-correct)

@@ -7,24 +7,24 @@ hero:
   tagline: How to exercise the app, what "correct" looks like, and where to report what you find.
   actions:
     - theme: brand
-      text: Start Here
+      text: Open test accounts
       link: /start-here/01-access
     - theme: alt
-      text: How to test
-      link: /testing/how-to-test
+      text: See company flow
+      link: /start-here/04-company-flow
     - theme: alt
       text: Glossary
       link: /glossary
 
 features:
   - title: Start Here
-    details: Get access, pick the right test account, and take the guided tour before you touch anything else.
+    details: Open the public demo, copy a workspace username and six-digit PIN, and learn what that company job owns.
     link: /start-here/01-access
   - title: Walkthroughs
-    details: Step-by-step runs through assets, activities, approvals, and branches — follow them in order.
+    details: Hand work from Admin to branch operations, Maintenance, Finance, and Executive review.
     link: /walkthroughs/assets/01-register-asset
   - title: Testing
-    details: What we want you to look for, and how to write up a finding so it can be acted on.
+    details: Run the complete two-branch company scenario and test every role and authorization boundary.
     link: /testing/how-to-test
 ---
 
@@ -39,17 +39,17 @@ phones over intermittent connectivity, so capture works offline and syncs later.
 
 ## Who this site is for
 
-This is the internal handbook for the ROUTIQ test team. It is written in English, it is not customer
-documentation, and it is not published for search engines. If you are testing the app, this is the
-only set of instructions you need to follow.
+This is the handbook for the ROUTIQ test team. It is written in English, it is not customer
+documentation, and search engines are instructed not to index it. The application and the
+credentials listed here are public, disposable test infrastructure with no real users.
 
 ## How to use it
 
-1. Work through **Start Here** in order: get access, sign in with the account you were assigned, then
-   take the tour so the vocabulary and the navigation are familiar.
-2. Run the **walkthroughs** in the order they appear in the sidebar. Later ones assume records
-   created by earlier ones, so skipping ahead will leave you without the data you need.
-3. Read **Testing → How to test** before you start hunting, and file every finding the way
+1. Work through **Start Here** in order: choose a real company job, take the app tour, and understand
+   how work moves between accounts.
+2. Run the **walkthroughs** in the order they appear in the sidebar. Sign out at each handoff instead
+   of using Admin for every task.
+3. Follow **Testing → Run the company test flow**, and file every finding the way
    **Reporting bugs** describes. A finding that nobody can reproduce is a finding we cannot fix.
 
 ::: warning UI labels change from workspace to workspace

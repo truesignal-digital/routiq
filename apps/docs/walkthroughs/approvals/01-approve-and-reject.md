@@ -2,7 +2,9 @@
 
 **Goal** — Work the approval queue: approve one entry, reject another with a reason, and prove that nobody can approve their own submission.
 
-**Log in as** — **Finance approver**. You will switch to the **Entry operator** and back to test the maker guard.
+**Log in as** — the **Finance Controller**. You will switch to an **Entry Clerk** and back to test the maker guard.
+
+**Handoff** — this queue contains high-value work submitted by both branch teams. Finance decides it, records reasons, and returns the outcome to operations.
 
 ## Where you are
 
@@ -19,13 +21,13 @@ flowchart LR
 
 ## Before you start
 
-You need at least two entries sitting at **Pending**. Lesson 02 of the activities track produces them: as the **Entry operator**, record an expense of `250000` and a revenue of `300000`. Anything above **100 000 XAF** from that role lands in the queue.
+You need at least two entries sitting at **Pending**. Lesson 02 of the activities track produces them: as the **Entry Clerk**, record an expense of `250000` and a revenue of `300000`. Anything above **100 000 XAF** from that role lands in the queue.
 
 ## Steps
 
 1. Click **Finance** in the navigation.
 
-> ✅ Expected: as the Finance approver you now see three tabs — **Entries**, **Approvals** and **Periods**. **Approvals** carries a count badge of everything pending in your branch scope.
+> ✅ Expected: as the Finance Controller you now see three tabs — **Entries**, **Approvals** and **Periods**. **Approvals** carries a count badge of everything pending in your branch scope.
 
 2. Click **Approvals**.
 
@@ -79,7 +81,7 @@ You need at least two entries sitting at **Pending**. Lesson 02 of the activitie
 
 *The rejected entry record preserves the approver's exact reason.*
 
-9. Still as the Finance approver, open a **Posted** entry from **Entries** and use the `⋯` menu's **Reverse** (or the **Reverse** action on the entry's own page).
+9. Still as the Finance Controller, open a **Posted** entry from **Entries** and use the `⋯` menu's **Reverse** (or the **Reverse** action on the entry's own page).
 
 > ✅ Expected: a dialog titled **Reverse entry** with a required **Reason for reversal** box. After submitting you get **Entry reversed**, the original entry now carries a **Reversed** chip, and both entries show a **Reversal chain** section: the original says **Reversed by entry**, the new one says **Reverses entry**. The original figures are still on screen — a correction is a mirror entry with the negated amount, never an edit.
 
@@ -93,12 +95,12 @@ You need at least two entries sitting at **Pending**. Lesson 02 of the activitie
 
 ## Try to break it
 
-- **Approve your own work.** Sign in as the **Finance approver**, record an entry above 100 000 XAF yourself, then open **Approvals**. Expect your own row to be listed but to carry an orange chip **Your submission — another approver must decide**, and its `⋯` menu to offer **no** Approve or Reject. Maker never equals approver, even for an admin. The server enforces it too: if you find a way to send the command anyway, it answers *You cannot approve an entry you created yourself.*
+- **Approve your own work.** Sign in as the **Finance Controller**, record an entry above 100 000 XAF yourself, then open **Approvals**. Expect your own row to be listed but to carry an orange chip **Your submission — another approver must decide**, and its `⋯` menu to offer **no** Approve or Reject. Maker never equals approver, even for an admin. The server enforces it too: if you find a way to send the command anyway, it answers *You cannot approve an entry you created yourself.*
 
-![Finance approver's own high-value entry result](/approvals-01-own-submission-result.png)
+![Finance Controller's own high-value entry result](/approvals-01-own-submission-result.png)
 
 *The captured result shows the actual disposition of an approver-created high-value entry for comparison with the expected maker guard.*
-- **Reach the queue as the Entry operator.** Sign in as the Entry operator and browse to `/finance/approvals` directly. Expect a permission-denied page and no **Approvals** tab in the finance sub-navigation.
+- **Reach the queue as the Entry Clerk.** Sign in as the Entry Clerk and browse to `/finance/approvals` directly. Expect a permission-denied page and no **Approvals** tab in the finance sub-navigation.
 - **Reject with only spaces.** Type a few spaces into **Rejection reason**. Expect **Reject** to stay disabled — the reason is trimmed before it counts.
 - **Decide the same entry twice.** Open the queue in two tabs, approve a row in tab A, then approve the same row in tab B. Expect tab B to refresh itself rather than double-decide, or to fail with *This action is not possible in the record's current state.*
 - **Reverse twice.** Reverse a posted entry, then try to reverse the same original again. Expect *This entry has already been reversed.* An entry reverses at most once.

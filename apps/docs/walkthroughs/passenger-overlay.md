@@ -2,7 +2,9 @@
 
 **Goal** — Run the same core loop in the passenger-transport workspace and confirm that the preset changes the **words** (and one required field), never the behaviour.
 
-**Log in as** — the same roles as before (**Admin**, **Entry operator**, **Approver**), but sign in with the **passenger-transport** test workspace on the login screen's **Workspace** field. Credentials are in the pinned team chat message.
+**Log in as** — the corresponding Passenger Test jobs: Yaoundé Branch Manager, Yaoundé Entry Clerk, Maintenance, Finance Controller, and Executive. Use workspace slug `passenger-test` and the [public credential table](/start-here/01-access).
+
+**Handoff** — repeat the same company workflow under passenger vocabulary; job ownership and permissions must not change with the preset.
 
 ## Where you are
 
@@ -51,7 +53,7 @@ Each step is a lesson you have already done. Do it quickly, and watch the labels
 
 *The passenger preset changes the fleet label to Vehicles while English activity navigation remains Trips.*
 
-1. **Repeat [assets lesson 01](/walkthroughs/assets/01-register-asset)** as **Admin**, registering a bus.
+1. **Repeat [assets lesson 01](/walkthroughs/assets/01-register-asset)** as the **Yaoundé Branch Manager**, registering a bus.
 
 ![Empty Your vehicles page](/passenger-assets-empty.png)
 
@@ -73,7 +75,7 @@ Each step is a lesson you have already done. Do it quickly, and watch the labels
 
 2. **Repeat [assets lesson 03](/walkthroughs/assets/03-lifecycle)**: commission the bus, then assign it.
 
-> ✅ Expected: same two actions, same dialogs, same six statuses. Toasts read **Vehicle commissioned** and **Vehicle assigned**. A cross-branch assignment still needs the Finance approver.
+> ✅ Expected: same two actions, same dialogs, same six statuses. Toasts read **Vehicle commissioned** and **Vehicle assigned**. A cross-branch assignment still needs the Finance Controller.
 
 ![BUS-001 after commissioning](/passenger-vehicle-in-service.png)
 
@@ -83,7 +85,7 @@ Each step is a lesson you have already done. Do it quickly, and watch the labels
 
 *Assignment uses the same command and updates the vehicle's current branch.*
 
-3. **Repeat [activities lesson 01](/walkthroughs/activities/01-create-trip)** as the **Entry operator**.
+3. **Repeat [activities lesson 01](/walkthroughs/activities/01-create-trip)** as the **Entry Clerk**.
 
 > ✅ Expected: the sheet is the **Journey** flavour. The flavour card is **Seats** with **Seats sold** and **Seats available**; the money card opens with one revenue line already there (a passenger run always took money, so there is nothing to add first). Each leg offers **Passengers** where the haulage sheet offered **Load**. Everything else — References, Vehicle and meters, Crew, Legs — is the same form.
 
@@ -123,7 +125,7 @@ Each step is a lesson you have already done. Do it quickly, and watch the labels
 
 *With legs, crew, revenue, and both readings present, the closed journey is Complete.*
 
-6. **Repeat [the approvals lesson](/walkthroughs/approvals/01-approve-and-reject)** as the **Approver**.
+6. **Repeat [the approvals lesson](/walkthroughs/approvals/01-approve-and-reject)** as the **Finance Controller**.
 
 > ✅ Expected: byte-for-byte the same queue. Nothing in the finance module is overlaid by either preset — the words **Approvals**, **Approve**, **Reject**, **Posted**, **Pending**, **Reversed** are shared.
 

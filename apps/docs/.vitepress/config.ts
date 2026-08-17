@@ -7,7 +7,8 @@ export default withMermaid(
     lang: 'en-US',
     title: 'ROUTIQ Tester Handbook',
     description: 'Internal handbook for the ROUTIQ test team.',
-    // Operator-only files are not handbook pages and must never be published.
+    // Operator-only source files are excluded. Public test credentials live on
+    // start-here/01-access.md; CREDENTIALS.md is only its deployment-side mirror.
     srcExclude: ['DEPLOY.md', 'CREDENTIALS.md'],
     head: [['meta', { name: 'robots', content: 'noindex, nofollow' }]],
     themeConfig: {
@@ -18,8 +19,9 @@ export default withMermaid(
           text: 'Start Here',
           items: [
             { text: 'Access', link: '/start-here/01-access' },
-            { text: 'Accounts', link: '/start-here/02-accounts' },
+            { text: 'Accounts & responsibilities', link: '/start-here/02-accounts' },
             { text: 'Tour', link: '/start-here/03-tour' },
+            { text: 'Company flow', link: '/start-here/04-company-flow' },
           ],
         },
         {
@@ -48,13 +50,13 @@ export default withMermaid(
           text: 'Walkthroughs — More',
           items: [
             { text: 'Passenger overlay', link: '/walkthroughs/passenger-overlay' },
-            { text: 'Branches', link: '/walkthroughs/branches' },
+            { text: 'Branch hierarchy', link: '/walkthroughs/branches' },
           ],
         },
         {
           text: 'Testing',
           items: [
-            { text: 'How to test', link: '/testing/how-to-test' },
+            { text: 'Run the company test flow', link: '/testing/how-to-test' },
             { text: 'Reporting bugs', link: '/testing/reporting-bugs' },
           ],
         },

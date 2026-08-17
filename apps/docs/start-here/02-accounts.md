@@ -1,87 +1,126 @@
-# Test accounts
+# Accounts and responsibilities
 
-Three personas are available in each test workspace: an owner/admin who configures the system, an entry operator who captures daily data, and a finance approver who reviews high-value submissions. Credentials for all accounts are in the pinned team chat message.
+ROUTIQ authorizes a person with two values: a fixed application **role** and a **branch scope**. A company job is the business meaning testers give that combination.
 
-## Admin (workspace owner)
+For example, the Operations Director and a Branch Manager both hold `OPS_MANAGER`. The director has every branch in scope; the manager has one. The header branch selector narrows what an all-branch user is viewing—it never grants access.
 
-**Role code:** ADMIN
+## Company jobs at a glance
 
-**Represents:** A workspace owner or system administrator who manages workspace configuration.
+| Company job | Application role | Scope | Primary responsibility |
+| --- | --- | --- | --- |
+| Owner / Admin | `ADMIN` | All | Govern configuration, branches, and users |
+| Operations Director | `OPS_MANAGER` | All | Supervise company-wide assets and operations |
+| Branch Manager | `OPS_MANAGER` | One branch | Run one branch and handle operational exceptions |
+| Entry Clerk | `FIELD_SUBMITTER` | One branch | Capture daily trips, documents, revenue, and costs |
+| Maintenance | `MAINTENANCE` | One branch | Record meter readings and inspect local operating history |
+| Finance Controller | `FINANCE_APPROVER` | All | Decide money movements and close financial periods |
+| Executive | `EXECUTIVE_VIEWER` | All | Review company performance without changing records |
 
-**Can do:**
-- Provision and configure branches (locations)
-- Add, edit, and remove users
-- Assign roles and branch access to users
-- View the entire workspace's data regardless of branch scope
-- Create, approve, and reject financial entries and corrections
-- Lock and reopen financial periods
-- Access admin settings and configuration screens
+The [quick-login page](./01-access.md) provides one account for every job in both test companies.
 
-**Cannot do:**
-- Approve their own submissions (the system rejects this with "requires another approver")
+## Owner / Admin
 
-**Use this account for:** Admin lessons and configuration walkthroughs.
+**Role:** `ADMIN` · **Scope:** all branches
 
----
+The owner/admin governs ROUTIQ rather than performing every company task personally.
 
-## Entry operator (day-to-day capture)
+**Can:**
 
-**Role code:** FIELD_SUBMITTER
+- Create, rename, deactivate, and reactivate branches.
+- Add members and assign their roles and branch scopes.
+- Configure categories, templates, and the approval threshold.
+- Perform operational and finance commands when necessary.
+- Approve, reject, reverse, lock, and reopen financial records.
 
-**Represents:** A field operator or office clerk who records assets, trips, fuel receipts, maintenance costs, and other business transactions.
+**Cannot:** approve an entry they created themselves. ROUTIQ enforces maker ≠ approver even for Admin.
 
-**Can do:**
-- Record trips and trip details (mileage, fuel, time)
-- Submit expense and revenue entries
-- Search and view the workspace's assets and activities
-- See only branches assigned to this user
+**Testing job:** verify the company structure first, then hand operational work to the appropriate manager.
 
-**Cannot do:**
-- Register or commission trucks/vehicles — the server allows only ADMIN and OPS_MANAGER (the button may still be visible; hitting the refusal is a known finding — see the register-asset walkthrough)
-- Approve any submission, even their own (approval always goes to FINANCE_APPROVER or ADMIN)
-- Access admin settings or user management
-- Lock or reopen financial periods
-- Reverse or correct approved entries
+## Operations Director and Branch Managers
 
-**Use this account for:** Day-to-day capture walkthroughs and field operator workflows.
+**Role:** `OPS_MANAGER`
 
----
+The role is shared because both jobs manage operations. Scope creates the difference:
 
-## Finance approver
+- The **Operations Director** has all branches, can use **All my branches**, and coordinates transfers or exceptions across the company.
+- A **Branch Manager** has one branch and can operate only on assets, people, and activities belonging to that branch.
 
-**Role code:** FINANCE_APPROVER
+**Can:**
 
-**Represents:** A finance manager or controller who reviews submitted entries and decides whether to approve or reject them.
+- Register people and assets, commission assets, and assign them.
+- Create, record, and close activities.
+- Reopen a closed activity with an audited reason.
+- Add or renew asset documents.
+- Record financial entries, which still follow approval thresholds.
 
-**Can do:**
-- View the approval queue showing submitted entries waiting for a decision
-- Approve or reject entries (rejected entries require a written reason)
-- Reverse or correct approved entries (marked as REVERSED, linked to the original)
-- Lock and reopen financial periods with audit reasons
-- Create, approve, and reject financial entries and corrections
-- See only branches assigned to this user
+**Cannot:** manage branches or user accounts, approve financial entries, reverse ledger entries, or lock periods.
 
-**Cannot do:**
-- Approve their own submissions (the system enforces "four-eyes" — another approver must decide)
-- Register assets or record trips (entry-capture is restricted to FIELD_SUBMITTER and ADMIN)
-- Access admin settings or user management
+**Testing handoff:** the Branch Manager prepares the branch for daily capture; the Operations Director intervenes only when work crosses branches or needs company-wide oversight.
 
-**Use this account for:** Approval workflows and finance review walkthroughs.
+## Entry Clerk
 
----
+**Role:** `FIELD_SUBMITTER` · **Scope:** one branch
 
-## Selecting a test account
+The clerk or dispatcher captures facts produced by daily operations.
 
-1. From the login screen, enter the username and password.
-2. Choose your workspace (TRUCKING or PASSENGER).
-3. You log in with that account's role and branch scope already active.
+**Can:**
 
-![ROUTIQ login screen used to select a test persona and workspace](/tour-login.png)
+- Create and close trips and record legs, crew, meter readings, revenue, and costs.
+- Add and renew asset documents.
+- Search and read assets and activities in the assigned branch.
+- Submit financial entries; small amounts post immediately and larger ones wait for Finance.
 
-*Use the workspace slug and credentials for the persona whose permissions you are testing.*
+**Cannot:**
 
-Each account has full access to its workspace's data within its assigned branches. If a test account is scoped to a single branch, it will only see data from that branch.
+- Register or commission assets—the server restricts those actions to Admin and Operations Manager.
+- Reopen a closed trip.
+- Approve, reject, reverse, or lock financial records.
+- Read another branch's records.
 
----
+The current UI may still show an asset-registration action to this role; submitting it must be refused. The asset walkthrough treats that mismatch as a deliberate permission test.
+
+## Maintenance
+
+**Role:** `MAINTENANCE` · **Scope:** one branch
+
+This account represents a mechanic, workshop recorder, or maintenance clerk.
+
+**Intended job:** inspect local operational history and record odometer or hour-meter readings against an asset.
+
+**Cannot:** register assets, create or close trips, record general finance entries, approve money, or manage the company.
+
+::: warning Current web gap
+The server authorizes `MAINTENANCE` for `record-meter-reading`, but the current web app hides **Record reading** together with the other activity capture controls. Today this account tests branch-scoped operational visibility and confirms that known missing affordance. The Entry Clerk records the reading in the UI until the maintenance control is separated. Work orders, parts, and repair scheduling are also not implemented yet.
+:::
+
+## Finance Controller
+
+**Role:** `FINANCE_APPROVER` · **Scope:** all branches
+
+Finance is a company-wide control function and receives work from both branch teams.
+
+**Can:**
+
+- Record financial entries.
+- Approve or reject submitted entries from another maker.
+- Reverse posted entries with a reason.
+- Lock and reopen monthly financial periods.
+- Complete approval-controlled cross-branch asset transfers.
+
+**Cannot:** approve their own submission, register assets, run trips, or manage users and branches.
+
+**Testing handoff:** Entry Clerks create financial facts; Finance decides only the entries that require judgment and then closes the reporting period.
+
+## Executive
+
+**Role:** `EXECUTIVE_VIEWER` · **Scope:** all branches
+
+The executive is deliberately read-only.
+
+**Can:** review dashboards, assets, activities, and operating history across both branches.
+
+**Cannot:** submit any command. Mutation buttons should be absent, and a direct command attempt must be refused by the server.
+
+**Testing job:** inspect the final state produced by the operating and finance teams, then confirm there is no way to change it.
 
 Next: [Tour of the app](./03-tour.md)
