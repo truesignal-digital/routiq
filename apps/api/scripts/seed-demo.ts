@@ -18,9 +18,12 @@ const demoId = (name: string) =>
 const ids = {
   workspace: demoId("workspace"),
   branch: demoId("branch:douala"),
+  branchYaounde: demoId("branch:yaounde"),
+  branchBafoussam: demoId("branch:bafoussam"),
   emilienne: demoId("user:emilienne"),
   boris: demoId("user:boris"),
   sali: demoId("user:sali"),
+  patrice: demoId("user:patrice"),
   driver: demoId("person:jean-ngwa"),
   vh001: demoId("asset:VH001"),
   vh003: demoId("asset:VH003"),
@@ -57,6 +60,7 @@ interface DemoUser {
   role: "ADMIN" | "OPS_MANAGER" | "FIELD_SUBMITTER";
 }
 
+/** Provisioned with the workspace; all three see every branch. */
 const users: DemoUser[] = [
   {
     id: ids.emilienne,
@@ -80,6 +84,33 @@ const users: DemoUser[] = [
     role: "FIELD_SUBMITTER",
   },
 ];
+
+/**
+ * The two branches Douala did not open with, and the one member who only sees
+ * one of them. All three arrive after provisioning rather than inside it: the
+ * provision payload is frozen behind its idempotency key (see the `.v2` note
+ * below), so anything the demo gains from here on has to come through the
+ * day-2 commands — which is also the truer demo, since opening an agency and
+ * hiring a dispatcher are things an operator does on a Tuesday, not at signup.
+ */
+const yaoundeBranch = { id: ids.branchYaounde, key: "yaounde", code: "YDE", name: "Yaoundé" };
+const bafoussamBranch = {
+  id: ids.branchBafoussam,
+  key: "bafoussam",
+  code: "BAF",
+  name: "Bafoussam",
+};
+const extraBranches = [yaoundeBranch, bafoussamBranch];
+
+/** Scoped to Yaoundé alone, so the demo has a branch-scoped view to set beside the three ALL-scope ones. */
+const patrice = {
+  id: ids.patrice,
+  username: "patrice",
+  displayName: "Patrice",
+  pin: "444444",
+  role: "FIELD_SUBMITTER",
+  branches: [yaoundeBranch],
+} satisfies DemoUser & { branches: { id: string; code: string }[] };
 
 function commandId(name: string): string {
   return demoId(`command:${name}`);
@@ -217,54 +248,37 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
   });
 }
 
-async function actor(principalId: string): Promise<AuthContext> {
-  const context = await resolveAuthContext(authDb, {
-    workspaceId: ids.workspace,
-    principalId,
-  });
-  if (!context) throw new Error(`Unable to resolve demo user ${principalId}`);
-  return context;
+async function existingWorkspaceId(slug: string): Promise<string | undefined> {
+  const [workspace] = await authDb
+    .select({ id: schema.workspaces.id })
+    .from(schema.workspaces)
+    .where(eq(schema.workspaces.slug, slug))
+    .limit(1);
+  return workspace?.id;
 }
 
-async function runCommand(
-  context: AuthContext,
-  operation: string,
-  payload: unknown,
-  options: { expectedVersion?: number } = {},
-): Promise<CommandOutcome> {
-  const name = operation.split(":", 1)[0]!;
-  const result = await dispatchCommand(db, context, {
-    name,
-    version: 1,
-    envelope: {
-      commandId: commandId(operation),
-      idempotencyKey: idempotencyKey(operation),
-      origin: "API",
-      ...(options.expectedVersion === undefined
-        ? {}
-        : { expectedVersion: options.expectedVersion }),
-    },
-    payload,
-  });
-  if ("error" in result.body) {
+/**
+ * Provisioning is skipped, not replayed, when the workspace is already there.
+ * Its idempotency key moved to `provision-workspace.v2` with issue #20, so a
+ * workspace provisioned under the old key finds no receipt: the command
+ * re-executes and answers 409 DUPLICATE_WORKSPACE_SLUG. Every demo seeded
+ * before that bump — the deployed one included — is in exactly that state, so
+ * it is the existence check rather than the receipt that lets a re-seed reach
+ * the commands after it.
+ */
+async function provisionOnce(): Promise<void> {
+  const existing = await existingWorkspaceId(workspaceSlug);
+  if (existing === ids.workspace) {
+    console.log(`Already provisioned: workspace id=${existing} slug=${workspaceSlug}`);
+    return;
+  }
+  if (existing !== undefined) {
     throw new Error(
-      `${operation} failed (${result.status} ${result.body.error.code}): ${JSON.stringify(result.body.error.metadata ?? {})}`,
-    );
-  }
-  return result.body;
-}
-
-try {
-  if (process.argv.includes("--reset")) {
-    const deleted = await resetDemoWorkspace(workspaceSlug);
-    console.log(
-      deleted
-        ? "Reset: deleted existing workspace"
-        : "Reset: no existing workspace to delete",
+      `Workspace "${workspaceSlug}" exists under id ${existing}, not the deterministic ${ids.workspace}; refusing to seed into it.`,
     );
   }
 
-  const provisioned = await provisionTenant(
+  await provisionTenant(
     {
       workspace: {
         id: ids.workspace,
@@ -302,12 +316,106 @@ try {
       idempotencyKey: idempotencyKey("provision-workspace.v2"),
     },
   );
+}
+
+async function branchCodesOf(workspaceId: string): Promise<string[]> {
+  const rows = await authDb
+    .select({ code: schema.branches.code })
+    .from(schema.branches)
+    .where(eq(schema.branches.workspaceId, workspaceId));
+  return rows.map((row) => row.code).sort();
+}
+
+async function actor(principalId: string): Promise<AuthContext> {
+  const context = await resolveAuthContext(authDb, {
+    workspaceId: ids.workspace,
+    principalId,
+  });
+  if (!context) throw new Error(`Unable to resolve demo user ${principalId}`);
+  return context;
+}
+
+async function runCommand(
+  context: AuthContext,
+  operation: string,
+  payload: unknown,
+  options: { expectedVersion?: number } = {},
+): Promise<CommandOutcome | undefined> {
+  const name = operation.split(":", 1)[0]!;
+  const result = await dispatchCommand(db, context, {
+    name,
+    version: 1,
+    envelope: {
+      commandId: commandId(operation),
+      idempotencyKey: idempotencyKey(operation),
+      origin: "API",
+      ...(options.expectedVersion === undefined
+        ? {}
+        : { expectedVersion: options.expectedVersion }),
+    },
+    payload,
+  });
+  if ("error" in result.body) {
+    /**
+     * A reused key means this step already ran, under a payload that has since
+     * been edited in this file — `close: true` joined the Garoua sheet after
+     * the demo was first seeded, and a re-seed has met a 409 there ever since.
+     * The step is done: the record it wrote is the one the demo has been
+     * telling its story about, and rewriting it is precisely what a re-seed
+     * must not do. So it is skipped loudly rather than fatally, and the
+     * commands added to this file after it still get their turn.
+     */
+    if (result.body.error.code === "IDEMPOTENCY_KEY_REUSED") {
+      console.warn(
+        `Skipped ${operation}: already seeded under an earlier version of its payload.`,
+      );
+      return undefined;
+    }
+    throw new Error(
+      `${operation} failed (${result.status} ${result.body.error.code}): ${JSON.stringify(result.body.error.metadata ?? {})}`,
+    );
+  }
+  return result.body;
+}
+
+try {
+  if (process.argv.includes("--reset")) {
+    const deleted = await resetDemoWorkspace(workspaceSlug);
+    console.log(
+      deleted
+        ? "Reset: deleted existing workspace"
+        : "Reset: no existing workspace to delete",
+    );
+  }
+
+  await provisionOnce();
 
   const [emilienne, boris, sali] = await Promise.all([
     actor(ids.emilienne),
     actor(ids.boris),
     actor(ids.sali),
   ]);
+
+  await Promise.all(
+    extraBranches.map((branch) =>
+      runCommand(emilienne, `create-branch:${branch.key}`, {
+        branchId: branch.id,
+        code: branch.code,
+        name: branch.name,
+      }),
+    ),
+  );
+
+  // After the branches exist: add-member proves every branch id in the scope
+  // belongs to this workspace before it writes the membership.
+  await runCommand(emilienne, "add-member:patrice", {
+    principalId: patrice.id,
+    displayName: patrice.displayName,
+    username: patrice.username,
+    pin: patrice.pin,
+    role: patrice.role,
+    branchScope: patrice.branches.map((branch) => branch.id),
+  });
 
   await Promise.all([
     runCommand(emilienne, "register-asset:VH001", {
@@ -542,16 +650,27 @@ try {
     JSON.stringify(
       {
         workspace: {
-          id: provisioned.workspaceId,
-          slug: provisioned.workspaceSlug,
-          branches: provisioned.branchCodes,
-          idempotentReplay: provisioned.idempotentReplay,
+          id: ids.workspace,
+          slug: workspaceSlug,
+          // Read back rather than assembled from the payloads above, so the
+          // line reports what the workspace has and not what was asked for.
+          branches: await branchCodesOf(ids.workspace),
         },
-        users: users.map(({ pin, ...user }) => ({
-          ...user,
-          branchScope: "ALL",
-          pin,
-        })),
+        users: [
+          ...users.map(({ pin, ...user }) => ({
+            ...user,
+            branchScope: "ALL" as string | string[],
+            pin,
+          })),
+          {
+            id: patrice.id,
+            username: patrice.username,
+            displayName: patrice.displayName,
+            role: patrice.role,
+            branchScope: patrice.branches.map((branch) => branch.code),
+            pin: patrice.pin,
+          },
+        ],
         summary: {
           assets: ["VH001", "VH003", "TR001"],
           journeys: [
@@ -559,26 +678,26 @@ try {
               route: "Douala → Garoua",
               asset: "VH003",
               status: "CLOSED",
-              completeness: garoua.recordStatus,
+              completeness: garoua?.recordStatus ?? "already-seeded",
             },
             {
               route: "Douala → Bafoussam",
               asset: "VH001",
               status: "CLOSED",
-              completeness: bafoussam.recordStatus,
+              completeness: bafoussam?.recordStatus ?? "already-seeded",
             },
             {
               route: "Douala → Yaoundé",
               asset: "VH003",
               status: "IN_PROGRESS",
-              persistedStatus: yaounde.recordStatus,
+              persistedStatus: yaounde?.recordStatus ?? "already-seeded",
             },
           ],
           garouaFinancials: {
             currency: "XAF",
             revenueMinor: 2_850_000,
             expenseMinor: 1_345_000,
-            expenseStatusesBeforeApproval: expenseResults.map((result) => result.recordStatus),
+            expenseStatusesBeforeApproval: expenseResults.map((result) => result?.recordStatus ?? "already-seeded"),
             approvedEntryIds: [
               ids.garouaRevenue,
               ids.garouaFuel,
@@ -589,7 +708,7 @@ try {
             asset: "VH003",
             amountMinor: 450_000,
             currency: "XAF",
-            status: repair.recordStatus,
+            status: repair?.recordStatus ?? "already-seeded",
           },
         },
       },
