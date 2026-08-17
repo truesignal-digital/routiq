@@ -7,8 +7,8 @@ export default withMermaid(
     lang: 'en-US',
     title: 'ROUTIQ Tester Handbook',
     description: 'Internal handbook for the ROUTIQ test team.',
-    // DEPLOY.md is an operator runbook, not a handbook page.
-    srcExclude: ['DEPLOY.md'],
+    // Operator-only files are not handbook pages and must never be published.
+    srcExclude: ['DEPLOY.md', 'CREDENTIALS.md'],
     head: [['meta', { name: 'robots', content: 'noindex, nofollow' }]],
     themeConfig: {
       search: { provider: 'local' },
