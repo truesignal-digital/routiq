@@ -12,8 +12,18 @@ declare module "vitest" {
 }
 
 export default async function globalSetup(project: TestProject) {
-  const container = await new PostgreSqlContainer("postgres:17-alpine").start();
-  const databaseUrl = container.getConnectionUri();
+  /**
+   * Escape hatch for environments without a Docker daemon (e.g. Claude Code on
+   * the web): point the suite at an already-running Postgres instead of a
+   * Testcontainers one. Migrations still run; the suite creates workspaces per
+   * test, so the database only needs to exist and be owned by the given user.
+   * CI and local dev keep the containerized default.
+   */
+  const externalUrl = process.env["ROUTIQ_TEST_DATABASE_URL"];
+  const container = externalUrl
+    ? undefined
+    : await new PostgreSqlContainer("postgres:17-alpine").start();
+  const databaseUrl = externalUrl ?? container!.getConnectionUri();
 
   const pool = new pg.Pool({ connectionString: databaseUrl });
   try {
@@ -27,6 +37,6 @@ export default async function globalSetup(project: TestProject) {
   project.provide("databaseUrl", databaseUrl);
 
   return async () => {
-    await container.stop();
+    await container?.stop();
   };
 }
