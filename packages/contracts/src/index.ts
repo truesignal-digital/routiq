@@ -39,3 +39,6 @@ export * from "./commands/queueability.js";
 export * from "./commands/members.js";
 export * from "./reads/members.js";
 export * from "./reads/branches.js";
+export * from "./commands/operational-issues.js";
+export * from "./commands/work-orders.js";
+export * from "./reads/maintenance.js";

@@ -68,6 +68,23 @@ export const COMMAND_ERROR_CODES = [
   "BRANCH_INACTIVE",
   /** A branch status flip that would change nothing — the caller's list is stale. */
   "BRANCH_STATUS_ALREADY_SET",
+  /** Acting on an operational issue that is no longer OPEN. */
+  "ISSUE_NOT_OPEN",
+  /**
+   * A cost posting naming a work order that is not accepting costs — costs
+   * attach while APPROVED only. Offline replays are exempt (§6 facts): they
+   * commit with the WORK_ORDER_NOT_OPEN_AT_COMMIT warning instead.
+   */
+  "WORK_ORDER_NOT_OPEN",
+  /** A posting (or linked issue) naming an asset other than the work order's. */
+  "WORK_ORDER_ASSET_MISMATCH",
+  /** release-asset-to-service on an asset with no open availability interval. */
+  "NO_OPEN_UNAVAILABILITY",
+  /**
+   * §5.1: the releaser must not be the performer for safety-critical work —
+   * the completion submitter of a linked work order cannot release the asset.
+   */
+  "RELEASER_CANNOT_BE_PERFORMER",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
@@ -91,6 +108,23 @@ export const COMMAND_WARNING_CODES = [
    * command receipt keeps the discrepancy for reconciliation.
    */
   "BRANCH_INACTIVE_AT_COMMIT",
+  /** A safety-critical report on an asset whose downtime interval is already open. */
+  "ASSET_ALREADY_UNAVAILABLE",
+  /**
+   * The issue closed (resolved or dismissed) while the downtime interval it
+   * opened still stands — Remise en service is a separate decision (§3.4
+   * inv. 8), so the record commits and the UI shows both states.
+   */
+  "ISSUE_CLOSED_ASSET_STILL_UNAVAILABLE",
+  /** The mirror ordering: released to service while the opening issue is still OPEN. */
+  "ASSET_RELEASED_ISSUE_STILL_OPEN",
+  /** Cancelled with net posted costs ≠ 0 — the spend stands, attributed to asset + WO. */
+  "WORK_ORDER_CANCELLED_WITH_COSTS",
+  /**
+   * An offline-captured cost replayed after its work order left APPROVED (§6).
+   * The record commits; the receipt keeps the discrepancy for reconciliation.
+   */
+  "WORK_ORDER_NOT_OPEN_AT_COMMIT",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];

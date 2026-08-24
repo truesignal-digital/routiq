@@ -6,15 +6,25 @@ import {
   PROFITABILITY_LAYERS,
 } from "./categories.js";
 
-export const createCategoryPayload = z.strictObject({
-  id: z.uuid(),
-  kind: z.enum(CATEGORY_KINDS),
-  code: z.string().regex(/^[A-Z][A-Z0-9_]*$/).max(40),
-  labelFr: z.string().min(1),
-  labelEn: z.string().min(1),
-  profitabilityLayer: z.enum(PROFITABILITY_LAYERS).optional(),
-  evidencePolicy: z.enum(EVIDENCE_POLICIES).optional(),
-});
+export const createCategoryPayload = z
+  .strictObject({
+    id: z.uuid(),
+    kind: z.enum(CATEGORY_KINDS),
+    code: z.string().regex(/^[A-Z][A-Z0-9_]*$/).max(40),
+    labelFr: z.string().min(1),
+    labelEn: z.string().min(1),
+    profitabilityLayer: z.enum(PROFITABILITY_LAYERS).optional(),
+    evidencePolicy: z.enum(EVIDENCE_POLICIES).optional(),
+    /** ISSUE_TYPE only: pre-checks the reporter's safety-critical box (#28). */
+    defaultSafetyCritical: z.boolean().optional(),
+  })
+  .refine(
+    (payload) => payload.defaultSafetyCritical === undefined || payload.kind === "ISSUE_TYPE",
+    {
+      message: "defaultSafetyCritical applies to ISSUE_TYPE categories only",
+      path: ["defaultSafetyCritical"],
+    },
+  );
 
 export const relabelCategoryPayload = z.strictObject({
   categoryId: z.uuid(),

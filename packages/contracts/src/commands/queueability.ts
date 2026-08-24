@@ -21,6 +21,15 @@ export const COMMAND_QUEUEABILITY = {
   "record-haulage-job-sheet": true,
   "record-expense": true,
   "record-revenue": true,
+  /*
+   * Maintenance facts. A defect exists the moment the reporter saw it — the
+   * safety-critical flag included; §6 and #28 want that capture to work
+   * offline. A roadside work order recorded after the fact is the same kind of
+   * transcription; replayed above the band it simply lands SUBMITTED and waits
+   * for its spend authorization before costs attach.
+   */
+  "report-issue": true,
+  "create-work-order": true,
 
   /*
    * Decisions — never queued.
@@ -57,6 +66,22 @@ export const COMMAND_QUEUEABILITY = {
    */
   "rename-branch": false,
   "set-branch-status": false,
+
+  /*
+   * Maintenance decisions. Resolving or dismissing an issue, approving,
+   * completing or cancelling a work order are all judgements on a record whose
+   * current state the operator must see — completion in particular is gated on
+   * the actual posted total, which only the server knows. Release-to-service
+   * is named by §6 itself: the asset goes back on the road on a decision, never
+   * on a replayed envelope.
+   */
+  "resolve-issue": false,
+  "dismiss-issue": false,
+  "approve-work-order": false,
+  "reject-work-order": false,
+  "complete-work-order": false,
+  "cancel-work-order": false,
+  "release-asset-to-service": false,
 
   /*
    * Member administration is decisions all the way down. Granting a login,

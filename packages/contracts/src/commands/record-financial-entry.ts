@@ -10,6 +10,13 @@ export const financialEntryPostingPayload = z.object({
    * a clerk records from the activity, without waiting for the sheet at close.
    */
   activityId: z.uuid().optional(),
+  /**
+   * Attributes the cost to a repair (§4.2): work-order costs are ordinary
+   * expense entries, entered once. The server fills `assetId` from the work
+   * order when omitted, and rejects a mismatching one — one canonical posting
+   * carries both dimensions.
+   */
+  workOrderId: z.uuid().optional(),
   amountMinor: positiveMoneyMinor,
   assetAttribution: z.enum(["DIRECT", "ALLOCATED"]).default("DIRECT"),
 });
