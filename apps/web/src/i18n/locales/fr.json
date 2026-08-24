@@ -146,6 +146,11 @@
     "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
     "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
     "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
+    "ISSUE_NOT_OPEN": "Ce signalement n'est plus ouvert.",
+    "WORK_ORDER_NOT_OPEN": "Cet ordre de travail n'accepte plus de coûts : il doit être approuvé et encore ouvert.",
+    "WORK_ORDER_ASSET_MISMATCH": "L'actif indiqué ne correspond pas à celui de l'ordre de travail.",
+    "NO_OPEN_UNAVAILABILITY": "Cet actif n'est pas immobilisé : aucune remise en service n'est nécessaire.",
+    "RELEASER_CANNOT_BE_PERFORMER": "La remise en service doit être décidée par une autre personne que celle qui a effectué les travaux.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {
@@ -592,7 +597,12 @@
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
-    "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation."
+    "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation.",
+    "ASSET_ALREADY_UNAVAILABLE": "L'actif était déjà immobilisé par un signalement précédent.",
+    "ISSUE_CLOSED_ASSET_STILL_UNAVAILABLE": "Signalement clos, mais l'actif reste immobilisé jusqu'à sa remise en service.",
+    "ASSET_RELEASED_ISSUE_STILL_OPEN": "Actif remis en service alors que le signalement est encore ouvert.",
+    "WORK_ORDER_CANCELLED_WITH_COSTS": "Ordre de travail annulé : les coûts déjà comptabilisés restent imputés.",
+    "WORK_ORDER_NOT_OPEN_AT_COMMIT": "Ordre de travail clos entre la saisie et la synchronisation : coût enregistré pour rapprochement."
   },
   "activities": {
     "title": "Activités",

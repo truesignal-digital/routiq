@@ -146,6 +146,11 @@
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
+    "ISSUE_NOT_OPEN": "This issue is no longer open.",
+    "WORK_ORDER_NOT_OPEN": "This work order is not accepting costs: it must be approved and still open.",
+    "WORK_ORDER_ASSET_MISMATCH": "The asset does not match the work order's asset.",
+    "NO_OPEN_UNAVAILABILITY": "This asset is not out of service: there is nothing to release.",
+    "RELEASER_CANNOT_BE_PERFORMER": "Release to service must be decided by someone other than the person who performed the work.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
@@ -592,7 +597,12 @@
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
-    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated."
+    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
+    "ASSET_ALREADY_UNAVAILABLE": "The asset was already out of service from an earlier report.",
+    "ISSUE_CLOSED_ASSET_STILL_UNAVAILABLE": "Issue closed, but the asset stays out of service until it is released.",
+    "ASSET_RELEASED_ISSUE_STILL_OPEN": "Asset released to service while the issue is still open.",
+    "WORK_ORDER_CANCELLED_WITH_COSTS": "Work order cancelled: the posted costs remain attributed.",
+    "WORK_ORDER_NOT_OPEN_AT_COMMIT": "Work order closed between capture and sync: cost recorded for reconciliation."
   },
   "activities": {
     "title": "Activities",
