@@ -7,6 +7,7 @@ import {
   financialEntries,
   financialPostings,
   persons,
+  workOrders,
 } from "../db/schema.js";
 import type { ApprovalDecision } from "./approvals.js";
 import { resolveTargetBranch } from "./branch-authorization.js";
@@ -23,6 +24,7 @@ export interface FinancialEntryPostingWriteRequest {
   assetId?: string | undefined;
   activityId?: string | undefined;
   personId?: string | undefined;
+  workOrderId?: string | undefined;
   amountMinor: number;
   assetAttribution: "DIRECT" | "ALLOCATED";
   activityAttribution?: "DIRECT" | "ALLOCATED" | undefined;
@@ -110,9 +112,83 @@ export async function writeFinancialEntry(
     });
   }
 
-  const requestedAssetIds = [
+  /*
+   * Work-order attribution (§4.2): resolve the named WOs first, because the
+   * asset checks below must also cover the asset a WO posting inherits. Costs
+   * attach while APPROVED only (#28) — but an offline replay is a fact from
+   * the past (§6): it commits with the discrepancy warning instead of a 409.
+   */
+  const workOrderWarnings: CommandWarningCode[] = [];
+  const requestedWorkOrderIds = [
     ...new Set(
       request.postings.flatMap((posting) =>
+        posting.workOrderId === undefined ? [] : [posting.workOrderId],
+      ),
+    ),
+  ];
+  const workOrdersById = new Map<
+    string,
+    { id: string; assetId: string; status: string }
+  >();
+  if (requestedWorkOrderIds.length > 0) {
+    const workOrderRows = await tx
+      .select({
+        id: workOrders.id,
+        assetId: workOrders.assetId,
+        status: workOrders.status,
+      })
+      .from(workOrders)
+      .where(
+        and(
+          eq(workOrders.workspaceId, ctx.workspaceId),
+          inArray(workOrders.id, requestedWorkOrderIds),
+        ),
+      );
+    for (const workOrder of workOrderRows) workOrdersById.set(workOrder.id, workOrder);
+    const missing = requestedWorkOrderIds.filter((id) => !workOrdersById.has(id));
+    if (missing.length > 0) {
+      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+        referenceType: "workOrder",
+        missing,
+      });
+    }
+    const notOpen = workOrderRows.find((workOrder) => workOrder.status !== "APPROVED");
+    if (notOpen) {
+      if (envelope.origin !== "OFFLINE_SYNC") {
+        throw new CommandError(409, "WORK_ORDER_NOT_OPEN", {
+          workOrderId: notOpen.id,
+          status: notOpen.status,
+        });
+      }
+      workOrderWarnings.push("WORK_ORDER_NOT_OPEN_AT_COMMIT");
+    }
+  }
+
+  /*
+   * One canonical posting carries both dimensions: a WO posting inherits the
+   * WO's asset when the caller omits it, and a contradicting one is refused —
+   * a brake job's cost cannot land on a different truck than the brake job.
+   */
+  const postings = request.postings.map((posting) => {
+    const workOrder =
+      posting.workOrderId === undefined
+        ? undefined
+        : workOrdersById.get(posting.workOrderId);
+    if (workOrder && posting.assetId !== undefined && posting.assetId !== workOrder.assetId) {
+      throw new CommandError(422, "WORK_ORDER_ASSET_MISMATCH", {
+        workOrderId: workOrder.id,
+        workOrderAssetId: workOrder.assetId,
+        postingAssetId: posting.assetId,
+      });
+    }
+    return workOrder && posting.assetId === undefined
+      ? { ...posting, assetId: workOrder.assetId }
+      : posting;
+  });
+
+  const requestedAssetIds = [
+    ...new Set(
+      postings.flatMap((posting) =>
         posting.assetId === undefined ? [] : [posting.assetId],
       ),
     ),
@@ -216,7 +292,7 @@ export async function writeFinancialEntry(
     branch,
     request.economicDate,
   );
-  const warnings: CommandWarningCode[] = [...branchWarnings];
+  const warnings: CommandWarningCode[] = [...branchWarnings, ...workOrderWarnings];
 
   let isPosted = approval.outcome === "AUTO_APPROVED";
   let period: Awaited<ReturnType<typeof resolvePostingPeriod>> | undefined;
@@ -284,7 +360,7 @@ export async function writeFinancialEntry(
     createdAt,
   });
 
-  const postingRows = request.postings.map((posting, index) => ({
+  const postingRows = postings.map((posting, index) => ({
     id: crypto.randomUUID(),
     workspaceId: ctx.workspaceId,
     financialEntryId: request.entryId,
@@ -299,6 +375,7 @@ export async function writeFinancialEntry(
       ? {}
       : { activityId: posting.activityId }),
     ...(posting.personId === undefined ? {} : { personId: posting.personId }),
+    ...(posting.workOrderId === undefined ? {} : { workOrderId: posting.workOrderId }),
     amountMinor: BigInt(posting.amountMinor),
     assetAttribution: posting.assetAttribution,
     activityAttribution: posting.activityAttribution ?? "DIRECT",

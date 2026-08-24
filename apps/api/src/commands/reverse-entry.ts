@@ -153,6 +153,9 @@ registerCommand<ReverseEntryPayload>({
       createdAt,
     });
 
+    // The mirror carries every attribution dimension of the original: ledger
+    // sums are signed over POSTED + REVERSED, so a dimension dropped here
+    // would leave that activity/person/work-order total un-reversed forever.
     const postingRows = originalPostings.map((posting) => ({
       id: crypto.randomUUID(),
       workspaceId: ctx.workspaceId,
@@ -164,8 +167,12 @@ registerCommand<ReverseEntryPayload>({
       categoryId: posting.categoryId,
       branchId: posting.branchId,
       ...(posting.assetId === null ? {} : { assetId: posting.assetId }),
+      ...(posting.activityId === null ? {} : { activityId: posting.activityId }),
+      ...(posting.personId === null ? {} : { personId: posting.personId }),
+      ...(posting.workOrderId === null ? {} : { workOrderId: posting.workOrderId }),
       amountMinor: -posting.amountMinor,
       assetAttribution: posting.assetAttribution,
+      activityAttribution: posting.activityAttribution,
       createdByCommandId: envelope.commandId,
       createdAt,
     }));

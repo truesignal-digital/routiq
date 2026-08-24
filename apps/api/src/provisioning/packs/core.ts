@@ -252,17 +252,122 @@ function defaultApprovalRules(): Array<
     );
   }
 
+  // MAINTENANCE records the costs of its own work orders — same generous auto
+  // band as the other recording roles; above it the entry waits SUBMITTED.
+  rules.push({
+    commandType: "record-expense",
+    categoryCode: null,
+    branchId: null,
+    amountMinMinor: null,
+    amountMaxMinor: 100_000n,
+    requiredRole: "MAINTENANCE",
+    createdByCommandId: null,
+  });
+
+  // Issue capture and standalone resolution are facts, auto for every
+  // operational role; dismissing someone else's report is a judgement kept
+  // from the field submitter.
+  for (const commandType of ["report-issue", "resolve-issue"]) {
+    rules.push(
+      ...(["FIELD_SUBMITTER", "MAINTENANCE", "OPS_MANAGER", "ADMIN"] as const).map(
+        (requiredRole) => ({
+          commandType,
+          categoryCode: null,
+          branchId: null,
+          amountMinMinor: null,
+          amountMaxMinor: null,
+          requiredRole,
+          createdByCommandId: null,
+        }),
+      ),
+    );
+  }
+
+  for (const commandType of ["dismiss-issue", "cancel-work-order"]) {
+    rules.push(
+      ...(["MAINTENANCE", "OPS_MANAGER", "ADMIN"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  /*
+   * The generous auto band (#27): create matches on expected cost, complete on
+   * the actual posted total. Above the band the WO waits SUBMITTED /
+   * COMPLETION_SUBMITTED for approve-work-order; ADMIN stays unbanded, the
+   * same shape record-expense gives FINANCE_APPROVER/ADMIN.
+   */
+  for (const commandType of ["create-work-order", "complete-work-order"]) {
+    rules.push(
+      ...(["MAINTENANCE", "OPS_MANAGER", "ADMIN"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: 100_000n,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+    rules.push({
+      commandType,
+      categoryCode: null,
+      branchId: null,
+      amountMinMinor: null,
+      amountMaxMinor: null,
+      requiredRole: "ADMIN",
+      createdByCommandId: null,
+    });
+  }
+
+  for (const commandType of ["approve-work-order", "reject-work-order"]) {
+    rules.push(
+      ...(["OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  // §5.1: always one human approval — executing the command IS the approval,
+  // so the rule authorizes the deciding roles and nobody else.
+  rules.push(
+    ...(["OPS_MANAGER", "ADMIN"] as const).map((requiredRole) => ({
+      commandType: "release-asset-to-service",
+      categoryCode: null,
+      branchId: null,
+      amountMinMinor: null,
+      amountMaxMinor: null,
+      requiredRole,
+      createdByCommandId: null,
+    })),
+  );
+
   return rules;
 }
 
 export const corePack: {
   code: "CORE";
-  version: 1;
+  version: 2;
   categories: Array<Omit<typeof categories.$inferInsert, "workspaceId">>;
   approvalRules: Array<Omit<typeof approvalRules.$inferInsert, "workspaceId">>;
 } = {
   code: "CORE",
-  version: 1,
+  // v2 (maintenance): ISSUE_TYPE categories with safety defaults + the
+  // work-order loop's approval rules. Packs never apply retroactively —
+  // existing workspaces pick these up by backfill command, not replay.
+  version: 2,
   categories: [
     {
       kind: "DOCUMENT_TYPE",
@@ -331,6 +436,60 @@ export const corePack: {
       labelEn: "Tolls",
       profitabilityLayer: "DIRECT",
       evidencePolicy: "NO_RECEIPT_EXPECTED",
+    },
+    /*
+     * Issue categories (#28): `defaultSafetyCritical` pre-checks the
+     * reporter's checkbox — brakes and accidents park the asset unless the
+     * reporter says otherwise. Tenant-editable config-as-data, like every
+     * other category field.
+     */
+    {
+      kind: "ISSUE_TYPE",
+      code: "MECHANICAL",
+      active: true,
+      labelFr: "Panne mécanique",
+      labelEn: "Mechanical fault",
+      defaultSafetyCritical: false,
+    },
+    {
+      kind: "ISSUE_TYPE",
+      code: "ELECTRICAL",
+      active: true,
+      labelFr: "Panne électrique",
+      labelEn: "Electrical fault",
+      defaultSafetyCritical: false,
+    },
+    {
+      kind: "ISSUE_TYPE",
+      code: "TIRES",
+      active: true,
+      labelFr: "Pneus",
+      labelEn: "Tires",
+      defaultSafetyCritical: false,
+    },
+    {
+      kind: "ISSUE_TYPE",
+      code: "BRAKES",
+      active: true,
+      labelFr: "Freins",
+      labelEn: "Brakes",
+      defaultSafetyCritical: true,
+    },
+    {
+      kind: "ISSUE_TYPE",
+      code: "ACCIDENT",
+      active: true,
+      labelFr: "Accident",
+      labelEn: "Accident",
+      defaultSafetyCritical: true,
+    },
+    {
+      kind: "ISSUE_TYPE",
+      code: "OTHER",
+      active: true,
+      labelFr: "Autre",
+      labelEn: "Other",
+      defaultSafetyCritical: false,
     },
   ],
   approvalRules: defaultApprovalRules(),

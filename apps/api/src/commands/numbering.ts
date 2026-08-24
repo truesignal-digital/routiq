@@ -60,3 +60,25 @@ export async function nextActivityNumber(
   const seq = await nextScopedSequence(tx, ctx, `ACTIVITY:${branch.id}:${year}`);
   return formatNumber(branch.code, year, seq);
 }
+
+export async function nextIssueNumber(
+  tx: Tx,
+  ctx: CommandContext,
+  branch: { id: string; code: string },
+  reportedAt: Date,
+): Promise<string> {
+  const year = reportedAt.toISOString().slice(0, 4);
+  const seq = await nextScopedSequence(tx, ctx, `ISSUE:${branch.id}:${year}`);
+  return formatNumber(branch.code, year, seq);
+}
+
+export async function nextWorkOrderNumber(
+  tx: Tx,
+  ctx: CommandContext,
+  branch: { id: string; code: string },
+  openedAt: Date,
+): Promise<string> {
+  const year = openedAt.toISOString().slice(0, 4);
+  const seq = await nextScopedSequence(tx, ctx, `WO:${branch.id}:${year}`);
+  return formatNumber(branch.code, year, seq);
+}

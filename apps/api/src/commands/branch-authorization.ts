@@ -1,6 +1,6 @@
 import type { CommandEnvelope, CommandWarningCode } from "@routiq/contracts";
 import { and, eq, inArray } from "drizzle-orm";
-import { assets, branches } from "../db/schema.js";
+import { assets, branches, workOrders } from "../db/schema.js";
 import { CommandError, type CommandContext, type Tx } from "./dispatcher.js";
 
 /** Resolve the current/source branches of assets for pipeline authorization. */
@@ -17,6 +17,25 @@ export async function assetBranchIds(
       and(
         eq(assets.workspaceId, ctx.workspaceId),
         inArray(assets.id, [...new Set(assetIds)]),
+      ),
+    );
+  return rows.map((row) => row.branchId);
+}
+
+/** Same resolver for the work orders a posting attributes cost to. */
+export async function workOrderBranchIds(
+  tx: Tx,
+  ctx: CommandContext,
+  workOrderIds: readonly string[],
+): Promise<readonly string[]> {
+  if (workOrderIds.length === 0) return [];
+  const rows = await tx
+    .select({ branchId: workOrders.branchId })
+    .from(workOrders)
+    .where(
+      and(
+        eq(workOrders.workspaceId, ctx.workspaceId),
+        inArray(workOrders.id, [...new Set(workOrderIds)]),
       ),
     );
   return rows.map((row) => row.branchId);

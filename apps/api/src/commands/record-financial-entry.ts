@@ -3,6 +3,7 @@ import type { z } from "zod";
 import {
   assetBranchIds,
   branchIdsByCode,
+  workOrderBranchIds,
 } from "./branch-authorization.js";
 import { registerCommand, type CommandDefinition } from "./dispatcher.js";
 import {
@@ -17,6 +18,7 @@ interface FinancialEntryCommandConfig {
   direction: FinancialEntryWriteRequest["direction"];
   categoryKind: FinancialEntryWriteRequest["categoryKind"];
   categoryRefType: FinancialEntryWriteRequest["categoryRefType"];
+  allowedRoles: CommandDefinition<FinancialEntryPayload>["allowedRoles"];
 }
 
 function financialEntryCommand(
@@ -26,7 +28,7 @@ function financialEntryCommand(
     name: config.name,
     version: 1,
     module: "FINANCE",
-    allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"],
+    allowedRoles: config.allowedRoles,
     payloadSchema: financialEntryPayload,
     approvalMode: "SUBMIT",
     branchAuthorization: {
@@ -35,11 +37,26 @@ function financialEntryCommand(
         const postingAssetIds = payload.postings.flatMap((posting) =>
           posting.assetId === undefined ? [] : [posting.assetId],
         );
-        const [entryBranchIds, postingBranchIds] = await Promise.all([
-          branchIdsByCode(tx, ctx, [payload.branchCode]),
-          assetBranchIds(tx, ctx, postingAssetIds),
-        ]);
-        return [...new Set([...entryBranchIds, ...postingBranchIds])];
+        // A WO posting may omit its asset (the writer fills it in), so the
+        // scope check has to reach the work order's branch directly.
+        const postingWorkOrderIds = payload.postings.flatMap((posting) =>
+          posting.workOrderId === undefined ? [] : [posting.workOrderId],
+        );
+        // A transaction owns one pg connection — child reads stay sequential.
+        const entryBranchIds = await branchIdsByCode(tx, ctx, [payload.branchCode]);
+        const postingBranchIds = await assetBranchIds(tx, ctx, postingAssetIds);
+        const postingWorkOrderBranchIds = await workOrderBranchIds(
+          tx,
+          ctx,
+          postingWorkOrderIds,
+        );
+        return [
+          ...new Set([
+            ...entryBranchIds,
+            ...postingBranchIds,
+            ...postingWorkOrderBranchIds,
+          ]),
+        ];
       },
     },
 
@@ -82,6 +99,16 @@ registerCommand(
     direction: "EXPENSE",
     categoryKind: "EXPENSE_CATEGORY",
     categoryRefType: "expenseCategory",
+    // MAINTENANCE records the parts and labor of its own work orders (§4.2
+    // "costs via ordinary expenses") — the seeded band keeps it auto only up
+    // to the same threshold as every other recording role.
+    allowedRoles: [
+      "FIELD_SUBMITTER",
+      "MAINTENANCE",
+      "OPS_MANAGER",
+      "FINANCE_APPROVER",
+      "ADMIN",
+    ],
   }),
 );
 registerCommand(
@@ -90,5 +117,6 @@ registerCommand(
     direction: "REVENUE",
     categoryKind: "REVENUE_CATEGORY",
     categoryRefType: "revenueCategory",
+    allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"],
   }),
 );

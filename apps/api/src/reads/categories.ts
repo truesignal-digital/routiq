@@ -41,6 +41,9 @@ export function registerCategoryReadRoutes(
               code: categories.code,
               labelFr: categories.labelFr,
               labelEn: categories.labelEn,
+              // ISSUE_TYPE only (CHECK); null elsewhere. Pre-checks the
+              // reporter's safety-critical box on the report-issue form.
+              defaultSafetyCritical: categories.defaultSafetyCritical,
             })
             .from(categories)
             .where(

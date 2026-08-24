@@ -54,7 +54,7 @@ describe("username/PIN login", () => {
       membershipId: member.membership.id,
       role: "FIELD_SUBMITTER",
       branchScope: [ws.branch.id],
-      enabledModules: ["CORE", "ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES"],
+      enabledModules: ["CORE", "ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES", "MAINTENANCE"],
       // Seeded workspaces have no workspace_templates rows, so they are
       // grandfathered all-enabled exactly as the dispatcher treats them.
       enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],

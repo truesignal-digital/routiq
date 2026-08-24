@@ -31,6 +31,7 @@ const FULL_FIELDS = [
   "labelEn",
   "profitabilityLayer",
   "evidencePolicy",
+  "defaultSafetyCritical",
   "active",
   "createdByCommandId",
   "rowVersion",
@@ -72,6 +73,7 @@ function categoryState(row: CategoryRow): Record<string, unknown> {
     labelEn: row.labelEn,
     profitabilityLayer: row.profitabilityLayer,
     evidencePolicy: row.evidencePolicy,
+    defaultSafetyCritical: row.defaultSafetyCritical,
     active: row.active,
     createdByCommandId: row.createdByCommandId,
     rowVersion: row.rowVersion,
@@ -131,6 +133,9 @@ const createCategory: CommandDefinition<CreateCategoryPayload> = {
         ...(payload.evidencePolicy === undefined
           ? {}
           : { evidencePolicy: payload.evidencePolicy }),
+        ...(payload.defaultSafetyCritical === undefined
+          ? {}
+          : { defaultSafetyCritical: payload.defaultSafetyCritical }),
         active: true,
         createdByCommandId: envelope.commandId,
       })
