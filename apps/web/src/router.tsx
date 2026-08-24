@@ -24,6 +24,7 @@ import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
 import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
 import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
+import { MaintenancePrototype } from "./screens/MaintenancePrototype.js";
 import { AppShell } from "./shell/AppShell.js";
 
 const rootRoute = createRootRoute();
@@ -138,6 +139,14 @@ const financePeriodsRoute = createRoute({
   component: FinancePeriodsScreen,
 });
 
+// PROTOTYPE — THROWAWAY (#31): maintenance UI variants. Remove with the screen.
+const maintenancePrototypeRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/prototype/maintenance",
+  validateSearch: z.object({ variant: z.enum(["A", "B", "C"]).optional() }),
+  component: MaintenancePrototype,
+});
+
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
@@ -181,6 +190,7 @@ const routeTree = rootRoute.addChildren([
     financeEntryDetailRoute,
     financeApprovalsRoute,
     financePeriodsRoute,
+    maintenancePrototypeRoute,
     moreRoute,
     personsRoute,
     usersRoute,
