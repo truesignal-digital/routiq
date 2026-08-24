@@ -416,6 +416,13 @@ export const categories = pgTable(
     })
       .notNull()
       .default("RECEIPT_EXPECTED"),
+    /**
+     * Issue categories only (CHECK in migration): whether picking this category
+     * pre-checks the reporter's safety-critical box. Config-as-data — the
+     * reporter's confirmed flag on the issue row is what opens the downtime
+     * interval, never the category default itself.
+     */
+    defaultSafetyCritical: boolean("default_safety_critical"),
     active: boolean("active").notNull().default(true),
     createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
     rowVersion: integer("row_version").notNull().default(1),
@@ -609,6 +616,7 @@ export const financialPostings = pgTable(
     assetId: uuid("asset_id").references(() => assets.id),
     activityId: uuid("activity_id").references((): AnyPgColumn => activities.id),
     personId: uuid("person_id").references((): AnyPgColumn => persons.id),
+    workOrderId: uuid("work_order_id").references((): AnyPgColumn => workOrders.id),
     /** SIGNED minor units: reversals subtract, sums can't double-count. */
     amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
     assetAttribution: text("asset_attribution", { enum: ["DIRECT", "ALLOCATED"] })
@@ -628,6 +636,7 @@ export const financialPostings = pgTable(
     index("financial_postings_ws_period_idx").on(t.workspaceId, t.postingPeriodId),
     index("financial_postings_ws_activity_idx").on(t.workspaceId, t.activityId),
     index("financial_postings_ws_person_idx").on(t.workspaceId, t.personId),
+    index("financial_postings_ws_work_order_idx").on(t.workspaceId, t.workOrderId),
   ],
 );
 
@@ -938,5 +947,191 @@ export const meterReadings = pgTable(
   (t) => [
     index("meter_readings_ws_asset_observed_idx").on(t.workspaceId, t.assetId, t.observedAt),
     uniqueIndex("meter_readings_superseded_uq").on(t.supersededById),
+  ],
+);
+
+/*
+ * ---------------------------------------------------------------------------
+ * Maintenance (§3.1, issue #28 lifecycle decisions) — defect reports, work
+ * orders and the downtime history they open. Composite tenant FKs, RLS,
+ * CHECKs and runtime grants live in the maintenance isolation migration.
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Operational issue (fr: Signalement) — defect, breakdown, incident. Lifecycle
+ * OPEN → RESOLVED | DISMISSED; no triage state — triage is implicit (create a
+ * WO, dismiss, or leave open). A confirmed safety-critical report opens an
+ * UNAVAILABLE availability interval in the same transaction (§3.4 inv. 8);
+ * release-to-service closes that interval without ever touching issue state —
+ * the two are deliberately uncoupled, warn-don't-block in both orders.
+ */
+export const operationalIssues = pgTable(
+  "operational_issues",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    /** The asset's branch at report time, copied so branch-scoped queues read flat. */
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    issueNumber: text("issue_number").notNull(),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    /** categories.kind = 'ISSUE_TYPE'. */
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id),
+    description: text("description"),
+    /**
+     * The reporter's confirmed flag — pre-checked in the UI by the category's
+     * default, overridable either way, so the downtime interval always traces
+     * to a human assertion.
+     */
+    safetyCritical: boolean("safety_critical").notNull().default(false),
+    status: text("status", { enum: ["OPEN", "RESOLVED", "DISMISSED"] })
+      .notNull()
+      .default("OPEN"),
+    reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNote: text("resolution_note"),
+    dismissedReason: text("dismissed_reason"),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("operational_issues_ws_number_uq").on(t.workspaceId, t.issueNumber),
+    index("operational_issues_ws_asset_reported_idx").on(
+      t.workspaceId,
+      t.assetId,
+      t.reportedAt,
+    ),
+    index("operational_issues_ws_status_idx").on(t.workspaceId, t.status),
+  ],
+);
+
+/**
+ * Work order (fr: Ordre de travail) — the maintenance unit of work. Lifecycle
+ * #28: enters APPROVED (auto band on expected cost) or SUBMITTED — no DRAFT and
+ * no IN_PROGRESS; the completion gate re-evaluates on the actual posted total
+ * and lands COMPLETED or COMPLETION_SUBMITTED; CANCELLED from any non-terminal
+ * state, posted costs standing. Terminals (COMPLETED, REJECTED, CANCELLED)
+ * never reopen — a wrong completion is corrected in the cost records by
+ * reversal, never by reopening the WO. Costs are ordinary expense entries whose
+ * postings carry work_order_id; actual_cost_minor is only the snapshot the
+ * completion gate matched on, never a hand-maintained total.
+ */
+export const workOrders = pgTable(
+  "work_orders",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    /** The asset's branch at creation, same rationale as operational_issues. */
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    workOrderNumber: text("work_order_number").notNull(),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    /** At most one Signalement per WO; multi-issue visit = several WOs; null = preventive work. */
+    operationalIssueId: uuid("operational_issue_id").references(
+      () => operationalIssues.id,
+    ),
+    description: text("description").notNull(),
+    /** What create-work-order's approval rule matched on (spend authorization). */
+    expectedCostMinor: bigint("expected_cost_minor", { mode: "bigint" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("XAF"),
+    status: text("status", {
+      enum: [
+        "SUBMITTED",
+        "APPROVED",
+        "COMPLETION_SUBMITTED",
+        "COMPLETED",
+        "REJECTED",
+        "CANCELLED",
+      ],
+    }).notNull(),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
+    /*
+     * Completion facts — captured once by complete-work-order and held through
+     * COMPLETION_SUBMITTED; a completion rejection nulls them all and returns
+     * the WO to APPROVED (work stays open, costs correctable, resubmit).
+     */
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completionNotes: text("completion_notes"),
+    resolveLinkedIssue: boolean("resolve_linked_issue"),
+    /** Signed posted total at completion evaluation — what the gate matched on. */
+    actualCostMinor: bigint("actual_cost_minor", { mode: "bigint" }),
+    /** Who submitted the completion — the performer proxy for the release guard. */
+    completedByPrincipalId: uuid("completed_by_principal_id").references(
+      () => principals.id,
+    ),
+    rejectedReason: text("rejected_reason"),
+    cancelledReason: text("cancelled_reason"),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("work_orders_ws_number_uq").on(t.workspaceId, t.workOrderNumber),
+    index("work_orders_ws_asset_opened_idx").on(t.workspaceId, t.assetId, t.openedAt),
+    index("work_orders_ws_status_idx").on(t.workspaceId, t.status),
+    index("work_orders_ws_issue_idx").on(t.workspaceId, t.operationalIssueId),
+  ],
+);
+
+/**
+ * Downtime history (§3.1): one interval table, downtime derived from it — never
+ * a hand-maintained total. Opened today only by a confirmed safety-critical
+ * issue report; closed only by release-asset-to-service (always a human
+ * decision, §5.1). At most one open interval per asset — the partial unique
+ * index below — so a second safety-critical report warns instead of stacking.
+ */
+export const availabilityIntervals = pgTable(
+  "availability_intervals",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    reason: text("reason", { enum: ["SAFETY_CRITICAL_ISSUE"] }).notNull(),
+    /** Nullable so future manual downtime needs no schema change; today always set. */
+    openedByIssueId: uuid("opened_by_issue_id").references(
+      () => operationalIssues.id,
+    ),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    /** NULL = the asset is currently unavailable. */
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    releaseNote: text("release_note"),
+    releasedByCommandId: uuid("released_by_command_id").references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("availability_intervals_open_per_asset_uq")
+      .on(t.workspaceId, t.assetId)
+      .where(sql`${t.endedAt} is null`),
+    index("availability_intervals_ws_asset_started_idx").on(
+      t.workspaceId,
+      t.assetId,
+      t.startedAt,
+    ),
   ],
 );

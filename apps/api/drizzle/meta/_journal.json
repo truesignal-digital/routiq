@@ -176,6 +176,20 @@
       "when": 1786825947084,
       "tag": "0024_branch_name_uq",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787530340525,
+      "tag": "0025_fine_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787530400525,
+      "tag": "0026_maintenance_isolation",
+      "breakpoints": true
     }
   ]
 }
