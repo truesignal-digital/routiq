@@ -435,6 +435,68 @@ describe("MaintenanceScreen — commands", () => {
     expect(submittedEnvelope()["expectedVersion"]).toBe(3);
   });
 
+  it("moves the header onto the refetched detail once the closure is declared", async () => {
+    const user = userEvent.setup();
+    // Only the detail read learns the work order closed: the table handed the
+    // drawer a row snapshot when it opened and never revises it, so a header
+    // still bound to that snapshot would keep showing "Approuvé" and no cost.
+    mocks.submit.mockImplementation(async () => {
+      detail = {
+        ...makeDetail(makeWorkOrder("CLOSED")),
+        actualCostMinor: 485_000,
+        summary: "Plaquettes et disques remplacés",
+      };
+      return {
+        ok: true,
+        outcome: {
+          commandId: NEW_RECORD_ID,
+          recordId: WORK_ORDER_ID,
+          rowVersion: 4,
+          warnings: [],
+          idempotentReplay: false,
+        },
+      };
+    });
+
+    renderScreen();
+    const sheet = await openSheet(user);
+    expect(
+      within(sheet).getByText("maintenance.workOrders.status.OPEN"),
+    ).toBeTruthy();
+
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.declareClosure" }),
+    );
+    await user.type(
+      await screen.findByLabelText("maintenance.fields.actualCost"),
+      "485000",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.declareClosure" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+
+    const reopened = await screen.findByRole("dialog");
+    await waitFor(() => {
+      expect(
+        within(reopened).getByText("maintenance.workOrders.status.CLOSED"),
+      ).toBeTruthy();
+    });
+    expect(
+      within(reopened).queryByText("maintenance.workOrders.status.OPEN"),
+    ).toBeNull();
+
+    const digits = (reopened.textContent ?? "").replace(/[\s  ,]/g, "");
+    expect(digits).toContain("485000");
+    expect(within(reopened).getByText("Plaquettes et disques remplacés")).toBeTruthy();
+
+    // The list row the table still holds is the stale copy — proof the header
+    // is reading the detail rather than the snapshot beside it.
+    expect(workOrderRow.status).toBe("OPEN");
+    expect(workOrderRow.actualCostMinor).toBeNull();
+  });
+
   it("reports a signalement as safety-critical when the box is ticked", async () => {
     const user = userEvent.setup();
     renderScreen();

@@ -245,9 +245,9 @@ function SheetActions({
 }
 
 /**
- * One work order's whole story, opened from its row. The header comes from the
- * list row so the sheet is never blank while the detail lands; the chronologie
- * and the cost lines are what the detail read adds.
+ * One work order's whole story, opened from its row. The chronologie and the
+ * cost lines are what the detail read adds; everything else is on both reads,
+ * and `header` below decides which copy is on screen.
  */
 export function WorkOrderSheet({
   row,
@@ -266,11 +266,22 @@ export function WorkOrderSheet({
   const detailQuery = useWorkOrder(row.id);
   const detail = detailQuery.data;
 
+  /**
+   * The detail read is the live copy; `row` is a snapshot the table handed the
+   * drawer when it opened and never revises — activating a row copies the
+   * object into the viewer's own state (`data-table.tsx`), so a command
+   * committed from inside this sheet leaves it describing the work order as it
+   * was. Falling back to it only until the detail lands keeps the sheet from
+   * opening blank without letting it go stale afterwards: declaring a closure
+   * has to move the status pill and the actual cost, not just the timeline.
+   */
+  const header: WorkOrderListItem = detail ?? row;
+
   const linkedIssue =
-    row.issue === null
+    header.issue === null
       ? undefined
-      : issues.find((issue) => issue.id === row.issue?.id);
-  const safetyCritical = row.issue?.safetyCritical ?? false;
+      : issues.find((issue) => issue.id === header.issue?.id);
+  const safetyCritical = header.issue?.safetyCritical ?? false;
 
   return (
     <div className="flex flex-col gap-5">
@@ -297,32 +308,38 @@ export function WorkOrderSheet({
         facts={[
           [
             t("maintenance.workOrders.columns.status"),
-            <StatusBadge key="status" tone={WORK_ORDER_TONES[row.status]}>
-              {t(`maintenance.workOrders.status.${row.status}`)}
+            <StatusBadge key="status" tone={WORK_ORDER_TONES[header.status]}>
+              {t(`maintenance.workOrders.status.${header.status}`)}
             </StatusBadge>,
           ],
           [
             t("maintenance.workOrders.columns.asset"),
             <span key="asset" className="font-mono">
-              {row.asset.assetCode}
+              {header.asset.assetCode}
             </span>,
           ],
-          [t("maintenance.workOrders.columns.branch"), row.branch.name],
+          [t("maintenance.workOrders.columns.branch"), header.branch.name],
           [
             t("maintenance.workOrders.columns.expectedCost"),
-            row.expectedCostMinor === null
+            header.expectedCostMinor === null
               ? "—"
-              : formatMoney(row.expectedCostMinor, { currency: row.currency, locale }),
+              : formatMoney(header.expectedCostMinor, {
+                  currency: header.currency,
+                  locale,
+                }),
           ],
           [
             t("maintenance.workOrders.columns.actualCost"),
-            row.actualCostMinor === null
+            header.actualCostMinor === null
               ? "—"
-              : formatMoney(row.actualCostMinor, { currency: row.currency, locale }),
+              : formatMoney(header.actualCostMinor, {
+                  currency: header.currency,
+                  locale,
+                }),
           ],
           [
             t("maintenance.fields.issue"),
-            row.issue === null ? (
+            header.issue === null ? (
               t("maintenance.detail.preventive")
             ) : (
               <span key="issue" className="flex flex-wrap items-center gap-1.5">
@@ -342,7 +359,7 @@ export function WorkOrderSheet({
         <h3 className="text-xs text-muted-foreground">
           {t("maintenance.fields.description")}
         </h3>
-        <p className="mt-1 text-sm">{row.description}</p>
+        <p className="mt-1 text-sm">{header.description}</p>
       </div>
 
       {detail?.summary != null && detail.summary !== "" && (
