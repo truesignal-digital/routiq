@@ -117,5 +117,40 @@
         "rowAttribute": "Charge line {position} to this trip"
       }
     }
+  },
+  "maintenance": {
+    "workOrders": {
+      "newHint": "Open a work order on a vehicle, with or without an originating issue.",
+      "columns": {
+        "asset": "Vehicle"
+      }
+    },
+    "issues": {
+      "newHint": "Describe the fault found on the vehicle. A safety-critical issue grounds the vehicle immediately.",
+      "columns": {
+        "asset": "Vehicle"
+      }
+    },
+    "fields": {
+      "asset": "Vehicle",
+      "safetyCriticalHint": "The vehicle is grounded from the moment this is filed until it is returned to service."
+    },
+    "actions": {
+      "releaseHint": "The vehicle becomes available again. This decision needs someone other than whoever declared the work complete."
+    },
+    "detail": {
+      "unavailableTitle": "Vehicle grounded"
+    },
+    "notify": {
+      "success": {
+        "assetReleased": "Vehicle returned to service"
+      }
+    }
+  },
+  "history": {
+    "event": {
+      "work_order-asset_released": "Vehicle returned to service",
+      "asset_availability-opened": "Vehicle grounded"
+    }
   }
 }
