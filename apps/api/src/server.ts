@@ -46,6 +46,7 @@ import { registerFinanceReadRoutes } from "./reads/finance.js";
 import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
+import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
 
 export interface ServerDeps {
   db: Db;
@@ -113,6 +114,7 @@ export function buildServer({
   registerMemberReadRoutes(app, db, requireAuth);
   registerBranchReadRoutes(app, db, requireAuth);
   registerHistoryReadRoutes(app, db, requireAuth);
+  registerMaintenanceReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   app.get("/v1/me", { preHandler: requireAuth }, async (req) => {
     const auth = req.auth;
