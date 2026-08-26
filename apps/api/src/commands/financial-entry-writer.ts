@@ -7,6 +7,7 @@ import {
   financialEntries,
   financialPostings,
   persons,
+  workOrders,
 } from "../db/schema.js";
 import type { ApprovalDecision } from "./approvals.js";
 import { resolveTargetBranch } from "./branch-authorization.js";
@@ -22,6 +23,7 @@ import { resolvePostingPeriod } from "./periods.js";
 export interface FinancialEntryPostingWriteRequest {
   assetId?: string | undefined;
   activityId?: string | undefined;
+  workOrderId?: string | undefined;
   personId?: string | undefined;
   amountMinor: number;
   assetAttribution: "DIRECT" | "ALLOCATED";
@@ -181,6 +183,47 @@ export async function writeFinancialEntry(
     }
   }
 
+  const requestedWorkOrderIds = [
+    ...new Set(
+      request.postings.flatMap((posting) =>
+        posting.workOrderId === undefined ? [] : [posting.workOrderId],
+      ),
+    ),
+  ];
+  if (requestedWorkOrderIds.length > 0) {
+    const workOrderRows = await tx
+      .select({ id: workOrders.id, status: workOrders.status })
+      .from(workOrders)
+      .where(
+        and(
+          eq(workOrders.workspaceId, ctx.workspaceId),
+          inArray(workOrders.id, requestedWorkOrderIds),
+        ),
+      );
+    const workOrdersById = new Map(workOrderRows.map((row) => [row.id, row]));
+    const missing = requestedWorkOrderIds.filter(
+      (workOrderId) => !workOrdersById.has(workOrderId),
+    );
+    if (missing.length > 0) {
+      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+        referenceType: "workOrder",
+        missing,
+      });
+    }
+    // A cancelled order records that the work never happened; attributing a
+    // cost to it would put spend on a repair the workshop called off. Every
+    // other state is fair game — parts are bought before closure, and a
+    // supplier invoice lands after it.
+    const cancelled = workOrderRows.find((row) => row.status === "CANCELLED");
+    if (cancelled) {
+      throw new CommandError(409, "INVALID_STATE_TRANSITION", {
+        referenceType: "workOrder",
+        workOrderId: cancelled.id,
+        from: cancelled.status,
+      });
+    }
+  }
+
   const requestedPersonIds = [
     ...new Set(
       request.postings.flatMap((posting) =>
@@ -298,6 +341,9 @@ export async function writeFinancialEntry(
     ...(posting.activityId === undefined
       ? {}
       : { activityId: posting.activityId }),
+    ...(posting.workOrderId === undefined
+      ? {}
+      : { workOrderId: posting.workOrderId }),
     ...(posting.personId === undefined ? {} : { personId: posting.personId }),
     amountMinor: BigInt(posting.amountMinor),
     assetAttribution: posting.assetAttribution,

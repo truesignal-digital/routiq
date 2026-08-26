@@ -76,6 +76,16 @@ export const COMMAND_QUEUEABILITY = {
   "reset-member-pin": false,
   "cancel-work-order": false,
   "release-asset-to-service": false,
+
+  /*
+   * The two work-order decisions. A creation or a completion is a fact the
+   * workshop can capture offline; deciding that the spend is authorized and
+   * that the declared costs are accepted is a judgement about a record whose
+   * current state the approver must see. Queuing either would let an approval
+   * replayed an hour later land on a work order that had since been cancelled.
+   */
+  "approve-work-order": false,
+  "approve-work-order-closure": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

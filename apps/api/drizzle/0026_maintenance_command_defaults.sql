@@ -8,6 +8,7 @@
 --   report-issue: ADMIN, OPS_MANAGER, FIELD_SUBMITTER, MAINTENANCE
 --   create-work-order, complete-work-order, cancel-work-order: ADMIN, OPS_MANAGER, MAINTENANCE
 --   release-asset-to-service: ADMIN, OPS_MANAGER
+--   approve-work-order, approve-work-order-closure: FINANCE_APPROVER, ADMIN
 --
 -- Idempotent: the NOT EXISTS is per workspace and command type, so re-running
 -- after a partial application adds nothing.
@@ -41,7 +42,11 @@ CROSS JOIN (
     ('cancel-work-order', 'OPS_MANAGER'),
     ('cancel-work-order', 'MAINTENANCE'),
     ('release-asset-to-service', 'ADMIN'),
-    ('release-asset-to-service', 'OPS_MANAGER')
+    ('release-asset-to-service', 'OPS_MANAGER'),
+    ('approve-work-order', 'FINANCE_APPROVER'),
+    ('approve-work-order', 'ADMIN'),
+    ('approve-work-order-closure', 'FINANCE_APPROVER'),
+    ('approve-work-order-closure', 'ADMIN')
 ) AS c(command_type, required_role)
 WHERE NOT EXISTS (
   SELECT 1

@@ -146,6 +146,11 @@
     "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
     "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
     "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
+    "ISSUE_ASSET_MISMATCH": "Ce signalement concerne un autre actif. Choisissez un signalement du même actif.",
+    "WORK_ORDER_ASSET_MISMATCH": "Cet ordre de travail concerne un autre actif.",
+    "WORK_ORDER_NOT_CLOSED": "L'ordre de travail doit être clôturé avant la remise en service.",
+    "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
+    "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {

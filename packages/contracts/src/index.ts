@@ -41,6 +41,8 @@ export * from "./reads/members.js";
 export * from "./reads/branches.js";
 export * from "./commands/report-issue.js";
 export * from "./commands/create-work-order.js";
+export * from "./commands/approve-work-order.js";
 export * from "./commands/complete-work-order.js";
+export * from "./commands/approve-work-order-closure.js";
 export * from "./commands/cancel-work-order.js";
 export * from "./commands/release-asset-to-service.js";

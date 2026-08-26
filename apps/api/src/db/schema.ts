@@ -978,8 +978,11 @@ export const operationalIssues = pgTable(
 
 /**
  * Maintenance work order (Ordre de travail): planned work to address an issue
- * or preventive maintenance. Status tracks the workflow (OPEN → PENDING_CLOSE →
- * CLOSED or CANCELLED). An issue may spawn multiple work orders; cancellation does
+ * or preventive maintenance. Status tracks the workflow (SUBMITTED → OPEN →
+ * PENDING_CLOSE → CLOSED, plus CANCELLED from SUBMITTED or OPEN). The two
+ * pending states exist only when a tenant threshold rule demanded review:
+ * without one, creation lands OPEN and completion lands CLOSED in a single
+ * call. An issue may spawn multiple work orders; cancellation does
  * not delete — it records a reason and opens the door for a new order on the same
  * issue. Composite tenant FKs put the work order, its asset and its linked issue
  * in one workspace; that the issue names the same asset is a handler check, not
@@ -997,8 +1000,15 @@ export const workOrders = pgTable(
       .references(() => assets.id),
     issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
     description: text("description").notNull(),
+    /**
+     * SUBMITTED is where a creation lands when a threshold rule required
+     * review; approve-work-order moves it to OPEN. Drizzle emits this column as
+     * plain `text` with no CHECK, and the 0025 snapshot records only its type
+     * and default — so widening the enum is a TypeScript-level change and needs
+     * no migration.
+     */
     status: text("status", {
-      enum: ["OPEN", "PENDING_CLOSE", "CLOSED", "CANCELLED"],
+      enum: ["SUBMITTED", "OPEN", "PENDING_CLOSE", "CLOSED", "CANCELLED"],
     })
       .notNull()
       .default("OPEN"),

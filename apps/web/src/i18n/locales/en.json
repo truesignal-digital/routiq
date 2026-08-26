@@ -146,6 +146,11 @@
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
+    "ISSUE_ASSET_MISMATCH": "That issue was reported against a different asset. Pick an issue for the same asset.",
+    "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
+    "WORK_ORDER_NOT_CLOSED": "The work order must be closed before the asset can be released to service.",
+    "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
+    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {

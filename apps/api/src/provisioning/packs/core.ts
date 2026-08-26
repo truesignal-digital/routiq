@@ -296,6 +296,25 @@ function defaultApprovalRules(): Array<
       })),
     );
   }
+
+  // The two work-order decisions, on the same footing as approve-entry: what
+  // they resolve is money — the expected spend on creation, the declared actual
+  // cost on closure — so the finance approver is the role that holds them.
+  // No amount bounds, so a workspace that never configures a threshold never
+  // meets a pending work order in the first place.
+  for (const commandType of ["approve-work-order", "approve-work-order-closure"]) {
+    rules.push(
+      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
   return rules;
 }
 
