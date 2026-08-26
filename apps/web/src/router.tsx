@@ -19,6 +19,7 @@ import { UsersScreen } from "./screens/UsersScreen.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
 import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
 import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
+import { MaintenanceScreen } from "./screens/MaintenanceScreen.js";
 import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
 import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
@@ -113,6 +114,14 @@ const activityDetailRoute = createRoute({
   component: ActivityDetailScreen,
 });
 
+// The screen gates itself on the MAINTENANCE module, as every module-owned
+// screen does; the nav entry disappears with the module (`sections.ts`).
+const maintenanceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/maintenance",
+  component: MaintenanceScreen,
+});
+
 const financeEntryDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries/$entryId",
@@ -176,6 +185,7 @@ const routeTree = rootRoute.addChildren([
     // Before the $activityId route, or "record" reads as an activity id.
     activityRecordRoute,
     activityDetailRoute,
+    maintenanceRoute,
     financeRecordRoute,
     financeEntriesRoute,
     financeEntryDetailRoute,

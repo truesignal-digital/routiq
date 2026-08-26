@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeSection, isSectionActive, visibleSections } from "./sections.js";
 
-const ALL = visibleSections(["CORE", "ASSETS", "FINANCE"]);
+const ALL = visibleSections(["CORE", "ASSETS", "FINANCE", "MAINTENANCE"]);
 
 function activeKey(pathname: string): string | undefined {
   return activeSection(ALL, pathname)?.key;
@@ -23,6 +23,16 @@ describe("visibleSections (module gate)", () => {
     expect(keys).toEqual(["home", "finances", "more"]);
   });
 
+  it("maintenance module shows the maintenance section", () => {
+    const keys = visibleSections(["CORE", "MAINTENANCE"]).map((s) => s.key);
+    expect(keys).toEqual(["home", "maintenance", "more"]);
+  });
+
+  it("without the maintenance module the workshop has no nav entry", () => {
+    const keys = visibleSections(["CORE", "ASSETS", "FINANCE"]).map((s) => s.key);
+    expect(keys).not.toContain("maintenance");
+  });
+
   it("while membership is loading only module-less sections render", () => {
     expect(visibleSections(undefined).map((s) => s.key)).toEqual(["home", "more"]);
   });
@@ -38,6 +48,7 @@ describe("visibleSections (module gate)", () => {
 describe("isSectionActive (exact-or-child)", () => {
   it("matches the section's own route", () => {
     expect(activeKey("/assets")).toBe("assets");
+    expect(activeKey("/maintenance")).toBe("maintenance");
     expect(activeKey("/more")).toBe("more");
   });
 

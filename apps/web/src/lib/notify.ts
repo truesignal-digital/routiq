@@ -6,7 +6,12 @@ import { i18n } from "../i18n/index.js";
  * domain-specific, so each namespace owns its own; warning and error codes are
  * shared vocabulary and fall back to the root `notify.*` block.
  */
-export type NotifyNamespace = "activities" | "assets" | "documents" | "finance";
+export type NotifyNamespace =
+  | "activities"
+  | "assets"
+  | "documents"
+  | "finance"
+  | "maintenance";
 
 type NotifyKind = "success" | "warnings" | "errors";
 
