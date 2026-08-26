@@ -252,6 +252,50 @@ function defaultApprovalRules(): Array<
     );
   }
 
+  // Maintenance commands: issue reporting, work order management, and asset release
+  for (const commandType of ["report-issue"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"] as const).map(
+        (requiredRole) => ({
+          commandType,
+          categoryCode: null,
+          branchId: null,
+          amountMinMinor: null,
+          amountMaxMinor: null,
+          requiredRole,
+          createdByCommandId: null,
+        }),
+      ),
+    );
+  }
+
+  for (const commandType of ["create-work-order", "complete-work-order", "cancel-work-order"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "MAINTENANCE"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  for (const commandType of ["release-asset-to-service"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
   return rules;
 }
 

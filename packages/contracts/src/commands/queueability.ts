@@ -21,6 +21,9 @@ export const COMMAND_QUEUEABILITY = {
   "record-haulage-job-sheet": true,
   "record-expense": true,
   "record-revenue": true,
+  "report-issue": true,
+  "create-work-order": true,
+  "complete-work-order": true,
 
   /*
    * Decisions — never queued.
@@ -71,6 +74,8 @@ export const COMMAND_QUEUEABILITY = {
   "deactivate-member": false,
   "reactivate-member": false,
   "reset-member-pin": false,
+  "cancel-work-order": false,
+  "release-asset-to-service": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;
