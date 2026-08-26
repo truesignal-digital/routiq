@@ -80,4 +80,32 @@ describe("routiq_app grants", () => {
       expect.objectContaining({ column_name: "posting_period_id" }),
     ]);
   });
+
+  it("maintenance rows keep the intended append-only runtime grants", async () => {
+    const grants = await grantsByTable();
+
+    // A signalement is an append-only observation: a later look at the same
+    // truck is a new issue, never an edit of the old one.
+    const issues = grants.get("operational_issues");
+    expect(issues?.has("SELECT")).toBe(true);
+    expect(issues?.has("INSERT")).toBe(true);
+    expect(issues?.has("UPDATE")).toBe(false);
+    expect(issues?.has("DELETE")).toBe(false);
+
+    // A work order's status moves, so UPDATE is the transition path — but
+    // cancelling stamps a reason rather than removing the row.
+    const orders = grants.get("work_orders");
+    expect(orders?.has("SELECT")).toBe(true);
+    expect(orders?.has("INSERT")).toBe(true);
+    expect(orders?.has("UPDATE")).toBe(true);
+    expect(orders?.has("DELETE")).toBe(false);
+
+    // An availability interval is opened by report-issue and closed — never
+    // deleted — by release-asset-to-service.
+    const intervals = grants.get("asset_availability_intervals");
+    expect(intervals?.has("SELECT")).toBe(true);
+    expect(intervals?.has("INSERT")).toBe(true);
+    expect(intervals?.has("UPDATE")).toBe(true);
+    expect(intervals?.has("DELETE")).toBe(false);
+  });
 });
