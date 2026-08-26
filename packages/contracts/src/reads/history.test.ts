@@ -91,6 +91,14 @@ describe("entity type to module map", () => {
       expect(MODULE_CODES).toContain(HISTORY_ENTITY_MODULE[entityType]);
     }
   });
+
+  it("puts the maintenance rows behind the module whose commands write them", () => {
+    expect(HISTORY_ENTITY_MODULE.work_order).toBe("MAINTENANCE");
+    expect(HISTORY_ENTITY_MODULE.operational_issue).toBe("MAINTENANCE");
+    // The grounding hangs off an asset but is opened and closed by maintenance
+    // commands, so ASSETS is not what entitles you to read it.
+    expect(HISTORY_ENTITY_MODULE.asset_availability_interval).toBe("MAINTENANCE");
+  });
 });
 
 describe("state key allowlist", () => {
@@ -129,6 +137,44 @@ describe("state key allowlist", () => {
       const keys = HISTORY_STATE_KEYS[entityType];
       expect(new Set(keys).size, entityType).toBe(keys.length);
     }
+  });
+
+  it("names what the maintenance commands actually snapshot", () => {
+    // Every key the phase-2b handlers put in a work-order snapshot: creation,
+    // both approvals, completion, cancellation and the release.
+    for (const key of [
+      "status",
+      "description",
+      "assetId",
+      "issueId",
+      "expectedCostMinor",
+      "actualCostMinor",
+      "currency",
+      "summary",
+      "completedAt",
+      "cancelReason",
+      "cancelledAt",
+      "approvalNote",
+      "releasedAt",
+      "releaseNote",
+    ]) {
+      expect(HISTORY_STATE_KEYS.work_order, key).toContain(key);
+    }
+    expect([...HISTORY_STATE_KEYS.operational_issue]).toEqual([
+      "assetId",
+      "description",
+      "safetyCritical",
+      "category",
+      "reportedAt",
+    ]);
+    // The release is `closedAt` moving off null; without it the timeline could
+    // not say the truck came back into service.
+    expect(HISTORY_STATE_KEYS.asset_availability_interval).toContain("closedAt");
+  });
+
+  it("treats the work order's declared costs as money, not as plain numbers", () => {
+    expect(HISTORY_MONEY_STATE_KEYS).toContain("expectedCostMinor");
+    expect(HISTORY_MONEY_STATE_KEYS).toContain("actualCostMinor");
   });
 
   it("marks as money only keys some entity type can actually show", () => {

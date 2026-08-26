@@ -13,13 +13,16 @@ export const HISTORY_ENTITY_TYPES = [
   "activity_asset_segment",
   "approval_rule",
   "asset",
+  "asset_availability_interval",
   "category",
   "document",
   "financial_entry",
   "meter_reading",
   "movement_leg",
+  "operational_issue",
   "person",
   "posting_period",
+  "work_order",
   "workspace",
   "workspace_module",
   "workspace_template",
@@ -40,13 +43,21 @@ export const HISTORY_ENTITY_MODULE = {
   activity_asset_segment: "ACTIVITIES",
   approval_rule: "CORE",
   asset: "ASSETS",
+  /**
+   * MAINTENANCE, not ASSETS: the grounding is opened by `report-issue` and
+   * closed by `release-asset-to-service`, so it follows the module whose
+   * commands write it — same rule that puts `person` under ACTIVITIES.
+   */
+  asset_availability_interval: "MAINTENANCE",
   category: "CORE",
   document: "DOCUMENTS",
   financial_entry: "FINANCE",
   meter_reading: "ACTIVITIES",
   movement_leg: "ACTIVITIES",
+  operational_issue: "MAINTENANCE",
   person: "ACTIVITIES",
   posting_period: "FINANCE",
+  work_order: "MAINTENANCE",
   workspace: "CORE",
   workspace_module: "CORE",
   workspace_template: "CORE",
@@ -173,6 +184,20 @@ export const HISTORY_STATE_KEYS = {
     "templateCode",
     "templateVersion",
   ],
+  /**
+   * A grounding, from `asset_availability.opened` and `.closed`. `closedAt`
+   * moving from null to a timestamp IS the release — availability is not
+   * lifecycle status, so nothing else on the row says the truck came back.
+   * `closedByCommandId` is bookkeeping and stays out; `releaseNote` is the
+   * releaser's own words and does not.
+   */
+  asset_availability_interval: [
+    "assetId",
+    "openedAt",
+    "openedByIssueId",
+    "closedAt",
+    "releaseNote",
+  ],
   category: [
     "kind",
     "code",
@@ -242,6 +267,19 @@ export const HISTORY_STATE_KEYS = {
     "passengerCount",
     "customValues",
   ],
+  /**
+   * A signalement is written once and never edited, so its only event is
+   * `operational_issue.reported` — every key here shows up as "was nothing, is
+   * now this". Listed anyway: the timeline is what an operator opens to ask who
+   * called the truck unsafe, and when.
+   */
+  operational_issue: [
+    "assetId",
+    "description",
+    "safetyCritical",
+    "category",
+    "reportedAt",
+  ],
   person: [
     "displayName",
     "personCode",
@@ -252,6 +290,29 @@ export const HISTORY_STATE_KEYS = {
     "active",
   ],
   posting_period: ["status", "lockedAt", "reason"],
+  /**
+   * The work-order workflow, from creation through both approvals to closure,
+   * cancellation or release. `approvalNote` is the authorizer's justification of
+   * a spend and `cancelReason` the abandonment motif — both are why the decision
+   * was taken and exist nowhere but the trail.
+   */
+  work_order: [
+    "status",
+    "description",
+    "assetId",
+    "issueId",
+    "expectedCostMinor",
+    "actualCostMinor",
+    "currency",
+    "summary",
+    "completedAt",
+    "cancelReason",
+    "cancelledAt",
+    "approvalNote",
+    "availabilityIntervalId",
+    "releasedAt",
+    "releaseNote",
+  ],
   /**
    * `admin` and `users` from `workspace.provisioned` are deliberately absent:
    * they are principal snapshots carrying login usernames, and CORE entitles
@@ -280,6 +341,8 @@ export const HISTORY_MONEY_STATE_KEYS = [
   "amountMinor",
   "amountMaxMinor",
   "acquisitionAmountMinor",
+  "expectedCostMinor",
+  "actualCostMinor",
 ] as const;
 
 export const historyValueKinds = ["MONEY", "VALUE"] as const;
