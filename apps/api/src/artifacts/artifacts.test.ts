@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { S3Client, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { GenericContainer, type StartedTestContainer } from "testcontainers";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import pg from "pg";
 import sharp from "sharp";
 import { inject } from "vitest";
@@ -18,6 +18,7 @@ import type { ObjectStorage } from "../storage/types.js";
 describe(
   "Artifacts API (with MinIO)",
   () => {
+    const runtimeApplicationName = `artifact-race-${randomUUID()}`;
     let minio: StartedTestContainer;
     let minioEndpoint: string;
     let pool: pg.Pool;
@@ -67,7 +68,10 @@ describe(
       const runtimeUrl = new URL(inject("databaseUrl"));
       runtimeUrl.username = "routiq_app";
       runtimeUrl.password = "routiq_app";
-      runtimePool = new pg.Pool({ connectionString: runtimeUrl.toString() });
+      runtimePool = new pg.Pool({
+        connectionString: runtimeUrl.toString(),
+        application_name: runtimeApplicationName,
+      });
       const runtimeDb = drizzle(runtimePool, { schema }) as unknown as Db;
 
       // Seed workspace and member
@@ -200,6 +204,72 @@ describe(
         const bytes = Buffer.from(await object.arrayBuffer());
         expect(bytes).toEqual(original);
         expect(createHash("sha256").update(bytes).digest("hex")).toBe(winner.json().sha256);
+      });
+
+      it.each(["PDF", "image"])("keeps the winning %s when a different payload is finalized concurrently", async (kind) => {
+        const artifactId = randomUUID();
+        const original = kind === "PDF"
+          ? Buffer.from("%PDF-1.4\nWinning receipt: 1000 XAF\n%%EOF")
+          : await sharp({ create: {
+            width: 8, height: 8, channels: 3, background: { r: 255, g: 0, b: 0 },
+          } }).withExif({ IFD0: { Artist: "Receipt fixture" } }).png().toBuffer();
+        const replacement = kind === "PDF"
+          ? Buffer.from("%PDF-1.4\nLosing receipt: 900000 XAF\n%%EOF")
+          : await sharp({ create: {
+            width: 8, height: 8, channels: 3, background: { r: 0, g: 0, b: 255 },
+          } }).png().toBuffer();
+        const headers = { authorization: `Bearer ${token}` };
+        const presign = await app.inject({
+          method: "POST", url: "/v1/artifacts/presign",
+          payload: { artifactId, sizeBytes: original.length }, headers,
+        });
+        expect(presign.statusCode).toBe(200);
+        const { uploadUrl } = presign.json();
+        expect((await fetch(uploadUrl, { method: "PUT", body: original })).ok).toBe(true);
+        const finalize = () => app.inject({
+          method: "POST", url: "/v1/artifacts/finalize", payload: { artifactId }, headers,
+        }).then((response) => response);
+        const waitForBlockedRequests = (count: number) => vi.waitFor(async () => {
+          const result = await db.execute(sql`
+            SELECT count(*)::integer AS count FROM pg_stat_activity
+            WHERE application_name = ${runtimeApplicationName} AND wait_event_type = 'Lock'
+          `);
+          expect(result.rows[0]?.count).toBe(count);
+        }, { timeout: 5000, interval: 10 });
+
+        // Hold the principal referenced by the evidence row. The first insert
+        // reserves its unique ID then waits on the FK; the second waits behind
+        // that uncommitted insert. Both real storage writes happen before commit.
+        // Only this fixture ordering uses SQL; the verdict is HTTP and bytes.
+        const pending = await db.transaction(async (tx) => {
+          await tx.select().from(schema.principals)
+            .where(eq(schema.principals.id, principal.id)).for("update");
+          const winner = finalize();
+          await waitForBlockedRequests(1);
+          expect((await fetch(uploadUrl, { method: "PUT", body: replacement })).ok).toBe(true);
+          const loser = finalize();
+          await waitForBlockedRequests(2);
+          return { winner, loser };
+        });
+        const winner = await pending.winner;
+        expect(winner.statusCode).toBe(200);
+        expect((await pending.loser).statusCode).toBe(409);
+
+        const download = await app.inject({
+          method: "GET", url: `/v1/artifacts/${artifactId}/download-url`, headers,
+        });
+        expect(download.statusCode).toBe(200);
+        const object = await fetch(download.json().url);
+        expect(object.ok).toBe(true);
+        const bytes = Buffer.from(await object.arrayBuffer());
+        expect(createHash("sha256").update(bytes).digest("hex")).toBe(winner.json().sha256);
+        if (kind === "PDF") {
+          expect(bytes).toEqual(original);
+        } else {
+          expect((await sharp(bytes).metadata()).exif).toBeUndefined();
+          const pixel = await sharp(bytes).extract({ left: 0, top: 0, width: 1, height: 1 }).raw().toBuffer();
+          expect([...pixel]).toEqual([255, 0, 0]);
+        }
       });
 
       it("keeps a finalized receipt unchanged when its upload URL is reused", async () => {
