@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { S3Client, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { GenericContainer, type StartedTestContainer } from "testcontainers";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -13,6 +13,7 @@ import { createS3Storage } from "../storage/s3.js";
 import { seedWorkspace, seedMember } from "../test/seed.js";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
+import type { ObjectStorage } from "../storage/types.js";
 
 describe(
   "Artifacts API (with MinIO)",
@@ -26,6 +27,7 @@ describe(
     let workspace: Awaited<ReturnType<typeof seedWorkspace>>["workspace"];
     let principal: Awaited<ReturnType<typeof seedMember>>["principal"];
     let token: string;
+    let storage: ObjectStorage;
 
     beforeAll(async () => {
       minio = await new GenericContainer("minio/minio")
@@ -86,17 +88,18 @@ describe(
       token = session.token;
 
       // Build app with S3 storage
+      storage = createS3Storage({
+        endpoint: minioEndpoint,
+        region: "us-east-1",
+        bucket: "artifacts",
+        accessKeyId: "minioadmin",
+        secretAccessKey: "minioadmin",
+        forcePathStyle: true,
+      });
       app = buildServer({
         db: runtimeDb,
         authDb: db,
-        storage: createS3Storage({
-          endpoint: minioEndpoint,
-          region: "us-east-1",
-          bucket: "artifacts",
-          accessKeyId: "minioadmin",
-          secretAccessKey: "minioadmin",
-          forcePathStyle: true,
-        }),
+        storage,
         logger: false,
       });
       await app.ready();
@@ -134,6 +137,114 @@ describe(
     });
 
     describe("Finalize: Happy Path", () => {
+      it("keeps the finalized image and its hash when a different image is uploaded under the same ID", async () => {
+        const artifactId = randomUUID();
+        const original = await sharp({ create: {
+          width: 8, height: 8, channels: 3, background: { r: 255, g: 0, b: 0 },
+        } }).withExif({ IFD0: { Artist: "Receipt fixture" } }).png().toBuffer();
+        expect((await sharp(original).metadata()).exif).toBeDefined();
+        const replacement = await sharp({ create: {
+          width: 8, height: 8, channels: 3, background: { r: 0, g: 0, b: 255 },
+        } }).png().toBuffer();
+        const headers = { authorization: `Bearer ${token}` };
+        const upload = async (bytes: Buffer) => {
+          const presign = await app.inject({
+            method: "POST", url: "/v1/artifacts/presign",
+            payload: { artifactId, sizeBytes: bytes.length }, headers,
+          });
+          expect(presign.statusCode).toBe(200);
+          expect((await fetch(presign.json().uploadUrl, { method: "PUT", body: new Uint8Array(bytes) })).ok).toBe(true);
+        };
+        const finalize = () => app.inject({
+          method: "POST", url: "/v1/artifacts/finalize", payload: { artifactId }, headers,
+        });
+        const download = async () => {
+          const response = await app.inject({ method: "GET", url: `/v1/artifacts/${artifactId}/download-url`, headers });
+          expect(response.statusCode).toBe(200);
+          const object = await fetch(response.json().url);
+          expect(object.ok).toBe(true);
+          return Buffer.from(await object.arrayBuffer());
+        };
+
+        await upload(original);
+        const finalized = await finalize();
+        expect(finalized.statusCode).toBe(200);
+        const before = await download();
+        expect((await sharp(before).metadata()).exif).toBeUndefined();
+        await upload(replacement);
+        expect((await finalize()).statusCode).toBe(409);
+        const after = await download();
+        expect(after).toEqual(before);
+        expect(createHash("sha256").update(after).digest("hex")).toBe(finalized.json().sha256);
+      });
+
+      it("returns one winning receipt when finalizations race", async () => {
+        const artifactId = randomUUID();
+        const original = Buffer.from("%PDF-1.4\nConcurrent receipt: 1000 XAF\n%%EOF");
+        const headers = { authorization: `Bearer ${token}` };
+        const presign = await app.inject({
+          method: "POST", url: "/v1/artifacts/presign",
+          payload: { artifactId, sizeBytes: original.length }, headers,
+        });
+        expect(presign.statusCode).toBe(200);
+        expect((await fetch(presign.json().uploadUrl, { method: "PUT", body: original })).ok).toBe(true);
+        const results = await Promise.all(Array.from({ length: 5 }, () => app.inject({
+          method: "POST", url: "/v1/artifacts/finalize", payload: { artifactId }, headers,
+        })));
+        expect(results.map((response) => response.statusCode).sort()).toEqual([200, 409, 409, 409, 409]);
+        const winner = results.find((response) => response.statusCode === 200)!;
+        const download = await app.inject({ method: "GET", url: `/v1/artifacts/${artifactId}/download-url`, headers });
+        expect(download.statusCode).toBe(200);
+        const object = await fetch(download.json().url);
+        expect(object.ok).toBe(true);
+        const bytes = Buffer.from(await object.arrayBuffer());
+        expect(bytes).toEqual(original);
+        expect(createHash("sha256").update(bytes).digest("hex")).toBe(winner.json().sha256);
+      });
+
+      it("keeps a finalized receipt unchanged when its upload URL is reused", async () => {
+        const artifactId = randomUUID();
+        const original = Buffer.from("%PDF-1.4\nReceipt: 1000 XAF\n%%EOF");
+        const replacement = Buffer.from("%PDF-1.4\nReceipt: 900000 XAF\n%%EOF");
+        const headers = { authorization: `Bearer ${token}` };
+        const presign = await app.inject({
+          method: "POST",
+          url: "/v1/artifacts/presign",
+          payload: { artifactId, sizeBytes: original.length },
+          headers,
+        });
+        expect(presign.statusCode).toBe(200);
+        const { uploadUrl } = presign.json();
+        expect((await fetch(uploadUrl, { method: "PUT", body: original })).ok).toBe(true);
+        const finalized = await app.inject({
+          method: "POST",
+          url: "/v1/artifacts/finalize",
+          payload: { artifactId },
+          headers,
+        });
+        expect(finalized.statusCode).toBe(200);
+
+        expect((await fetch(uploadUrl, { method: "PUT", body: replacement })).ok).toBe(true);
+        const repeated = await app.inject({
+          method: "POST",
+          url: "/v1/artifacts/finalize",
+          payload: { artifactId },
+          headers,
+        });
+        expect(repeated.statusCode).toBe(409);
+        const download = await app.inject({
+          method: "GET",
+          url: `/v1/artifacts/${artifactId}/download-url`,
+          headers,
+        });
+        expect(download.statusCode).toBe(200);
+        const response = await fetch(download.json().url);
+        expect(response.ok).toBe(true);
+        const bytes = Buffer.from(await response.arrayBuffer());
+        expect(bytes).toEqual(original);
+        expect(createHash("sha256").update(bytes).digest("hex")).toBe(finalized.json().sha256);
+      });
+
       it("presign + upload + finalize with JPEG → success with EXIF stripped", async () => {
         const artifactId = randomUUID();
 
@@ -329,6 +440,97 @@ describe(
     });
 
     describe("Download URL", () => {
+      it.each(["missing", "replaced"])("refuses a %s legacy receipt without a verified copy", async (state) => {
+        const artifactId = randomUUID();
+        const legacyKey = `ws/${workspace.id}/artifacts/${artifactId}`;
+        const original = Buffer.from("%PDF-1.4\nLegacy receipt: 1000 XAF\n%%EOF");
+        const replacement = Buffer.from("%PDF-1.4\nLegacy receipt: 900000 XAF\n%%EOF");
+        if (state === "replaced") await storage.putObject(legacyKey, replacement, "application/pdf");
+        await db.insert(schema.sourceArtifacts).values({
+          id: artifactId,
+          workspaceId: workspace.id,
+          storageKey: legacyKey,
+          sha256: createHash("sha256").update(original).digest("hex"),
+          mimeType: "application/pdf",
+          sizeBytes: BigInt(original.length),
+          uploadedByPrincipalId: principal.id,
+        });
+
+        const download = await app.inject({
+          method: "GET",
+          url: `/v1/artifacts/${artifactId}/download-url`,
+          headers: { authorization: `Bearer ${token}` },
+        });
+        expect(download.statusCode).toBe(409);
+        expect(download.json()).toEqual({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
+      });
+
+      it("does not issue a finalized receipt download URL to another workspace", async () => {
+        const artifactId = randomUUID();
+        const original = Buffer.from("%PDF-1.4\nPrivate receipt: 1000 XAF\n%%EOF");
+        const headers = { authorization: `Bearer ${token}` };
+        const presign = await app.inject({
+          method: "POST", url: "/v1/artifacts/presign",
+          payload: { artifactId, sizeBytes: original.length }, headers,
+        });
+        expect(presign.statusCode).toBe(200);
+        expect((await fetch(presign.json().uploadUrl, { method: "PUT", body: original })).ok).toBe(true);
+        expect((await app.inject({
+          method: "POST", url: "/v1/artifacts/finalize", payload: { artifactId }, headers,
+        })).statusCode).toBe(200);
+
+        const other = await seedWorkspace(db);
+        const otherMember = await seedMember(db, {
+          workspaceId: other.workspace.id, role: "ADMIN", allBranches: true,
+        });
+        const otherSession = await createSession(db, {
+          principalId: otherMember.principal.id, workspaceId: other.workspace.id,
+        });
+        const download = await app.inject({
+          method: "GET", url: `/v1/artifacts/${artifactId}/download-url`,
+          headers: { authorization: `Bearer ${otherSession.token}` },
+        });
+        expect(download.statusCode).toBe(404);
+        expect(download.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+      });
+
+      it("preserves a legacy receipt before an outstanding upload URL replaces its old object", async () => {
+        // Existing deployment data: the artifact row points at the client PUT key.
+        const artifactId = randomUUID();
+        const legacyKey = `ws/${workspace.id}/artifacts/${artifactId}`;
+        const original = Buffer.from("%PDF-1.4\nLegacy receipt: 1000 XAF\n%%EOF");
+        const replacement = Buffer.from("%PDF-1.4\nLegacy receipt: 900000 XAF\n%%EOF");
+        await storage.putObject(legacyKey, original, "application/pdf");
+        await db.insert(schema.sourceArtifacts).values({
+          id: artifactId,
+          workspaceId: workspace.id,
+          storageKey: legacyKey,
+          sha256: createHash("sha256").update(original).digest("hex"),
+          mimeType: "application/pdf",
+          sizeBytes: BigInt(original.length),
+          uploadedByPrincipalId: principal.id,
+        });
+        const oldUploadUrl = await storage.presignPut(legacyKey, { expiresSeconds: 900 });
+        const download = () => app.inject({
+          method: "GET",
+          url: `/v1/artifacts/${artifactId}/download-url`,
+          headers: { authorization: `Bearer ${token}` },
+        });
+        const beforeReplacement = await download();
+        expect(beforeReplacement.statusCode).toBe(200);
+
+        expect((await fetch(oldUploadUrl, { method: "PUT", body: replacement })).ok).toBe(true);
+        const oldDownload = await fetch(beforeReplacement.json().url);
+        expect(oldDownload.ok).toBe(true);
+        expect(Buffer.from(await oldDownload.arrayBuffer())).toEqual(original);
+
+        const afterReplacement = await download();
+        expect(afterReplacement.statusCode).toBe(200);
+        const newDownload = await fetch(afterReplacement.json().url);
+        expect(newDownload.ok).toBe(true);
+        expect(Buffer.from(await newDownload.arrayBuffer())).toEqual(original);
+      });
+
       it("GET download-url returns signed URL for existing artifact", async () => {
         const artifactId = randomUUID();
         const jpegBuffer = await sharp({

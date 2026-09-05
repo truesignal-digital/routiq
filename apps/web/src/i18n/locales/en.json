@@ -121,6 +121,7 @@
     "VERSION_CONFLICT": "Someone else modified this record. Refresh, then reapply your changes.",
     "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
     "ARTIFACT_UPLOAD_INCOMPLETE": "An attachment has not finished uploading. Wait or remove it.",
+    "ARTIFACT_INTEGRITY_MISMATCH": "This attachment no longer matches its recorded evidence. Contact an administrator; it cannot be downloaded safely.",
     "UNSUPPORTED_MEDIA_TYPE": "Unsupported file format (JPEG, PNG, WebP or PDF only).",
     "STORAGE_FAILED": "Storing the file failed. Please retry.",
     "ASSET_NOT_OPERATIONAL": "This asset has left the fleet: no new operations are possible.",
