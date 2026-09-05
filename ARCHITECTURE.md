@@ -409,6 +409,7 @@ Every profitability figure discloses: layers included, approval statuses include
 - Three-layer tenant isolation (§4.4); command layer is the only write path; runtime DB role can't touch audit or posted rows.
 - RBAC: ~6 fixed roles (admin, ops manager, field submitter, maintenance, finance approver, executive viewer) + branch scope. `principal_type` distinguishes humans/AI/integrations.
 - Evidence artifacts immutable + hashed; corrections attach, never replace.
+- For release and legacy-data handling, follow the [finalized receipt rollout guide](docs/howto/artifact-integrity-rollout.md).
 - Offline caches are branch-scoped and per-user; PINs re-auth on device; revoked users' unsynced drafts are recoverable by an admin (never silently destroyed — they may contain real business facts).
 - Server clock and server-derived identity are authoritative; client `occurred_at` is preserved as user-reported data.
 

@@ -121,6 +121,7 @@
     "VERSION_CONFLICT": "Cet enregistrement a été modifié par quelqu'un d'autre. Actualisez puis réappliquez vos changements.",
     "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
     "ARTIFACT_UPLOAD_INCOMPLETE": "Une pièce jointe n'a pas fini d'être téléversée. Attendez la fin ou retirez-la.",
+    "ARTIFACT_INTEGRITY_MISMATCH": "Cette pièce jointe ne correspond plus à la preuve enregistrée. Contactez un administrateur ; son téléchargement est bloqué.",
     "UNSUPPORTED_MEDIA_TYPE": "Format de fichier non pris en charge (JPEG, PNG, WebP ou PDF uniquement).",
     "STORAGE_FAILED": "Échec du stockage du fichier. Réessayez.",
     "ASSET_NOT_OPERATIONAL": "Cet actif est sorti du parc : aucune nouvelle opération n'est possible.",

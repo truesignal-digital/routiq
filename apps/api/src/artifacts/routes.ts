@@ -31,6 +31,10 @@ function getStorageKey(workspaceId: string, artifactId: string): string {
   return `ws/${workspaceId}/artifacts/${artifactId}`;
 }
 
+function getFinalStorageKey(workspaceId: string, artifactId: string, sha256: string): string {
+  return `ws/${workspaceId}/finalized-artifacts/${artifactId}/${sha256}`;
+}
+
 export function registerArtifactRoutes(
   app: FastifyInstance,
   db: Db,
@@ -150,9 +154,6 @@ export function registerArtifactRoutes(
               .rotate()
               .toFormat(format ?? "jpeg")
               .toBuffer();
-
-            // Write cleaned bytes back to storage
-            await storage.putObject(storageKey, finalBytes, mimeType);
           } catch (error) {
             req.log.error({
               err: error,
@@ -167,6 +168,11 @@ export function registerArtifactRoutes(
 
         // Step 4: Calculate SHA-256 of final bytes
         const sha256 = createHash("sha256").update(finalBytes).digest("hex");
+        // Client PUT URLs address only the upload key. A different finalized
+        // payload gets a different key, so a losing concurrent finalize cannot
+        // overwrite the winner. Equal hashes only write the same bytes.
+        const finalStorageKey = getFinalStorageKey(auth.workspaceId, artifactId, sha256);
+        await storage.putObject(finalStorageKey, finalBytes, mimeType);
 
         // Step 5: Insert sourceArtifacts row
         try {
@@ -177,7 +183,7 @@ export function registerArtifactRoutes(
               await tx.insert(sourceArtifacts).values({
                 id: artifactId,
                 workspaceId: auth.workspaceId,
-                storageKey,
+                storageKey: finalStorageKey,
                 sha256,
                 mimeType,
                 sizeBytes: BigInt(finalBytes.length),
@@ -285,7 +291,23 @@ export function registerArtifactRoutes(
           });
         }
 
-        const url = await storage.presignGet(artifact.storageKey, {
+        const finalStorageKey = getFinalStorageKey(auth.workspaceId, artifact.id, artifact.sha256);
+        if (artifact.storageKey !== finalStorageKey) {
+          // Older rows point at the mutable upload key. Preserve a verified
+          // snapshot before issuing a GET URL; do not grant UPDATE on evidence
+          // rows or trust a later replacement of the legacy upload object.
+          const preserved = await storage.getObject(finalStorageKey);
+          const candidate = preserved ?? await storage.getObject(artifact.storageKey);
+          if (!candidate || createHash("sha256").update(candidate.body).digest("hex") !== artifact.sha256) {
+            req.log.error({ event: "artifact.integrity_mismatch", artifactId: artifact.id });
+            return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
+          }
+          if (!preserved) {
+            await storage.putObject(finalStorageKey, candidate.body, artifact.mimeType);
+          }
+        }
+
+        const url = await storage.presignGet(finalStorageKey, {
           expiresSeconds: 300,
         });
 
