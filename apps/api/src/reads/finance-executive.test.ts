@@ -15,10 +15,10 @@ describe("executive financial HTTP boundaries", () => {
   const otherCompanyEntryId = randomUUID();
   const historyEvents = new Map<string, string>();
 
-  const command = (token: string, name: string, payload: object) => ctx.app.inject({
+  const command = (token: string, name: string, payload: object, expectedVersion?: number) => ctx.app.inject({
     method: "POST", url: `/v1/commands/${name}`,
     headers: { authorization: `Bearer ${token}` },
-    payload: { version: 1, envelope: { commandId: randomUUID(), idempotencyKey: randomUUID(), origin: "HUMAN_UI" }, payload },
+    payload: { version: 1, envelope: { commandId: randomUUID(), idempotencyKey: randomUUID(), origin: "HUMAN_UI", ...(expectedVersion === undefined ? {} : { expectedVersion }) }, payload },
   });
   const read = (path: string) => ctx.app.inject({
     method: "GET", url: path, headers: { authorization: `Bearer ${executive}` },
@@ -101,5 +101,35 @@ describe("executive financial HTTP boundaries", () => {
     const list = await read("/v1/finance/entries");
     expect(financialEntryListResponse.parse(list.json()).entries.map((item) => ({ id: item.id, status: item.status, amount: item.amountMinor })))
       .toEqual([{ id: ownEntryId, status: "POSTED", amount: 25000 }]);
+  });
+
+  it("drills through a total to its direction and both signed sides of a reversal", async () => {
+    const seeded = await seedWorkspace(ctx.db);
+    const member = await seedMember(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN", allBranches: true });
+    const admin = (await createSession(ctx.db, { principalId: member.principal.id, workspaceId: seeded.workspace.id })).token;
+    const viewer = await seedMember(ctx.db, { workspaceId: seeded.workspace.id, role: "EXECUTIVE_VIEWER", branchIds: [seeded.branch.id] });
+    const token = (await createSession(ctx.db, { principalId: viewer.principal.id, workspaceId: seeded.workspace.id })).token;
+    const get = (path: string) => ctx.app.inject({ method: "GET", url: path, headers: { authorization: `Bearer ${token}` } });
+    const originalId = randomUUID();
+    const retainedId = randomUUID();
+    const reversalId = randomUUID();
+    for (const [name, payload] of [
+      ["record-expense", expense(originalId)],
+      ["record-expense", expense(retainedId)],
+      ["record-revenue", { ...expense(randomUUID()), categoryCode: "FREIGHT_REVENUE" }],
+      ["reverse-entry", { originalEntryId: originalId, reversalEntryId: reversalId, reason: "Duplicate fuel receipt" }],
+    ] as const) {
+      const response = await command(admin, name, payload, name === "reverse-entry" ? 1 : undefined);
+      expect(response.statusCode, response.body).toBe(200);
+    }
+    const response = await get(`/v1/finance/entries?branchId=${seeded.branch.id}&periodCode=2026-09&direction=EXPENSE&status=LEDGER`);
+    expect(response.statusCode, response.body).toBe(200);
+    const entries = financialEntryListResponse.parse(response.json()).entries;
+    expect(entries.map((item) => item.id).sort()).toEqual([originalId, retainedId, reversalId].sort());
+    expect(entries.find((item) => item.id === originalId)?.status).toBe("REVERSED");
+    expect(entries.find((item) => item.id === reversalId)?.amountMinor).toBe(-25000);
+    const dashboard = await get(`/v1/dashboard?branchId=${seeded.branch.id}`);
+    expect(entries.reduce((total, item) => total + item.amountMinor, 0)).toBe(dashboard.json().openPeriod.postedExpenseMinor);
+    expect((await get("/v1/finance/entries?direction=INVALID")).statusCode).toBe(400);
   });
 });

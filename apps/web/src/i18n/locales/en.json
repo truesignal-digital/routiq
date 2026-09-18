@@ -484,6 +484,7 @@
       },
       "filters": {
         "status": "Status",
+        "ledger": "Posted and reversed",
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
         "assetOption": "{code} — {name}"

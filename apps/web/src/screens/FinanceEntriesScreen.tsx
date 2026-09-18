@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
-import { LIST_LIMIT_DEFAULT } from "@routiq/contracts";
+import { financialEntryFilters, LIST_LIMIT_DEFAULT } from "@routiq/contracts";
 import { FileText, Maximize2, Plus, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -30,7 +30,8 @@ import { useEntries } from "@/finance/useEntries.js";
 import { formatDate } from "@/lib/format.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 
-const STATUS_OPTIONS = ["SUBMITTED", "POSTED", "REJECTED", "REVERSED"] as const;
+const STATUS_OPTIONS = financialEntryFilters.shape.status.unwrap().options;
+const DIRECTION_OPTIONS = financialEntryFilters.shape.direction.unwrap().options;
 
 /** Module-level so the column memo in `useFinanceEntryColumns` holds. */
 const LIST_COLUMNS: readonly FinanceEntryColumnId[] = [
@@ -70,6 +71,7 @@ function FinanceEntriesContent() {
   const searchFilters = useMemo(() => ({
     periodCode: search.periodCode ?? "",
     status: search.status ?? "",
+    direction: search.direction ?? "",
     assetId: search.assetId ?? "",
   }), [search]);
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>(searchFilters);
@@ -83,6 +85,7 @@ function FinanceEntriesContent() {
       search: {
         periodCode: values["periodCode"] || undefined,
         status: STATUS_OPTIONS.find((status) => status === values["status"]),
+        direction: DIRECTION_OPTIONS.find((direction) => direction === values["direction"]),
         assetId: values["assetId"] || undefined,
       },
     });
@@ -97,6 +100,7 @@ function FinanceEntriesContent() {
   // than stitching pages from two different orders together.
   const entriesQuery = useEntries({
     ...(filterValues["status"] ? { status: filterValues["status"] } : {}),
+    ...(filterValues["direction"] ? { direction: filterValues["direction"] } : {}),
     ...(periodCode ? { periodCode } : {}),
     ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
     ...(sort ? { sort } : {}),
@@ -144,7 +148,16 @@ function FinanceEntriesContent() {
         placeholder: t("finance.entries.filters.status"),
         options: STATUS_OPTIONS.map((status) => ({
           value: status,
-          label: t(`finance.entries.status.${status}`),
+          label: status === "LEDGER" ? t("finance.entries.filters.ledger") : t(`finance.entries.status.${status}`),
+        })),
+      },
+      {
+        columnId: "direction",
+        type: "select",
+        placeholder: t("finance.entries.detail.direction"),
+        options: DIRECTION_OPTIONS.map((direction) => ({
+          value: direction,
+          label: t(direction === "EXPENSE" ? "finance.record.expenseLabel" : "finance.record.revenueLabel"),
         })),
       },
       {

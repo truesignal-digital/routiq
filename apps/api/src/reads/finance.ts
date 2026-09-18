@@ -1,5 +1,7 @@
 import {
   financialEntryDetail,
+  financialEntryFilters,
+  ledgerEntryStatuses,
   financialEntryListResponse,
   listQuery,
   pendingApprovalsResponse,
@@ -91,12 +93,7 @@ function entrySortValue(field: EntrySortField, row: EntrySortRow): KeysetValue {
 // pagination on a stable sort key, server-bounded limits. This response keeps
 // `entries` where new resources use `items` — the legacy key documented there.
 const listQuerySchema = listQuery(
-  {
-    status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]).optional(),
-    periodCode: z.string().optional(),
-    assetId: z.uuid().optional(),
-    branchId: z.uuid().optional(),
-  },
+  financialEntryFilters.shape,
   { sortFields: entrySortFields },
 );
 
@@ -166,7 +163,7 @@ export function registerFinanceReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, periodCode, assetId, branchId, cursor, limit } =
+        const { status, direction, periodCode, assetId, branchId, cursor, limit } =
           parsedQuery.data;
         const sort = parsedQuery.data.sort ?? defaultEntrySort;
         const sortColumn = entrySortColumns[sort.field];
@@ -192,8 +189,13 @@ export function registerFinanceReadRoutes(
             conditions.push(eq(financialEntries.branchId, branchId));
           }
 
-          if (status) {
+          if (status === "LEDGER") {
+            conditions.push(inArray(financialEntries.status, [...ledgerEntryStatuses]));
+          } else if (status) {
             conditions.push(eq(financialEntries.status, status));
+          }
+          if (direction) {
+            conditions.push(eq(financialEntries.direction, direction));
           }
 
           if (periodCode) {

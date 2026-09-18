@@ -41,7 +41,7 @@ export function SectionCards({
           title={t(`home.cards.${key}.title`)}
           to={cardTarget(key, entriesReachable)}
           search={key === "openPeriodExpense" || key === "openPeriodRevenue"
-            ? { periodCode: data?.openPeriod?.periodCode }
+            ? { periodCode: data?.openPeriod?.periodCode, status: "LEDGER", direction: key === "openPeriodExpense" ? "EXPENSE" : "REVENUE" }
             : undefined}
           isPending={isPending}
         >
@@ -135,7 +135,7 @@ function KpiCard({
   cardKey: DashboardCardKey;
   title: string;
   to: string | undefined;
-  search: { periodCode: string | undefined } | undefined;
+  search: { periodCode: string | undefined; status: "LEDGER"; direction: "EXPENSE" | "REVENUE" } | undefined;
   isPending: boolean;
   children: CardBody | undefined;
 }) {

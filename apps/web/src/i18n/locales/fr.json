@@ -484,6 +484,7 @@
       },
       "filters": {
         "status": "Statut",
+        "ledger": "Comptabilisées et extournées",
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
         "assetOption": "{code} — {name}"

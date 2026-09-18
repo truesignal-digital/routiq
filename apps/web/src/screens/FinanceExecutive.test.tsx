@@ -134,12 +134,13 @@ it.each(viewers)("renders empty and error states without write controls ($locale
 });
 
 it.each(viewers)("shows loading without a false denial or write controls ($locale, $width px)", async (viewer) => {
-  const pending = Promise.withResolvers<void>();
-  const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending.promise });
+  let release = () => {};
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending });
   await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries")).toBe(true));
   expect(screen.getByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
   expect(screen.queryByRole("link", { name: viewer.record })).toBeNull();
-  await act(async () => { pending.resolve(); });
+  await act(async () => { release(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
 });
 
@@ -157,6 +158,8 @@ it("opens a dashboard total in its period and retains branch/period after inspec
   await user.click(await screen.findByRole("link", { name: "Period expense" }));
   await screen.findByRole("button", { name: "FIN-EXEC" });
   expect(screen.getByPlaceholderText("Period (YYYY-MM)").getAttribute("value")).toBe("2026-09");
+  expect(history.location.search).toContain("direction=EXPENSE");
+  expect(history.location.search).toContain("status=LEDGER");
   const period = screen.getByPlaceholderText("Period (YYYY-MM)");
   await user.clear(period);
   await user.type(period, "2026-08");

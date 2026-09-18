@@ -7,6 +7,18 @@ const categoryType = z.object({
   labelEn: z.string(),
 });
 
+/** Both the original and negative reversal contribute to signed ledger totals. */
+export const ledgerEntryStatuses = ["POSTED", "REVERSED"] as const;
+
+/** LEDGER is a read-filter bucket, never a stored entry status. */
+export const financialEntryFilters = z.object({
+  status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED", "LEDGER"]).optional(),
+  direction: z.enum(["EXPENSE", "REVENUE"]).optional(),
+  periodCode: z.string().optional(),
+  assetId: z.uuid().optional(),
+  branchId: z.uuid().optional(),
+});
+
 export const financialEntryListItem = z.object({
   id: z.uuid(),
   entryNumber: z.string(),
