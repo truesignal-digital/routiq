@@ -213,7 +213,7 @@ FROM financial_postings p
 JOIN financial_entries e ON e.id = p.financial_entry_id
 JOIN categories c        ON c.id = p.category_id
 WHERE p.workspace_id = :ws
-  AND e.status = 'POSTED'
+  AND e.status IN ('POSTED', 'REVERSED')
   AND p.economic_date >= :from AND p.economic_date < :to
   AND p.asset_id IS NOT NULL
   AND c.profitability_layer IN ('DIRECT','MAINTENANCE')   -- per the measure requested

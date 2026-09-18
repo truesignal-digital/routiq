@@ -4,7 +4,7 @@ This reference defines the next internal-fleet slice. **The workspace and the ad
 
 ## Product boundary
 
-The first customer is a company managing its own vehicles in Cameroon. The first useful outcome is explainable recorded operating spend: a manager can open a vehicle, see what was recorded, inspect the source and approval history, and act through existing permissions. Do not require trip revenue, passenger counts or freight jobs to obtain value.
+The first customer is a company managing its own vehicles in Cameroon. The first useful outcome is explainable recorded vehicle expenses: a manager can open a vehicle, see what was recorded, inspect the source and approval history, and act through existing permissions. Do not require trip revenue, passenger counts or freight jobs to obtain value.
 
 The vehicle workspace is a view over existing records and commands, not a replacement asset schema, second ledger or new workflow engine. Company/branch overviews and cross-vehicle approval queues remain global. The workspace is their record-specific destination.
 
@@ -33,7 +33,7 @@ Keep chassis number, year, acquisition data and other specifications in a detail
 Stable sections: **Overview, Money, Documents, History**. Preserve selected section, period and list filters in shareable navigation. Keep the vehicle identity visible. Do not show unimplemented Maintenance, Assignments, Fuel analytics or Payments tabs as working features.
 
 - Overview: header, clearly named period spend and actionable records that actually exist. Missing data is explicit.
-- Money: posted operating expense, pending review separately, category breakdown, contributing entries, evidence/history links and permitted expense/review/correction actions.
+- Money: recorded vehicle expenses, pending review separately, category breakdown, contributing entries, evidence/history links and permitted expense/review/correction actions.
 - Documents: reuse existing vehicle document records, renewal and supersession commands. A renewal creates a new version; do not replace old evidence.
 - History: authorized records and audit events, paginated on demand. Never a separate editable “timeline ledger.”
 
@@ -45,10 +45,10 @@ Hide actions the actor cannot perform. An executive can inspect but cannot recor
 
 | Label | Definition |
 | --- | --- |
-| Posted operating expense | Sum **signed vehicle-attributed postings** for EXPENSE entries in POSTED or REVERSED state, in the selected posting period and currency, within the actor's tenant/branch scope. Includes the original and its negative reversal. It is not total ownership cost, cash paid or company profit. |
+| Recorded vehicle expenses | Sum **signed vehicle-attributed postings** for EXPENSE entries in POSTED or REVERSED state, in the selected posting period and currency, within the actor's tenant/branch scope. Include all recorded category layers: DIRECT, MAINTENANCE, OWNERSHIP and SHARED, including the original and its negative reversal. State those included layers in the metric explanation. It is not narrowly defined operating contribution, complete ownership cost, cash paid or company profit. |
 | Awaiting review | SUBMITTED expense postings attributed to this vehicle. With a month selector, use the entry's economic month and label that basis explicitly: these entries have no posting period yet. Do not add this amount to posted spend. |
 | Rejected | Visible in a separate record filter/history, never included in posted or pending totals. |
-| Evidence missing | An actionable entry lacks the required linked source evidence under its applicable policy. Distinguish not supplied, unverified, verified and unavailable; an uploaded file alone is not verification. Do not infer receipt presence from free text or a payment reference. |
+| Evidence missing | An actionable entry lacks the required linked source evidence under its applicable policy. Distinguish supplied, not supplied and unavailable to this reader. Upload integrity checks protect bytes/provenance, not the truth of a receipt. Human verification is **not recorded** by the current model and is deferred; neither an uploaded file nor entry approval supplies a verified-receipt state. Do not infer receipt presence from free text or a payment reference. |
 | Recorded payment method/reference | The supplied method/reference on the entry. It does not prove payment, settlement or reconciliation. Those workflows remain #46. |
 
 XAF has exponent zero: 150,000 XAF is stored as 150,000 minor units. No division by 100. Calendar economic dates remain the same day across viewer time zones; posting/audit timestamps are instants. A late posting retains its economic date and shows the actual posting period. Do not silently make an economic-month chart and a posting-period card appear to have the same basis.
@@ -75,7 +75,7 @@ No destination-branch operating authority, cashier role, custody transfer, payme
 2. **Vehicle detail:** extend the current asset-detail response with a nullable custodian summary sourced from the existing membership reference. Do not add driver, permanent manager, last location or availability columns to simulate missing domains. Keep unknown location/availability explicit until their own commands and policies exist.
 3. **Vehicle money read:** add a focused period-aware read alongside asset detail (proposed `GET /v1/assets/:assetId/finance?periodCode=YYYY-MM`), with currency, date basis, signed posted expense and separately labelled pending/evidence measures. Reuse ledger predicates; never filter or total just the client-loaded page. The existing detail's `finance` field is lifetime data and must not be relabelled as a selected-period total.
 4. **Contributing records:** reuse the financial entry list and its vehicle/period/direction/ledger filters, adding vehicle-attributed amounts where needed. Include the original entry identity and complete-entry amount separately. Keep pagination, branch intersection and selected filters intact.
-5. **Evidence read:** expose minimal linked artifact metadata via an authorized entry read and request private download access only after tenant **and financial record branch** authorization. Do not expose a workspace-only artifact URL as a branch authorization shortcut. Preserve command-to-artifact provenance, reversal links and verification state; no public receipt bucket.
+5. **Evidence read:** expose minimal linked artifact metadata via an authorized entry read and request private download access only after tenant **and financial record branch** authorization. Do not expose a workspace-only artifact URL as a branch authorization shortcut. Preserve command-to-artifact provenance, immutable hash metadata and reversal links; no public receipt bucket. Display human verification as “Not recorded”; a reviewed-receipt state would require a separately specified audited command/data model, outside this slice.
 
 No new stored balance, monthly total, vehicle ledger, availability flag or location field is required for the first Money slice. Preset catalog/backfill changes, if needed, use an additive migration or audited provisioning commands after checking actual constraints. Allocate migration numbers from the current integration baseline with #47's owner; never reserve a number here or copy another branch's migrations. Current custodian storage exists, so a read addition alone needs no new column.
 

@@ -28,8 +28,8 @@ _Avoid_: driver, reporting manager
 An assessment of whether a vehicle can take on work, distinct from its lifecycle and physical location.
 _Avoid_: lifecycle status, absence of recorded problems
 
-**Recorded Operating Spend**:
-The signed posted operating expenses attributed to a vehicle for an explicitly stated period and currency; not proof of cash paid or complete ownership cost.
+**Recorded Vehicle Expenses**:
+The signed posted expenses attributed to a vehicle across the stated cost layers, period and currency; not proof of cash paid or complete ownership cost.
 _Avoid_: profit, savings, total ownership cost
 
 **Template Preset**:
