@@ -6,11 +6,17 @@ Synthesized from a multi-agent architecture review (5 analysis passes: domain mo
 
 v0.2 incorporates partner requirements from the 22 July meeting (Azalea/Ange): worker compensation reporting, document-expiry notifications, notes on records. Work orders, receipt verification flow, and full action logging were already covered by v0.1.
 
+### Current product direction: internal company fleets
+
+The historical v0.2 transport-first design remains context, not a requirement for every fleet to earn trip revenue. The first target is now companies managing their own internal fleets in Cameroon. Lead with vehicle-centered operating spend, traceable records and useful management decisions; preserve trucking/passenger presets and the existing command/tenant model.
+
+The [vehicle workspace v1 contract](docs/reference/vehicle-workspace-v1.md) defines the initial header, Overview/Money/Documents/History sections, precise metric meanings, proposed additive contracts and required tests. Its Planned items are not existing capabilities. [Product scope](docs/concepts/internal-fleet-product-scope.md) curates the research rationale. Home branch, reported location, custodian, lifecycle and availability remain distinct; no GPS, payment reconciliation or visiting-branch authority is inferred from the UI.
+
 ---
 
 ## 1. Principles
 
-1. **Asset-centered, manual-first.** No GPS, no ticketing, no general ledger. Staff enter operational records; the platform connects them into one asset timeline and explainable profitability.
+1. **Vehicle-centered, manual-first.** No GPS, no ticketing, no general ledger. Staff enter operational records; the platform connects them into a vehicle workspace and explainable operating spend. Transport profitability applies only where revenue and cost coverage support it.
 2. **AI-native, not AI-dependent.** The application works fully through forms. A future AI agent uses the *same* command layer as the forms — it never writes to the database and ships nothing user-visible in the first version.
 3. **One command layer, one write path.** Human UI, offline sync, CSV import, and AI all invoke the same transactional command handlers. No adapter gets direct database access.
 4. **Never manufacture missing values.** Reports show completeness warnings, calculation basis, and approval status instead of fake precision.
@@ -138,7 +144,7 @@ Application modules (§2) are also **entitlement units**. One `workspace_modules
 6. Activity close **warns, not blocks**: missing readings or source summaries set completeness `COMPLETE_WITH_EXCEPTIONS` (with reason) instead of preventing close. Hard-block only the trivial minimum (actual dates, at least one asset segment). Period lock, by contrast, is strict.
 7. Substitution keeps one customer-facing activity; each asset carries only the distance and cost it actually incurred. Recovery/repair costs stay direct to the failed asset.
 8. Safety-critical defect reports make the asset unavailable immediately on submission; restoration is a separate release approval.
-9. Default reports use POSTED, non-reversed lines only; drafts appear only in clearly labelled provisional views.
+9. Posted totals sum signed postings from POSTED **and REVERSED** entries: a reversal preserves the original and adds its negative counterpart. Counting only POSTED after reversal leaves a false negative amount. Pending/rejected entries are excluded and shown separately; posted/approved does not establish payment. This corrects the original v0.2 wording to match the append-only ledger.
 10. Reports never silently invent missing values.
 
 ---
