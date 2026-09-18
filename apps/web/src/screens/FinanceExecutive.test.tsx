@@ -93,7 +93,11 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const history = createMemoryHistory({ initialEntries: [path] });
   const router = createRouter({ routeTree: applicationRouter.routeTree, history });
-  render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
+  // Initial navigation is asynchronous. Flush its React updates before starting
+  // DOM query deadlines; the cold CI render can exceed findBy's default wait.
+  await act(async () => {
+    render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
+  });
   return { requests, history };
 }
 
