@@ -53,6 +53,7 @@ function toDate(value: string | Date | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/** Calendar dates retain their day; timestamps use the viewer's time zone. */
 export function formatDate(iso: string | null | undefined, locale?: string): string {
   if (iso == null) return "";
 
@@ -61,6 +62,8 @@ export function formatDate(iso: string | null | undefined, locale?: string): str
 
   return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
     dateStyle: "short",
+    // ISO date-only strings parse at UTC midnight, but are not instants to shift.
+    ...(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? { timeZone: "UTC" } : {}),
   }).format(date);
 }
 

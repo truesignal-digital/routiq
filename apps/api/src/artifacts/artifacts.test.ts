@@ -31,7 +31,11 @@ describe(
     let storage: ObjectStorage;
 
     beforeAll(async () => {
-      minio = await new GenericContainer("minio/minio")
+      // Docker Hub no longer serves this fixture. Pin the publisher's multi-arch
+      // Quay image so fresh CI and cached developer machines run the same build.
+      minio = await new GenericContainer(
+        "quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+      )
         .withCommand(["server", "/data"])
         .withEnvironment({ MINIO_ROOT_USER: "minioadmin", MINIO_ROOT_PASSWORD: "minioadmin" })
         .withExposedPorts(9000)
@@ -110,10 +114,11 @@ describe(
     }, 120000);
 
     afterAll(async () => {
-      await app.close();
-      await runtimePool.end();
-      await pool.end();
-      await minio.stop();
+      // Preserve the setup error if the image or database could not start.
+      await app?.close();
+      await runtimePool?.end();
+      await pool?.end();
+      await minio?.stop();
     });
 
     describe("Presign and Upload", () => {
