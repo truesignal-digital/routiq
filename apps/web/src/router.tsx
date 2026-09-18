@@ -88,6 +88,11 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
+  validateSearch: z.object({
+    periodCode: z.string().optional(),
+    status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]).optional(),
+    assetId: z.uuid().optional(),
+  }),
   component: FinanceEntriesScreen,
 });
 

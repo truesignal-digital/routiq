@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { LIST_LIMIT_DEFAULT } from "@routiq/contracts";
 import { FileText, Maximize2, Plus, Undo2 } from "lucide-react";
@@ -20,7 +20,7 @@ import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
-import { canRecordFinance, canReverseEntry } from "@/finance/permissions.js";
+import { canReadFinance, canRecordFinance, canReverseEntry } from "@/finance/permissions.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
   useFinanceEntryColumns,
@@ -48,13 +48,45 @@ const DEFAULT_SORTING: SortingState = [{ id: "postedAt", desc: true }];
 
 export function FinanceEntriesScreen() {
   const { t } = useTranslation();
+  const me = useMeContext();
+  if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
+  if (!canReadFinance(me.role, me.enabledModules)) {
+    return <PermissionDenied width="wide" title={t("finance.entries.title")}
+      icon={<FileText className="size-7" aria-hidden />}
+      code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
+  }
+  return <FinanceEntriesContent />;
+}
+
+function FinanceEntriesContent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
-  const canView = canRecordFinance(me?.role, me?.enabledModules);
+  const canRecord = canRecordFinance(me?.role, me?.enabledModules);
 
   // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
   // does the filtering, so the table never narrows rows itself.
-  const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
+  const search = useSearch({ from: "/app/finance/entries" });
+  const searchFilters = useMemo(() => ({
+    periodCode: search.periodCode ?? "",
+    status: search.status ?? "",
+    assetId: search.assetId ?? "",
+  }), [search]);
+  const [filterValues, setFilterValues] = useState<DataTableFilterValues>(searchFilters);
+  // Restore the list lens on history navigation as well as fresh deep links.
+  useEffect(() => setFilterValues(searchFilters), [searchFilters]);
+  const changeFilters = (values: DataTableFilterValues) => {
+    setFilterValues(values);
+    void navigate({
+      to: "/finance/entries",
+      replace: true,
+      search: {
+        periodCode: values["periodCode"] || undefined,
+        status: STATUS_OPTIONS.find((status) => status === values["status"]),
+        assetId: values["assetId"] || undefined,
+      },
+    });
+  };
   // Owned here so the view menu can sit in the toolbar row beside the tabs.
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
@@ -134,17 +166,6 @@ export function FinanceEntriesScreen() {
 
   const columns = useFinanceEntryColumns(LIST_COLUMNS);
 
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        width="wide"
-        title={t("finance.entries.title")}
-        icon={<FileText className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
-      />
-    );
-  }
-
   return (
     <PageContainer width="wide">
       <PageHeader
@@ -157,7 +178,7 @@ export function FinanceEntriesScreen() {
           onChange={setColumnVisibility}
           primaryColumn={{ columnId: "entryNumber" }}
         />
-        {canView && (
+        {canRecord && (
           <Button size="sm" render={<Link to="/finance/record" />}>
             <Plus aria-hidden />
             {t("finance.entries.recordAction")}
@@ -189,7 +210,7 @@ export function FinanceEntriesScreen() {
             data={allEntries}
             filters={filters}
             filterValues={filterValues}
-            onFilterChange={setFilterValues}
+            onFilterChange={changeFilters}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}

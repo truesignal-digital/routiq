@@ -352,13 +352,13 @@ describe("DashboardScreen — gating", () => {
     expect(kpiKeys()).not.toContain("pendingApprovals");
   });
 
-  it("keeps the totals for a read-only executive but not the link into entries", async () => {
+  it("lets a read-only executive trace totals and recent entries", async () => {
     installFetch();
     await renderHome(membership("EXECUTIVE_VIEWER", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("openPeriodRevenue")).toBeTruthy());
-    expect(screen.queryByRole("link", { name: /Period revenue/ })).toBeNull();
-    expect(screen.queryByText("Recent entries")).toBeNull();
+    expect(screen.getByRole("link", { name: /Period revenue/ })).toBeTruthy();
+    expect(await screen.findByText("Recent entries")).toBeTruthy();
   });
 });
 

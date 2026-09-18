@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +27,7 @@ import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { canReverseEntry } from "@/finance/permissions.js";
+import { canReadFinance, canReverseEntry } from "@/finance/permissions.js";
 import { validateReversalReason } from "@/finance/model.js";
 import { z } from "zod";
 import { ReversalLink } from "@/finance/ReversalLink.js";
@@ -41,6 +42,18 @@ interface ReverseDialogState {
 }
 
 export function FinanceEntryDetailScreen() {
+  const { t } = useTranslation();
+  const me = useMeContext();
+  if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
+  if (!canReadFinance(me.role, me.enabledModules)) {
+    return <PermissionDenied title={t("finance.entries.detail.title")}
+      icon={<FileText className="size-7" aria-hidden />}
+      code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
+  }
+  return <FinanceEntryDetailContent />;
+}
+
+function FinanceEntryDetailContent() {
   const { t } = useTranslation();
   const { entryId } = useParams({ from: "/app/finance/entries/$entryId" });
   const navigate = useNavigate();
@@ -69,7 +82,7 @@ export function FinanceEntryDetailScreen() {
 
 
   const handleReverseSubmit = async () => {
-    if (!entryQuery.data || !validateReversalReason(reverseDialog.reason)) return;
+    if (!canReverse || !entryQuery.data || !validateReversalReason(reverseDialog.reason)) return;
 
     setReverseError(undefined);
     setReverseDialog((s) => ({ ...s, submitting: true }));
@@ -189,7 +202,7 @@ export function FinanceEntryDetailScreen() {
             </Button>
           )}
 
-          {reverseDialog.open && (
+          {canReverse && reverseDialog.open && (
             <ReverseDialog
               isOpen={reverseDialog.open}
               reason={reverseDialog.reason}
