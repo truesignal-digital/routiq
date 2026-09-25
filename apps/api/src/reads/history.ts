@@ -11,13 +11,29 @@ import {
   type HistoryFieldChange,
   type ListSort,
 } from "@routiq/contracts";
-import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
-import { auditEvents, commands, financialEntries, principals, workspaces } from "../db/schema.js";
+import {
+  activities,
+  activityAssetSegments,
+  assetAvailabilityIntervals,
+  assets,
+  auditEvents,
+  commands,
+  documents,
+  financialEntries,
+  meterReadings,
+  movementLegs,
+  operationalIssues,
+  persons,
+  principals,
+  workOrders,
+  workspaces,
+} from "../db/schema.js";
 import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import {
@@ -157,16 +173,150 @@ function diffCurrency(
   return workspaceDefault;
 }
 
-/** Tenant RLS alone does not enforce the financial entry's branch scope. */
-async function canReadFinancialHistory(tx: TenantTx, auth: AuthContext, entityType: HistoryEntityType, entityId: string) {
-  if (entityType !== "financial_entry" || auth.branchScope === "ALL") return true;
-  const [entry] = await tx.select({ id: financialEntries.id }).from(financialEntries)
-    .where(and(
-      eq(financialEntries.workspaceId, auth.workspaceId),
-      eq(financialEntries.id, entityId),
-      inArray(financialEntries.branchId, auth.branchScope),
-    )).limit(1);
-  return entry !== undefined;
+/**
+ * The branch a record belongs to, for the types that have one — their own, or
+ * their parent's. Undefined when the record does not exist.
+ */
+type BranchOf = (tx: TenantTx, workspaceId: string, entityId: string) => Promise<string | undefined>;
+
+async function first(rows: Promise<Array<{ branchId: string }>>): Promise<string | undefined> {
+  return (await rows)[0]?.branchId;
+}
+
+const byAsset: BranchOf = (tx, workspaceId, assetId) =>
+  first(
+    tx
+      .select({ branchId: assets.branchId })
+      .from(assets)
+      .where(and(eq(assets.workspaceId, workspaceId), eq(assets.id, assetId)))
+      .limit(1),
+  );
+
+const byActivity: BranchOf = (tx, workspaceId, entityId) =>
+  first(
+    tx
+      .select({ branchId: activities.branchId })
+      .from(activities)
+      .where(and(eq(activities.workspaceId, workspaceId), eq(activities.id, entityId)))
+      .limit(1),
+  );
+
+/** A child row whose branch is its activity's. */
+function viaActivity(
+  table: typeof activityAssetSegments | typeof movementLegs,
+): BranchOf {
+  return (tx, workspaceId, entityId) =>
+    first(
+      tx
+        .select({ branchId: activities.branchId })
+        .from(table)
+        .innerJoin(
+          activities,
+          and(eq(activities.workspaceId, table.workspaceId), eq(activities.id, table.activityId)),
+        )
+        .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+        .limit(1),
+    );
+}
+
+/** A maintenance or document row whose branch is its asset's. */
+function viaAsset(
+  table:
+    | typeof documents
+    | typeof workOrders
+    | typeof operationalIssues
+    | typeof assetAvailabilityIntervals,
+): BranchOf {
+  return (tx, workspaceId, entityId) =>
+    first(
+      tx
+        .select({ branchId: assets.branchId })
+        .from(table)
+        .innerJoin(
+          assets,
+          and(eq(assets.workspaceId, table.workspaceId), eq(assets.id, table.assetId)),
+        )
+        .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+        .limit(1),
+    );
+}
+
+/**
+ * A reading taken during a job belongs to the job's branch — where it was
+ * recorded and who may see the job; a standalone reading to its asset's.
+ */
+const byMeterReading: BranchOf = async (tx, workspaceId, entityId) => {
+  const [reading] = await tx
+    .select({ assetId: meterReadings.assetId, activityId: meterReadings.activityId })
+    .from(meterReadings)
+    .where(and(eq(meterReadings.workspaceId, workspaceId), eq(meterReadings.id, entityId)))
+    .limit(1);
+  if (!reading) return undefined;
+  return reading.activityId === null
+    ? byAsset(tx, workspaceId, reading.assetId)
+    : byActivity(tx, workspaceId, reading.activityId);
+};
+
+const byPerson: BranchOf = (tx, workspaceId, entityId) =>
+  first(
+    tx
+      .select({ branchId: persons.branchId })
+      .from(persons)
+      .where(and(eq(persons.workspaceId, workspaceId), eq(persons.id, entityId)))
+      .limit(1),
+  );
+
+const byFinancialEntry: BranchOf = (tx, workspaceId, entityId) =>
+  first(
+    tx
+      .select({ branchId: financialEntries.branchId })
+      .from(financialEntries)
+      .where(and(eq(financialEntries.workspaceId, workspaceId), eq(financialEntries.id, entityId)))
+      .limit(1),
+  );
+
+/**
+ * Branch scope per history entity type (#58), explicit for every type so a new
+ * one cannot fall through to "allow": the Record's key set is the closed
+ * entity vocabulary, and `WORKSPACE` must be chosen on purpose. Workspace-level
+ * types have no branch; the module gate and RLS are their whole rule.
+ */
+const HISTORY_BRANCH_SCOPE: Record<HistoryEntityType, BranchOf | "WORKSPACE"> = {
+  activity: byActivity,
+  activity_asset_segment: viaActivity(activityAssetSegments),
+  approval_rule: "WORKSPACE",
+  asset: byAsset,
+  asset_availability_interval: viaAsset(assetAvailabilityIntervals),
+  category: "WORKSPACE",
+  document: viaAsset(documents),
+  financial_entry: byFinancialEntry,
+  meter_reading: byMeterReading,
+  movement_leg: viaActivity(movementLegs),
+  operational_issue: viaAsset(operationalIssues),
+  person: byPerson,
+  posting_period: "WORKSPACE",
+  work_order: viaAsset(workOrders),
+  workspace: "WORKSPACE",
+  workspace_module: "WORKSPACE",
+  workspace_template: "WORKSPACE",
+};
+
+/**
+ * Whether the actor may read this record's history. Outside their branches the
+ * answer is the same 404 the record's detail read gives — the timeline is not a
+ * side door to data the detail withholds. Checked against the branch the record
+ * belongs to NOW (an asset transferred away takes its history with it).
+ */
+async function canReadHistory(
+  tx: TenantTx,
+  auth: AuthContext,
+  entityType: HistoryEntityType,
+  entityId: string,
+): Promise<boolean> {
+  const scope = HISTORY_BRANCH_SCOPE[entityType];
+  if (scope === "WORKSPACE" || auth.branchScope === "ALL") return true;
+  const branchId = await scope(tx, auth.workspaceId, entityId);
+  return branchId !== undefined && auth.branchScope.includes(branchId);
 }
 
 export function registerHistoryReadRoutes(
@@ -176,8 +326,8 @@ export function registerHistoryReadRoutes(
 ) {
   /**
    * History is visible to whoever can read the record: the gate is the owning
-   * module's entitlement plus RLS and the financial entry's branch scope,
-   * with no per-role rule on top. Field staff
+   * module's entitlement plus RLS and the record's branch scope, with no
+   * per-role rule on top. Field staff
    * seeing "the office corrected my sheet" is the point, not a leak.
    */
   app.get(
@@ -206,7 +356,7 @@ export function registerHistoryReadRoutes(
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
           }
-          if (!(await canReadFinancialHistory(tx, auth, entityType, entityId))) {
+          if (!(await canReadHistory(tx, auth, entityType, entityId))) {
             return { error: "REFERENCE_NOT_FOUND" as const };
           }
 
@@ -330,7 +480,7 @@ export function registerHistoryReadRoutes(
 
   /**
    * What one event changed. Same gate as the timeline it hangs off — owning
-   * module, RLS and financial branch scope — and the same rule about the snapshots: they are projected
+   * module, RLS and branch scope — and the same rule about the snapshots: they are projected
    * through `HISTORY_STATE_KEYS` here and never served raw.
    */
   app.get(
@@ -357,7 +507,7 @@ export function registerHistoryReadRoutes(
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
           }
-          if (!(await canReadFinancialHistory(tx, auth, entityType, entityId))) {
+          if (!(await canReadHistory(tx, auth, entityType, entityId))) {
             return { error: "REFERENCE_NOT_FOUND" as const };
           }
 

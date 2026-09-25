@@ -10,7 +10,7 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { auditEvents, commands, principals } from "../db/schema.js";
+import { auditEvents, branches, categories, commands, principals } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { diffStates } from "./history.js";
@@ -406,8 +406,8 @@ describe("GET /v1/history/:entityType/:entityId", () => {
 
       expect(body.items.map((item) => item.eventType)).toEqual([
         "work_order.asset_released",
-        "work_order.closed",
-        "work_order.opened",
+        "work_order.completed",
+        "work_order.created",
       ]);
       expect(body.items.map((item) => item.command.name)).toEqual([
         "release-asset-to-service",
@@ -424,12 +424,14 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(closed?.actor.principalId).not.toBe(adminPrincipalId);
     });
 
-    it("serves the signalement that started it", async () => {
+    it("serves the signalement that started it, and the completion that resolved it", async () => {
       const body = await timeline("operational_issue", issueId);
       expect(body.items.map((item) => item.eventType)).toEqual([
+        "operational_issue.resolved",
         "operational_issue.reported",
       ]);
-      expect(body.items[0]?.changedFields).toContain("safetyCritical");
+      expect(body.items[1]?.changedFields).toContain("safetyCritical");
+      expect(body.items[0]?.command.name).toBe("complete-work-order");
     });
 
     it("serves the grounding as an opening and a closing", async () => {
@@ -449,10 +451,10 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(response.json()).toEqual({ items: [], nextCursor: null });
     });
 
-    it("diffs the closure as a status move and a declared cost", async () => {
+    it("diffs the completion as a status move and a declared cost", async () => {
       const body = await timeline("work_order", workOrderId);
       const closure = body.items.find(
-        (item) => item.eventType === "work_order.closed",
+        (item) => item.eventType === "work_order.completed",
       );
       if (!closure) throw new Error("no closure event on the seeded work order");
 
@@ -467,8 +469,8 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(diff.changes).toContainEqual({
         field: "status",
         kind: "VALUE",
-        before: "OPEN",
-        after: "CLOSED",
+        before: "APPROVED",
+        after: "COMPLETED",
       });
       // MONEY, not VALUE: the client formats it against `currency`, never divides.
       expect(diff.changes).toContainEqual({
@@ -514,6 +516,146 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(
         diff.changes.find((change) => change.field === "releaseNote")?.after,
       ).toBe("Essai routier concluant");
+    });
+  });
+
+  /**
+   * #58: every history type with a branch — its own or its parent's — is read
+   * against the actor's branch scope, with the same 404 the detail reads give.
+   * Workspace-level types keep the module gate alone.
+   */
+  describe("branch scope", () => {
+    let scopedToken: string;
+    let scopedAdminToken: string;
+    const records: Record<"DLA" | "YDE", Record<string, string>> = { DLA: {}, YDE: {} };
+    let categoryId: string;
+
+    beforeAll(async () => {
+      const seeded = await seedWorkspace(ctx.db);
+      const wsId = seeded.workspace.id;
+      await ctx.db
+        .insert(branches)
+        .values({ workspaceId: wsId, code: "YDE", name: "Yaoundé" });
+      const admin = await seedMember(ctx.db, { workspaceId: wsId, role: "ADMIN", allBranches: true });
+      scopedAdminToken = (await createSession(ctx.db, { workspaceId: wsId, principalId: admin.principal.id })).token;
+      const doualaOnly = await seedMember(ctx.db, {
+        workspaceId: wsId,
+        role: "OPS_MANAGER",
+        branchIds: [seeded.branch.id],
+      });
+      scopedToken = (await createSession(ctx.db, { workspaceId: wsId, principalId: doualaOnly.principal.id })).token;
+
+      for (const branchCode of ["DLA", "YDE"] as const) {
+        const as = { token: scopedAdminToken };
+        const assetId = await seedAsset(ctx.app, scopedAdminToken, { branchCode });
+        const activityId = randomUUID();
+        await command(
+          "create-activity",
+          {
+            activityId,
+            branchCode,
+            activityTypeCode: "HAULAGE_JOB",
+            templateCode: "TRUCKING",
+            primarySegmentId: randomUUID(),
+            primaryAssetId: assetId,
+            startedAt: "2026-07-10T06:00:00Z",
+          },
+          as,
+        );
+        const documentId = randomUUID();
+        await command(
+          "add-or-renew-document",
+          { documentId, assetId, documentTypeCode: "INSURANCE", expiresAt: "2027-01-01" },
+          as,
+        );
+        const workOrderId = randomUUID();
+        await command(
+          "create-work-order",
+          { workOrderId, assetId, description: "Révision" },
+          as,
+        );
+        const issueId = randomUUID();
+        await command(
+          "report-issue",
+          { issueId, assetId, description: "Bruit", safetyCritical: false },
+          as,
+        );
+        const personId = randomUUID();
+        await command(
+          "register-person",
+          { personId, displayName: `Chauffeur ${branchCode}`, branchCode, defaultRole: "DRIVER" },
+          as,
+        );
+        const readingId = randomUUID();
+        await command(
+          "record-meter-reading",
+          {
+            readingId,
+            assetId,
+            readingType: "ODOMETER",
+            value: 120_000,
+            observedAt: "2026-07-12T08:00:00Z",
+          },
+          as,
+        );
+        records[branchCode] = {
+          asset: assetId,
+          activity: activityId,
+          document: documentId,
+          work_order: workOrderId,
+          operational_issue: issueId,
+          person: personId,
+          meter_reading: readingId,
+        };
+      }
+
+      const [category] = await ctx.db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.workspaceId, wsId))
+        .limit(1);
+      categoryId = category!.id;
+    });
+
+    for (const entityType of [
+      "asset",
+      "activity",
+      "document",
+      "work_order",
+      "operational_issue",
+      "person",
+      "meter_reading",
+    ] as const) {
+      it(`404s a ${entityType} outside the reader's branches and serves one inside`, async () => {
+        const outside = await history(entityType, records.YDE[entityType]!, "", scopedToken);
+        expect(outside.statusCode).toBe(404);
+        expect(outside.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+
+        const inside = await history(entityType, records.DLA[entityType]!, "", scopedToken);
+        expect(inside.statusCode).toBe(200);
+        expect(historyListResponse.parse(inside.json()).items.length).toBeGreaterThan(0);
+
+        // The diff is the same side door, and has the same lock.
+        const [event] = historyListResponse.parse(
+          (await history(entityType, records.YDE[entityType]!, "", scopedAdminToken)).json(),
+        ).items;
+        const diffResponse = await ctx.app.inject({
+          method: "GET",
+          url: `/v1/history/${entityType}/${records.YDE[entityType]}/${event!.eventId}`,
+          headers: { authorization: `Bearer ${scopedToken}` },
+        });
+        expect(diffResponse.statusCode).toBe(404);
+      });
+    }
+
+    it("404s an unknown id of a branch-bearing type for a scoped reader", async () => {
+      const response = await history("work_order", randomUUID(), "", scopedToken);
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("keeps workspace-level types readable across branches", async () => {
+      const response = await history("category", categoryId, "", scopedToken);
+      expect(response.statusCode).toBe(200);
     });
   });
 
