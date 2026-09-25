@@ -1,4 +1,5 @@
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useParams, useSearch } from "@tanstack/react-router";
+import { VehicleWorkspacePrototype } from "@/prototypes/vehicle-workspace/VehicleWorkspacePrototype.js";
 import { ArrowRight, FileText, MapPin, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AssetActions } from "@/assets/AssetActions.js";
@@ -20,6 +21,7 @@ export function AssetDetailScreen() {
   const { assetId } = useParams({ from: "/app/assets/$assetId" });
   const me = useMeContext();
   const assetQuery = useAssetDetail(assetId);
+  const { variant: prototypeVariant } = useSearch({ from: "/app/assets/$assetId" });
   const locale = i18n.language;
 
   if (assetQuery.isPending) {
@@ -43,6 +45,9 @@ export function AssetDetailScreen() {
   }
 
   const asset = assetQuery.data;
+  if (prototypeVariant !== undefined) {
+    return <VehicleWorkspacePrototype asset={asset} variant={prototypeVariant} />;
+  }
   const { finance } = asset;
   const nothingPosted =
     finance.revenueMinor === 0 &&
