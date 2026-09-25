@@ -327,4 +327,41 @@ describe("record-movement-leg.v1 / record-meter-reading.v1", () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
   });
+
+  /**
+   * The workshop reads the odometer when a truck comes in. The handler always
+   * accepted the role; without a default rule every such reading answered 403
+   * APPROVAL_REQUIRED (step 2 of #44, owner's role rules).
+   */
+  it("accepts a standalone reading from the maintenance role", async () => {
+    const mechanic = await seedMember(ctx.db, {
+      workspaceId,
+      role: "MAINTENANCE",
+      allBranches: true,
+    });
+    const mechanicToken = (
+      await createSession(ctx.db, { workspaceId, principalId: mechanic.principal.id })
+    ).token;
+    const response = await ctx.app.inject({
+      method: "POST",
+      url: "/v1/commands/record-meter-reading",
+      headers: { authorization: `Bearer ${mechanicToken}` },
+      payload: {
+        version: 1,
+        envelope: {
+          commandId: randomUUID(),
+          idempotencyKey: `idem-${randomUUID()}`,
+          origin: "HUMAN_UI",
+        },
+        payload: {
+          readingId: randomUUID(),
+          assetId: truckId,
+          readingType: "ODOMETER",
+          value: 512_300,
+          observedAt: "2026-08-01T07:30:00Z",
+        },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+  });
 });
