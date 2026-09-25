@@ -25,8 +25,14 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     profiles: ["appliance"]
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://routiq:routiq@postgres:5432/routiq_dev
+      # Two roles, as in .env.example: request traffic runs as routiq_app so
+      # tenant RLS applies; auth lookups and boot migrations need the owner.
+      # Without AUTH_DATABASE_URL the API falls back to localhost:5435 and
+      # exits at boot (#42).
+      DATABASE_URL: postgres://routiq_app:routiq_app@postgres:5432/routiq_dev
+      AUTH_DATABASE_URL: postgres://routiq:routiq@postgres:5432/routiq_dev
       PORT: 3001
       # Keys the fingerprint of command payloads (payload-fingerprint.ts); the
       # API will not start without it. This literal is a demo default, like the
