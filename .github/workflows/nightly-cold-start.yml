@@ -34,15 +34,44 @@ jobs:
           echo "API failed to become healthy after $max_attempts attempts"
           exit 1
 
+      # A dropped database connection must not take the API down for good:
+      # restart Postgres alone and require the same health gate to pass again.
+      - name: Restart Postgres and wait for API health
+        run: |
+          docker compose --profile appliance restart postgres
+          attempt=0
+          max_attempts=24
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -f http://localhost:3001/health; then
+              echo "API is healthy"
+              # The restart policy would hide a crash; the process itself must survive.
+              restarts=$(docker inspect -f '{{.RestartCount}}' "$(docker compose --profile appliance ps -q api)")
+              if [ "$restarts" != "0" ]; then
+                echo "API container restarted $restarts time(s) during the Postgres restart"
+                exit 1
+              fi
+              exit 0
+            fi
+            attempt=$((attempt + 1))
+            if [ $attempt -lt $max_attempts ]; then
+              echo "Health check failed (attempt $attempt/$max_attempts), retrying in 5s..."
+              sleep 5
+            fi
+          done
+          echo "API failed to become healthy after $max_attempts attempts"
+          exit 1
+
+      # --profile appliance, or compose ignores the api service; -a, or an
+      # exited api container is hidden.
       - name: Dump diagnostics on failure
         if: failure()
         run: |
           echo "=== Docker Compose Status ==="
-          docker compose ps
+          docker compose --profile appliance ps -a
           echo ""
-          echo "=== Docker Compose Logs (last 100 lines) ==="
-          docker compose logs --tail 100
+          echo "=== Docker Compose Logs (last 200 lines) ==="
+          docker compose --profile appliance logs --tail 200
 
       - name: Cleanup
         if: always()
-        run: docker compose down -v
+        run: docker compose --profile appliance down -v
