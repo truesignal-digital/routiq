@@ -31,13 +31,14 @@ describe(
     let storage: ObjectStorage;
 
     beforeAll(async () => {
-      // Docker Hub no longer serves this fixture. Pin the publisher's multi-arch
-      // Quay image so fresh CI and cached developer machines run the same build.
+      // MinIO no longer publishes pullable images (Docker Hub and Quay both
+      // refuse anonymous pulls). RustFS is an S3-compatible server with a public
+      // image; the multi-arch index digest keeps CI and developer machines on
+      // the same build.
       minio = await new GenericContainer(
-        "quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+        "rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff",
       )
-        .withCommand(["server", "/data"])
-        .withEnvironment({ MINIO_ROOT_USER: "minioadmin", MINIO_ROOT_PASSWORD: "minioadmin" })
+        .withEnvironment({ RUSTFS_ACCESS_KEY: "minioadmin", RUSTFS_SECRET_KEY: "minioadmin" })
         .withExposedPorts(9000)
         .start();
       minioEndpoint = `http://${minio.getHost()}:${minio.getMappedPort(9000)}`;
