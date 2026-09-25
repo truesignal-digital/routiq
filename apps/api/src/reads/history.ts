@@ -11,13 +11,14 @@ import {
   type HistoryFieldChange,
   type ListSort,
 } from "@routiq/contracts";
-import { and, eq, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
+import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
-import { auditEvents, commands, principals, workspaces } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
+import { auditEvents, commands, financialEntries, principals, workspaces } from "../db/schema.js";
+import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import {
   afterKeyset,
@@ -156,6 +157,18 @@ function diffCurrency(
   return workspaceDefault;
 }
 
+/** Tenant RLS alone does not enforce the financial entry's branch scope. */
+async function canReadFinancialHistory(tx: TenantTx, auth: AuthContext, entityType: HistoryEntityType, entityId: string) {
+  if (entityType !== "financial_entry" || auth.branchScope === "ALL") return true;
+  const [entry] = await tx.select({ id: financialEntries.id }).from(financialEntries)
+    .where(and(
+      eq(financialEntries.workspaceId, auth.workspaceId),
+      eq(financialEntries.id, entityId),
+      inArray(financialEntries.branchId, auth.branchScope),
+    )).limit(1);
+  return entry !== undefined;
+}
+
 export function registerHistoryReadRoutes(
   app: FastifyInstance,
   db: Db,
@@ -163,7 +176,8 @@ export function registerHistoryReadRoutes(
 ) {
   /**
    * History is visible to whoever can read the record: the gate is the owning
-   * module's entitlement plus RLS, with no per-role rule on top. Field staff
+   * module's entitlement plus RLS and the financial entry's branch scope,
+   * with no per-role rule on top. Field staff
    * seeing "the office corrected my sheet" is the point, not a leak.
    */
   app.get(
@@ -191,6 +205,9 @@ export function registerHistoryReadRoutes(
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
+          }
+          if (!(await canReadFinancialHistory(tx, auth, entityType, entityId))) {
+            return { error: "REFERENCE_NOT_FOUND" as const };
           }
 
           const decodedCursor = cursor
@@ -261,6 +278,9 @@ export function registerHistoryReadRoutes(
         });
 
         if ("error" in result) {
+          if (result.error === "REFERENCE_NOT_FOUND") {
+            return reply.status(404).send({ error: { code: result.error } });
+          }
           return result.error === "MODULE_DISABLED"
             ? reply.status(403).send({
                 error: { code: "MODULE_DISABLED", metadata: { module: moduleCode } },
@@ -310,7 +330,7 @@ export function registerHistoryReadRoutes(
 
   /**
    * What one event changed. Same gate as the timeline it hangs off — owning
-   * module plus RLS — and the same rule about the snapshots: they are projected
+   * module, RLS and financial branch scope — and the same rule about the snapshots: they are projected
    * through `HISTORY_STATE_KEYS` here and never served raw.
    */
   app.get(
@@ -336,6 +356,9 @@ export function registerHistoryReadRoutes(
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
+          }
+          if (!(await canReadFinancialHistory(tx, auth, entityType, entityId))) {
+            return { error: "REFERENCE_NOT_FOUND" as const };
           }
 
           const [row] = await tx
@@ -364,6 +387,9 @@ export function registerHistoryReadRoutes(
         });
 
         if ("error" in result) {
+          if (result.error === "REFERENCE_NOT_FOUND") {
+            return reply.status(404).send({ error: { code: result.error } });
+          }
           return reply.status(403).send({
             error: { code: "MODULE_DISABLED", metadata: { module: moduleCode } },
           });

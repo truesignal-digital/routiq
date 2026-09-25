@@ -40,6 +40,9 @@ export function SectionCards({
           cardKey={key}
           title={t(`home.cards.${key}.title`)}
           to={cardTarget(key, entriesReachable)}
+          search={key === "openPeriodExpense" || key === "openPeriodRevenue"
+            ? { periodCode: data?.openPeriod?.periodCode, status: "LEDGER", direction: key === "openPeriodExpense" ? "EXPENSE" : "REVENUE" }
+            : undefined}
           isPending={isPending}
         >
           {data === undefined ? undefined : cardBody(key, data, t)}
@@ -125,12 +128,14 @@ function KpiCard({
   cardKey,
   title,
   to,
+  search,
   isPending,
   children,
 }: {
   cardKey: DashboardCardKey;
   title: string;
   to: string | undefined;
+  search: { periodCode: string | undefined; status: "LEDGER"; direction: "EXPENSE" | "REVENUE" } | undefined;
   isPending: boolean;
   children: CardBody | undefined;
 }) {
@@ -181,6 +186,7 @@ function KpiCard({
       {to !== undefined && (
         <Link
           to={to}
+          {...(search === undefined ? {} : { search })}
           aria-label={title}
           className="absolute inset-0 rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50"
         />

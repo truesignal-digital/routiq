@@ -64,7 +64,7 @@ describe("canOpenEntriesList", () => {
     for (const role of admitted) {
       expect(canOpenEntriesList(role, ALL_MODULES)).toBe(true);
     }
-    expect(canOpenEntriesList("EXECUTIVE_VIEWER", ALL_MODULES)).toBe(false);
+    expect(canOpenEntriesList("EXECUTIVE_VIEWER", ALL_MODULES)).toBe(true);
     expect(canOpenEntriesList("ADMIN", ["CORE", "ASSETS"])).toBe(false);
     expect(canOpenEntriesList(undefined, undefined)).toBe(false);
   });

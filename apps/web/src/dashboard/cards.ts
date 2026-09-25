@@ -1,5 +1,5 @@
 import type { ModuleCode, Role } from "@routiq/contracts";
-import { canApproveEntries, canRecordFinance } from "../finance/permissions.js";
+import { canApproveEntries, canReadFinance } from "../finance/permissions.js";
 
 export type DashboardCardKey =
   | "pendingApprovals"
@@ -58,5 +58,5 @@ export function canOpenEntriesList(
   role: Role | undefined,
   enabledModules: ModuleCode[] | undefined,
 ): boolean {
-  return canRecordFinance(role, enabledModules);
+  return canReadFinance(role, enabledModules);
 }

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**ROUTIQ** is an asset lifecycle & profitability platform for Cameroonian transport operators (trucking + passenger transport). Pilot-stage: two known tenants, French-first users, intermittent connectivity, offline capture on low-end Android. **`ARCHITECTURE.md` (v0.2) is the authoritative design document — consult it before any non-trivial design decision; section references below point into it.**
+**ROUTIQ** is a vehicle-centered fleet operations and spending-traceability platform for Cameroon. The first target is companies managing their own internal fleets; preserve the existing trucking and passenger-transport pilots/presets. Trip revenue is not required for an internal fleet to obtain value. French-first with English support, intermittent connectivity and low-end Android shape delivery; offline recovery is a requirement, not a blanket claim of implemented behavior. **`ARCHITECTURE.md` is the authoritative design document — consult it before any non-trivial design decision; section references below point into it.** The [vehicle workspace v1 contract](docs/reference/vehicle-workspace-v1.md) distinguishes existing fields from planned additions and defines cost/read boundaries.
 
 ## Commands
 

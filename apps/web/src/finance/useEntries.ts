@@ -7,6 +7,7 @@ export async function fetchFinanceEntries(
   token: string,
   params?: {
     status?: string;
+    direction?: string;
     periodCode?: string;
     assetId?: string;
     branchId?: string;
@@ -18,6 +19,7 @@ export async function fetchFinanceEntries(
 ): Promise<FinancialEntryListResponse> {
   const url = new URL("/v1/finance/entries", window.location.origin);
   if (params?.status) url.searchParams.append("status", params.status);
+  if (params?.direction) url.searchParams.append("direction", params.direction);
   if (params?.periodCode) url.searchParams.append("periodCode", params.periodCode);
   if (params?.assetId) url.searchParams.append("assetId", params.assetId);
   if (params?.branchId) url.searchParams.append("branchId", params.branchId);
@@ -34,6 +36,7 @@ export async function fetchFinanceEntries(
 
 export interface UseEntriesParams {
   status?: string;
+  direction?: string;
   periodCode?: string;
   assetId?: string;
   branchId?: string;

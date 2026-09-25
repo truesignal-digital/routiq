@@ -5,6 +5,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
+import { financialEntryFilters } from "@routiq/contracts";
 import { sessionStore } from "./auth/store.js";
 import { AssetDetailScreen } from "./screens/AssetDetailScreen.js";
 import { AssetDocumentsScreen } from "./screens/AssetDocumentsScreen.js";
@@ -88,6 +89,7 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
+  validateSearch: financialEntryFilters.omit({ branchId: true }),
   component: FinanceEntriesScreen,
 });
 
