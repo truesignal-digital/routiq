@@ -73,7 +73,7 @@ const assetDetailRoute = createRoute({
   path: "/assets/$assetId",
   // PROTOTYPE — issue #44 design variants; delete with the prototype.
   validateSearch: z.object({
-    variant: z.enum(["A", "B", "C", "D"]).optional(),
+    variant: z.enum(["A", "B", "C", "D", "E"]).optional(),
     as: z.enum(["ADMIN", "OPS_MANAGER", "MAINTENANCE", "FIELD_SUBMITTER", "FINANCE_APPROVER", "EXECUTIVE_VIEWER"]).optional(),
   }),
   component: AssetDetailScreen,

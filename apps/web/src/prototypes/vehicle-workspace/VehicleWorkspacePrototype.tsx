@@ -9,6 +9,7 @@ import { VariantA } from "./VariantA.js";
 import { VariantB } from "./VariantB.js";
 import { VariantC } from "./VariantC.js";
 import { VariantD } from "./VariantD.js";
+import { VariantE } from "./VariantE.js";
 import { VariantSwitcher, type VariantKey } from "./VariantSwitcher.js";
 import { buildWorkspace } from "./mockData.js";
 
@@ -20,6 +21,7 @@ export function VehicleWorkspacePrototype({ asset, variant }: { asset: AssetDeta
       {variant === "B" && <VariantB ws={ws} />}
       {variant === "C" && <VariantC ws={ws} />}
       {variant === "D" && <VariantD ws={ws} />}
+      {variant === "E" && <VariantE ws={ws} />}
       <VariantSwitcher variant={variant} />
     </>
   );

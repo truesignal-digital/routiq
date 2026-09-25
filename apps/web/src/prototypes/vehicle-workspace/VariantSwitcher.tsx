@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useProtoRole } from "./actions.js";
 import { ROLE_LABELS, type ProtoRole } from "./mockData.js";
 
-export const VARIANT_KEYS = ["A", "B", "C", "D"] as const;
+export const VARIANT_KEYS = ["A", "B", "C", "D", "E"] as const;
 export type VariantKey = (typeof VARIANT_KEYS)[number];
 
 export const VARIANT_NAMES: Record<VariantKey, string> = {
@@ -17,6 +17,7 @@ export const VARIANT_NAMES: Record<VariantKey, string> = {
   B: "Vehicle story",
   C: "Workshop board",
   D: "Action hub",
+  E: "A, refined",
 };
 
 export const VARIANT_SUBTITLES: Record<VariantKey, string> = {
@@ -24,6 +25,7 @@ export const VARIANT_SUBTITLES: Record<VariantKey, string> = {
   B: "One chronological story of the vehicle. A composer on top to add to it; a sticky vehicle card on the side.",
   C: "Readiness first. Issues and work orders move across lanes; money, documents and history sit behind the board.",
   D: "Phone-first. Big actions up front, current state below, history last. Built for the person standing next to the truck.",
+  E: "Variant A rebuilt to explain itself: one status sentence, one next step, one place per action.",
 };
 
 function step(current: VariantKey, by: 1 | -1): VariantKey {
