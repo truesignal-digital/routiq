@@ -20,9 +20,26 @@ const ISSUE_REPORTERS: readonly Role[] = [
   "MAINTENANCE",
 ];
 
+/**
+ * Closing a signalement as dealt with is a field fact — the fault fixed on the
+ * spot — so the reporter who fixed it may record it.
+ */
+const ISSUE_RESOLVERS: readonly Role[] = [
+  "ADMIN",
+  "OPS_MANAGER",
+  "MAINTENANCE",
+  "FIELD_SUBMITTER",
+];
+
+/** Overruling someone's report is a judgement, kept off the field role. */
+const ISSUE_DISMISSERS: readonly Role[] = ["ADMIN", "OPS_MANAGER", "MAINTENANCE"];
+
 const WORK_ORDER_WRITERS: readonly Role[] = ["ADMIN", "OPS_MANAGER", "MAINTENANCE"];
 
-/** The two work-order decisions sit with the finance approver, as approve-entry does. */
+/**
+ * The work-order decisions — both approvals and both refusals — sit with the
+ * finance approver, as approve-entry does.
+ */
 const WORK_ORDER_APPROVERS: readonly Role[] = ["FINANCE_APPROVER", "ADMIN"];
 
 /** Putting a truck back on the road is a manager's call, never the workshop's. */
@@ -44,6 +61,20 @@ export function canReportIssues(
   return allowed(ISSUE_REPORTERS, role, enabledModules);
 }
 
+export function canResolveIssues(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return allowed(ISSUE_RESOLVERS, role, enabledModules);
+}
+
+export function canDismissIssues(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return allowed(ISSUE_DISMISSERS, role, enabledModules);
+}
+
 /** Opening, declaring completion on, and cancelling a work order. */
 export function canManageWorkOrders(
   role: Role | undefined,
@@ -52,6 +83,7 @@ export function canManageWorkOrders(
   return allowed(WORK_ORDER_WRITERS, role, enabledModules);
 }
 
+/** Approving or rejecting a work order, and approving or rejecting its completion. */
 export function canApproveWorkOrders(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,

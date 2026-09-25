@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ClipboardList, FileWarning, Wrench } from "lucide-react";
+import { CircleCheck, CircleSlash, ClipboardList, FileWarning, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { IssueListItem, WorkOrderStatus } from "@routiq/contracts";
-import { workOrderStatuses } from "@routiq/contracts";
-import { DataTable } from "@/components/data-table";
-import { ErrorState, LoadingState, PageHeader } from "@/components/page";
+import type { IssueListItem, IssueStatus, WorkOrderStatus } from "@routiq/contracts";
+import { issueStatuses, workOrderStatuses } from "@routiq/contracts";
+import { DataTable, type DataTableRowAction } from "@/components/data-table";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   CancelWorkOrderDialog,
   CompleteWorkOrderDialog,
   CreateWorkOrderDialog,
+  IssueDecisionDialog,
   ReleaseAssetDialog,
   ReportIssueDialog,
   WorkOrderDecisionDialog,
@@ -22,9 +23,11 @@ import {
 } from "@/maintenance/MaintenanceDialogs.js";
 import {
   canApproveWorkOrders,
+  canDismissIssues,
   canManageWorkOrders,
   canReleaseAssets,
   canReportIssues,
+  canResolveIssues,
   canViewMaintenance,
 } from "@/maintenance/permissions.js";
 import { useIssues, useWorkOrders } from "@/maintenance/useMaintenance.js";
@@ -32,33 +35,37 @@ import { WorkOrderSheet } from "@/maintenance/WorkOrderSheet.js";
 import { cn } from "@/lib/utils.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 
-type StatusFilter = WorkOrderStatus | "ALL";
+type WorkOrderFilter = WorkOrderStatus | "ALL";
+type IssueFilter = IssueStatus | "ALL";
 
-const STATUS_FILTERS: readonly StatusFilter[] = ["ALL", ...workOrderStatuses];
+const WORK_ORDER_FILTERS: readonly WorkOrderFilter[] = ["ALL", ...workOrderStatuses];
+const ISSUE_FILTERS: readonly IssueFilter[] = ["ALL", ...issueStatuses];
 
 /**
- * The queue's own status filter, as chips rather than a select: five statuses
- * that an operator switches between constantly, and the chip row says which one
- * is in force without being opened. No counts — a keyset read never learns how
- * many rows sit behind the cursor (ADR-0003), so a number here could only be a
- * count of the loaded page pretending to be a total.
+ * A list's own status filter, as chips rather than a select: a handful of
+ * statuses that an operator switches between constantly, and the chip row says
+ * which one is in force without being opened. No counts — a keyset read never
+ * learns how many rows sit behind the cursor (ADR-0003), so a number here could
+ * only be a count of the loaded page pretending to be a total.
  */
-function StatusChips({
+function StatusChips<S extends string>({
+  filters,
   value,
+  label,
+  labelFor,
   onChange,
 }: {
-  value: StatusFilter;
-  onChange: (status: StatusFilter) => void;
+  filters: readonly (S | "ALL")[];
+  value: S | "ALL";
+  label: string;
+  labelFor: (status: S) => string;
+  onChange: (status: S | "ALL") => void;
 }) {
   const { t } = useTranslation();
 
   return (
-    <div
-      role="group"
-      aria-label={t("maintenance.workOrders.filters.status")}
-      className="flex flex-wrap gap-2"
-    >
-      {STATUS_FILTERS.map((status) => (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+      {filters.map((status) => (
         <button
           key={status}
           type="button"
@@ -71,9 +78,7 @@ function StatusChips({
               : "border-border text-muted-foreground hover:bg-muted",
           )}
         >
-          {status === "ALL"
-            ? t("maintenance.workOrders.filters.all")
-            : t(`maintenance.workOrders.status.${status}`)}
+          {status === "ALL" ? t("maintenance.filters.all") : labelFor(status)}
         </button>
       ))}
     </div>
@@ -91,24 +96,61 @@ export function MaintenanceScreen() {
     release: canReleaseAssets(me?.role, me?.enabledModules),
   };
   const canReport = canReportIssues(me?.role, me?.enabledModules);
+  const canResolve = canResolveIssues(me?.role, me?.enabledModules);
+  const canDismiss = canDismissIssues(me?.role, me?.enabledModules);
 
-  const [status, setStatus] = useState<StatusFilter>("ALL");
+  const [status, setStatus] = useState<WorkOrderFilter>("ALL");
+  const [issueStatus, setIssueStatus] = useState<IssueFilter>("ALL");
   const [dialog, setDialog] = useState<MaintenanceDialog>({ kind: "none" });
 
-  // `/v1/work-orders` does the filtering; narrowing the loaded page here would
-  // describe the page instead of the workshop. Branch is absent on purpose —
-  // both reads are branch-scoped, so the shell's agency reaches them without
-  // this screen passing anything.
+  // `/v1/work-orders` and `/v1/issues` do the filtering; narrowing the loaded
+  // page here would describe the page instead of the workshop. Branch is absent
+  // on purpose — both reads are branch-scoped, so the shell's agency reaches
+  // them without this screen passing anything.
   const workOrdersQuery = useWorkOrders(status === "ALL" ? {} : { status });
-  const issuesQuery = useIssues();
+  const issuesQuery = useIssues(issueStatus === "ALL" ? {} : { status: issueStatus });
+  // The sheet and the work-order form look signalements up whatever the tab's
+  // filter says: a closed one still names the grounding and the linked fault.
+  const allIssuesQuery = useIssues();
 
   const workOrderColumns = useWorkOrderColumns();
   const issueColumns = useIssueColumns();
 
   const workOrders = workOrdersQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const issues = issuesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const issueRows = issuesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const issues = allIssuesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   const dismiss = () => setDialog({ kind: "none" });
+
+  function issueActions(issue: IssueListItem): DataTableRowAction<IssueListItem>[] {
+    if (issue.status !== "OPEN") return [];
+    const actions: DataTableRowAction<IssueListItem>[] = [];
+    if (permissions.manage) {
+      actions.push({
+        key: "create-work-order",
+        label: t("maintenance.issues.createWorkOrder"),
+        icon: ClipboardList,
+        onSelect: () => setDialog({ kind: "create-work-order", issue }),
+      });
+    }
+    if (canResolve) {
+      actions.push({
+        key: "resolve",
+        label: t("maintenance.actions.resolveIssue"),
+        icon: CircleCheck,
+        onSelect: () => setDialog({ kind: "decide-issue", decision: "resolve", issue }),
+      });
+    }
+    if (canDismiss) {
+      actions.push({
+        key: "dismiss",
+        label: t("maintenance.actions.dismissIssue"),
+        icon: CircleSlash,
+        onSelect: () => setDialog({ kind: "decide-issue", decision: "dismiss", issue }),
+      });
+    }
+    return actions;
+  }
 
   if (me !== undefined && !canView) {
     return (
@@ -160,7 +202,13 @@ export function MaintenanceScreen() {
 
         <TabsContent value="work-orders" className="mt-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <StatusChips value={status} onChange={setStatus} />
+            <StatusChips
+              filters={WORK_ORDER_FILTERS}
+              value={status}
+              label={t("maintenance.workOrders.filters.status")}
+              labelFor={(filter) => t(`maintenance.workOrders.status.${filter}`)}
+              onChange={setStatus}
+            />
             <BranchScopeLine
               className="ms-auto"
               count={workOrdersQuery.isPending ? undefined : workOrders.length}
@@ -205,6 +253,11 @@ export function MaintenanceScreen() {
                 emptyState={
                   workOrdersQuery.isPending ? (
                     <LoadingState label={t("maintenance.workOrders.loading")} />
+                  ) : status !== "ALL" ? (
+                    <EmptyState
+                      icon={<ClipboardList className="size-7" aria-hidden />}
+                      message={t("maintenance.workOrders.filteredEmpty")}
+                    />
                   ) : (
                     <BranchScopedEmptyState
                       icon={<ClipboardList className="size-7" aria-hidden />}
@@ -219,10 +272,20 @@ export function MaintenanceScreen() {
         </TabsContent>
 
         <TabsContent value="issues" className="mt-4">
-          <BranchScopeLine
-            count={issuesQuery.isPending ? undefined : issues.length}
-            hasMore={issuesQuery.hasNextPage ?? false}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <StatusChips
+              filters={ISSUE_FILTERS}
+              value={issueStatus}
+              label={t("maintenance.issues.filters.status")}
+              labelFor={(filter) => t(`maintenance.issues.status.${filter}`)}
+              onChange={setIssueStatus}
+            />
+            <BranchScopeLine
+              className="ms-auto"
+              count={issuesQuery.isPending ? undefined : issueRows.length}
+              hasMore={issuesQuery.hasNextPage ?? false}
+            />
+          </div>
 
           {issuesQuery.isError ? (
             <ErrorState
@@ -235,22 +298,10 @@ export function MaintenanceScreen() {
             <div className="mt-4">
               <DataTable
                 columns={issueColumns}
-                data={issues}
+                data={issueRows}
                 getRowId={(row) => row.id}
                 primaryColumn={{ columnId: "asset" }}
-                rowActions={(issue: IssueListItem) =>
-                  permissions.manage
-                    ? [
-                        {
-                          key: "create-work-order",
-                          label: t("maintenance.issues.createWorkOrder"),
-                          icon: ClipboardList,
-                          onSelect: () =>
-                            setDialog({ kind: "create-work-order", issue }),
-                        },
-                      ]
-                    : []
-                }
+                rowActions={issueActions}
                 loadMore={{
                   hasNextPage: issuesQuery.hasNextPage ?? false,
                   isFetching: issuesQuery.isFetchingNextPage,
@@ -259,6 +310,11 @@ export function MaintenanceScreen() {
                 emptyState={
                   issuesQuery.isPending ? (
                     <LoadingState label={t("maintenance.issues.loading")} />
+                  ) : issueStatus !== "ALL" ? (
+                    <EmptyState
+                      icon={<FileWarning className="size-7" aria-hidden />}
+                      message={t("maintenance.issues.filteredEmpty")}
+                    />
                   ) : (
                     <BranchScopedEmptyState
                       icon={<FileWarning className="size-7" aria-hidden />}
@@ -287,17 +343,17 @@ export function MaintenanceScreen() {
       {dialog.kind === "cancel" && (
         <CancelWorkOrderDialog workOrder={dialog.workOrder} onDismiss={dismiss} />
       )}
-      {dialog.kind === "approve" && (
+      {dialog.kind === "decide-work-order" && (
         <WorkOrderDecisionDialog
           workOrder={dialog.workOrder}
-          decision="approve"
+          decision={dialog.decision}
           onDismiss={dismiss}
         />
       )}
-      {dialog.kind === "approve-closure" && (
-        <WorkOrderDecisionDialog
-          workOrder={dialog.workOrder}
-          decision="approve-closure"
+      {dialog.kind === "decide-issue" && (
+        <IssueDecisionDialog
+          issue={dialog.issue}
+          decision={dialog.decision}
           onDismiss={dismiss}
         />
       )}

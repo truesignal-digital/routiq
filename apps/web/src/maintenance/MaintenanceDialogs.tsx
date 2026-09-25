@@ -48,10 +48,10 @@ type CreateWorkOrderPayload = z.infer<typeof createWorkOrderPayload>;
 type CompleteWorkOrderPayload = z.infer<typeof completeWorkOrderPayload>;
 type CancelWorkOrderPayload = z.infer<typeof cancelWorkOrderPayload>;
 type ReleaseAssetPayload = z.infer<typeof releaseAssetToServicePayload>;
-type DecisionPayload = { workOrderId: string; note?: string };
+type DecisionPayload = Readonly<Record<string, string>>;
 
 /**
- * What a decision or closure dialog needs to address one work order. No
+ * What a decision or completion dialog needs to address one work order. No
  * currency: the command contracts pin it to XAF (`currencyCode` is a literal),
  * so carrying the row's own value here would only invite a payload the schema
  * rejects.
@@ -60,20 +60,30 @@ export interface WorkOrderRef {
   id: string;
   assetId: string;
   status: WorkOrderStatus;
+  /** The signalement the order answers; null on preventive work. */
+  issueId: string | null;
   /** §5.3 optimistic concurrency — quoted on every work-order mutation. */
   rowVersion: number;
 }
+
+export type WorkOrderDecision =
+  | "approve"
+  | "reject"
+  | "approve-completion"
+  | "reject-completion";
+
+export type IssueDecision = "resolve" | "dismiss";
 
 export type MaintenanceDialog =
   | { kind: "none" }
   | { kind: "report-issue" }
   /** Opened from an issue row, the signalement is fixed and the asset with it. */
   | { kind: "create-work-order"; issue?: IssueListItem }
-  | { kind: "approve"; workOrder: WorkOrderRef }
+  | { kind: "decide-work-order"; decision: WorkOrderDecision; workOrder: WorkOrderRef }
   | { kind: "complete"; workOrder: WorkOrderRef }
-  | { kind: "approve-closure"; workOrder: WorkOrderRef }
   | { kind: "cancel"; workOrder: WorkOrderRef }
-  | { kind: "release"; workOrder: WorkOrderRef };
+  | { kind: "release"; workOrder: WorkOrderRef }
+  | { kind: "decide-issue"; decision: IssueDecision; issue: IssueListItem };
 
 /**
  * Every maintenance write moves the queue, the signalements and the open
@@ -94,7 +104,7 @@ function useMaintenanceCommit() {
 
 /**
  * The shell every maintenance form shares: title, error banner, fields, and the
- * two-button footer. Keeps the six dialogs down to the fields that differ.
+ * two-button footer. Keeps each dialog down to the fields that differ.
  */
 function CommandDialog({
   title,
@@ -331,8 +341,11 @@ export function CreateWorkOrderDialog({
     !submitting && assetId !== "" && trimmedDescription !== "" && costUsable;
 
   // A work order references at most one signalement, and it has to be one filed
-  // against the same truck — the server rejects the pairing otherwise.
-  const linkable = issues.filter((candidate) => candidate.asset.id === assetId);
+  // against the same truck — the server rejects the pairing otherwise. A
+  // resolved or dismissed signalement has nothing left for a repair to answer.
+  const linkable = issues.filter(
+    (candidate) => candidate.asset.id === assetId && candidate.status === "OPEN",
+  );
 
   async function submit() {
     if (!ready) return;
@@ -452,6 +465,7 @@ export function CompleteWorkOrderDialog({
   const commit = useMaintenanceCommit();
   const [actualCost, setActualCost] = useState("");
   const [summary, setSummary] = useState("");
+  const [resolveLinkedIssue, setResolveLinkedIssue] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const intent = useRef<CommandIntent<CompleteWorkOrderPayload> | undefined>(undefined);
@@ -459,6 +473,7 @@ export function CompleteWorkOrderDialog({
   const actualCostMinor = parseMoneyXaf(actualCost);
   const costUsable = actualCost.trim() === "" || actualCostMinor !== null;
   const trimmedSummary = summary.trim();
+  const hasIssue = workOrder.issueId !== null;
   const ready = !submitting && costUsable;
 
   async function submit() {
@@ -477,6 +492,7 @@ export function CompleteWorkOrderDialog({
         currency: "XAF",
         ...(actualCostMinor === null ? {} : { actualCostMinor }),
         ...(trimmedSummary === "" ? {} : { summary: trimmedSummary }),
+        ...(hasIssue ? { resolveLinkedIssue } : {}),
       },
       { expectedVersion: workOrder.rowVersion },
     );
@@ -486,16 +502,16 @@ export function CompleteWorkOrderDialog({
       setError(result.code);
       return;
     }
-    await commit("closureDeclared", result.outcome.warnings);
+    await commit("completionDeclared", result.outcome.warnings);
     onDismiss();
   }
 
   return (
     <CommandDialog
-      title={t("maintenance.actions.declareClosureTitle")}
-      description={t("maintenance.actions.declareClosureHint")}
+      title={t("maintenance.actions.completeTitle")}
+      description={t("maintenance.actions.completeHint")}
       error={error}
-      submitLabel={t("maintenance.actions.declareClosure")}
+      submitLabel={t("maintenance.actions.complete")}
       ready={ready}
       submitting={submitting}
       onSubmit={() => void submit()}
@@ -522,6 +538,26 @@ export function CompleteWorkOrderDialog({
           onChange={(event) => setSummary(event.target.value)}
         />
       </div>
+
+      {hasIssue && (
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="work-order-resolve-issue"
+            checked={resolveLinkedIssue}
+            aria-label={t("maintenance.fields.resolveLinkedIssue")}
+            onCheckedChange={(checked) => setResolveLinkedIssue(checked === true)}
+          />
+          <Label
+            htmlFor="work-order-resolve-issue"
+            className="flex flex-col items-start gap-0.5"
+          >
+            <span>{t("maintenance.fields.resolveLinkedIssue")}</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {t("maintenance.fields.resolveLinkedIssueHint")}
+            </span>
+          </Label>
+        </div>
+      )}
     </CommandDialog>
   );
 }
@@ -596,44 +632,51 @@ export function CancelWorkOrderDialog({
 }
 
 /**
- * The two work-order decisions. They share a shape — a work order and an
- * optional note — but never a command name: one authorizes the expected spend,
- * the other accepts what it actually cost, and the audit trail keeps them apart.
+ * One decision on one record. An approval or a resolution may carry a note; a
+ * refusal or a dismissal must say why, because the trail is the only place the
+ * motive survives.
  */
-export function WorkOrderDecisionDialog({
-  workOrder,
-  decision,
-  client = commandClient,
+function DecisionDialog({
+  commandName,
+  subject,
+  expectedVersion,
+  text,
+  copy,
+  context,
+  successKey,
+  client,
   onDismiss,
 }: {
-  workOrder: WorkOrderRef;
-  decision: "approve" | "approve-closure";
-  client?: CommandClient;
+  commandName: string;
+  subject: DecisionPayload;
+  expectedVersion: number;
+  text: "note" | "reason";
+  copy: { title: string; hint: string; submit: string };
+  /** What the decision is about, when the dialog was not opened from its sheet. */
+  context?: string | undefined;
+  successKey: string;
+  client: CommandClient;
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
   const commit = useMaintenanceCommit();
-  const [note, setNote] = useState("");
+  const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const intent = useRef<CommandIntent<DecisionPayload> | undefined>(undefined);
 
-  const isClosure = decision === "approve-closure";
-  const commandName = isClosure ? "approve-work-order-closure" : "approve-work-order";
-  const trimmedNote = note.trim();
+  const trimmed = value.trim();
+  const ready = !submitting && (text === "note" || trimmed !== "");
 
   async function submit() {
-    if (submitting) return;
+    if (!ready) return;
     setError(undefined);
     setSubmitting(true);
 
     intent.current ??= createCommandIntent<DecisionPayload>(client, commandName, 1);
     const result = await intent.current.submit(
-      {
-        workOrderId: workOrder.id,
-        ...(trimmedNote === "" ? {} : { note: trimmedNote }),
-      },
-      { expectedVersion: workOrder.rowVersion },
+      { ...subject, ...(trimmed === "" ? {} : { [text]: trimmed }) },
+      { expectedVersion },
     );
     setSubmitting(false);
 
@@ -641,43 +684,160 @@ export function WorkOrderDecisionDialog({
       setError(result.code);
       return;
     }
-    await commit(isClosure ? "closureApproved" : "workOrderApproved", result.outcome.warnings);
+    await commit(successKey, result.outcome.warnings);
     onDismiss();
   }
 
   return (
     <CommandDialog
-      title={
-        isClosure
-          ? t("maintenance.actions.approveClosureTitle")
-          : t("maintenance.actions.approveTitle")
-      }
-      description={
-        isClosure
-          ? t("maintenance.actions.approveClosureHint")
-          : t("maintenance.actions.approveHint")
-      }
+      title={copy.title}
+      description={copy.hint}
       error={error}
-      submitLabel={
-        isClosure
-          ? t("maintenance.actions.approveClosure")
-          : t("maintenance.actions.approve")
-      }
-      ready={!submitting}
+      submitLabel={copy.submit}
+      ready={ready}
       submitting={submitting}
       onSubmit={() => void submit()}
       onDismiss={onDismiss}
     >
+      {context !== undefined && (
+        <p className="text-sm text-muted-foreground">{context}</p>
+      )}
+
       <div className="flex flex-col gap-2">
-        <Label htmlFor="work-order-decision-note">{t("maintenance.fields.note")}</Label>
+        <Label htmlFor="decision-text">{t(`maintenance.fields.${text}`)}</Label>
         <Textarea
-          id="work-order-decision-note"
+          id="decision-text"
           maxLength={500}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
         />
       </div>
     </CommandDialog>
+  );
+}
+
+interface DecisionSpec {
+  command: string;
+  text: "note" | "reason";
+  successKey: string;
+  title: string;
+  hint: string;
+  submit: string;
+}
+
+/**
+ * The four work-order decisions share a shape but never a command name: the
+ * audit trail keeps authorizing the spend apart from accepting what it cost,
+ * and each refusal apart from its approval.
+ */
+const WORK_ORDER_DECISIONS: Record<WorkOrderDecision, DecisionSpec> = {
+  approve: {
+    command: "approve-work-order",
+    text: "note",
+    successKey: "workOrderApproved",
+    title: "maintenance.actions.approveTitle",
+    hint: "maintenance.actions.approveHint",
+    submit: "maintenance.actions.approve",
+  },
+  reject: {
+    command: "reject-work-order",
+    text: "reason",
+    successKey: "workOrderRejected",
+    title: "maintenance.actions.rejectTitle",
+    hint: "maintenance.actions.rejectHint",
+    submit: "maintenance.actions.reject",
+  },
+  "approve-completion": {
+    command: "approve-work-order-closure",
+    text: "note",
+    successKey: "completionApproved",
+    title: "maintenance.actions.approveCompletionTitle",
+    hint: "maintenance.actions.approveCompletionHint",
+    submit: "maintenance.actions.approveCompletion",
+  },
+  "reject-completion": {
+    command: "reject-work-order-completion",
+    text: "reason",
+    successKey: "completionRejected",
+    title: "maintenance.actions.rejectCompletionTitle",
+    hint: "maintenance.actions.rejectCompletionHint",
+    submit: "maintenance.actions.rejectCompletion",
+  },
+};
+
+const ISSUE_DECISIONS: Record<IssueDecision, DecisionSpec> = {
+  resolve: {
+    command: "resolve-issue",
+    text: "note",
+    successKey: "issueResolved",
+    title: "maintenance.actions.resolveIssueTitle",
+    hint: "maintenance.actions.resolveIssueHint",
+    submit: "maintenance.actions.resolveIssue",
+  },
+  dismiss: {
+    command: "dismiss-issue",
+    text: "reason",
+    successKey: "issueDismissed",
+    title: "maintenance.actions.dismissIssueTitle",
+    hint: "maintenance.actions.dismissIssueHint",
+    submit: "maintenance.actions.dismissIssue",
+  },
+};
+
+export function WorkOrderDecisionDialog({
+  workOrder,
+  decision,
+  client = commandClient,
+  onDismiss,
+}: {
+  workOrder: WorkOrderRef;
+  decision: WorkOrderDecision;
+  client?: CommandClient;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  const spec = WORK_ORDER_DECISIONS[decision];
+
+  return (
+    <DecisionDialog
+      commandName={spec.command}
+      subject={{ workOrderId: workOrder.id }}
+      expectedVersion={workOrder.rowVersion}
+      text={spec.text}
+      copy={{ title: t(spec.title), hint: t(spec.hint), submit: t(spec.submit) }}
+      successKey={spec.successKey}
+      client={client}
+      onDismiss={onDismiss}
+    />
+  );
+}
+
+export function IssueDecisionDialog({
+  issue,
+  decision,
+  client = commandClient,
+  onDismiss,
+}: {
+  issue: IssueListItem;
+  decision: IssueDecision;
+  client?: CommandClient;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  const spec = ISSUE_DECISIONS[decision];
+
+  return (
+    <DecisionDialog
+      commandName={spec.command}
+      subject={{ issueId: issue.id }}
+      expectedVersion={issue.rowVersion}
+      text={spec.text}
+      copy={{ title: t(spec.title), hint: t(spec.hint), submit: t(spec.submit) }}
+      context={issue.description}
+      successKey={spec.successKey}
+      client={client}
+      onDismiss={onDismiss}
+    />
   );
 }
 

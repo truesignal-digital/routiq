@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type {
   IssueListResponse,
+  IssueStatus,
   WorkOrderDetail,
   WorkOrderListResponse,
   WorkOrderStatus,
@@ -104,11 +105,18 @@ export interface UseIssuesParams {
   branchId?: string;
   assetId?: string;
   safetyCritical?: boolean;
+  status?: IssueStatus;
 }
 
 export async function fetchIssues(
   token: string,
-  params: { branchId?: string; assetId?: string; safetyCritical?: string; cursor?: string } = {},
+  params: {
+    branchId?: string;
+    assetId?: string;
+    safetyCritical?: string;
+    status?: IssueStatus;
+    cursor?: string;
+  } = {},
   signal?: AbortSignal,
   fetchImpl: typeof fetch = fetch,
 ): Promise<IssueListResponse> {

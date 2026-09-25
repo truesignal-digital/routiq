@@ -13,7 +13,10 @@ import type {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { openSelect } from "../test-select.js";
-import type { UseWorkOrdersParams } from "../maintenance/useMaintenance.js";
+import type {
+  UseIssuesParams,
+  UseWorkOrdersParams,
+} from "../maintenance/useMaintenance.js";
 
 const WORK_ORDER_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 const ISSUE_ID = "5e6f7a8b-0000-4000-8000-000000000002";
@@ -55,6 +58,7 @@ vi.mock("../assets/useAssetOptions.js", () => ({
 
 /** One record per distinct query — an unchanged params object is a cache hit. */
 const issuedQueries: UseWorkOrdersParams[] = [];
+const issuedIssueQueries: UseIssuesParams[] = [];
 
 let workOrderRow: WorkOrderListItem;
 let detail: WorkOrderDetail;
@@ -77,15 +81,20 @@ vi.mock("../maintenance/useMaintenance.js", () => ({
       refetch: vi.fn(),
     };
   },
-  useIssues: () => ({
-    data: { pages: [{ items: issueRows, nextCursor: null }] },
-    isError: false,
-    isPending: false,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    fetchNextPage: vi.fn(),
-    refetch: vi.fn(),
-  }),
+  useIssues: (params: UseIssuesParams = {}) => {
+    if (!issuedIssueQueries.some((seen) => JSON.stringify(seen) === JSON.stringify(params))) {
+      issuedIssueQueries.push(params);
+    }
+    return {
+      data: { pages: [{ items: issueRows, nextCursor: null }] },
+      isError: false,
+      isPending: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    };
+  },
   useWorkOrder: () => ({
     data: detail,
     isError: false,
@@ -112,12 +121,14 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
       name: "Douala",
     },
     expectedCostMinor: 40_000,
-    actualCostMinor: status === "CLOSED" || status === "PENDING_CLOSE" ? 45_000 : null,
+    actualCostMinor:
+      status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? 45_000 : null,
     currency: "XAF",
     issue: { id: ISSUE_ID, safetyCritical: true },
     createdAt: "2026-08-01T08:00:00.000Z",
     completedAt: null,
     cancelledAt: null,
+    rejectedAt: status === "REJECTED" ? "2026-08-01T10:00:00.000Z" : null,
     rowVersion: 3,
   };
 }
@@ -127,11 +138,14 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
     ...row,
     summary: null,
     cancelReason: null,
+    rejectReason: null,
+    completionRejectReason: null,
+    resolveLinkedIssue: false,
     createdByCommandId: "7777aaaa-0000-4000-8000-000000000007",
     chronologie: [
       {
         eventId: "aaaa0001-0000-4000-8000-000000000001",
-        kind: "work_order.opened",
+        kind: "work_order.created",
         occurredAt: "2026-08-01T08:00:00.000Z",
         actor: {
           principalId: "bbbb0001-0000-4000-8000-000000000001",
@@ -152,6 +166,7 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
         entryStatus: "POSTED",
       },
     ],
+    pendingCostLines: [],
   };
 }
 
@@ -167,9 +182,14 @@ const issue: IssueListItem = {
   safetyCritical: true,
   category: "Freinage",
   reportedAt: "2026-07-31T16:30:00.000Z",
-  workOrders: [{ id: WORK_ORDER_ID, status: "OPEN" }],
+  status: "OPEN",
+  resolvedAt: null,
+  resolutionNote: null,
+  dismissedAt: null,
+  dismissReason: null,
+  workOrders: [{ id: WORK_ORDER_ID, status: "APPROVED" }],
   assetUnavailable: true,
-  rowVersion: 1,
+  rowVersion: 2,
 };
 
 const opsManager: MeContext = {
@@ -221,8 +241,9 @@ function submittedEnvelope(): Record<string, unknown> {
 beforeEach(() => {
   vi.clearAllMocks();
   issuedQueries.length = 0;
+  issuedIssueQueries.length = 0;
   me = opsManager;
-  workOrderRow = makeWorkOrder("OPEN");
+  workOrderRow = makeWorkOrder("APPROVED");
   detail = makeDetail(workOrderRow);
   issueRows = [issue];
   sessionStore.save({
@@ -264,12 +285,12 @@ describe("MaintenanceScreen — work order queue", () => {
     expect(issuedQueries[0]).toEqual({});
 
     await user.click(
-      screen.getByRole("button", { name: "maintenance.workOrders.status.CLOSED" }),
+      screen.getByRole("button", { name: "maintenance.workOrders.status.COMPLETED" }),
     );
 
     // Filtering client-side would describe the loaded page, not the workshop.
     await waitFor(() => {
-      expect(issuedQueries.some((query) => query.status === "CLOSED")).toBe(true);
+      expect(issuedQueries.some((query) => query.status === "COMPLETED")).toBe(true);
     });
   });
 
@@ -289,7 +310,7 @@ describe("MaintenanceScreen — row sheet", () => {
 
     expect(within(sheet).getByText("Amina Njoya")).toBeTruthy();
     expect(
-      within(sheet).getByText("history.event.work_order-opened"),
+      within(sheet).getByText("history.event.work_order-created"),
     ).toBeTruthy();
     expect(within(sheet).getByText("DLA-2026-00007")).toBeTruthy();
     expect(
@@ -321,23 +342,23 @@ describe("MaintenanceScreen — row sheet", () => {
 });
 
 describe("MaintenanceScreen — state-driven actions", () => {
-  it("offers declare-closure on an approved work order and nothing else", async () => {
+  function actionButton(sheet: HTMLElement, key: string) {
+    return within(sheet).queryByRole("button", { name: `maintenance.actions.${key}` });
+  }
+
+  it("offers completion and cancellation on an approved work order and nothing else", async () => {
     const user = userEvent.setup();
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(
-      within(sheet).getByRole("button", { name: "maintenance.actions.declareClosure" }),
-    ).toBeTruthy();
-    expect(
-      within(sheet).queryByRole("button", { name: "maintenance.actions.approve" }),
-    ).toBeNull();
-    expect(
-      within(sheet).queryByRole("button", { name: "maintenance.actions.release" }),
-    ).toBeNull();
+    expect(actionButton(sheet, "complete")).toBeTruthy();
+    expect(actionButton(sheet, "cancelWorkOrder")).toBeTruthy();
+    for (const absent of ["approve", "reject", "approveCompletion", "release"]) {
+      expect(actionButton(sheet, absent), absent).toBeNull();
+    }
   });
 
-  it("offers approve only on a submitted work order, and only to an approver", async () => {
+  it("offers approve and reject on a submitted work order, only to an approver", async () => {
     const user = userEvent.setup();
     workOrderRow = makeWorkOrder("SUBMITTED");
     detail = makeDetail(workOrderRow);
@@ -345,82 +366,190 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(
-      within(sheet).getByRole("button", { name: "maintenance.actions.approve" }),
-    ).toBeTruthy();
-    expect(
-      within(sheet).queryByRole("button", {
-        name: "maintenance.actions.declareClosure",
-      }),
-    ).toBeNull();
+    expect(actionButton(sheet, "approve")).toBeTruthy();
+    expect(actionButton(sheet, "reject")).toBeTruthy();
+    expect(actionButton(sheet, "complete")).toBeNull();
+    // Cancelling is the workshop's call, not the approver's.
+    expect(actionButton(sheet, "cancelWorkOrder")).toBeNull();
   });
 
-  it("offers validate-closure only while the closure is pending", async () => {
+  it("lets the workshop cancel a submitted work order but not decide it", async () => {
     const user = userEvent.setup();
-    workOrderRow = makeWorkOrder("PENDING_CLOSE");
-    detail = makeDetail(workOrderRow);
-    me = as("FINANCE_APPROVER");
-    renderScreen();
-
-    const sheet = await openSheet(user);
-    expect(
-      within(sheet).getByRole("button", { name: "maintenance.actions.approveClosure" }),
-    ).toBeTruthy();
-  });
-
-  it("offers the return to service once the work order is closed", async () => {
-    const user = userEvent.setup();
-    workOrderRow = makeWorkOrder("CLOSED");
+    workOrderRow = makeWorkOrder("SUBMITTED");
     detail = makeDetail(workOrderRow);
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(
-      within(sheet).getByRole("button", { name: "maintenance.actions.release" }),
-    ).toBeTruthy();
-    expect(
-      within(sheet).queryByRole("button", {
-        name: "maintenance.actions.cancelWorkOrder",
-      }),
-    ).toBeNull();
+    expect(actionButton(sheet, "cancelWorkOrder")).toBeTruthy();
+    expect(actionButton(sheet, "approve")).toBeNull();
+    expect(actionButton(sheet, "reject")).toBeNull();
   });
 
-  it("shows a read-only role no action at all", async () => {
+  it("offers approve and reject completion only while the completion is submitted", async () => {
     const user = userEvent.setup();
-    me = as("EXECUTIVE_VIEWER");
+    workOrderRow = makeWorkOrder("COMPLETION_SUBMITTED");
+    detail = makeDetail(workOrderRow);
+    me = as("ADMIN");
     renderScreen();
 
     const sheet = await openSheet(user);
-    for (const action of [
-      "maintenance.actions.approve",
-      "maintenance.actions.declareClosure",
-      "maintenance.actions.approveClosure",
-      "maintenance.actions.release",
-      "maintenance.actions.cancelWorkOrder",
+    expect(actionButton(sheet, "approveCompletion")).toBeTruthy();
+    expect(actionButton(sheet, "rejectCompletion")).toBeTruthy();
+    expect(actionButton(sheet, "cancelWorkOrder")).toBeTruthy();
+    expect(actionButton(sheet, "complete")).toBeNull();
+  });
+
+  it("offers the return to service once the work order is completed", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("COMPLETED");
+    detail = makeDetail(workOrderRow);
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(actionButton(sheet, "release")).toBeTruthy();
+    expect(actionButton(sheet, "cancelWorkOrder")).toBeNull();
+  });
+
+  it("offers no return to service when the asset is not grounded", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("COMPLETED");
+    detail = makeDetail(workOrderRow);
+    issueRows = [{ ...issue, status: "RESOLVED", assetUnavailable: false }];
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(actionButton(sheet, "release")).toBeNull();
+  });
+
+  it("closes the terminal states to every action, even for an admin", async () => {
+    const user = userEvent.setup();
+    me = as("ADMIN");
+    workOrderRow = makeWorkOrder("REJECTED");
+    detail = { ...makeDetail(workOrderRow), rejectReason: "Devis trop élevé" };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).getByText("Devis trop élevé")).toBeTruthy();
+    expect(within(sheet).getByText("maintenance.fields.rejectReason")).toBeTruthy();
+    for (const key of [
+      "approve",
+      "reject",
+      "complete",
+      "approveCompletion",
+      "rejectCompletion",
+      "release",
+      "cancelWorkOrder",
     ]) {
-      expect(within(sheet).queryByRole("button", { name: action })).toBeNull();
+      expect(actionButton(sheet, key), key).toBeNull();
     }
-    // …and no way to open one either.
+  });
+
+  it("shows why a completion was sent back on the reopened work order", async () => {
+    const user = userEvent.setup();
+    detail = {
+      ...makeDetail(workOrderRow),
+      completionRejectReason: "Facture des disques manquante",
+    };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).getByText("Facture des disques manquante")).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /maintenance.workOrders.new/ }),
-    ).toBeNull();
+      within(sheet).getByText("maintenance.fields.completionRejectReason"),
+    ).toBeTruthy();
+  });
+
+  it("shows an executive viewer no action anywhere, whatever the status", async () => {
+    me = as("EXECUTIVE_VIEWER");
+    for (const status of [
+      "SUBMITTED",
+      "APPROVED",
+      "COMPLETION_SUBMITTED",
+      "COMPLETED",
+    ] as const) {
+      const user = userEvent.setup();
+      workOrderRow = makeWorkOrder(status);
+      detail = makeDetail(workOrderRow);
+      renderScreen();
+
+      const sheet = await openSheet(user);
+      expect(within(sheet).queryAllByRole("button", { name: /^maintenance\.actions\./ }))
+        .toEqual([]);
+      cleanup();
+    }
+
+    const user = userEvent.setup();
+    renderScreen();
+    // …no way to open a record either…
+    expect(screen.queryByRole("button", { name: /maintenance.workOrders.new/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /maintenance.issues.new/ })).toBeNull();
+    // …and no menu on an open signalement.
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await screen.findByText("Freins qui sifflent en descente");
+    expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
+  });
+});
+
+describe("MaintenanceScreen — row sheet costs", () => {
+  it("keeps pending cost lines apart from the posted set", async () => {
+    const user = userEvent.setup();
+    detail = {
+      ...makeDetail(workOrderRow),
+      pendingCostLines: [
+        {
+          postingId: "cccc0002-0000-4000-8000-000000000002",
+          entryId: "dddd0002-0000-4000-8000-000000000002",
+          entryNumber: "DLA-2026-00009",
+          description: "Disques avant",
+          amountMinor: 250_000,
+          currency: "XAF",
+          economicDate: "2026-08-03",
+          entryStatus: "SUBMITTED",
+        },
+      ],
+    };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    const posted = within(sheet).getByText("maintenance.detail.costLines").parentElement;
+    const pending = within(sheet).getByText("maintenance.detail.pendingCostLines")
+      .parentElement;
+    if (posted === null || pending === null) throw new Error("cost sections missing");
+
+    expect(within(posted).getByText("DLA-2026-00007")).toBeTruthy();
+    expect(within(posted).queryByText("DLA-2026-00009")).toBeNull();
+    expect(within(pending).getByText("DLA-2026-00009")).toBeTruthy();
+    expect(
+      within(pending).getByText("maintenance.detail.entryStatus.SUBMITTED"),
+    ).toBeTruthy();
+    expect(
+      within(pending).getByText("maintenance.detail.pendingCostLinesHint"),
+    ).toBeTruthy();
+  });
+
+  it("shows no pending section when nothing awaits approval", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
   });
 });
 
 describe("MaintenanceScreen — commands", () => {
-  it("declares the closure with the row's version quoted", async () => {
+  it("declares completion with the row's version quoted", async () => {
     const user = userEvent.setup();
     renderScreen();
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.declareClosure" }),
+      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
     );
 
     const cost = await screen.findByLabelText("maintenance.fields.actualCost");
     await user.type(cost, "45000");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.declareClosure" }),
+      screen.getByRole("button", { name: "maintenance.actions.complete" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -435,14 +564,169 @@ describe("MaintenanceScreen — commands", () => {
     expect(submittedEnvelope()["expectedVersion"]).toBe(3);
   });
 
-  it("moves the header onto the refetched detail once the closure is declared", async () => {
+  it("resolves the linked signalement by default when completing", async () => {
     const user = userEvent.setup();
-    // Only the detail read learns the work order closed: the table handed the
-    // drawer a row snapshot when it opened and never revises it, so a header
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+    );
+    await screen.findByLabelText("maintenance.fields.resolveLinkedIssue");
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(submittedPayload()["resolveLinkedIssue"]).toBe(true);
+  });
+
+  it("sends resolveLinkedIssue false when the box is unticked", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+    );
+    await user.click(await screen.findByLabelText("maintenance.fields.resolveLinkedIssue"));
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(submittedPayload()["resolveLinkedIssue"]).toBe(false);
+  });
+
+  it("offers no linked-issue box on preventive work", async () => {
+    const user = userEvent.setup();
+    workOrderRow = { ...makeWorkOrder("APPROVED"), issue: null };
+    detail = makeDetail(workOrderRow);
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+    );
+    await screen.findByLabelText("maintenance.fields.actualCost");
+    expect(screen.queryByLabelText("maintenance.fields.resolveLinkedIssue")).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect("resolveLinkedIssue" in submittedPayload()).toBe(false);
+  });
+
+  it("rejects a submitted work order with a reason and the row's version", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("SUBMITTED");
+    detail = makeDetail(workOrderRow);
+    me = as("FINANCE_APPROVER");
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.reject" }),
+    );
+
+    // A refusal must say why: the button stays shut on an empty reason.
+    const submit = await screen.findByRole("button", { name: "maintenance.actions.reject" });
+    expect(submit.hasAttribute("disabled")).toBe(true);
+
+    await user.type(screen.getByLabelText("maintenance.fields.reason"), "Devis trop élevé");
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.reject" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("reject-work-order");
+    expect(submittedPayload()).toEqual({
+      workOrderId: WORK_ORDER_ID,
+      reason: "Devis trop élevé",
+    });
+    expect(submittedEnvelope()["expectedVersion"]).toBe(3);
+  });
+
+  it("sends a submitted completion back with a reason", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("COMPLETION_SUBMITTED");
+    detail = makeDetail(workOrderRow);
+    me = as("FINANCE_APPROVER");
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.rejectCompletion" }),
+    );
+    await user.type(
+      await screen.findByLabelText("maintenance.fields.reason"),
+      "Facture manquante",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.rejectCompletion" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("reject-work-order-completion");
+    expect(submittedPayload()).toEqual({
+      workOrderId: WORK_ORDER_ID,
+      reason: "Facture manquante",
+    });
+    expect(submittedEnvelope()["expectedVersion"]).toBe(3);
+  });
+
+  it("approves a submitted completion under the closure command's wire name", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("COMPLETION_SUBMITTED");
+    detail = makeDetail(workOrderRow);
+    me = as("FINANCE_APPROVER");
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.approveCompletion" }),
+    );
+    await screen.findByLabelText("maintenance.fields.note");
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.approveCompletion" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("approve-work-order-closure");
+    expect(submittedPayload()).toEqual({ workOrderId: WORK_ORDER_ID });
+    expect(submittedEnvelope()["expectedVersion"]).toBe(3);
+  });
+
+  it("releases the asset on the completed work order it cites", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("COMPLETED");
+    detail = makeDetail(workOrderRow);
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "maintenance.actions.release" }),
+    );
+    await screen.findByLabelText("maintenance.fields.note");
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.release" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("release-asset-to-service");
+    expect(submittedPayload()).toEqual({ assetId: ASSET_ID, workOrderId: WORK_ORDER_ID });
+    expect(submittedEnvelope()["expectedVersion"]).toBe(3);
+  });
+
+  it("moves the header onto the refetched detail once completion is declared", async () => {
+    const user = userEvent.setup();
+    // Only the detail read learns the work order completed: the table handed
+    // the drawer a row snapshot when it opened and never revises it, so a header
     // still bound to that snapshot would keep showing "Approuvé" and no cost.
     mocks.submit.mockImplementation(async () => {
       detail = {
-        ...makeDetail(makeWorkOrder("CLOSED")),
+        ...makeDetail(makeWorkOrder("COMPLETED")),
         actualCostMinor: 485_000,
         summary: "Plaquettes et disques remplacés",
       };
@@ -461,18 +745,18 @@ describe("MaintenanceScreen — commands", () => {
     renderScreen();
     const sheet = await openSheet(user);
     expect(
-      within(sheet).getByText("maintenance.workOrders.status.OPEN"),
+      within(sheet).getByText("maintenance.workOrders.status.APPROVED"),
     ).toBeTruthy();
 
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.declareClosure" }),
+      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
     );
     await user.type(
       await screen.findByLabelText("maintenance.fields.actualCost"),
       "485000",
     );
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.declareClosure" }),
+      screen.getByRole("button", { name: "maintenance.actions.complete" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -480,11 +764,11 @@ describe("MaintenanceScreen — commands", () => {
     const reopened = await screen.findByRole("dialog");
     await waitFor(() => {
       expect(
-        within(reopened).getByText("maintenance.workOrders.status.CLOSED"),
+        within(reopened).getByText("maintenance.workOrders.status.COMPLETED"),
       ).toBeTruthy();
     });
     expect(
-      within(reopened).queryByText("maintenance.workOrders.status.OPEN"),
+      within(reopened).queryByText("maintenance.workOrders.status.APPROVED"),
     ).toBeNull();
 
     const digits = (reopened.textContent ?? "").replace(/[\s  ,]/g, "");
@@ -493,7 +777,7 @@ describe("MaintenanceScreen — commands", () => {
 
     // The list row the table still holds is the stale copy — proof the header
     // is reading the detail rather than the snapshot beside it.
-    expect(workOrderRow.status).toBe("OPEN");
+    expect(workOrderRow.status).toBe("APPROVED");
     expect(workOrderRow.actualCostMinor).toBeNull();
   });
 
@@ -580,6 +864,143 @@ describe("MaintenanceScreen — signalements tab", () => {
       issueId: ISSUE_ID,
       description: "Changer les plaquettes",
     });
+  });
+
+  it("shows each signalement's status and why it was closed", async () => {
+    const user = userEvent.setup();
+    issueRows = [
+      {
+        ...issue,
+        status: "DISMISSED",
+        dismissedAt: "2026-08-01T09:00:00.000Z",
+        dismissReason: "Doublon du signalement de lundi",
+      },
+    ];
+    renderScreen();
+
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await screen.findByText("Freins qui sifflent en descente");
+    expect(screen.getAllByText("maintenance.issues.status.DISMISSED").length).toBeGreaterThan(1);
+    expect(screen.getByText("Doublon du signalement de lundi")).toBeTruthy();
+    // A closed signalement has nothing left to decide.
+    expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
+  });
+
+  it("asks the server to filter signalements by status", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(
+      await screen.findByRole("button", { name: "maintenance.issues.status.OPEN" }),
+    );
+
+    await waitFor(() => {
+      expect(issuedIssueQueries.some((query) => query.status === "OPEN")).toBe(true);
+    });
+    // The sheet's lookup stays unfiltered: a closed signalement still names the grounding.
+    expect(issuedIssueQueries.some((query) => query.status === undefined)).toBe(true);
+  });
+
+  it("says the filter found nothing rather than claiming a first run", async () => {
+    const user = userEvent.setup();
+    issueRows = [];
+    renderScreen();
+
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(
+      await screen.findByRole("button", { name: "maintenance.issues.status.DISMISSED" }),
+    );
+
+    expect(await screen.findByText("maintenance.issues.filteredEmpty")).toBeTruthy();
+    expect(screen.queryByText("maintenance.issues.emptyHint")).toBeNull();
+  });
+
+  async function openIssueAction(
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+  ): Promise<void> {
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await screen.findByText("Freins qui sifflent en descente");
+    await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
+    await user.click(await screen.findByRole("menuitem", { name }));
+  }
+
+  it("resolves an open signalement with an optional note and its version", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await openIssueAction(user, "maintenance.actions.resolveIssue");
+    await user.type(
+      await screen.findByLabelText("maintenance.fields.note"),
+      "Collier resserré sur place",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.resolveIssue" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("resolve-issue");
+    expect(submittedPayload()).toEqual({
+      issueId: ISSUE_ID,
+      note: "Collier resserré sur place",
+    });
+    expect(submittedEnvelope()["expectedVersion"]).toBe(2);
+  });
+
+  it("resolves without a note when none is given", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await openIssueAction(user, "maintenance.actions.resolveIssue");
+    await screen.findByLabelText("maintenance.fields.note");
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.resolveIssue" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(submittedPayload()).toEqual({ issueId: ISSUE_ID });
+  });
+
+  it("dismisses an open signalement only with a reason", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await openIssueAction(user, "maintenance.actions.dismissIssue");
+    const submit = await screen.findByRole("button", {
+      name: "maintenance.actions.dismissIssue",
+    });
+    expect(submit.hasAttribute("disabled")).toBe(true);
+
+    await user.type(screen.getByLabelText("maintenance.fields.reason"), "Rien constaté");
+    await user.click(
+      screen.getByRole("button", { name: "maintenance.actions.dismissIssue" }),
+    );
+
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
+    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("dismiss-issue");
+    expect(submittedPayload()).toEqual({ issueId: ISSUE_ID, reason: "Rien constaté" });
+    expect(submittedEnvelope()["expectedVersion"]).toBe(2);
+  });
+
+  it("lets a field submitter resolve a signalement but not dismiss it", async () => {
+    const user = userEvent.setup();
+    me = as("FIELD_SUBMITTER");
+    renderScreen();
+
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await screen.findByText("Freins qui sifflent en descente");
+    await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
+
+    expect(
+      await screen.findByRole("menuitem", { name: "maintenance.actions.resolveIssue" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("menuitem", { name: "maintenance.actions.dismissIssue" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "maintenance.issues.createWorkOrder" }),
+    ).toBeNull();
   });
 });
 

@@ -7,14 +7,19 @@ import type {
   WorkOrderCostLine,
   WorkOrderDetail,
   WorkOrderListItem,
+  WorkOrderPendingCostLine,
 } from "@routiq/contracts";
 import { ErrorState, LoadingState } from "@/components/page";
 import { historyEventLabelKey } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format.js";
-import { WORK_ORDER_TONES } from "./columns.js";
-import type { MaintenanceDialog, WorkOrderRef } from "./MaintenanceDialogs.js";
+import { ISSUE_TONES, WORK_ORDER_TONES } from "./columns.js";
+import type {
+  MaintenanceDialog,
+  WorkOrderDecision,
+  WorkOrderRef,
+} from "./MaintenanceDialogs.js";
 import { useWorkOrder } from "./useMaintenance.js";
 
 export interface WorkOrderSheetPermissions {
@@ -97,27 +102,25 @@ function Chronologie({
   );
 }
 
+const ENTRY_STATUS_TONES = {
+  POSTED: "success",
+  REVERSED: "neutral",
+  SUBMITTED: "warning",
+} as const;
+
 /**
- * Labour and parts booked against this repair. A submitted-but-unapproved line
- * is stamped as such: it is not money spent yet, and the total would lie if it
- * pretended otherwise.
+ * Labour and parts booked against this repair, one list per set: the posted
+ * lines are money spent, the pending ones are awaiting finance review and are
+ * never read into it.
  */
 function CostLines({
   lines,
   locale,
 }: {
-  lines: readonly WorkOrderCostLine[];
+  lines: readonly (WorkOrderCostLine | WorkOrderPendingCostLine)[];
   locale: string;
 }) {
   const { t } = useTranslation();
-
-  if (lines.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        {t("maintenance.detail.costLinesEmpty")}
-      </p>
-    );
-  }
 
   return (
     <ul className="flex flex-col gap-2">
@@ -129,10 +132,7 @@ function CostLines({
           <span className="flex min-w-0 flex-col">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs">{line.entryNumber}</span>
-              <StatusBadge
-                tone={line.entryStatus === "POSTED" ? "success" : "warning"}
-                icon={null}
-              >
+              <StatusBadge tone={ENTRY_STATUS_TONES[line.entryStatus]} icon={null}>
                 {t(`maintenance.detail.entryStatus.${line.entryStatus}`)}
               </StatusBadge>
             </span>
@@ -155,10 +155,13 @@ function CostLines({
 function SheetActions({
   detail,
   permissions,
+  assetUnavailable,
   onAction,
 }: {
   detail: WorkOrderDetail;
   permissions: WorkOrderSheetPermissions;
+  /** Only a grounded asset has anything to release. */
+  assetUnavailable: boolean;
   onAction: (dialog: MaintenanceDialog) => void;
 }) {
   const { t } = useTranslation();
@@ -166,82 +169,88 @@ function SheetActions({
     id: detail.id,
     assetId: detail.asset.id,
     status: detail.status,
+    issueId: detail.issue?.id ?? null,
     rowVersion: detail.rowVersion,
   };
 
   const buttons: ReactNode[] = [];
-
-  if (detail.status === "SUBMITTED" && permissions.approve) {
+  const action = (
+    key: string,
+    label: string,
+    dialog: MaintenanceDialog,
+    variant: "default" | "outline" = "default",
+  ) =>
     buttons.push(
       <Button
-        key="approve"
+        key={key}
         type="button"
+        variant={variant}
         className="min-h-9"
-        onClick={() => onAction({ kind: "approve", workOrder })}
+        onClick={() => onAction(dialog)}
       >
-        {t("maintenance.actions.approve")}
+        {label}
       </Button>,
     );
-  }
+  const decide = (
+    decision: WorkOrderDecision,
+    label: string,
+    variant: "default" | "outline" = "default",
+  ) => action(decision, label, { kind: "decide-work-order", decision, workOrder }, variant);
 
-  if (detail.status === "OPEN" && permissions.manage) {
-    buttons.push(
-      <Button
-        key="complete"
-        type="button"
-        className="min-h-9"
-        onClick={() => onAction({ kind: "complete", workOrder })}
-      >
-        {t("maintenance.actions.declareClosure")}
-      </Button>,
-    );
-  }
-
-  if (detail.status === "PENDING_CLOSE" && permissions.approve) {
-    buttons.push(
-      <Button
-        key="approve-closure"
-        type="button"
-        className="min-h-9"
-        onClick={() => onAction({ kind: "approve-closure", workOrder })}
-      >
-        {t("maintenance.actions.approveClosure")}
-      </Button>,
-    );
-  }
-
-  if (detail.status === "CLOSED" && permissions.release) {
-    buttons.push(
-      <Button
-        key="release"
-        type="button"
-        className="min-h-9"
-        onClick={() => onAction({ kind: "release", workOrder })}
-      >
-        {t("maintenance.actions.release")}
-      </Button>,
-    );
+  switch (detail.status) {
+    case "SUBMITTED":
+      if (permissions.approve) {
+        decide("approve", t("maintenance.actions.approve"));
+        decide("reject", t("maintenance.actions.reject"), "outline");
+      }
+      break;
+    case "APPROVED":
+      if (permissions.manage) {
+        action("complete", t("maintenance.actions.complete"), { kind: "complete", workOrder });
+      }
+      break;
+    case "COMPLETION_SUBMITTED":
+      if (permissions.approve) {
+        decide("approve-completion", t("maintenance.actions.approveCompletion"));
+        decide("reject-completion", t("maintenance.actions.rejectCompletion"), "outline");
+      }
+      break;
+    case "COMPLETED":
+      if (permissions.release && assetUnavailable) {
+        action("release", t("maintenance.actions.release"), { kind: "release", workOrder });
+      }
+      break;
+    case "REJECTED":
+    case "CANCELLED":
+      break;
   }
 
   if (
-    (detail.status === "SUBMITTED" || detail.status === "OPEN") &&
+    (detail.status === "SUBMITTED" ||
+      detail.status === "APPROVED" ||
+      detail.status === "COMPLETION_SUBMITTED") &&
     permissions.manage
   ) {
-    buttons.push(
-      <Button
-        key="cancel"
-        type="button"
-        variant="outline"
-        className="min-h-9"
-        onClick={() => onAction({ kind: "cancel", workOrder })}
-      >
-        {t("maintenance.actions.cancelWorkOrder")}
-      </Button>,
+    action(
+      "cancel",
+      t("maintenance.actions.cancelWorkOrder"),
+      { kind: "cancel", workOrder },
+      "outline",
     );
   }
 
   if (buttons.length === 0) return null;
   return <div className="flex flex-wrap gap-2">{buttons}</div>;
+}
+
+function LabelledText({ label, text }: { label: string; text: string | null | undefined }) {
+  if (text == null || text === "") return null;
+  return (
+    <div>
+      <h3 className="text-xs text-muted-foreground">{label}</h3>
+      <p className="mt-1 text-sm">{text}</p>
+    </div>
+  );
 }
 
 /**
@@ -344,6 +353,11 @@ export function WorkOrderSheet({
             ) : (
               <span key="issue" className="flex flex-wrap items-center gap-1.5">
                 <span>{linkedIssue?.description ?? t("maintenance.detail.linkedIssue")}</span>
+                {linkedIssue !== undefined && (
+                  <StatusBadge tone={ISSUE_TONES[linkedIssue.status]}>
+                    {t(`maintenance.issues.status.${linkedIssue.status}`)}
+                  </StatusBadge>
+                )}
                 {safetyCritical && (
                   <StatusBadge tone="danger" icon={ShieldAlert}>
                     {t("maintenance.issues.safetyCritical")}
@@ -362,28 +376,25 @@ export function WorkOrderSheet({
         <p className="mt-1 text-sm">{header.description}</p>
       </div>
 
-      {detail?.summary != null && detail.summary !== "" && (
-        <div>
-          <h3 className="text-xs text-muted-foreground">
-            {t("maintenance.fields.summary")}
-          </h3>
-          <p className="mt-1 text-sm">{detail.summary}</p>
-        </div>
+      <LabelledText label={t("maintenance.fields.summary")} text={detail?.summary} />
+      <LabelledText label={t("maintenance.fields.cancelReason")} text={detail?.cancelReason} />
+      {detail?.status === "REJECTED" && (
+        <LabelledText label={t("maintenance.fields.rejectReason")} text={detail.rejectReason} />
       )}
-
-      {detail?.cancelReason != null && detail.cancelReason !== "" && (
-        <div>
-          <h3 className="text-xs text-muted-foreground">
-            {t("maintenance.fields.cancelReason")}
-          </h3>
-          <p className="mt-1 text-sm">{detail.cancelReason}</p>
-        </div>
+      {/* Kept on the row while the order is open again, so the workshop sees
+          what to fix before declaring completion a second time. */}
+      {detail?.status === "APPROVED" && (
+        <LabelledText
+          label={t("maintenance.fields.completionRejectReason")}
+          text={detail.completionRejectReason}
+        />
       )}
 
       {detail !== undefined && (
         <SheetActions
           detail={detail}
           permissions={permissions}
+          assetUnavailable={linkedIssue?.assetUnavailable === true}
           onAction={onAction}
         />
       )}
@@ -410,7 +421,25 @@ export function WorkOrderSheet({
           <h3 className="mb-3 text-sm font-semibold">
             {t("maintenance.detail.costLines")}
           </h3>
-          <CostLines lines={detail.costLines} locale={locale} />
+          {detail.costLines.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("maintenance.detail.costLinesEmpty")}
+            </p>
+          ) : (
+            <CostLines lines={detail.costLines} locale={locale} />
+          )}
+        </div>
+      )}
+
+      {detail !== undefined && detail.pendingCostLines.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold">
+            {t("maintenance.detail.pendingCostLines")}
+          </h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            {t("maintenance.detail.pendingCostLinesHint")}
+          </p>
+          <CostLines lines={detail.pendingCostLines} locale={locale} />
         </div>
       )}
     </div>

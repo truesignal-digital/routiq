@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
 import type {
   IssueListItem,
+  IssueStatus,
   WorkOrderListItem,
   WorkOrderStatus,
 } from "@routiq/contracts";
@@ -10,21 +11,28 @@ import { ShieldAlert, TriangleAlert } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
 
+type Tone = "neutral" | "success" | "warning" | "info" | "danger";
+
 /**
  * How far through its life a work order is, at a glance. SUBMITTED and
- * PENDING_CLOSE are both "waiting on a decision", which is what warning means
- * everywhere else in the app; CANCELLED stays neutral because nothing went
- * wrong, the job simply never happened.
+ * COMPLETION_SUBMITTED are both "waiting on a decision", which is what warning
+ * means everywhere else in the app; REJECTED is a refusal, so danger; CANCELLED
+ * stays neutral because nothing went wrong, the job simply never happened.
  */
-export const WORK_ORDER_TONES: Record<
-  WorkOrderStatus,
-  "neutral" | "success" | "warning" | "info" | "danger"
-> = {
+export const WORK_ORDER_TONES: Record<WorkOrderStatus, Tone> = {
   SUBMITTED: "warning",
-  OPEN: "info",
-  PENDING_CLOSE: "warning",
-  CLOSED: "success",
+  APPROVED: "info",
+  COMPLETION_SUBMITTED: "warning",
+  COMPLETED: "success",
+  REJECTED: "danger",
   CANCELLED: "neutral",
+};
+
+/** An open signalement still wants someone to act; a dismissal is not a failure. */
+export const ISSUE_TONES: Record<IssueStatus, Tone> = {
+  OPEN: "warning",
+  RESOLVED: "success",
+  DISMISSED: "neutral",
 };
 
 /**
@@ -192,6 +200,27 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
             )}
           </span>
         ),
+      },
+      {
+        id: "status",
+        header: t("maintenance.issues.columns.status"),
+        meta: { mobile: "primary", label: t("maintenance.issues.columns.status") },
+        cell: ({ row }) => {
+          const closingWords =
+            row.original.status === "DISMISSED"
+              ? row.original.dismissReason
+              : row.original.resolutionNote;
+          return (
+            <span className="flex flex-col items-start gap-1">
+              <StatusBadge tone={ISSUE_TONES[row.original.status]}>
+                {t(`maintenance.issues.status.${row.original.status}`)}
+              </StatusBadge>
+              {row.original.status !== "OPEN" && closingWords !== null && (
+                <span className="text-xs text-muted-foreground">{closingWords}</span>
+              )}
+            </span>
+          );
+        },
       },
       {
         id: "category",

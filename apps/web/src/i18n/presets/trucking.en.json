@@ -138,7 +138,7 @@
       "safetyCriticalHint": "The truck is grounded from the moment this is filed until it is returned to service."
     },
     "actions": {
-      "releaseHint": "The truck becomes available again. This decision needs someone other than whoever declared the work complete."
+      "releaseHint": "The truck becomes available again. This decision needs someone other than whoever declared the work complete or closed the issue."
     },
     "detail": {
       "unavailableTitle": "Truck grounded"

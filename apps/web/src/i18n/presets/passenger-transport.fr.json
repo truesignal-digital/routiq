@@ -136,7 +136,7 @@
       "safetyCriticalHint": "Le véhicule est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
     },
     "actions": {
-      "releaseHint": "Le véhicule redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés."
+      "releaseHint": "Le véhicule redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement."
     },
     "detail": {
       "unavailableTitle": "Véhicule immobilisé"

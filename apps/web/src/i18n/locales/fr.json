@@ -150,9 +150,12 @@
     "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
     "ISSUE_ASSET_MISMATCH": "Ce signalement concerne un autre actif. Choisissez un signalement du même actif.",
     "WORK_ORDER_ASSET_MISMATCH": "Cet ordre de travail concerne un autre actif.",
-    "WORK_ORDER_NOT_CLOSED": "L'ordre de travail doit être clôturé avant la remise en service.",
+    "WORK_ORDER_NOT_COMPLETED": "Aucun ordre de travail terminé ne répond au signalement qui a immobilisé cet actif. Terminez les travaux avant la remise en service.",
+    "WORK_ORDER_ISSUE_MISMATCH": "Cet ordre de travail ne répond pas au signalement qui a immobilisé l'actif.",
+    "WORK_ORDER_NOT_OPEN": "Cet ordre de travail n'est pas en cours : un coût ne peut y être imputé qu'une fois l'ordre approuvé, et tant qu'il n'est ni terminé, ni rejeté, ni annulé.",
+    "HUMAN_PRINCIPAL_REQUIRED": "Cette action doit être faite par une personne, pas par une intégration ni un agent automatique.",
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
-    "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés.",
+    "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {
@@ -998,6 +1001,9 @@
   "maintenance": {
     "title": "Maintenance",
     "retry": "Réessayer",
+    "filters": {
+      "all": "Tous"
+    },
     "workOrders": {
       "tab": "Ordres de travail",
       "new": "Nouvel ordre de travail",
@@ -1007,9 +1013,9 @@
       "loadFailed": "Impossible de charger les ordres de travail. Veuillez réessayer.",
       "emptyHint": "Aucun ordre de travail pour l'instant. Les réparations ouvertes apparaîtront ici.",
       "branchEmptyHint": "Aucun ordre de travail pour cette agence.",
+      "filteredEmpty": "Aucun ordre de travail avec ce statut.",
       "filters": {
-        "status": "Statut",
-        "all": "Tous"
+        "status": "Statut"
       },
       "columns": {
         "reference": "N°",
@@ -1022,9 +1028,10 @@
       },
       "status": {
         "SUBMITTED": "Soumis",
-        "OPEN": "Approuvé",
-        "PENDING_CLOSE": "Clôture soumise",
-        "CLOSED": "Clôturé",
+        "APPROVED": "Approuvé",
+        "COMPLETION_SUBMITTED": "Fin des travaux soumise",
+        "COMPLETED": "Terminé",
+        "REJECTED": "Rejeté",
         "CANCELLED": "Annulé"
       }
     },
@@ -1037,14 +1044,24 @@
       "loadFailed": "Impossible de charger les signalements. Veuillez réessayer.",
       "emptyHint": "Aucun signalement pour l'instant. Les défauts constatés apparaîtront ici.",
       "branchEmptyHint": "Aucun signalement pour cette agence.",
+      "filteredEmpty": "Aucun signalement avec ce statut.",
       "safetyCritical": "Sécurité",
       "unavailable": "Immobilisé",
       "noWorkOrder": "Aucun",
       "createWorkOrder": "Créer un ordre de travail",
+      "filters": {
+        "status": "Statut"
+      },
+      "status": {
+        "OPEN": "Ouvert",
+        "RESOLVED": "Résolu",
+        "DISMISSED": "Classé sans suite"
+      },
       "columns": {
         "asset": "Actif",
         "description": "Description",
         "safety": "État",
+        "status": "Statut",
         "category": "Catégorie",
         "reportedAt": "Signalé le",
         "workOrders": "Ordres de travail"
@@ -1064,8 +1081,12 @@
       "expectedCost": "Coût prévu",
       "actualCost": "Coût réel",
       "summary": "Compte rendu",
+      "resolveLinkedIssue": "Clore le signalement lié",
+      "resolveLinkedIssueHint": "Décochez si les travaux sont faits mais que le problème persiste.",
       "reason": "Motif",
       "cancelReason": "Motif d'annulation",
+      "rejectReason": "Motif du rejet",
+      "completionRejectReason": "Motif du refus de la fin des travaux",
       "note": "Note"
     },
     "actions": {
@@ -1074,25 +1095,39 @@
       "approve": "Approuver",
       "approveTitle": "Approuver l'ordre de travail",
       "approveHint": "Vous autorisez la dépense prévue. L'ordre de travail passe en travaux.",
-      "approveClosure": "Valider la clôture",
-      "approveClosureTitle": "Valider la clôture",
-      "approveClosureHint": "Vous acceptez les coûts réels déclarés. L'ordre de travail est clôturé.",
-      "declareClosure": "Déclarer la clôture",
-      "declareClosureTitle": "Déclarer les travaux terminés",
-      "declareClosureHint": "Déclarez le coût réel et le compte rendu des travaux.",
+      "reject": "Rejeter",
+      "rejectTitle": "Rejeter l'ordre de travail",
+      "rejectHint": "Vous refusez la dépense prévue. Le rejet est définitif et le motif reste au journal.",
+      "complete": "Déclarer terminé",
+      "completeTitle": "Déclarer les travaux terminés",
+      "completeHint": "Déclarez le coût réel et le compte rendu des travaux.",
+      "approveCompletion": "Valider la fin des travaux",
+      "approveCompletionTitle": "Valider la fin des travaux",
+      "approveCompletionHint": "Vous acceptez les coûts réels déclarés. L'ordre de travail est terminé.",
+      "rejectCompletion": "Refuser la fin des travaux",
+      "rejectCompletionTitle": "Refuser la fin des travaux",
+      "rejectCompletionHint": "Les travaux restent ouverts. L'atelier voit le motif et peut déclarer à nouveau la fin des travaux.",
       "cancelWorkOrder": "Annuler l'ordre de travail",
       "cancelWorkOrderTitle": "Annuler l'ordre de travail",
       "cancelWorkOrderHint": "L'ordre de travail est abandonné. Le motif reste au journal.",
       "release": "Remise en service",
       "releaseTitle": "Remise en service",
-      "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés.",
-      "releaseSubject": "Ordre de travail {reference}"
+      "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
+      "releaseSubject": "Ordre de travail {reference}",
+      "resolveIssue": "Marquer résolu",
+      "resolveIssueTitle": "Résoudre le signalement",
+      "resolveIssueHint": "Le problème a été traité, par exemple réparé sur place. La résolution ne lève pas l'immobilisation : seule la remise en service le fait.",
+      "dismissIssue": "Classer sans suite",
+      "dismissIssueTitle": "Classer le signalement sans suite",
+      "dismissIssueHint": "Le signalement n'aurait pas dû être ouvert : erreur, doublon, rien constaté. Le motif reste au journal."
     },
     "detail": {
       "chronologie": "Chronologie",
       "chronologieEmpty": "Aucun évènement enregistré.",
-      "costLines": "Coûts imputés",
-      "costLinesEmpty": "Aucun coût imputé à cet ordre de travail.",
+      "costLines": "Coûts comptabilisés",
+      "costLinesEmpty": "Aucun coût comptabilisé sur cet ordre de travail.",
+      "pendingCostLines": "Coûts en attente d'approbation",
+      "pendingCostLinesHint": "Enregistrés mais pas encore dépensés : ils ne comptent pas dans les coûts comptabilisés.",
       "loading": "Chargement de la chronologie…",
       "loadFailed": "Impossible de charger la chronologie. Veuillez réessayer.",
       "preventive": "Préventif — aucun signalement",
@@ -1102,17 +1137,20 @@
       "entryStatus": {
         "SUBMITTED": "En attente",
         "POSTED": "Comptabilisé",
-        "REJECTED": "Rejeté",
         "REVERSED": "Extourné"
       }
     },
     "notify": {
       "success": {
         "issueReported": "Signalement enregistré",
+        "issueResolved": "Signalement résolu",
+        "issueDismissed": "Signalement classé sans suite",
         "workOrderCreated": "Ordre de travail ouvert",
         "workOrderApproved": "Ordre de travail approuvé",
-        "closureDeclared": "Clôture déclarée",
-        "closureApproved": "Clôture validée",
+        "workOrderRejected": "Ordre de travail rejeté",
+        "completionDeclared": "Fin des travaux déclarée",
+        "completionApproved": "Fin des travaux validée",
+        "completionRejected": "Fin des travaux refusée",
         "workOrderCancelled": "Ordre de travail annulé",
         "assetReleased": "Actif remis en service"
       }
@@ -1337,14 +1375,22 @@
       "template_preset-disabled": "Modèle métier désactivé",
       "workspace-provisioned": "Espace de travail créé",
       "operational_issue-reported": "Signalement enregistré",
+      "operational_issue-resolved": "Signalement résolu",
+      "operational_issue-dismissed": "Signalement classé sans suite",
+      "work_order-created": "Ordre de travail créé",
       "work_order-submitted": "Ordre de travail soumis",
-      "work_order-opened": "Ordre de travail ouvert",
       "work_order-approved": "Ordre de travail approuvé",
+      "work_order-rejected": "Ordre de travail rejeté",
+      "work_order-completion_submitted": "Fin des travaux soumise à validation",
+      "work_order-completed": "Ordre de travail terminé",
+      "work_order-completion_approved": "Fin des travaux validée",
+      "work_order-completion_rejected": "Fin des travaux refusée",
+      "work_order-cancelled": "Ordre de travail annulé",
+      "work_order-asset_released": "Actif remis en service",
+      "work_order-opened": "Ordre de travail ouvert",
       "work_order-closure_submitted": "Clôture déclarée",
       "work_order-closed": "Ordre de travail clôturé",
       "work_order-closure_approved": "Clôture validée",
-      "work_order-cancelled": "Ordre de travail annulé",
-      "work_order-asset_released": "Actif remis en service",
       "asset_availability-opened": "Actif immobilisé",
       "asset_availability-closed": "Immobilisation levée"
     },
@@ -1478,7 +1524,21 @@
       "openedAt": "ouverture",
       "reportedAt": "signalé le",
       "safetyCritical": "critique pour la sécurité",
-      "category": "catégorie"
+      "category": "catégorie",
+      "resolveLinkedIssue": "clore le signalement lié",
+      "rejectReason": "motif du rejet",
+      "rejectedAt": "rejet",
+      "completionRejectReason": "motif du refus de fin des travaux",
+      "overrideReason": "motif de dérogation",
+      "availabilityIntervalId": "immobilisation",
+      "releasedAt": "remise en service",
+      "releaseNote": "note de remise en service",
+      "resolvedAt": "résolution",
+      "resolutionNote": "note de résolution",
+      "resolvedByWorkOrderId": "résolu par l'ordre de travail",
+      "dismissedAt": "classement sans suite",
+      "dismissReason": "motif du classement",
+      "defaultSafetyCritical": "critique pour la sécurité par défaut"
     }
   }
 }

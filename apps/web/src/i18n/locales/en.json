@@ -150,9 +150,12 @@
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
     "ISSUE_ASSET_MISMATCH": "That issue was reported against a different asset. Pick an issue for the same asset.",
     "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
-    "WORK_ORDER_NOT_CLOSED": "The work order must be closed before the asset can be released to service.",
+    "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the issue that grounded this asset. Complete the work before returning it to service.",
+    "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the issue that grounded the asset.",
+    "WORK_ORDER_NOT_OPEN": "This work order is not open: costs can only be booked against it after approval and before it is completed, rejected or cancelled.",
+    "HUMAN_PRINCIPAL_REQUIRED": "This action must be taken by a person, not by an integration or an automated agent.",
     "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
-    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete.",
+    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the issue.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
@@ -998,6 +1001,9 @@
   "maintenance": {
     "title": "Maintenance",
     "retry": "Retry",
+    "filters": {
+      "all": "All"
+    },
     "workOrders": {
       "tab": "Work orders",
       "new": "New work order",
@@ -1007,9 +1013,9 @@
       "loadFailed": "Could not load the work orders. Please try again.",
       "emptyHint": "No work orders yet. Repairs opened here will show up in this list.",
       "branchEmptyHint": "No work orders for this branch.",
+      "filteredEmpty": "No work orders with this status.",
       "filters": {
-        "status": "Status",
-        "all": "All"
+        "status": "Status"
       },
       "columns": {
         "reference": "No.",
@@ -1022,9 +1028,10 @@
       },
       "status": {
         "SUBMITTED": "Submitted",
-        "OPEN": "Approved",
-        "PENDING_CLOSE": "Closure submitted",
-        "CLOSED": "Closed",
+        "APPROVED": "Approved",
+        "COMPLETION_SUBMITTED": "Completion submitted",
+        "COMPLETED": "Completed",
+        "REJECTED": "Rejected",
         "CANCELLED": "Cancelled"
       }
     },
@@ -1037,14 +1044,24 @@
       "loadFailed": "Could not load the issues. Please try again.",
       "emptyHint": "No issues yet. Faults reported here will show up in this list.",
       "branchEmptyHint": "No issues for this branch.",
+      "filteredEmpty": "No issues with this status.",
       "safetyCritical": "Safety",
       "unavailable": "Grounded",
       "noWorkOrder": "None",
       "createWorkOrder": "Create a work order",
+      "filters": {
+        "status": "Status"
+      },
+      "status": {
+        "OPEN": "Open",
+        "RESOLVED": "Resolved",
+        "DISMISSED": "Dismissed"
+      },
       "columns": {
         "asset": "Asset",
         "description": "Description",
         "safety": "State",
+        "status": "Status",
         "category": "Category",
         "reportedAt": "Reported",
         "workOrders": "Work orders"
@@ -1064,8 +1081,12 @@
       "expectedCost": "Expected cost",
       "actualCost": "Actual cost",
       "summary": "Work summary",
+      "resolveLinkedIssue": "Resolve the linked issue",
+      "resolveLinkedIssueHint": "Untick it if the work is done but the problem remains.",
       "reason": "Reason",
       "cancelReason": "Cancellation reason",
+      "rejectReason": "Rejection reason",
+      "completionRejectReason": "Why the completion was rejected",
       "note": "Note"
     },
     "actions": {
@@ -1074,25 +1095,39 @@
       "approve": "Approve",
       "approveTitle": "Approve the work order",
       "approveHint": "You authorize the expected spend. The work order moves into repair.",
-      "approveClosure": "Validate closure",
-      "approveClosureTitle": "Validate closure",
-      "approveClosureHint": "You accept the declared actual costs. The work order is closed.",
-      "declareClosure": "Declare closure",
-      "declareClosureTitle": "Declare the work complete",
-      "declareClosureHint": "Declare the actual cost and what was done.",
+      "reject": "Reject",
+      "rejectTitle": "Reject the work order",
+      "rejectHint": "You refuse the expected spend. The rejection is final and the reason stays on the audit trail.",
+      "complete": "Declare complete",
+      "completeTitle": "Declare the work complete",
+      "completeHint": "Declare the actual cost and what was done.",
+      "approveCompletion": "Approve completion",
+      "approveCompletionTitle": "Approve the completion",
+      "approveCompletionHint": "You accept the declared actual costs. The work order is completed.",
+      "rejectCompletion": "Reject completion",
+      "rejectCompletionTitle": "Reject the completion",
+      "rejectCompletionHint": "The work stays open. The workshop sees the reason and can declare completion again.",
       "cancelWorkOrder": "Cancel the work order",
       "cancelWorkOrderTitle": "Cancel the work order",
       "cancelWorkOrderHint": "The work order is abandoned. The reason stays on the audit trail.",
       "release": "Return to service",
       "releaseTitle": "Return to service",
-      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete.",
-      "releaseSubject": "Work order {reference}"
+      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the issue.",
+      "releaseSubject": "Work order {reference}",
+      "resolveIssue": "Mark resolved",
+      "resolveIssueTitle": "Resolve the issue",
+      "resolveIssueHint": "The problem has been dealt with, for example fixed on the spot. Resolving does not lift a grounding: only a return to service does.",
+      "dismissIssue": "Dismiss",
+      "dismissIssueTitle": "Dismiss the issue",
+      "dismissIssueHint": "The issue should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
     },
     "detail": {
       "chronologie": "Timeline",
       "chronologieEmpty": "No events recorded.",
-      "costLines": "Booked costs",
-      "costLinesEmpty": "No costs booked against this work order.",
+      "costLines": "Posted costs",
+      "costLinesEmpty": "No costs posted against this work order.",
+      "pendingCostLines": "Costs awaiting approval",
+      "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
       "loading": "Loading the timeline…",
       "loadFailed": "Could not load the timeline. Please try again.",
       "preventive": "Preventive — no issue",
@@ -1102,17 +1137,20 @@
       "entryStatus": {
         "SUBMITTED": "Pending",
         "POSTED": "Posted",
-        "REJECTED": "Rejected",
         "REVERSED": "Reversed"
       }
     },
     "notify": {
       "success": {
         "issueReported": "Issue reported",
+        "issueResolved": "Issue resolved",
+        "issueDismissed": "Issue dismissed",
         "workOrderCreated": "Work order opened",
         "workOrderApproved": "Work order approved",
-        "closureDeclared": "Closure declared",
-        "closureApproved": "Closure validated",
+        "workOrderRejected": "Work order rejected",
+        "completionDeclared": "Work declared complete",
+        "completionApproved": "Completion approved",
+        "completionRejected": "Completion rejected",
         "workOrderCancelled": "Work order cancelled",
         "assetReleased": "Asset returned to service"
       }
@@ -1337,14 +1375,22 @@
       "template_preset-disabled": "Business preset disabled",
       "workspace-provisioned": "Workspace provisioned",
       "operational_issue-reported": "Issue reported",
+      "operational_issue-resolved": "Issue resolved",
+      "operational_issue-dismissed": "Issue dismissed",
+      "work_order-created": "Work order created",
       "work_order-submitted": "Work order submitted",
-      "work_order-opened": "Work order opened",
       "work_order-approved": "Work order approved",
+      "work_order-rejected": "Work order rejected",
+      "work_order-completion_submitted": "Completion submitted for approval",
+      "work_order-completed": "Work order completed",
+      "work_order-completion_approved": "Completion approved",
+      "work_order-completion_rejected": "Completion rejected",
+      "work_order-cancelled": "Work order cancelled",
+      "work_order-asset_released": "Asset returned to service",
+      "work_order-opened": "Work order opened",
       "work_order-closure_submitted": "Closure declared",
       "work_order-closed": "Work order closed",
       "work_order-closure_approved": "Closure validated",
-      "work_order-cancelled": "Work order cancelled",
-      "work_order-asset_released": "Asset returned to service",
       "asset_availability-opened": "Asset grounded",
       "asset_availability-closed": "Grounding lifted"
     },
@@ -1478,7 +1524,21 @@
       "openedAt": "opened",
       "reportedAt": "reported",
       "safetyCritical": "safety-critical",
-      "category": "category"
+      "category": "category",
+      "resolveLinkedIssue": "resolve linked issue",
+      "rejectReason": "rejection reason",
+      "rejectedAt": "rejected",
+      "completionRejectReason": "completion rejection reason",
+      "overrideReason": "override reason",
+      "availabilityIntervalId": "grounding",
+      "releasedAt": "returned to service",
+      "releaseNote": "release note",
+      "resolvedAt": "resolved",
+      "resolutionNote": "resolution note",
+      "resolvedByWorkOrderId": "resolved by work order",
+      "dismissedAt": "dismissed",
+      "dismissReason": "dismissal reason",
+      "defaultSafetyCritical": "safety-critical by default"
     }
   }
 }
