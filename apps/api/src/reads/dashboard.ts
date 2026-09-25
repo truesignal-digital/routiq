@@ -1,5 +1,5 @@
 import type { AssetLifecycleStatus } from "@routiq/contracts";
-import { dashboardQuery, dashboardResponse } from "@routiq/contracts";
+import { dashboardQuery, dashboardResponse, ledgerEntryStatuses } from "@routiq/contracts";
 import { and, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -27,7 +27,7 @@ import { serializeMinor } from "./serialize-minor.js";
  * lines, so the pair nets to zero only when both are summed (§3.4). Counting
  * POSTED alone would leave the negated half behind and report a false loss.
  */
-export const LEDGER_ENTRY_STATUSES = ["POSTED", "REVERSED"] as const;
+export const LEDGER_ENTRY_STATUSES = ledgerEntryStatuses;
 
 /** Zero-filled so every lifecycle status is reported, including the empty ones. */
 function zeroedStatusCounts(): Record<AssetLifecycleStatus, number> {

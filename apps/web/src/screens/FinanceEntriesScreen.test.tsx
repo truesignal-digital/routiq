@@ -50,10 +50,12 @@ vi.mock("react-i18next", async () => {
 });
 
 const navigate = vi.fn();
+const emptySearch = vi.hoisted(() => ({}));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
   useParams: () => ({}),
+  useSearch: () => emptySearch,
   Link: ({ to, children, ...props }: { to: string; children?: ReactNode }) => (
     <a href={to} {...props}>
       {children}
@@ -70,6 +72,7 @@ vi.mock("../auth/me.js", () => ({
 }));
 
 vi.mock("../finance/permissions.js", () => ({
+  canReadFinance: vi.fn(() => true),
   canRecordFinance: vi.fn(() => true),
   canReverseEntry: vi.fn(() => false),
   canManagePeriods: () => false,
@@ -160,7 +163,7 @@ vi.mock("../finance/useEntry.js", () => ({
   }),
 }));
 
-import { canRecordFinance, canReverseEntry } from "../finance/permissions.js";
+import { canReadFinance, canRecordFinance, canReverseEntry } from "../finance/permissions.js";
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
 
 const DEBOUNCE_MS = 300;
@@ -191,6 +194,7 @@ beforeEach(() => {
   // clearAllMocks keeps implementations, so an opt-out set by one test would
   // otherwise follow the next one.
   vi.mocked(canRecordFinance).mockReturnValue(true);
+  vi.mocked(canReadFinance).mockReturnValue(true);
   vi.mocked(canReverseEntry).mockReturnValue(false);
   mockDesktop();
   issuedQueries.length = 0;
@@ -297,10 +301,8 @@ describe("FinanceEntriesScreen", () => {
     expect(action.getAttribute("href")).toBe("/finance/record");
   });
 
-  it("drops the record action along with the screen when finance writing is denied", () => {
-    // On this screen the action's gate is the screen's own gate: a role that
-    // cannot record cannot reach the list either.
-    vi.mocked(canRecordFinance).mockReturnValue(false);
+  it("drops the record action along with the screen when finance reading is denied", () => {
+    vi.mocked(canReadFinance).mockReturnValue(false);
     render(<FinanceEntriesScreen />);
 
     expect(
