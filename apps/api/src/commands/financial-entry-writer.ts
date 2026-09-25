@@ -192,8 +192,17 @@ export async function writeFinancialEntry(
   ];
   if (requestedWorkOrderIds.length > 0) {
     const workOrderRows = await tx
-      .select({ id: workOrders.id, status: workOrders.status })
+      .select({
+        id: workOrders.id,
+        status: workOrders.status,
+        assetId: workOrders.assetId,
+        branchId: assets.branchId,
+      })
       .from(workOrders)
+      .innerJoin(
+        assets,
+        and(eq(assets.workspaceId, workOrders.workspaceId), eq(assets.id, workOrders.assetId)),
+      )
       .where(
         and(
           eq(workOrders.workspaceId, ctx.workspaceId),
@@ -210,16 +219,41 @@ export async function writeFinancialEntry(
         missing,
       });
     }
-    // A cancelled order records that the work never happened; attributing a
-    // cost to it would put spend on a repair the workshop called off. Every
-    // other state is fair game — parts are bought before closure, and a
-    // supplier invoice lands after it.
-    const cancelled = workOrderRows.find((row) => row.status === "CANCELLED");
-    if (cancelled) {
-      throw new CommandError(409, "INVALID_STATE_TRANSITION", {
-        referenceType: "workOrder",
-        workOrderId: cancelled.id,
-        from: cancelled.status,
+    // Branch scope reads through the order's asset (#47 finding 3): with the
+    // posting's assetId omitted, nothing else would stop a member from putting
+    // spend on another branch's repair. Same refusal as the pipeline's own
+    // branch check, so an out-of-scope order is indistinguishable from an
+    // out-of-scope asset.
+    if (ctx.branchScope !== "ALL") {
+      const scope = ctx.branchScope;
+      const outside = workOrderRows.find((row) => !scope.includes(row.branchId));
+      if (outside) {
+        throw new CommandError(403, "ROLE_FORBIDDEN", {
+          referenceType: "workOrder",
+          workOrderId: outside.id,
+        });
+      }
+    }
+    for (const posting of request.postings) {
+      if (posting.workOrderId === undefined || posting.assetId === undefined) continue;
+      const workOrder = workOrdersById.get(posting.workOrderId)!;
+      if (workOrder.assetId !== posting.assetId) {
+        throw new CommandError(422, "WORK_ORDER_ASSET_MISMATCH", {
+          workOrderId: workOrder.id,
+          workOrderAssetId: workOrder.assetId,
+          assetId: posting.assetId,
+        });
+      }
+    }
+    // Costs attach only to APPROVED work (#28): SUBMITTED spend is not yet
+    // authorized, and COMPLETED, REJECTED and CANCELLED orders are closed to
+    // new cost. Reversals do not come through here — they copy the original
+    // attribution and are always allowed.
+    const notOpen = workOrderRows.find((row) => row.status !== "APPROVED");
+    if (notOpen) {
+      throw new CommandError(409, "WORK_ORDER_NOT_OPEN", {
+        workOrderId: notOpen.id,
+        status: notOpen.status,
       });
     }
   }

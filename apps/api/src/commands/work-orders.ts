@@ -14,10 +14,14 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { resolveLinkedIssueOnCompletion } from "./issue-decisions.js";
 import {
   loadWorkOrderForUpdate,
   requireAsset,
+  workOrderAssetBranchId,
   workOrderBranchIds,
+  workOrderLedgerTotal,
+  type WorkOrderRow,
 } from "./work-order-lookup.js";
 
 type CreateWorkOrderPayload = z.infer<typeof createWorkOrderPayload>;
@@ -27,16 +31,13 @@ type CancelWorkOrderPayload = z.infer<typeof cancelWorkOrderPayload>;
 /**
  * Ordre de travail: the job the workshop is being asked to do.
  *
- * Runs in SUBMIT approval mode, the same fork the financial entries use (§5.2).
- * With the catalog defaults — which carry no amount bounds — every authorized
- * role's creation is AUTO_APPROVED and lands OPEN, so a workspace that never
- * configures a threshold never meets a pending work order at all. A tenant that
- * adds an amount rule above, say, 500 000 XAF starts seeing SUBMITTED orders
- * there, resolved by approve-work-order.
- *
- * `expectedCostMinor` is what the rules match on, so the threshold is read
- * against the spend being authorized rather than against what it turns out to
- * cost. The declared actual cost gets its own fork at completion.
+ * No DRAFT (#28): the approval rule is read against the EXPECTED cost and the
+ * order lands APPROVED — open work, costs may attach — or SUBMITTED for
+ * approve-work-order / reject-work-order. With the catalog defaults, which carry
+ * no amount bounds, every authorized role's creation lands APPROVED, so a
+ * workspace that never configures a threshold never meets a pending order.
+ * The asset's branch goes into the rule context, so a branch-scoped threshold
+ * matches (#47 finding 5).
  */
 export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
   name: "create-work-order",
@@ -51,15 +52,14 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
     resolve: (tx, ctx, payload) => assetBranchIds(tx, ctx, [payload.assetId]),
   },
 
-  /**
-   * Amount only. A work order carries no category, and the branch dimension is
-   * deliberately left out: it would have to be resolved from the asset on every
-   * call to answer a rule shape no tenant configures yet. Add it when one does.
-   */
-  async approvalContext(_tx, _ctx, payload) {
-    return payload.expectedCostMinor === undefined
-      ? {}
-      : { amountMinor: payload.expectedCostMinor };
+  async approvalContext(tx, ctx, payload) {
+    const [branchId] = await assetBranchIds(tx, ctx, [payload.assetId]);
+    return {
+      ...(branchId === undefined ? {} : { branchId }),
+      ...(payload.expectedCostMinor === undefined
+        ? {}
+        : { amountMinor: payload.expectedCostMinor }),
+    };
   },
 
   async execute(tx, ctx, envelope, payload, approval) {
@@ -85,8 +85,8 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
       }
       // The composite tenant FK already keeps both rows in one workspace. That
       // the signalement was reported against THIS truck is a rule only the
-      // command layer can hold — and it is the one that decides whether the
-      // release later needs a second pair of eyes.
+      // command layer can hold — and it is the one the release reads to decide
+      // which completed work answers a grounding.
       if (issue.assetId !== payload.assetId) {
         throw new CommandError(422, "ISSUE_ASSET_MISMATCH", {
           issueId: payload.issueId,
@@ -96,7 +96,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
       }
     }
 
-    const status = approval.outcome === "AUTO_APPROVED" ? "OPEN" : "SUBMITTED";
+    const status = approval.outcome === "AUTO_APPROVED" ? "APPROVED" : "SUBMITTED";
 
     await tx.insert(workOrders).values({
       id: payload.workOrderId,
@@ -113,7 +113,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
     });
 
     await appendAuditEvent(tx, ctx, envelope, {
-      eventType: status === "OPEN" ? "work_order.opened" : "work_order.submitted",
+      eventType: status === "APPROVED" ? "work_order.created" : "work_order.submitted",
       entityType: "work_order",
       entityId: payload.workOrderId,
       afterState: {
@@ -148,14 +148,16 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
 };
 
 /**
- * The workshop declaring the job finished and what it cost.
+ * The workshop declaring the job finished. APPROVED → COMPLETED (auto band) or
+ * COMPLETION_SUBMITTED for approve-work-order-closure / reject-work-order-
+ * completion.
  *
- * Same SUBMIT fork as creation, matched on the DECLARED actual cost: under the
- * catalog defaults the order closes in one call, and a tenant threshold sends it
- * to PENDING_CLOSE for approve-work-order-closure to accept. Either way the
- * declared cost, the summary and the completion time are stamped on the row —
- * they are what the approver is being asked to look at, so they cannot wait for
- * the approval that reads them.
+ * The band is read against the actual total: the larger of what the workshop
+ * declares and what the ledger already holds against the order, so a
+ * completion cannot slip under a threshold by under-declaring spend the
+ * postings already show. The completion facts — cost, summary, time and the
+ * resolve flag — are stamped either way: they are what an approver is asked to
+ * look at, and a held completion acts on its flag only once approved.
  */
 export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
   name: "complete-work-order",
@@ -166,10 +168,16 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
   approvalMode: "SUBMIT",
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 
-  async approvalContext(_tx, _ctx, payload) {
-    return payload.actualCostMinor === undefined
-      ? {}
-      : { amountMinor: payload.actualCostMinor };
+  async approvalContext(tx, ctx, payload) {
+    // Sequential: one transaction owns one connection.
+    const branchId = await workOrderAssetBranchId(tx, ctx, payload.workOrderId);
+    const ledgerTotal = await workOrderLedgerTotal(tx, ctx, payload.workOrderId);
+    const declared = BigInt(payload.actualCostMinor ?? 0);
+    const actualTotal = declared > ledgerTotal ? declared : ledgerTotal;
+    return {
+      ...(branchId === undefined ? {} : { branchId }),
+      amountMinor: Number(actualTotal),
+    };
   },
 
   async execute(tx, ctx, envelope, payload, approval) {
@@ -177,15 +185,17 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
     checkOptimisticVersion(envelope, workOrder.rowVersion);
 
     const status =
-      approval.outcome === "AUTO_APPROVED" ? "CLOSED" : "PENDING_CLOSE";
+      approval.outcome === "AUTO_APPROVED" ? "COMPLETED" : "COMPLETION_SUBMITTED";
 
-    if (workOrder.status !== "OPEN") {
+    if (workOrder.status !== "APPROVED") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         from: workOrder.status,
         to: status,
       });
     }
 
+    const resolveLinkedIssue =
+      workOrder.issueId !== null && (payload.resolveLinkedIssue ?? true);
     const completedAt = new Date();
     const rowVersion = workOrder.rowVersion + 1;
 
@@ -200,6 +210,8 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
             ? null
             : BigInt(payload.actualCostMinor),
         summary: payload.summary ?? null,
+        resolveLinkedIssue,
+        completionRejectReason: null,
         completedAt,
         rowVersion,
       })
@@ -212,13 +224,15 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
 
     await appendAuditEvent(tx, ctx, envelope, {
       eventType:
-        status === "CLOSED" ? "work_order.closed" : "work_order.closure_submitted",
+        status === "COMPLETED" ? "work_order.completed" : "work_order.completion_submitted",
       entityType: "work_order",
       entityId: workOrder.id,
       beforeState: {
         status: workOrder.status,
         actualCostMinor: workOrder.actualCostMinor?.toString() ?? null,
         summary: workOrder.summary,
+        resolveLinkedIssue: workOrder.resolveLinkedIssue,
+        completionRejectReason: workOrder.completionRejectReason,
         completedAt: workOrder.completedAt?.toISOString() ?? null,
         rowVersion: workOrder.rowVersion,
       },
@@ -226,6 +240,8 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
         status,
         actualCostMinor: payload.actualCostMinor ?? null,
         summary: payload.summary ?? null,
+        resolveLinkedIssue,
+        completionRejectReason: null,
         completedAt: completedAt.toISOString(),
         rowVersion,
       },
@@ -233,10 +249,22 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
         "status",
         "actualCostMinor",
         "summary",
+        "resolveLinkedIssue",
+        "completionRejectReason",
         "completedAt",
         "rowVersion",
       ],
     });
+
+    if (status === "COMPLETED" && resolveLinkedIssue) {
+      await resolveLinkedIssueOnCompletion(
+        tx,
+        ctx,
+        envelope,
+        workOrder,
+        payload.summary,
+      );
+    }
 
     return {
       recordId: workOrder.id,
@@ -247,12 +275,19 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
   },
 };
 
+const CANCELLABLE = new Set<WorkOrderRow["status"]>([
+  "SUBMITTED",
+  "APPROVED",
+  "COMPLETION_SUBMITTED",
+]);
+
 /**
- * Calling the job off. Legal from SUBMITTED (never authorized) and from OPEN
- * (authorized, not done) — never from a terminal state: a closed order is
- * append-only history, and re-cancelling a cancelled one would rewrite the
- * reason the first cancellation recorded. A cancelled order is not deleted; the
- * same signalement can spawn a new one.
+ * Calling the job off, from any state that is not terminal (#28). Posted costs
+ * stand — abandoning a repair does not unspend money — and there is no
+ * auto-reversal: correcting them is a finance decision taken by reverse-entry.
+ * A terminal order is append-only history, and re-cancelling a cancelled one
+ * would rewrite the reason the first cancellation recorded. The same
+ * signalement can spawn a new order.
  */
 export const cancelWorkOrder: CommandDefinition<CancelWorkOrderPayload> = {
   name: "cancel-work-order",
@@ -266,7 +301,7 @@ export const cancelWorkOrder: CommandDefinition<CancelWorkOrderPayload> = {
     const workOrder = await loadWorkOrderForUpdate(tx, ctx, payload.workOrderId);
     checkOptimisticVersion(envelope, workOrder.rowVersion);
 
-    if (workOrder.status !== "SUBMITTED" && workOrder.status !== "OPEN") {
+    if (!CANCELLABLE.has(workOrder.status)) {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         from: workOrder.status,
         to: "CANCELLED",

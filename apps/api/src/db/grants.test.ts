@@ -92,6 +92,29 @@ describe("routiq_app grants", () => {
     expect(issues?.has("UPDATE")).toBe(false);
     expect(issues?.has("DELETE")).toBe(false);
 
+    // #28: a signalement's status moves once — resolved or dismissed — and the
+    // report itself never does, so UPDATE reaches only the status columns.
+    const issueColumnGrants = await ctx.db.execute(sql`
+      select column_name
+      from information_schema.role_column_grants
+      where grantee = 'routiq_app'
+        and table_schema = 'public'
+        and table_name = 'operational_issues'
+        and privilege_type = 'UPDATE'
+    `);
+    expect(
+      (issueColumnGrants.rows as { column_name: string }[])
+        .map((row) => row.column_name)
+        .sort(),
+    ).toEqual([
+      "dismiss_reason",
+      "dismissed_at",
+      "resolution_note",
+      "resolved_at",
+      "row_version",
+      "status",
+    ]);
+
     // A work order's status moves, so UPDATE is the transition path — but
     // cancelling stamps a reason rather than removing the row.
     const orders = grants.get("work_orders");

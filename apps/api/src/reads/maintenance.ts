@@ -23,7 +23,8 @@ import {
   principals,
   workOrders,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
+import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import { isModuleEnabled } from "../modules/registry.js";
 import {
   afterKeyset,
   bindTimestamp,
@@ -68,6 +69,19 @@ function serializeOptionalMinor(value: bigint | null): number | null {
   return value === null ? null : serializeMinor(value);
 }
 
+/**
+ * Every maintenance read answers MODULE_DISABLED when the workspace turned the
+ * module off, the same gate the commands and the history timeline apply — a
+ * disabled module's queue must not stay readable by URL.
+ */
+async function maintenanceEnabled(tx: TenantTx, workspaceId: string): Promise<boolean> {
+  return isModuleEnabled(tx, workspaceId, "MAINTENANCE");
+}
+
+const MODULE_DISABLED_BODY = {
+  error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } },
+} as const;
+
 export function registerMaintenanceReadRoutes(
   app: FastifyInstance,
   db: Db,
@@ -91,6 +105,9 @@ export function registerMaintenanceReadRoutes(
         const { status, branchId, assetId, cursor, limit } = parsedQuery.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          if (!(await maintenanceEnabled(tx, auth.workspaceId))) {
+            return { error: "MODULE_DISABLED" as const };
+          }
           const decodedCursor = cursor
             ? decodeKeysetCursor(cursor, workOrderSort)
             : undefined;
@@ -139,6 +156,7 @@ export function registerMaintenanceReadRoutes(
               createdAt: commands.executedAt,
               completedAt: workOrders.completedAt,
               cancelledAt: workOrders.cancelledAt,
+              rejectedAt: workOrders.rejectedAt,
               rowVersion: workOrders.rowVersion,
             })
             .from(workOrders)
@@ -184,7 +202,9 @@ export function registerMaintenanceReadRoutes(
         });
 
         if ("error" in result) {
-          return reply.status(400).send({ error: { code: result.error } });
+          return result.error === "MODULE_DISABLED"
+            ? reply.status(403).send(MODULE_DISABLED_BODY)
+            : reply.status(400).send({ error: { code: result.error } });
         }
 
         const hasNextPage = result.rows.length > limit;
@@ -213,6 +233,7 @@ export function registerMaintenanceReadRoutes(
           createdAt: row.createdAt.toISOString(),
           completedAt: row.completedAt?.toISOString() ?? null,
           cancelledAt: row.cancelledAt?.toISOString() ?? null,
+          rejectedAt: row.rejectedAt?.toISOString() ?? null,
           rowVersion: row.rowVersion,
         }));
 
@@ -255,6 +276,9 @@ export function registerMaintenanceReadRoutes(
         const { workOrderId } = parsedParams.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          if (!(await maintenanceEnabled(tx, auth.workspaceId))) {
+            return { error: "MODULE_DISABLED" as const };
+          }
           const conditions: SQL[] = [
             eq(workOrders.workspaceId, auth.workspaceId),
             eq(workOrders.id, workOrderId),
@@ -281,10 +305,14 @@ export function registerMaintenanceReadRoutes(
               safetyCritical: operationalIssues.safetyCritical,
               summary: workOrders.summary,
               cancelReason: workOrders.cancelReason,
+              rejectReason: workOrders.rejectReason,
+              completionRejectReason: workOrders.completionRejectReason,
+              resolveLinkedIssue: workOrders.resolveLinkedIssue,
               createdAt: commands.executedAt,
               createdByCommandId: workOrders.createdByCommandId,
               completedAt: workOrders.completedAt,
               cancelledAt: workOrders.cancelledAt,
+              rejectedAt: workOrders.rejectedAt,
               rowVersion: workOrders.rowVersion,
             })
             .from(workOrders)
@@ -349,6 +377,17 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
+          // A cost line is a financial record: its entry's branch is read
+          // against the actor's scope, whatever branch the truck is in now.
+          // REJECTED spend was refused and is not a cost of this repair.
+          const costConditions: SQL[] = [
+            eq(financialPostings.workspaceId, auth.workspaceId),
+            eq(financialPostings.workOrderId, workOrderId),
+            inArray(financialEntries.status, ["POSTED", "REVERSED", "SUBMITTED"]),
+          ];
+          if (auth.branchScope !== "ALL") {
+            costConditions.push(inArray(financialEntries.branchId, auth.branchScope));
+          }
           const costRows = await tx
             .select({
               postingId: financialPostings.id,
@@ -368,12 +407,7 @@ export function registerMaintenanceReadRoutes(
                 eq(financialEntries.id, financialPostings.financialEntryId),
               ),
             )
-            .where(
-              and(
-                eq(financialPostings.workspaceId, auth.workspaceId),
-                eq(financialPostings.workOrderId, workOrderId),
-              ),
-            )
+            .where(and(...costConditions))
             .orderBy(
               asc(financialPostings.economicDate),
               asc(financialEntries.entryNumber),
@@ -388,8 +422,15 @@ export function registerMaintenanceReadRoutes(
             .status(404)
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
+        if ("error" in result) {
+          return reply.status(403).send(MODULE_DISABLED_BODY);
+        }
 
         const { header, eventRows, costRows } = result;
+        const costLine = (line: (typeof costRows)[number]) => ({
+          ...line,
+          amountMinor: serializeMinor(line.amountMinor),
+        });
         return workOrderDetail.parse({
           id: header.id,
           status: header.status,
@@ -416,10 +457,14 @@ export function registerMaintenanceReadRoutes(
                 },
           summary: header.summary,
           cancelReason: header.cancelReason,
+          rejectReason: header.rejectReason,
+          completionRejectReason: header.completionRejectReason,
+          resolveLinkedIssue: header.resolveLinkedIssue,
           createdAt: header.createdAt.toISOString(),
           createdByCommandId: header.createdByCommandId,
           completedAt: header.completedAt?.toISOString() ?? null,
           cancelledAt: header.cancelledAt?.toISOString() ?? null,
+          rejectedAt: header.rejectedAt?.toISOString() ?? null,
           rowVersion: header.rowVersion,
           chronologie: eventRows.map((event) => ({
             eventId: event.eventId,
@@ -431,10 +476,12 @@ export function registerMaintenanceReadRoutes(
               scope: event.scope,
             },
           })),
-          costLines: costRows.map((line) => ({
-            ...line,
-            amountMinor: serializeMinor(line.amountMinor),
-          })),
+          costLines: costRows
+            .filter((line) => line.entryStatus !== "SUBMITTED")
+            .map(costLine),
+          pendingCostLines: costRows
+            .filter((line) => line.entryStatus === "SUBMITTED")
+            .map(costLine),
         });
       } catch (error) {
         req.log.error({ err: error }, "work order detail read failed");
@@ -444,9 +491,9 @@ export function registerMaintenanceReadRoutes(
   );
 
   /**
-   * The signalements queue. An issue stores no state of its own (§ schema note):
-   * what happened to it lives in its work orders, and whether the truck is still
-   * grounded lives in the availability intervals — both resolved here so the
+   * The signalements queue. An issue's own state is OPEN, RESOLVED or
+   * DISMISSED; its work orders and whether the truck is still grounded live
+   * elsewhere — the availability intervals — and are resolved here so the
    * screen renders a row without a second round trip on 2G.
    */
   app.get(
@@ -459,10 +506,13 @@ export function registerMaintenanceReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { branchId, assetId, safetyCritical, cursor, limit } =
+        const { branchId, assetId, safetyCritical, status, cursor, limit } =
           parsedQuery.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          if (!(await maintenanceEnabled(tx, auth.workspaceId))) {
+            return { error: "MODULE_DISABLED" as const };
+          }
           const decodedCursor = cursor
             ? decodeKeysetCursor(cursor, issueSort)
             : undefined;
@@ -483,6 +533,7 @@ export function registerMaintenanceReadRoutes(
               eq(operationalIssues.safetyCritical, safetyCritical),
             );
           }
+          if (status) conditions.push(eq(operationalIssues.status, status));
           if (decodedCursor) {
             conditions.push(
               afterKeyset(
@@ -507,6 +558,11 @@ export function registerMaintenanceReadRoutes(
               safetyCritical: operationalIssues.safetyCritical,
               category: operationalIssues.category,
               reportedAt: operationalIssues.reportedAt,
+              status: operationalIssues.status,
+              resolvedAt: operationalIssues.resolvedAt,
+              resolutionNote: operationalIssues.resolutionNote,
+              dismissedAt: operationalIssues.dismissedAt,
+              dismissReason: operationalIssues.dismissReason,
               rowVersion: operationalIssues.rowVersion,
             })
             .from(operationalIssues)
@@ -582,7 +638,9 @@ export function registerMaintenanceReadRoutes(
         });
 
         if ("error" in result) {
-          return reply.status(400).send({ error: { code: result.error } });
+          return result.error === "MODULE_DISABLED"
+            ? reply.status(403).send(MODULE_DISABLED_BODY)
+            : reply.status(400).send({ error: { code: result.error } });
         }
 
         const hasNextPage = result.rows.length > limit;
@@ -616,6 +674,11 @@ export function registerMaintenanceReadRoutes(
           safetyCritical: row.safetyCritical,
           category: row.category,
           reportedAt: row.reportedAt.toISOString(),
+          status: row.status,
+          resolvedAt: row.resolvedAt?.toISOString() ?? null,
+          resolutionNote: row.resolutionNote,
+          dismissedAt: row.dismissedAt?.toISOString() ?? null,
+          dismissReason: row.dismissReason,
           workOrders: workOrdersByIssue.get(row.id) ?? [],
           assetUnavailable: groundedAssetIds.has(row.assetId),
           rowVersion: row.rowVersion,

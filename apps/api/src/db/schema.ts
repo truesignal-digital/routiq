@@ -416,6 +416,12 @@ export const categories = pgTable(
     })
       .notNull()
       .default("RECEIPT_EXPECTED"),
+    /**
+     * ISSUE_TYPE only (#28): picking this kind of fault pre-checks the
+     * reporter's safety-critical box. A default, never a decision — the
+     * interval opens on the reporter's confirmed flag, not on this column.
+     */
+    defaultSafetyCritical: boolean("default_safety_critical").notNull().default(false),
     active: boolean("active").notNull().default(true),
     createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
     rowVersion: integer("row_version").notNull().default(1),
@@ -966,6 +972,18 @@ export const operationalIssues = pgTable(
     safetyCritical: boolean("safety_critical").notNull(),
     category: text("category"),
     reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+    /**
+     * OPEN → RESOLVED | DISMISSED, once (#28). No triage state: what happens
+     * next — a work order, a dismissal, nothing yet — is an attribute of the
+     * issue's surroundings, not a status. The report columns above never move.
+     */
+    status: text("status", { enum: ["OPEN", "RESOLVED", "DISMISSED"] })
+      .notNull()
+      .default("OPEN"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNote: text("resolution_note"),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    dismissReason: text("dismiss_reason"),
     createdByCommandId: uuid("created_by_command_id")
       .notNull()
       .references(() => commands.id),
@@ -978,15 +996,16 @@ export const operationalIssues = pgTable(
 
 /**
  * Maintenance work order (Ordre de travail): planned work to address an issue
- * or preventive maintenance. Status tracks the workflow (SUBMITTED → OPEN →
- * PENDING_CLOSE → CLOSED, plus CANCELLED from SUBMITTED or OPEN). The two
- * pending states exist only when a tenant threshold rule demanded review:
- * without one, creation lands OPEN and completion lands CLOSED in a single
- * call. An issue may spawn multiple work orders; cancellation does
- * not delete — it records a reason and opens the door for a new order on the same
- * issue. Composite tenant FKs put the work order, its asset and its linked issue
- * in one workspace; that the issue names the same asset is a handler check, not
- * a structural one.
+ * or preventive maintenance. The owner's state machine (#28): creation lands
+ * APPROVED (auto band) or SUBMITTED; SUBMITTED → APPROVED | REJECTED; APPROVED
+ * is open work and the only state costs attach to; completion lands COMPLETED
+ * or COMPLETION_SUBMITTED, whose rejection returns to APPROVED; CANCELLED from
+ * any non-terminal state. COMPLETED, REJECTED and CANCELLED never reopen. An
+ * issue may spawn multiple work orders; cancellation does not delete — it
+ * records a reason and opens the door for a new order on the same issue.
+ * Composite tenant FKs put the work order, its asset and its linked issue in one
+ * workspace; that the issue names the same asset is a handler check, not a
+ * structural one.
  */
 export const workOrders = pgTable(
   "work_orders",
@@ -1001,24 +1020,38 @@ export const workOrders = pgTable(
     issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
     description: text("description").notNull(),
     /**
-     * SUBMITTED is where a creation lands when a threshold rule required
-     * review; approve-work-order moves it to OPEN. Drizzle emits this column as
-     * plain `text` with no CHECK, and the 0025 snapshot records only its type
-     * and default — so widening the enum is a TypeScript-level change and needs
-     * no migration.
+     * Plain `text` with no CHECK, as Drizzle emits it; the value set is held by
+     * the handlers. 0027 renamed the pre-#28 values in place.
      */
     status: text("status", {
-      enum: ["SUBMITTED", "OPEN", "PENDING_CLOSE", "CLOSED", "CANCELLED"],
+      enum: [
+        "SUBMITTED",
+        "APPROVED",
+        "COMPLETION_SUBMITTED",
+        "COMPLETED",
+        "REJECTED",
+        "CANCELLED",
+      ],
     })
       .notNull()
-      .default("OPEN"),
+      .default("APPROVED"),
     expectedCostMinor: bigint("expected_cost_minor", { mode: "bigint" }),
     currency: char("currency", { length: 3 }).notNull().default("XAF"),
     actualCostMinor: bigint("actual_cost_minor", { mode: "bigint" }),
     summary: text("summary"),
+    /**
+     * The completion's resolve-the-issue flag, held with the other completion
+     * facts while COMPLETION_SUBMITTED waits for review, and acted on when the
+     * completion is approved.
+     */
+    resolveLinkedIssue: boolean("resolve_linked_issue").notNull().default(false),
     cancelReason: text("cancel_reason"),
+    rejectReason: text("reject_reason"),
+    /** The last completion sent back; the workshop reads it before resubmitting. */
+    completionRejectReason: text("completion_reject_reason"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    rejectedAt: timestamp("rejected_at", { withTimezone: true }),
     createdByCommandId: uuid("created_by_command_id")
       .notNull()
       .references(() => commands.id),

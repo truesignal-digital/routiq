@@ -197,6 +197,6 @@ describe("maintenance command approval defaults", () => {
       },
     });
     expect(approved.statusCode).toBe(200);
-    expect(approved.json()).toMatchObject({ recordStatus: "OPEN" });
+    expect(approved.json()).toMatchObject({ recordStatus: "APPROVED" });
   });
 });

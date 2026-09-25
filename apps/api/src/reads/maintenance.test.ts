@@ -141,6 +141,19 @@ describe("work order and signalement reads", () => {
         { workOrderId: lifecycleWorkOrderId, note: "Devis validé" },
         { expectedVersion: created.rowVersion },
       );
+      // Costs attach while the order is APPROVED (#28) — before completion.
+      await command(adminToken, "record-expense", {
+        entryId: randomUUID(),
+        branchCode: "DLA",
+        categoryCode: "REPAIRS",
+        economicDate: "2026-08-13",
+        amountMinor: 900_000,
+        paymentMethod: "BANK",
+        description: "Pièces et main-d'œuvre freinage",
+        postings: [
+          { assetId: dlaAssetId, workOrderId: lifecycleWorkOrderId, amountMinor: 900_000 },
+        ],
+      });
       const completed = await command(
         managerToken,
         "complete-work-order",
@@ -197,20 +210,8 @@ describe("work order and signalement reads", () => {
       description: "Recharge de climatisation",
     });
 
-    // Costs: one entry against the work order under test, one against a
-    // different order on the same asset. The detail must show only the first.
-    await command(adminToken, "record-expense", {
-      entryId: randomUUID(),
-      branchCode: "DLA",
-      categoryCode: "REPAIRS",
-      economicDate: "2026-08-13",
-      amountMinor: 900_000,
-      paymentMethod: "BANK",
-      description: "Pièces et main-d'œuvre freinage",
-      postings: [
-        { assetId: dlaAssetId, workOrderId: lifecycleWorkOrderId, amountMinor: 900_000 },
-      ],
-    });
+    // A second order on the same asset carries its own cost; the lifecycle
+    // order's detail must not show it.
     await command(adminToken, "record-expense", {
       entryId: randomUUID(),
       branchCode: "DLA",
@@ -314,8 +315,8 @@ describe("work order and signalement reads", () => {
   }
 
   /**
-   * Tenant threshold rules on both creation and closure: above the bound only an
-   * admin may authorize, which is what puts SUBMITTED and PENDING_CLOSE — and
+   * Tenant threshold rules on both creation and completion: above the bound only
+   * an admin may authorize, which is what puts SUBMITTED and COMPLETION_SUBMITTED — and
    * their approval events — on the timeline.
    */
   async function withThresholds<T>(run: () => Promise<T>): Promise<T> {
@@ -389,7 +390,7 @@ describe("work order and signalement reads", () => {
         (item) => item.id === lifecycleWorkOrderId,
       );
       expect(lifecycle).toMatchObject({
-        status: "CLOSED",
+        status: "COMPLETED",
         description: "Réfection du circuit de freinage",
         asset: {
           id: dlaAssetId,
@@ -423,10 +424,10 @@ describe("work order and signalement reads", () => {
         (await listWorkOrders("status=CANCELLED")).items.map((item) => item.id),
       ).toEqual([cancelledWorkOrderId]);
       expect(
-        (await listWorkOrders("status=CLOSED")).items.map((item) => item.id),
+        (await listWorkOrders("status=COMPLETED")).items.map((item) => item.id),
       ).toEqual([flipWorkOrderId, lifecycleWorkOrderId]);
       expect(
-        (await listWorkOrders("status=OPEN")).items.map((item) => item.id),
+        (await listWorkOrders("status=APPROVED")).items.map((item) => item.id),
       ).toEqual([ydeWorkOrderId, decoyWorkOrderId]);
     });
 
@@ -501,8 +502,8 @@ describe("work order and signalement reads", () => {
       expect(body.chronologie.map((event) => event.kind)).toEqual([
         "work_order.submitted",
         "work_order.approved",
-        "work_order.closure_submitted",
-        "work_order.closure_approved",
+        "work_order.completion_submitted",
+        "work_order.completion_approved",
         "work_order.asset_released",
       ]);
 
@@ -524,13 +525,16 @@ describe("work order and signalement reads", () => {
       }
     });
 
-    it("carries the closure summary and the header the list already shows", async () => {
+    it("carries the completion summary and the header the list already shows", async () => {
       const body = workOrderDetail.parse((await detail(lifecycleWorkOrderId)).json());
       expect(body).toMatchObject({
         id: lifecycleWorkOrderId,
-        status: "CLOSED",
+        status: "COMPLETED",
         summary: "Maître-cylindre et flexibles remplacés",
         cancelReason: null,
+        rejectReason: null,
+        completionRejectReason: null,
+        resolveLinkedIssue: true,
         actualCostMinor: 900_000,
         issue: { id: safetyIssueId, safetyCritical: true },
         branch: { code: "DLA" },
@@ -560,7 +564,7 @@ describe("work order and signalement reads", () => {
       expect(body.cancelReason).toBe("Reporté à la prochaine immobilisation");
       expect(body.cancelledAt).not.toBeNull();
       expect(body.chronologie.map((event) => event.kind)).toEqual([
-        "work_order.opened",
+        "work_order.created",
         "work_order.cancelled",
       ]);
       expect(body.costLines).toEqual([]);
@@ -595,16 +599,38 @@ describe("work order and signalement reads", () => {
         description: "Fuite de liquide de frein",
         safetyCritical: true,
         category: "BRAKES",
-        workOrders: [{ id: lifecycleWorkOrderId, status: "CLOSED" }],
+        // Resolved by the approved completion that asked for it (#28).
+        status: "RESOLVED",
+        dismissReason: null,
+        workOrders: [{ id: lifecycleWorkOrderId, status: "COMPLETED" }],
         // Already released during setup.
         assetUnavailable: false,
       });
       expect(response.items[0]).toMatchObject({
         safetyCritical: false,
         category: null,
+        status: "OPEN",
+        resolvedAt: null,
         workOrders: [],
         assetUnavailable: false,
       });
+    });
+
+    it("filters by the signalement's own status", async () => {
+      expect(
+        (await listIssues("status=RESOLVED")).items.map((item) => item.id),
+      ).toEqual([flipIssueId, safetyIssueId]);
+      expect(
+        (await listIssues("status=OPEN")).items.map((item) => item.id),
+      ).toEqual([ydeIssueId, minorIssueId]);
+      expect((await listIssues("status=DISMISSED")).items).toEqual([]);
+
+      const bad = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/issues?status=TRIAGED",
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(bad.statusCode).toBe(400);
     });
 
     it("filters by safety criticality and by branch through the asset", async () => {
@@ -640,7 +666,7 @@ describe("work order and signalement reads", () => {
         id: flipIssueId,
         safetyCritical: true,
         assetUnavailable: true,
-        workOrders: [{ id: flipWorkOrderId, status: "CLOSED" }],
+        workOrders: [{ id: flipWorkOrderId, status: "COMPLETED" }],
       });
 
       await command(adminToken, "release-asset-to-service", {
@@ -650,6 +676,139 @@ describe("work order and signalement reads", () => {
 
       const released = (await listIssues(`assetId=${flipAssetId}`)).items;
       expect(released[0]?.assetUnavailable).toBe(false);
+    });
+  });
+
+  /**
+   * C.1: a cost line is a financial record. The entry's branch is read against
+   * the reader's scope, and the lines are split by what finance decided:
+   * posted (POSTED plus both halves of a reversal), pending (SUBMITTED), and
+   * refused (REJECTED — not a cost at all).
+   */
+  describe("GET /v1/work-orders/:id cost lines", () => {
+    let costOrderId: string;
+
+    beforeAll(async () => {
+      costOrderId = randomUUID();
+      await command(managerToken, "create-work-order", {
+        workOrderId: costOrderId,
+        assetId: dlaAssetId,
+        description: "Embrayage",
+      });
+      const expense = (
+        token: string,
+        branchCode: string,
+        amountMinor: number,
+        description: string,
+        entryId = randomUUID(),
+      ) =>
+        command(token, "record-expense", {
+          entryId,
+          branchCode,
+          categoryCode: "REPAIRS",
+          economicDate: "2026-08-15",
+          amountMinor,
+          paymentMethod: "CASH",
+          description,
+          postings: [{ workOrderId: costOrderId, amountMinor }],
+        }).then((result) => ({ ...result, entryId }));
+
+      await expense(adminToken, "DLA", 30_000, "Disque d'embrayage");
+      // Paid by the Yaoundé agency for a Douala truck: a Yaoundé record.
+      await expense(adminToken, "YDE", 12_000, "Kit payé à Yaoundé");
+
+      const reversed = await expense(adminToken, "DLA", 8_000, "Saisi deux fois");
+      await command(
+        adminToken,
+        "reverse-entry",
+        { originalEntryId: reversed.entryId, reversalEntryId: randomUUID(), reason: "Doublon" },
+        { expectedVersion: 1 },
+      );
+
+      // Above the field band: waits for finance.
+      await expense(managerToken, "DLA", 150_000, "Main-d'œuvre garage");
+
+      const refused = await expense(managerToken, "DLA", 200_000, "Facture refusée");
+      await command(
+        adminToken,
+        "reject-entry",
+        { entryId: refused.entryId, reason: "Pas de justificatif" },
+        { expectedVersion: 1 },
+      );
+    });
+
+    it("separates posted, pending and refused spend", async () => {
+      const body = workOrderDetail.parse((await detail(costOrderId)).json());
+
+      expect(
+        body.costLines.map((line) => [line.description, line.amountMinor, line.entryStatus]),
+      ).toEqual(
+        expect.arrayContaining([
+          ["Disque d'embrayage", 30_000, "POSTED"],
+          ["Kit payé à Yaoundé", 12_000, "POSTED"],
+          ["Saisi deux fois", 8_000, "REVERSED"],
+          ["Saisi deux fois", -8_000, "POSTED"],
+        ]),
+      );
+      expect(body.costLines).toHaveLength(4);
+      // Signed lines sum to what the repair cost: the reversal pair nets out.
+      expect(body.costLines.reduce((sum, line) => sum + line.amountMinor, 0)).toBe(42_000);
+
+      expect(
+        body.pendingCostLines.map((line) => [line.description, line.amountMinor]),
+      ).toEqual([["Main-d'œuvre garage", 150_000]]);
+      expect(
+        [...body.costLines, ...body.pendingCostLines].map((line) => line.description),
+      ).not.toContain("Facture refusée");
+    });
+
+    it("drops the lines booked in a branch the reader cannot see", async () => {
+      const scoped = workOrderDetail.parse((await detail(costOrderId, doualaToken)).json());
+      expect(scoped.costLines.map((line) => line.description)).not.toContain(
+        "Kit payé à Yaoundé",
+      );
+      expect(scoped.costLines).toHaveLength(3);
+      expect(scoped.pendingCostLines).toHaveLength(1);
+    });
+  });
+
+  describe("module entitlement", () => {
+    it("answers MODULE_DISABLED on every maintenance read once the module is off", async () => {
+      const seeded = await seedWorkspace(db);
+      const admin = await seedMember(db, {
+        workspaceId: seeded.workspace.id,
+        role: "ADMIN",
+        allBranches: true,
+      });
+      const gatedToken = (
+        await createSession(db, {
+          workspaceId: seeded.workspace.id,
+          principalId: admin.principal.id,
+        })
+      ).token;
+
+      for (const url of ["/v1/work-orders", "/v1/issues", `/v1/work-orders/${randomUUID()}`]) {
+        const open = await ctx.app.inject({
+          method: "GET",
+          url,
+          headers: { authorization: `Bearer ${gatedToken}` },
+        });
+        expect(open.statusCode, url).not.toBe(403);
+      }
+
+      await command(gatedToken, "disable-module", { moduleCode: "MAINTENANCE" });
+
+      for (const url of ["/v1/work-orders", "/v1/issues", `/v1/work-orders/${randomUUID()}`]) {
+        const response = await ctx.app.inject({
+          method: "GET",
+          url,
+          headers: { authorization: `Bearer ${gatedToken}` },
+        });
+        expect(response.statusCode, url).toBe(403);
+        expect(response.json(), url).toEqual({
+          error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } },
+        });
+      }
     });
   });
 });

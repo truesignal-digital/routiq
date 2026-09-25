@@ -69,6 +69,7 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
         safetyCritical: payload.safetyCritical,
         category: payload.category ?? null,
         reportedAt: reportedAt.toISOString(),
+        status: "OPEN",
         rowVersion: 1,
       },
       changedFields: [
@@ -78,6 +79,7 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
         "safetyCritical",
         "category",
         "reportedAt",
+        "status",
         "rowVersion",
       ],
     });

@@ -3,15 +3,23 @@ import { and, eq, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
-import { assetAvailabilityIntervals } from "../db/schema.js";
+import {
+  approvalRules,
+  assetAvailabilityIntervals,
+  auditEvents,
+  operationalIssues,
+} from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
 /**
  * Remise en service: the decision that ends a grounding.
  *
- * Two things have to be true before a truck flagged unsafe carries passengers
- * again — the repair is closed and accepted, and a second pair of eyes says so.
+ * The guard starts from what grounded the asset (#47 finding 1): the open
+ * interval, its signalement, and a COMPLETED work order answering THAT
+ * signalement — or, once the signalement itself was closed, an explicit
+ * override reason. A second pair of eyes signs it off (§5.1), and it is never
+ * an AI's call (#47 finding 2).
  */
 describe("release-asset-to-service.v1", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -19,6 +27,7 @@ describe("release-asset-to-service.v1", () => {
   let workspaceId: string;
   let adminToken: string;
   let managerToken: string;
+  let mechanicToken: string;
   let otherWorkspaceWorkOrderId: string;
 
   beforeAll(async () => {
@@ -28,23 +37,9 @@ describe("release-asset-to-service.v1", () => {
     const seeded = await seedWorkspace(db);
     workspaceId = seeded.workspace.id;
 
-    const admin = await seedMember(db, {
-      workspaceId,
-      role: "ADMIN",
-      allBranches: true,
-    });
-    adminToken = (
-      await createSession(db, { workspaceId, principalId: admin.principal.id })
-    ).token;
-
-    const manager = await seedMember(db, {
-      workspaceId,
-      role: "OPS_MANAGER",
-      allBranches: true,
-    });
-    managerToken = (
-      await createSession(db, { workspaceId, principalId: manager.principal.id })
-    ).token;
+    adminToken = await tokenFor("ADMIN");
+    managerToken = await tokenFor("OPS_MANAGER");
+    mechanicToken = await tokenFor("MAINTENANCE");
 
     const otherSeeded = await seedWorkspace(db);
     const otherAdmin = await seedMember(db, {
@@ -74,6 +69,20 @@ describe("release-asset-to-service.v1", () => {
   afterAll(async () => {
     await ctx.close();
   });
+
+  async function tokenFor(
+    role: "ADMIN" | "OPS_MANAGER" | "MAINTENANCE",
+    principalType: "HUMAN" | "AI_AGENT" | "INTEGRATION" = "HUMAN",
+  ): Promise<string> {
+    const member = await seedMember(db, {
+      workspaceId,
+      role,
+      principalType,
+      allBranches: true,
+    });
+    return (await createSession(db, { workspaceId, principalId: member.principal.id }))
+      .token;
+  }
 
   function post(
     token: string,
@@ -111,295 +120,477 @@ describe("release-asset-to-service.v1", () => {
       );
   }
 
-  /**
-   * The whole journey: a signalement grounds the truck, a work order fixes it,
-   * the workshop closes it. `completerToken` is the member who declares the
-   * repair finished — the person the release must differ from.
-   */
-  async function groundedAsset(
-    opts: {
-      safetyCritical?: boolean;
-      completerToken?: string;
-      complete?: boolean;
-    } = {},
-  ): Promise<{ assetId: string; workOrderId: string }> {
-    const assetId = await seedAsset(ctx.app, adminToken);
-    const issueId = randomUUID();
-    const workOrderId = randomUUID();
-    const safetyCritical = opts.safetyCritical ?? true;
+  function readIssue(issueId: string) {
+    return db.select().from(operationalIssues).where(eq(operationalIssues.id, issueId));
+  }
 
+  async function reportIssue(
+    assetId: string,
+    safetyCritical: boolean,
+    description = "Plaquettes de frein hors service",
+  ): Promise<string> {
+    const issueId = randomUUID();
     expect(
       (
         await post(managerToken, "report-issue", {
           issueId,
           assetId,
-          description: "Plaquettes de frein hors service",
+          description,
           safetyCritical,
         })
       ).statusCode,
     ).toBe(200);
-
-    expect(
-      (
-        await post(managerToken, "create-work-order", {
-          workOrderId,
-          assetId,
-          issueId,
-          description: "Remplacement du système de freinage",
-          expectedCostMinor: 90_000,
-        })
-      ).statusCode,
-    ).toBe(200);
-
-    if (opts.complete !== false) {
-      const completed = await post(
-        opts.completerToken ?? managerToken,
-        "complete-work-order",
-        { workOrderId, actualCostMinor: 88_000, summary: "Freins refaits" },
-        { expectedVersion: 1 },
-      );
-      expect(completed.statusCode).toBe(200);
-      expect(completed.json()).toMatchObject({ recordStatus: "CLOSED" });
-    }
-
-    return { assetId, workOrderId };
+    return issueId;
   }
 
-  it("closes the grounding when someone other than the mechanic signs it off", async () => {
-    const { assetId, workOrderId } = await groundedAsset({
-      completerToken: managerToken,
-    });
-    expect(await openIntervals(assetId)).toHaveLength(1);
-
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId,
-      workOrderId,
-      note: "Essai routier concluant",
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({
-      recordStatus: "AVAILABLE",
-      rowVersion: 2,
-    });
-    expect(await openIntervals(assetId)).toHaveLength(0);
-
-    const [interval] = await db
-      .select()
-      .from(assetAvailabilityIntervals)
-      .where(eq(assetAvailabilityIntervals.assetId, assetId));
-    expect(interval?.closedAt).toBeInstanceOf(Date);
-    expect(interval?.closedByCommandId).not.toBeNull();
-  });
-
-  /**
-   * §3.4: availability is not lifecycle. The grounding was never a status on
-   * the asset, so releasing it leaves nothing on the asset row to check — the
-   * open interval is the whole state, and it is gone.
-   */
-  it("refuses a release when the asset holds no grounding", async () => {
-    const { assetId, workOrderId } = await groundedAsset({
-      safetyCritical: false,
-    });
-    expect(await openIntervals(assetId)).toHaveLength(0);
-
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId,
-      workOrderId,
-    });
-    expect(response.statusCode).toBe(409);
-    expect(response.json()).toMatchObject({
-      error: { code: "ASSET_NOT_UNAVAILABLE" },
-    });
-  });
-
-  it("refuses a second release of the same grounding", async () => {
-    const { assetId, workOrderId } = await groundedAsset();
-    expect(
-      (
-        await post(adminToken, "release-asset-to-service", {
-          assetId,
-          workOrderId,
-        })
-      ).statusCode,
-    ).toBe(200);
-
-    const again = await post(adminToken, "release-asset-to-service", {
-      assetId,
-      workOrderId,
-    });
-    expect(again.statusCode).toBe(409);
-    expect(again.json()).toMatchObject({
-      error: { code: "ASSET_NOT_UNAVAILABLE" },
-    });
-  });
-
-  it("refuses a release on work that is not closed", async () => {
-    const { assetId, workOrderId } = await groundedAsset({ complete: false });
-
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId,
-      workOrderId,
-    });
-    expect(response.statusCode).toBe(409);
-    expect(response.json()).toMatchObject({
-      error: { code: "WORK_ORDER_NOT_CLOSED", metadata: { status: "OPEN" } },
-    });
-    expect(await openIntervals(assetId)).toHaveLength(1);
-  });
-
-  it("refuses a work order that belongs to another asset", async () => {
-    const grounded = await groundedAsset();
-    const other = await groundedAsset();
-
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId: grounded.assetId,
-      workOrderId: other.workOrderId,
-    });
-    expect(response.statusCode).toBe(422);
-    expect(response.json()).toMatchObject({
-      error: { code: "WORK_ORDER_ASSET_MISMATCH" },
-    });
-    expect(await openIntervals(grounded.assetId)).toHaveLength(1);
-  });
-
-  /** Two pairs of eyes: the mechanic who declared it fixed cannot also clear it. */
-  it("refuses the member who declared the safety-critical work complete", async () => {
-    const { assetId, workOrderId } = await groundedAsset({
-      completerToken: adminToken,
-    });
-
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId,
-      workOrderId,
-    });
-    expect(response.statusCode).toBe(403);
-    expect(response.json()).toMatchObject({
-      error: { code: "SELF_RELEASE_FORBIDDEN" },
-    });
-    expect(await openIntervals(assetId)).toHaveLength(1);
-  });
-
-  /**
-   * The second pair of eyes is bought by the safety flag, not by the release
-   * itself. A truck grounded by one report and repaired under a preventive
-   * order is the mechanic's own call.
-   */
-  it("lets the completer release when the linked issue is not safety-critical", async () => {
-    const assetId = await seedAsset(ctx.app, adminToken);
-    const groundingIssueId = randomUUID();
-    const routineIssueId = randomUUID();
+  async function createWorkOrder(
+    assetId: string,
+    issueId: string | undefined,
+  ): Promise<string> {
     const workOrderId = randomUUID();
-
-    expect(
-      (
-        await post(managerToken, "report-issue", {
-          issueId: groundingIssueId,
-          assetId,
-          description: "Fuite de frein",
-          safetyCritical: true,
-        })
-      ).statusCode,
-    ).toBe(200);
-    expect(
-      (
-        await post(managerToken, "report-issue", {
-          issueId: routineIssueId,
-          assetId,
-          description: "Essuie-glace usé",
-          safetyCritical: false,
-        })
-      ).statusCode,
-    ).toBe(200);
-    expect(
-      (
-        await post(managerToken, "create-work-order", {
-          workOrderId,
-          assetId,
-          issueId: routineIssueId,
-          description: "Changement essuie-glaces",
-        })
-      ).statusCode,
-    ).toBe(200);
-    expect(
-      (
-        await post(
-          adminToken,
-          "complete-work-order",
-          { workOrderId, actualCostMinor: 4_000 },
-          { expectedVersion: 1 },
-        )
-      ).statusCode,
-    ).toBe(200);
-
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId,
+    const response = await post(managerToken, "create-work-order", {
       workOrderId,
+      assetId,
+      ...(issueId === undefined ? {} : { issueId }),
+      description: "Remplacement du système de freinage",
+      expectedCostMinor: 90_000,
     });
-    expect(response.statusCode).toBe(200);
-    expect(await openIntervals(assetId)).toHaveLength(0);
-  });
+    expect(response.json()).toMatchObject({ recordStatus: "APPROVED" });
+    return workOrderId;
+  }
 
-  it("rejects a stale work-order version when the caller quotes one", async () => {
-    const { assetId, workOrderId } = await groundedAsset();
-
-    const stale = await post(
-      adminToken,
-      "release-asset-to-service",
-      { assetId, workOrderId },
+  async function completeWorkOrder(
+    workOrderId: string,
+    completerToken = managerToken,
+    extra: Record<string, unknown> = {},
+  ): Promise<void> {
+    const completed = await post(
+      completerToken,
+      "complete-work-order",
+      { workOrderId, actualCostMinor: 88_000, summary: "Freins refaits", ...extra },
       { expectedVersion: 1 },
     );
-    expect(stale.statusCode).toBe(409);
-    expect(stale.json()).toMatchObject({
-      error: { code: "VERSION_CONFLICT", metadata: { currentVersion: 2 } },
+    expect(completed.json()).toMatchObject({ recordStatus: "COMPLETED" });
+  }
+
+  /**
+   * The whole journey: a safety-critical signalement grounds the truck and a
+   * work order answers it. `completerToken` declares the repair finished — the
+   * person the release must differ from.
+   */
+  async function groundedAsset(
+    opts: { completerToken?: string; complete?: boolean; resolveLinkedIssue?: boolean } = {},
+  ): Promise<{ assetId: string; issueId: string; workOrderId: string }> {
+    const assetId = await seedAsset(ctx.app, adminToken);
+    const issueId = await reportIssue(assetId, true);
+    const workOrderId = await createWorkOrder(assetId, issueId);
+    if (opts.complete !== false) {
+      await completeWorkOrder(
+        workOrderId,
+        opts.completerToken ?? managerToken,
+        opts.resolveLinkedIssue === undefined
+          ? {}
+          : { resolveLinkedIssue: opts.resolveLinkedIssue },
+      );
+    }
+    return { assetId, issueId, workOrderId };
+  }
+
+  describe("the happy path", () => {
+    it("closes the grounding when someone other than the mechanic signs it off", async () => {
+      const { assetId, workOrderId } = await groundedAsset();
+      expect(await openIntervals(assetId)).toHaveLength(1);
+
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        workOrderId,
+        note: "Essai routier concluant",
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        recordStatus: "AVAILABLE",
+        rowVersion: 2,
+      });
+      expect(await openIntervals(assetId)).toHaveLength(0);
+
+      const [interval] = await db
+        .select()
+        .from(assetAvailabilityIntervals)
+        .where(eq(assetAvailabilityIntervals.assetId, assetId));
+      expect(interval?.closedAt).toBeInstanceOf(Date);
+      expect(interval?.closedByCommandId).not.toBeNull();
     });
 
-    const current = await post(
-      adminToken,
-      "release-asset-to-service",
-      { assetId, workOrderId },
-      { expectedVersion: 2 },
-    );
-    expect(current.statusCode).toBe(200);
+    it("finds the completed work order itself when the release names none", async () => {
+      const { assetId, workOrderId } = await groundedAsset();
+      const response = await post(adminToken, "release-asset-to-service", { assetId });
+      expect(response.statusCode).toBe(200);
+
+      const [released] = await db
+        .select()
+        .from(auditEvents)
+        .where(
+          and(
+            eq(auditEvents.entityId, workOrderId),
+            eq(auditEvents.eventType, "work_order.asset_released"),
+          ),
+        );
+      expect(released).toBeDefined();
+    });
+
+    /** #28: release and resolution are decoupled — the release never writes the issue. */
+    it("never touches the signalement's status", async () => {
+      const { assetId, issueId } = await groundedAsset({ resolveLinkedIssue: false });
+      const [before] = await readIssue(issueId);
+      expect(before).toMatchObject({ status: "OPEN" });
+
+      expect(
+        (await post(adminToken, "release-asset-to-service", { assetId })).statusCode,
+      ).toBe(200);
+      expect((await readIssue(issueId))[0]).toEqual(before);
+    });
   });
 
-  it("cannot release against another workspace's order", async () => {
-    const { assetId } = await groundedAsset();
+  describe("what has to be true of the grounding", () => {
+    it("refuses a release when the asset holds no grounding", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const response = await post(adminToken, "release-asset-to-service", { assetId });
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toMatchObject({
+        error: { code: "ASSET_NOT_UNAVAILABLE" },
+      });
+    });
 
-    const response = await post(adminToken, "release-asset-to-service", {
-      assetId,
-      workOrderId: otherWorkspaceWorkOrderId,
+    it("refuses a second release of the same grounding", async () => {
+      const { assetId, workOrderId } = await groundedAsset();
+      expect(
+        (await post(adminToken, "release-asset-to-service", { assetId, workOrderId }))
+          .statusCode,
+      ).toBe(200);
+      const again = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        workOrderId,
+      });
+      expect(again.statusCode).toBe(409);
+      expect(again.json()).toMatchObject({ error: { code: "ASSET_NOT_UNAVAILABLE" } });
     });
-    expect(response.statusCode).toBe(422);
-    expect(response.json()).toMatchObject({
-      error: {
-        code: "REFERENCE_NOT_FOUND",
-        metadata: { referenceType: "workOrder" },
-      },
+
+    for (const [label, prepare] of [
+      ["still APPROVED", async (_workOrderId: string) => {}],
+      [
+        "waiting on a completion review",
+        async (workOrderId: string) => {
+          // A threshold only an admin clears, so the manager's completion is held.
+          const [rule] = await db
+            .insert(approvalRules)
+            .values({
+              workspaceId,
+              commandType: "complete-work-order",
+              categoryCode: null,
+              branchId: null,
+              amountMinMinor: 10_000n,
+              amountMaxMinor: null,
+              requiredRole: "ADMIN",
+              createdByCommandId: null,
+            })
+            .returning({ id: approvalRules.id });
+          try {
+            const held = await post(
+              managerToken,
+              "complete-work-order",
+              { workOrderId, actualCostMinor: 50_000 },
+              { expectedVersion: 1 },
+            );
+            expect(held.json()).toMatchObject({ recordStatus: "COMPLETION_SUBMITTED" });
+          } finally {
+            await db.delete(approvalRules).where(eq(approvalRules.id, rule!.id));
+          }
+        },
+      ],
+    ] as const) {
+      it(`refuses a release on work ${label}`, async () => {
+        const { assetId, workOrderId } = await groundedAsset({ complete: false });
+        await prepare(workOrderId);
+
+        const cited = await post(adminToken, "release-asset-to-service", {
+          assetId,
+          workOrderId,
+        });
+        expect(cited.statusCode).toBe(409);
+        expect(cited.json()).toMatchObject({
+          error: { code: "WORK_ORDER_NOT_COMPLETED", metadata: { workOrderId } },
+        });
+
+        const uncited = await post(adminToken, "release-asset-to-service", { assetId });
+        expect(uncited.statusCode).toBe(409);
+        expect(uncited.json()).toMatchObject({
+          error: {
+            code: "WORK_ORDER_NOT_COMPLETED",
+            metadata: { issueStatus: "OPEN", overrideAllowed: false },
+          },
+        });
+        expect(await openIntervals(assetId)).toHaveLength(1);
+      });
+    }
+
+    it("refuses a work order that belongs to another asset", async () => {
+      const { assetId } = await groundedAsset();
+      const { workOrderId: foreignOrder } = await groundedAsset();
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        workOrderId: foreignOrder,
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: "WORK_ORDER_ASSET_MISMATCH" },
+      });
     });
-    expect(await openIntervals(assetId)).toHaveLength(1);
+
+    /**
+     * #47 finding 1, reproduced: an old, completed, issue-less order on the same
+     * truck used to satisfy the guard while the release closed whatever
+     * grounding was open. It no longer vouches for a fault it was never about.
+     */
+    it("refuses a completed preventive order as the grounds for a safety-critical release", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const preventive = await createWorkOrder(assetId, undefined);
+      await completeWorkOrder(preventive);
+      const issueId = await reportIssue(assetId, true);
+
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        workOrderId: preventive,
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: {
+          code: "WORK_ORDER_ISSUE_MISMATCH",
+          metadata: { workOrderId: preventive, workOrderIssueId: null, groundingIssueId: issueId },
+        },
+      });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("refuses completed work on a different, non-critical fault of the same truck", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const groundingIssue = await reportIssue(assetId, true);
+      const cosmeticIssue = await reportIssue(assetId, false, "Rayure sur la portière");
+      const cosmeticOrder = await createWorkOrder(assetId, cosmeticIssue);
+      await completeWorkOrder(cosmeticOrder);
+
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        workOrderId: cosmeticOrder,
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: {
+          code: "WORK_ORDER_ISSUE_MISMATCH",
+          metadata: { groundingIssueId: groundingIssue },
+        },
+      });
+
+      // And uncited, the cosmetic repair does not count either.
+      const uncited = await post(adminToken, "release-asset-to-service", { assetId });
+      expect(uncited.statusCode).toBe(409);
+      expect(uncited.json()).toMatchObject({ error: { code: "WORK_ORDER_NOT_COMPLETED" } });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("cannot release against another workspace's order", async () => {
+      const { assetId } = await groundedAsset();
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        workOrderId: otherWorkspaceWorkOrderId,
+      });
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({
+        error: { code: "REFERENCE_NOT_FOUND", metadata: { referenceType: "workOrder" } },
+      });
+    });
   });
 
-  it("is not queueable — the maintenance role cannot make this call at all", async () => {
-    const maintenance = await seedMember(db, {
-      workspaceId,
-      role: "MAINTENANCE",
-      allBranches: true,
-    });
-    const maintenanceToken = (
-      await createSession(db, {
-        workspaceId,
-        principalId: maintenance.principal.id,
-      })
-    ).token;
-    const { assetId, workOrderId } = await groundedAsset();
+  describe("the override path, once the signalement is closed without a work order", () => {
+    it("releases a truck whose fault was resolved on the spot, with a reason", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const issueId = await reportIssue(assetId, true);
+      expect(
+        (
+          await post(
+            mechanicToken,
+            "resolve-issue",
+            { issueId, note: "Durite reclipsée" },
+            { expectedVersion: 1 },
+          )
+        ).statusCode,
+      ).toBe(200);
 
-    const response = await post(maintenanceToken, "release-asset-to-service", {
-      assetId,
-      workOrderId,
+      const withoutReason = await post(adminToken, "release-asset-to-service", { assetId });
+      expect(withoutReason.statusCode).toBe(409);
+      expect(withoutReason.json()).toMatchObject({
+        error: {
+          code: "WORK_ORDER_NOT_COMPLETED",
+          metadata: { issueStatus: "RESOLVED", overrideAllowed: true },
+        },
+      });
+
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        overrideReason: "Réparé sur place, contrôlé au dépôt",
+      });
+      expect(response.statusCode).toBe(200);
+      expect(await openIntervals(assetId)).toHaveLength(0);
+
+      const [closed] = await db
+        .select()
+        .from(auditEvents)
+        .where(
+          and(
+            eq(auditEvents.eventType, "asset_availability.closed"),
+            eq(auditEvents.entityType, "asset_availability_interval"),
+            eq(auditEvents.commandId, (response.json() as { commandId: string }).commandId),
+          ),
+        );
+      expect(closed?.afterState).toMatchObject({
+        overrideReason: "Réparé sur place, contrôlé au dépôt",
+      });
     });
-    expect(response.statusCode).toBe(403);
-    expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
-    expect(await openIntervals(assetId)).toHaveLength(1);
+
+    it("releases a truck whose report was dismissed as made in error", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const issueId = await reportIssue(assetId, true);
+      await post(mechanicToken, "dismiss-issue", { issueId, reason: "Fausse alerte" }, {
+        expectedVersion: 1,
+      });
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        overrideReason: "Signalement classé sans suite",
+      });
+      expect(response.statusCode).toBe(200);
+    });
+
+    it("refuses an override while the signalement is still open", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      await reportIssue(assetId, true);
+      const response = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        overrideReason: "Je prends la responsabilité",
+      });
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toMatchObject({
+        error: { code: "WORK_ORDER_NOT_COMPLETED", metadata: { overrideAllowed: false } },
+      });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("refuses the member who closed the signalement from releasing on it", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const issueId = await reportIssue(assetId, true);
+      await post(managerToken, "resolve-issue", { issueId }, { expectedVersion: 1 });
+      const response = await post(managerToken, "release-asset-to-service", {
+        assetId,
+        overrideReason: "Moi seul",
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        error: { code: "SELF_RELEASE_FORBIDDEN", metadata: { issueId } },
+      });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("checks the quoted version against the signalement it acts from", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const issueId = await reportIssue(assetId, true);
+      await post(mechanicToken, "dismiss-issue", { issueId, reason: "Doublon" }, {
+        expectedVersion: 1,
+      });
+      const stale = await post(
+        adminToken,
+        "release-asset-to-service",
+        { assetId, overrideReason: "Doublon" },
+        { expectedVersion: 1 },
+      );
+      expect(stale.statusCode).toBe(409);
+      expect(stale.json()).toMatchObject({
+        error: { code: "VERSION_CONFLICT", metadata: { currentVersion: 2 } },
+      });
+    });
+  });
+
+  describe("two pairs of eyes", () => {
+    it("refuses the member who declared the safety-critical work complete", async () => {
+      const { assetId, workOrderId } = await groundedAsset({
+        completerToken: managerToken,
+      });
+      for (const payload of [{ assetId, workOrderId }, { assetId }]) {
+        const response = await post(managerToken, "release-asset-to-service", payload);
+        expect(response.statusCode).toBe(403);
+        expect(response.json()).toMatchObject({
+          error: { code: "SELF_RELEASE_FORBIDDEN" },
+        });
+      }
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("refuses a completer who cites a colleague's order on the same grounding", async () => {
+      const { assetId, issueId, workOrderId: managersOrder } = await groundedAsset({
+        completerToken: managerToken,
+      });
+      const adminsOrder = await createWorkOrder(assetId, issueId);
+      await completeWorkOrder(adminsOrder, adminToken, { resolveLinkedIssue: false });
+
+      const response = await post(managerToken, "release-asset-to-service", {
+        assetId,
+        workOrderId: adminsOrder,
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: "SELF_RELEASE_FORBIDDEN" } });
+      expect(managersOrder).not.toBe(adminsOrder);
+    });
+  });
+
+  describe("who may release", () => {
+    /** #47 finding 2, reproduced: an AI principal holding ADMIN used to be let through. */
+    for (const principalType of ["AI_AGENT", "INTEGRATION"] as const) {
+      it(`refuses an ${principalType} principal whatever its role`, async () => {
+        const { assetId, workOrderId } = await groundedAsset();
+        const agentToken = await tokenFor("ADMIN", principalType);
+        const response = await post(agentToken, "release-asset-to-service", {
+          assetId,
+          workOrderId,
+        });
+        expect(response.statusCode).toBe(403);
+        expect(response.json()).toMatchObject({
+          error: { code: "HUMAN_PRINCIPAL_REQUIRED", metadata: { principalType } },
+        });
+        expect(await openIntervals(assetId)).toHaveLength(1);
+      });
+    }
+
+    it("rejects a stale work-order version when the caller quotes one", async () => {
+      const { assetId, workOrderId } = await groundedAsset();
+      const response = await post(
+        adminToken,
+        "release-asset-to-service",
+        { assetId, workOrderId },
+        { expectedVersion: 1 },
+      );
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toMatchObject({
+        error: { code: "VERSION_CONFLICT", metadata: { currentVersion: 2 } },
+      });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("is not the workshop's call — the maintenance role cannot make it at all", async () => {
+      const { assetId, workOrderId } = await groundedAsset({ completerToken: adminToken });
+      const response = await post(mechanicToken, "release-asset-to-service", {
+        assetId,
+        workOrderId,
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
+    });
   });
 });
