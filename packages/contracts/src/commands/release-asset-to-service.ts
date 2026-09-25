@@ -1,9 +1,22 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
 
+/**
+ * Remise en service. The server reads what grounded the asset — its open
+ * availability interval and the signalement that opened it — and requires a
+ * COMPLETED work order answering THAT signalement. `workOrderId` is optional:
+ * when given it must be such an order; when omitted any completed one counts.
+ *
+ * `overrideReason` is the release without a completed work order, and is only
+ * accepted once the grounding signalement has itself been closed (resolved on
+ * the spot or dismissed as reported in error) — the human assertion that the
+ * problem is gone then comes from that decision, and this reason says why no
+ * work order was needed.
+ */
 export const releaseAssetToServicePayload = z.object({
   assetId: z.uuid(),
-  workOrderId: z.uuid(),
+  workOrderId: z.uuid().optional(),
+  overrideReason: z.string().min(1).max(500).optional(),
   note: z.string().min(1).max(500).optional(),
 });
 

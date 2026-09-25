@@ -46,4 +46,8 @@ export * from "./commands/complete-work-order.js";
 export * from "./commands/approve-work-order-closure.js";
 export * from "./commands/cancel-work-order.js";
 export * from "./commands/release-asset-to-service.js";
+export * from "./commands/resolve-issue.js";
+export * from "./commands/dismiss-issue.js";
+export * from "./commands/reject-work-order.js";
+export * from "./commands/reject-work-order-completion.js";
 export * from "./reads/maintenance.js";

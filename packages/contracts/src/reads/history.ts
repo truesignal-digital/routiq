@@ -34,8 +34,9 @@ export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];
 
 /**
  * History is visible to whoever can read the record, so the owning module's
- * entitlement and tenant RLS apply; financial entry history also respects
- * the actor's branch scope. Ownership mirrors the `module`
+ * entitlement and tenant RLS apply, and every type that has a branch — its own
+ * or its parent's — is read against the actor's branch scope. Ownership mirrors
+ * the `module`
  * field on the commands that write each entity type — `person` sits under
  * ACTIVITIES because `register-person` does.
  */
@@ -198,6 +199,7 @@ export const HISTORY_STATE_KEYS = {
     "openedByIssueId",
     "closedAt",
     "releaseNote",
+    "overrideReason",
   ],
   category: [
     "kind",
@@ -206,6 +208,7 @@ export const HISTORY_STATE_KEYS = {
     "labelEn",
     "profitabilityLayer",
     "evidencePolicy",
+    "defaultSafetyCritical",
     "active",
   ],
   document: [
@@ -269,17 +272,23 @@ export const HISTORY_STATE_KEYS = {
     "customValues",
   ],
   /**
-   * A signalement is written once and never edited, so its only event is
-   * `operational_issue.reported` — every key here shows up as "was nothing, is
-   * now this". Listed anyway: the timeline is what an operator opens to ask who
-   * called the truck unsafe, and when.
+   * A signalement's report is never edited; what moves is its status, once —
+   * resolved (on the spot or by a completed work order) or dismissed. The
+   * timeline is what an operator opens to ask who called the truck unsafe, and
+   * who said it was dealt with.
    */
   operational_issue: [
+    "status",
     "assetId",
     "description",
     "safetyCritical",
     "category",
     "reportedAt",
+    "resolvedAt",
+    "resolutionNote",
+    "resolvedByWorkOrderId",
+    "dismissedAt",
+    "dismissReason",
   ],
   person: [
     "displayName",
@@ -292,10 +301,11 @@ export const HISTORY_STATE_KEYS = {
   ],
   posting_period: ["status", "lockedAt", "reason"],
   /**
-   * The work-order workflow, from creation through both approvals to closure,
-   * cancellation or release. `approvalNote` is the authorizer's justification of
-   * a spend and `cancelReason` the abandonment motif — both are why the decision
-   * was taken and exist nowhere but the trail.
+   * The work-order workflow, from creation through both approvals to
+   * completion, rejection, cancellation or release. `approvalNote` is the
+   * authorizer's justification of a spend, the reject and cancel reasons the
+   * refusal and abandonment motifs — all of them are why the decision was taken
+   * and exist nowhere but the trail.
    */
   work_order: [
     "status",
@@ -306,13 +316,18 @@ export const HISTORY_STATE_KEYS = {
     "actualCostMinor",
     "currency",
     "summary",
+    "resolveLinkedIssue",
     "completedAt",
+    "rejectReason",
+    "rejectedAt",
+    "completionRejectReason",
     "cancelReason",
     "cancelledAt",
     "approvalNote",
     "availabilityIntervalId",
     "releasedAt",
     "releaseNote",
+    "overrideReason",
   ],
   /**
    * `admin` and `users` from `workspace.provisioned` are deliberately absent:

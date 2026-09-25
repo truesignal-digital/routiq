@@ -2,14 +2,24 @@ import { z } from "zod";
 import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
 
+/**
+ * The owner's state machine (#28). APPROVED is open work — costs attach only
+ * here. The two pending states exist only when a threshold rule demanded
+ * review; COMPLETED, REJECTED and CANCELLED are terminal and never reopen.
+ */
 export const workOrderStatuses = [
   "SUBMITTED",
-  "OPEN",
-  "PENDING_CLOSE",
-  "CLOSED",
+  "APPROVED",
+  "COMPLETION_SUBMITTED",
+  "COMPLETED",
+  "REJECTED",
   "CANCELLED",
 ] as const;
 export const workOrderStatus = z.enum(workOrderStatuses);
+
+/** OPEN until resolved (dealt with) or dismissed (reported in error). No triage state. */
+export const issueStatuses = ["OPEN", "RESOLVED", "DISMISSED"] as const;
+export const issueStatus = z.enum(issueStatuses);
 
 /**
  * An asset seen from the maintenance module: identity plus the two labels the
@@ -69,6 +79,7 @@ export const workOrderListItem = z.object({
   createdAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),
   cancelledAt: z.iso.datetime().nullable(),
+  rejectedAt: z.iso.datetime().nullable(),
   rowVersion: z.number().int().positive(),
 });
 
@@ -82,14 +93,25 @@ export const workOrderListResponse = listResponse(workOrderListItem);
  * failing the whole response.
  */
 export const WORK_ORDER_EVENT_KINDS = [
+  "work_order.created",
   "work_order.submitted",
-  "work_order.opened",
   "work_order.approved",
+  "work_order.rejected",
+  "work_order.completion_submitted",
+  "work_order.completed",
+  "work_order.completion_approved",
+  "work_order.completion_rejected",
+  "work_order.cancelled",
+  "work_order.asset_released",
+  /**
+   * Written before #28 renamed the states. Audit events are append-only, so a
+   * database that ran the earlier maintenance candidate keeps them forever and
+   * the client still needs their labels.
+   */
+  "work_order.opened",
   "work_order.closure_submitted",
   "work_order.closed",
   "work_order.closure_approved",
-  "work_order.cancelled",
-  "work_order.asset_released",
 ] as const;
 
 export type WorkOrderEventKind = (typeof WORK_ORDER_EVENT_KINDS)[number];
@@ -107,12 +129,7 @@ export const workOrderChronologieEvent = z.object({
   actor: historyActor,
 });
 
-/**
- * Labour and parts booked against this repair: one line per posting carrying the
- * work order (§4.2), never a second entry. The entry's status travels with it so
- * a submitted-but-unapproved cost is not read as spent.
- */
-export const workOrderCostLine = z.object({
+const costLineFields = {
   postingId: z.uuid(),
   entryId: z.uuid(),
   entryNumber: z.string(),
@@ -121,17 +138,48 @@ export const workOrderCostLine = z.object({
   amountMinor: z.number().int(),
   currency: z.string().length(3),
   economicDate: z.iso.date(),
-  entryStatus: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]),
+};
+
+/**
+ * Labour and parts booked against this repair: one line per posting carrying the
+ * work order (§4.2), never a second entry. The posted set is POSTED lines plus
+ * both halves of a reversal — the REVERSED original and its negative
+ * counterpart — so the lines sum to what the repair actually cost.
+ */
+export const workOrderCostLine = z.object({
+  ...costLineFields,
+  entryStatus: z.enum(["POSTED", "REVERSED"]),
+});
+
+/** Awaiting finance review: recorded, not spent. Never summed into the posted set. */
+export const workOrderPendingCostLine = z.object({
+  ...costLineFields,
+  entryStatus: z.literal("SUBMITTED"),
 });
 
 export const workOrderDetail = workOrderListItem.extend({
   summary: z.string().nullable(),
   cancelReason: z.string().nullable(),
+  /** Why the spend was refused (terminal REJECTED). */
+  rejectReason: z.string().nullable(),
+  /**
+   * Why the last declared completion was sent back. Kept while the order is
+   * APPROVED again, so the workshop sees what to fix before resubmitting.
+   */
+  completionRejectReason: z.string().nullable(),
+  /** The flag a held completion carries until it is approved or sent back. */
+  resolveLinkedIssue: z.boolean(),
   /** §3.4 provenance: the command that first wrote the row. */
   createdByCommandId: z.uuid(),
   /** Time-ordered, oldest first — a life story reads forwards. */
   chronologie: z.array(workOrderChronologieEvent),
+  /**
+   * Only postings in the reader's branch scope: a cost line is a financial
+   * record, and its entry's branch is what finance scope is read against.
+   * REJECTED entries are excluded — they record a spend that was refused.
+   */
   costLines: z.array(workOrderCostLine),
+  pendingCostLines: z.array(workOrderPendingCostLine),
 });
 
 const queryBoolean = z
@@ -142,6 +190,7 @@ export const issueListQuery = listQuery({
   branchId: z.uuid().optional(),
   assetId: z.uuid().optional(),
   safetyCritical: queryBoolean.optional(),
+  status: issueStatus.optional(),
 });
 
 /** A work order spawned by this signalement; an issue may spawn several. */
@@ -158,6 +207,11 @@ export const issueListItem = z.object({
   safetyCritical: z.boolean(),
   category: z.string().nullable(),
   reportedAt: z.iso.datetime(),
+  status: issueStatus,
+  resolvedAt: z.iso.datetime().nullable(),
+  resolutionNote: z.string().nullable(),
+  dismissedAt: z.iso.datetime().nullable(),
+  dismissReason: z.string().nullable(),
   workOrders: z.array(issueWorkOrderRef),
   /**
    * Whether the ASSET is grounded right now — an open availability interval,
@@ -172,6 +226,8 @@ export const issueListItem = z.object({
 export const issueListResponse = listResponse(issueListItem);
 
 export type WorkOrderStatus = z.infer<typeof workOrderStatus>;
+export type IssueStatus = z.infer<typeof issueStatus>;
+export type WorkOrderPendingCostLine = z.infer<typeof workOrderPendingCostLine>;
 export type WorkOrderListQuery = z.infer<typeof workOrderListQuery>;
 export type WorkOrderListItem = z.infer<typeof workOrderListItem>;
 export type WorkOrderListResponse = z.infer<typeof workOrderListResponse>;

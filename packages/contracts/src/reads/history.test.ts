@@ -151,21 +151,32 @@ describe("state key allowlist", () => {
       "actualCostMinor",
       "currency",
       "summary",
+      "resolveLinkedIssue",
       "completedAt",
+      "rejectReason",
+      "rejectedAt",
+      "completionRejectReason",
       "cancelReason",
       "cancelledAt",
       "approvalNote",
       "releasedAt",
       "releaseNote",
+      "overrideReason",
     ]) {
       expect(HISTORY_STATE_KEYS.work_order, key).toContain(key);
     }
     expect([...HISTORY_STATE_KEYS.operational_issue]).toEqual([
+      "status",
       "assetId",
       "description",
       "safetyCritical",
       "category",
       "reportedAt",
+      "resolvedAt",
+      "resolutionNote",
+      "resolvedByWorkOrderId",
+      "dismissedAt",
+      "dismissReason",
     ]);
     // The release is `closedAt` moving off null; without it the timeline could
     // not say the truck came back into service.

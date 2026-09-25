@@ -2,9 +2,11 @@ import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
 
 /**
- * Accepts the actual costs declared when the work was completed.
- * PENDING_CLOSE → CLOSED. The approver may not be the member who declared the
- * completion — the same maker/checker split the financial entries use.
+ * Accepts the completion the workshop declared: COMPLETION_SUBMITTED →
+ * COMPLETED. The name predates the owner's vocabulary (#28) and is kept because
+ * it is the wire contract; the semantics are "approve the completion". The
+ * approver may not be the member who declared it — the same maker/checker
+ * split the financial entries use.
  */
 export const approveWorkOrderClosurePayload = z.object({
   workOrderId: z.uuid(),

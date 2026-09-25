@@ -75,23 +75,48 @@ export const COMMAND_ERROR_CODES = [
    * satisfied and only the command layer can catch it.
    */
   "ISSUE_ASSET_MISMATCH",
-  /** A release naming a work order that belongs to a different asset. */
+  /**
+   * A work order that belongs to a different asset than the record naming it:
+   * a release citing another truck's repair, or a cost posting whose assetId
+   * and workOrderId point at two different vehicles.
+   */
   "WORK_ORDER_ASSET_MISMATCH",
   /**
-   * Releasing an asset on a work order that has not been closed. The closure is
-   * what says the repair is finished and its cost accepted; without it the
-   * release would put an unrepaired truck back on the road.
+   * Releasing an asset with no COMPLETED work order answering the signalement
+   * that grounded it. Completion is what says the repair is finished and, above
+   * the band, that its cost was accepted; without it the release would put an
+   * unrepaired truck back on the road. `metadata.overrideAllowed` says whether
+   * the grounding signalement is already closed, which is the one case an
+   * explicit override reason can stand in for the work order.
    */
-  "WORK_ORDER_NOT_CLOSED",
+  "WORK_ORDER_NOT_COMPLETED",
+  /**
+   * A release citing a completed work order that does not answer the
+   * signalement behind the current grounding — an older repair, or preventive
+   * work, cannot vouch for a fault it was never about.
+   */
+  "WORK_ORDER_ISSUE_MISMATCH",
+  /**
+   * A cost attributed to a work order that is not APPROVED (#28): pending work
+   * has not been authorized, and completed, rejected or cancelled work is closed
+   * to new spend. Reversals are exempt — they correct what already stands.
+   */
+  "WORK_ORDER_NOT_OPEN",
+  /**
+   * A command reserved for a human principal — release to service (§5.1:
+   * "never AI") — called by an AI agent or an integration.
+   */
+  "HUMAN_PRINCIPAL_REQUIRED",
   /**
    * Releasing an asset that holds no open availability interval — it was never
    * taken out of service, or someone released it first.
    */
   "ASSET_NOT_UNAVAILABLE",
   /**
-   * The member who declared the work complete trying to release the asset
-   * themselves, on work that started with a safety-critical report. Two pairs
-   * of eyes before a truck flagged unsafe carries passengers again.
+   * The member who declared the work complete — or who closed the grounding
+   * signalement themselves — trying to release the asset, after a
+   * safety-critical report. Two pairs of eyes before a truck flagged unsafe
+   * carries passengers again.
    */
   "SELF_RELEASE_FORBIDDEN",
 ] as const;

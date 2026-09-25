@@ -3,9 +3,10 @@ import { commandEnvelope } from "../envelope.js";
 
 /**
  * Authorizes the expected spend on a work order that landed SUBMITTED because
- * a threshold rule required review. SUBMITTED → OPEN. Kept separate from
- * approve-work-order-closure because the two carry different audit meanings:
- * this one commits the workshop to the job, that one accepts what it cost.
+ * a threshold rule required review. SUBMITTED → APPROVED, which is open work:
+ * costs attach from here on. Kept separate from approve-work-order-closure
+ * because the two carry different audit meanings: this one commits the
+ * workshop to the job, that one accepts what it cost.
  */
 export const approveWorkOrderPayload = z.object({
   workOrderId: z.uuid(),

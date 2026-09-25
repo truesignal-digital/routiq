@@ -32,11 +32,39 @@ describe("releaseAssetToServiceCommand", () => {
     ).toBe(false);
   });
 
-  it("rejects missing workOrderId", () => {
+  it("accepts a release that names no work order — the server finds the one answering the grounding", () => {
+    const { workOrderId: _omitted, ...withoutWorkOrder } = valid.payload;
     expect(
       releaseAssetToServiceCommand.safeParse({
         ...valid,
-        payload: { ...valid.payload, workOrderId: undefined },
+        payload: withoutWorkOrder,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("carries an override reason for a grounding closed without a work order", () => {
+    expect(
+      releaseAssetToServiceCommand.parse({
+        ...valid,
+        payload: { assetId: valid.payload.assetId, overrideReason: "Signalement classé" },
+      }).payload.overrideReason,
+    ).toBe("Signalement classé");
+  });
+
+  it("rejects an empty override reason", () => {
+    expect(
+      releaseAssetToServiceCommand.safeParse({
+        ...valid,
+        payload: { assetId: valid.payload.assetId, overrideReason: "" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an invalid workOrderId", () => {
+    expect(
+      releaseAssetToServiceCommand.safeParse({
+        ...valid,
+        payload: { ...valid.payload, workOrderId: "not-a-uuid" },
       }).success,
     ).toBe(false);
   });

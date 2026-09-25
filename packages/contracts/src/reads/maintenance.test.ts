@@ -23,7 +23,7 @@ const branch = {
 
 const listItem = {
   id: "5f4e3d2c-1b0a-4998-8776-655443322110",
-  status: "OPEN",
+  status: "APPROVED",
   description: "Remplacement de la pompe à eau",
   asset,
   branch,
@@ -37,11 +37,12 @@ const listItem = {
   createdAt: "2026-08-12T09:00:00.000Z",
   completedAt: null,
   cancelledAt: null,
+  rejectedAt: null,
   rowVersion: 1,
 };
 
 describe("work order list contract", () => {
-  it("accepts an open order whose costs are not yet declared", () => {
+  it("accepts an approved order whose costs are not yet declared", () => {
     expect(workOrderListItem.parse(listItem)).toEqual(listItem);
   });
 
@@ -54,6 +55,15 @@ describe("work order list contract", () => {
     expect(
       workOrderListItem.safeParse({ ...listItem, status: "DONE" }).success,
     ).toBe(false);
+  });
+
+  it("rejects the pre-#28 status names — no OPEN, PENDING_CLOSE or CLOSED on the wire", () => {
+    for (const legacy of ["OPEN", "PENDING_CLOSE", "CLOSED", "DRAFT", "IN_PROGRESS"]) {
+      expect(
+        workOrderListItem.safeParse({ ...listItem, status: legacy }).success,
+        legacy,
+      ).toBe(false);
+    }
   });
 
   it("rejects a currency that is not a 3-letter code", () => {
@@ -87,8 +97,11 @@ describe("work order list query contract", () => {
 
   it("accepts a status chip and a branch lens together", () => {
     expect(
-      workOrderListQuery.parse({ status: "PENDING_CLOSE", branchId: branch.id }),
-    ).toMatchObject({ status: "PENDING_CLOSE", branchId: branch.id });
+      workOrderListQuery.parse({
+        status: "COMPLETION_SUBMITTED",
+        branchId: branch.id,
+      }),
+    ).toMatchObject({ status: "COMPLETION_SUBMITTED", branchId: branch.id });
   });
 
   it("refuses a sort — the queue's order is not a client choice", () => {
@@ -105,16 +118,19 @@ describe("work order list query contract", () => {
 describe("work order detail contract", () => {
   const detail = {
     ...listItem,
-    status: "CLOSED",
+    status: "COMPLETED",
     actualCostMinor: 58_000,
     completedAt: "2026-08-13T16:30:00.000Z",
     summary: "Pompe remplacée, circuit purgé",
     cancelReason: null,
+    rejectReason: null,
+    completionRejectReason: null,
+    resolveLinkedIssue: true,
     createdByCommandId: "cc11dd22-ee33-4f44-8055-667788990011",
     chronologie: [
       {
         eventId: "11112222-3333-4444-8555-666677778888",
-        kind: "work_order.opened",
+        kind: "work_order.created",
         occurredAt: "2026-08-12T09:00:00.000Z",
         actor: {
           principalId: "22223333-4444-4555-8666-777788889999",
@@ -124,7 +140,7 @@ describe("work order detail contract", () => {
       },
       {
         eventId: "33334444-5555-4666-8777-888899990000",
-        kind: "work_order.closed",
+        kind: "work_order.completed",
         occurredAt: "2026-08-13T16:30:00.000Z",
         actor: { principalId: null, displayName: null, scope: "PLATFORM" },
       },
@@ -141,9 +157,21 @@ describe("work order detail contract", () => {
         entryStatus: "POSTED",
       },
     ],
+    pendingCostLines: [
+      {
+        postingId: "66667777-8888-4999-8000-111122223333",
+        entryId: "77778888-9999-4000-8111-222233334444",
+        entryNumber: "EXP-DLA-2026-0009",
+        description: "Facture fournisseur",
+        amountMinor: 12_000,
+        currency: "XAF",
+        economicDate: "2026-08-13",
+        entryStatus: "SUBMITTED",
+      },
+    ],
   };
 
-  it("accepts a closed order with its timeline and its costs", () => {
+  it("accepts a completed order with its timeline and its costs", () => {
     expect(workOrderDetail.parse(detail)).toEqual(detail);
   });
 
@@ -160,8 +188,22 @@ describe("work order detail contract", () => {
   });
 
   it("names every kind the maintenance commands write", () => {
-    expect(WORK_ORDER_EVENT_KINDS).toContain("work_order.asset_released");
-    expect(WORK_ORDER_EVENT_KINDS).toContain("work_order.closure_approved");
+    for (const kind of [
+      "work_order.created",
+      "work_order.submitted",
+      "work_order.approved",
+      "work_order.rejected",
+      "work_order.completion_submitted",
+      "work_order.completed",
+      "work_order.completion_approved",
+      "work_order.completion_rejected",
+      "work_order.cancelled",
+      "work_order.asset_released",
+      // Legacy vocabulary still in any trail written before #28.
+      "work_order.closure_approved",
+    ]) {
+      expect(WORK_ORDER_EVENT_KINDS, kind).toContain(kind);
+    }
     expect(new Set(WORK_ORDER_EVENT_KINDS).size).toBe(
       WORK_ORDER_EVENT_KINDS.length,
     );
@@ -175,6 +217,30 @@ describe("work order detail contract", () => {
     expect(workOrderDetail.parse(reversed).costLines[0]?.amountMinor).toBe(
       -58_000,
     );
+  });
+
+  it("keeps a pending cost out of the posted set", () => {
+    expect(
+      workOrderDetail.safeParse({
+        ...detail,
+        costLines: [{ ...detail.costLines[0]!, entryStatus: "SUBMITTED" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      workOrderDetail.safeParse({
+        ...detail,
+        pendingCostLines: [{ ...detail.pendingCostLines[0]!, entryStatus: "POSTED" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("carries no REJECTED line anywhere — a refused spend is not a cost", () => {
+    expect(
+      workOrderDetail.safeParse({
+        ...detail,
+        costLines: [{ ...detail.costLines[0]!, entryStatus: "REJECTED" }],
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects a detail missing its chronologie", () => {
@@ -192,7 +258,12 @@ describe("issue list contract", () => {
     safetyCritical: true,
     category: "BRAKES",
     reportedAt: "2026-08-12T08:15:00.000Z",
-    workOrders: [{ id: listItem.id, status: "OPEN" }],
+    status: "OPEN",
+    resolvedAt: null,
+    resolutionNote: null,
+    dismissedAt: null,
+    dismissReason: null,
+    workOrders: [{ id: listItem.id, status: "APPROVED" }],
     assetUnavailable: true,
     rowVersion: 1,
   };
@@ -210,6 +281,22 @@ describe("issue list contract", () => {
       assetUnavailable: false,
     };
     expect(issueListItem.parse(bare)).toEqual(bare);
+  });
+
+  it("accepts a dismissed signalement with its reason", () => {
+    const dismissed = {
+      ...issue,
+      status: "DISMISSED",
+      dismissedAt: "2026-08-12T10:00:00.000Z",
+      dismissReason: "Signalé par erreur",
+    };
+    expect(issueListItem.parse(dismissed)).toEqual(dismissed);
+  });
+
+  it("rejects an issue status outside OPEN/RESOLVED/DISMISSED", () => {
+    expect(issueListItem.safeParse({ ...issue, status: "TRIAGED" }).success).toBe(
+      false,
+    );
   });
 
   it("requires the availability flag — an absent one must not read as available", () => {

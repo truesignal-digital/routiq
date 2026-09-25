@@ -22,6 +22,13 @@ export const COMMAND_QUEUEABILITY = {
   "record-expense": true,
   "record-revenue": true,
   "report-issue": true,
+  /*
+   * Resolving is the fault fixed on the spot — the mechanic tightened the
+   * clamp on a roadside with no signal, and that happened whether or not the
+   * server hears about it for an hour. The version it quotes still decides a
+   * race with a dismissal.
+   */
+  "resolve-issue": true,
   "create-work-order": true,
   "complete-work-order": true,
 
@@ -86,6 +93,13 @@ export const COMMAND_QUEUEABILITY = {
    */
   "approve-work-order": false,
   "approve-work-order-closure": false,
+  /*
+   * Their refusing pairs, for the same reason — and a dismissal is a judgement
+   * that someone's report was wrong, made against the issue as it stands now.
+   */
+  "reject-work-order": false,
+  "reject-work-order-completion": false,
+  "dismiss-issue": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

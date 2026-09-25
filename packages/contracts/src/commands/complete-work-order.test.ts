@@ -58,4 +58,26 @@ describe("completeWorkOrderCommand", () => {
       }).payload.summary,
     ).toBe("Tire replaced successfully");
   });
+
+  it("leaves resolveLinkedIssue unset so the server can default it from the issue link", () => {
+    expect(completeWorkOrderCommand.parse(valid).payload.resolveLinkedIssue).toBeUndefined();
+  });
+
+  it("carries an explicit resolveLinkedIssue=false — work done, problem persists", () => {
+    expect(
+      completeWorkOrderCommand.parse({
+        ...valid,
+        payload: { ...valid.payload, resolveLinkedIssue: false },
+      }).payload.resolveLinkedIssue,
+    ).toBe(false);
+  });
+
+  it("rejects a non-boolean resolveLinkedIssue", () => {
+    expect(
+      completeWorkOrderCommand.safeParse({
+        ...valid,
+        payload: { ...valid.payload, resolveLinkedIssue: "yes" },
+      }).success,
+    ).toBe(false);
+  });
 });
