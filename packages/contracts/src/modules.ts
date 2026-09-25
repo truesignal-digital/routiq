@@ -7,6 +7,7 @@ export const TOGGLEABLE_MODULE_CODES = [
   "DOCUMENTS",
   "FINANCE",
   "ACTIVITIES",
+  "MAINTENANCE",
 ] as const;
 export const MODULE_CODES = ["CORE", ...TOGGLEABLE_MODULE_CODES] as const;
 

@@ -22,6 +22,10 @@ describe("GET /v1/history/:entityType/:entityId", () => {
   let workspaceId: string;
   let adminPrincipalId: string;
   let activityId: string;
+  let maintenanceAssetId: string;
+  let issueId: string;
+  let workOrderId: string;
+  let availabilityIntervalId: string;
 
   async function command(
     name: string,
@@ -164,6 +168,58 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       { activityId },
       { expectedVersion: await activityRowVersion() },
     );
+
+    // A second truck carrying the maintenance chain: a safety-critical
+    // signalement grounds it, one work order repairs it, and a release puts it
+    // back on the road. Three entity types, three timelines, one story.
+    const mechanic = await seedMember(ctx.db, {
+      workspaceId,
+      role: "OPS_MANAGER",
+      allBranches: true,
+    });
+    const mechanicToken = (
+      await createSession(ctx.db, {
+        workspaceId,
+        principalId: mechanic.principal.id,
+      })
+    ).token;
+
+    maintenanceAssetId = await seedAsset(ctx.app, token, {
+      assetCode: "HIST-WO-TRUCK",
+    });
+    issueId = randomUUID();
+    await command("report-issue", {
+      issueId,
+      assetId: maintenanceAssetId,
+      description: "Fuite de liquide de frein",
+      safetyCritical: true,
+      category: "BRAKES",
+    });
+
+    workOrderId = randomUUID();
+    const createdWorkOrder = await command("create-work-order", {
+      workOrderId,
+      assetId: maintenanceAssetId,
+      issueId,
+      description: "Réfection du circuit de freinage",
+      expectedCostMinor: 300_000,
+    });
+    await command(
+      "complete-work-order",
+      {
+        workOrderId,
+        actualCostMinor: 325_000,
+        summary: "Maître-cylindre et flexibles remplacés",
+      },
+      { token: mechanicToken, expectedVersion: createdWorkOrder.rowVersion },
+    );
+    // Releaser ≠ performer, because the originating signalement is safety-critical.
+    const released = await command("release-asset-to-service", {
+      assetId: maintenanceAssetId,
+      workOrderId,
+      note: "Essai routier concluant",
+    });
+    availabilityIntervalId = released.recordId;
   });
 
   afterAll(async () => ctx.close());
@@ -336,6 +392,129 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     const response = await history("activity", activityId, "?cursor=bm90LWEtY3Vyc29y");
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  describe("maintenance entity types", () => {
+    async function timeline(entityType: string, entityId: string) {
+      const response = await history(entityType, entityId);
+      expect(response.statusCode).toBe(200);
+      return historyListResponse.parse(response.json());
+    }
+
+    it("returns a work order's whole workflow, newest first", async () => {
+      const body = await timeline("work_order", workOrderId);
+
+      expect(body.items.map((item) => item.eventType)).toEqual([
+        "work_order.asset_released",
+        "work_order.closed",
+        "work_order.opened",
+      ]);
+      expect(body.items.map((item) => item.command.name)).toEqual([
+        "release-asset-to-service",
+        "complete-work-order",
+        "create-work-order",
+      ]);
+      for (const item of body.items) {
+        expect(item.actor.scope).toBe("WORKSPACE");
+        expect(item.actor.displayName).toEqual(expect.any(String));
+      }
+      // The mechanic declared it complete; the admin signed it back into service.
+      const [released, closed] = body.items;
+      expect(released?.actor.principalId).toBe(adminPrincipalId);
+      expect(closed?.actor.principalId).not.toBe(adminPrincipalId);
+    });
+
+    it("serves the signalement that started it", async () => {
+      const body = await timeline("operational_issue", issueId);
+      expect(body.items.map((item) => item.eventType)).toEqual([
+        "operational_issue.reported",
+      ]);
+      expect(body.items[0]?.changedFields).toContain("safetyCritical");
+    });
+
+    it("serves the grounding as an opening and a closing", async () => {
+      const body = await timeline(
+        "asset_availability_interval",
+        availabilityIntervalId,
+      );
+      expect(body.items.map((item) => item.eventType)).toEqual([
+        "asset_availability.closed",
+        "asset_availability.opened",
+      ]);
+    });
+
+    it("shows another tenant nothing for the same work order id", async () => {
+      const response = await history("work_order", workOrderId, "", otherToken);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ items: [], nextCursor: null });
+    });
+
+    it("diffs the closure as a status move and a declared cost", async () => {
+      const body = await timeline("work_order", workOrderId);
+      const closure = body.items.find(
+        (item) => item.eventType === "work_order.closed",
+      );
+      if (!closure) throw new Error("no closure event on the seeded work order");
+
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/work_order/${workOrderId}/${closure.eventId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.statusCode).toBe(200);
+
+      const diff = historyEventDiff.parse(response.json());
+      expect(diff.changes).toContainEqual({
+        field: "status",
+        kind: "VALUE",
+        before: "OPEN",
+        after: "CLOSED",
+      });
+      // MONEY, not VALUE: the client formats it against `currency`, never divides.
+      expect(diff.changes).toContainEqual({
+        field: "actualCostMinor",
+        kind: "MONEY",
+        before: null,
+        after: 325_000,
+      });
+      expect(diff.changes).toContainEqual({
+        field: "summary",
+        kind: "VALUE",
+        before: null,
+        after: "Maître-cylindre et flexibles remplacés",
+      });
+      expect(diff.changes.map((change) => change.field)).not.toContain(
+        "rowVersion",
+      );
+    });
+
+    it("diffs the release as the grounding's closing timestamp", async () => {
+      const body = await timeline(
+        "asset_availability_interval",
+        availabilityIntervalId,
+      );
+      const closed = body.items.find(
+        (item) => item.eventType === "asset_availability.closed",
+      );
+      if (!closed) throw new Error("no closing event on the seeded interval");
+
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/asset_availability_interval/${availabilityIntervalId}/${closed.eventId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.statusCode).toBe(200);
+
+      const diff = historyEventDiff.parse(response.json());
+      const fields = diff.changes.map((change) => change.field);
+      expect(fields).toContain("closedAt");
+      expect(fields).toContain("releaseNote");
+      // Bookkeeping: the command that closed it is provenance, not history.
+      expect(fields).not.toContain("closedByCommandId");
+      expect(
+        diff.changes.find((change) => change.field === "releaseNote")?.after,
+      ).toBe("Essai routier concluant");
+    });
   });
 
   describe("GET /v1/history/:entityType/:entityId/:eventId", () => {

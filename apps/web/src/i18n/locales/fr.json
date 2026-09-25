@@ -7,7 +7,8 @@
     "assets": "Actifs",
     "finances": "Finances",
     "more": "Plus",
-    "activities": "Activités"
+    "activities": "Activités",
+    "maintenance": "Maintenance"
   },
   "home": {
     "title": "Accueil",
@@ -147,6 +148,11 @@
     "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
     "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
     "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
+    "ISSUE_ASSET_MISMATCH": "Ce signalement concerne un autre actif. Choisissez un signalement du même actif.",
+    "WORK_ORDER_ASSET_MISMATCH": "Cet ordre de travail concerne un autre actif.",
+    "WORK_ORDER_NOT_CLOSED": "L'ordre de travail doit être clôturé avant la remise en service.",
+    "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
+    "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
   "assets": {
@@ -989,6 +995,129 @@
       "closingSubmitting": "Clôture…"
     }
   },
+  "maintenance": {
+    "title": "Maintenance",
+    "retry": "Réessayer",
+    "workOrders": {
+      "tab": "Ordres de travail",
+      "new": "Nouvel ordre de travail",
+      "newHint": "Ouvrez un ordre de travail sur un actif, avec ou sans signalement à l'origine.",
+      "newSubmit": "Ouvrir l'ordre de travail",
+      "loading": "Chargement des ordres de travail…",
+      "loadFailed": "Impossible de charger les ordres de travail. Veuillez réessayer.",
+      "emptyHint": "Aucun ordre de travail pour l'instant. Les réparations ouvertes apparaîtront ici.",
+      "branchEmptyHint": "Aucun ordre de travail pour cette agence.",
+      "filters": {
+        "status": "Statut",
+        "all": "Tous"
+      },
+      "columns": {
+        "reference": "N°",
+        "asset": "Actif",
+        "branch": "Agence",
+        "description": "Description",
+        "expectedCost": "Coût prévu",
+        "actualCost": "Coût réel",
+        "status": "Statut"
+      },
+      "status": {
+        "SUBMITTED": "Soumis",
+        "OPEN": "Approuvé",
+        "PENDING_CLOSE": "Clôture soumise",
+        "CLOSED": "Clôturé",
+        "CANCELLED": "Annulé"
+      }
+    },
+    "issues": {
+      "tab": "Signalements",
+      "new": "Nouveau signalement",
+      "newHint": "Décrivez le défaut constaté sur l'actif. Un signalement critique pour la sécurité immobilise l'actif immédiatement.",
+      "newSubmit": "Enregistrer le signalement",
+      "loading": "Chargement des signalements…",
+      "loadFailed": "Impossible de charger les signalements. Veuillez réessayer.",
+      "emptyHint": "Aucun signalement pour l'instant. Les défauts constatés apparaîtront ici.",
+      "branchEmptyHint": "Aucun signalement pour cette agence.",
+      "safetyCritical": "Sécurité",
+      "unavailable": "Immobilisé",
+      "noWorkOrder": "Aucun",
+      "createWorkOrder": "Créer un ordre de travail",
+      "columns": {
+        "asset": "Actif",
+        "description": "Description",
+        "safety": "État",
+        "category": "Catégorie",
+        "reportedAt": "Signalé le",
+        "workOrders": "Ordres de travail"
+      }
+    },
+    "fields": {
+      "asset": "Actif",
+      "choose": "Choisir",
+      "description": "Description",
+      "category": "Catégorie",
+      "categoryPlaceholder": "Freinage, pneumatique, moteur…",
+      "safetyCritical": "Critique pour la sécurité",
+      "safetyCriticalHint": "L'actif est immobilisé dès l'enregistrement et jusqu'à sa remise en service.",
+      "issue": "Signalement",
+      "issueHint": "Sans signalement, l'ordre de travail est préventif.",
+      "preventive": "Préventif",
+      "expectedCost": "Coût prévu",
+      "actualCost": "Coût réel",
+      "summary": "Compte rendu",
+      "reason": "Motif",
+      "cancelReason": "Motif d'annulation",
+      "note": "Note"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "submitting": "Envoi…",
+      "approve": "Approuver",
+      "approveTitle": "Approuver l'ordre de travail",
+      "approveHint": "Vous autorisez la dépense prévue. L'ordre de travail passe en travaux.",
+      "approveClosure": "Valider la clôture",
+      "approveClosureTitle": "Valider la clôture",
+      "approveClosureHint": "Vous acceptez les coûts réels déclarés. L'ordre de travail est clôturé.",
+      "declareClosure": "Déclarer la clôture",
+      "declareClosureTitle": "Déclarer les travaux terminés",
+      "declareClosureHint": "Déclarez le coût réel et le compte rendu des travaux.",
+      "cancelWorkOrder": "Annuler l'ordre de travail",
+      "cancelWorkOrderTitle": "Annuler l'ordre de travail",
+      "cancelWorkOrderHint": "L'ordre de travail est abandonné. Le motif reste au journal.",
+      "release": "Remise en service",
+      "releaseTitle": "Remise en service",
+      "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés.",
+      "releaseSubject": "Ordre de travail {reference}"
+    },
+    "detail": {
+      "chronologie": "Chronologie",
+      "chronologieEmpty": "Aucun évènement enregistré.",
+      "costLines": "Coûts imputés",
+      "costLinesEmpty": "Aucun coût imputé à cet ordre de travail.",
+      "loading": "Chargement de la chronologie…",
+      "loadFailed": "Impossible de charger la chronologie. Veuillez réessayer.",
+      "preventive": "Préventif — aucun signalement",
+      "linkedIssue": "Signalement lié",
+      "unavailableTitle": "Actif immobilisé",
+      "unavailableHint": "Seule la remise en service rouvre la disponibilité.",
+      "entryStatus": {
+        "SUBMITTED": "En attente",
+        "POSTED": "Comptabilisé",
+        "REJECTED": "Rejeté",
+        "REVERSED": "Extourné"
+      }
+    },
+    "notify": {
+      "success": {
+        "issueReported": "Signalement enregistré",
+        "workOrderCreated": "Ordre de travail ouvert",
+        "workOrderApproved": "Ordre de travail approuvé",
+        "closureDeclared": "Clôture déclarée",
+        "closureApproved": "Clôture validée",
+        "workOrderCancelled": "Ordre de travail annulé",
+        "assetReleased": "Actif remis en service"
+      }
+    }
+  },
   "persons": {
     "title": "Personnel",
     "register": "Ajouter une personne",
@@ -1206,7 +1335,18 @@
       "module-disabled": "Module désactivé",
       "template_preset-materialized": "Modèle métier activé",
       "template_preset-disabled": "Modèle métier désactivé",
-      "workspace-provisioned": "Espace de travail créé"
+      "workspace-provisioned": "Espace de travail créé",
+      "operational_issue-reported": "Signalement enregistré",
+      "work_order-submitted": "Ordre de travail soumis",
+      "work_order-opened": "Ordre de travail ouvert",
+      "work_order-approved": "Ordre de travail approuvé",
+      "work_order-closure_submitted": "Clôture déclarée",
+      "work_order-closed": "Ordre de travail clôturé",
+      "work_order-closure_approved": "Clôture validée",
+      "work_order-cancelled": "Ordre de travail annulé",
+      "work_order-asset_released": "Actif remis en service",
+      "asset_availability-opened": "Actif immobilisé",
+      "asset_availability-closed": "Immobilisation levée"
     },
     "field": {
       "status": "statut",
@@ -1325,7 +1465,20 @@
       "timezone": "fuseau horaire",
       "moduleCode": "module",
       "updatedAt": "modification",
-      "presetCode": "modèle métier"
+      "presetCode": "modèle métier",
+      "expectedCostMinor": "coût prévu",
+      "actualCostMinor": "coût réel",
+      "summary": "compte rendu",
+      "completedAt": "travaux terminés",
+      "cancelReason": "motif d'annulation",
+      "cancelledAt": "annulation",
+      "closedByCommandId": "commande de clôture",
+      "issueId": "signalement",
+      "openedByIssueId": "signalement à l'origine",
+      "openedAt": "ouverture",
+      "reportedAt": "signalé le",
+      "safetyCritical": "critique pour la sécurité",
+      "category": "catégorie"
     }
   }
 }

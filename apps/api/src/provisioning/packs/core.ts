@@ -252,6 +252,69 @@ function defaultApprovalRules(): Array<
     );
   }
 
+  // Maintenance commands: issue reporting, work order management, and asset release
+  for (const commandType of ["report-issue"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"] as const).map(
+        (requiredRole) => ({
+          commandType,
+          categoryCode: null,
+          branchId: null,
+          amountMinMinor: null,
+          amountMaxMinor: null,
+          requiredRole,
+          createdByCommandId: null,
+        }),
+      ),
+    );
+  }
+
+  for (const commandType of ["create-work-order", "complete-work-order", "cancel-work-order"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "MAINTENANCE"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  for (const commandType of ["release-asset-to-service"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  // The two work-order decisions, on the same footing as approve-entry: what
+  // they resolve is money — the expected spend on creation, the declared actual
+  // cost on closure — so the finance approver is the role that holds them.
+  // No amount bounds, so a workspace that never configures a threshold never
+  // meets a pending work order in the first place.
+  for (const commandType of ["approve-work-order", "approve-work-order-closure"]) {
+    rules.push(
+      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
   return rules;
 }
 

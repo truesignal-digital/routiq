@@ -582,8 +582,10 @@ export const financialEntries = pgTable(
  * from routiq_app) except the period-assignment update at approval time, done
  * via the owner path inside the command transaction — corrections are new
  * negated rows via reversal entries. Sum of a POSTED entry's postings equals
- * the entry amount (command-layer invariant). activity_id / work_order_id /
- * person_id attribution dimensions land with their own specs.
+ * the entry amount (command-layer invariant). activity_id, work_order_id and
+ * person_id are the attribution dimensions: what a cost was for. A posting
+ * carries at most one of each, and the work-order dimension is how labour and
+ * parts costs reach the chronologie of the order that incurred them.
  */
 export const financialPostings = pgTable(
   "financial_postings",
@@ -608,6 +610,7 @@ export const financialPostings = pgTable(
       .references(() => branches.id),
     assetId: uuid("asset_id").references(() => assets.id),
     activityId: uuid("activity_id").references((): AnyPgColumn => activities.id),
+    workOrderId: uuid("work_order_id").references((): AnyPgColumn => workOrders.id),
     personId: uuid("person_id").references((): AnyPgColumn => persons.id),
     /** SIGNED minor units: reversals subtract, sums can't double-count. */
     amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
@@ -627,6 +630,7 @@ export const financialPostings = pgTable(
     index("financial_postings_ws_asset_date_idx").on(t.workspaceId, t.assetId, t.economicDate),
     index("financial_postings_ws_period_idx").on(t.workspaceId, t.postingPeriodId),
     index("financial_postings_ws_activity_idx").on(t.workspaceId, t.activityId),
+    index("financial_postings_ws_work_order_idx").on(t.workspaceId, t.workOrderId),
     index("financial_postings_ws_person_idx").on(t.workspaceId, t.personId),
   ],
 );
@@ -938,5 +942,128 @@ export const meterReadings = pgTable(
   (t) => [
     index("meter_readings_ws_asset_observed_idx").on(t.workspaceId, t.assetId, t.observedAt),
     uniqueIndex("meter_readings_superseded_uq").on(t.supersededById),
+  ],
+);
+
+/**
+ * Operational issue (Signalement): captures the initial report of a problem
+ * with an asset. An issue is created offline (queueable) and may spawn one or
+ * more work orders. State is derived from work orders and availability intervals,
+ * never stored. Status column intentionally absent — the issue lifecycle is
+ * implicit in its work orders and release-to-service decision.
+ */
+export const operationalIssues = pgTable(
+  "operational_issues",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    description: text("description").notNull(),
+    safetyCritical: boolean("safety_critical").notNull(),
+    category: text("category"),
+    reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [
+    index("operational_issues_ws_asset_idx").on(t.workspaceId, t.assetId),
+  ],
+);
+
+/**
+ * Maintenance work order (Ordre de travail): planned work to address an issue
+ * or preventive maintenance. Status tracks the workflow (SUBMITTED → OPEN →
+ * PENDING_CLOSE → CLOSED, plus CANCELLED from SUBMITTED or OPEN). The two
+ * pending states exist only when a tenant threshold rule demanded review:
+ * without one, creation lands OPEN and completion lands CLOSED in a single
+ * call. An issue may spawn multiple work orders; cancellation does
+ * not delete — it records a reason and opens the door for a new order on the same
+ * issue. Composite tenant FKs put the work order, its asset and its linked issue
+ * in one workspace; that the issue names the same asset is a handler check, not
+ * a structural one.
+ */
+export const workOrders = pgTable(
+  "work_orders",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
+    description: text("description").notNull(),
+    /**
+     * SUBMITTED is where a creation lands when a threshold rule required
+     * review; approve-work-order moves it to OPEN. Drizzle emits this column as
+     * plain `text` with no CHECK, and the 0025 snapshot records only its type
+     * and default — so widening the enum is a TypeScript-level change and needs
+     * no migration.
+     */
+    status: text("status", {
+      enum: ["SUBMITTED", "OPEN", "PENDING_CLOSE", "CLOSED", "CANCELLED"],
+    })
+      .notNull()
+      .default("OPEN"),
+    expectedCostMinor: bigint("expected_cost_minor", { mode: "bigint" }),
+    currency: char("currency", { length: 3 }).notNull().default("XAF"),
+    actualCostMinor: bigint("actual_cost_minor", { mode: "bigint" }),
+    summary: text("summary"),
+    cancelReason: text("cancel_reason"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [
+    index("work_orders_ws_asset_idx").on(t.workspaceId, t.assetId),
+    index("work_orders_ws_status_idx").on(t.workspaceId, t.status),
+  ],
+);
+
+/**
+ * Asset availability interval: tracks when an asset transitions to UNAVAILABLE
+ * due to safety-critical issues and when it is released back to service.
+ * At most one open interval per (workspace_id, asset_id) enforced via PARTIAL
+ * UNIQUE constraint. An asset is implicitly AVAILABLE unless it holds an open
+ * interval; this separation from lifecycle_status is deliberate (§3 invariants).
+ * closed_by_command_id is the release-asset-to-service decision, which requires
+ * approval; created_by_command_id tracks the opener (usually report-issue).
+ */
+export const assetAvailabilityIntervals = pgTable(
+  "asset_availability_intervals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
+    openedByIssueId: uuid("opened_by_issue_id")
+      .notNull()
+      .references((): AnyPgColumn => operationalIssues.id),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedByCommandId: uuid("closed_by_command_id").references(() => commands.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [
+    index("asset_availability_intervals_ws_asset_idx").on(t.workspaceId, t.assetId),
+    uniqueIndex("asset_availability_intervals_open_per_asset_uq")
+      .on(t.workspaceId, t.assetId)
+      .where(sql`${t.closedAt} IS NULL`),
   ],
 );

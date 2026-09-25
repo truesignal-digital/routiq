@@ -1,0 +1,641 @@
+import {
+  issueListQuery,
+  issueListResponse,
+  workOrderDetail,
+  workOrderListQuery,
+  workOrderListResponse,
+  type ListSort,
+} from "@routiq/contracts";
+import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { z } from "zod";
+import type { RequireAuth } from "../auth/plugin.js";
+import type { Db } from "../db/client.js";
+import {
+  assetAvailabilityIntervals,
+  assets,
+  auditEvents,
+  branches,
+  commands,
+  financialEntries,
+  financialPostings,
+  operationalIssues,
+  principals,
+  workOrders,
+} from "../db/schema.js";
+import { inWorkspace } from "../db/tenant.js";
+import {
+  afterKeyset,
+  bindTimestamp,
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  keysetOrderBy,
+  type KeysetColumn,
+} from "./cursor.js";
+import { serializeMinor } from "./serialize-minor.js";
+
+/**
+ * Newest first, always — both maintenance queues read that way and neither
+ * offers the client a sort. The cursor still carries the ordering, because
+ * `decodeKeysetCursor` refuses a boundary minted under any other one.
+ */
+const workOrderSort: ListSort<"createdAt"> = {
+  field: "createdAt",
+  direction: "desc",
+};
+
+const issueSort: ListSort<"reportedAt"> = {
+  field: "reportedAt",
+  direction: "desc",
+};
+
+/**
+ * A work order has no timestamp of its own: the row is stamped by the command
+ * that wrote it, so the queue orders on that receipt's execution time. The FK is
+ * NOT NULL, which is what lets the join below be an inner one.
+ */
+const workOrderCreatedAtColumn: KeysetColumn = {
+  column: commands.executedAt,
+  bind: bindTimestamp,
+};
+
+const issueReportedAtColumn: KeysetColumn = {
+  column: operationalIssues.reportedAt,
+  bind: bindTimestamp,
+};
+
+function serializeOptionalMinor(value: bigint | null): number | null {
+  return value === null ? null : serializeMinor(value);
+}
+
+export function registerMaintenanceReadRoutes(
+  app: FastifyInstance,
+  db: Db,
+  requireAuth: RequireAuth,
+) {
+  /**
+   * The work-order queue. Neither work orders nor issues carry a branch column,
+   * so the branch lens — and the `branchId` filter — resolve through the asset,
+   * which is why every query in this file joins the fleet.
+   */
+  app.get(
+    "/v1/work-orders",
+    { preHandler: requireAuth },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const auth = req.auth!;
+        const parsedQuery = workOrderListQuery.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { status, branchId, assetId, cursor, limit } = parsedQuery.data;
+
+        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          const decodedCursor = cursor
+            ? decodeKeysetCursor(cursor, workOrderSort)
+            : undefined;
+          if (cursor && !decodedCursor) {
+            return { error: "VALIDATION_FAILED" as const };
+          }
+
+          const conditions: SQL[] = [
+            eq(workOrders.workspaceId, auth.workspaceId),
+          ];
+          // Branch scope comes from the session, never the client; a branchId
+          // filter narrows inside it and can never widen it.
+          if (auth.branchScope !== "ALL") {
+            conditions.push(inArray(assets.branchId, auth.branchScope));
+          }
+          if (branchId) conditions.push(eq(assets.branchId, branchId));
+          if (status) conditions.push(eq(workOrders.status, status));
+          if (assetId) conditions.push(eq(workOrders.assetId, assetId));
+          if (decodedCursor) {
+            conditions.push(
+              afterKeyset(
+                workOrderCreatedAtColumn,
+                workOrderSort.direction,
+                workOrders.id,
+                decodedCursor,
+              ),
+            );
+          }
+
+          const rows = await tx
+            .select({
+              id: workOrders.id,
+              status: workOrders.status,
+              description: workOrders.description,
+              assetId: workOrders.assetId,
+              assetCode: assets.assetCode,
+              registrationNumber: assets.registrationNumber,
+              branchId: assets.branchId,
+              branchCode: branches.code,
+              branchName: branches.name,
+              expectedCostMinor: workOrders.expectedCostMinor,
+              actualCostMinor: workOrders.actualCostMinor,
+              currency: workOrders.currency,
+              issueId: workOrders.issueId,
+              safetyCritical: operationalIssues.safetyCritical,
+              createdAt: commands.executedAt,
+              completedAt: workOrders.completedAt,
+              cancelledAt: workOrders.cancelledAt,
+              rowVersion: workOrders.rowVersion,
+            })
+            .from(workOrders)
+            .innerJoin(
+              assets,
+              and(
+                eq(assets.workspaceId, workOrders.workspaceId),
+                eq(assets.id, workOrders.assetId),
+              ),
+            )
+            .innerJoin(
+              branches,
+              and(
+                eq(branches.workspaceId, assets.workspaceId),
+                eq(branches.id, assets.branchId),
+              ),
+            )
+            .innerJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, workOrders.workspaceId),
+                eq(commands.id, workOrders.createdByCommandId),
+              ),
+            )
+            .leftJoin(
+              operationalIssues,
+              and(
+                eq(operationalIssues.workspaceId, workOrders.workspaceId),
+                eq(operationalIssues.id, workOrders.issueId),
+              ),
+            )
+            .where(and(...conditions))
+            .orderBy(
+              ...keysetOrderBy(
+                workOrderCreatedAtColumn,
+                workOrderSort.direction,
+                workOrders.id,
+              ),
+            )
+            .limit(limit + 1);
+
+          return { rows };
+        });
+
+        if ("error" in result) {
+          return reply.status(400).send({ error: { code: result.error } });
+        }
+
+        const hasNextPage = result.rows.length > limit;
+        const pageRows = result.rows.slice(0, limit);
+        const items = pageRows.map((row) => ({
+          id: row.id,
+          status: row.status,
+          description: row.description,
+          asset: {
+            id: row.assetId,
+            assetCode: row.assetCode,
+            registrationNumber: row.registrationNumber,
+          },
+          branch: {
+            id: row.branchId,
+            code: row.branchCode,
+            name: row.branchName,
+          },
+          expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
+          actualCostMinor: serializeOptionalMinor(row.actualCostMinor),
+          currency: row.currency,
+          issue:
+            row.issueId === null
+              ? null
+              : { id: row.issueId, safetyCritical: row.safetyCritical ?? false },
+          createdAt: row.createdAt.toISOString(),
+          completedAt: row.completedAt?.toISOString() ?? null,
+          cancelledAt: row.cancelledAt?.toISOString() ?? null,
+          rowVersion: row.rowVersion,
+        }));
+
+        let nextCursor: string | null = null;
+        if (hasNextPage && pageRows.length > 0) {
+          const lastRow = pageRows[pageRows.length - 1]!;
+          nextCursor = encodeKeysetCursor(
+            workOrderSort,
+            lastRow.createdAt.toISOString(),
+            lastRow.id,
+          );
+        }
+
+        return workOrderListResponse.parse({ items, nextCursor });
+      } catch (error) {
+        req.log.error({ err: error }, "work orders list read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+
+  /**
+   * One work order, its chronologie and what it cost. The timeline is assembled
+   * from the audit trail rather than from the row's own columns: the row holds
+   * only the current state, while who approved the spend and who signed the
+   * truck back into service exist nowhere else.
+   */
+  app.get(
+    "/v1/work-orders/:workOrderId",
+    { preHandler: requireAuth },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const auth = req.auth!;
+        const parsedParams = z
+          .object({ workOrderId: z.uuid() })
+          .safeParse(req.params);
+        if (!parsedParams.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { workOrderId } = parsedParams.data;
+
+        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          const conditions: SQL[] = [
+            eq(workOrders.workspaceId, auth.workspaceId),
+            eq(workOrders.id, workOrderId),
+          ];
+          if (auth.branchScope !== "ALL") {
+            conditions.push(inArray(assets.branchId, auth.branchScope));
+          }
+
+          const [header] = await tx
+            .select({
+              id: workOrders.id,
+              status: workOrders.status,
+              description: workOrders.description,
+              assetId: workOrders.assetId,
+              assetCode: assets.assetCode,
+              registrationNumber: assets.registrationNumber,
+              branchId: assets.branchId,
+              branchCode: branches.code,
+              branchName: branches.name,
+              expectedCostMinor: workOrders.expectedCostMinor,
+              actualCostMinor: workOrders.actualCostMinor,
+              currency: workOrders.currency,
+              issueId: workOrders.issueId,
+              safetyCritical: operationalIssues.safetyCritical,
+              summary: workOrders.summary,
+              cancelReason: workOrders.cancelReason,
+              createdAt: commands.executedAt,
+              createdByCommandId: workOrders.createdByCommandId,
+              completedAt: workOrders.completedAt,
+              cancelledAt: workOrders.cancelledAt,
+              rowVersion: workOrders.rowVersion,
+            })
+            .from(workOrders)
+            .innerJoin(
+              assets,
+              and(
+                eq(assets.workspaceId, workOrders.workspaceId),
+                eq(assets.id, workOrders.assetId),
+              ),
+            )
+            .innerJoin(
+              branches,
+              and(
+                eq(branches.workspaceId, assets.workspaceId),
+                eq(branches.id, assets.branchId),
+              ),
+            )
+            .innerJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, workOrders.workspaceId),
+                eq(commands.id, workOrders.createdByCommandId),
+              ),
+            )
+            .leftJoin(
+              operationalIssues,
+              and(
+                eq(operationalIssues.workspaceId, workOrders.workspaceId),
+                eq(operationalIssues.id, workOrders.issueId),
+              ),
+            )
+            .where(and(...conditions))
+            .limit(1);
+
+          if (!header) return undefined;
+
+          // A transaction owns one pg connection; keep the child reads
+          // sequential so the driver never receives overlapping queries.
+          const eventRows = await tx
+            .select({
+              eventId: auditEvents.id,
+              kind: auditEvents.eventType,
+              occurredAt: auditEvents.occurredAt,
+              scope: auditEvents.scope,
+              // The generated masking column, not `actor_principal_id`: it is
+              // NULL for PLATFORM events, so the principals join finds nothing
+              // and the vendor operator's identity never crosses the tenant line.
+              actorPrincipalId: auditEvents.tenantActorPrincipalId,
+              actorDisplayName: principals.displayName,
+            })
+            .from(auditEvents)
+            .leftJoin(
+              principals,
+              eq(principals.id, auditEvents.tenantActorPrincipalId),
+            )
+            .where(
+              and(
+                eq(auditEvents.workspaceId, auth.workspaceId),
+                eq(auditEvents.entityType, "work_order"),
+                eq(auditEvents.entityId, workOrderId),
+              ),
+            )
+            .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
+
+          const costRows = await tx
+            .select({
+              postingId: financialPostings.id,
+              entryId: financialEntries.id,
+              entryNumber: financialEntries.entryNumber,
+              description: financialEntries.description,
+              amountMinor: financialPostings.amountMinor,
+              currency: financialEntries.currency,
+              economicDate: financialPostings.economicDate,
+              entryStatus: financialEntries.status,
+            })
+            .from(financialPostings)
+            .innerJoin(
+              financialEntries,
+              and(
+                eq(financialEntries.workspaceId, financialPostings.workspaceId),
+                eq(financialEntries.id, financialPostings.financialEntryId),
+              ),
+            )
+            .where(
+              and(
+                eq(financialPostings.workspaceId, auth.workspaceId),
+                eq(financialPostings.workOrderId, workOrderId),
+              ),
+            )
+            .orderBy(
+              asc(financialPostings.economicDate),
+              asc(financialEntries.entryNumber),
+              asc(financialPostings.lineNo),
+            );
+
+          return { header, eventRows, costRows };
+        });
+
+        if (!result) {
+          return reply
+            .status(404)
+            .send({ error: { code: "REFERENCE_NOT_FOUND" } });
+        }
+
+        const { header, eventRows, costRows } = result;
+        return workOrderDetail.parse({
+          id: header.id,
+          status: header.status,
+          description: header.description,
+          asset: {
+            id: header.assetId,
+            assetCode: header.assetCode,
+            registrationNumber: header.registrationNumber,
+          },
+          branch: {
+            id: header.branchId,
+            code: header.branchCode,
+            name: header.branchName,
+          },
+          expectedCostMinor: serializeOptionalMinor(header.expectedCostMinor),
+          actualCostMinor: serializeOptionalMinor(header.actualCostMinor),
+          currency: header.currency,
+          issue:
+            header.issueId === null
+              ? null
+              : {
+                  id: header.issueId,
+                  safetyCritical: header.safetyCritical ?? false,
+                },
+          summary: header.summary,
+          cancelReason: header.cancelReason,
+          createdAt: header.createdAt.toISOString(),
+          createdByCommandId: header.createdByCommandId,
+          completedAt: header.completedAt?.toISOString() ?? null,
+          cancelledAt: header.cancelledAt?.toISOString() ?? null,
+          rowVersion: header.rowVersion,
+          chronologie: eventRows.map((event) => ({
+            eventId: event.eventId,
+            kind: event.kind,
+            occurredAt: event.occurredAt.toISOString(),
+            actor: {
+              principalId: event.actorPrincipalId,
+              displayName: event.actorDisplayName,
+              scope: event.scope,
+            },
+          })),
+          costLines: costRows.map((line) => ({
+            ...line,
+            amountMinor: serializeMinor(line.amountMinor),
+          })),
+        });
+      } catch (error) {
+        req.log.error({ err: error }, "work order detail read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+
+  /**
+   * The signalements queue. An issue stores no state of its own (§ schema note):
+   * what happened to it lives in its work orders, and whether the truck is still
+   * grounded lives in the availability intervals — both resolved here so the
+   * screen renders a row without a second round trip on 2G.
+   */
+  app.get(
+    "/v1/issues",
+    { preHandler: requireAuth },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const auth = req.auth!;
+        const parsedQuery = issueListQuery.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { branchId, assetId, safetyCritical, cursor, limit } =
+          parsedQuery.data;
+
+        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          const decodedCursor = cursor
+            ? decodeKeysetCursor(cursor, issueSort)
+            : undefined;
+          if (cursor && !decodedCursor) {
+            return { error: "VALIDATION_FAILED" as const };
+          }
+
+          const conditions: SQL[] = [
+            eq(operationalIssues.workspaceId, auth.workspaceId),
+          ];
+          if (auth.branchScope !== "ALL") {
+            conditions.push(inArray(assets.branchId, auth.branchScope));
+          }
+          if (branchId) conditions.push(eq(assets.branchId, branchId));
+          if (assetId) conditions.push(eq(operationalIssues.assetId, assetId));
+          if (safetyCritical !== undefined) {
+            conditions.push(
+              eq(operationalIssues.safetyCritical, safetyCritical),
+            );
+          }
+          if (decodedCursor) {
+            conditions.push(
+              afterKeyset(
+                issueReportedAtColumn,
+                issueSort.direction,
+                operationalIssues.id,
+                decodedCursor,
+              ),
+            );
+          }
+
+          const rows = await tx
+            .select({
+              id: operationalIssues.id,
+              assetId: operationalIssues.assetId,
+              assetCode: assets.assetCode,
+              registrationNumber: assets.registrationNumber,
+              branchId: assets.branchId,
+              branchCode: branches.code,
+              branchName: branches.name,
+              description: operationalIssues.description,
+              safetyCritical: operationalIssues.safetyCritical,
+              category: operationalIssues.category,
+              reportedAt: operationalIssues.reportedAt,
+              rowVersion: operationalIssues.rowVersion,
+            })
+            .from(operationalIssues)
+            .innerJoin(
+              assets,
+              and(
+                eq(assets.workspaceId, operationalIssues.workspaceId),
+                eq(assets.id, operationalIssues.assetId),
+              ),
+            )
+            .innerJoin(
+              branches,
+              and(
+                eq(branches.workspaceId, assets.workspaceId),
+                eq(branches.id, assets.branchId),
+              ),
+            )
+            .where(and(...conditions))
+            .orderBy(
+              ...keysetOrderBy(
+                issueReportedAtColumn,
+                issueSort.direction,
+                operationalIssues.id,
+              ),
+            )
+            .limit(limit + 1);
+
+          const pageRows = rows.slice(0, limit);
+          const issueIds = pageRows.map((row) => row.id);
+          const pageAssetIds = [...new Set(pageRows.map((row) => row.assetId))];
+
+          // Sequential, same reason as the detail read: one connection per tx.
+          const linkedWorkOrders =
+            issueIds.length === 0
+              ? []
+              : await tx
+                  .select({
+                    id: workOrders.id,
+                    issueId: workOrders.issueId,
+                    status: workOrders.status,
+                  })
+                  .from(workOrders)
+                  .where(
+                    and(
+                      eq(workOrders.workspaceId, auth.workspaceId),
+                      inArray(workOrders.issueId, issueIds),
+                    ),
+                  )
+                  .orderBy(asc(workOrders.id));
+
+          const groundedAssets =
+            pageAssetIds.length === 0
+              ? []
+              : await tx
+                  .select({ assetId: assetAvailabilityIntervals.assetId })
+                  .from(assetAvailabilityIntervals)
+                  .where(
+                    and(
+                      eq(
+                        assetAvailabilityIntervals.workspaceId,
+                        auth.workspaceId,
+                      ),
+                      inArray(assetAvailabilityIntervals.assetId, pageAssetIds),
+                      isNull(assetAvailabilityIntervals.closedAt),
+                    ),
+                  );
+
+          return {
+            rows,
+            linkedWorkOrders,
+            groundedAssetIds: groundedAssets.map((row) => row.assetId),
+          };
+        });
+
+        if ("error" in result) {
+          return reply.status(400).send({ error: { code: result.error } });
+        }
+
+        const hasNextPage = result.rows.length > limit;
+        const pageRows = result.rows.slice(0, limit);
+
+        const workOrdersByIssue = new Map<
+          string,
+          Array<{ id: string; status: string }>
+        >();
+        for (const workOrder of result.linkedWorkOrders) {
+          if (workOrder.issueId === null) continue;
+          const bucket = workOrdersByIssue.get(workOrder.issueId) ?? [];
+          bucket.push({ id: workOrder.id, status: workOrder.status });
+          workOrdersByIssue.set(workOrder.issueId, bucket);
+        }
+        const groundedAssetIds = new Set(result.groundedAssetIds);
+
+        const items = pageRows.map((row) => ({
+          id: row.id,
+          asset: {
+            id: row.assetId,
+            assetCode: row.assetCode,
+            registrationNumber: row.registrationNumber,
+          },
+          branch: {
+            id: row.branchId,
+            code: row.branchCode,
+            name: row.branchName,
+          },
+          description: row.description,
+          safetyCritical: row.safetyCritical,
+          category: row.category,
+          reportedAt: row.reportedAt.toISOString(),
+          workOrders: workOrdersByIssue.get(row.id) ?? [],
+          assetUnavailable: groundedAssetIds.has(row.assetId),
+          rowVersion: row.rowVersion,
+        }));
+
+        let nextCursor: string | null = null;
+        if (hasNextPage && pageRows.length > 0) {
+          const lastRow = pageRows[pageRows.length - 1]!;
+          nextCursor = encodeKeysetCursor(
+            issueSort,
+            lastRow.reportedAt.toISOString(),
+            lastRow.id,
+          );
+        }
+
+        return issueListResponse.parse({ items, nextCursor });
+      } catch (error) {
+        req.log.error({ err: error }, "issues list read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+}

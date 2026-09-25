@@ -7,7 +7,8 @@
     "assets": "Assets",
     "finances": "Finance",
     "more": "More",
-    "activities": "Activities"
+    "activities": "Activities",
+    "maintenance": "Maintenance"
   },
   "home": {
     "title": "Home",
@@ -147,6 +148,11 @@
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
+    "ISSUE_ASSET_MISMATCH": "That issue was reported against a different asset. Pick an issue for the same asset.",
+    "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
+    "WORK_ORDER_NOT_CLOSED": "The work order must be closed before the asset can be released to service.",
+    "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
+    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {
@@ -989,6 +995,129 @@
       "closingSubmitting": "Closing…"
     }
   },
+  "maintenance": {
+    "title": "Maintenance",
+    "retry": "Retry",
+    "workOrders": {
+      "tab": "Work orders",
+      "new": "New work order",
+      "newHint": "Open a work order on an asset, with or without an originating issue.",
+      "newSubmit": "Open work order",
+      "loading": "Loading work orders…",
+      "loadFailed": "Could not load the work orders. Please try again.",
+      "emptyHint": "No work orders yet. Repairs opened here will show up in this list.",
+      "branchEmptyHint": "No work orders for this branch.",
+      "filters": {
+        "status": "Status",
+        "all": "All"
+      },
+      "columns": {
+        "reference": "No.",
+        "asset": "Asset",
+        "branch": "Branch",
+        "description": "Description",
+        "expectedCost": "Expected cost",
+        "actualCost": "Actual cost",
+        "status": "Status"
+      },
+      "status": {
+        "SUBMITTED": "Submitted",
+        "OPEN": "Approved",
+        "PENDING_CLOSE": "Closure submitted",
+        "CLOSED": "Closed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "issues": {
+      "tab": "Issues",
+      "new": "New issue",
+      "newHint": "Describe the fault found on the asset. A safety-critical issue grounds the asset immediately.",
+      "newSubmit": "Report issue",
+      "loading": "Loading issues…",
+      "loadFailed": "Could not load the issues. Please try again.",
+      "emptyHint": "No issues yet. Faults reported here will show up in this list.",
+      "branchEmptyHint": "No issues for this branch.",
+      "safetyCritical": "Safety",
+      "unavailable": "Grounded",
+      "noWorkOrder": "None",
+      "createWorkOrder": "Create a work order",
+      "columns": {
+        "asset": "Asset",
+        "description": "Description",
+        "safety": "State",
+        "category": "Category",
+        "reportedAt": "Reported",
+        "workOrders": "Work orders"
+      }
+    },
+    "fields": {
+      "asset": "Asset",
+      "choose": "Choose",
+      "description": "Description",
+      "category": "Category",
+      "categoryPlaceholder": "Brakes, tyres, engine…",
+      "safetyCritical": "Safety-critical",
+      "safetyCriticalHint": "The asset is grounded from the moment this is filed until it is returned to service.",
+      "issue": "Issue",
+      "issueHint": "With no issue linked, the work order is preventive.",
+      "preventive": "Preventive",
+      "expectedCost": "Expected cost",
+      "actualCost": "Actual cost",
+      "summary": "Work summary",
+      "reason": "Reason",
+      "cancelReason": "Cancellation reason",
+      "note": "Note"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "submitting": "Submitting…",
+      "approve": "Approve",
+      "approveTitle": "Approve the work order",
+      "approveHint": "You authorize the expected spend. The work order moves into repair.",
+      "approveClosure": "Validate closure",
+      "approveClosureTitle": "Validate closure",
+      "approveClosureHint": "You accept the declared actual costs. The work order is closed.",
+      "declareClosure": "Declare closure",
+      "declareClosureTitle": "Declare the work complete",
+      "declareClosureHint": "Declare the actual cost and what was done.",
+      "cancelWorkOrder": "Cancel the work order",
+      "cancelWorkOrderTitle": "Cancel the work order",
+      "cancelWorkOrderHint": "The work order is abandoned. The reason stays on the audit trail.",
+      "release": "Return to service",
+      "releaseTitle": "Return to service",
+      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete.",
+      "releaseSubject": "Work order {reference}"
+    },
+    "detail": {
+      "chronologie": "Timeline",
+      "chronologieEmpty": "No events recorded.",
+      "costLines": "Booked costs",
+      "costLinesEmpty": "No costs booked against this work order.",
+      "loading": "Loading the timeline…",
+      "loadFailed": "Could not load the timeline. Please try again.",
+      "preventive": "Preventive — no issue",
+      "linkedIssue": "Linked issue",
+      "unavailableTitle": "Asset grounded",
+      "unavailableHint": "Only a return to service reopens availability.",
+      "entryStatus": {
+        "SUBMITTED": "Pending",
+        "POSTED": "Posted",
+        "REJECTED": "Rejected",
+        "REVERSED": "Reversed"
+      }
+    },
+    "notify": {
+      "success": {
+        "issueReported": "Issue reported",
+        "workOrderCreated": "Work order opened",
+        "workOrderApproved": "Work order approved",
+        "closureDeclared": "Closure declared",
+        "closureApproved": "Closure validated",
+        "workOrderCancelled": "Work order cancelled",
+        "assetReleased": "Asset returned to service"
+      }
+    }
+  },
   "persons": {
     "title": "People",
     "register": "Add a person",
@@ -1206,7 +1335,18 @@
       "module-disabled": "Module disabled",
       "template_preset-materialized": "Business preset enabled",
       "template_preset-disabled": "Business preset disabled",
-      "workspace-provisioned": "Workspace provisioned"
+      "workspace-provisioned": "Workspace provisioned",
+      "operational_issue-reported": "Issue reported",
+      "work_order-submitted": "Work order submitted",
+      "work_order-opened": "Work order opened",
+      "work_order-approved": "Work order approved",
+      "work_order-closure_submitted": "Closure declared",
+      "work_order-closed": "Work order closed",
+      "work_order-closure_approved": "Closure validated",
+      "work_order-cancelled": "Work order cancelled",
+      "work_order-asset_released": "Asset returned to service",
+      "asset_availability-opened": "Asset grounded",
+      "asset_availability-closed": "Grounding lifted"
     },
     "field": {
       "status": "status",
@@ -1325,7 +1465,20 @@
       "timezone": "timezone",
       "moduleCode": "module",
       "updatedAt": "updated",
-      "presetCode": "business preset"
+      "presetCode": "business preset",
+      "expectedCostMinor": "expected cost",
+      "actualCostMinor": "actual cost",
+      "summary": "work summary",
+      "completedAt": "work completed",
+      "cancelReason": "cancellation reason",
+      "cancelledAt": "cancelled",
+      "closedByCommandId": "closing command",
+      "issueId": "issue",
+      "openedByIssueId": "originating issue",
+      "openedAt": "opened",
+      "reportedAt": "reported",
+      "safetyCritical": "safety-critical",
+      "category": "category"
     }
   }
 }

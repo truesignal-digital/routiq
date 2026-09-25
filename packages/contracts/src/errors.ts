@@ -69,6 +69,31 @@ export const COMMAND_ERROR_CODES = [
   "BRANCH_INACTIVE",
   /** A branch status flip that would change nothing — the caller's list is stale. */
   "BRANCH_STATUS_ALREADY_SET",
+  /**
+   * A work order naming an operational issue reported against a different
+   * asset. Both rows are in the workspace, so the composite tenant FK is
+   * satisfied and only the command layer can catch it.
+   */
+  "ISSUE_ASSET_MISMATCH",
+  /** A release naming a work order that belongs to a different asset. */
+  "WORK_ORDER_ASSET_MISMATCH",
+  /**
+   * Releasing an asset on a work order that has not been closed. The closure is
+   * what says the repair is finished and its cost accepted; without it the
+   * release would put an unrepaired truck back on the road.
+   */
+  "WORK_ORDER_NOT_CLOSED",
+  /**
+   * Releasing an asset that holds no open availability interval — it was never
+   * taken out of service, or someone released it first.
+   */
+  "ASSET_NOT_UNAVAILABLE",
+  /**
+   * The member who declared the work complete trying to release the asset
+   * themselves, on work that started with a safety-critical report. Two pairs
+   * of eyes before a truck flagged unsafe carries passengers again.
+   */
+  "SELF_RELEASE_FORBIDDEN",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
