@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import {
+  canReadLedger,
   HISTORY_ENTITY_MODULE,
   HISTORY_MONEY_STATE_KEYS,
   HISTORY_STATE_KEYS,
@@ -37,6 +38,7 @@ import {
 } from "../db/schema.js";
 import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
+import { hasPostingWithoutWorkOrder } from "./entry-evidence.js";
 import {
   afterKeyset,
   bindTimestampText,
@@ -315,6 +317,10 @@ const HISTORY_BRANCH_SCOPE: Record<HistoryEntityType, BranchOf | "WORKSPACE"> = 
  * answer is the same 404 the record's detail read gives — the timeline is not a
  * side door to data the detail withholds. Checked against the branch the record
  * belongs to NOW (an asset transferred away takes its history with it).
+ *
+ * An entry's snapshots carry its amounts, so outside the ledger readers its
+ * timeline follows the entry-evidence rule: the workshop reaches only entries
+ * whose every line is a work-order cost, and any other entry is the same 404.
  */
 async function canReadHistory(
   tx: TenantTx,
@@ -323,9 +329,14 @@ async function canReadHistory(
   entityId: string,
 ): Promise<boolean> {
   const scope = HISTORY_BRANCH_SCOPE[entityType];
-  if (scope === "WORKSPACE" || auth.branchScope === "ALL") return true;
-  const branchId = await scope(tx, auth.workspaceId, entityId);
-  return branchId !== undefined && auth.branchScope.includes(branchId);
+  if (scope !== "WORKSPACE" && auth.branchScope !== "ALL") {
+    const branchId = await scope(tx, auth.workspaceId, entityId);
+    if (branchId === undefined || !auth.branchScope.includes(branchId)) return false;
+  }
+  if (entityType === "financial_entry" && !canReadLedger(auth.role)) {
+    return !(await hasPostingWithoutWorkOrder(tx, auth.workspaceId, entityId));
+  }
+  return true;
 }
 
 export function registerHistoryReadRoutes(
@@ -335,8 +346,8 @@ export function registerHistoryReadRoutes(
 ) {
   /**
    * History is visible to whoever can read the record: the gate is the owning
-   * module's entitlement plus RLS and the record's branch scope, with no
-   * per-role rule on top. Field staff
+   * module's entitlement plus RLS and the record's branch scope, with one
+   * per-role rule on top — ledger money (`canReadHistory`). Field staff
    * seeing "the office corrected my sheet" is the point, not a leak.
    */
   app.get(
@@ -486,7 +497,7 @@ export function registerHistoryReadRoutes(
 
   /**
    * What one event changed. Same gate as the timeline it hangs off — owning
-   * module, RLS and branch scope — and the same rule about the snapshots: they are projected
+   * module, RLS, branch scope and the ledger rule — and the same rule about the snapshots: they are projected
    * through `HISTORY_STATE_KEYS` here and never served raw.
    */
   app.get(

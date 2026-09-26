@@ -659,6 +659,105 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     });
   });
 
+  /**
+   * Review P9: an entry's snapshots carry its amounts, and the workshop is
+   * outside the ledger readers. Its reach into an entry's timeline is the
+   * entry-evidence rule — every line a work-order cost — and any other entry is
+   * the same 404 as one outside its branches, on the timeline and the diff.
+   */
+  describe("ledger money", () => {
+    let plainEntryId: string;
+    let repairEntryId: string;
+    let mechanicToken: string;
+    let approverToken: string;
+
+    async function sessionFor(role: "MAINTENANCE" | "FINANCE_APPROVER") {
+      const member = await seedMember(ctx.db, { workspaceId, role, allBranches: true });
+      return (await createSession(ctx.db, { workspaceId, principalId: member.principal.id })).token;
+    }
+
+    async function eventDiff(entryId: string, authToken: string) {
+      const [event] = historyListResponse.parse(
+        (await history("financial_entry", entryId)).json(),
+      ).items;
+      return ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/financial_entry/${entryId}/${event!.eventId}`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+    }
+
+    beforeAll(async () => {
+      mechanicToken = await sessionFor("MAINTENANCE");
+      approverToken = await sessionFor("FINANCE_APPROVER");
+      const assetId = await seedAsset(ctx.app, token, { assetCode: "HIST-LEDGER-TRUCK" });
+      const expense = {
+        branchCode: "DLA",
+        economicDate: "2026-08-12",
+        paymentMethod: "CASH",
+      };
+
+      plainEntryId = randomUUID();
+      await command("record-expense", {
+        ...expense,
+        entryId: plainEntryId,
+        categoryCode: "FUEL",
+        amountMinor: 30_000,
+        postings: [{ assetId, amountMinor: 30_000 }],
+      });
+
+      const workOrderId = randomUUID();
+      await command("create-work-order", {
+        workOrderId,
+        assetId,
+        description: "Embrayage",
+        expectedCostMinor: 80_000,
+      });
+      repairEntryId = randomUUID();
+      await command("record-expense", {
+        ...expense,
+        entryId: repairEntryId,
+        categoryCode: "REPAIRS",
+        amountMinor: 80_000,
+        postings: [{ assetId, amountMinor: 80_000, workOrderId }],
+      });
+    });
+
+    it("404s the workshop on an entry that is not a work-order cost", async () => {
+      const timeline = await history("financial_entry", plainEntryId, "", mechanicToken);
+      expect(timeline.statusCode).toBe(404);
+      expect(timeline.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+
+      const diffResponse = await eventDiff(plainEntryId, mechanicToken);
+      expect(diffResponse.statusCode).toBe(404);
+      expect(diffResponse.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+    });
+
+    it("serves the workshop an entry whose every line is a work-order cost", async () => {
+      const timeline = await history("financial_entry", repairEntryId, "", mechanicToken);
+      expect(timeline.statusCode).toBe(200);
+      expect(historyListResponse.parse(timeline.json()).items.length).toBeGreaterThan(0);
+
+      const diffResponse = await eventDiff(repairEntryId, mechanicToken);
+      expect(diffResponse.statusCode).toBe(200);
+      expect(historyEventDiff.parse(diffResponse.json()).changes).toContainEqual(
+        expect.objectContaining({ field: "amountMinor", after: 80_000 }),
+      );
+    });
+
+    it("serves a ledger reader any entry", async () => {
+      const timeline = await history("financial_entry", plainEntryId, "", approverToken);
+      expect(timeline.statusCode).toBe(200);
+      expect(historyListResponse.parse(timeline.json()).items.length).toBeGreaterThan(0);
+
+      const diffResponse = await eventDiff(plainEntryId, approverToken);
+      expect(diffResponse.statusCode).toBe(200);
+      expect(historyEventDiff.parse(diffResponse.json()).changes).toContainEqual(
+        expect.objectContaining({ field: "amountMinor", after: 30_000 }),
+      );
+    });
+  });
+
   describe("GET /v1/history/:entityType/:entityId/:eventId", () => {
     /** A borrowed command receipt: the diff read never looks at one. */
     async function anchorCommandId(): Promise<string> {
