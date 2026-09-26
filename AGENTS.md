@@ -104,12 +104,15 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 
 - A new violation fails, and so does a violation in a new file.
 - When you remove violations, the count drops below its baseline and `pnpm lint` fails until you run `pnpm lint:tighten` and commit the lower baseline. That locks the improvement in.
-- If a guard blocks you, change the code, or stop and ask. Never edit a rule to let your change through, never delete a rule, and never raise a baseline by hand. The only exception is an ADR in `docs/adr/`, cited by a `Trust-Exception: ADR-NNNN` commit trailer.
+- If a guard blocks you, change the code, or stop and ask. Never edit a rule to let your change through, never delete a rule, and never raise a baseline by hand. The only exception is an ADR in `docs/adr/`, cited by a `Trust-Exception: ADR-NNNN` commit trailer. The `ratchet` PR check enforces this: it runs the base branch's copy of `tools/ratchet.ts`, fails on a raised baseline, a removed rule, or removed lines in the guard machinery, and accepts only a trailer whose ADR exists.
 - When a bug or review finding shows a new class of mistake, add a rule for it, with a case in `tools/guards/rules.test.ts`.
 
 ## Git and PRs
 
 - Branch off `develop`; open PRs into `develop`. Never push to `develop` or `main` directly, never force-push a shared branch, never merge your own PR.
+- `pnpm install` points git at `.githooks/`: `pre-push` refuses pushes to `main` and `develop` and runs `pnpm typecheck && pnpm lint`. Never bypass it with `--no-verify`.
+- Claude Code sessions also run `.claude/hooks/git-guardrails.ts`, which blocks protected-branch pushes, force pushes, remote branch deletes, `--no-verify`, `gh pr merge`, `reset --hard`, `clean -f`, `branch -D` and `checkout .`/`restore .`.
+- Fill in every section of `.github/pull_request_template.md`. The `pr-evidence` check fails a PR that changes `apps/web/src` or `apps/api/src` (tests excepted) without a walkthrough video link and a "Found while testing" list.
 - Commit messages: short imperative subject; body only when the why isn't obvious.
 - Issues live in GitHub (`docs/agents/issue-tracker.md`). `.scratch/` is read-only history; add nothing there.
 

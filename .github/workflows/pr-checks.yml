@@ -1,0 +1,59 @@
+name: PR checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Both checks run the base branch's copy of their script, so a PR cannot
+  # relax the check that judges it. The first PR that adds a script falls back
+  # to its own copy. The .mts name makes Node load them as ES modules.
+  evidence:
+    name: pr-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Load the checker from the base branch
+        run: git show "origin/$BASE_REF:tools/pr-evidence.ts" > "$RUNNER_TEMP/pr-evidence.mts" 2>/dev/null || cp tools/pr-evidence.ts "$RUNNER_TEMP/pr-evidence.mts"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+      - name: Require a walkthrough video and the found-while-testing list
+        run: node --no-warnings "$RUNNER_TEMP/pr-evidence.mts"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+
+  ratchet:
+    name: ratchet
+    # The description does not affect the ratchet; skip re-runs on edits.
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Load the checker from the base branch
+        run: git show "origin/$BASE_REF:tools/ratchet.ts" > "$RUNNER_TEMP/ratchet.mts" 2>/dev/null || cp tools/ratchet.ts "$RUNNER_TEMP/ratchet.mts"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+      - name: Guards only get stricter
+        run: node --no-warnings "$RUNNER_TEMP/ratchet.mts"
+        env:
+          BASE_REF: ${{ github.base_ref }}
