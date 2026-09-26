@@ -2,6 +2,7 @@ import {
   CATEGORY_KINDS,
   EVIDENCE_POLICIES,
   MODULE_CODES,
+  NOTE_ENTITY_TYPES,
   PRINCIPAL_TYPES,
   PROFITABILITY_LAYERS,
   ROLES,
@@ -456,7 +457,12 @@ export const documents = pgTable(
       .references(() => commands.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("documents_supersedes_uq").on(t.workspaceId, t.supersedesDocumentId)],
+  (t) => [
+    uniqueIndex("documents_supersedes_uq").on(t.workspaceId, t.supersedesDocumentId),
+    // The vehicle workspace reads a vehicle's documents for its history and
+    // its expiry attention; nothing indexed them by asset before.
+    index("documents_ws_asset_idx").on(t.workspaceId, t.assetId),
+  ],
 );
 
 /** Immutable, hashed evidence blobs (§3.4). No update path exists by design. */
@@ -1098,5 +1104,36 @@ export const assetAvailabilityIntervals = pgTable(
     uniqueIndex("asset_availability_intervals_open_per_asset_uq")
       .on(t.workspaceId, t.assetId)
       .where(sql`${t.closedAt} IS NULL`),
+  ],
+);
+
+/**
+ * A free-text annotation on a record (§3.1). Append-only: UPDATE and DELETE are
+ * not granted, so a correction is another note. v1 annotates assets only, and
+ * `asset_id` is the exclusive arc the composite tenant FK hangs off — a CHECK
+ * in the migration ties it to `entity_id` — so a note can never point into
+ * another workspace. `author_membership_id` is the member who wrote it.
+ */
+export const notes = pgTable(
+  "notes",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    entityType: text("entity_type", { enum: NOTE_ENTITY_TYPES }).notNull(),
+    entityId: uuid("entity_id").notNull(),
+    assetId: uuid("asset_id").references(() => assets.id),
+    authorMembershipId: uuid("author_membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    body: text("body").notNull(),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("notes_ws_entity_created_idx").on(t.workspaceId, t.entityType, t.entityId, t.createdAt),
   ],
 );

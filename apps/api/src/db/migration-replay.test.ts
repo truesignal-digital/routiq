@@ -16,7 +16,8 @@ import { createTestApp } from "../test/fixture.js";
  * every CREATE and ADD CONSTRAINT, and 0026's approval-rule backfill is written
  * so a second pass inserts nothing. 0027 (the #28 state machines) guards its
  * columns, renames only legacy status values and backfills with NOT EXISTS /
- * ON CONFLICT DO NOTHING.
+ * ON CONFLICT DO NOTHING. 0028 (notes, #44) guards its table, constraints and
+ * policy, and backfills add-note's rules with NOT EXISTS.
  *
  * The suite's database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -27,6 +28,7 @@ const MIGRATIONS = [
   "0025_dark_sheva_callister",
   "0026_maintenance_command_defaults",
   "0027_maintenance_state_machines",
+  "0028_notes",
 ];
 
 function statementsOf(migration: string): string[] {

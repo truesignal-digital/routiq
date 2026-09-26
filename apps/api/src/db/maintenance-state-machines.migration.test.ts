@@ -249,10 +249,14 @@ describe("migration 0027 on a database that predates it", () => {
       "row_version",
       "status",
     ]);
-    // Keep drizzle's own bookkeeping honest: the migrator recorded 0027 once.
+    // Keep drizzle's own bookkeeping honest: every journal entry — 0027 and
+    // whatever came after it — recorded exactly once.
     const applied = await query<{ n: string }>(
       `SELECT count(*)::text AS n FROM drizzle.__drizzle_migrations`,
     );
-    expect(Number(applied[0]?.n)).toBe(28);
+    const journal = JSON.parse(
+      await readFile(join(MIGRATIONS, "meta", "_journal.json"), "utf8"),
+    ) as { entries: unknown[] };
+    expect(Number(applied[0]?.n)).toBe(journal.entries.length);
   });
 });

@@ -28,6 +28,7 @@ import {
   financialEntries,
   meterReadings,
   movementLegs,
+  notes,
   operationalIssues,
   persons,
   principals,
@@ -219,13 +220,14 @@ function viaActivity(
     );
 }
 
-/** A maintenance or document row whose branch is its asset's. */
+/** A maintenance, document or note row whose branch is its asset's. */
 function viaAsset(
   table:
     | typeof documents
     | typeof workOrders
     | typeof operationalIssues
-    | typeof assetAvailabilityIntervals,
+    | typeof assetAvailabilityIntervals
+    | typeof notes,
 ): BranchOf {
   return (tx, workspaceId, entityId) =>
     first(
@@ -292,6 +294,7 @@ const HISTORY_BRANCH_SCOPE: Record<HistoryEntityType, BranchOf | "WORKSPACE"> = 
   financial_entry: byFinancialEntry,
   meter_reading: byMeterReading,
   movement_leg: viaActivity(movementLegs),
+  note: viaAsset(notes),
   operational_issue: viaAsset(operationalIssues),
   person: byPerson,
   posting_period: "WORKSPACE",
