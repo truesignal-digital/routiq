@@ -1540,5 +1540,16 @@
       "dismissReason": "motif du classement",
       "defaultSafetyCritical": "critique pour la sécurité par défaut"
     }
+  },
+  "commandForm": {
+    "cancel": "Annuler",
+    "submitting": "Enregistrement…",
+    "close": "Fermer",
+    "reload": "Actualiser",
+    "backTo": "Retour à {record}",
+    "conflictTitle": "Modifié ailleurs",
+    "conflictBody": "Quelqu'un d'autre a modifié cet enregistrement. Actualisez, vérifiez, puis réappliquez votre action.",
+    "approvalTitle": "Approbation requise",
+    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié."
   }
 }

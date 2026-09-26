@@ -1540,5 +1540,16 @@
       "dismissReason": "dismissal reason",
       "defaultSafetyCritical": "safety-critical by default"
     }
+  },
+  "commandForm": {
+    "cancel": "Cancel",
+    "submitting": "Saving…",
+    "close": "Close",
+    "reload": "Refresh",
+    "backTo": "Back to {record}",
+    "conflictTitle": "Modified elsewhere",
+    "conflictBody": "Someone else changed this record. Refresh, review, then reapply your action.",
+    "approvalTitle": "Approval required",
+    "approvalBody": "This action needs an approval before it takes effect. Nothing was changed."
   }
 }
