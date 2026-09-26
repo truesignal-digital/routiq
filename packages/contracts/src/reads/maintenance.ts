@@ -81,6 +81,14 @@ export const workOrderListItem = z.object({
   cancelledAt: z.iso.datetime().nullable(),
   rejectedAt: z.iso.datetime().nullable(),
   rowVersion: z.number().int().positive(),
+  /** Who created the order — the maker approve-work-order refuses. */
+  createdBy: historyActor,
+  /**
+   * Who declared the work complete, while that declaration stands
+   * (COMPLETION_SUBMITTED or COMPLETED) — the maker the closure approval and
+   * a safety-critical release refuse. Null in every other status.
+   */
+  completedBy: historyActor.nullable(),
 });
 
 export const workOrderListResponse = listResponse(workOrderListItem);
@@ -225,6 +233,16 @@ export const issueListItem = z.object({
 
 export const issueListResponse = listResponse(issueListItem);
 
+/** One signalement, for a deep link: the list row plus its trail and files. */
+export const issueDetail = issueListItem.extend({
+  /** Its audit events, oldest first — reported, then resolved or dismissed. */
+  chronologie: z.array(workOrderChronologieEvent),
+  /** Photos attached when it was reported. */
+  artifactCount: z.number().int().nonnegative(),
+  /** Who resolved or dismissed it; null while OPEN. */
+  closedBy: historyActor.nullable(),
+});
+
 export type WorkOrderStatus = z.infer<typeof workOrderStatus>;
 export type IssueStatus = z.infer<typeof issueStatus>;
 export type WorkOrderPendingCostLine = z.infer<typeof workOrderPendingCostLine>;
@@ -237,3 +255,4 @@ export type WorkOrderDetail = z.infer<typeof workOrderDetail>;
 export type IssueListQuery = z.infer<typeof issueListQuery>;
 export type IssueListItem = z.infer<typeof issueListItem>;
 export type IssueListResponse = z.infer<typeof issueListResponse>;
+export type IssueDetail = z.infer<typeof issueDetail>;

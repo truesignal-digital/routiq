@@ -40,23 +40,29 @@ export async function commandActors(
   return new Map(rows.map((row) => [row.commandId, toActor(row)]));
 }
 
+export interface LastEvent {
+  actor: HistoryActor;
+  occurredAt: Date;
+}
+
 /**
- * The masked actor of the latest event of these types on each entity — "who
- * declared this work complete", "who closed this signalement". Entities with no
- * such event are absent from the map.
+ * The latest event of these types on each entity, with its masked actor —
+ * "who declared this work complete, and when". Entities with no such event are
+ * absent from the map.
  */
-export async function lastEventActors(
+export async function lastEvents(
   tx: TenantTx,
   workspaceId: string,
   entityType: string,
   entityIds: readonly string[],
   eventTypes: readonly string[],
-): Promise<Map<string, HistoryActor>> {
+): Promise<Map<string, LastEvent>> {
   const ids = [...new Set(entityIds)];
   if (ids.length === 0 || eventTypes.length === 0) return new Map();
   const rows = await tx
     .selectDistinctOn([auditEvents.entityId], {
       entityId: auditEvents.entityId,
+      occurredAt: auditEvents.occurredAt,
       principalId: auditEvents.tenantActorPrincipalId,
       displayName: principals.displayName,
       scope: auditEvents.scope,
@@ -72,5 +78,47 @@ export async function lastEventActors(
       ),
     )
     .orderBy(auditEvents.entityId, desc(auditEvents.occurredAt), desc(auditEvents.id));
-  return new Map(rows.map((row) => [row.entityId, toActor(row)]));
+  return new Map(
+    rows.map((row) => [row.entityId, { actor: toActor(row), occurredAt: row.occurredAt }]),
+  );
+}
+
+/** `lastEvents`, keeping only the actor. */
+export async function lastEventActors(
+  tx: TenantTx,
+  workspaceId: string,
+  entityType: string,
+  entityIds: readonly string[],
+  eventTypes: readonly string[],
+): Promise<Map<string, HistoryActor>> {
+  const events = await lastEvents(tx, workspaceId, entityType, entityIds, eventTypes);
+  return new Map([...events].map(([id, event]) => [id, event.actor]));
+}
+
+/**
+ * Every tenant principal who ever acted on these entities with these event
+ * types — the release's "vouchers", who may not also release. PLATFORM events
+ * carry no tenant principal and contribute nothing.
+ */
+export async function eventPrincipalIds(
+  tx: TenantTx,
+  workspaceId: string,
+  entityType: string,
+  entityIds: readonly string[],
+  eventTypes: readonly string[],
+): Promise<Set<string>> {
+  const ids = [...new Set(entityIds)];
+  if (ids.length === 0 || eventTypes.length === 0) return new Set();
+  const rows = await tx
+    .selectDistinct({ principalId: auditEvents.tenantActorPrincipalId })
+    .from(auditEvents)
+    .where(
+      and(
+        eq(auditEvents.workspaceId, workspaceId),
+        eq(auditEvents.entityType, entityType),
+        inArray(auditEvents.entityId, ids),
+        inArray(auditEvents.eventType, [...eventTypes]),
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.principalId === null ? [] : [row.principalId])));
 }

@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { COMMAND_ORIGINS } from "../envelope.js";
+import { PROFITABILITY_LAYERS } from "../commands/categories.js";
+import { COMMAND_ORIGINS, moneyMinor } from "../envelope.js";
 import { ROLES } from "../roles.js";
 import { meterReadingSource, meterReadingType } from "./assets.js";
+import { monthCode } from "./finance.js";
 import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
 
@@ -58,3 +60,163 @@ export type AssetReadingItem = z.infer<typeof assetReadingItem>;
 export type AssetReadingsResponse = z.infer<typeof assetReadingsResponse>;
 export type CustodianCandidate = z.infer<typeof custodianCandidate>;
 export type CustodianCandidatesResponse = z.infer<typeof custodianCandidatesResponse>;
+
+/**
+ * A vehicle's money for one month. Every figure names its basis: posted money
+ * by POSTING period (what the books say for the month), pending and rejected
+ * by ECONOMIC month (when it was spent). Amounts are this vehicle's SIGNED
+ * posting lines only — a split entry contributes its share, a reversal
+ * subtracts — in the workspace currency; XAF has exponent 0. Entries are read
+ * against the caller's branches by the ENTRY's branch, not the vehicle's.
+ * Served only to the roles in FINANCE_READER_ROLES.
+ */
+export const assetFinanceQuery = z.object({
+  /** Defaults to the current month in the workspace timezone. */
+  periodCode: monthCode.optional(),
+});
+
+export const assetFinancePeriodStatuses = ["OPEN", "LOCKED", "NOT_STARTED"] as const;
+
+export const assetFinanceResponse = z.object({
+  assetId: z.uuid(),
+  currency: z.string().length(3),
+  periodCode: z.string(),
+  /** NOT_STARTED: no posting period row exists for the month yet. */
+  periodStatus: z.enum(assetFinancePeriodStatuses),
+  /** Always all four, in order, so a client renders layers without guessing. */
+  layers: z.array(z.enum(PROFITABILITY_LAYERS)),
+  posted: z.object({
+    basis: z.literal("POSTING_PERIOD"),
+    expenseMinor: moneyMinor,
+    revenueMinor: moneyMinor,
+    entryCount: z.number().int().nonnegative(),
+  }),
+  pending: z.object({
+    basis: z.literal("ECONOMIC_MONTH"),
+    expenseMinor: moneyMinor,
+    entryCount: z.number().int().nonnegative(),
+  }),
+  rejected: z.object({
+    basis: z.literal("ECONOMIC_MONTH"),
+    entryCount: z.number().int().nonnegative(),
+  }),
+  /** Entries still waiting for paperwork (NOT_SUPPLIED, reversals excluded). */
+  evidenceMissing: z.object({
+    postedCount: z.number().int().nonnegative(),
+    pendingCount: z.number().int().nonnegative(),
+  }),
+  /** Posted expense by category, signed, largest first; categories netting to zero are left out. */
+  byCategory: z.array(
+    z.object({
+      code: z.string(),
+      labelFr: z.string(),
+      labelEn: z.string(),
+      layer: z.enum(PROFITABILITY_LAYERS),
+      expenseMinor: moneyMinor,
+    }),
+  ),
+  /** Six posting periods ending at `periodCode`, oldest first, zero-filled. */
+  series: z.array(
+    z.object({
+      periodCode: z.string(),
+      expenseMinor: moneyMinor,
+      revenueMinor: moneyMinor,
+    }),
+  ),
+});
+
+/**
+ * What needs someone on this vehicle, as facts. The server derives them —
+ * business date, branch scope and module gates live here — and names the
+ * principals who may NOT take the next step (maker/checker, self-release);
+ * which step is the caller's own stays the client's decision.
+ */
+export const ATTENTION_CODES = [
+  "ISSUE_UNPLANNED",
+  "WORK_ORDER_AWAITING_AUTHORIZATION",
+  "WORK_ORDER_IN_PROGRESS",
+  "WORK_ORDER_AWAITING_SIGN_OFF",
+  "ASSET_AWAITING_RELEASE",
+  "DOCUMENT_EXPIRED",
+  "DOCUMENT_EXPIRING",
+  "ENTRY_AWAITING_REVIEW",
+  "ENTRY_EVIDENCE_MISSING",
+] as const;
+export const attentionCode = z.enum(ATTENTION_CODES);
+
+export const ATTENTION_SEVERITIES = ["CRITICAL", "WARNING", "INFO"] as const;
+export const attentionSeverity = z.enum(ATTENTION_SEVERITIES);
+
+export const ATTENTION_SUBJECT_TYPES = [
+  "operational_issue",
+  "work_order",
+  "asset_availability_interval",
+  "document",
+  "financial_entry",
+] as const;
+
+/** How many days ahead an expiry becomes DOCUMENT_EXPIRING. */
+export const DOCUMENT_EXPIRING_WINDOW_DAYS = 30;
+
+/** At most this many items, most severe and oldest first. */
+export const ATTENTION_ITEM_LIMIT = 50;
+
+export const assetAttentionItem = z.object({
+  code: attentionCode,
+  severity: attentionSeverity,
+  subject: z.object({
+    entityType: z.enum(ATTENTION_SUBJECT_TYPES),
+    id: z.uuid(),
+    /** Entry or document number; null where the record has none. */
+    number: z.string().nullable(),
+    /** The version a command on the subject quotes; null for documents (never edited). */
+    rowVersion: z.number().int().positive().nullable(),
+  }),
+  /**
+   * Since when this needs attention. Documents have a date, not an instant:
+   * theirs is UTC midnight of the expiry (EXPIRED) or of the day it entered the
+   * 30-day window (EXPIRING); display from `params.expiresAt`.
+   */
+  since: z.iso.datetime(),
+  /** The subject is the grounding signalement, one of its work orders, or the open interval. */
+  partOfGrounding: z.boolean(),
+  /** Principals who may not take the next step on this item; empty when anyone eligible may. */
+  makerPrincipalIds: z.array(z.uuid()),
+  /** Allowlisted facts for the sentence; every key optional. */
+  params: z
+    .object({
+      description: z.string().max(140),
+      safetyCritical: z.boolean(),
+      amountMinor: moneyMinor,
+      currency: z.string().length(3),
+      expectedCostMinor: moneyMinor,
+      actualCostMinor: moneyMinor,
+      documentTypeLabelFr: z.string(),
+      documentTypeLabelEn: z.string(),
+      expiresAt: z.iso.date(),
+      /** Days from the business date to expiry; negative once expired. */
+      daysLeft: z.number().int(),
+      recordedBy: historyActor,
+      /** No completed work order answers the grounding; release needs an override reason. */
+      overrideRequired: z.boolean(),
+      completionRejectReason: z.string(),
+      hasCompletedWorkOrder: z.boolean(),
+      categoryLabelFr: z.string(),
+      categoryLabelEn: z.string(),
+    })
+    .partial(),
+});
+
+export const assetAttentionResponse = z.object({
+  assetId: z.uuid(),
+  /** Today in the workspace timezone — what document expiry was judged against. */
+  businessDate: z.iso.date(),
+  items: z.array(assetAttentionItem),
+});
+
+export type AssetFinanceQuery = z.infer<typeof assetFinanceQuery>;
+export type AssetFinanceResponse = z.infer<typeof assetFinanceResponse>;
+export type AttentionCode = z.infer<typeof attentionCode>;
+export type AttentionSeverity = z.infer<typeof attentionSeverity>;
+export type AssetAttentionItem = z.infer<typeof assetAttentionItem>;
+export type AssetAttentionResponse = z.infer<typeof assetAttentionResponse>;

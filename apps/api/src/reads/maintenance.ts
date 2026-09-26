@@ -1,21 +1,28 @@
 import {
+  issueDetail,
   issueListQuery,
   issueListResponse,
   workOrderDetail,
   workOrderListQuery,
   workOrderListResponse,
+  type HistoryActor,
   type ListSort,
 } from "@routiq/contracts";
-import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import {
+  ISSUE_CLOSURE_EVENTS,
+  WORK_ORDER_COMPLETION_EVENTS,
+} from "../commands/work-order-lookup.js";
+import {
   assetAvailabilityIntervals,
   assets,
   auditEvents,
   branches,
+  commandSourceArtifacts,
   commands,
   financialEntries,
   financialPostings,
@@ -25,6 +32,8 @@ import {
 } from "../db/schema.js";
 import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
+import { lastEventActors, toActor } from "./actors.js";
+import { invalidRequest, notFound, passReadGate, sendReadFailure } from "./read-gate.js";
 import {
   afterKeyset,
   bindTimestamp,
@@ -81,6 +90,28 @@ async function maintenanceEnabled(tx: TenantTx, workspaceId: string): Promise<bo
 const MODULE_DISABLED_BODY = {
   error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } },
 } as const;
+
+/** Statuses in which a completion stands, so its declarer is a live maker. */
+const COMPLETION_DECLARED = new Set(["COMPLETION_SUBMITTED", "COMPLETED"]);
+
+/**
+ * Who declared each order complete, for the orders whose completion stands. A
+ * completion sent back returns the order to APPROVED, and its old declarer is
+ * nobody's maker until the work is declared again.
+ */
+async function completersOf(
+  tx: TenantTx,
+  workspaceId: string,
+  orders: ReadonlyArray<{ id: string; status: string }>,
+): Promise<Map<string, HistoryActor>> {
+  return lastEventActors(
+    tx,
+    workspaceId,
+    "work_order",
+    orders.filter((order) => COMPLETION_DECLARED.has(order.status)).map((order) => order.id),
+    WORK_ORDER_COMPLETION_EVENTS,
+  );
+}
 
 export function registerMaintenanceReadRoutes(
   app: FastifyInstance,
@@ -158,6 +189,9 @@ export function registerMaintenanceReadRoutes(
               cancelledAt: workOrders.cancelledAt,
               rejectedAt: workOrders.rejectedAt,
               rowVersion: workOrders.rowVersion,
+              creatorPrincipalId: commands.tenantActorPrincipalId,
+              creatorDisplayName: principals.displayName,
+              creatorScope: commands.scope,
             })
             .from(workOrders)
             .innerJoin(
@@ -188,6 +222,7 @@ export function registerMaintenanceReadRoutes(
                 eq(operationalIssues.id, workOrders.issueId),
               ),
             )
+            .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...conditions))
             .orderBy(
               ...keysetOrderBy(
@@ -198,7 +233,8 @@ export function registerMaintenanceReadRoutes(
             )
             .limit(limit + 1);
 
-          return { rows };
+          const completers = await completersOf(tx, auth.workspaceId, rows.slice(0, limit));
+          return { rows, completers };
         });
 
         if ("error" in result) {
@@ -235,6 +271,12 @@ export function registerMaintenanceReadRoutes(
           cancelledAt: row.cancelledAt?.toISOString() ?? null,
           rejectedAt: row.rejectedAt?.toISOString() ?? null,
           rowVersion: row.rowVersion,
+          createdBy: toActor({
+            principalId: row.creatorPrincipalId,
+            displayName: row.creatorDisplayName,
+            scope: row.creatorScope,
+          }),
+          completedBy: result.completers.get(row.id) ?? null,
         }));
 
         let nextCursor: string | null = null;
@@ -314,6 +356,9 @@ export function registerMaintenanceReadRoutes(
               cancelledAt: workOrders.cancelledAt,
               rejectedAt: workOrders.rejectedAt,
               rowVersion: workOrders.rowVersion,
+              creatorPrincipalId: commands.tenantActorPrincipalId,
+              creatorDisplayName: principals.displayName,
+              creatorScope: commands.scope,
             })
             .from(workOrders)
             .innerJoin(
@@ -344,10 +389,12 @@ export function registerMaintenanceReadRoutes(
                 eq(operationalIssues.id, workOrders.issueId),
               ),
             )
+            .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...conditions))
             .limit(1);
 
           if (!header) return undefined;
+          const completers = await completersOf(tx, auth.workspaceId, [header]);
 
           // A transaction owns one pg connection; keep the child reads
           // sequential so the driver never receives overlapping queries.
@@ -414,7 +461,7 @@ export function registerMaintenanceReadRoutes(
               asc(financialPostings.lineNo),
             );
 
-          return { header, eventRows, costRows };
+          return { header, eventRows, costRows, completedBy: completers.get(header.id) ?? null };
         });
 
         if (!result) {
@@ -426,7 +473,7 @@ export function registerMaintenanceReadRoutes(
           return reply.status(403).send(MODULE_DISABLED_BODY);
         }
 
-        const { header, eventRows, costRows } = result;
+        const { header, eventRows, costRows, completedBy } = result;
         const costLine = (line: (typeof costRows)[number]) => ({
           ...line,
           amountMinor: serializeMinor(line.amountMinor),
@@ -466,6 +513,12 @@ export function registerMaintenanceReadRoutes(
           cancelledAt: header.cancelledAt?.toISOString() ?? null,
           rejectedAt: header.rejectedAt?.toISOString() ?? null,
           rowVersion: header.rowVersion,
+          createdBy: toActor({
+            principalId: header.creatorPrincipalId,
+            displayName: header.creatorDisplayName,
+            scope: header.creatorScope,
+          }),
+          completedBy,
           chronologie: eventRows.map((event) => ({
             eventId: event.eventId,
             kind: event.kind,
@@ -698,6 +751,152 @@ export function registerMaintenanceReadRoutes(
       } catch (error) {
         req.log.error({ err: error }, "issues list read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+
+  /**
+   * One signalement by id — the deep link the vehicle's record panel opens.
+   * The list row's fields plus its own trail, its photos and who closed it;
+   * scope resolves through the asset like every maintenance read.
+   */
+  app.get(
+    "/v1/issues/:issueId",
+    { preHandler: requireAuth },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const auth = req.auth!;
+        const params = z.object({ issueId: z.uuid() }).safeParse(req.params);
+        if (!params.success) throw invalidRequest();
+        const { issueId } = params.data;
+
+        const body = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          await passReadGate(tx, auth, { module: "MAINTENANCE" });
+
+          const conditions: SQL[] = [
+            eq(operationalIssues.workspaceId, auth.workspaceId),
+            eq(operationalIssues.id, issueId),
+          ];
+          if (auth.branchScope !== "ALL") {
+            conditions.push(inArray(assets.branchId, auth.branchScope));
+          }
+          const [row] = await tx
+            .select({
+              id: operationalIssues.id,
+              assetId: operationalIssues.assetId,
+              assetCode: assets.assetCode,
+              registrationNumber: assets.registrationNumber,
+              branchId: assets.branchId,
+              branchCode: branches.code,
+              branchName: branches.name,
+              description: operationalIssues.description,
+              safetyCritical: operationalIssues.safetyCritical,
+              category: operationalIssues.category,
+              reportedAt: operationalIssues.reportedAt,
+              status: operationalIssues.status,
+              resolvedAt: operationalIssues.resolvedAt,
+              resolutionNote: operationalIssues.resolutionNote,
+              dismissedAt: operationalIssues.dismissedAt,
+              dismissReason: operationalIssues.dismissReason,
+              rowVersion: operationalIssues.rowVersion,
+              createdByCommandId: operationalIssues.createdByCommandId,
+            })
+            .from(operationalIssues)
+            .innerJoin(
+              assets,
+              and(eq(assets.workspaceId, operationalIssues.workspaceId), eq(assets.id, operationalIssues.assetId)),
+            )
+            .innerJoin(
+              branches,
+              and(eq(branches.workspaceId, assets.workspaceId), eq(branches.id, assets.branchId)),
+            )
+            .where(and(...conditions))
+            .limit(1);
+          if (!row) throw notFound();
+
+          const linkedWorkOrders = await tx
+            .select({ id: workOrders.id, status: workOrders.status })
+            .from(workOrders)
+            .where(and(eq(workOrders.workspaceId, auth.workspaceId), eq(workOrders.issueId, row.id)))
+            .orderBy(asc(workOrders.id));
+
+          const [grounded] = await tx
+            .select({ id: assetAvailabilityIntervals.id })
+            .from(assetAvailabilityIntervals)
+            .where(
+              and(
+                eq(assetAvailabilityIntervals.workspaceId, auth.workspaceId),
+                eq(assetAvailabilityIntervals.assetId, row.assetId),
+                isNull(assetAvailabilityIntervals.closedAt),
+              ),
+            )
+            .limit(1);
+
+          const eventRows = await tx
+            .select({
+              eventId: auditEvents.id,
+              kind: auditEvents.eventType,
+              occurredAt: auditEvents.occurredAt,
+              scope: auditEvents.scope,
+              principalId: auditEvents.tenantActorPrincipalId,
+              displayName: principals.displayName,
+            })
+            .from(auditEvents)
+            .leftJoin(principals, eq(principals.id, auditEvents.tenantActorPrincipalId))
+            .where(
+              and(
+                eq(auditEvents.workspaceId, auth.workspaceId),
+                eq(auditEvents.entityType, "operational_issue"),
+                eq(auditEvents.entityId, row.id),
+              ),
+            )
+            .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
+
+          const [artifacts] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(commandSourceArtifacts)
+            .where(
+              and(
+                eq(commandSourceArtifacts.workspaceId, auth.workspaceId),
+                eq(commandSourceArtifacts.commandId, row.createdByCommandId),
+              ),
+            );
+
+          const closers =
+            row.status === "OPEN"
+              ? new Map<string, HistoryActor>()
+              : await lastEventActors(tx, auth.workspaceId, "operational_issue", [row.id], ISSUE_CLOSURE_EVENTS);
+
+          return {
+            id: row.id,
+            asset: { id: row.assetId, assetCode: row.assetCode, registrationNumber: row.registrationNumber },
+            branch: { id: row.branchId, code: row.branchCode, name: row.branchName },
+            description: row.description,
+            safetyCritical: row.safetyCritical,
+            category: row.category,
+            reportedAt: row.reportedAt.toISOString(),
+            status: row.status,
+            resolvedAt: row.resolvedAt?.toISOString() ?? null,
+            resolutionNote: row.resolutionNote,
+            dismissedAt: row.dismissedAt?.toISOString() ?? null,
+            dismissReason: row.dismissReason,
+            workOrders: linkedWorkOrders,
+            assetUnavailable: grounded !== undefined,
+            rowVersion: row.rowVersion,
+            chronologie: eventRows.map((event) => ({
+              eventId: event.eventId,
+              kind: event.kind,
+              occurredAt: event.occurredAt.toISOString(),
+              actor: toActor(event),
+            })),
+            artifactCount: artifacts?.count ?? 0,
+            closedBy: closers.get(row.id) ?? null,
+          };
+        });
+
+        return issueDetail.parse(body);
+      } catch (error) {
+        return sendReadFailure(req, reply, error, "issue detail");
       }
     },
   );

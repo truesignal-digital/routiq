@@ -54,6 +54,11 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
     const url = new URL(ownerUrl);
     url.pathname = `/${databaseName}`;
     pool = new pg.Pool({ connectionString: url.toString() });
+    // `pool.end()` resolves before its sockets finish closing, and the forced
+    // DROP DATABASE in afterAll can reach a client mid-close. pg-pool re-emits
+    // that FATAL on the pool; it is expected there and must not surface as an
+    // unhandled error.
+    pool.on("error", () => {});
 
     truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0028-"));
     await cp(MIGRATIONS, truncatedFolder, { recursive: true });

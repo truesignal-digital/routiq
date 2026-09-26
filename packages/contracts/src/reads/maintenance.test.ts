@@ -39,6 +39,12 @@ const listItem = {
   cancelledAt: null,
   rejectedAt: null,
   rowVersion: 1,
+  createdBy: {
+    principalId: "0b8a4c1e-6f2d-4e3a-9c5b-7d1e2f3a4b5c",
+    displayName: "Hervé",
+    scope: "WORKSPACE",
+  },
+  completedBy: null,
 };
 
 describe("work order list contract", () => {

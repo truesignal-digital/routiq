@@ -37,7 +37,9 @@ import {
   financialPostings,
   workspaces,
 } from "../db/schema.js";
+import { registerAssetAttentionReadRoutes } from "./asset-attention.js";
 import { registerAssetCustodianReadRoutes } from "./asset-custodians.js";
+import { registerAssetFinanceReadRoutes } from "./asset-finance.js";
 import { loadAvailability, loadCustodian, loadLastReading } from "./asset-header.js";
 import { registerAssetReadingReadRoutes } from "./asset-readings.js";
 import { registerCategoryReadRoutes } from "./categories.js";
@@ -167,6 +169,8 @@ export function registerAssetReadRoutes(
   registerDocumentReadRoutes(app, db, requireAuth);
   registerAssetReadingReadRoutes(app, db, requireAuth);
   registerAssetCustodianReadRoutes(app, db, requireAuth);
+  registerAssetFinanceReadRoutes(app, db, requireAuth);
+  registerAssetAttentionReadRoutes(app, db, requireAuth);
 
   app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
     try {

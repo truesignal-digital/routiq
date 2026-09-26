@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  issueDetail,
   issueListResponse,
   workOrderDetail,
   workOrderListResponse,
@@ -8,9 +9,10 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
-import { approvalRules, branches } from "../db/schema.js";
+import { approvalRules, branches, sourceArtifacts } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { apiClient, seedActor, type Actor } from "../test/client.js";
 
 describe("work order and signalement reads", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -809,6 +811,177 @@ describe("work order and signalement reads", () => {
           error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } },
         });
       }
+    });
+  });
+});
+
+/**
+ * The makers the vehicle workspace needs for its lock reasons (#44), and the
+ * signalement deep link.
+ */
+describe("work order makers and the issue detail read", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
+  let admin: Actor;
+  let mechanic: Actor;
+  let driver: Actor;
+  let ydeOnly: Actor;
+  let outsider: Actor;
+  let truck: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    const [yaounde] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId, code: "YDE", name: "Yaoundé" })
+      .returning();
+    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    const other = await seedWorkspace(ctx.db);
+    outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
+    truck = await seedAsset(ctx.app, admin.token);
+    await ctx.db.insert(approvalRules).values({
+      workspaceId,
+      commandType: "complete-work-order",
+      amountMinMinor: 100_000n,
+      requiredRole: "ADMIN",
+    });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function order(workOrderId: string) {
+    const response = await api.get(admin.token, `/v1/work-orders/${workOrderId}`);
+    expect(response.status).toBe(200);
+    return workOrderDetail.parse(response.body);
+  }
+
+  it("names the creator always, and the completer only while the completion stands", async () => {
+    const workOrderId = randomUUID();
+    const created = await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId: truck,
+      description: "Vidange",
+    });
+    const hervé = { principalId: mechanic.principalId, displayName: "Hervé", scope: "WORKSPACE" };
+    expect(await order(workOrderId)).toMatchObject({ createdBy: hervé, completedBy: null });
+
+    const completed = await api.ok(
+      mechanic.token,
+      "complete-work-order",
+      { workOrderId, actualCostMinor: 150_000 },
+      { expectedVersion: created.rowVersion },
+    );
+    expect(await order(workOrderId)).toMatchObject({
+      status: "COMPLETION_SUBMITTED",
+      completedBy: hervé,
+    });
+
+    const list = workOrderListResponse.parse(
+      (await api.get(admin.token, `/v1/work-orders?assetId=${truck}`)).body,
+    );
+    expect(list.items.find((item) => item.id === workOrderId)).toMatchObject({
+      createdBy: hervé,
+      completedBy: hervé,
+    });
+
+    // Sent back to APPROVED: the old declaration no longer stands.
+    await api.ok(
+      admin.token,
+      "reject-work-order-completion",
+      { workOrderId, reason: "Montant à justifier" },
+      { expectedVersion: completed.rowVersion },
+    );
+    expect(await order(workOrderId)).toMatchObject({ status: "APPROVED", completedBy: null });
+  });
+
+  it("serves one signalement with its trail, photos and closer", async () => {
+    const photo = randomUUID();
+    await ctx.db.insert(sourceArtifacts).values({
+      id: photo,
+      workspaceId,
+      storageKey: `ws/${workspaceId}/finalized-artifacts/${photo}/x`,
+      sha256: "x",
+      mimeType: "image/jpeg",
+      sizeBytes: 1n,
+      uploadedByPrincipalId: driver.principalId,
+    });
+    const issueId = randomUUID();
+    const reported = await api.ok(
+      driver.token,
+      "report-issue",
+      { issueId, assetId: truck, description: "Pare-choc arraché", safetyCritical: false },
+      { sourceArtifactIds: [photo] },
+    );
+
+    let response = await api.get(admin.token, `/v1/issues/${issueId}`);
+    expect(response.status).toBe(200);
+    let body = issueDetail.parse(response.body);
+    expect(body).toMatchObject({
+      id: issueId,
+      status: "OPEN",
+      artifactCount: 1,
+      closedBy: null,
+      workOrders: [],
+      assetUnavailable: false,
+      chronologie: [
+        {
+          kind: "operational_issue.reported",
+          actor: { principalId: driver.principalId, displayName: "Sali", scope: "WORKSPACE" },
+        },
+      ],
+    });
+
+    await api.ok(
+      mechanic.token,
+      "resolve-issue",
+      { issueId, note: "Refixé sur place" },
+      { expectedVersion: reported.rowVersion },
+    );
+    body = issueDetail.parse((await api.get(admin.token, `/v1/issues/${issueId}`)).body);
+    expect(body.status).toBe("RESOLVED");
+    expect(body.closedBy).toEqual({
+      principalId: mechanic.principalId,
+      displayName: "Hervé",
+      scope: "WORKSPACE",
+    });
+    expect(body.chronologie.map((event) => event.kind)).toEqual([
+      "operational_issue.reported",
+      "operational_issue.resolved",
+    ]);
+  });
+
+  it("answers 404 across branches and workspaces, 403 with the module off", async () => {
+    const issueId = randomUUID();
+    await api.ok(driver.token, "report-issue", {
+      issueId,
+      assetId: truck,
+      description: "Klaxon",
+      safetyCritical: false,
+    });
+    for (const actor of [ydeOnly, outsider]) {
+      const response = await api.get(actor.token, `/v1/issues/${issueId}`);
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+    }
+    expect((await api.get(admin.token, `/v1/issues/${randomUUID()}`)).status).toBe(404);
+    expect((await api.get(admin.token, "/v1/issues/not-a-uuid")).status).toBe(400);
+
+    const gated = await seedWorkspace(ctx.db);
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    const refused = await api.get(gatedAdmin.token, `/v1/issues/${randomUUID()}`);
+    expect(refused.status).toBe(403);
+    expect(refused.body).toEqual({
+      error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } },
     });
   });
 });
