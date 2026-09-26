@@ -164,7 +164,8 @@
       "success": {
         "registered": "Asset registered",
         "commissioned": "Asset commissioned",
-        "assigned": "Asset assigned"
+        "assigned": "Asset assigned",
+        "custodianChanged": "Custodian changed"
       }
     },
     "eyebrow": "Operational fleet",
@@ -284,7 +285,9 @@
       "approvalBody": "A transfer to another branch needs an approval. That step arrives with the approval flow.",
       "open": "Open asset record",
       "commissionHint": "Puts the asset into service. Its operating history starts counting from here.",
-      "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them."
+      "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them.",
+      "custodian": "Change custodian",
+      "custodianHint": "Names who answers for the asset day to day."
     },
     "columns": {
       "asset": "Asset",
@@ -1574,6 +1577,695 @@
         "retryReading": "Save the reading again",
         "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
         "readingSaved": "Odometer reading saved"
+      },
+      "note": {
+        "title": "Add a note",
+        "description": "A remark on the vehicle's history. Notes are never edited; a correction is another note.",
+        "label": "Note",
+        "placeholder": "What should others know about this vehicle?",
+        "submit": "Add note"
+      },
+      "evidence": {
+        "title": "Attach a receipt",
+        "description": "Adds proof to this entry. The entry itself is not edited.",
+        "entry": "Entry",
+        "files": "Photo or PDF",
+        "hint": "Add at least one file.",
+        "submit": "Attach"
+      },
+      "custodian": {
+        "label": "New custodian",
+        "choose": "Choose a member",
+        "none": "Nobody (clear the custodian)",
+        "current": "Current: {name}.",
+        "currentNone": "Currently nobody.",
+        "hint": "Only workspace members whose branches cover this vehicle can hold it. A driver without a login is not offered.",
+        "empty": "No member can hold this vehicle yet."
+      }
+    },
+    "page": {
+      "notFound": "This vehicle does not exist or is outside your branches."
+    },
+    "severity": {
+      "CRITICAL": "Urgent",
+      "WARNING": "Soon",
+      "INFO": "For information"
+    },
+    "tabs": {
+      "label": "Vehicle sections",
+      "now": "Now",
+      "maintenance": "Maintenance",
+      "money": "Money",
+      "trips": "Activities",
+      "documents": "Documents",
+      "history": "History",
+      "toDoCount": "{count, plural, one {thing to do} other {things to do}}",
+      "needsYou": "Needs you"
+    },
+    "header": {
+      "home": "Home: {branch}",
+      "noPlate": "No plate",
+      "details": "Details",
+      "hideDetails": "Hide details",
+      "viewOnly": "View only",
+      "moreActions": "More actions"
+    },
+    "facts": {
+      "custodian": "Custodian {name}",
+      "nobody": "none",
+      "reading": "{readingType, select, HOURS {Hour meter} other {Odometer}} {value}, {ago}",
+      "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
+      "noReading": "No odometer reading yet",
+      "locationNoReport": "Location: no report",
+      "lifecycleSince": "{status} since {since}"
+    },
+    "details": {
+      "rightNow": "Right now",
+      "vehicle": "Vehicle",
+      "specifications": "Specifications",
+      "availability": "Availability",
+      "available": "Available",
+      "availableSince": "Available since {date}",
+      "groundedSince": "Grounded since {date}",
+      "notAssessed": "Not assessed: the maintenance module is off",
+      "lifecycle": "Lifecycle",
+      "lifecycleSince": "{status} since {date}",
+      "homeBranch": "Home branch",
+      "homeBranchValue": "{branch}, administrative home",
+      "custodian": "Custodian",
+      "custodianSince": "{name} since {date}",
+      "custodianInactive": "Access deactivated",
+      "nobodyAssigned": "Nobody assigned",
+      "reportedLocation": "Reported location",
+      "reportedLocationNone": "No report. Locations are reported by people, not GPS.",
+      "odometer": "Odometer",
+      "readingMeta": "{date} · {source} · {by}",
+      "fleetCode": "Fleet code",
+      "plate": "Plate",
+      "makeModel": "Make and model",
+      "year": "Year",
+      "class": "Class",
+      "chassis": "Chassis number",
+      "acquired": "Acquired",
+      "acquiredWithAmount": "{date} · {amount}",
+      "notRecorded": "Not recorded",
+      "noSpecifications": "No specifications for this template."
+    },
+    "status": {
+      "grounded": {
+        "lead": "{days, plural, =0 {Grounded since today} one {Grounded since yesterday} other {Grounded for # days}} — reported: “{report}”.",
+        "noWorkOrder": "Nobody has planned the repair yet: problem {issue} has no work order.",
+        "repairRefused": "The repair was refused ({workOrder}); nobody has planned another yet.",
+        "awaitingAuthorization": "The repair ({workOrder}) is waiting for finance to authorize it.",
+        "inProgress": "Waiting on the workshop to finish the repair ({workOrder}).",
+        "completionSentBack": "The completion of {workOrder} was sent back; waiting on the workshop to finish it.",
+        "awaitingSignOff": "The repair is done; waiting on finance to sign off {workOrder}.",
+        "awaitingRelease": "The repair ({workOrder}) is signed off; waiting on a manager to release it to service.",
+        "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
+        "doNotDrive": "Do not drive it until a manager releases it to service."
+      },
+      "available": {
+        "lead": "Available.",
+        "sinceAndTrip": "In service since {since}; last trip {lastTrip}.",
+        "sinceNoTrips": "In service since {since}; no trips yet.",
+        "lastTripOnly": "Last trip {lastTrip}.",
+        "noTrips": "No trips yet."
+      },
+      "notAssessed": {
+        "lead": "Availability not assessed.",
+        "follow": "The maintenance module is off, so nobody records whether this vehicle may be used."
+      },
+      "registered": {
+        "lead": "Registered, not in service yet.",
+        "follow": "Commission it to start its operating history."
+      },
+      "disposed": {
+        "lead": "{status, select, SOLD {Sold.} RETIRED {Retired.} other {Written off.}}",
+        "follow": "Its history stays readable; nothing new can be recorded."
+      },
+      "alsoDocumentExpired": "Also: {document} expired on {date}.",
+      "openRecord": "{kind, select, work_order {Open work order {ref}} issue {Open problem {ref}} other {Open}}",
+      "lockedCaption": "{step} · {reason}"
+    },
+    "steps": {
+      "log-fuel": "Log fuel",
+      "record-expense": "Record expense",
+      "attach-evidence": "Attach receipt",
+      "record-reading": "Record odometer",
+      "add-note": "Add note",
+      "report-issue": "Report a problem",
+      "create-work-order": "Create work order",
+      "approve-work-order": "Authorize",
+      "complete-work-order": "Complete work",
+      "approve-completion": "Sign off",
+      "cancel-work-order": "Cancel work order",
+      "release": "Release to service",
+      "start-trip": "Start a trip",
+      "change-custodian": "Change custodian",
+      "transfer-branch": "Transfer home branch",
+      "add-document": "Add document",
+      "renew-document": "Renew",
+      "record-revenue": "Record revenue",
+      "review-entry": "Review",
+      "reverse-entry": "Reverse",
+      "commission": "Commission",
+      "reject-work-order": "Refuse",
+      "reject-completion": "Send back",
+      "resolve-issue": "Mark resolved",
+      "dismiss-issue": "Dismiss",
+      "approve-entry": "Approve",
+      "reject-entry": "Reject",
+      "add-cost": "Add a cost"
+    },
+    "locked": {
+      "needsAuthorization": "Needs finance to authorize {ref} first.",
+      "needsCompletion": "Needs {ref} completed first.",
+      "needsSignOff": "Needs {ref} signed off.",
+      "needsCompletionAndSignOff": "Needs {ref} completed and signed off.",
+      "needsAll": "Needs {ref} authorized, completed and signed off.",
+      "needsWorkOrder": "Needs a work order, completed and signed off.",
+      "makerCannotApprove": "You created {ref}; someone else authorizes it.",
+      "completerCannotSignOff": "You completed {ref}; someone else signs it off.",
+      "youRecordedIt": "You recorded it; someone else reviews it.",
+      "selfReleaseForbidden": "You vouched for the repair of a safety-critical problem; someone else releases the vehicle.",
+      "humanOnly": "Only a person can release a vehicle to service.",
+      "notGrounded": "The vehicle is not grounded.",
+      "noWorkOrderInProgress": "No work order in progress.",
+      "noOpenWorkOrder": "No open work order.",
+      "nothingAwaitingAuthorization": "Nothing waiting for authorization.",
+      "nothingAwaitingSignOff": "No completed work waiting for sign-off.",
+      "nothingAwaitingReview": "Nothing waiting for review.",
+      "noEntryMissingReceipt": "No entry is missing a receipt.",
+      "nothingToRenew": "No document is expired or expiring. Renew one from Documents.",
+      "noRevenueCategory": "No revenue category is set up for this workspace.",
+      "alreadyInService": "Already in service.",
+      "vehicleDisposed": "The vehicle has left the fleet; nothing new can be recorded."
+    },
+    "waiting": {
+      "label": "Waiting on",
+      "others": "Waiting on others",
+      "finance": "Finance",
+      "workshop": "The workshop",
+      "manager": "A manager",
+      "operations": "Operations",
+      "recorder": "Whoever recorded it"
+    },
+    "now": {
+      "todo": {
+        "title": "To do",
+        "description": "What needs you on this vehicle, most urgent first.",
+        "descriptionBesides": "Besides the repair above, what needs you on this vehicle.",
+        "emptyTitle": "Nothing needs you right now.",
+        "emptyTitleBesides": "Nothing else needs you on this vehicle.",
+        "emptyHint": "When something does, it shows up here with one button to handle it."
+      },
+      "attention": {
+        "title": "Needs attention",
+        "description": "Open items on this vehicle and who is handling each one.",
+        "empty": "Nothing needs attention on this vehicle."
+      },
+      "month": {
+        "description": "This vehicle's share",
+        "posted": "Posted expenses",
+        "postedHint": "Posted is not the same as paid",
+        "review": "Awaiting review",
+        "reviewHint": "{count, plural, one {# entry, not counted in posted} other {# entries, not counted in posted}}",
+        "missing": "Missing receipts",
+        "missingHint": "Recorded without proof",
+        "seeMoney": "See money"
+      },
+      "recent": {
+        "title": "Recent",
+        "seeAll": "See all history",
+        "meta": "{name} · {date}"
+      }
+    },
+    "attention": {
+      "ISSUE_UNPLANNED": {
+        "title": "Problem {ref} has no work order",
+        "detail": "{description}"
+      },
+      "WORK_ORDER_AWAITING_AUTHORIZATION": {
+        "title": "{ref} awaiting authorization",
+        "detail": "{description}",
+        "detailWithCost": "{description} · {expected} expected"
+      },
+      "WORK_ORDER_IN_PROGRESS": {
+        "title": "{ref} in progress",
+        "detail": "{description}",
+        "detailSentBack": "Completion sent back: {reason}"
+      },
+      "WORK_ORDER_AWAITING_SIGN_OFF": {
+        "title": "{ref} awaiting sign-off",
+        "detail": "{description}",
+        "detailCosts": "{actual} actual vs {expected} expected",
+        "detailActual": "{actual} actual"
+      },
+      "ASSET_AWAITING_RELEASE": {
+        "title": "Ready to release to service",
+        "detail": "{override, select, yes {The problem was closed without a repair; the release needs a reason.} other {The repair is signed off.}}"
+      },
+      "DOCUMENT_EXPIRED": {
+        "title": "{type} expired",
+        "detail": "Expired on {date}."
+      },
+      "DOCUMENT_EXPIRING": {
+        "title": "{type} expires in {days, plural, one {# day} other {# days}}",
+        "detail": "Valid until {date}."
+      },
+      "ENTRY_AWAITING_REVIEW": {
+        "title": "{category} awaiting review",
+        "detail": "{ref} · {amount}, recorded by {name}."
+      },
+      "ENTRY_EVIDENCE_MISSING": {
+        "title": "Receipt missing",
+        "detail": "{ref} · {amount}, recorded by {name}."
+      }
+    },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Problems reported on this vehicle, and the work orders that fix them.",
+      "loading": "Loading maintenance…",
+      "loadFailed": "We couldn't load the maintenance records.",
+      "workOrders": "Work orders",
+      "workOrdersHint": "Work in progress. Parts and labour are recorded as entries linked to the order.",
+      "workOrdersEmpty": "No work in progress. Plan one from a reported problem when something needs fixing.",
+      "newProblems": "New problems",
+      "newProblemsHint": "Reported, but not planned into a work order yet.",
+      "newProblemsEmpty": "No new problems. Report one if something is wrong.",
+      "done": "Done",
+      "doneSummary": "{workOrders, plural, one {# work order} other {# work orders}}, {problems, plural, one {# closed problem} other {# closed problems}}",
+      "nextStepYours": "Next step is yours",
+      "notPlanned": "Not planned yet",
+      "inWorkOrder": "In a work order",
+      "fromProblem": "from problem {ref}",
+      "planned": "{amount} planned",
+      "noEstimate": "No estimate",
+      "overBudget": "+{percent}%",
+      "doneOn": "Done {date}",
+      "cancelledOn": "Cancelled {date}",
+      "refusedOn": "Refused {date}",
+      "openedOn": "Opened {date}",
+      "reported": "reported",
+      "safetyCritical": "Safety-critical"
+    },
+    "money": {
+      "title": "Money",
+      "titleFor": "Money · {period}",
+      "description": "This vehicle's share of each entry. Awaiting review is never added to posted; posted is not paid.",
+      "periodLabel": "Month",
+      "periodPrev": "Previous month",
+      "periodNext": "Next month",
+      "loading": "Loading money…",
+      "loadFailed": "We couldn't load this vehicle's money.",
+      "posted": "Posted expenses",
+      "postedHint": "All layers · posted is not paid",
+      "postedBasis": "By posting period: what the books say for this month.",
+      "economicBasis": "By economic month: when the money was spent.",
+      "review": "Awaiting review",
+      "reviewHint": "{count, plural, one {# entry · not in posted} other {# entries · not in posted}}",
+      "missing": "Missing receipts",
+      "missingHint": "Recorded without proof",
+      "revenue": "Posted revenue",
+      "revenueHint": "Posted is not cash received",
+      "entryCount": "{count, plural, one {# entry} other {# entries}}",
+      "howCalculated": "How this is calculated",
+      "byCategory": "Spending by category",
+      "byCategoryHint": "Posted, {period}",
+      "lastSixMonths": "Last 6 months",
+      "lastSixMonthsHint": "Posted entries by posting period",
+      "totalPosted": "Total posted",
+      "noPostedExpenses": "No posted expenses this month.",
+      "expenses": "Expenses",
+      "revenueLegend": "Revenue",
+      "monthBar": "{month}: expenses {expenses}, revenue {revenue}",
+      "entries": "Entries",
+      "entriesHint": "Nothing is edited: a correction is a reversal, and both stay listed.",
+      "filterLabel": "Show entries",
+      "filters": {
+        "posted": "Posted",
+        "expenses": "Expenses",
+        "revenue": "Revenue",
+        "review": "Awaiting review",
+        "rejected": "Rejected",
+        "missing": "Missing receipt"
+      },
+      "noEntries": "No entries match this filter.",
+      "forTrip": "for trip {number}",
+      "forWorkOrder": "for work order {ref}",
+      "ofEntry": "of a {amount} entry",
+      "lifetime": "Lifetime, all posted entries since registration: revenue {revenue} · expenses {expenses} · net {net}. Recorded figures, not cash paid or profit."
+    },
+    "layers": {
+      "DIRECT": "Direct",
+      "MAINTENANCE": "Maintenance",
+      "OWNERSHIP": "Ownership",
+      "SHARED": "Shared"
+    },
+    "evidence": {
+      "SUPPLIED": "Receipt on file",
+      "PAYMENT_REFERENCE": "Payment reference",
+      "NOT_EXPECTED": "No receipt expected",
+      "NOT_SUPPLIED": "No receipt"
+    },
+    "trips": {
+      "title": "Activities",
+      "description": "Activities with this vehicle",
+      "descriptionWithKm": "Activities with this vehicle · {km, number} km recorded",
+      "empty": "No activities yet. Start one when the vehicle leaves the depot.",
+      "loading": "Loading…",
+      "loadFailed": "We couldn't load the activities.",
+      "onTheRoad": "On the road",
+      "closed": "Closed",
+      "closedWithGaps": "{count, plural, one {Closed, # gap} other {Closed, # gaps}}",
+      "route": "{from} → {to}",
+      "tripNumber": "Trip {number}",
+      "km": "{value, number} km",
+      "stillOpen": "still open",
+      "customer": "Customer",
+      "none": "None",
+      "driver": "Driver",
+      "started": "Started",
+      "ended": "Ended",
+      "stillOnRoad": "Still on the road",
+      "distance": "Distance",
+      "distanceUnknown": "Known when closed",
+      "gapsNote": "Closed with {count, plural, one {# gap} other {# gaps}}. Reports show the gaps; they never fill them in.",
+      "linkedMoney": "Linked money",
+      "wholeTrip": "Whole-trip amounts",
+      "noMoney": "No entries linked to this trip yet.",
+      "odometer": "Odometer",
+      "noReadings": "No start or end reading for this vehicle.",
+      "readingLine": "{source} · {date}",
+      "openFull": "Open the full trip"
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Expiry dates drive reminders. Renewing keeps every earlier version.",
+      "empty": "No documents yet. Add the insurance and the inspection so expiry reminders work.",
+      "expired": "Expired",
+      "expiresIn": "{count, plural, =0 {Expires today} one {Expires in # day} other {Expires in # days}}",
+      "valid": "Valid",
+      "noExpiry": "No expiry date",
+      "noNumber": "No number",
+      "earlierKept": "{count, plural, one {# earlier version kept} other {# earlier versions kept}}",
+      "firstVersion": "First version",
+      "scanOnFile": "Scan on file",
+      "noScan": "No scan on file",
+      "validUntilShort": "valid until",
+      "validUntil": "Valid until {date}",
+      "expiredOn": "{type} expired on {date}.",
+      "supersededNote": "This version was replaced by a renewal. It is kept unchanged.",
+      "superseded": "Replaced",
+      "scan": "Scan",
+      "filesOnFile": "{count, plural, one {# file on file} other {# files on file}}",
+      "earlierVersions": "Earlier versions",
+      "renewKeeps": "Renewing creates a new version and keeps this one."
+    },
+    "readings": {
+      "title": "Odometer readings",
+      "eyebrow": "Odometer",
+      "description": "Readings are never edited; a lower value is kept with a warning.",
+      "empty": "No readings yet.",
+      "meta": "{source} · {name} · {date}",
+      "superseded": "Corrected by a later reading.",
+      "supersededBecause": "Corrected: {reason}",
+      "delta": "{delta, number, ::sign-always} {readingType, select, HOURS {h} other {km}}",
+      "source": {
+        "ACTIVITY_START": "Trip start",
+        "ACTIVITY_END": "Trip end",
+        "SUBSTITUTION": "Substitution",
+        "MANUAL": "Manual reading",
+        "WORK_ORDER": "Workshop"
+      }
+    },
+    "history": {
+      "title": "History",
+      "description": "Everything recorded on this vehicle. Nothing is edited away: corrections appear next to the original.",
+      "filterLabel": "Show events",
+      "filters": {
+        "ALL": "All",
+        "MAINTENANCE": "Maintenance",
+        "MONEY": "Money",
+        "TRIPS": "Activities",
+        "DOCUMENTS": "Documents",
+        "READINGS": "Readings",
+        "ASSIGNMENTS": "Assignments",
+        "LIFECYCLE": "Lifecycle",
+        "NOTES": "Notes"
+      },
+      "loading": "Loading history…",
+      "loadFailed": "We couldn't load the history.",
+      "empty": "Nothing of this kind recorded yet.",
+      "loadMore": "Load more",
+      "open": "Open",
+      "event": {
+        "asset-registered": "Vehicle registered",
+        "asset-commissioned": "Put into service",
+        "asset-assigned": "{change, select, branch {Moved to branch {branch}} custodian {Custodian changed to {custodian}} cleared {Custodian removed} other {Assignment changed}}",
+        "activity-created": "Trip {number} started",
+        "activity-closed": "Trip {number} closed",
+        "activity-reopened": "Trip {number} reopened",
+        "activity-sheet_recorded": "Trip sheet {number} recorded",
+        "activity-asset_substituted": "Vehicle substituted on trip {number}",
+        "movement_leg-recorded": "Leg recorded on trip {number}",
+        "meter_reading-recorded": "{readingType, select, HOURS {Hour meter {value, number} h} other {Odometer {value, number} km}}",
+        "meter_reading-corrected": "{readingType, select, HOURS {Hour meter corrected to {value, number} h} other {Odometer corrected to {value, number} km}}",
+        "document-added": "{type} added",
+        "document-renewed": "{type} renewed",
+        "financial_entry-posted": "Entry posted",
+        "financial_entry-submitted": "Entry recorded, awaiting review",
+        "financial_entry-approved": "Entry approved",
+        "financial_entry-rejected": "Entry rejected",
+        "financial_entry-reversed": "Entry reversed",
+        "financial_entry-reversal_posted": "Reversal posted",
+        "financial_entry-evidence_attached": "{count, plural, one {Receipt attached} other {# files attached}}",
+        "operational_issue-reported": "Problem reported",
+        "operational_issue-resolved": "Problem resolved",
+        "operational_issue-dismissed": "Problem dismissed",
+        "work_order-created": "Work order opened",
+        "work_order-submitted": "Work order submitted for authorization",
+        "work_order-approved": "Work order authorized",
+        "work_order-rejected": "Work order refused",
+        "work_order-completion_submitted": "Work declared complete, awaiting sign-off",
+        "work_order-completed": "Work completed",
+        "work_order-completion_approved": "Work signed off",
+        "work_order-completion_rejected": "Completion sent back",
+        "work_order-cancelled": "Work order cancelled",
+        "work_order-asset_released": "Released to service",
+        "asset_availability-opened": "Grounded",
+        "asset_availability-closed": "Grounding lifted",
+        "note-added": "Note added"
+      }
+    },
+    "panel": {
+      "loading": "Loading…",
+      "notFound": "Not available",
+      "notFoundHint": "This record does not exist, is outside your branches, or is not something your role reads.",
+      "retry": "Try again",
+      "backTo": "{kind, select, work_order {Back to work order {ref}} issue {Back to problem {ref}} entry {Back to the entry} trip {Back to the trip} document {Back to the document} note {Back to the note} other {Back to the readings}}",
+      "workOrderTitle": "Work order {ref}",
+      "workOrderEyebrow": "Work order {ref}",
+      "issueTitle": "Problem {ref}",
+      "issueEyebrow": "Problem {ref}",
+      "entryTitle": "Entry",
+      "entryEyebrow": "{direction, select, REVENUE {Revenue {number}} other {Expense {number}}}",
+      "tripTitle": "Trip",
+      "tripEyebrow": "Trip {number} · {type}",
+      "documentTitle": "Document",
+      "documentEyebrow": "Document",
+      "noteEyebrow": "Note",
+      "noteBy": "Note by {name}",
+      "noteAppendOnly": "Notes are never edited. A correction is another note.",
+      "fromProblem": "From problem {ref}",
+      "keepsGrounded": "This work order keeps the vehicle grounded. After sign-off, a manager releases it to service.",
+      "completionSentBack": "Completion sent back: {reason}",
+      "opened": "Opened",
+      "atBy": "{date} by {name}",
+      "expectedCost": "Expected cost",
+      "actualCost": "Actual cost",
+      "actualCostLater": "Set when the work is completed",
+      "completed": "Completed",
+      "whatWasDone": "What was done",
+      "reason": "Reason",
+      "costs": "Costs",
+      "chronology": "Chronology",
+      "category": "Category",
+      "reported": "Reported",
+      "photos": "Photos",
+      "photoCount": "{count, plural, =0 {None} one {# photo} other {# photos}}",
+      "workOrders": "Work orders",
+      "noneYet": "None yet",
+      "resolution": "Resolution",
+      "safetyCriticalNote": "Safety-critical reports ground the vehicle the moment they are recorded. Only a manager can release it.",
+      "date": "Date",
+      "costType": "Cost type",
+      "thisVehicle": "This vehicle",
+      "wholeEntry": "Whole entry",
+      "notShared": "Same, not shared",
+      "sharedWith": "{amount}, shared with other vehicles",
+      "paidTo": "Paid to",
+      "recordedBy": "Recorded by",
+      "postingPeriod": "Posting period",
+      "notPosted": "Not posted",
+      "reverses": "Reverses",
+      "reversedBy": "Reversed by",
+      "openOriginal": "The original entry",
+      "openReversal": "The reversal",
+      "awaitingReviewNote": "Awaiting review: not counted in posted totals until approved. Whoever recorded it cannot approve it.",
+      "postedNotPaid": "Posted means recorded in the books, not paid. A mistake is corrected by a reversal; the original stays.",
+      "receipt": "Receipt",
+      "noFiles": "No file on this entry.",
+      "evidenceVia": {
+        "RECORDED": "Recorded with the entry · {date} · {name}",
+        "ATTACHED": "Attached later · {date} · {name}"
+      },
+      "openFile": "Open the file",
+      "openFullEntry": "Open the full entry",
+      "waitingOn": {
+        "authorization": "Waiting on finance to authorize the spending.",
+        "completion": "Waiting on the workshop to complete the work.",
+        "signOff": "Waiting on finance to sign off the work and its cost.",
+        "release": "Waiting on a manager to release the vehicle to service.",
+        "planning": "Waiting on the workshop to plan a work order.",
+        "entryReview": "Waiting on finance to review it. Until then it is not counted in posted totals.",
+        "entryReceipt": "Waiting on {name} to attach the receipt.",
+        "documentRenewal": "Waiting on operations to renew it."
+      }
+    },
+    "rows": {
+      "actionsFor": "Actions for {record}"
+    },
+    "bar": {
+      "label": "Quick actions",
+      "more": "More"
+    },
+    "notify": {
+      "success": {
+        "noteAdded": "Note added",
+        "evidenceAttached": "Receipt attached"
+      }
+    },
+    "actions": {
+      "log-fuel": {
+        "label": "Log fuel",
+        "short": "Fuel",
+        "description": "Fuel paid for this vehicle, with the odometer if you read it. The expense is saved first."
+      },
+      "record-expense": {
+        "label": "Record expense",
+        "short": "Expense",
+        "description": "Any cost for this vehicle. Above the threshold it waits for finance review."
+      },
+      "attach-evidence": {
+        "label": "Attach receipt",
+        "short": "Receipt",
+        "description": "Adds proof to an entry recorded without it. The entry itself is not edited."
+      },
+      "record-reading": {
+        "label": "Record odometer",
+        "short": "Odometer",
+        "description": "A standalone reading. A value lower than the last is kept with a warning, never refused."
+      },
+      "add-note": {
+        "label": "Add note",
+        "short": "Note",
+        "description": "A short remark on the vehicle's history. Notes are never edited."
+      },
+      "report-issue": {
+        "label": "Report a problem",
+        "short": "Problem",
+        "description": "Something is wrong with the vehicle. Safety-critical grounds it at once."
+      },
+      "create-work-order": {
+        "label": "Create work order",
+        "short": "Work order",
+        "description": "Plan the repair and its expected cost, from a reported problem or as preventive work."
+      },
+      "approve-work-order": {
+        "label": "Authorize work order",
+        "short": "Authorize",
+        "description": "Finance authorizes the spending before work starts. Whoever created it cannot authorize it."
+      },
+      "complete-work-order": {
+        "label": "Complete work",
+        "short": "Complete",
+        "description": "Say what was done and what it cost."
+      },
+      "approve-completion": {
+        "label": "Sign off work order",
+        "short": "Sign off",
+        "description": "Checks the completed work and its actual cost. Whoever completed it cannot sign it off."
+      },
+      "cancel-work-order": {
+        "label": "Cancel work order",
+        "short": "Cancel",
+        "description": "Stop a work order that is no longer needed. A reason is required."
+      },
+      "release": {
+        "label": "Release to service",
+        "short": "Release",
+        "description": "Ends the grounding once the repair is signed off. After a safety-critical problem, whoever vouched for the repair cannot release."
+      },
+      "start-trip": {
+        "label": "Start a trip",
+        "short": "Trip",
+        "description": "Opens the trip sheet with this vehicle as the main vehicle."
+      },
+      "change-custodian": {
+        "label": "Change custodian",
+        "short": "Custodian",
+        "description": "Who answers for the vehicle day to day. Not the same as who drives each trip."
+      },
+      "transfer-branch": {
+        "label": "Transfer home branch",
+        "short": "Transfer",
+        "description": "Moves the vehicle's home branch for good. Past records stay with the branch that made them."
+      },
+      "add-document": {
+        "label": "Add document",
+        "short": "Document",
+        "description": "Insurance, inspection, permits. A missing expiry date shows as unknown, never as valid."
+      },
+      "renew-document": {
+        "label": "Renew document",
+        "short": "Renew",
+        "description": "Records the new version of a document. The old one is kept."
+      },
+      "record-revenue": {
+        "label": "Record revenue",
+        "short": "Revenue",
+        "description": "Freight or fares earned with this vehicle."
+      },
+      "review-entry": {
+        "label": "Review entry",
+        "short": "Review",
+        "description": "Approve or reject an entry waiting for review. Whoever recorded it cannot approve it."
+      },
+      "reverse-entry": {
+        "label": "Reverse entry",
+        "short": "Reverse",
+        "description": "Posted money is never edited: a reversal cancels it and both stay. Pick the entry in Money."
+      },
+      "commission": {
+        "label": "Commission",
+        "short": "Commission",
+        "description": "From registered to in service: the operating history starts here."
+      },
+      "groups": {
+        "capture": "Capture",
+        "maintenance": "Maintenance",
+        "operations": "Operations",
+        "documents": "Documents",
+        "money": "Money",
+        "lifecycle": "Lifecycle"
+      },
+      "all": {
+        "title": "All actions",
+        "description": "Everything you can do on {vehicle}, by area.",
+        "search": "Search actions",
+        "searchPlaceholder": "Search, e.g. fuel, renew, sign off",
+        "noMatch": "No action matches “{query}”."
       }
     }
   }

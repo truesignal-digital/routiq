@@ -1,14 +1,10 @@
-import type { ModuleCode, Role } from "@routiq/contracts";
+import { canReadLedger, type ModuleCode, type Role } from "@routiq/contracts";
 
-const FINANCE_READERS: readonly Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "FINANCE_APPROVER",
-  "FIELD_SUBMITTER",
-  "EXECUTIVE_VIEWER",
-];
-
-/** Read access is independent of command capabilities; server scope still applies. */
+/**
+ * Read access is independent of command capabilities; server scope still
+ * applies. The role list is the server's own (`FINANCE_READER_ROLES`), so the
+ * workshop never sees the books here either.
+ */
 export function canReadFinance(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
@@ -16,7 +12,7 @@ export function canReadFinance(
   return (
     (enabledModules?.includes("FINANCE") ?? false) &&
     role !== undefined &&
-    FINANCE_READERS.includes(role)
+    canReadLedger(role)
   );
 }
 
@@ -66,4 +62,41 @@ export function canManagePeriods(
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
   return canApproveEntries(role, enabledModules);
+}
+
+/**
+ * Attaching a receipt later is open to whoever could have attached it at
+ * capture: record-expense's roles, the workshop included (its work-order costs).
+ */
+const EVIDENCE_ATTACHERS: readonly Role[] = [
+  "ADMIN",
+  "OPS_MANAGER",
+  "FINANCE_APPROVER",
+  "FIELD_SUBMITTER",
+  "MAINTENANCE",
+];
+
+export function canAttachEvidence(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return (
+    (enabledModules?.includes("FINANCE") ?? false) &&
+    role !== undefined &&
+    EVIDENCE_ATTACHERS.includes(role)
+  );
+}
+
+/**
+ * A cost booked against an approved work order. The workshop records expenses
+ * only this way (the handler refuses its expenses without a work order), so
+ * this is record-expense's list plus MAINTENANCE.
+ */
+export function canAddWorkOrderCost(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return canRecordFinance(role, enabledModules) || (
+    (enabledModules?.includes("FINANCE") ?? false) && role === "MAINTENANCE"
+  );
 }

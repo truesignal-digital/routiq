@@ -11,7 +11,8 @@ export type NotifyNamespace =
   | "assets"
   | "documents"
   | "finance"
-  | "maintenance";
+  | "maintenance"
+  | "vehicle";
 
 type NotifyKind = "success" | "warnings" | "errors";
 

@@ -152,5 +152,21 @@
       "work_order-asset_released": "Véhicule remis en service",
       "asset_availability-opened": "Véhicule immobilisé"
     }
+  },
+  "vehicle": {
+    "tabs": {
+      "trips": "Trajets"
+    },
+    "trips": {
+      "title": "Trajets",
+      "description": "Trajets avec ce véhicule",
+      "descriptionWithKm": "Trajets avec ce véhicule · {km, number} km enregistrés",
+      "empty": "Aucun trajet pour l'instant. Démarrez-en un quand le véhicule quitte le dépôt."
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trajets"
+      }
+    }
   }
 }

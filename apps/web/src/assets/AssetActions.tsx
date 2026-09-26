@@ -28,10 +28,15 @@ import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
-import { canManageAssets } from "./permissions.js";
+import { canCommissionAsset, canTransferAsset } from "./permissions.js";
 import { useAssetRegistrationReference } from "./reference.js";
 
-export type AssetActionKey = "commission" | "assign";
+/**
+ * `assign` moves the vehicle to another branch; `custodian` names who answers
+ * for it. Both are `assign-asset` — one form per question, so a custodian
+ * change never shows a branch picker.
+ */
+export type AssetActionKey = "commission" | "assign" | "custodian";
 
 /** The fields an action needs, so a list row and a detail page both qualify. */
 export interface AssetActionTarget {
@@ -56,11 +61,15 @@ export function assetActions(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): AssetActionKey[] {
-  if (!canManageAssets(role, enabledModules)) return [];
   if (DISPOSED.includes(asset.lifecycleStatus)) return [];
-  return asset.lifecycleStatus === "REGISTERED"
-    ? ["commission", "assign"]
-    : ["assign"];
+  // role-config: each action follows its command's default rules, so a role the
+  // server would refuse is never offered the button.
+  const actions: AssetActionKey[] = [];
+  if (asset.lifecycleStatus === "REGISTERED" && canCommissionAsset(role, enabledModules)) {
+    actions.push("commission");
+  }
+  if (canTransferAsset(role, enabledModules)) actions.push("assign");
+  return actions;
 }
 
 /**
@@ -122,7 +131,9 @@ export function AssetActionForm({
 
   const custodianValue = custodian?.value;
   const ready =
-    action === "commission" || branchCode !== "" || custodianValue !== undefined;
+    action === "commission" ||
+    (action === "assign" && branchCode !== "") ||
+    custodianValue !== undefined;
 
   async function submit() {
     if (!ready) return;
@@ -155,7 +166,11 @@ export function AssetActionForm({
     if (!result.ok) return;
     notifyCommandSuccess(
       "assets",
-      action === "commission" ? "commissioned" : "assigned",
+      action === "commission"
+        ? "commissioned"
+        : action === "custodian"
+          ? "custodianChanged"
+          : "assigned",
       result.outcome.warnings,
     );
     await invalidateAssets();
@@ -215,7 +230,7 @@ export function AssetActionForm({
           </Select>
         </div>
       )}
-      {action === "assign" && custodian?.field}
+      {action !== "commission" && custodian?.field}
     </CommandForm>
   );
 }

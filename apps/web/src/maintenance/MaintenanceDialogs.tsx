@@ -32,6 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/money-input.js";
 import { useActiveSession } from "../auth/store.js";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
+import { useCategories } from "../documents/useCategories.js";
+import { localizedLabel } from "../lib/format.js";
 import { useAssetOptions } from "../assets/useAssetOptions.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -210,13 +212,13 @@ export function ReportIssueForm({
   const [description, setDescription] = useState("");
   const [safetyCritical, setSafetyCritical] = useState(false);
   const [category, setCategory] = useState("");
+  const issueTypes = useCategories("ISSUE_TYPE");
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const intent = useRef<CommandIntent<ReportIssuePayload> | undefined>(undefined);
 
   const assetId = pinnedAssetId ?? chosenAssetId;
   const trimmedDescription = description.trim();
-  const trimmedCategory = category.trim();
   const ready = !uploading && assetId !== "" && trimmedDescription !== "";
 
   async function submit() {
@@ -229,7 +231,8 @@ export function ReportIssueForm({
           assetId,
           description: trimmedDescription,
           safetyCritical,
-          ...(trimmedCategory === "" ? {} : { category: trimmedCategory }),
+          // The category's stable code, like every other category reference.
+          ...(category === "" ? {} : { category }),
         },
         artifactIds.length > 0 ? { sourceArtifactIds: artifactIds } : {},
       );
@@ -268,13 +271,32 @@ export function ReportIssueForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="issue-category">{t("maintenance.fields.category")}</Label>
-        <Input
-          id="issue-category"
-          maxLength={80}
-          placeholder={t("maintenance.fields.categoryPlaceholder")}
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-        />
+        <Select
+          value={category || null}
+          onValueChange={(next) => {
+            const code = (next as string | null) ?? "";
+            setCategory(code);
+            // A kind of fault that is usually dangerous pre-checks the box; the
+            // reporter can still untick it.
+            const picked = issueTypes.data?.find((type) => type.code === code);
+            if (picked !== undefined) setSafetyCritical(picked.defaultSafetyCritical === true);
+          }}
+        >
+          <SelectTrigger
+            id="issue-category"
+            className="w-full"
+            aria-label={t("maintenance.fields.category")}
+          >
+            <SelectValue placeholder={t("maintenance.fields.choose")} />
+          </SelectTrigger>
+          <SelectContent>
+            {(issueTypes.data ?? []).map((type) => (
+              <SelectItem key={type.code} value={type.code}>
+                {localizedLabel(type)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Safety-critical grounds the truck the moment it is filed — the caption

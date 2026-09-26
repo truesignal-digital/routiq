@@ -152,5 +152,21 @@
       "work_order-asset_released": "Vehicle returned to service",
       "asset_availability-opened": "Vehicle grounded"
     }
+  },
+  "vehicle": {
+    "tabs": {
+      "trips": "Trips"
+    },
+    "trips": {
+      "title": "Trips",
+      "description": "Trips with this vehicle",
+      "descriptionWithKm": "Trips with this vehicle · {km, number} km recorded",
+      "empty": "No trips yet. Start one when the vehicle leaves the depot."
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trips"
+      }
+    }
   }
 }

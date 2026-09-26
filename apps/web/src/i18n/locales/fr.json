@@ -164,7 +164,8 @@
       "success": {
         "registered": "Actif enregistré",
         "commissioned": "Actif mis en service",
-        "assigned": "Actif affecté"
+        "assigned": "Actif affecté",
+        "custodianChanged": "Responsable modifié"
       }
     },
     "eyebrow": "Parc opérationnel",
@@ -284,7 +285,9 @@
       "approvalBody": "Un transfert vers une autre agence nécessite une approbation. Cette étape arrive avec le circuit d'approbation.",
       "open": "Ouvrir la fiche",
       "commissionHint": "Met l'actif en service. Son historique d'exploitation démarre ici.",
-      "assignHint": "Rattache l'actif à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies."
+      "assignHint": "Rattache l'actif à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies.",
+      "custodian": "Changer de responsable",
+      "custodianHint": "Désigne qui répond de l'actif au quotidien."
     },
     "columns": {
       "asset": "Actif",
@@ -1574,6 +1577,695 @@
         "retryReading": "Réessayer le relevé",
         "expenseStands": "La dépense de carburant est enregistrée. Le relevé du compteur n'a pas été enregistré.",
         "readingSaved": "Relevé du compteur enregistré"
+      },
+      "note": {
+        "title": "Ajouter une note",
+        "description": "Une remarque dans l'historique du véhicule. Une note n'est jamais modifiée ; une correction est une nouvelle note.",
+        "label": "Note",
+        "placeholder": "Que doivent savoir les autres sur ce véhicule ?",
+        "submit": "Ajouter la note"
+      },
+      "evidence": {
+        "title": "Joindre un reçu",
+        "description": "Ajoute une preuve à cette écriture. L'écriture elle-même n'est pas modifiée.",
+        "entry": "Écriture",
+        "files": "Photo ou PDF",
+        "hint": "Ajoutez au moins un fichier.",
+        "submit": "Joindre"
+      },
+      "custodian": {
+        "label": "Nouveau responsable",
+        "choose": "Choisir un membre",
+        "none": "Personne (retirer le responsable)",
+        "current": "Actuel : {name}.",
+        "currentNone": "Actuellement personne.",
+        "hint": "Seuls les membres dont les agences couvrent ce véhicule peuvent en être responsables. Un chauffeur sans compte n'est pas proposé.",
+        "empty": "Aucun membre ne peut encore en être responsable."
+      }
+    },
+    "page": {
+      "notFound": "Ce véhicule n'existe pas ou n'est pas dans vos agences."
+    },
+    "severity": {
+      "CRITICAL": "Urgent",
+      "WARNING": "Bientôt",
+      "INFO": "Pour information"
+    },
+    "tabs": {
+      "label": "Sections du véhicule",
+      "now": "En ce moment",
+      "maintenance": "Maintenance",
+      "money": "Argent",
+      "trips": "Activités",
+      "documents": "Documents",
+      "history": "Historique",
+      "toDoCount": "{count, plural, one {chose à faire} other {choses à faire}}",
+      "needsYou": "Vous attend"
+    },
+    "header": {
+      "home": "Agence : {branch}",
+      "noPlate": "Sans immatriculation",
+      "details": "Détails",
+      "hideDetails": "Masquer les détails",
+      "viewOnly": "Consultation seule",
+      "moreActions": "Plus d'actions"
+    },
+    "facts": {
+      "custodian": "Responsable {name}",
+      "nobody": "aucun",
+      "reading": "{readingType, select, HOURS {Horamètre} other {Compteur}} {value}, {ago}",
+      "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
+      "noReading": "Aucun relevé de compteur",
+      "locationNoReport": "Position : aucun signalement",
+      "lifecycleSince": "{status} depuis {since}"
+    },
+    "details": {
+      "rightNow": "En ce moment",
+      "vehicle": "Véhicule",
+      "specifications": "Caractéristiques",
+      "availability": "Disponibilité",
+      "available": "Disponible",
+      "availableSince": "Disponible depuis le {date}",
+      "groundedSince": "Immobilisé depuis le {date}",
+      "notAssessed": "Non évaluée : le module maintenance est désactivé",
+      "lifecycle": "Cycle de vie",
+      "lifecycleSince": "{status} depuis le {date}",
+      "homeBranch": "Agence de rattachement",
+      "homeBranchValue": "{branch}, rattachement administratif",
+      "custodian": "Responsable",
+      "custodianSince": "{name} depuis le {date}",
+      "custodianInactive": "Accès désactivé",
+      "nobodyAssigned": "Personne",
+      "reportedLocation": "Position signalée",
+      "reportedLocationNone": "Aucun signalement. Les positions sont signalées par des personnes, pas par GPS.",
+      "odometer": "Compteur",
+      "readingMeta": "{date} · {source} · {by}",
+      "fleetCode": "Code flotte",
+      "plate": "Immatriculation",
+      "makeModel": "Marque et modèle",
+      "year": "Année",
+      "class": "Catégorie",
+      "chassis": "N° de châssis",
+      "acquired": "Acquisition",
+      "acquiredWithAmount": "{date} · {amount}",
+      "notRecorded": "Non renseigné",
+      "noSpecifications": "Aucune caractéristique pour ce modèle."
+    },
+    "status": {
+      "grounded": {
+        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — signalement : « {report} ».",
+        "noWorkOrder": "Personne n'a encore planifié la réparation : le signalement {issue} n'a pas d'ordre de travail.",
+        "repairRefused": "La réparation a été refusée ({workOrder}) ; aucune autre n'est encore planifiée.",
+        "awaitingAuthorization": "La réparation ({workOrder}) attend l'autorisation de la finance.",
+        "inProgress": "En attente de l'atelier pour terminer la réparation ({workOrder}).",
+        "completionSentBack": "La fin des travaux de {workOrder} a été renvoyée ; en attente de l'atelier.",
+        "awaitingSignOff": "La réparation est terminée ; en attente de la validation de {workOrder} par la finance.",
+        "awaitingRelease": "La réparation ({workOrder}) est validée ; en attente d'un responsable pour la remise en service.",
+        "issueClosedAwaitingRelease": "Le signalement {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
+        "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
+      },
+      "available": {
+        "lead": "Disponible.",
+        "sinceAndTrip": "En service depuis {since} ; dernier trajet {lastTrip}.",
+        "sinceNoTrips": "En service depuis {since} ; aucun trajet pour l'instant.",
+        "lastTripOnly": "Dernier trajet {lastTrip}.",
+        "noTrips": "Aucun trajet pour l'instant."
+      },
+      "notAssessed": {
+        "lead": "Disponibilité non évaluée.",
+        "follow": "Le module maintenance est désactivé : personne n'enregistre si ce véhicule peut rouler."
+      },
+      "registered": {
+        "lead": "Enregistré, pas encore en service.",
+        "follow": "Mettez-le en service pour démarrer son historique d'exploitation."
+      },
+      "disposed": {
+        "lead": "{status, select, SOLD {Vendu.} RETIRED {Retiré du service.} other {Mis au rebut.}}",
+        "follow": "Son historique reste consultable ; plus rien ne peut être enregistré."
+      },
+      "alsoDocumentExpired": "Aussi : {document} a expiré le {date}.",
+      "openRecord": "{kind, select, work_order {Ouvrir l'ordre de travail {ref}} issue {Ouvrir le signalement {ref}} other {Ouvrir}}",
+      "lockedCaption": "{step} · {reason}"
+    },
+    "steps": {
+      "log-fuel": "Enregistrer un plein",
+      "record-expense": "Saisir une dépense",
+      "attach-evidence": "Joindre le reçu",
+      "record-reading": "Relever le compteur",
+      "add-note": "Ajouter une note",
+      "report-issue": "Signaler un problème",
+      "create-work-order": "Créer un ordre de travail",
+      "approve-work-order": "Autoriser",
+      "complete-work-order": "Terminer les travaux",
+      "approve-completion": "Valider",
+      "cancel-work-order": "Annuler l'ordre de travail",
+      "release": "Remettre en service",
+      "start-trip": "Démarrer un trajet",
+      "change-custodian": "Changer de responsable",
+      "transfer-branch": "Changer d'agence",
+      "add-document": "Ajouter un document",
+      "renew-document": "Renouveler",
+      "record-revenue": "Saisir une recette",
+      "review-entry": "Examiner",
+      "reverse-entry": "Contre-passer",
+      "commission": "Mettre en service",
+      "reject-work-order": "Refuser",
+      "reject-completion": "Renvoyer",
+      "resolve-issue": "Marquer résolu",
+      "dismiss-issue": "Classer sans suite",
+      "approve-entry": "Approuver",
+      "reject-entry": "Rejeter",
+      "add-cost": "Ajouter un coût"
+    },
+    "locked": {
+      "needsAuthorization": "Il faut d'abord que la finance autorise {ref}.",
+      "needsCompletion": "Il faut d'abord que {ref} soit terminé.",
+      "needsSignOff": "Il faut que {ref} soit validé.",
+      "needsCompletionAndSignOff": "Il faut que {ref} soit terminé et validé.",
+      "needsAll": "Il faut que {ref} soit autorisé, terminé et validé.",
+      "needsWorkOrder": "Il faut un ordre de travail terminé et validé.",
+      "makerCannotApprove": "Vous avez créé {ref} ; une autre personne l'autorise.",
+      "completerCannotSignOff": "Vous avez terminé {ref} ; une autre personne le valide.",
+      "youRecordedIt": "Vous l'avez saisie ; une autre personne l'examine.",
+      "selfReleaseForbidden": "Vous avez garanti la réparation d'un problème critique ; une autre personne remet le véhicule en service.",
+      "humanOnly": "Seule une personne peut remettre un véhicule en service.",
+      "notGrounded": "Le véhicule n'est pas immobilisé.",
+      "noWorkOrderInProgress": "Aucun ordre de travail en cours.",
+      "noOpenWorkOrder": "Aucun ordre de travail ouvert.",
+      "nothingAwaitingAuthorization": "Rien n'attend d'autorisation.",
+      "nothingAwaitingSignOff": "Aucun travail terminé n'attend de validation.",
+      "nothingAwaitingReview": "Rien n'attend d'examen.",
+      "noEntryMissingReceipt": "Aucune écriture sans reçu.",
+      "nothingToRenew": "Aucun document expiré ou proche de l'expiration. Renouvelez depuis Documents.",
+      "noRevenueCategory": "Aucune catégorie de recette n'est configurée.",
+      "alreadyInService": "Déjà en service.",
+      "vehicleDisposed": "Le véhicule a quitté la flotte ; plus rien ne peut être enregistré."
+    },
+    "waiting": {
+      "label": "En attente de",
+      "others": "En attente des autres",
+      "finance": "La finance",
+      "workshop": "L'atelier",
+      "manager": "Un responsable",
+      "operations": "L'exploitation",
+      "recorder": "L'auteur de la saisie"
+    },
+    "now": {
+      "todo": {
+        "title": "À faire",
+        "description": "Ce qui vous attend sur ce véhicule, le plus urgent d'abord.",
+        "descriptionBesides": "En plus de la réparation ci-dessus, ce qui vous attend sur ce véhicule.",
+        "emptyTitle": "Rien ne vous attend pour l'instant.",
+        "emptyTitleBesides": "Rien d'autre ne vous attend sur ce véhicule.",
+        "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter."
+      },
+      "attention": {
+        "title": "À surveiller",
+        "description": "Les points ouverts sur ce véhicule et qui s'en occupe.",
+        "empty": "Rien à signaler sur ce véhicule."
+      },
+      "month": {
+        "description": "Part de ce véhicule",
+        "posted": "Dépenses comptabilisées",
+        "postedHint": "Comptabilisé ne veut pas dire payé",
+        "review": "En attente d'examen",
+        "reviewHint": "{count, plural, one {# écriture, non comptée} other {# écritures, non comptées}}",
+        "missing": "Reçus manquants",
+        "missingHint": "Saisies sans justificatif",
+        "seeMoney": "Voir l'argent"
+      },
+      "recent": {
+        "title": "Récent",
+        "seeAll": "Tout l'historique",
+        "meta": "{name} · {date}"
+      }
+    },
+    "attention": {
+      "ISSUE_UNPLANNED": {
+        "title": "Le signalement {ref} n'a pas d'ordre de travail",
+        "detail": "{description}"
+      },
+      "WORK_ORDER_AWAITING_AUTHORIZATION": {
+        "title": "{ref} en attente d'autorisation",
+        "detail": "{description}",
+        "detailWithCost": "{description} · {expected} prévus"
+      },
+      "WORK_ORDER_IN_PROGRESS": {
+        "title": "{ref} en cours",
+        "detail": "{description}",
+        "detailSentBack": "Fin des travaux renvoyée : {reason}"
+      },
+      "WORK_ORDER_AWAITING_SIGN_OFF": {
+        "title": "{ref} en attente de validation",
+        "detail": "{description}",
+        "detailCosts": "{actual} réels contre {expected} prévus",
+        "detailActual": "{actual} réels"
+      },
+      "ASSET_AWAITING_RELEASE": {
+        "title": "Prêt pour la remise en service",
+        "detail": "{override, select, yes {Le signalement a été clos sans réparation ; la remise en service demande un motif.} other {La réparation est validée.}}"
+      },
+      "DOCUMENT_EXPIRED": {
+        "title": "Document expiré : {type}",
+        "detail": "A expiré le {date}."
+      },
+      "DOCUMENT_EXPIRING": {
+        "title": "{type} : expire dans {days, plural, one {# jour} other {# jours}}",
+        "detail": "Valable jusqu'au {date}."
+      },
+      "ENTRY_AWAITING_REVIEW": {
+        "title": "{category} en attente d'examen",
+        "detail": "{ref} · {amount}, saisie par {name}."
+      },
+      "ENTRY_EVIDENCE_MISSING": {
+        "title": "Reçu manquant",
+        "detail": "{ref} · {amount}, saisie par {name}."
+      }
+    },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Les problèmes signalés sur ce véhicule et les ordres de travail qui les règlent.",
+      "loading": "Chargement de la maintenance…",
+      "loadFailed": "Impossible de charger la maintenance.",
+      "workOrders": "Ordres de travail",
+      "workOrdersHint": "Travaux en cours. Pièces et main-d'œuvre sont saisies comme écritures liées à l'ordre.",
+      "workOrdersEmpty": "Aucun travail en cours. Planifiez-en un à partir d'un problème signalé.",
+      "newProblems": "Nouveaux problèmes",
+      "newProblemsHint": "Signalés, mais pas encore planifiés dans un ordre de travail.",
+      "newProblemsEmpty": "Aucun nouveau problème. Signalez-en un si quelque chose ne va pas.",
+      "done": "Terminé",
+      "doneSummary": "{workOrders, plural, one {# ordre de travail} other {# ordres de travail}}, {problems, plural, one {# problème clos} other {# problèmes clos}}",
+      "nextStepYours": "La suite vous revient",
+      "notPlanned": "Pas encore planifié",
+      "inWorkOrder": "Dans un ordre de travail",
+      "fromProblem": "du signalement {ref}",
+      "planned": "{amount} prévus",
+      "noEstimate": "Sans estimation",
+      "overBudget": "+{percent} %",
+      "doneOn": "Terminé le {date}",
+      "cancelledOn": "Annulé le {date}",
+      "refusedOn": "Refusé le {date}",
+      "openedOn": "Ouvert le {date}",
+      "reported": "signalé",
+      "safetyCritical": "Critique pour la sécurité"
+    },
+    "money": {
+      "title": "Argent",
+      "titleFor": "Argent · {period}",
+      "description": "La part de ce véhicule dans chaque écriture. L'attente d'examen n'est jamais ajoutée au comptabilisé ; comptabilisé ne veut pas dire payé.",
+      "periodLabel": "Mois",
+      "periodPrev": "Mois précédent",
+      "periodNext": "Mois suivant",
+      "loading": "Chargement de l'argent…",
+      "loadFailed": "Impossible de charger l'argent de ce véhicule.",
+      "posted": "Dépenses comptabilisées",
+      "postedHint": "Toutes couches · comptabilisé n'est pas payé",
+      "postedBasis": "Par période comptable : ce que disent les comptes pour ce mois.",
+      "economicBasis": "Par mois économique : quand l'argent a été dépensé.",
+      "review": "En attente d'examen",
+      "reviewHint": "{count, plural, one {# écriture · hors comptabilisé} other {# écritures · hors comptabilisé}}",
+      "missing": "Reçus manquants",
+      "missingHint": "Saisies sans justificatif",
+      "revenue": "Recettes comptabilisées",
+      "revenueHint": "Comptabilisé n'est pas encaissé",
+      "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
+      "howCalculated": "Mode de calcul",
+      "byCategory": "Dépenses par catégorie",
+      "byCategoryHint": "Comptabilisé, {period}",
+      "lastSixMonths": "6 derniers mois",
+      "lastSixMonthsHint": "Écritures comptabilisées par période",
+      "totalPosted": "Total comptabilisé",
+      "noPostedExpenses": "Aucune dépense comptabilisée ce mois-ci.",
+      "expenses": "Dépenses",
+      "revenueLegend": "Recettes",
+      "monthBar": "{month} : dépenses {expenses}, recettes {revenue}",
+      "entries": "Écritures",
+      "entriesHint": "Rien n'est modifié : une correction est une contre-passation, et les deux restent listées.",
+      "filterLabel": "Afficher les écritures",
+      "filters": {
+        "posted": "Comptabilisées",
+        "expenses": "Dépenses",
+        "revenue": "Recettes",
+        "review": "En attente",
+        "rejected": "Rejetées",
+        "missing": "Sans reçu"
+      },
+      "noEntries": "Aucune écriture pour ce filtre.",
+      "forTrip": "pour le trajet {number}",
+      "forWorkOrder": "pour l'ordre de travail {ref}",
+      "ofEntry": "sur une écriture de {amount}",
+      "lifetime": "Depuis l'enregistrement, toutes écritures comptabilisées : recettes {revenue} · dépenses {expenses} · net {net}. Montants saisis, ni trésorerie ni bénéfice."
+    },
+    "layers": {
+      "DIRECT": "Direct",
+      "MAINTENANCE": "Maintenance",
+      "OWNERSHIP": "Détention",
+      "SHARED": "Partagé"
+    },
+    "evidence": {
+      "SUPPLIED": "Reçu joint",
+      "PAYMENT_REFERENCE": "Référence de paiement",
+      "NOT_EXPECTED": "Reçu non requis",
+      "NOT_SUPPLIED": "Sans reçu"
+    },
+    "trips": {
+      "title": "Activités",
+      "description": "Activités avec ce véhicule",
+      "descriptionWithKm": "Activités avec ce véhicule · {km, number} km enregistrés",
+      "empty": "Aucune activité pour l'instant. Démarrez-en une quand le véhicule quitte le dépôt.",
+      "loading": "Chargement…",
+      "loadFailed": "Impossible de charger les activités.",
+      "onTheRoad": "En route",
+      "closed": "Clôturé",
+      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}",
+      "route": "{from} → {to}",
+      "tripNumber": "Trajet {number}",
+      "km": "{value, number} km",
+      "stillOpen": "toujours ouvert",
+      "customer": "Client",
+      "none": "Aucun",
+      "driver": "Chauffeur",
+      "started": "Départ",
+      "ended": "Arrivée",
+      "stillOnRoad": "Toujours en route",
+      "distance": "Distance",
+      "distanceUnknown": "Connue à la clôture",
+      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
+      "linkedMoney": "Argent lié",
+      "wholeTrip": "Montants du trajet entier",
+      "noMoney": "Aucune écriture liée à ce trajet.",
+      "odometer": "Compteur",
+      "noReadings": "Aucun relevé de départ ou d'arrivée pour ce véhicule.",
+      "readingLine": "{source} · {date}",
+      "openFull": "Ouvrir le trajet complet"
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Les dates d'expiration déclenchent les rappels. Un renouvellement conserve toutes les versions précédentes.",
+      "empty": "Aucun document. Ajoutez l'assurance et la visite technique pour recevoir les rappels.",
+      "expired": "Expiré",
+      "expiresIn": "{count, plural, =0 {Expire aujourd'hui} one {Expire dans # jour} other {Expire dans # jours}}",
+      "valid": "Valide",
+      "noExpiry": "Sans date d'expiration",
+      "noNumber": "Sans numéro",
+      "earlierKept": "{count, plural, one {# version précédente conservée} other {# versions précédentes conservées}}",
+      "firstVersion": "Première version",
+      "scanOnFile": "Scan joint",
+      "noScan": "Aucun scan",
+      "validUntilShort": "valable jusqu'au",
+      "validUntil": "Valable jusqu'au {date}",
+      "expiredOn": "{type} : expiré le {date}.",
+      "supersededNote": "Cette version a été remplacée par un renouvellement. Elle est conservée telle quelle.",
+      "superseded": "Remplacé",
+      "scan": "Scan",
+      "filesOnFile": "{count, plural, one {# fichier joint} other {# fichiers joints}}",
+      "earlierVersions": "Versions précédentes",
+      "renewKeeps": "Renouveler crée une nouvelle version et conserve celle-ci."
+    },
+    "readings": {
+      "title": "Relevés du compteur",
+      "eyebrow": "Compteur",
+      "description": "Un relevé n'est jamais modifié ; une valeur plus basse est gardée avec un avertissement.",
+      "empty": "Aucun relevé.",
+      "meta": "{source} · {name} · {date}",
+      "superseded": "Corrigé par un relevé ultérieur.",
+      "supersededBecause": "Corrigé : {reason}",
+      "delta": "{delta, number, ::sign-always} {readingType, select, HOURS {h} other {km}}",
+      "source": {
+        "ACTIVITY_START": "Départ du trajet",
+        "ACTIVITY_END": "Fin du trajet",
+        "SUBSTITUTION": "Substitution",
+        "MANUAL": "Relevé manuel",
+        "WORK_ORDER": "Atelier"
+      }
+    },
+    "history": {
+      "title": "Historique",
+      "description": "Tout ce qui a été enregistré sur ce véhicule. Rien n'est effacé : les corrections apparaissent à côté de l'original.",
+      "filterLabel": "Afficher les événements",
+      "filters": {
+        "ALL": "Tout",
+        "MAINTENANCE": "Maintenance",
+        "MONEY": "Argent",
+        "TRIPS": "Activités",
+        "DOCUMENTS": "Documents",
+        "READINGS": "Relevés",
+        "ASSIGNMENTS": "Affectations",
+        "LIFECYCLE": "Cycle de vie",
+        "NOTES": "Notes"
+      },
+      "loading": "Chargement de l'historique…",
+      "loadFailed": "Impossible de charger l'historique.",
+      "empty": "Rien de ce type pour l'instant.",
+      "loadMore": "Charger plus",
+      "open": "Ouvrir",
+      "event": {
+        "asset-registered": "Véhicule enregistré",
+        "asset-commissioned": "Mis en service",
+        "asset-assigned": "{change, select, branch {Rattaché à l'agence {branch}} custodian {Nouveau responsable : {custodian}} cleared {Responsable retiré} other {Affectation modifiée}}",
+        "activity-created": "Trajet {number} démarré",
+        "activity-closed": "Trajet {number} clôturé",
+        "activity-reopened": "Trajet {number} rouvert",
+        "activity-sheet_recorded": "Feuille de route {number} enregistrée",
+        "activity-asset_substituted": "Véhicule substitué sur le trajet {number}",
+        "movement_leg-recorded": "Étape enregistrée sur le trajet {number}",
+        "meter_reading-recorded": "{readingType, select, HOURS {Horamètre {value, number} h} other {Compteur {value, number} km}}",
+        "meter_reading-corrected": "{readingType, select, HOURS {Horamètre corrigé à {value, number} h} other {Compteur corrigé à {value, number} km}}",
+        "document-added": "Document ajouté : {type}",
+        "document-renewed": "Document renouvelé : {type}",
+        "financial_entry-posted": "Écriture comptabilisée",
+        "financial_entry-submitted": "Écriture saisie, en attente d'examen",
+        "financial_entry-approved": "Écriture approuvée",
+        "financial_entry-rejected": "Écriture rejetée",
+        "financial_entry-reversed": "Écriture contre-passée",
+        "financial_entry-reversal_posted": "Contre-passation comptabilisée",
+        "financial_entry-evidence_attached": "{count, plural, one {Reçu joint} other {# fichiers joints}}",
+        "operational_issue-reported": "Problème signalé",
+        "operational_issue-resolved": "Problème résolu",
+        "operational_issue-dismissed": "Signalement classé sans suite",
+        "work_order-created": "Ordre de travail ouvert",
+        "work_order-submitted": "Ordre de travail soumis à autorisation",
+        "work_order-approved": "Ordre de travail autorisé",
+        "work_order-rejected": "Ordre de travail refusé",
+        "work_order-completion_submitted": "Travaux déclarés terminés, en attente de validation",
+        "work_order-completed": "Travaux terminés",
+        "work_order-completion_approved": "Travaux validés",
+        "work_order-completion_rejected": "Fin des travaux renvoyée",
+        "work_order-cancelled": "Ordre de travail annulé",
+        "work_order-asset_released": "Remis en service",
+        "asset_availability-opened": "Immobilisé",
+        "asset_availability-closed": "Immobilisation levée",
+        "note-added": "Note ajoutée"
+      }
+    },
+    "panel": {
+      "loading": "Chargement…",
+      "notFound": "Indisponible",
+      "notFoundHint": "Cet enregistrement n'existe pas, est hors de vos agences ou n'est pas consultable avec votre rôle.",
+      "retry": "Réessayer",
+      "backTo": "{kind, select, work_order {Retour à l'ordre de travail {ref}} issue {Retour au signalement {ref}} entry {Retour à l'écriture} trip {Retour au trajet} document {Retour au document} note {Retour à la note} other {Retour aux relevés}}",
+      "workOrderTitle": "Ordre de travail {ref}",
+      "workOrderEyebrow": "Ordre de travail {ref}",
+      "issueTitle": "Signalement {ref}",
+      "issueEyebrow": "Signalement {ref}",
+      "entryTitle": "Écriture",
+      "entryEyebrow": "{direction, select, REVENUE {Recette {number}} other {Dépense {number}}}",
+      "tripTitle": "Trajet",
+      "tripEyebrow": "Trajet {number} · {type}",
+      "documentTitle": "Document",
+      "documentEyebrow": "Document",
+      "noteEyebrow": "Note",
+      "noteBy": "Note de {name}",
+      "noteAppendOnly": "Une note n'est jamais modifiée. Une correction est une nouvelle note.",
+      "fromProblem": "Du signalement {ref}",
+      "keepsGrounded": "Cet ordre de travail maintient le véhicule immobilisé. Après validation, un responsable le remet en service.",
+      "completionSentBack": "Fin des travaux renvoyée : {reason}",
+      "opened": "Ouvert",
+      "atBy": "{date} par {name}",
+      "expectedCost": "Coût prévu",
+      "actualCost": "Coût réel",
+      "actualCostLater": "Renseigné à la fin des travaux",
+      "completed": "Terminé",
+      "whatWasDone": "Travaux réalisés",
+      "reason": "Motif",
+      "costs": "Coûts",
+      "chronology": "Chronologie",
+      "category": "Catégorie",
+      "reported": "Signalé",
+      "photos": "Photos",
+      "photoCount": "{count, plural, =0 {Aucune} one {# photo} other {# photos}}",
+      "workOrders": "Ordres de travail",
+      "noneYet": "Aucun pour l'instant",
+      "resolution": "Résolution",
+      "safetyCriticalNote": "Un signalement critique immobilise le véhicule dès sa saisie. Seul un responsable peut le remettre en service.",
+      "date": "Date",
+      "costType": "Type de coût",
+      "thisVehicle": "Ce véhicule",
+      "wholeEntry": "Écriture entière",
+      "notShared": "Identique, non partagée",
+      "sharedWith": "{amount}, partagée avec d'autres véhicules",
+      "paidTo": "Payé à",
+      "recordedBy": "Saisie par",
+      "postingPeriod": "Période comptable",
+      "notPosted": "Non comptabilisée",
+      "reverses": "Contre-passe",
+      "reversedBy": "Contre-passée par",
+      "openOriginal": "L'écriture d'origine",
+      "openReversal": "La contre-passation",
+      "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur ne peut pas l'approuver.",
+      "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige par une contre-passation ; l'original reste.",
+      "receipt": "Justificatif",
+      "noFiles": "Aucun fichier sur cette écriture.",
+      "evidenceVia": {
+        "RECORDED": "Joint à la saisie · {date} · {name}",
+        "ATTACHED": "Joint après coup · {date} · {name}"
+      },
+      "openFile": "Ouvrir le fichier",
+      "openFullEntry": "Ouvrir l'écriture complète",
+      "waitingOn": {
+        "authorization": "En attente de l'autorisation de la dépense par la finance.",
+        "completion": "En attente de la fin des travaux par l'atelier.",
+        "signOff": "En attente de la validation des travaux et de leur coût par la finance.",
+        "release": "En attente de la remise en service par un responsable.",
+        "planning": "En attente d'un ordre de travail de l'atelier.",
+        "entryReview": "En attente d'examen par la finance. D'ici là, elle n'est pas comptée dans le comptabilisé.",
+        "entryReceipt": "En attente du reçu de {name}.",
+        "documentRenewal": "En attente du renouvellement par l'exploitation."
+      }
+    },
+    "rows": {
+      "actionsFor": "Actions pour {record}"
+    },
+    "bar": {
+      "label": "Actions rapides",
+      "more": "Plus"
+    },
+    "notify": {
+      "success": {
+        "noteAdded": "Note ajoutée",
+        "evidenceAttached": "Reçu joint"
+      }
+    },
+    "actions": {
+      "log-fuel": {
+        "label": "Enregistrer un plein",
+        "short": "Plein",
+        "description": "Le carburant payé pour ce véhicule, avec le compteur si vous l'avez relevé. La dépense est enregistrée d'abord."
+      },
+      "record-expense": {
+        "label": "Saisir une dépense",
+        "short": "Dépense",
+        "description": "Tout coût de ce véhicule. Au-delà du seuil, elle attend l'examen de la finance."
+      },
+      "attach-evidence": {
+        "label": "Joindre un reçu",
+        "short": "Reçu",
+        "description": "Ajoute une preuve à une écriture saisie sans. L'écriture elle-même n'est pas modifiée."
+      },
+      "record-reading": {
+        "label": "Relever le compteur",
+        "short": "Compteur",
+        "description": "Un relevé isolé. Une valeur plus basse que la précédente est gardée avec un avertissement, jamais refusée."
+      },
+      "add-note": {
+        "label": "Ajouter une note",
+        "short": "Note",
+        "description": "Une courte remarque dans l'historique du véhicule. Une note n'est jamais modifiée."
+      },
+      "report-issue": {
+        "label": "Signaler un problème",
+        "short": "Problème",
+        "description": "Quelque chose ne va pas sur le véhicule. Un problème critique pour la sécurité l'immobilise aussitôt."
+      },
+      "create-work-order": {
+        "label": "Créer un ordre de travail",
+        "short": "Ordre",
+        "description": "Planifiez la réparation et son coût prévu, à partir d'un problème signalé ou en préventif."
+      },
+      "approve-work-order": {
+        "label": "Autoriser un ordre de travail",
+        "short": "Autoriser",
+        "description": "La finance autorise la dépense avant les travaux. Son auteur ne peut pas l'autoriser."
+      },
+      "complete-work-order": {
+        "label": "Terminer les travaux",
+        "short": "Terminer",
+        "description": "Indiquez ce qui a été fait et ce que cela a coûté."
+      },
+      "approve-completion": {
+        "label": "Valider un ordre de travail",
+        "short": "Valider",
+        "description": "Contrôle les travaux terminés et leur coût réel. Celui qui les a terminés ne peut pas les valider."
+      },
+      "cancel-work-order": {
+        "label": "Annuler un ordre de travail",
+        "short": "Annuler",
+        "description": "Arrête un ordre de travail devenu inutile. Un motif est obligatoire."
+      },
+      "release": {
+        "label": "Remettre en service",
+        "short": "Remettre",
+        "description": "Lève l'immobilisation une fois la réparation validée. Après un problème critique, celui qui a garanti la réparation ne peut pas remettre en service."
+      },
+      "start-trip": {
+        "label": "Démarrer un trajet",
+        "short": "Trajet",
+        "description": "Ouvre la feuille de route avec ce véhicule comme véhicule principal."
+      },
+      "change-custodian": {
+        "label": "Changer de responsable",
+        "short": "Responsable",
+        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque trajet."
+      },
+      "transfer-branch": {
+        "label": "Changer d'agence",
+        "short": "Agence",
+        "description": "Change durablement l'agence de rattachement. Les écritures passées restent à l'agence qui les a saisies."
+      },
+      "add-document": {
+        "label": "Ajouter un document",
+        "short": "Document",
+        "description": "Assurance, visite technique, autorisations. Sans date d'expiration, un document n'est jamais présenté comme valide."
+      },
+      "renew-document": {
+        "label": "Renouveler un document",
+        "short": "Renouveler",
+        "description": "Enregistre la nouvelle version d'un document. L'ancienne est conservée."
+      },
+      "record-revenue": {
+        "label": "Saisir une recette",
+        "short": "Recette",
+        "description": "Fret ou recettes voyageurs gagnés avec ce véhicule."
+      },
+      "review-entry": {
+        "label": "Examiner une écriture",
+        "short": "Examiner",
+        "description": "Approuvez ou rejetez une écriture en attente. Son auteur ne peut pas l'approuver."
+      },
+      "reverse-entry": {
+        "label": "Contre-passer une écriture",
+        "short": "Contre-passer",
+        "description": "Une écriture comptabilisée n'est jamais modifiée : la contre-passation l'annule et les deux restent. Choisissez-la dans Argent."
+      },
+      "commission": {
+        "label": "Mettre en service",
+        "short": "Service",
+        "description": "D'enregistré à en service : l'historique d'exploitation démarre ici."
+      },
+      "groups": {
+        "capture": "Saisie",
+        "maintenance": "Maintenance",
+        "operations": "Exploitation",
+        "documents": "Documents",
+        "money": "Argent",
+        "lifecycle": "Cycle de vie"
+      },
+      "all": {
+        "title": "Toutes les actions",
+        "description": "Tout ce que vous pouvez faire sur {vehicle}, par domaine.",
+        "search": "Rechercher une action",
+        "searchPlaceholder": "Rechercher, ex. plein, renouveler, valider",
+        "noMatch": "Aucune action ne correspond à « {query} »."
       }
     }
   }
