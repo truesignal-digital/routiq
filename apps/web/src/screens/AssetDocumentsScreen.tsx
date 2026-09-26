@@ -1,37 +1,24 @@
-import { useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
-import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { FileText, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
-import { useActiveSession } from "@/auth/store.js";
-import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
-import { commandClient } from "@/commands/instance.js";
-import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileUpload } from "@/components/ui/file-upload";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DocumentForm } from "@/documents/DocumentForm.js";
 import {
   expiryState,
   groupDocuments,
-  renewalDefaults,
   type AssetDocument,
   type ExpiryState,
 } from "@/documents/model.js";
 import { canAccessDocuments, canManageDocuments } from "@/documents/permissions.js";
-import { useCategories } from "@/documents/useCategories.js";
 import { useAssetDocuments } from "@/documents/useDocuments.js";
-import { errorMessage } from "@/lib/error-message.js";
 import { formatDate, localizedLabel } from "@/lib/format.js";
-import { notifyCommandSuccess } from "@/lib/notify.js";
 
 
 interface FormState {
@@ -49,16 +36,13 @@ const EXPIRY_TONES: Record<ExpiryState, "neutral" | "success" | "warning" | "dan
 
 
 export function AssetDocumentsScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { assetId } = useParams({ from: "/app/assets/$assetId/documents" });
-  const queryClient = useQueryClient();
-  const session = useActiveSession();
   const me = useMeContext();
   const documentsEnabled = canAccessDocuments(me?.enabledModules);
   const canManage = canManageDocuments(me?.role, me?.enabledModules);
 
   const documentsQuery = useAssetDocuments(assetId);
-  const typesQuery = useCategories("DOCUMENT_TYPE");
   const [form, setForm] = useState<FormState>({ open: false });
   const [inspecting, setInspecting] = useState<string>();
 
@@ -102,18 +86,10 @@ export function AssetDocumentsScreen() {
       {form.open && (
         <DocumentForm
           key={form.renews?.id ?? "new"}
-          assetId={assetId}
+          surface="page"
+          pinnedAssetId={assetId}
           renews={form.renews}
-          documentTypes={typesQuery.data ?? []}
-          documentTypesFailed={typesQuery.isError}
-          onClose={() => setForm({ open: false })}
-          onCommitted={async (renewed) => {
-            setForm({ open: false });
-            notifyCommandSuccess("documents", renewed ? "renewed" : "added");
-            await queryClient.invalidateQueries({
-              queryKey: ["ws", session?.workspaceSlug, "asset", assetId, "documents"],
-            });
-          }}
+          onDismiss={() => setForm({ open: false })}
         />
       )}
 
@@ -231,166 +207,5 @@ export function AssetDocumentsScreen() {
         )}
       </div>
     </PageContainer>
-  );
-}
-
-function DocumentForm({
-  assetId,
-  renews,
-  documentTypes,
-  documentTypesFailed,
-  onClose,
-  onCommitted,
-}: {
-  assetId: string;
-  renews: AssetDocument | undefined;
-  documentTypes: Array<{ code: string; labelFr: string; labelEn: string }>;
-  documentTypesFailed: boolean;
-  onClose: () => void;
-  onCommitted: (renewed: boolean) => Promise<void>;
-}) {
-  const { t, i18n } = useTranslation();
-  const [documentId] = useState(() => crypto.randomUUID());
-  const intentRef = useRef<CommandIntent<AddOrRenewDocumentPayload> | undefined>(undefined);
-
-  const defaults = renewalDefaults(renews);
-  const [typeCode, setTypeCode] = useState(defaults.typeCode);
-  const [title, setTitle] = useState(defaults.title);
-  const [documentNumber, setDocumentNumber] = useState(defaults.documentNumber);
-  const [issuedAt, setIssuedAt] = useState(defaults.issuedAt);
-  const [expiresAt, setExpiresAt] = useState(defaults.expiresAt);
-  const [artifactIds, setArtifactIds] = useState<string[]>([]);
-  const [attachmentsUploading, setAttachmentsUploading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorCode, setErrorCode] = useState<string>();
-
-  const labelOf = (item: { labelFr: string; labelEn: string }) =>
-    localizedLabel(item);
-
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setErrorCode(undefined);
-    setSubmitting(true);
-    intentRef.current ??= createCommandIntent(commandClient, "add-or-renew-document", 1);
-    const result = await intentRef.current.submit(
-      {
-        documentId,
-        assetId,
-        documentTypeCode: typeCode,
-        ...(title === "" ? {} : { title }),
-        ...(documentNumber === "" ? {} : { documentNumber }),
-        ...(issuedAt === "" ? {} : { issuedAt }),
-        ...(expiresAt === "" ? {} : { expiresAt }),
-        ...(renews === undefined ? {} : { supersedesDocumentId: renews.id }),
-      },
-      artifactIds.length > 0 ? { sourceArtifactIds: artifactIds } : {},
-    );
-    setSubmitting(false);
-    if (!result.ok) {
-      setErrorCode(result.code);
-      return;
-    }
-    await onCommitted(renews !== undefined);
-  }
-
-  return (
-    <form
-      className="mt-4 flex flex-col gap-4 rounded-xl border border-border bg-card p-4"
-      onSubmit={(e) => void onSubmit(e)}
-    >
-      <p className="text-sm font-semibold">
-        {renews ? t("documents.renewTitle", { name: renews.title ?? renews.type.code }) : t("documents.addTitle")}
-      </p>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="doc-type">{t("documents.fields.type")}</Label>
-        {documentTypesFailed && (
-          <ErrorBanner message={t("documents.typesFailed")} />
-        )}
-        <Select
-          value={typeCode || null}
-          onValueChange={(value) => setTypeCode(value ?? "")}
-          disabled={renews !== undefined || documentTypesFailed}
-        >
-          <SelectTrigger className="min-h-11" id="doc-type">
-            <SelectValue placeholder={t("assets.form.choose")} />
-          </SelectTrigger>
-          <SelectContent>
-            {documentTypes.map((c) => (
-              <SelectItem key={c.code} value={c.code}>
-                {labelOf(c)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="doc-title">{t("documents.fields.title")}</Label>
-          <Input id="doc-title" className="min-h-11" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="doc-number">{t("documents.fields.number")}</Label>
-          <Input
-            id="doc-number"
-            className="min-h-11"
-            value={documentNumber}
-            onChange={(e) => setDocumentNumber(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="doc-issued">{t("documents.fields.issuedAt")}</Label>
-          <Input
-            id="doc-issued"
-            className="min-h-11"
-            type="date"
-            value={issuedAt}
-            onChange={(e) => setIssuedAt(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="doc-expires">{t("documents.fields.expiresAt")}</Label>
-          <Input
-            id="doc-expires"
-            className="min-h-11"
-            type="date"
-            value={expiresAt}
-            onChange={(e) => setExpiresAt(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium">{t("finance.record.evidenceLabel")}</span>
-        <FileUpload
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          onChange={setArtifactIds}
-          onUploadingChange={setAttachmentsUploading}
-        />
-      </div>
-
-      {errorCode !== undefined && (
-        <p
-          role={errorCode === "ASSET_NOT_OPERATIONAL" || errorCode === "DOCUMENT_ALREADY_SUPERSEDED" ? "status" : "alert"}
-          className={
-            errorCode === "ASSET_NOT_OPERATIONAL" || errorCode === "DOCUMENT_ALREADY_SUPERSEDED"
-              ? "rounded-lg bg-info/10 px-4 py-3 text-sm text-info-foreground"
-              : "rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
-          }
-        >
-          {errorMessage(i18n, errorCode)}
-        </p>
-      )}
-
-      <div className="flex gap-2">
-        <Button type="submit" className="min-h-11 flex-1" disabled={submitting || attachmentsUploading || documentTypesFailed || typeCode === ""}>
-          {submitting ? t("assets.actions.working") : t("documents.save")}
-        </Button>
-        <Button type="button" variant="outline" className="min-h-11" onClick={onClose}>
-          {t("assets.form.cancel")}
-        </Button>
-      </div>
-    </form>
   );
 }
