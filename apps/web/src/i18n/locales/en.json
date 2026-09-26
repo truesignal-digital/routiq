@@ -434,7 +434,9 @@
       "submitting": "Recording…",
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch…",
-      "branchesFailed": "We couldn't load branches. Retry this page."
+      "branchesFailed": "We couldn't load branches. Retry this page.",
+      "expenseTitle": "Record an expense",
+      "revenueTitle": "Record revenue"
     },
     "entries": {
       "title": "Entries",

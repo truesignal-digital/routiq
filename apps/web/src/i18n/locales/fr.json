@@ -434,7 +434,9 @@
       "submitting": "Enregistrement…",
       "branchLabel": "Agence",
       "chooseBranch": "Choisir une agence…",
-      "branchesFailed": "Impossible de charger les agences. Actualisez cette page."
+      "branchesFailed": "Impossible de charger les agences. Actualisez cette page.",
+      "expenseTitle": "Saisir une dépense",
+      "revenueTitle": "Saisir une recette"
     },
     "entries": {
       "title": "Écritures comptables",

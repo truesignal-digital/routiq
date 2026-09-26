@@ -1,39 +1,24 @@
-import { useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useSearch } from "@tanstack/react-router";
 import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
-import { z } from "zod";
 import { useMeContext } from "@/auth/me.js";
-import { useActiveSession } from "@/auth/store.js";
-import { commandClient } from "@/commands/instance.js";
-import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import {
   DataTable,
   DataTableViewOptions,
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { ErrorBanner } from "@/components/error-banner.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
-import { isOwnSubmission, validateRejectionReason } from "@/finance/model.js";
+import { ApproveEntryForm, RejectEntryForm } from "@/finance/EntryDecisionForms.js";
+import { isOwnSubmission } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import {
   approvalsOutsideBranch,
@@ -44,15 +29,7 @@ import { toSortParam } from "@/lib/sort-param.js";
 import { useAmbientBranchId, useCurrentBranch } from "@/shell/branch-context.js";
 import { BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
-import { notifyCommandSuccess } from "@/lib/notify.js";
-import {
-  approveEntryPayload,
-  rejectEntryPayload,
-  type PendingApprovalItem,
-} from "@routiq/contracts";
-
-type ApproveEntryPayloadType = z.infer<typeof approveEntryPayload>;
-type RejectEntryPayloadType = z.infer<typeof rejectEntryPayload>;
+import type { PendingApprovalItem } from "@routiq/contracts";
 
 type ActionDialogState =
   | { open: false }
@@ -66,8 +43,6 @@ const APPROVALS_PAGE_SIZE = 100;
 
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
-  const queryClient = useQueryClient();
-  const session = useActiveSession();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
@@ -101,22 +76,9 @@ export function FinanceApprovalsScreen() {
   const pendingElsewhere = approvalsOutsideBranch(approvalsQuery.data);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const approveIntentRef = useRef<CommandIntent<ApproveEntryPayloadType> | undefined>(undefined);
-  const rejectIntentRef = useRef<CommandIntent<RejectEntryPayloadType> | undefined>(undefined);
-  const [actionError, setActionError] = useState<string>();
 
   const entries = approvalsQuery.data?.pages.flatMap((page) => page.entries) ?? [];
 
-  // ADR-0001: a decided entry leaves the queue because the server says so, not
-  // because the client crossed it off locally.
-  const invalidateDecided = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["ws", session?.workspaceSlug, "finance", "approvals"],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["ws", session?.workspaceSlug, "finance", "entries"],
-    });
-  };
   const filters = useMemo<DataTableFilter[]>(
     () => [
       {
@@ -265,67 +227,6 @@ export function FinanceApprovalsScreen() {
     ];
   };
 
-  const handleApprove = async (entryId: string, rowVersion: number, note: string) => {
-    setActionError(undefined);
-    approveIntentRef.current ??= createCommandIntent<ApproveEntryPayloadType>(
-      commandClient,
-      "approve-entry",
-      1,
-    );
-
-    const result = await approveIntentRef.current.submit(
-      {
-        entryId,
-        ...(note ? { note } : {}),
-      },
-      { expectedVersion: rowVersion },
-    );
-
-    if (!result.ok) {
-      if (result.code === "VERSION_CONFLICT") {
-        // Refetch on version conflict
-        await approvalsQuery.refetch();
-        return;
-      }
-      setActionError(result.code);
-      return;
-    }
-
-    notifyCommandSuccess("finance", "approved", result.outcome.warnings);
-    setActionDialog({ open: false });
-    await invalidateDecided();
-  };
-
-  const handleReject = async (entryId: string, rowVersion: number, reason: string) => {
-    setActionError(undefined);
-    rejectIntentRef.current ??= createCommandIntent<RejectEntryPayloadType>(
-      commandClient,
-      "reject-entry",
-      1,
-    );
-
-    const result = await rejectIntentRef.current.submit(
-      {
-        entryId,
-        reason,
-      },
-      { expectedVersion: rowVersion },
-    );
-
-    if (!result.ok) {
-      if (result.code === "VERSION_CONFLICT") {
-        await approvalsQuery.refetch();
-        return;
-      }
-      setActionError(result.code);
-      return;
-    }
-
-    notifyCommandSuccess("finance", "rejected", result.outcome.warnings);
-    setActionDialog({ open: false });
-    await invalidateDecided();
-  };
-
   if (me !== undefined && !canApprove) {
     return (
       <PermissionDenied
@@ -430,108 +331,20 @@ export function FinanceApprovalsScreen() {
         </div>
       )}
 
-      {actionDialog.open && (
-        <ActionDialog
-          action={actionDialog.action}
-          onApprove={(note) =>
-            handleApprove(actionDialog.entryId, actionDialog.rowVersion, note)
-          }
-          onReject={(reason) =>
-            handleReject(actionDialog.entryId, actionDialog.rowVersion, reason)
-          }
-          onCancel={() => setActionDialog({ open: false })}
-          error={actionError}
-        />
-      )}
-    </PageContainer>
-  );
-}
-
-
-function ActionDialog({
-  action,
-  onApprove,
-  onReject,
-  onCancel,
-  error,
-}: {
-  action: "approve" | "reject";
-  onApprove: (note: string) => Promise<void>;
-  onReject: (reason: string) => Promise<void>;
-  onCancel: () => void;
-  error: string | undefined;
-}) {
-  const { t } = useTranslation();
-  const [text, setText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const isValid = action === "approve" || validateRejectionReason(text);
-
-  const handleSubmit = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      if (action === "approve") {
-        await onApprove(text);
-      } else {
-        await onReject(text);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {action === "approve"
-              ? t("finance.approvals.approveTitle")
-              : t("finance.approvals.rejectTitle")}
-          </DialogTitle>
-        </DialogHeader>
-
-        {error && <ErrorBanner code={error} />}
-
-        {action === "approve" ? (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="note">{t("finance.approvals.noteLabel")} {t("finance.approvals.optional")}</Label>
-            <Textarea id="note" placeholder={t("finance.approvals.notePlaceholder")} value={text} onChange={(e) => setText(e.target.value)} />
-          </div>
+      {actionDialog.open &&
+        (actionDialog.action === "approve" ? (
+          <ApproveEntryForm
+            surface="dialog"
+            entry={{ id: actionDialog.entryId, rowVersion: actionDialog.rowVersion }}
+            onDismiss={() => setActionDialog({ open: false })}
+          />
         ) : (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="reason">{t("finance.approvals.reasonLabel")}</Label>
-            <Textarea id="reason" placeholder={t("finance.approvals.reasonPlaceholder")} value={text} onChange={(e) => setText(e.target.value)}
-              className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-            />
-          </div>
-        )}
-
-        <DialogFooter>
-          <DialogClose
-            render={
-              <Button
-                variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
-              />
-            }
-          >
-            {t("finance.approvals.cancel")}
-          </DialogClose>
-          <Button
-            className="min-h-11 flex-1 sm:flex-none"
-            disabled={action === "reject" && (!isValid || submitting)}
-            onClick={() => void handleSubmit()}
-          >
-            {submitting
-              ? t("finance.approvals.submitting")
-              : action === "approve"
-                ? t("finance.approvals.approve")
-                : t("finance.approvals.reject")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <RejectEntryForm
+            surface="dialog"
+            entry={{ id: actionDialog.entryId, rowVersion: actionDialog.rowVersion }}
+            onDismiss={() => setActionDialog({ open: false })}
+          />
+        ))}
+    </PageContainer>
   );
 }
