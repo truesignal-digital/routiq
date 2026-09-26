@@ -15,21 +15,18 @@ import { toActor } from "./actors.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import {
   afterKeyset,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeTimestampCursor,
   encodeKeysetCursor,
   keysetOrderBy,
-  type KeysetColumn,
+  microsecondKey,
+  timestampKeyset,
 } from "./cursor.js";
 import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 
 const readingSort: ListSort<"observedAt"> = { field: "observedAt", direction: "desc" };
 
-const observedAtColumn: KeysetColumn = {
-  column: meterReadings.observedAt,
-  bind: bindTimestamp,
-};
+const observedAtColumn = timestampKeyset(meterReadings.observedAt);
 
 /**
  * Which of an in-scope vehicle's readings the caller may see, by the history
@@ -71,7 +68,7 @@ export function registerAssetReadingReadRoutes(
         const { assetId } = params.data;
         const { readingType, cursor, limit } = query.data;
 
-        const decodedCursor = cursor ? decodeKeysetCursor(cursor, readingSort) : undefined;
+        const decodedCursor = cursor ? decodeTimestampCursor(cursor, readingSort) : undefined;
         if (cursor && !decodedCursor) throw invalidRequest();
 
         const rows = await inWorkspace(db, auth.workspaceId, async (tx) => {
@@ -97,6 +94,7 @@ export function registerAssetReadingReadRoutes(
               readingType: meterReadings.readingType,
               value: meterReadings.value,
               observedAt: meterReadings.observedAt,
+              observedAtKey: microsecondKey(meterReadings.observedAt),
               source: meterReadings.source,
               activityId: meterReadings.activityId,
               activityNumber: activities.activityNumber,
@@ -132,7 +130,7 @@ export function registerAssetReadingReadRoutes(
         const last = pageRows[pageRows.length - 1];
         const nextCursor =
           rows.length > limit && last
-            ? encodeKeysetCursor(readingSort, last.observedAt.toISOString(), last.id)
+            ? encodeKeysetCursor(readingSort, last.observedAtKey, last.id)
             : null;
 
         return assetReadingsResponse.parse({

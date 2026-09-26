@@ -89,10 +89,12 @@ export interface KeysetColumn {
   bind: (value: Exclude<KeysetValue, null>) => SQL;
   /** Nulls sort last in both directions, matching the ORDER BY below. */
   nullable?: boolean;
+  /**
+   * Whether a decoded boundary is a value of this column's type. The cursor is
+   * client-held: a boundary Postgres cannot cast would fail there as a 500.
+   */
+  accepts?: (value: Exclude<KeysetValue, null>) => boolean;
 }
-
-export const bindTimestamp = (value: Exclude<KeysetValue, null>): SQL =>
-  sql`${new Date(value)}`;
 
 /**
  * A timestamptz column as keyset text, to the MICROsecond. A JS Date holds
@@ -101,14 +103,40 @@ export const bindTimestamp = (value: Exclude<KeysetValue, null>): SQL =>
  * every row that shares its millisecond and sorts after it. Mint the cursor
  * from this text and bind it back with `bindTimestampText`.
  */
-export function microsecondKey(column: PgColumn): SQL<string> {
-  return sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+export function microsecondKey<TColumn extends PgColumn>(
+  column: TColumn,
+): SQL<TColumn["_"]["notNull"] extends true ? string : string | null> {
+  return sql`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 }
 
 export const bindTimestampText = (value: Exclude<KeysetValue, null>): SQL =>
   sql`${String(value)}::timestamptz`;
 
 const isoTimestamp = z.iso.datetime();
+const isoDate = z.iso.date();
+const INT64_MIN = -(2n ** 63n);
+const INT64_MAX = 2n ** 63n - 1n;
+
+export const isIsoTimestamp = (value: Exclude<KeysetValue, null>): boolean =>
+  typeof value === "string" && isoTimestamp.safeParse(value).success;
+export const isIsoDate = (value: Exclude<KeysetValue, null>): boolean =>
+  typeof value === "string" && isoDate.safeParse(value).success;
+export const isInt64Text = (value: Exclude<KeysetValue, null>): boolean => {
+  if (typeof value !== "string" || !/^-?\d{1,19}$/.test(value)) return false;
+  const parsed = BigInt(value);
+  return parsed >= INT64_MIN && parsed <= INT64_MAX;
+};
+
+/**
+ * A timestamptz sort column: its cursor is minted from `microsecondKey`, bound
+ * back at that precision, and refused at decode unless it is an ISO timestamp.
+ */
+export function timestampKeyset(
+  column: PgColumn,
+  options: { nullable?: true } = {},
+): KeysetColumn {
+  return { column, bind: bindTimestampText, accepts: isIsoTimestamp, ...options };
+}
 
 /**
  * `decodeKeysetCursor` for a list keyed on a timestamp: the boundary must also
@@ -121,9 +149,26 @@ export function decodeTimestampCursor(
 ): (KeysetCursor & { value: string }) | undefined {
   const decoded = decodeKeysetCursor(cursor, sort);
   if (decoded === undefined || typeof decoded.value !== "string") return undefined;
-  if (!isoTimestamp.safeParse(decoded.value).success) return undefined;
+  if (!isIsoTimestamp(decoded.value)) return undefined;
   return { ...decoded, value: decoded.value };
 }
+
+/**
+ * `decodeKeysetCursor` checked against the column the sort resolves to: a
+ * boundary the column does not `accepts`, or a null one where the column has
+ * no null tail, is refused like any tampered cursor.
+ */
+export function decodeColumnCursor(
+  cursor: string,
+  sort: ListSort,
+  spec: KeysetColumn,
+): KeysetCursor | undefined {
+  const decoded = decodeKeysetCursor(cursor, sort);
+  if (decoded === undefined) return undefined;
+  if (decoded.value === null) return spec.nullable ? decoded : undefined;
+  return spec.accepts === undefined || spec.accepts(decoded.value) ? decoded : undefined;
+}
+
 export const bindDate = (value: Exclude<KeysetValue, null>): SQL =>
   sql`${String(value)}::date`;
 export const bindBigint = (value: Exclude<KeysetValue, null>): SQL =>

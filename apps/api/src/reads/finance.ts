@@ -42,10 +42,13 @@ import {
   bindBigint,
   bindDate,
   bindText,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeColumnCursor,
   encodeKeysetCursor,
+  isInt64Text,
+  isIsoDate,
   keysetOrderBy,
+  microsecondKey,
+  timestampKeyset,
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
@@ -74,22 +77,19 @@ const defaultEntrySort: ListSort<EntrySortField> = {
 };
 
 const entrySortColumns: Record<EntrySortField, KeysetColumn> = {
-  economicDate: { column: financialEntries.economicDate, bind: bindDate },
+  economicDate: { column: financialEntries.economicDate, bind: bindDate, accepts: isIsoDate },
   // Null until an entry posts, so the null tail is part of this ordering.
-  postedAt: {
-    column: financialEntries.postedAt,
-    bind: bindTimestamp,
-    nullable: true,
-  },
+  postedAt: timestampKeyset(financialEntries.postedAt, { nullable: true }),
   // The entry's own SIGNED total. Postings sum to it by invariant (§3.4), so
   // there is nothing to aggregate — and a reversal sorts below its original.
-  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  amount: { column: financialEntries.amountMinor, bind: bindBigint, accepts: isInt64Text },
   entryNumber: { column: financialEntries.entryNumber, bind: bindText },
 };
 
 interface EntrySortRow {
   economicDate: string;
-  postedAt: Date | null;
+  /** `postedAt` as microsecond keyset text. */
+  postedAtKey: string | null;
   amountMinor: bigint;
   entryNumber: string;
 }
@@ -99,7 +99,7 @@ function entrySortValue(field: EntrySortField, row: EntrySortRow): KeysetValue {
     case "economicDate":
       return row.economicDate;
     case "postedAt":
-      return row.postedAt?.toISOString() ?? null;
+      return row.postedAtKey;
     // Minor units are bigint; a string survives the round trip exactly.
     case "amount":
       return row.amountMinor.toString();
@@ -126,13 +126,14 @@ const defaultApprovalSort: ListSort<ApprovalSortField> = {
 };
 
 const approvalSortColumns: Record<ApprovalSortField, KeysetColumn> = {
-  submittedAt: { column: financialEntries.createdAt, bind: bindTimestamp },
-  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  submittedAt: timestampKeyset(financialEntries.createdAt),
+  amount: { column: financialEntries.amountMinor, bind: bindBigint, accepts: isInt64Text },
   entryNumber: { column: financialEntries.entryNumber, bind: bindText },
 };
 
 interface ApprovalSortRow {
-  submittedAt: Date;
+  /** `submittedAt` as microsecond keyset text. */
+  submittedAtKey: string;
   amountMinor: bigint;
   entryNumber: string;
 }
@@ -143,7 +144,7 @@ function approvalSortValue(
 ): KeysetValue {
   switch (field) {
     case "submittedAt":
-      return row.submittedAt.toISOString();
+      return row.submittedAtKey;
     case "amount":
       return row.amountMinor.toString();
     case "entryNumber":
@@ -379,7 +380,7 @@ export function registerFinanceReadRoutes(
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           await passReadGate(tx, auth, LEDGER_GATE);
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" };
@@ -458,7 +459,10 @@ export function registerFinanceReadRoutes(
           }
 
           const rows = await tx
-            .select(entryItemColumns(assetId))
+            .select({
+              ...entryItemColumns(assetId),
+              postedAtKey: microsecondKey(financialEntries.postedAt),
+            })
             .from(financialEntries)
             .innerJoin(
               categories,
@@ -503,7 +507,7 @@ export function registerFinanceReadRoutes(
         let nextCursor: string | null = null;
         if (hasNextPage && entries.length > 0) {
           // Encoded off the raw row: the mapped item has already lost the
-          // bigint amount and the Date to their wire forms.
+          // bigint amount to its wire form and never carries the microsecond key.
           const lastRow = rows[entries.length - 1]!;
           nextCursor = encodeKeysetCursor(
             sort,
@@ -751,7 +755,7 @@ export function registerFinanceReadRoutes(
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           await passReadGate(tx, auth, LEDGER_GATE);
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -795,6 +799,7 @@ export function registerFinanceReadRoutes(
               ...entryItemColumns(undefined),
               submittedByPrincipalId: commands.initiatedByPrincipalId,
               submittedAt: financialEntries.createdAt,
+              submittedAtKey: microsecondKey(financialEntries.createdAt),
             })
             .from(financialEntries)
             .innerJoin(

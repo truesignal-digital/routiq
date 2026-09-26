@@ -42,10 +42,11 @@ import { inWorkspace } from "../db/tenant.js";
 import {
   afterKeyset,
   bindText,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeColumnCursor,
   encodeKeysetCursor,
   keysetOrderBy,
+  microsecondKey,
+  timestampKeyset,
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
@@ -59,16 +60,13 @@ const defaultActivitySort: ListSort<"startedAt"> = {
 type ActivitySortField = "startedAt" | "activityNumber";
 
 const activitySortColumns: Record<ActivitySortField, KeysetColumn> = {
-  startedAt: {
-    column: activities.startedAt,
-    bind: bindTimestamp,
-    nullable: true,
-  },
+  startedAt: timestampKeyset(activities.startedAt, { nullable: true }),
   activityNumber: { column: activities.activityNumber, bind: bindText },
 };
 
 interface ActivitySortRow {
-  startedAt: Date | null;
+  /** `startedAt` as microsecond keyset text. */
+  startedAtKey: string | null;
   activityNumber: string;
 }
 
@@ -76,9 +74,7 @@ function activitySortValue(
   field: ActivitySortField,
   row: ActivitySortRow,
 ): KeysetValue {
-  return field === "startedAt"
-    ? row.startedAt?.toISOString() ?? null
-    : row.activityNumber;
+  return field === "startedAt" ? row.startedAtKey : row.activityNumber;
 }
 
 function likePattern(search: string): string {
@@ -210,7 +206,7 @@ export function registerActivityReadRoutes(
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -275,6 +271,7 @@ export function registerActivityReadRoutes(
               completeness: activities.completeness,
               completenessCodes: activities.completenessCodes,
               startedAt: activities.startedAt,
+              startedAtKey: microsecondKey(activities.startedAt),
               endedAt: activities.endedAt,
               customerName: activities.customerName,
               clientReference: activities.clientReference,
