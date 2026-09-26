@@ -144,7 +144,7 @@ function WaitingOnOthers({ todos }: { todos: Todo[] }) {
         <span className="font-medium">{t("vehicle.waiting.others")}</span>
         <Count>{todos.length}</Count>
         <span className="ml-auto truncate pl-3 text-xs text-muted-foreground">
-          {new Intl.ListFormat(i18n.language, { style: "narrow", type: "unit" }).format(names)}
+          {new Intl.ListFormat(i18n.language, { style: "narrow", type: "conjunction" }).format(names)}
         </span>
       </button>
       {open && (
