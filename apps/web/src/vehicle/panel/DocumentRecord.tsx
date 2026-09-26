@@ -97,10 +97,11 @@ function DocumentRecordBody({ id, form }: { id: string; form: PanelForm | undefi
             ],
           ]}
         />
-        {doc.artifacts.length > 0 && (
+        {/* An API older than the file lists sends none; show nothing rather than fail. */}
+        {(doc.artifacts ?? []).length > 0 && (
           <DetailSection title={t("vehicle.documents.scan")}>
             <ul className="divide-y rounded-lg border">
-              {doc.artifacts.map((file, index) => (
+              {(doc.artifacts ?? []).map((file, index) => (
                 <RecordFileRow
                   key={file.artifactId}
                   name={file.originalFileName ?? t("vehicle.documents.fileNumber", { number: index + 1 })}

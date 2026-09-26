@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ALL_MODULES,
   ASSET_ID,
+  asset,
   documentRow,
   entryRow,
   historyItem,
@@ -51,6 +52,27 @@ describe("which sections a viewer gets", () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", modules: ["CORE", "ASSETS"] });
     await screen.findByText("Available.");
     expect(tabNames()).toEqual(["Now", "History"]);
+  });
+
+  it("renders the workshop's header and Now without a money card, from a detail with no finance block", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "MAINTENANCE",
+      asset: asset({ finance: undefined }),
+    });
+    expect(await screen.findByText("Available.")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("VH003");
+    expect(screen.getByRole("button", { name: "Report a problem" })).toBeTruthy();
+    expect(await screen.findByText("Recent")).toBeTruthy();
+    expect(screen.queryByText("This vehicle's share")).toBeNull();
+    expect(screen.queryByText(/Lifetime/)).toBeNull();
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("button", { name: "Details" }).at(-1)!);
+    // The purchase price is money too: the date alone.
+    expect(await screen.findByText("3/1/24")).toBeTruthy();
+    expect(screen.queryByText(/45,000,000/)).toBeNull();
+    expect(
+      recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.endsWith("/finance")),
+    ).toBe(false);
   });
 
   it("denies a direct link to Money for the workshop without ever asking for money", async () => {

@@ -140,10 +140,11 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
             ],
           ]}
         />
-        {issue.artifacts.length > 0 && (
+        {/* An API older than the file lists sends none; show nothing rather than fail. */}
+        {(issue.artifacts ?? []).length > 0 && (
           <DetailSection title={t("vehicle.panel.photos")}>
             <ul className="divide-y rounded-lg border">
-              {issue.artifacts.map((file, index) => (
+              {(issue.artifacts ?? []).map((file, index) => (
                 <RecordFileRow
                   key={file.artifactId}
                   name={file.originalFileName ?? t("vehicle.panel.photoNumber", { number: index + 1 })}
