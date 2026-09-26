@@ -268,6 +268,10 @@ export function issueDetail(overrides: Partial<IssueDetail> = {}): IssueDetail {
       },
     ],
     artifactCount: 2,
+    artifacts: [
+      { artifactId: "00000000-0000-4000-8000-0000000000e1", mimeType: "image/jpeg", sizeBytes: 90_000, originalFileName: "voyant-frein.jpg" },
+      { artifactId: "00000000-0000-4000-8000-0000000000e2", mimeType: "image/jpeg", sizeBytes: 95_000, originalFileName: null },
+    ],
     closedBy: null,
     ...overrides,
   };
@@ -363,6 +367,7 @@ export function documentRow(overrides: Partial<AssetDocumentRead> = {}): AssetDo
     supersededByDocumentId: null,
     createdAt: "2025-09-23T08:00:00.000Z",
     artifactCount: 0,
+    artifacts: [],
     ...overrides,
   };
 }

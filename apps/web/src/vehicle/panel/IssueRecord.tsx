@@ -15,7 +15,7 @@ import { groundingFacts, isActiveWorkOrder, issueSteps } from "../flow.js";
 import { recordReference } from "../model.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note, SafetyMark } from "../parts.js";
 import { useIssue } from "../useVehicle.js";
-import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
+import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
 
 const TITLE_MAX = 120;
 
@@ -140,6 +140,19 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
             ],
           ]}
         />
+        {issue.artifacts.length > 0 && (
+          <DetailSection title={t("vehicle.panel.photos")}>
+            <ul className="divide-y rounded-lg border">
+              {issue.artifacts.map((file, index) => (
+                <RecordFileRow
+                  key={file.artifactId}
+                  name={file.originalFileName ?? t("vehicle.panel.photoNumber", { number: index + 1 })}
+                  downloadPath={`/v1/issues/${issue.id}/artifacts/${file.artifactId}/download-url`}
+                />
+              ))}
+            </ul>
+          </DetailSection>
+        )}
         {issue.resolutionNote !== null && (
           <DetailSection title={t("vehicle.panel.resolution")}>
             <p className="text-sm">{issue.resolutionNote}</p>

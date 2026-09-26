@@ -8,7 +8,7 @@ import type { RecordSteps } from "../flow.js";
 import { may } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
 import { DocumentState } from "../tabs/DocumentsTab.js";
-import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
+import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
 
 /** The versions a document replaced, newest first, by following `supersedes`. */
 export function earlierVersions(doc: AssetDocument, all: readonly AssetDocument[]): AssetDocument[] {
@@ -97,6 +97,19 @@ function DocumentRecordBody({ id, form }: { id: string; form: PanelForm | undefi
             ],
           ]}
         />
+        {doc.artifacts.length > 0 && (
+          <DetailSection title={t("vehicle.documents.scan")}>
+            <ul className="divide-y rounded-lg border">
+              {doc.artifacts.map((file, index) => (
+                <RecordFileRow
+                  key={file.artifactId}
+                  name={file.originalFileName ?? t("vehicle.documents.fileNumber", { number: index + 1 })}
+                  downloadPath={`/v1/assets/${asset.id}/documents/${doc.id}/artifacts/${file.artifactId}/download-url`}
+                />
+              ))}
+            </ul>
+          </DetailSection>
+        )}
         <DetailSection title={t("vehicle.documents.earlierVersions")}>
           {earlier.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("vehicle.documents.firstVersion")}</p>

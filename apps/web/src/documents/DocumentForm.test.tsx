@@ -31,6 +31,7 @@ const insurance: AssetDocument = {
   supersededByDocumentId: null,
   createdAt: "2025-09-20T08:00:00.000Z",
   artifactCount: 0,
+  artifacts: [],
 };
 
 type Seen = { name: string; payload: Record<string, unknown> };

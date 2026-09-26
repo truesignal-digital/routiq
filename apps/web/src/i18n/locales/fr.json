@@ -1986,7 +1986,8 @@
       "scan": "Scan",
       "filesOnFile": "{count, plural, one {# fichier joint} other {# fichiers joints}}",
       "earlierVersions": "Versions précédentes",
-      "renewKeeps": "Renouveler crée une nouvelle version et conserve celle-ci."
+      "renewKeeps": "Renouveler crée une nouvelle version et conserve celle-ci.",
+      "fileNumber": "Fichier {number}"
     },
     "readings": {
       "title": "Relevés du compteur",
@@ -2137,7 +2138,8 @@
         "entryReview": "En attente d'examen par la finance. D'ici là, elle n'est pas comptée dans le comptabilisé.",
         "entryReceipt": "En attente du reçu de {name}.",
         "documentRenewal": "En attente du renouvellement par l'exploitation."
-      }
+      },
+      "photoNumber": "Photo {number}"
     },
     "rows": {
       "actionsFor": "Actions pour {record}"

@@ -1986,7 +1986,8 @@
       "scan": "Scan",
       "filesOnFile": "{count, plural, one {# file on file} other {# files on file}}",
       "earlierVersions": "Earlier versions",
-      "renewKeeps": "Renewing creates a new version and keeps this one."
+      "renewKeeps": "Renewing creates a new version and keeps this one.",
+      "fileNumber": "File {number}"
     },
     "readings": {
       "title": "Odometer readings",
@@ -2137,7 +2138,8 @@
         "entryReview": "Waiting on finance to review it. Until then it is not counted in posted totals.",
         "entryReceipt": "Waiting on {name} to attach the receipt.",
         "documentRenewal": "Waiting on operations to renew it."
-      }
+      },
+      "photoNumber": "Photo {number}"
     },
     "rows": {
       "actionsFor": "Actions for {record}"

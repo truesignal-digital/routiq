@@ -211,3 +211,16 @@ it("opens a receipt through the entry's own route, never the generic artifact ro
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
 });
+
+it("opens an issue's photo through the issue's own route", async () => {
+  const open = vi.fn();
+  vi.stubGlobal("open", open);
+  const recorded = await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=issue:${ISSUE_ID}`, scenario);
+  const user = userEvent.setup();
+  const panel = await screen.findByRole("dialog", { name: /Kekem/ });
+  expect(within(panel).getByText("voyant-frein.jpg")).toBeTruthy();
+  await user.click(within(panel).getAllByRole("button", { name: "Open the file" })[0]!);
+  const path = `/v1/issues/${ISSUE_ID}/artifacts/00000000-0000-4000-8000-0000000000e1/download-url`;
+  await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
+  expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
+});
