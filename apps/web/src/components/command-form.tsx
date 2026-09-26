@@ -174,6 +174,10 @@ function CommandFormBody(props: CommandFormProps) {
   const formId = useId()
   const { surface, error, ready, submitting, onSubmit, onDismiss } = props
   const outcome = outcomeOf(error)
+  // A dialog or a sheet takes the class on its overlay; a page or a panel
+  // page has only the form to put it on.
+  const bodyClassName =
+    surface === "page" || surface === "panel" ? props.className : undefined
 
   if (outcome !== "form") {
     const copy =
@@ -192,7 +196,7 @@ function CommandFormBody(props: CommandFormProps) {
     }
 
     return (
-      <div className={cn(surfaceBodyClass(surface), props.className)}>
+      <div className={cn(surfaceBodyClass(surface), bodyClassName)}>
         <div className={cn(surface === "panel" || surface === "sheet" ? "p-4" : undefined)}>
           <div
             role={outcome === "conflict" ? "alert" : "status"}
@@ -269,7 +273,7 @@ function CommandFormBody(props: CommandFormProps) {
     <form
       id={formId}
       noValidate
-      className={cn(surfaceBodyClass(surface), props.className)}
+      className={cn(surfaceBodyClass(surface), bodyClassName)}
       onSubmit={handleSubmit}
     >
       <div
