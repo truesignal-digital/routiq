@@ -166,7 +166,8 @@ export function EntryStatusBadge({ status }: { status: EntryStatus }) {
   const { t } = useTranslation();
   return (
     <StatusBadge tone={ENTRY_TONE[status]} icon={ENTRY_ICON[status]} className="rounded-md">
-      {t(`finance.entries.status.${status}`)}
+      {/* The workspace's one name for the pending state, the Money card's. */}
+      {status === "SUBMITTED" ? t("vehicle.money.review") : t(`finance.entries.status.${status}`)}
     </StatusBadge>
   );
 }

@@ -1137,7 +1137,7 @@
       "chronologieEmpty": "No events recorded.",
       "costLines": "Posted costs",
       "costLinesEmpty": "No costs posted against this work order.",
-      "pendingCostLines": "Costs awaiting approval",
+      "pendingCostLines": "Costs awaiting review",
       "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
       "loading": "Loading the timeline…",
       "loadFailed": "Could not load the timeline. Please try again.",
@@ -1146,7 +1146,7 @@
       "unavailableTitle": "Asset grounded",
       "unavailableHint": "Only a return to service reopens availability.",
       "entryStatus": {
-        "SUBMITTED": "Pending",
+        "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
         "REVERSED": "Reversed"
       }

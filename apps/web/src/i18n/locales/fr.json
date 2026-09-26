@@ -1137,7 +1137,7 @@
       "chronologieEmpty": "Aucun évènement enregistré.",
       "costLines": "Coûts comptabilisés",
       "costLinesEmpty": "Aucun coût comptabilisé sur cet ordre de travail.",
-      "pendingCostLines": "Coûts en attente d'approbation",
+      "pendingCostLines": "Coûts en attente d'examen",
       "pendingCostLinesHint": "Enregistrés mais pas encore dépensés : ils ne comptent pas dans les coûts comptabilisés.",
       "loading": "Chargement de la chronologie…",
       "loadFailed": "Impossible de charger la chronologie. Veuillez réessayer.",
@@ -1146,7 +1146,7 @@
       "unavailableTitle": "Actif immobilisé",
       "unavailableHint": "Seule la remise en service rouvre la disponibilité.",
       "entryStatus": {
-        "SUBMITTED": "En attente",
+        "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisé",
         "REVERSED": "Extourné"
       }
@@ -1912,7 +1912,7 @@
         "posted": "Comptabilisées",
         "expenses": "Dépenses",
         "revenue": "Recettes",
-        "review": "En attente",
+        "review": "En attente d'examen",
         "rejected": "Rejetées",
         "missing": "Sans reçu"
       },
