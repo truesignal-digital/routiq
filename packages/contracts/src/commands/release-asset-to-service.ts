@@ -21,7 +21,7 @@ import { commandEnvelope } from "../envelope.js";
 export const releaseAssetToServicePayload = z.object({
   assetId: z.uuid(),
   workOrderId: z.uuid().optional(),
-  overrideReason: z.string().min(1).max(500).optional(),
+  overrideReason: z.string().trim().min(1).max(500).optional(),
   note: z.string().min(1).max(500).optional(),
 });
 

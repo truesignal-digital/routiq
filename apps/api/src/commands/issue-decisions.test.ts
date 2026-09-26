@@ -258,6 +258,20 @@ describe("issue decision commands", () => {
       expect(response.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
     });
 
+    it("takes blanks for no reason at all", async () => {
+      const issueId = await reportIssue();
+      const response = await post(
+        mechanicToken,
+        "dismiss-issue",
+        { issueId, reason: "  \n " },
+        { expectedVersion: 1 },
+      );
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error: { code: "VALIDATION_FAILED", metadata: { issues: [{ path: ["reason"] }] } },
+      });
+    });
+
     it("never touches availability — a dismissed grounding stays grounded", async () => {
       const issueId = randomUUID();
       expect(

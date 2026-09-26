@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { COMMAND_QUEUEABILITY, isQueueable } from "./queueability.js";
-import { dismissIssueCommand } from "./dismiss-issue.js";
-import { rejectWorkOrderCompletionCommand } from "./reject-work-order-completion.js";
-import { rejectWorkOrderCommand } from "./reject-work-order.js";
+import { cancelWorkOrderPayload } from "./cancel-work-order.js";
+import { dismissIssueCommand, dismissIssuePayload } from "./dismiss-issue.js";
+import { releaseAssetToServicePayload } from "./release-asset-to-service.js";
+import {
+  rejectWorkOrderCompletionCommand,
+  rejectWorkOrderCompletionPayload,
+} from "./reject-work-order-completion.js";
+import { rejectWorkOrderCommand, rejectWorkOrderPayload } from "./reject-work-order.js";
 import { resolveIssueCommand } from "./resolve-issue.js";
 
 const envelope = {
@@ -129,4 +134,26 @@ describe("queueability of the #28 commands", () => {
       expect(name in COMMAND_QUEUEABILITY, name).toBe(true);
     }
   });
+});
+
+/**
+ * Review finding 8: a reason is the trail's account of why a decision went
+ * against someone, so blanks that only look like text are no reason at all.
+ */
+describe("required reasons", () => {
+  const payloads = [
+    ["dismiss-issue", dismissIssuePayload, { issueId }, "reason"],
+    ["reject-work-order", rejectWorkOrderPayload, { workOrderId }, "reason"],
+    ["reject-work-order-completion", rejectWorkOrderCompletionPayload, { workOrderId }, "reason"],
+    ["cancel-work-order", cancelWorkOrderPayload, { workOrderId }, "reason"],
+    ["release-asset-to-service", releaseAssetToServicePayload, { assetId: issueId }, "overrideReason"],
+  ] as const;
+
+  for (const [name, schema, base, field] of payloads) {
+    it(`${name} refuses a whitespace-only ${field} and trims a real one`, () => {
+      expect(schema.safeParse({ ...base, [field]: "   \n\t " }).success).toBe(false);
+      const parsed = schema.parse({ ...base, [field]: "  Doublon  " }) as Record<string, unknown>;
+      expect(parsed[field]).toBe("Doublon");
+    });
+  }
 });

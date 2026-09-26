@@ -162,6 +162,7 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
   allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE"],
   payloadSchema: completeWorkOrderPayload,
   approvalMode: "SUBMIT",
+  // No operationalAssetId on purpose: an open order on a disposed asset can still be closed; costs cannot attach, record-expense keeps that guard.
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 
   async approvalContext(tx, ctx, payload) {

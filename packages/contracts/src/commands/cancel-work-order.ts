@@ -8,7 +8,7 @@ import { commandEnvelope } from "../envelope.js";
  */
 export const cancelWorkOrderPayload = z.object({
   workOrderId: z.uuid(),
-  reason: z.string().min(1).max(500),
+  reason: z.string().trim().min(1).max(500),
 });
 
 export const cancelWorkOrderCommand = z.object({
