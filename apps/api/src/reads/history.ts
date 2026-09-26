@@ -39,10 +39,11 @@ import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import {
   afterKeyset,
-  bindTimestamp,
-  decodeKeysetCursor,
+  bindTimestampText,
+  decodeTimestampCursor,
   encodeKeysetCursor,
   keysetOrderBy,
+  microsecondKey,
   type KeysetColumn,
 } from "./cursor.js";
 
@@ -56,9 +57,14 @@ const historySort: ListSort<"occurredAt"> = {
   direction: "desc",
 };
 
+/**
+ * The events of one command share a transaction timestamp to the microsecond,
+ * so the cursor carries it at that precision: a millisecond boundary would
+ * skip the rest of a command split across two pages.
+ */
 const occurredAtColumn: KeysetColumn = {
   column: auditEvents.occurredAt,
-  bind: bindTimestamp,
+  bind: bindTimestampText,
 };
 
 /**
@@ -364,7 +370,7 @@ export function registerHistoryReadRoutes(
           }
 
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, historySort)
+            ? decodeTimestampCursor(cursor, historySort)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -391,6 +397,7 @@ export function registerHistoryReadRoutes(
               eventId: auditEvents.id,
               eventType: auditEvents.eventType,
               occurredAt: auditEvents.occurredAt,
+              occurredAtKey: microsecondKey(auditEvents.occurredAt),
               scope: auditEvents.scope,
               // The generated masking column, not `actor_principal_id`: it is
               // NULL for PLATFORM events, so the principals join finds nothing
@@ -466,11 +473,7 @@ export function registerHistoryReadRoutes(
         let nextCursor: string | null = null;
         if (hasNextPage && pageRows.length > 0) {
           const lastRow = pageRows[pageRows.length - 1]!;
-          nextCursor = encodeKeysetCursor(
-            historySort,
-            lastRow.occurredAt.toISOString(),
-            lastRow.eventId,
-          );
+          nextCursor = encodeKeysetCursor(historySort, lastRow.occurredAtKey, lastRow.eventId);
         }
 
         return historyListResponse.parse({ items, nextCursor });

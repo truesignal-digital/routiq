@@ -36,10 +36,11 @@ import { lastEventActors, toActor } from "./actors.js";
 import { invalidRequest, notFound, passReadGate, sendReadFailure } from "./read-gate.js";
 import {
   afterKeyset,
-  bindTimestamp,
-  decodeKeysetCursor,
+  bindTimestampText,
+  decodeTimestampCursor,
   encodeKeysetCursor,
   keysetOrderBy,
+  microsecondKey,
   type KeysetColumn,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
@@ -62,16 +63,17 @@ const issueSort: ListSort<"reportedAt"> = {
 /**
  * A work order has no timestamp of its own: the row is stamped by the command
  * that wrote it, so the queue orders on that receipt's execution time. The FK is
- * NOT NULL, which is what lets the join below be an inner one.
+ * NOT NULL, which is what lets the join below be an inner one. Postgres stamps
+ * that time to the microsecond, so the cursor carries it at that precision.
  */
 const workOrderCreatedAtColumn: KeysetColumn = {
   column: commands.executedAt,
-  bind: bindTimestamp,
+  bind: bindTimestampText,
 };
 
 const issueReportedAtColumn: KeysetColumn = {
   column: operationalIssues.reportedAt,
-  bind: bindTimestamp,
+  bind: bindTimestampText,
 };
 
 function serializeOptionalMinor(value: bigint | null): number | null {
@@ -140,7 +142,7 @@ export function registerMaintenanceReadRoutes(
             return { error: "MODULE_DISABLED" as const };
           }
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, workOrderSort)
+            ? decodeTimestampCursor(cursor, workOrderSort)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -185,6 +187,7 @@ export function registerMaintenanceReadRoutes(
               issueId: workOrders.issueId,
               safetyCritical: operationalIssues.safetyCritical,
               createdAt: commands.executedAt,
+              createdAtKey: microsecondKey(commands.executedAt),
               completedAt: workOrders.completedAt,
               cancelledAt: workOrders.cancelledAt,
               rejectedAt: workOrders.rejectedAt,
@@ -282,11 +285,7 @@ export function registerMaintenanceReadRoutes(
         let nextCursor: string | null = null;
         if (hasNextPage && pageRows.length > 0) {
           const lastRow = pageRows[pageRows.length - 1]!;
-          nextCursor = encodeKeysetCursor(
-            workOrderSort,
-            lastRow.createdAt.toISOString(),
-            lastRow.id,
-          );
+          nextCursor = encodeKeysetCursor(workOrderSort, lastRow.createdAtKey, lastRow.id);
         }
 
         return workOrderListResponse.parse({ items, nextCursor });
@@ -567,7 +566,7 @@ export function registerMaintenanceReadRoutes(
             return { error: "MODULE_DISABLED" as const };
           }
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, issueSort)
+            ? decodeTimestampCursor(cursor, issueSort)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -611,6 +610,7 @@ export function registerMaintenanceReadRoutes(
               safetyCritical: operationalIssues.safetyCritical,
               category: operationalIssues.category,
               reportedAt: operationalIssues.reportedAt,
+              reportedAtKey: microsecondKey(operationalIssues.reportedAt),
               status: operationalIssues.status,
               resolvedAt: operationalIssues.resolvedAt,
               resolutionNote: operationalIssues.resolutionNote,
@@ -740,11 +740,7 @@ export function registerMaintenanceReadRoutes(
         let nextCursor: string | null = null;
         if (hasNextPage && pageRows.length > 0) {
           const lastRow = pageRows[pageRows.length - 1]!;
-          nextCursor = encodeKeysetCursor(
-            issueSort,
-            lastRow.reportedAt.toISOString(),
-            lastRow.id,
-          );
+          nextCursor = encodeKeysetCursor(issueSort, lastRow.reportedAtKey, lastRow.id);
         }
 
         return issueListResponse.parse({ items, nextCursor });
