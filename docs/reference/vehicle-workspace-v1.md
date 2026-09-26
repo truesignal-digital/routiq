@@ -93,7 +93,7 @@ Every financial entry has one evidence state, computed on read from what is link
 | PAYMENT_REFERENCE | Paid by MOMO, OM or BANK with a payment reference. The reference stands in for paper (ARCHITECTURE §5.4); it is not a receipt and proves no settlement. |
 | NOT_SUPPLIED | Anything else. This is “evidence missing”. |
 
-None of the four says a person checked the paper. A reversal never counts as missing, and a rejected entry or a reversal cannot take evidence. `attach-evidence` links up to ten already uploaded files to an existing entry without changing its amount, status or version; MAINTENANCE may attach only to entries whose every posting names a work order. The entry detail lists the files (`evidenceFiles`, each with how it arrived: RECORDED or ATTACHED), and `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` hands out a short-lived link only after the FINANCE module, the entry's branch and the file's link to that entry all pass, each miss answering the same 404. Known imprecision: a file attached to a composite sheet counts for every entry that sheet created.
+None of the four says a person checked the paper. A reversal never counts as missing, and a rejected entry or a reversal cannot take evidence. `attach-evidence` links up to ten already uploaded files to an existing entry without changing its amount, status or version; MAINTENANCE may attach only to entries whose every posting names a work order. The entry detail lists the files (`evidenceFiles`, each with how it arrived: RECORDED or ATTACHED), and `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` hands out a short-lived link only after the FINANCE module and a ledger-reading role (or MAINTENANCE on a work-order-only entry), the entry's branch and the file's link to that entry all pass, each miss past the role answering the same 404. Known imprecision: a file attached to a composite sheet counts for every entry that sheet created.
 
 ## Attention
 
@@ -133,16 +133,17 @@ Served on `feat/maintenance-on-develop`:
 
 | Endpoint | Module and roles | Period basis |
 | --- | --- | --- |
-| `GET /v1/assets/:assetId` | ASSETS; adds `custodian`, `availability`, `lastReading` | The existing `finance` field stays lifetime data and must not be relabelled as a selected-period total. |
+| `GET /v1/assets/:assetId` | ASSETS; adds `custodian`, `availability`, `lastReading`; `finance` only for FINANCE_READER_ROLES (absent for MAINTENANCE) | The existing `finance` field stays lifetime data and must not be relabelled as a selected-period total. |
 | `GET /v1/assets/:assetId/readings` | ACTIVITIES | None; newest observation first, superseded rows listed and flagged. |
 | `GET /v1/assets/:assetId/finance?periodCode=YYYY-MM` | FINANCE; FINANCE_READER_ROLES only | Posted by POSTING_PERIOD; pending and rejected by ECONOMIC_MONTH; `periodStatus` OPEN, LOCKED or NOT_STARTED; six-period series ending at the period. Defaults to the current month in the workspace timezone. Only this vehicle's signed posting lines, entries read by their own branch. |
 | `GET /v1/assets/:assetId/attention` | ASSETS; items gated as above | Business date in the workspace timezone. |
 | `GET /v1/assets/:assetId/history` | ASSETS; MONEY for ledger readers only | None; newest first. |
 | `GET /v1/assets/:assetId/custodian-candidates` | ASSETS; ADMIN and OPS_MANAGER | None. |
 | `GET /v1/issues/:issueId` | MAINTENANCE | None. |
-| `GET /v1/finance/entries` | FINANCE | `periodCode` is the posting period; `economicMonth` is the economic month. `status=LEDGER` means POSTED and REVERSED. Each item carries its evidence state and file count; `evidence=MISSING` filters to NOT_SUPPLIED. With `assetId`, each item also carries the vehicle's signed share (`assetShareMinor`). |
-| `GET /v1/finance/entries/:entryId` | FINANCE | Adds `evidenceFiles`. |
-| `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` | FINANCE; entry in the caller's branches | None. |
+| `GET /v1/finance/entries` | FINANCE; FINANCE_READER_ROLES only | `periodCode` is the posting period; `economicMonth` is the economic month. `status=LEDGER` means POSTED and REVERSED. Each item carries its evidence state and file count; `evidence=MISSING` filters to NOT_SUPPLIED. With `assetId`, each item also carries the vehicle's signed share (`assetShareMinor`). |
+| `GET /v1/finance/entries/:entryId` | FINANCE; FINANCE_READER_ROLES only | Adds `evidenceFiles`. |
+| `GET /v1/finance/approvals` | FINANCE; FINANCE_READER_ROLES only | None. |
+| `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` | FINANCE; FINANCE_READER_ROLES, or MAINTENANCE on an entry whose every posting names a work order; entry in the caller's branches | None. |
 
 Commands served for the workspace: `add-note.v1`, `attach-evidence.v1`, custodian changes through `assign-asset` (`custodianMembershipId`), and the maintenance commands listed in ARCHITECTURE §5.1. Migrations 0025 to 0029 on the branch add the maintenance tables (issues, work orders, availability intervals and the work-order column on postings), their approval defaults, the state machines, notes and the attach-evidence defaults. No stored balance, monthly total, vehicle ledger, availability flag or location field was added.
 

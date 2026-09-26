@@ -12,8 +12,9 @@ import sharp from "sharp";
 import type { Db } from "../db/client.js";
 import { inWorkspace } from "../db/tenant.js";
 import type { ObjectStorage } from "../storage/types.js";
+import { canReadLedger, FINANCE_READER_ROLES } from "@routiq/contracts";
 import { financialEntries, sourceArtifacts } from "../db/schema.js";
-import { entryEvidenceFiles } from "../reads/entry-evidence.js";
+import { entryEvidenceFiles, hasPostingWithoutWorkOrder } from "../reads/entry-evidence.js";
 import { invalidRequest, notFound, passReadGate, ReadRefusal } from "../reads/read-gate.js";
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -352,9 +353,11 @@ export function registerArtifactRoutes(
    * workspace-wide route above answers any member of the tenant; an entry is a
    * financial record read against the caller's branches, so its receipt must be
    * too — this route is the only one the finance screens use (PLAN §1.7).
-   * Checked in order: the FINANCE module, the entry in the caller's branches,
-   * the file among the entry's evidence; each miss is the same 404, and storage
-   * is never touched before all three pass.
+   * Checked in order: the FINANCE module and a ledger-reading role, the entry in
+   * the caller's branches, the file among the entry's evidence; each miss past
+   * the role is the same 404, and storage is never touched before all pass.
+   * The workshop, outside the ledger readers, reaches only entries whose every
+   * line is a work-order cost — the rule attach-evidence applies to it.
    */
   app.get(
     "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
@@ -373,7 +376,10 @@ export function registerArtifactRoutes(
         const { entryId, artifactId } = params.data;
 
         const artifact = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, { module: "FINANCE" });
+          await passReadGate(tx, auth, {
+            module: "FINANCE",
+            roles: [...FINANCE_READER_ROLES, "MAINTENANCE"],
+          });
           const [entry] = await tx
             .select({
               id: financialEntries.id,
@@ -391,6 +397,12 @@ export function registerArtifactRoutes(
           if (
             !entry ||
             (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
+          ) {
+            throw notFound();
+          }
+          if (
+            !canReadLedger(auth.role) &&
+            (await hasPostingWithoutWorkOrder(tx, auth.workspaceId, entry.id))
           ) {
             throw notFound();
           }

@@ -5,7 +5,9 @@ import {
   assetListResponse,
   assetListSortFields,
   assetSummary,
+  canReadLedger,
   listQuery,
+  type AssetFinancialSummary,
   type AssetLifecycleStatus,
   type AssetListSortField,
   type ListSort,
@@ -26,7 +28,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
+import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import {
   activities,
   activityAssetSegments,
@@ -148,6 +150,100 @@ function assetScopeConditions(
   }
 
   return conditions;
+}
+
+/**
+ * The vehicle's money, for the roles that read the books (FINANCE_READER_ROLES).
+ * The workshop sees the cost lines of its own work orders, never the ledger.
+ */
+async function loadFinanceSummary(
+  tx: TenantTx,
+  auth: AuthContext,
+  assetId: string,
+  currency: string,
+): Promise<AssetFinancialSummary> {
+  // Same predicates as the dashboard totals: signed postings, POSTED
+  // plus REVERSED so a reversed entry and its negated mirror cancel,
+  // one currency so the total is never a mix. Branch scope applies to
+  // the entries too — a scoped reader never sees another branch's money.
+  const financeConditions: SQL[] = [
+    eq(financialPostings.workspaceId, auth.workspaceId),
+    eq(financialPostings.assetId, assetId),
+    inArray(financialEntries.status, [...LEDGER_ENTRY_STATUSES]),
+    eq(financialEntries.currency, currency),
+  ];
+  if (auth.branchScope !== "ALL") {
+    financeConditions.push(
+      inArray(financialEntries.branchId, auth.branchScope),
+    );
+  }
+
+  const revenueSum = sql<string>`coalesce(sum(case when ${financialEntries.direction} = 'REVENUE' then ${financialPostings.amountMinor} else 0 end), 0)::text`;
+  const expenseSum = sql<string>`coalesce(sum(case when ${financialEntries.direction} = 'EXPENSE' then ${financialPostings.amountMinor} else 0 end), 0)::text`;
+
+  // Postings own the asset link, so the join starts there; the entry
+  // supplies direction, status and currency.
+  const [totals] = await tx
+    .select({ revenueMinor: revenueSum, expenseMinor: expenseSum })
+    .from(financialPostings)
+    .innerJoin(
+      financialEntries,
+      and(
+        eq(financialEntries.workspaceId, financialPostings.workspaceId),
+        eq(financialEntries.id, financialPostings.financialEntryId),
+      ),
+    )
+    .where(and(...financeConditions));
+
+  const categoryTotal = sql<string>`sum(${financialPostings.amountMinor})::text`;
+  const categoryRows = await tx
+    .select({
+      code: categories.code,
+      labelFr: categories.labelFr,
+      labelEn: categories.labelEn,
+      totalMinor: categoryTotal,
+    })
+    .from(financialPostings)
+    .innerJoin(
+      financialEntries,
+      and(
+        eq(financialEntries.workspaceId, financialPostings.workspaceId),
+        eq(financialEntries.id, financialPostings.financialEntryId),
+      ),
+    )
+    .innerJoin(
+      categories,
+      and(
+        eq(categories.workspaceId, financialPostings.workspaceId),
+        eq(categories.id, financialPostings.categoryId),
+      ),
+    )
+    .where(
+      and(
+        ...financeConditions,
+        eq(financialEntries.direction, "EXPENSE"),
+      ),
+    )
+    .groupBy(categories.code, categories.labelFr, categories.labelEn)
+    // A category whose charges were all reversed nets to zero; listing
+    // it would read as a cost that is no longer in the books.
+    .having(sql`sum(${financialPostings.amountMinor}) <> 0`)
+    .orderBy(desc(sql`sum(${financialPostings.amountMinor})`));
+
+  const revenueMinor = BigInt(totals?.revenueMinor ?? "0");
+  const expenseMinor = BigInt(totals?.expenseMinor ?? "0");
+  return {
+    currency,
+    revenueMinor: serializeMinor(revenueMinor),
+    expenseMinor: serializeMinor(expenseMinor),
+    netMinor: serializeMinor(revenueMinor - expenseMinor),
+    expenseByCategory: categoryRows.map((row) => ({
+      code: row.code,
+      labelFr: row.labelFr,
+      labelEn: row.labelEn,
+      totalMinor: serializeMinor(BigInt(row.totalMinor)),
+    })),
+  };
 }
 
 /** The asset page shows a recent slice, not a history; /v1/activities?assetId= pages the rest. */
@@ -413,74 +509,9 @@ export function registerAssetReadRoutes(
             .from(workspaces)
             .where(eq(workspaces.id, auth.workspaceId));
           const currency = workspace?.defaultCurrency ?? "XAF";
-
-          // Same predicates as the dashboard totals: signed postings, POSTED
-          // plus REVERSED so a reversed entry and its negated mirror cancel,
-          // one currency so the total is never a mix. Branch scope applies to
-          // the entries too — a scoped reader never sees another branch's money.
-          const financeConditions: SQL[] = [
-            eq(financialPostings.workspaceId, auth.workspaceId),
-            eq(financialPostings.assetId, assetId),
-            inArray(financialEntries.status, [...LEDGER_ENTRY_STATUSES]),
-            eq(financialEntries.currency, currency),
-          ];
-          if (auth.branchScope !== "ALL") {
-            financeConditions.push(
-              inArray(financialEntries.branchId, auth.branchScope),
-            );
-          }
-
-          const revenueSum = sql<string>`coalesce(sum(case when ${financialEntries.direction} = 'REVENUE' then ${financialPostings.amountMinor} else 0 end), 0)::text`;
-          const expenseSum = sql<string>`coalesce(sum(case when ${financialEntries.direction} = 'EXPENSE' then ${financialPostings.amountMinor} else 0 end), 0)::text`;
-
-          // Postings own the asset link, so the join starts there; the entry
-          // supplies direction, status and currency.
-          const [totals] = await tx
-            .select({ revenueMinor: revenueSum, expenseMinor: expenseSum })
-            .from(financialPostings)
-            .innerJoin(
-              financialEntries,
-              and(
-                eq(financialEntries.workspaceId, financialPostings.workspaceId),
-                eq(financialEntries.id, financialPostings.financialEntryId),
-              ),
-            )
-            .where(and(...financeConditions));
-
-          const categoryTotal = sql<string>`sum(${financialPostings.amountMinor})::text`;
-          const categoryRows = await tx
-            .select({
-              code: categories.code,
-              labelFr: categories.labelFr,
-              labelEn: categories.labelEn,
-              totalMinor: categoryTotal,
-            })
-            .from(financialPostings)
-            .innerJoin(
-              financialEntries,
-              and(
-                eq(financialEntries.workspaceId, financialPostings.workspaceId),
-                eq(financialEntries.id, financialPostings.financialEntryId),
-              ),
-            )
-            .innerJoin(
-              categories,
-              and(
-                eq(categories.workspaceId, financialPostings.workspaceId),
-                eq(categories.id, financialPostings.categoryId),
-              ),
-            )
-            .where(
-              and(
-                ...financeConditions,
-                eq(financialEntries.direction, "EXPENSE"),
-              ),
-            )
-            .groupBy(categories.code, categories.labelFr, categories.labelEn)
-            // A category whose charges were all reversed nets to zero; listing
-            // it would read as a cost that is no longer in the books.
-            .having(sql`sum(${financialPostings.amountMinor}) <> 0`)
-            .orderBy(desc(sql`sum(${financialPostings.amountMinor})`));
+          const finance = canReadLedger(auth.role)
+            ? await loadFinanceSummary(tx, auth, assetId, currency)
+            : undefined;
 
           const activityConditions: SQL[] = [
             eq(activities.workspaceId, auth.workspaceId),
@@ -552,9 +583,7 @@ export function registerAssetReadRoutes(
 
           return {
             header,
-            currency,
-            totals,
-            categoryRows,
+            finance,
             activityRows,
             custodian,
             availability,
@@ -570,17 +599,12 @@ export function registerAssetReadRoutes(
 
         const {
           header,
-          currency,
-          totals,
-          categoryRows,
+          finance,
           activityRows,
           custodian,
           availability,
           lastReading,
         } = result;
-        const revenueMinor = BigInt(totals?.revenueMinor ?? "0");
-        const expenseMinor = BigInt(totals?.expenseMinor ?? "0");
-
         return assetDetail.parse({
           id: header.id,
           assetCode: header.assetCode,
@@ -609,18 +633,7 @@ export function registerAssetReadRoutes(
           customValues: header.customValues,
           branchId: header.branchId,
           branch: { code: header.branchCode, name: header.branchName },
-          finance: {
-            currency,
-            revenueMinor: serializeMinor(revenueMinor),
-            expenseMinor: serializeMinor(expenseMinor),
-            netMinor: serializeMinor(revenueMinor - expenseMinor),
-            expenseByCategory: categoryRows.map((row) => ({
-              code: row.code,
-              labelFr: row.labelFr,
-              labelEn: row.labelEn,
-              totalMinor: serializeMinor(BigInt(row.totalMinor)),
-            })),
-          },
+          ...(finance === undefined ? {} : { finance }),
           recentActivities: activityRows.map((row) => ({
             id: row.id,
             activityNumber: row.activityNumber,
