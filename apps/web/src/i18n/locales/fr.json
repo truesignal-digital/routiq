@@ -1560,7 +1560,20 @@
   "vehicle": {
     "forms": {
       "pinnedVehicle": "Véhicule",
-      "lastReading": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}"
+      "lastReading": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}",
+      "fuel": {
+        "title": "Enregistrer un plein",
+        "description": "Enregistre la dépense de carburant, puis le compteur si vous le saisissez.",
+        "amount": "Montant payé (XAF)",
+        "when": "Date et heure",
+        "station": "Station (facultatif)",
+        "odometer": "Compteur en km (facultatif)",
+        "receipt": "Photo du reçu (facultatif)",
+        "submit": "Enregistrer le plein",
+        "retryReading": "Réessayer le relevé",
+        "expenseStands": "La dépense de carburant est enregistrée. Le relevé du compteur n'a pas été enregistré.",
+        "readingSaved": "Relevé du compteur enregistré"
+      }
     }
   }
 }
