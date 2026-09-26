@@ -120,6 +120,14 @@ export const COMMAND_ERROR_CODES = [
    */
   "SELF_RELEASE_FORBIDDEN",
   /**
+   * Releasing a vehicle while a safety-critical signalement OTHER than the one
+   * that grounded it is still OPEN. A second safety-critical report on a truck
+   * already down opens no interval of its own, so the release is the last point
+   * where it can hold the truck back. `metadata.openIssueIds` lists them; each
+   * has to be resolved or dismissed first. Applies to the override path too.
+   */
+  "SAFETY_ISSUE_OPEN",
+  /**
    * A custodian who cannot hold the vehicle: `metadata.reason` is DEACTIVATED
    * (the membership was revoked) or OUT_OF_SCOPE (their branches do not cover
    * the vehicle's branch after the move).
@@ -148,6 +156,13 @@ export const COMMAND_WARNING_CODES = [
    * command receipt keeps the discrepancy for reconciliation.
    */
   "BRANCH_INACTIVE_AT_COMMIT",
+  /**
+   * A release that went through on a completed work order while the signalement
+   * that grounded the truck is still OPEN — the work was declared done but not
+   * the problem. The release stands (#28 decouples the two); the signalement
+   * still needs resolving or dismissing.
+   */
+  "GROUNDING_ISSUE_STILL_OPEN",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];

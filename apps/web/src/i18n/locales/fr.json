@@ -156,6 +156,7 @@
     "HUMAN_PRINCIPAL_REQUIRED": "Cette action doit être faite par une personne, pas par une intégration ni un agent automatique.",
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
     "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
+    "SAFETY_ISSUE_OPEN": "Un autre signalement critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
   },
@@ -604,7 +605,8 @@
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
-    "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation."
+    "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation.",
+    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le signalement qui l'avait immobilisé est encore ouvert."
   },
   "activities": {
     "title": "Activités",

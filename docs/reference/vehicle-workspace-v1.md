@@ -102,10 +102,11 @@ None of the four says a person checked the paper. A reversal never counts as mis
 | Code | When | Severity |
 | --- | --- | --- |
 | ISSUE_UNPLANNED | An OPEN issue with no active work order | CRITICAL if safety-critical, else WARNING |
+| ISSUE_OPEN_WHILE_AVAILABLE | In place of ISSUE_UNPLANNED: an OPEN safety-critical issue with a completed work order on a vehicle that is not grounded — released with the issue left open | INFO |
 | WORK_ORDER_AWAITING_AUTHORIZATION | A work order SUBMITTED because a threshold rule held it | WARNING |
 | WORK_ORDER_IN_PROGRESS | A work order APPROVED and not yet completed | INFO, or WARNING when its completion was sent back |
 | WORK_ORDER_AWAITING_SIGN_OFF | A completion awaiting approval (COMPLETION_SUBMITTED) | WARNING |
-| ASSET_AWAITING_RELEASE | The vehicle is grounded, and either a completed work order answers the grounding issue or that issue is closed; with no completed work order, the release needs an override reason | CRITICAL |
+| ASSET_AWAITING_RELEASE | The vehicle is grounded, either a completed work order answers the grounding issue or that issue is closed, and no other safety-critical issue on it is OPEN; with no completed work order, the release needs an override reason | CRITICAL |
 | DOCUMENT_EXPIRED | A current document whose expiry date has passed | CRITICAL |
 | DOCUMENT_EXPIRING | A current document expiring within 30 days | WARNING |
 | ENTRY_AWAITING_REVIEW | A SUBMITTED entry with a posting on this vehicle | INFO |

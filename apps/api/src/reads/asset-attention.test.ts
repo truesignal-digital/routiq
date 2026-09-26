@@ -5,7 +5,13 @@ import {
   type AttentionCode,
 } from "@routiq/contracts";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { approvalRules, branches, sourceArtifacts } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import {
+  approvalRules,
+  assetAvailabilityIntervals,
+  branches,
+  sourceArtifacts,
+} from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
@@ -211,6 +217,99 @@ describe("GET /v1/assets/:assetId/attention", () => {
       makerPrincipalIds: [mechanic.principalId],
       params: { overrideRequired: true, hasCompletedWorkOrder: false },
     });
+  });
+
+  it("offers no release while another safety-critical signalement is open", async () => {
+    const truck = await seedAsset(ctx.app, admin.token);
+    const brakes = randomUUID();
+    await api.ok(driver.token, "report-issue", {
+      issueId: brakes,
+      assetId: truck,
+      description: "Freins",
+      safetyCritical: true,
+    });
+    const steering = randomUUID();
+    const steeringReported = await api.ok(driver.token, "report-issue", {
+      issueId: steering,
+      assetId: truck,
+      description: "Direction bloquée",
+      safetyCritical: true,
+    });
+    const workOrderId = randomUUID();
+    const created = await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId: truck,
+      issueId: brakes,
+      description: "Freins",
+      expectedCostMinor: 10_000,
+    });
+    await api.ok(
+      mechanic.token,
+      "complete-work-order",
+      { workOrderId, actualCostMinor: 10_000 },
+      { expectedVersion: created.rowVersion },
+    );
+
+    let body = await attention(manager.token, truck);
+    expect(codes(body.items)).toEqual(["ISSUE_UNPLANNED"]);
+    expect(body.items[0]).toMatchObject({
+      severity: "CRITICAL",
+      subject: { id: steering },
+      partOfGrounding: false,
+    });
+
+    await api.ok(
+      mechanic.token,
+      "dismiss-issue",
+      { issueId: steering, reason: "Doublon du signalement freins" },
+      { expectedVersion: steeringReported.rowVersion },
+    );
+    body = await attention(manager.token, truck);
+    expect(codes(body.items)).toEqual(["ASSET_AWAITING_RELEASE"]);
+  });
+
+  it("keeps a quiet reminder once a truck is released with its signalement still open", async () => {
+    const truck = await seedAsset(ctx.app, admin.token);
+    const issueId = randomUUID();
+    await api.ok(driver.token, "report-issue", {
+      issueId,
+      assetId: truck,
+      description: "Freins",
+      safetyCritical: true,
+    });
+    const workOrderId = randomUUID();
+    const created = await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId: truck,
+      issueId,
+      description: "Plaquettes",
+      expectedCostMinor: 10_000,
+    });
+    await api.ok(
+      mechanic.token,
+      "complete-work-order",
+      { workOrderId, actualCostMinor: 10_000, resolveLinkedIssue: false },
+      { expectedVersion: created.rowVersion },
+    );
+    const released = await api.ok(manager.token, "release-asset-to-service", { assetId: truck });
+    expect(released.warnings).toEqual(["GROUNDING_ISSUE_STILL_OPEN"]);
+
+    const body = await attention(manager.token, truck);
+    expect(body.items).toEqual([
+      expect.objectContaining({
+        code: "ISSUE_OPEN_WHILE_AVAILABLE",
+        severity: "INFO",
+        subject: { entityType: "operational_issue", id: issueId, number: null, rowVersion: 1 },
+        partOfGrounding: false,
+        makerPrincipalIds: [],
+        params: { description: "Freins", safetyCritical: true, hasCompletedWorkOrder: true },
+      }),
+    ]);
+    const [interval] = await ctx.db
+      .select({ closedAt: assetAvailabilityIntervals.closedAt })
+      .from(assetAvailabilityIntervals)
+      .where(eq(assetAvailabilityIntervals.assetId, truck));
+    expect(body.items[0]?.since).toBe(interval?.closedAt?.toISOString());
   });
 
   it("warns about a minor fault nobody has planned, outside any grounding", async () => {
