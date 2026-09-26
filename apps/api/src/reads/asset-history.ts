@@ -42,7 +42,7 @@ import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { toActor } from "./actors.js";
 import { readingBranchScope } from "./asset-readings.js";
 import { requireScopedAsset } from "./asset-scope.js";
-import { decodeKeysetCursor, encodeKeysetCursor } from "./cursor.js";
+import { decodeTimestampCursor, encodeKeysetCursor, microsecondKey } from "./cursor.js";
 import { noteSql } from "./history.js";
 import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
@@ -66,12 +66,11 @@ import { serializeMinor } from "./serialize-minor.js";
 const historySort: ListSort<"occurredAt"> = { field: "occurredAt", direction: "desc" };
 
 /**
- * The keyset position is the event time to the MICROsecond, as text. A JS Date
- * holds milliseconds, and the events of one command share a transaction
- * timestamp: a millisecond cursor would skip the rest of a command split across
- * two pages.
+ * The keyset position is the event time to the MICROsecond, as text: the
+ * events of one command share a transaction timestamp, and a millisecond
+ * cursor would skip the rest of a command split across two pages.
  */
-const occurredAtKeySql = sql<string>`to_char(${auditEvents.occurredAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+const occurredAtKeySql = microsecondKey(auditEvents.occurredAt);
 
 interface SourceContext {
   workspaceId: string;
@@ -676,12 +675,8 @@ export function registerAssetHistoryReadRoutes(
         const { assetId } = params.data;
         const { kind: kinds, cursor, limit } = query.data;
 
-        const decoded = cursor ? decodeKeysetCursor(cursor, historySort) : undefined;
-        if (cursor && (!decoded || typeof decoded.value !== "string")) throw invalidRequest();
-        const position =
-          decoded && typeof decoded.value === "string"
-            ? { value: decoded.value, id: decoded.id }
-            : undefined;
+        const position = cursor ? decodeTimestampCursor(cursor, historySort) : undefined;
+        if (cursor && !position) throw invalidRequest();
 
         const page = await inWorkspace(db, auth.workspaceId, async (tx) => {
           const modules = await passReadGate(tx, auth, { module: "ASSETS" });

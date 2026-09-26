@@ -93,6 +93,37 @@ export interface KeysetColumn {
 
 export const bindTimestamp = (value: Exclude<KeysetValue, null>): SQL =>
   sql`${new Date(value)}`;
+
+/**
+ * A timestamptz column as keyset text, to the MICROsecond. A JS Date holds
+ * milliseconds, while a column Postgres stamps itself (now(), one
+ * transaction's events) carries microseconds: a millisecond boundary skips
+ * every row that shares its millisecond and sorts after it. Mint the cursor
+ * from this text and bind it back with `bindTimestampText`.
+ */
+export function microsecondKey(column: PgColumn): SQL<string> {
+  return sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+}
+
+export const bindTimestampText = (value: Exclude<KeysetValue, null>): SQL =>
+  sql`${String(value)}::timestamptz`;
+
+const isoTimestamp = z.iso.datetime();
+
+/**
+ * `decodeKeysetCursor` for a list keyed on a timestamp: the boundary must also
+ * be an ISO timestamp, or the cursor is refused like any tampered one rather
+ * than reaching Postgres and failing as a 500.
+ */
+export function decodeTimestampCursor(
+  cursor: string,
+  sort: ListSort,
+): (KeysetCursor & { value: string }) | undefined {
+  const decoded = decodeKeysetCursor(cursor, sort);
+  if (decoded === undefined || typeof decoded.value !== "string") return undefined;
+  if (!isoTimestamp.safeParse(decoded.value).success) return undefined;
+  return { ...decoded, value: decoded.value };
+}
 export const bindDate = (value: Exclude<KeysetValue, null>): SQL =>
   sql`${String(value)}::date`;
 export const bindBigint = (value: Exclude<KeysetValue, null>): SQL =>
