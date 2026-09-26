@@ -12,6 +12,7 @@ import type {
   VehicleHistoryResponse,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { retryUnlessNotFound } from "../lib/query-retry.js";
 import { maintenanceQueryKey } from "../maintenance/useMaintenance.js";
 
 /**
@@ -48,6 +49,7 @@ export function useAssetAttention(assetId: string, enabled = true) {
   const session = useActiveSession();
   return useQuery<AssetAttentionResponse>({
     queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "attention"],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     queryFn: ({ signal }) =>
       getJson(`/v1/assets/${assetId}/attention`, signal, "ATTENTION"),
@@ -59,6 +61,7 @@ export function useAssetFinance(assetId: string, periodCode: string | undefined,
   const session = useActiveSession();
   return useQuery<AssetFinanceResponse>({
     queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "finance", periodCode ?? "current"],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     queryFn: ({ signal }) =>
       getJson(withQuery(`/v1/assets/${assetId}/finance`, { periodCode }), signal, "ASSET_FINANCE"),
@@ -78,6 +81,7 @@ export function useAssetHistory(
   const session = useActiveSession();
   return useInfiniteQuery<VehicleHistoryResponse>({
     queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "history", kind ?? "ALL", limit],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: VehicleHistoryResponse) => last.nextCursor ?? undefined,
@@ -99,6 +103,7 @@ export function useAssetReadings(assetId: string, enabled: boolean) {
   const session = useActiveSession();
   return useInfiniteQuery<AssetReadingsResponse>({
     queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "readings"],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: AssetReadingsResponse) => last.nextCursor ?? undefined,
@@ -116,6 +121,7 @@ export function useCustodianCandidates(assetId: string, enabled: boolean) {
   const session = useActiveSession();
   return useQuery<CustodianCandidatesResponse>({
     queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "custodian-candidates"],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     queryFn: ({ signal }) =>
       getJson(`/v1/assets/${assetId}/custodian-candidates`, signal, "CUSTODIANS"),
@@ -127,6 +133,7 @@ export function useIssue(issueId: string, enabled = true) {
   const session = useActiveSession();
   return useQuery<IssueDetail>({
     queryKey: [...maintenanceQueryKey(session?.workspaceSlug), "issues", "detail", issueId],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     queryFn: ({ signal }) => getJson(`/v1/issues/${issueId}`, signal, "ISSUE"),
   });
@@ -146,6 +153,7 @@ export function useNote(noteId: string) {
   const session = useActiveSession();
   return useQuery<VehicleNote | null>({
     queryKey: ["ws", session?.workspaceSlug, "notes", noteId],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined,
     queryFn: async ({ signal }) => {
       const timeline = await getJson<HistoryListResponse>(`/v1/history/note/${noteId}`, signal, "NOTE");
@@ -184,6 +192,7 @@ export function useVehicleEntries(assetId: string, filter: VehicleEntriesFilter,
   const params = { assetId, ...filter };
   return useInfiniteQuery<FinancialEntryListResponse>({
     queryKey: ["ws", session?.workspaceSlug, "finance", "entries", "vehicle", params],
+    retry: retryUnlessNotFound,
     enabled: session !== undefined && enabled,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: FinancialEntryListResponse) => last.nextCursor ?? undefined,

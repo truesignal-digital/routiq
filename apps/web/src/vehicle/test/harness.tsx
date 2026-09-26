@@ -41,6 +41,11 @@ export interface VehicleScenario {
   asset?: AssetDetail;
   /** HTTP status for the vehicle read, when it should fail. */
   assetStatus?: number;
+  /**
+   * Keep the Query client's own retry defaults (three retries, backoff from
+   * 1 s) instead of the harness's none-and-instant, to test a read's retry.
+   */
+  defaultRetries?: boolean;
   attention?: AssetAttentionItem[];
   finance?: (periodCode: string | null) => AssetFinanceResponse;
   history?: VehicleHistoryItem[];
@@ -208,7 +213,10 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
 
   await i18n.changeLanguage(scenario.locale ?? "en");
   sessionStore.save({ ...identity, token: "vehicle-test-token", expiresAt: "2099-01-01T00:00:00Z" });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // Reads that set their own `retry` still retry here, but without the backoff.
+  const client = new QueryClient({
+    defaultOptions: { queries: scenario.defaultRetries === true ? {} : { retry: false, retryDelay: 0 } },
+  });
   const history = createMemoryHistory({ initialEntries: [path] });
   const router = createRouter({ routeTree: applicationRouter.routeTree, history });
   await act(async () => {

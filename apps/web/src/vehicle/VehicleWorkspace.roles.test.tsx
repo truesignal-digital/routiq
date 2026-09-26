@@ -14,7 +14,7 @@ import {
   groundingWorkOrder,
   workOrderDetail,
 } from "./test/fixtures.js";
-import { closeVehicle, openVehicle } from "./test/harness.js";
+import { closeVehicle, openVehicle, requested } from "./test/harness.js";
 
 // The shared command client captures `fetch` at import; route it through the stub.
 vi.mock("../commands/instance.js", async () => {
@@ -230,6 +230,25 @@ describe("the status sentence and the step beside it, per role", () => {
     });
     expect(await screen.findByText("Availability not assessed.")).toBeTruthy();
     expect(screen.queryByRole("tab", { name: /Maintenance/ })).toBeNull();
+  });
+
+  it("shows not-found at once, without retrying the 404", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "FIELD_SUBMITTER",
+      assetStatus: 404,
+      defaultRetries: true,
+    });
+    // Well inside the first retry's 1 s backoff.
+    expect(
+      await screen.findByText("This vehicle does not exist or is outside your branches.", {}, { timeout: 500 }),
+    ).toBeTruthy();
+    expect(requested(recorded, `/v1/assets/${ASSET_ID}`)).toHaveLength(1);
+  });
+
+  it("retries any other failure twice before offering a retry", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "FIELD_SUBMITTER", assetStatus: 500 });
+    expect((await screen.findByRole("alert")).textContent).toContain("We couldn't load this asset.");
+    expect(requested(recorded, `/v1/assets/${ASSET_ID}`)).toHaveLength(3);
   });
 
   it("says a vehicle outside the caller's branches is not found, and offers a retry on failure", async () => {
