@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { assetDetail } from "@routiq/contracts";
+import { assetDetail, type AssetDetail } from "@routiq/contracts";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { branches } from "../db/schema.js";
+import { assetAvailabilityIntervals, auditEvents, branches } from "../db/schema.js";
+import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedMember, seedWorkspace } from "../test/seed.js";
+import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
 /**
  * The demo's payoff question — "did Camion 03 make money?" — so the money math
@@ -416,4 +418,304 @@ describe("GET /v1/assets/:assetId", () => {
     });
     return activityId;
   }
+});
+
+/**
+ * The three header facts the vehicle workspace opens on (#44): who holds the
+ * vehicle, whether it may be used, and what its meter last said — each owned
+ * by a module the workspace may switch off.
+ */
+describe("GET /v1/assets/:assetId header facts", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
+  let yaoundeId: string;
+  let admin: Actor;
+  let manager: Actor;
+  let mechanic: Actor;
+  let driver: Actor;
+  let ydeOnly: Actor;
+  let gatedAdmin: Actor;
+  let gatedAssetId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    const [yaounde] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId, code: "YDE", name: "Yaoundé" })
+      .returning();
+    if (!yaounde) throw new Error("branch insert returned no row");
+    yaoundeId = yaounde.id;
+
+    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", displayName: "Boris" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
+    driver = await seedActor(ctx.db, {
+      workspaceId,
+      role: "FIELD_SUBMITTER",
+      displayName: "Sali",
+    });
+    ydeOnly = await seedActor(ctx.db, {
+      workspaceId,
+      role: "OPS_MANAGER",
+      branchIds: [yaoundeId],
+    });
+
+    // Modules are per workspace, so the switched-off cases get their own.
+    const gated = await seedWorkspace(ctx.db);
+    gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    gatedAssetId = await seedAsset(ctx.app, gatedAdmin.token, { assetCode: "GATED-01" });
+    await api.ok(gatedAdmin.token, "report-issue", {
+      issueId: randomUUID(),
+      assetId: gatedAssetId,
+      description: "Freins",
+      safetyCritical: true,
+    });
+    await api.ok(gatedAdmin.token, "record-meter-reading", {
+      readingId: randomUUID(),
+      assetId: gatedAssetId,
+      readingType: "ODOMETER",
+      value: 1000,
+      observedAt: "2026-08-01T08:00:00Z",
+    });
+    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ACTIVITIES" });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function detail(token: string, assetId: string): Promise<AssetDetail> {
+    const response = await api.get(token, `/v1/assets/${assetId}`);
+    expect(response.status).toBe(200);
+    return assetDetail.parse(response.body);
+  }
+
+  async function assign(assetId: string, custodianMembershipId: string | null) {
+    const current = await detail(admin.token, assetId);
+    return api.send(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId },
+      { expectedVersion: current.rowVersion },
+    );
+  }
+
+  it("opens a fresh vehicle with no custodian, never grounded and no reading", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const body = await detail(admin.token, assetId);
+    expect(body.custodian).toBeNull();
+    expect(body.availability).toEqual({ state: "AVAILABLE", since: null });
+    expect(body.lastReading).toBeNull();
+  });
+
+  it("names the custodian from the assignment that set them", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const assigned = await assign(assetId, driver.membershipId);
+    expect(assigned.status).toBe(200);
+
+    const [event] = await ctx.db
+      .select({ occurredAt: auditEvents.occurredAt })
+      .from(auditEvents)
+      .where(
+        and(
+          eq(auditEvents.commandId, assigned.body.commandId!),
+          eq(auditEvents.eventType, "asset.assigned"),
+        ),
+      );
+    const body = await detail(admin.token, assetId);
+    expect(body.custodian).toEqual({
+      membershipId: driver.membershipId,
+      displayName: "Sali",
+      active: true,
+      since: event!.occurredAt.toISOString(),
+    });
+  });
+
+  it("clears the custodian when assign-asset sends null", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    expect((await assign(assetId, driver.membershipId)).status).toBe(200);
+    expect((await assign(assetId, null)).status).toBe(200);
+    expect((await detail(admin.token, assetId)).custodian).toBeNull();
+  });
+
+  it("keeps naming a deactivated custodian, flagged inactive", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const leaver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER" });
+    expect((await assign(assetId, leaver.membershipId)).status).toBe(200);
+    await api.ok(admin.token, "deactivate-member", { principalId: leaver.principalId });
+
+    const body = await detail(admin.token, assetId);
+    expect(body.custodian).toMatchObject({ membershipId: leaver.membershipId, active: false });
+  });
+
+  it("reads GROUNDED from the open interval, with its signalement and work orders", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const issueId = randomUUID();
+    await api.ok(driver.token, "report-issue", {
+      issueId,
+      assetId,
+      description: "Fuite de liquide de frein",
+      safetyCritical: true,
+      category: "BRAKES",
+    });
+    const workOrderId = randomUUID();
+    const created = await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId,
+      issueId,
+      description: "Remplacer les flexibles",
+    });
+    await api.ok(
+      mechanic.token,
+      "complete-work-order",
+      { workOrderId, summary: "Flexibles remplacés" },
+      { expectedVersion: created.rowVersion },
+    );
+
+    const [interval] = await ctx.db
+      .select()
+      .from(assetAvailabilityIntervals)
+      .where(eq(assetAvailabilityIntervals.assetId, assetId));
+    const body = await detail(admin.token, assetId);
+    expect(body.availability).toEqual({
+      state: "GROUNDED",
+      since: interval!.openedAt.toISOString(),
+      intervalId: interval!.id,
+      intervalRowVersion: 1,
+      issue: {
+        id: issueId,
+        description: "Fuite de liquide de frein",
+        safetyCritical: true,
+        category: "BRAKES",
+        // Completing a work order resolves the signalement it answers by default.
+        status: "RESOLVED",
+        rowVersion: 2,
+        reportedAt: expect.any(String),
+        reportedBy: { principalId: driver.principalId, displayName: "Sali", scope: "WORKSPACE" },
+        closedBy: { principalId: mechanic.principalId, displayName: "Hervé", scope: "WORKSPACE" },
+      },
+      workOrders: [
+        {
+          id: workOrderId,
+          status: "COMPLETED",
+          rowVersion: expect.any(Number),
+          createdAt: expect.any(String),
+          createdBy: { principalId: mechanic.principalId, displayName: "Hervé", scope: "WORKSPACE" },
+          completedBy: {
+            principalId: mechanic.principalId,
+            displayName: "Hervé",
+            scope: "WORKSPACE",
+          },
+        },
+      ],
+    });
+
+    // Released by someone other than the completer: available again, since
+    // the interval's own closing time.
+    await api.ok(manager.token, "release-asset-to-service", { assetId, workOrderId });
+    const [closed] = await ctx.db
+      .select()
+      .from(assetAvailabilityIntervals)
+      .where(eq(assetAvailabilityIntervals.assetId, assetId));
+    expect((await detail(admin.token, assetId)).availability).toEqual({
+      state: "AVAILABLE",
+      since: closed!.closedAt!.toISOString(),
+    });
+  });
+
+  it("names who closed the grounding signalement", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const issueId = randomUUID();
+    const reported = await api.ok(driver.token, "report-issue", {
+      issueId,
+      assetId,
+      description: "Voyant moteur",
+      safetyCritical: true,
+    });
+    await api.ok(
+      mechanic.token,
+      "dismiss-issue",
+      { issueId, reason: "Capteur débranché" },
+      { expectedVersion: reported.rowVersion },
+    );
+    const body = await detail(admin.token, assetId);
+    expect(body.availability.state).toBe("GROUNDED");
+    if (body.availability.state !== "GROUNDED") return;
+    expect(body.availability.issue.status).toBe("DISMISSED");
+    expect(body.availability.issue.closedBy).toEqual({
+      principalId: mechanic.principalId,
+      displayName: "Hervé",
+      scope: "WORKSPACE",
+    });
+    expect(body.availability.workOrders).toEqual([]);
+  });
+
+  it("answers NOT_ASSESSED and no reading when their modules are off", async () => {
+    const body = await detail(gatedAdmin.token, gatedAssetId);
+    expect(body.availability).toEqual({ state: "NOT_ASSESSED" });
+    expect(body.lastReading).toBeNull();
+  });
+
+  it("shows the newest current odometer reading, ignoring superseded ones and hours", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const reading = (value: number, observedAt: string, extra: Record<string, unknown> = {}) =>
+      api.ok(driver.token, "record-meter-reading", {
+        readingId: extra["readingId"] ?? randomUUID(),
+        assetId,
+        readingType: "ODOMETER",
+        value,
+        observedAt,
+        ...extra,
+      });
+    await reading(120_000, "2026-08-01T08:00:00Z");
+    const typo = randomUUID();
+    await reading(129_500, "2026-08-10T08:00:00Z", { readingId: typo });
+    // The correction is observed earlier than the typo it replaces, so only
+    // ignoring superseded rows can make it the answer.
+    const corrected = randomUUID();
+    await reading(125_900, "2026-08-09T18:00:00Z", {
+      readingId: corrected,
+      supersedesReadingId: typo,
+      supersedeReason: "Chiffre mal saisi",
+    });
+    // Engine hours newer than every odometer reading still lose to the odometer.
+    await reading(3_400, "2026-08-20T08:00:00Z", { readingType: "HOURS" });
+
+    expect((await detail(admin.token, assetId)).lastReading).toEqual({
+      id: corrected,
+      readingType: "ODOMETER",
+      value: 125_900,
+      observedAt: "2026-08-09T18:00:00.000Z",
+      source: "MANUAL",
+      activityId: null,
+      recordedBy: { principalId: driver.principalId, displayName: "Sali", scope: "WORKSPACE" },
+    });
+  });
+
+  it("falls back to hours for plant that has no odometer", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    await api.ok(driver.token, "record-meter-reading", {
+      readingId: randomUUID(),
+      assetId,
+      readingType: "HOURS",
+      value: 812,
+      observedAt: "2026-08-02T08:00:00Z",
+    });
+    expect((await detail(admin.token, assetId)).lastReading).toMatchObject({
+      readingType: "HOURS",
+      value: 812,
+    });
+  });
+
+  it("answers 404 to a branch-scoped reader for a vehicle outside their branches", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const response = await api.get(ydeOnly.token, `/v1/assets/${assetId}`);
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+  });
 });

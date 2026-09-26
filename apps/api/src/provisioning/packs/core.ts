@@ -320,6 +320,39 @@ function defaultApprovalRules(): Array<
     );
   }
 
+  // Attaching a receipt to an existing entry is open to whoever could have
+  // attached it at capture — record-expense's roles, without its amount band:
+  // a file changes no amount, so there is nothing for a threshold to weigh.
+  rules.push(
+    ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const).map(
+      (requiredRole) => ({
+        commandType: "attach-evidence",
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      }),
+    ),
+  );
+
+  // A note is a remark, not a decision: every role that records anything may
+  // write one. EXECUTIVE_VIEWER records nothing, notes included.
+  rules.push(
+    ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE", "FINANCE_APPROVER"] as const).map(
+      (requiredRole) => ({
+        commandType: "add-note",
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      }),
+    ),
+  );
+
   // The two work-order decisions, on the same footing as approve-entry: what
   // they resolve is money — the expected spend on creation, the declared actual
   // cost on closure — so the finance approver is the role that holds them.

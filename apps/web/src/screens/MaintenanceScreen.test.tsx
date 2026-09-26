@@ -130,6 +130,8 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
     cancelledAt: null,
     rejectedAt: status === "REJECTED" ? "2026-08-01T10:00:00.000Z" : null,
     rowVersion: 3,
+    createdBy: { principalId: null, displayName: null, scope: "WORKSPACE" },
+    completedBy: null,
   };
 }
 

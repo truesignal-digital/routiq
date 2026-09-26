@@ -19,6 +19,7 @@ import type {
 } from "@routiq/contracts";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
+import { entryVehicleFields } from "../test-entry-fields.js";
 
 const session = {
   username: "ada",
@@ -77,7 +78,7 @@ const entries: FinancialEntryListResponse = {
       entryNumber: "ENT-0042",
       direction: "EXPENSE",
       status: "POSTED",
-      category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+      category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: null },
       amountMinor: -50000,
       currency: "XAF",
       economicDate: "2026-07-22",
@@ -89,13 +90,15 @@ const entries: FinancialEntryListResponse = {
       estimateStatus: "ACTUAL",
       postedAt: "2026-07-22T10:00:00Z",
       rowVersion: 1,
+      reversesEntryId: null,
+      ...entryVehicleFields,
     },
     {
       id: "22222222-2222-4222-8222-222222222222",
       entryNumber: "ENT-0041",
       direction: "REVENUE",
       status: "SUBMITTED",
-      category: { code: "FREIGHT", labelFr: "Fret", labelEn: "Freight" },
+      category: { code: "FREIGHT", labelFr: "Fret", labelEn: "Freight", layer: null },
       amountMinor: 120000,
       currency: "XAF",
       economicDate: "2026-07-21",
@@ -107,6 +110,8 @@ const entries: FinancialEntryListResponse = {
       estimateStatus: "ACTUAL",
       postedAt: null,
       rowVersion: 1,
+      reversesEntryId: null,
+      ...entryVehicleFields,
     },
   ],
   nextCursor: "cursor-1",

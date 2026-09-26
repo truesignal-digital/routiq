@@ -33,13 +33,14 @@ vi.mock("./useEntry.js", () => ({
 }));
 
 import { EntrySummary } from "./EntrySummary.js";
+import { entryVehicleFields } from "../test-entry-fields.js";
 
 const entry: FinancialEntryDetail = {
   id: "00000000-0000-4000-8000-000000000010",
   entryNumber: "FIN-001",
   direction: "EXPENSE",
   status: "POSTED",
-  category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+  category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: null },
   amountMinor: 25000,
   currency: "XAF",
   economicDate: "2026-07-01",
@@ -57,6 +58,8 @@ const entry: FinancialEntryDetail = {
   rejectedReason: null,
   reversesEntryId: null,
   reversedByEntryId: null,
+  ...entryVehicleFields,
+  evidenceFiles: [],
   postings: [],
 };
 

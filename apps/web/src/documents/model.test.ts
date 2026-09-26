@@ -28,6 +28,7 @@ describe("groupDocuments", () => {
     supersedesDocumentId: null,
     supersededByDocumentId: null,
     createdAt: "2026-07-23T00:00:00Z",
+    artifactCount: 0,
     ...over,
   });
 
@@ -53,6 +54,7 @@ describe("renewalDefaults", () => {
       supersedesDocumentId: null,
       supersededByDocumentId: null,
       createdAt: "2026-01-01T00:00:00Z",
+      artifactCount: 0,
     })).toEqual({
       typeCode: "INSURANCE",
       title: "Fleet cover",

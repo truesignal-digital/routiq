@@ -31,6 +31,13 @@ export const COMMAND_QUEUEABILITY = {
   "resolve-issue": true,
   "create-work-order": true,
   "complete-work-order": true,
+  /* A remark written in the yard with no signal is still what the driver saw. */
+  "add-note": true,
+  /*
+   * A receipt photographed offline is a fact about a spend already recorded;
+   * attaching it changes nothing the entry says, so a late replay is harmless.
+   */
+  "attach-evidence": true,
 
   /*
    * Decisions — never queued.

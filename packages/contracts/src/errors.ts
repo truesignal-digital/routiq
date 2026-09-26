@@ -119,6 +119,12 @@ export const COMMAND_ERROR_CODES = [
    * carries passengers again.
    */
   "SELF_RELEASE_FORBIDDEN",
+  /**
+   * A custodian who cannot hold the vehicle: `metadata.reason` is DEACTIVATED
+   * (the membership was revoked) or OUT_OF_SCOPE (their branches do not cover
+   * the vehicle's branch after the move).
+   */
+  "CUSTODIAN_INELIGIBLE",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

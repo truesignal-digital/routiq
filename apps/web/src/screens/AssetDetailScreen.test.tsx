@@ -103,6 +103,9 @@ function asset(overrides: Partial<AssetDetail> = {}): AssetDetail {
         endedAt: null,
       },
     ],
+    custodian: null,
+    availability: { state: "AVAILABLE", since: null },
+    lastReading: null,
     ...overrides,
   };
 }

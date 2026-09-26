@@ -19,6 +19,7 @@ export const HISTORY_ENTITY_TYPES = [
   "financial_entry",
   "meter_reading",
   "movement_leg",
+  "note",
   "operational_issue",
   "person",
   "posting_period",
@@ -56,6 +57,8 @@ export const HISTORY_ENTITY_MODULE = {
   financial_entry: "FINANCE",
   meter_reading: "ACTIVITIES",
   movement_leg: "ACTIVITIES",
+  /** `add-note` is a CORE command: every member may annotate what they can see. */
+  note: "CORE",
   operational_issue: "MAINTENANCE",
   person: "ACTIVITIES",
   posting_period: "FINANCE",
@@ -245,6 +248,8 @@ export const HISTORY_STATE_KEYS = {
     "reason",
     "reversesEntryId",
     "reversedByEntryId",
+    /** `financial_entry.evidence_attached`: the files linked by that call. */
+    "artifactIds",
   ],
   meter_reading: [
     "readingType",
@@ -271,6 +276,8 @@ export const HISTORY_STATE_KEYS = {
     "passengerCount",
     "customValues",
   ],
+  /** A note is its body and what it annotates; it never changes after `note.added`. */
+  note: ["entityType", "entityId", "body"],
   /**
    * A signalement's report is never edited; what moves is its status, once —
    * resolved (on the spot or by a completed work order) or dismissed. The

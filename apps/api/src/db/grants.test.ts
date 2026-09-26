@@ -81,6 +81,21 @@ describe("routiq_app grants", () => {
     ]);
   });
 
+  it("notes are append-only for the runtime role, behind forced RLS", async () => {
+    const grants = await grantsByTable();
+    const privs = grants.get("notes");
+    expect(privs?.has("SELECT")).toBe(true);
+    expect(privs?.has("INSERT")).toBe(true);
+    expect(privs?.has("UPDATE")).toBe(false);
+    expect(privs?.has("DELETE")).toBe(false);
+
+    const rls = await ctx.db.execute(sql`
+      select relrowsecurity, relforcerowsecurity from pg_class
+      where relname = 'notes' and relnamespace = 'public'::regnamespace
+    `);
+    expect(rls.rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
+  });
+
   it("maintenance rows keep the intended append-only runtime grants", async () => {
     const grants = await grantsByTable();
 

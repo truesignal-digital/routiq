@@ -50,4 +50,7 @@ export * from "./commands/resolve-issue.js";
 export * from "./commands/dismiss-issue.js";
 export * from "./commands/reject-work-order.js";
 export * from "./commands/reject-work-order-completion.js";
+export * from "./commands/add-note.js";
+export * from "./commands/attach-evidence.js";
 export * from "./reads/maintenance.js";
+export * from "./reads/asset-workspace.js";
