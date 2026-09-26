@@ -1,0 +1,230 @@
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
+import { Download, FileText } from "lucide-react";
+import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts";
+import { Button } from "@/components/ui/button";
+import { sessionStore } from "@/auth/store.js";
+import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
+import { ApproveEntryForm, RejectEntryForm, ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
+import { useEntry } from "@/finance/useEntry.js";
+import { errorMessage } from "@/lib/error-message.js";
+import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
+import { useVehicle, type PanelForm } from "../context.js";
+import { entrySteps, missingReceipt } from "../flow.js";
+import { DetailHeader, DetailSection, FactList, LinkButton, Note } from "../parts.js";
+import {
+  EntryStatusBadge,
+  EvidenceMark,
+  PanelFooter,
+  PanelLoading,
+  PanelMissing,
+  useFormHost,
+} from "./shared.js";
+
+/** This vehicle's signed share of the entry: its own posting lines, nothing else. */
+export function vehicleShare(entry: Pick<FinancialEntryDetail, "postings">, assetId: string): number {
+  return entry.postings
+    .filter((posting) => posting.assetId === assetId)
+    .reduce((sum, posting) => sum + posting.amountMinor, 0);
+}
+
+export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
+  const { t, i18n } = useTranslation();
+  const { asset, viewer, panel, gates } = useVehicle();
+  // The books are read only by the roles that may read them; the workshop never fetches them.
+  const query = useEntry(gates.money ? id : undefined);
+  const host = useFormHost(t("vehicle.panel.entryTitle"));
+  const locale = i18n.language;
+
+  if (!gates.money) return <PanelMissing />;
+  if (query.isPending) return <PanelLoading />;
+  if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
+  const entry = query.data;
+  const steps = entrySteps(entry, viewer);
+  const back = { ...host.back, label: entry.entryNumber };
+
+  if (form !== undefined) {
+    const common = {
+      surface: "panel" as const,
+      entry: { id: entry.id, rowVersion: entry.rowVersion },
+      back,
+      onDone: host.onDone,
+      onDismiss: host.onDismiss,
+    };
+    switch (form.key) {
+      case "attach-evidence":
+        return (
+          <AttachEvidenceForm
+            surface="panel"
+            entry={{ id: entry.id, entryNumber: entry.entryNumber }}
+            back={back}
+            onDone={host.onDone}
+            onDismiss={host.onDismiss}
+          />
+        );
+      case "approve-entry":
+        return <ApproveEntryForm {...common} />;
+      case "reject-entry":
+        return <RejectEntryForm {...common} />;
+      case "reverse-entry":
+        return <ReverseEntryForm {...common} />;
+      default:
+        return null;
+    }
+  }
+
+  const share = vehicleShare(entry, asset.id);
+  const money = (minor: number) => formatMoney(minor, { currency: entry.currency, locale });
+  const revenue = entry.direction === "REVENUE";
+  const recorder = entry.recordedBy.displayName ?? t("history.actor.unknown");
+  const waiting =
+    entry.status === "SUBMITTED"
+      ? t("vehicle.panel.waitingOn.entryReview")
+      : missingReceipt(entry)
+        ? t("vehicle.panel.waitingOn.entryReceipt", { name: recorder })
+        : null;
+
+  return (
+    <>
+      <DetailHeader
+        eyebrow={t("vehicle.panel.entryEyebrow", { direction: entry.direction, number: entry.entryNumber })}
+        title={
+          <span className="flex items-baseline justify-between gap-3">
+            <span>{localizedLabel(entry.category, locale)}</span>
+            <span className="tabular-nums">
+              {formatMoney(share, { currency: entry.currency, locale, ...(revenue ? { signDisplay: "exceptZero" } : {}) })}
+            </span>
+          </span>
+        }
+        meta={
+          <>
+            <EntryStatusBadge status={entry.status} />
+            <EvidenceMark entry={entry} />
+          </>
+        }
+      />
+      <div className="space-y-6 p-4">
+        <FactList
+          rows={[
+            [t("vehicle.panel.date"), formatDate(entry.economicDate, locale)],
+            [
+              t("vehicle.panel.costType"),
+              entry.category.layer === null ? t("vehicle.details.notRecorded") : t(`vehicle.layers.${entry.category.layer}`),
+            ],
+            [t("vehicle.panel.thisVehicle"), money(share)],
+            [
+              t("vehicle.panel.wholeEntry"),
+              share === entry.amountMinor
+                ? t("vehicle.panel.notShared")
+                : t("vehicle.panel.sharedWith", { amount: money(entry.amountMinor) }),
+            ],
+            [t("vehicle.panel.paidTo"), entry.counterpartyName ?? t("vehicle.details.notRecorded")],
+            [t("vehicle.panel.recordedBy"), recorder],
+            [
+              t("vehicle.panel.postingPeriod"),
+              entry.postingPeriodCode ?? t("vehicle.panel.notPosted"),
+            ],
+            ...(entry.reversesEntryId === null
+              ? []
+              : ([
+                  [
+                    t("vehicle.panel.reverses"),
+                    <LinkButton onClick={() => panel.openRecord({ kind: "entry", id: entry.reversesEntryId ?? "" })}>
+                      {t("vehicle.panel.openOriginal")}
+                    </LinkButton>,
+                  ],
+                ] as const)),
+            ...(entry.reversedByEntryId === null
+              ? []
+              : ([
+                  [
+                    t("vehicle.panel.reversedBy"),
+                    <LinkButton onClick={() => panel.openRecord({ kind: "entry", id: entry.reversedByEntryId ?? "" })}>
+                      {t("vehicle.panel.openReversal")}
+                    </LinkButton>,
+                  ],
+                ] as const)),
+          ]}
+        />
+        {entry.rejectedReason !== null && (
+          <DetailSection title={t("vehicle.panel.reason")}>
+            <p className="text-sm">{entry.rejectedReason}</p>
+          </DetailSection>
+        )}
+        <Note>
+          {entry.status === "SUBMITTED"
+            ? t("vehicle.panel.awaitingReviewNote")
+            : t("vehicle.panel.postedNotPaid")}
+        </Note>
+        {entry.reversesEntryId === null && (
+          <DetailSection
+            title={t("vehicle.panel.receipt")}
+            aside={t(`vehicle.evidence.${entry.evidence.state}`)}
+          >
+            {entry.evidenceFiles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("vehicle.panel.noFiles")}</p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {entry.evidenceFiles.map((file) => (
+                  <EvidenceFileRow key={file.artifactId} entryId={entry.id} file={file} />
+                ))}
+              </ul>
+            )}
+          </DetailSection>
+        )}
+        <Link
+          to="/finance/entries/$entryId"
+          params={{ entryId: entry.id }}
+          className="inline-block text-sm font-medium underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground"
+        >
+          {t("vehicle.panel.openFullEntry")}
+        </Link>
+      </div>
+      <PanelFooter steps={steps} waiting={waiting} onStep={panel.openStep} />
+    </>
+  );
+}
+
+/** A receipt opens through the entry-scoped route, never the workspace-wide one. */
+function EvidenceFileRow({ entryId, file }: { entryId: string; file: EntryEvidenceFile }) {
+  const { t, i18n } = useTranslation();
+  const [error, setError] = useState<string>();
+
+  async function open() {
+    setError(undefined);
+    const token = sessionStore.getToken();
+    const response = await fetch(
+      `/v1/finance/entries/${entryId}/evidence/${file.artifactId}/download-url`,
+      { headers: token === undefined ? {} : { authorization: `Bearer ${token}` } },
+    );
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: { code?: string } } | null;
+      setError(body?.error?.code ?? "READ_FAILED");
+      return;
+    }
+    const { url } = (await response.json()) as { url: string };
+    window.open(url, "_blank", "noopener");
+  }
+
+  return (
+    <li className="flex items-start justify-between gap-3 px-3 py-2.5">
+      <div className="flex min-w-0 gap-2">
+        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{file.originalFileName ?? file.mimeType}</p>
+          <p className="text-xs text-muted-foreground">
+            {t(`vehicle.panel.evidenceVia.${file.via}`, {
+              date: formatDateTime(file.attachedAt, i18n.language),
+              name: file.attachedBy.displayName ?? t("history.actor.unknown"),
+            })}
+          </p>
+          {error !== undefined && <p className="text-xs text-destructive">{errorMessage(i18n, error)}</p>}
+        </div>
+      </div>
+      <Button variant="ghost" size="icon-sm" aria-label={t("vehicle.panel.openFile")} onClick={() => void open()}>
+        <Download aria-hidden />
+      </Button>
+    </li>
+  );
+}

@@ -1,0 +1,165 @@
+import { useTranslation } from "react-i18next";
+import { Clock } from "lucide-react";
+import type { IssueDetail } from "@routiq/contracts";
+import { StatusBadge } from "@/components/status-badge.js";
+import { useCategories } from "@/documents/useCategories.js";
+import { formatDateTime, localizedLabel } from "@/lib/format.js";
+import {
+  CreateWorkOrderForm,
+  IssueDecisionForm,
+  ReleaseForm,
+} from "@/maintenance/MaintenanceDialogs.js";
+import { Chronologie } from "@/maintenance/WorkOrderSheet.js";
+import { useVehicle, type PanelForm } from "../context.js";
+import { groundingFacts, isActiveWorkOrder, issueSteps } from "../flow.js";
+import { recordReference } from "../model.js";
+import { DetailHeader, DetailSection, FactList, LinkButton, Note, SafetyMark } from "../parts.js";
+import { useIssue } from "../useVehicle.js";
+import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
+
+const TITLE_MAX = 120;
+
+/** An issue's category is a code; its label comes from the ISSUE_TYPE list, else the code itself. */
+export function useIssueCategoryLabel() {
+  const { i18n } = useTranslation();
+  const types = useCategories("ISSUE_TYPE");
+  return (code: string | null) => {
+    if (code === null) return null;
+    const type = types.data?.find((candidate) => candidate.code === code);
+    return type === undefined ? code : localizedLabel(type, i18n.language);
+  };
+}
+
+export function IssueStatusBadge({ issue }: { issue: Pick<IssueDetail, "status" | "workOrders"> }) {
+  const { t } = useTranslation();
+  if (issue.status === "OPEN") {
+    const planned = issue.workOrders.some((wo) => isActiveWorkOrder(wo.status));
+    return planned ? (
+      <StatusBadge tone="info" className="rounded-md">
+        {t("vehicle.maintenance.inWorkOrder")}
+      </StatusBadge>
+    ) : (
+      <StatusBadge tone="warning" icon={Clock} className="rounded-md">
+        {t("vehicle.maintenance.notPlanned")}
+      </StatusBadge>
+    );
+  }
+  return (
+    <StatusBadge tone="neutral" className="rounded-md">
+      {t(`maintenance.issues.status.${issue.status}`)}
+    </StatusBadge>
+  );
+}
+
+export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
+  const { t, i18n } = useTranslation();
+  const { asset, viewer, panel, gates, pinnedLabel } = useVehicle();
+  const query = useIssue(id, gates.maintenance);
+  const categoryLabel = useIssueCategoryLabel();
+  const host = useFormHost(t("vehicle.panel.issueTitle", { ref: recordReference(id) }));
+  const locale = i18n.language;
+
+  if (!gates.maintenance) return <PanelMissing />;
+  if (query.isPending) return <PanelLoading />;
+  if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
+  const issue = query.data;
+  if (issue.asset.id !== asset.id) return <PanelMissing />;
+
+  const grounding = groundingFacts(asset);
+  const planned = issue.workOrders.some((wo) => isActiveWorkOrder(wo.status));
+  const steps = issueSteps({ id: issue.id, status: issue.status, planned }, viewer, grounding);
+
+  if (form !== undefined) {
+    const common = { surface: "panel" as const, back: host.back, onDone: host.onDone, onDismiss: host.onDismiss };
+    switch (form.key) {
+      case "create-work-order":
+        return (
+          <CreateWorkOrderForm
+            {...common}
+            issue={issue}
+            pinnedAssetId={asset.id}
+            pinnedAssetLabel={pinnedLabel}
+          />
+        );
+      case "resolve-issue":
+        return <IssueDecisionForm {...common} issue={issue} decision="resolve" />;
+      case "dismiss-issue":
+        return <IssueDecisionForm {...common} issue={issue} decision="dismiss" />;
+      case "release":
+        return (
+          <ReleaseForm {...common} subject={{ kind: "override", assetId: asset.id, issue }} />
+        );
+      default:
+        return null;
+    }
+  }
+
+  const reportedBy = issue.chronologie[0]?.actor.displayName ?? t("history.actor.unknown");
+  const title =
+    issue.description.length > TITLE_MAX
+      ? `${issue.description.slice(0, TITLE_MAX - 1).trimEnd()}…`
+      : issue.description;
+  const category = categoryLabel(issue.category);
+  const unplanned = issue.status === "OPEN" && !planned;
+
+  return (
+    <>
+      <DetailHeader
+        eyebrow={t("vehicle.panel.issueEyebrow", { ref: recordReference(issue.id) })}
+        title={title}
+        meta={
+          <>
+            <IssueStatusBadge issue={issue} />
+            {issue.safetyCritical && <SafetyMark />}
+          </>
+        }
+      />
+      <div className="space-y-6 p-4">
+        {title !== issue.description && <p className="text-sm">{issue.description}</p>}
+        <FactList
+          rows={[
+            [t("vehicle.panel.category"), category ?? t("vehicle.details.notRecorded")],
+            [
+              t("vehicle.panel.reported"),
+              t("vehicle.panel.atBy", { date: formatDateTime(issue.reportedAt, locale), name: reportedBy }),
+            ],
+            [t("vehicle.panel.photos"), t("vehicle.panel.photoCount", { count: issue.artifactCount })],
+            [
+              t("vehicle.panel.workOrders"),
+              issue.workOrders.length === 0 ? (
+                t("vehicle.panel.noneYet")
+              ) : (
+                <span className="flex flex-wrap gap-x-2">
+                  {issue.workOrders.map((wo) => (
+                    <LinkButton key={wo.id} onClick={() => panel.openRecord({ kind: "work_order", id: wo.id })}>
+                      {recordReference(wo.id)}
+                    </LinkButton>
+                  ))}
+                </span>
+              ),
+            ],
+          ]}
+        />
+        {issue.resolutionNote !== null && (
+          <DetailSection title={t("vehicle.panel.resolution")}>
+            <p className="text-sm">{issue.resolutionNote}</p>
+          </DetailSection>
+        )}
+        {issue.dismissReason !== null && (
+          <DetailSection title={t("vehicle.panel.reason")}>
+            <p className="text-sm">{issue.dismissReason}</p>
+          </DetailSection>
+        )}
+        {issue.safetyCritical && <Note>{t("vehicle.panel.safetyCriticalNote")}</Note>}
+        <DetailSection title={t("vehicle.panel.chronology")}>
+          <Chronologie events={issue.chronologie} locale={locale} />
+        </DetailSection>
+      </div>
+      <PanelFooter
+        steps={steps}
+        waiting={unplanned ? t("vehicle.panel.waitingOn.planning") : null}
+        onStep={panel.openStep}
+      />
+    </>
+  );
+}
