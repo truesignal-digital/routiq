@@ -119,7 +119,8 @@ export function releaseBlocker(facts: GroundingFacts | undefined): Lock | undefi
   if (wo !== undefined) {
     const ref = { ref: recordReference(wo.id) };
     if (wo.status === "SUBMITTED") return { key: "needsAll", params: ref };
-    if (wo.status === "APPROVED") return { key: "needsCompletionAndSignOff", params: ref };
+    // Not "and signed off": a completion inside the auto band lands COMPLETED directly.
+    if (wo.status === "APPROVED") return { key: "needsCompletion", params: ref };
     if (wo.status === "COMPLETION_SUBMITTED") return { key: "needsSignOff", params: ref };
     return undefined;
   }
@@ -205,7 +206,7 @@ export function workOrderSteps(
         primary = {
           kind: "locked",
           step: step("release"),
-          lock: { key: "needsCompletionAndSignOff", params: reference(wo.id) },
+          lock: { key: "needsCompletion", params: reference(wo.id) },
         };
       }
       // Costs attach only to open work (WORK_ORDER_NOT_OPEN otherwise).
@@ -407,7 +408,10 @@ export type GroundedPhase =
   | "inProgress"
   | "completionSentBack"
   | "awaitingSignOff"
+  /** Completed; the timeline shows no sign-off, or could not be read. */
   | "awaitingRelease"
+  /** Completed through a sign-off (COMPLETION_SUBMITTED, then approved). */
+  | "awaitingReleaseSignedOff"
   | "issueClosedAwaitingRelease";
 
 export type Situation =
@@ -436,7 +440,31 @@ export function daysSince(iso: string, now: Date): number {
   return Math.max(0, Math.round((startOfLocalDay(now) - startOfLocalDay(new Date(iso))) / DAY_MS));
 }
 
-function groundedPhase(facts: GroundingFacts, attention: readonly AssetAttentionItem[]): GroundedPhase {
+/** The events that settle a work order's completion, and whether each is a sign-off. */
+const COMPLETION_EVENTS: Record<string, boolean> = {
+  "work_order.completed": false,
+  "work_order.completion_approved": true,
+  // Written before #28 renamed the states; audit events are kept forever.
+  "work_order.closed": false,
+  "work_order.closure_approved": true,
+};
+
+/**
+ * Whether the standing completion was signed off, read off the work order's
+ * timeline (oldest first): the last settling event decides. The availability
+ * read cannot tell, so without the timeline the answer is no — the sentence
+ * then says "completed", never a sign-off that may not have happened.
+ */
+export function completionSignedOff(chronologie: readonly { kind: string }[] | undefined): boolean {
+  const settled = chronologie?.filter((event) => event.kind in COMPLETION_EVENTS).at(-1);
+  return settled !== undefined && COMPLETION_EVENTS[settled.kind] === true;
+}
+
+function groundedPhase(
+  facts: GroundingFacts,
+  attention: readonly AssetAttentionItem[],
+  signedOff: boolean,
+): GroundedPhase {
   const wo = facts.workOrder;
   if (wo === undefined) {
     if (facts.grounded.issue.status !== "OPEN") return "issueClosedAwaitingRelease";
@@ -457,7 +485,7 @@ function groundedPhase(facts: GroundingFacts, attention: readonly AssetAttention
     case "COMPLETION_SUBMITTED":
       return "awaitingSignOff";
     default:
-      return "awaitingRelease";
+      return signedOff ? "awaitingReleaseSignedOff" : "awaitingRelease";
   }
 }
 
@@ -465,11 +493,13 @@ function groundedPhase(facts: GroundingFacts, attention: readonly AssetAttention
  * Which sentence the header says. Lifecycle first — a sold truck is not
  * "available" — then availability, which only the maintenance module can speak
  * to: without it the answer is "not assessed", never a silent "available".
+ * `signedOff` is `completionSignedOff` of the grounding work order's timeline.
  */
 export function situationOf(
   asset: Pick<AssetDetail, "availability" | "lifecycleStatus" | "commissionedAt" | "recentActivities">,
   attention: readonly AssetAttentionItem[],
   now: Date,
+  signedOff = false,
 ): Situation {
   if ((DISPOSED as readonly string[]).includes(asset.lifecycleStatus)) {
     return { kind: "disposed", status: asset.lifecycleStatus as DisposedStatus };
@@ -481,7 +511,7 @@ export function situationOf(
       since: facts.grounded.since,
       days: daysSince(facts.grounded.since, now),
       report: facts.grounded.issue.description,
-      phase: groundedPhase(facts, attention),
+      phase: groundedPhase(facts, attention, signedOff),
       issueId: facts.grounded.issue.id,
       workOrderId: (facts.workOrder ?? facts.refused)?.id,
     };

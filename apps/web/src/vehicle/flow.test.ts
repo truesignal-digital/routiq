@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Role, WorkOrderStatus } from "@routiq/contracts";
 import {
   buildTodos,
+  completionSignedOff,
   daysSince,
   entrySteps,
   groundingFacts,
@@ -182,8 +183,8 @@ describe("the step beside the status sentence", () => {
       EXECUTIVE_VIEWER: "none",
     },
     APPROVED: {
-      ADMIN: "locked:release:needsCompletionAndSignOff",
-      OPS_MANAGER: "locked:release:needsCompletionAndSignOff",
+      ADMIN: "locked:release:needsCompletion",
+      OPS_MANAGER: "locked:release:needsCompletion",
       FIELD_SUBMITTER: "none",
       MAINTENANCE: "go:complete-work-order",
       FINANCE_APPROVER: "locked:approve-completion:needsCompletion",
@@ -270,7 +271,7 @@ describe("the step beside the status sentence", () => {
     const at = (status: WorkOrderStatus) =>
       releaseBlocker(groundingFacts(asset({ availability: grounded([groundingWorkOrder(status)]) })))?.key;
     expect(at("SUBMITTED")).toBe("needsAll");
-    expect(at("APPROVED")).toBe("needsCompletionAndSignOff");
+    expect(at("APPROVED")).toBe("needsCompletion");
     expect(at("COMPLETION_SUBMITTED")).toBe("needsSignOff");
     expect(at("COMPLETED")).toBeUndefined();
     expect(releaseBlocker(groundingFacts(asset({ availability: grounded([]) })))?.key).toBe("needsWorkOrder");
@@ -325,6 +326,34 @@ describe("the status sentence", () => {
   ] as const)("grounded with %j reads %s", (workOrders, phase) => {
     const situation = situationOf(asset({ availability: grounded([...workOrders]) }), [], now);
     expect(situation.kind === "grounded" && situation.phase).toBe(phase);
+  });
+
+  it("says signed off only when the completion went through a sign-off", () => {
+    const vehicle = asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) });
+    const phase = (signedOff: boolean) => {
+      const situation = situationOf(vehicle, [], now, signedOff);
+      return situation.kind === "grounded" && situation.phase;
+    };
+    expect(phase(false)).toBe("awaitingRelease");
+    expect(phase(true)).toBe("awaitingReleaseSignedOff");
+  });
+
+  it("reads the sign-off off the work order's timeline, the last settling event deciding", () => {
+    const events = (...kinds: string[]) => kinds.map((kind) => ({ kind }));
+    expect(completionSignedOff(undefined)).toBe(false);
+    expect(completionSignedOff(events("work_order.created", "work_order.approved", "work_order.completed"))).toBe(false);
+    expect(
+      completionSignedOff(
+        events("work_order.approved", "work_order.completion_submitted", "work_order.completion_approved"),
+      ),
+    ).toBe(true);
+    // Sent back once, then completed inside the auto band: no sign-off stands.
+    expect(
+      completionSignedOff(
+        events("work_order.completion_submitted", "work_order.completion_rejected", "work_order.completed"),
+      ),
+    ).toBe(false);
+    expect(completionSignedOff(events("work_order.closure_submitted", "work_order.closure_approved"))).toBe(true);
   });
 
   it("says a completion was sent back, from the attention read", () => {

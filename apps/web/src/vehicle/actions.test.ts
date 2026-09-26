@@ -150,7 +150,7 @@ describe("what the vehicle allows right now", () => {
   it("releases only once the grounding's work order is completed", () => {
     expect(state("release", facts(), "OPS_MANAGER")).toBe("locked:notGrounded");
     const inRepair = facts({ asset: asset({ availability: grounded([groundingWorkOrder("APPROVED")]) }) });
-    expect(state("release", inRepair, "OPS_MANAGER")).toBe("locked:needsCompletionAndSignOff");
+    expect(state("release", inRepair, "OPS_MANAGER")).toBe("locked:needsCompletion");
     const done = facts({ asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }) });
     expect(state("release", done, "OPS_MANAGER")).toBe("enabled:work_order");
     const ownRepair = facts({

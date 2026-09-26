@@ -54,8 +54,8 @@ describe("the status sentence and the step beside it, per role", () => {
     caption?: RegExp;
     doNotDrive?: boolean;
   }> = [
-    { role: "ADMIN", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed and signed off.` } },
-    { role: "OPS_MANAGER", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed and signed off.` } },
+    { role: "ADMIN", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed first.` } },
+    { role: "OPS_MANAGER", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed first.` } },
     { role: "MAINTENANCE", button: "Complete work" },
     { role: "FINANCE_APPROVER", caption: new RegExp(`Sign off · Needs ${WO_REF} completed first\\.`) },
     { role: "FIELD_SUBMITTER", doNotDrive: true },
@@ -133,6 +133,71 @@ describe("the status sentence and the step beside it, per role", () => {
     const block = within(await sentence());
     expect(block.getByText(/You vouched for the repair of a safety-critical problem/)).toBeTruthy();
     expect((block.getByRole("button", { name: "Release to service" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  describe("a completed repair waiting for release", () => {
+    const done = asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) });
+    const event = (kind: string, minute: number) => ({
+      eventId: `00000000-0000-4000-8000-0000000001${String(minute).padStart(2, "0")}`,
+      kind,
+      occurredAt: `2026-09-24T10:${String(minute).padStart(2, "0")}:00.000Z`,
+      actor: actor(ME_ID, "Hervé"),
+    });
+    const direct = workOrderDetail("COMPLETED", {
+      chronologie: [event("work_order.created", 1), event("work_order.approved", 2), event("work_order.completed", 3)],
+    });
+    const signedOff = workOrderDetail("COMPLETED", {
+      chronologie: [
+        event("work_order.created", 1),
+        event("work_order.approved", 2),
+        event("work_order.completion_submitted", 3),
+        event("work_order.completion_approved", 4),
+      ],
+    });
+
+    it("says completed, never signed off, when the completion landed COMPLETED directly", async () => {
+      await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE_APPROVER", asset: done, workOrderDetails: [direct] });
+      const block = await sentence();
+      await waitFor(() =>
+        expect(block.textContent).toContain(`The repair (${WO_REF}) is completed; waiting on a manager to release it.`),
+      );
+      expect(block.textContent).not.toMatch(/signed off/);
+    });
+
+    it("says signed off once a completion approval happened", async () => {
+      await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE_APPROVER", asset: done, workOrderDetails: [signedOff] });
+      const block = await sentence();
+      await waitFor(() =>
+        expect(block.textContent).toContain(`The repair (${WO_REF}) is signed off; waiting on a manager to release it.`),
+      );
+    });
+
+    it("says completed when the timeline cannot be read", async () => {
+      await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE_APPROVER", asset: done });
+      const block = await sentence();
+      await waitFor(() => expect(block.textContent).toContain(`The repair (${WO_REF}) is completed;`));
+    });
+
+    it("says it in French", async () => {
+      await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE_APPROVER", asset: done, workOrderDetails: [direct], locale: "fr-CM" });
+      const block = await sentence();
+      await waitFor(() =>
+        expect(block.textContent).toContain(
+          `La réparation (${WO_REF}) est terminée ; en attente d'un responsable pour la remise en service.`,
+        ),
+      );
+      expect(block.textContent).not.toMatch(/validée/);
+    });
+  });
+
+  it("gives the manager's locked release its reason in French", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "OPS_MANAGER", asset: inRepair, locale: "fr-CM" });
+    const block = within(await sentence());
+    const release = block.getByRole("button", { name: "Remettre en service" }) as HTMLButtonElement;
+    expect(release.disabled).toBe(true);
+    expect(document.getElementById(release.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+      `Il faut d'abord que ${WO_REF} soit terminé.`,
+    );
   });
 
   it("speaks French, quoting the report", async () => {

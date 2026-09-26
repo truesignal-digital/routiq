@@ -86,7 +86,6 @@ export type LockKey =
   | "needsAuthorization"
   | "needsCompletion"
   | "needsSignOff"
-  | "needsCompletionAndSignOff"
   | "needsAll"
   | "needsWorkOrder"
   | "makerCannotApprove"

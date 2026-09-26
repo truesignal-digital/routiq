@@ -1682,7 +1682,8 @@
         "inProgress": "Waiting on the workshop to finish the repair ({workOrder}).",
         "completionSentBack": "The completion of {workOrder} was sent back; waiting on the workshop to finish it.",
         "awaitingSignOff": "The repair is done; waiting on finance to sign off {workOrder}.",
-        "awaitingRelease": "The repair ({workOrder}) is signed off; waiting on a manager to release it to service.",
+        "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
+        "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
         "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
         "doNotDrive": "Do not drive it until a manager releases it to service."
       },
@@ -1743,9 +1744,8 @@
       "needsAuthorization": "Needs finance to authorize {ref} first.",
       "needsCompletion": "Needs {ref} completed first.",
       "needsSignOff": "Needs {ref} signed off.",
-      "needsCompletionAndSignOff": "Needs {ref} completed and signed off.",
-      "needsAll": "Needs {ref} authorized, completed and signed off.",
-      "needsWorkOrder": "Needs a work order, completed and signed off.",
+      "needsAll": "Needs {ref} authorized and completed.",
+      "needsWorkOrder": "Needs a completed work order, or the problem closed.",
       "makerCannotApprove": "You created {ref}; someone else authorizes it.",
       "completerCannotSignOff": "You completed {ref}; someone else signs it off.",
       "youRecordedIt": "You recorded it; someone else reviews it.",
@@ -1829,7 +1829,7 @@
       },
       "ASSET_AWAITING_RELEASE": {
         "title": "Ready to release to service",
-        "detail": "{override, select, yes {The problem was closed without a repair; the release needs a reason.} other {The repair is signed off.}}"
+        "detail": "{override, select, yes {The problem was closed without a repair; the release needs a reason.} other {The repair is completed.}}"
       },
       "DOCUMENT_EXPIRED": {
         "title": "{type} expired",
@@ -2085,7 +2085,7 @@
       "noteBy": "Note by {name}",
       "noteAppendOnly": "Notes are never edited. A correction is another note.",
       "fromProblem": "From problem {ref}",
-      "keepsGrounded": "This work order keeps the vehicle grounded. After sign-off, a manager releases it to service.",
+      "keepsGrounded": "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
       "completionSentBack": "Completion sent back: {reason}",
       "opened": "Opened",
       "atBy": "{date} by {name}",
@@ -2213,7 +2213,7 @@
       "release": {
         "label": "Release to service",
         "short": "Release",
-        "description": "Ends the grounding once the repair is signed off. After a safety-critical problem, whoever vouched for the repair cannot release."
+        "description": "Ends the grounding once the repair is completed. After a safety-critical problem, whoever vouched for the repair cannot release."
       },
       "start-trip": {
         "label": "Start a trip",

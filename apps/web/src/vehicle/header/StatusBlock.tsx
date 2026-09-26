@@ -14,8 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
+import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { useVehicle } from "../context.js";
-import { groundingStep, situationOf, type Situation } from "../flow.js";
+import { completionSignedOff, groundingFacts, groundingStep, situationOf, type Situation } from "../flow.js";
 import { recordReference, type PanelRef, type RoleStep } from "../model.js";
 import { LinkButton, useLockText, useStepLabel, withNodes } from "../parts.js";
 import { STEP_ICONS } from "../steps.js";
@@ -42,7 +43,10 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
   const { t, i18n } = useTranslation();
   const { asset, attention, viewer, panel } = useVehicle();
   const locale = i18n.language;
-  const situation = situationOf(asset, attention, now);
+  // Only the work order's timeline says whether its completion was signed off.
+  const completed = groundingFacts(asset)?.workOrder;
+  const completedOrder = useWorkOrder(completed?.status === "COMPLETED" ? completed.id : undefined);
+  const situation = situationOf(asset, attention, now, completionSignedOff(completedOrder.data?.chronologie));
   const openRef = (ref: PanelRef) => panel.openRecord(ref);
 
   const refLink = (kind: "work_order" | "issue", id: string | undefined) =>
