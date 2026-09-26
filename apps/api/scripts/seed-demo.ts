@@ -486,13 +486,21 @@ async function storyToday(): Promise<string> {
   return currentBusinessDate(receipt?.executedAt ?? new Date(), demoTimezone);
 }
 
-async function assetRowVersion(assetId: string): Promise<number> {
+async function assetState(assetId: string) {
   const [asset] = await authDb
-    .select({ rowVersion: schema.assets.rowVersion })
+    .select({
+      lifecycleStatus: schema.assets.lifecycleStatus,
+      registrationNumber: schema.assets.registrationNumber,
+      rowVersion: schema.assets.rowVersion,
+    })
     .from(schema.assets)
     .where(and(eq(schema.assets.workspaceId, ids.workspace), eq(schema.assets.id, assetId)));
   if (!asset) throw new Error(`Asset ${assetId} is missing`);
-  return asset.rowVersion;
+  return asset;
+}
+
+async function assetRowVersion(assetId: string): Promise<number> {
+  return (await assetState(assetId)).rowVersion;
 }
 
 async function workOrderRowVersion(workOrderId: string): Promise<number> {
@@ -555,6 +563,7 @@ async function accountsSummary() {
 /** What the vehicle workspace shows for one truck, read back after seeding. */
 async function vehicleSummary(assetId: string, today: string) {
   const ws = ids.workspace;
+  const { lifecycleStatus, registrationNumber } = await assetState(assetId);
   const [openInterval] = await authDb
     .select({ openedAt: schema.assetAvailabilityIntervals.openedAt })
     .from(schema.assetAvailabilityIntervals)
@@ -654,6 +663,8 @@ async function vehicleSummary(assetId: string, today: string) {
   const superseded = new Set(documents.map((doc) => doc.supersedesDocumentId));
 
   return {
+    registrationNumber,
+    lifecycleStatus,
     groundedSince: openInterval?.openedAt.toISOString() ?? null,
     custodian: custodian?.displayName ?? null,
     issues: issues.map((issue) => ({
@@ -750,6 +761,7 @@ try {
     runCommand(emilienne, "register-asset:VH003", {
       assetId: ids.vh003,
       assetCode: "VH003",
+      registrationNumber: "LT 482 AB",
       assetClassCode: "TRUCK",
       templateCode: "TRUCKING",
       branchCode,
@@ -762,6 +774,28 @@ try {
       branchCode,
     }),
   ]);
+
+  // Only register-asset sets a plate, so a workspace registered before the
+  // plate joined its payload keeps VH003 blank until a `--reset`.
+  if ((await assetState(ids.vh003)).registrationNumber === null) {
+    console.warn("VH003 has no registration number: re-seed with --reset to give it LT 482 AB.");
+  }
+
+  // In service long before the July trips. The transition is one-way, so a
+  // re-seed that finds a truck already commissioned leaves it alone.
+  for (const truck of [
+    { code: "VH003", assetId: ids.vh003, commissionedAt: "2019-03-18T08:00:00+01:00" },
+    { code: "VH001", assetId: ids.vh001, commissionedAt: "2021-09-06T08:00:00+01:00" },
+  ]) {
+    const { lifecycleStatus, rowVersion } = await assetState(truck.assetId);
+    if (lifecycleStatus !== "REGISTERED") continue;
+    await runCommand(
+      emilienne,
+      `commission-asset:${truck.code}`,
+      { assetId: truck.assetId, commissionedAt: truck.commissionedAt },
+      { expectedVersion: rowVersion },
+    );
+  }
 
   await runCommand(boris, "register-person:jean-ngwa", {
     personId: ids.driver,

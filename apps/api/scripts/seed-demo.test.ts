@@ -138,6 +138,25 @@ describe("seed-demo", () => {
     ]);
   });
 
+  it("registers VH003 under its plate and puts both trucks in service", async () => {
+    const trucks = await rows<{
+      code: string;
+      plate: string | null;
+      status: string;
+      commissioned: boolean;
+    }>(
+      `select asset_code as code, registration_number as plate, lifecycle_status as status,
+              commissioned_at is not null as commissioned
+         from assets where workspace_id = $1 and asset_code in ('VH001', 'VH003')
+        order by asset_code`,
+      [workspaceId],
+    );
+    expect(trucks).toEqual([
+      { code: "VH001", plate: null, status: "IN_SERVICE", commissioned: true },
+      { code: "VH003", plate: "LT 482 AB", status: "IN_SERVICE", commissioned: true },
+    ]);
+  });
+
   it("grounds VH003 behind an approved brake work order with one cost line awaiting review", async () => {
     const vh003 = await assetId("VH003");
 
