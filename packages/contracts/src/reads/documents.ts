@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { recordArtifact } from "./artifacts.js";
 
 export const assetDocumentRead = z.object({
   id: z.uuid(),
@@ -12,6 +13,11 @@ export const assetDocumentRead = z.object({
   createdAt: z.iso.datetime(),
   /** Files attached when the document was recorded (its command's source artifacts). */
   artifactCount: z.number().int().nonnegative(),
+  /**
+   * Those files, oldest first. Download each through
+   * `GET /v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url`.
+   */
+  artifacts: z.array(recordArtifact),
 });
 
 export const assetDocumentsReadResponse = z.object({
