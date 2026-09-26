@@ -43,8 +43,10 @@ export function AssetDetailScreen() {
   }
 
   const asset = assetQuery.data;
+  // Absent for roles outside the ledger readers (the workshop): no money card.
   const { finance } = asset;
   const nothingPosted =
+    finance !== undefined &&
     finance.revenueMinor === 0 &&
     finance.expenseMinor === 0 &&
     finance.expenseByCategory.length === 0;
@@ -90,6 +92,7 @@ export function AssetDetailScreen() {
         <OtherBranchNotice branchCode={asset.branch.code} />
       </div>
 
+      {finance !== undefined && (
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>{t("assets.detail.money.title")}</CardTitle>
@@ -159,6 +162,7 @@ export function AssetDetailScreen() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <Card className="mt-6">
         <CardHeader>

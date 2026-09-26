@@ -335,10 +335,10 @@ export function CreateWorkOrderDialog({
   const intent = useRef<CommandIntent<CreateWorkOrderPayload> | undefined>(undefined);
 
   const trimmedDescription = description.trim();
+  // Required: the approval threshold is read against it; 0 means no spend foreseen.
   const expectedCostMinor = parseMoneyXaf(expectedCost);
-  const costUsable = expectedCost.trim() === "" || expectedCostMinor !== null;
   const ready =
-    !submitting && assetId !== "" && trimmedDescription !== "" && costUsable;
+    !submitting && assetId !== "" && trimmedDescription !== "" && expectedCostMinor !== null;
 
   // A work order references at most one signalement, and it has to be one filed
   // against the same truck — the server rejects the pairing otherwise. A
@@ -348,7 +348,7 @@ export function CreateWorkOrderDialog({
   );
 
   async function submit() {
-    if (!ready) return;
+    if (!ready || expectedCostMinor === null) return;
     setError(undefined);
     setSubmitting(true);
 
@@ -363,7 +363,7 @@ export function CreateWorkOrderDialog({
       description: trimmedDescription,
       currency: "XAF",
       ...(issueId === "" ? {} : { issueId }),
-      ...(expectedCostMinor === null ? {} : { expectedCostMinor }),
+      expectedCostMinor,
     });
     setSubmitting(false);
 
