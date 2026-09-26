@@ -11,7 +11,8 @@ export type NotifyNamespace =
   | "assets"
   | "documents"
   | "finance"
-  | "maintenance";
+  | "maintenance"
+  | "vehicle";
 
 type NotifyKind = "success" | "warnings" | "errors";
 
@@ -25,6 +26,11 @@ function localizedNotifyMessage(
 
   const shared = `notify.${kind}.${key}`;
   if (i18n.exists(shared)) return i18n.t(shared);
+
+  // The shared code catalogs (`warnings.*`, `errors.*`) are where a code's
+  // wording lives when no domain overrides it.
+  const catalog = `${kind}.${key}`;
+  if (kind !== "success" && i18n.exists(catalog)) return i18n.t(catalog);
 
   console.warn(`[notify] no translation for ${scoped}`);
   const scopedGeneric = `${namespace}.notify.${kind}.generic`;

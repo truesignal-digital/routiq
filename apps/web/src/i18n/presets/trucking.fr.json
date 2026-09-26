@@ -154,5 +154,27 @@
       "work_order-asset_released": "Camion remis en service",
       "asset_availability-opened": "Camion immobilisé"
     }
+  },
+  "vehicle": {
+    "forms": {
+      "pinnedVehicle": "Camion"
+    },
+    "tabs": {
+      "trips": "Trajets"
+    },
+    "trips": {
+      "title": "Trajets",
+      "description": "Trajets avec ce camion",
+      "descriptionWithKm": "Trajets avec ce camion · {km, number} km enregistrés",
+      "empty": "Aucun trajet pour l'instant. Démarrez-en un quand le camion quitte le dépôt."
+    },
+    "locked": {
+      "notGrounded": "Le camion n'est pas immobilisé."
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trajets"
+      }
+    }
   }
 }

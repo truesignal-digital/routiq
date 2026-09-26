@@ -154,5 +154,27 @@
       "work_order-asset_released": "Truck returned to service",
       "asset_availability-opened": "Truck grounded"
     }
+  },
+  "vehicle": {
+    "forms": {
+      "pinnedVehicle": "Truck"
+    },
+    "tabs": {
+      "trips": "Trips"
+    },
+    "trips": {
+      "title": "Trips",
+      "description": "Trips with this truck",
+      "descriptionWithKm": "Trips with this truck · {km, number} km recorded",
+      "empty": "No trips yet. Start one when the truck leaves the depot."
+    },
+    "locked": {
+      "notGrounded": "The truck is not grounded."
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trips"
+      }
+    }
   }
 }

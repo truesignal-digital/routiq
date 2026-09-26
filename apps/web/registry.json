@@ -899,6 +899,30 @@
         "lucide-react",
         "react-i18next"
       ]
+    },
+    {
+      "name": "command-form",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/command-form.tsx",
+          "type": "registry:file",
+          "target": "components/command-form.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "sheet",
+        "error-banner",
+        "error-message",
+        "use-mobile",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
     }
   ]
 }

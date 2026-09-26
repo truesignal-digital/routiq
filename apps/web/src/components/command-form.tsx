@@ -1,0 +1,385 @@
+import { useId, useState, type FormEvent, type ReactNode } from "react"
+import { ArrowLeft } from "lucide-react"
+import { useTranslation } from "react-i18next"
+
+import { ErrorBanner } from "@/components/error-banner.js"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { errorMessage } from "@/lib/error-message.js"
+import { cn } from "@/lib/utils"
+
+/**
+ * Where a command form is hosted. `dialog` and `sheet` own their overlay;
+ * `panel` renders inside an overlay the host already holds (a record panel's
+ * page stack), so the host decides what closing means; `page` sits in the flow
+ * of a screen.
+ */
+export type CommandSurface = "dialog" | "sheet" | "panel" | "page"
+
+/** The record a panel form was opened from: the back arrow returns to it. */
+export interface CommandFormBack {
+  label: string
+  onBack: () => void
+}
+
+export interface CommandFormCopy {
+  title: string
+  body: string
+}
+
+type CommandFormChrome =
+  | { surface: "page"; title?: string | undefined }
+  | { surface: "dialog" | "sheet" | "panel"; title: string }
+
+export type CommandFormProps = CommandFormChrome & {
+  description?: string | undefined
+  /** Panel only: the record this form belongs to. */
+  back?: CommandFormBack | undefined
+  /**
+   * The last submit's error code. VERSION_CONFLICT and APPROVAL_REQUIRED
+   * replace the form, because both are answers the operator has to read before
+   * anything else; every other code is a banner above the untouched fields.
+   */
+  error?: string | undefined
+  /** Codes that are information rather than failure, shown as a note. */
+  informativeCodes?: readonly string[] | undefined
+  /** Wording for the two replacing states, when the generic one is too vague. */
+  conflict?: CommandFormCopy | undefined
+  approval?: CommandFormCopy | undefined
+  /** What "Refresh" does after a conflict. Defaults to dismissing the form. */
+  onReload?: (() => void | Promise<void>) | undefined
+  submitLabel: string
+  submittingLabel?: string | undefined
+  cancelLabel?: string | undefined
+  /** A page form with nowhere to go back to has no cancel button. */
+  hideCancel?: boolean | undefined
+  ready: boolean
+  submitting: boolean
+  onSubmit: () => void
+  onDismiss: () => void
+  className?: string | undefined
+  children: ReactNode
+}
+
+type Outcome = "form" | "conflict" | "approval"
+
+function outcomeOf(error: string | undefined): Outcome {
+  if (error === "VERSION_CONFLICT") return "conflict"
+  if (error === "APPROVAL_REQUIRED") return "approval"
+  return "form"
+}
+
+/**
+ * One command form, rendered the same way on every surface: header, body,
+ * footer, the error banner, and the two outcomes that replace the form. Each
+ * form supplies only its fields and its submit.
+ */
+export function CommandForm(props: CommandFormProps) {
+  const { surface, onDismiss } = props
+
+  if (surface === "dialog") {
+    return (
+      <Dialog open onOpenChange={(open) => !open && onDismiss()}>
+        <DialogContent className={props.className}>
+          <DialogHeader>
+            <DialogTitle>{props.title}</DialogTitle>
+            {props.description !== undefined && (
+              <DialogDescription>{props.description}</DialogDescription>
+            )}
+          </DialogHeader>
+          <CommandFormBody {...props} />
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  if (surface === "sheet") {
+    return <CommandFormSheet {...props} />
+  }
+
+  if (surface === "panel") {
+    return <CommandFormPanel {...props} />
+  }
+
+  return <CommandFormBody {...props} />
+}
+
+function CommandFormSheet(props: CommandFormProps) {
+  const isMobile = useIsMobile()
+
+  return (
+    <Sheet open onOpenChange={(open) => !open && props.onDismiss()}>
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "gap-0 overflow-y-auto",
+          isMobile ? "max-h-[92vh] rounded-t-xl" : "data-[side=right]:sm:max-w-lg",
+          props.className,
+        )}
+      >
+        <CommandFormPanel {...props} />
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+/** The panel page: a header with the way back, then the body and a sticky footer. */
+function CommandFormPanel(props: CommandFormProps) {
+  const { t } = useTranslation()
+
+  return (
+    <>
+      <div className="border-b px-4 pt-3 pb-4 pr-12">
+        {props.back !== undefined && (
+          <button
+            type="button"
+            onClick={props.back.onBack}
+            aria-label={t("commandForm.backTo", { record: props.back.label })}
+            className="mb-3 flex max-w-full items-center gap-1.5 rounded-md py-0.5 text-left text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <ArrowLeft className="size-4 shrink-0" aria-hidden />
+            <span className="truncate font-medium">{props.back.label}</span>
+          </button>
+        )}
+        <SheetTitle className="text-lg leading-snug font-semibold">
+          {props.title}
+        </SheetTitle>
+        {props.description !== undefined && (
+          <SheetDescription className="mt-1">{props.description}</SheetDescription>
+        )}
+      </div>
+      <CommandFormBody {...props} />
+    </>
+  )
+}
+
+/** The part every surface shares: the form, or the outcome that replaced it. */
+function CommandFormBody(props: CommandFormProps) {
+  const { t, i18n } = useTranslation()
+  const formId = useId()
+  const { surface, error, ready, submitting, onSubmit, onDismiss } = props
+  const outcome = outcomeOf(error)
+  // A dialog or a sheet takes the class on its overlay; a page or a panel
+  // page has only the form to put it on.
+  const bodyClassName =
+    surface === "page" || surface === "panel" ? props.className : undefined
+
+  if (outcome !== "form") {
+    const copy =
+      outcome === "conflict"
+        ? (props.conflict ?? {
+            title: t("commandForm.conflictTitle"),
+            body: t("commandForm.conflictBody"),
+          })
+        : (props.approval ?? {
+            title: t("commandForm.approvalTitle"),
+            body: t("commandForm.approvalBody"),
+          })
+    const reload = async () => {
+      if (props.onReload === undefined) onDismiss()
+      else await props.onReload()
+    }
+
+    return (
+      <div className={cn(surfaceBodyClass(surface), bodyClassName)}>
+        <div className={cn(surface === "panel" || surface === "sheet" ? "p-4" : undefined)}>
+          <div
+            role={outcome === "conflict" ? "alert" : "status"}
+            className={cn(
+              "rounded-lg px-3 py-2 text-sm",
+              outcome === "conflict"
+                ? "bg-warning/10 text-warning-foreground"
+                : "bg-info/10 text-info-foreground",
+            )}
+          >
+            <p className="font-semibold">{copy.title}</p>
+            <p className="mt-1">{copy.body}</p>
+          </div>
+        </div>
+        <Footer surface={surface}>
+          {outcome === "conflict" ? (
+            <Button
+              type="button"
+              className="min-h-11 flex-1 sm:flex-none"
+              onClick={() => void reload()}
+            >
+              {t("commandForm.reload")}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              className="min-h-11 flex-1 sm:flex-none"
+              onClick={onDismiss}
+            >
+              {t("commandForm.close")}
+            </Button>
+          )}
+        </Footer>
+      </div>
+    )
+  }
+
+  const informative =
+    error !== undefined && (props.informativeCodes ?? []).includes(error)
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!ready || submitting) return
+    onSubmit()
+  }
+
+  // On a page the submit spans the column; in an overlay it sits in the footer.
+  const submit = (
+    <Button
+      key="submit"
+      type="submit"
+      form={formId}
+      className={surface === "page" ? "min-h-11 flex-1" : "min-h-11 flex-1 sm:flex-none"}
+      disabled={!ready || submitting}
+    >
+      {submitting
+        ? (props.submittingLabel ?? t("commandForm.submitting"))
+        : props.submitLabel}
+    </Button>
+  )
+  const cancel = props.hideCancel ? null : (
+    <Button
+      key="cancel"
+      type="button"
+      variant="outline"
+      className={surface === "page" ? "min-h-11" : "min-h-11 flex-1 sm:flex-none"}
+      onClick={onDismiss}
+    >
+      {props.cancelLabel ?? t("commandForm.cancel")}
+    </Button>
+  )
+
+  return (
+    <form
+      id={formId}
+      noValidate
+      className={cn(surfaceBodyClass(surface), bodyClassName)}
+      onSubmit={handleSubmit}
+    >
+      <div
+        className={cn(
+          "flex flex-col gap-4",
+          (surface === "panel" || surface === "sheet") && "p-4",
+        )}
+      >
+        {surface === "page" && props.title !== undefined && (
+          <p className="text-sm font-semibold">{props.title}</p>
+        )}
+        {surface === "page" && props.description !== undefined && (
+          <p className="text-sm text-muted-foreground">{props.description}</p>
+        )}
+        {error !== undefined &&
+          (informative ? (
+            <p
+              role="status"
+              className="rounded-lg bg-info/10 px-4 py-3 text-sm text-info-foreground"
+            >
+              {errorMessage(i18n, error)}
+            </p>
+          ) : (
+            <ErrorBanner code={error} />
+          ))}
+        {props.children}
+      </div>
+      {/* Dialogs keep cancel first so it lands under the submit on a phone;
+          panels lead with the step itself, as the record footer does. */}
+      <Footer surface={surface}>
+        {surface === "dialog" ? [cancel, submit] : [submit, cancel]}
+      </Footer>
+    </form>
+  )
+}
+
+function surfaceBodyClass(surface: CommandSurface): string {
+  switch (surface) {
+    case "dialog":
+      return "flex flex-col gap-4"
+    case "page":
+      return "flex flex-col gap-4 rounded-xl border border-border bg-card p-4"
+    case "panel":
+    case "sheet":
+      return "flex flex-1 flex-col"
+  }
+}
+
+function Footer({
+  surface,
+  children,
+}: {
+  surface: CommandSurface
+  children: ReactNode
+}) {
+  if (surface === "dialog") return <DialogFooter>{children}</DialogFooter>
+  if (surface === "page") return <div className="flex gap-2">{children}</div>
+  return (
+    <SheetFooter className="sticky bottom-0 z-20 flex-row gap-2 border-t bg-popover">
+      {children}
+    </SheetFooter>
+  )
+}
+
+/**
+ * A value the form is fixed to, shown where its picker would be. The record
+ * panel pins the vehicle; a decision pins the record it decides.
+ */
+export function PinnedField({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <p className="rounded-md bg-muted px-3 py-2 text-sm whitespace-pre-line">
+        {children}
+      </p>
+    </div>
+  )
+}
+
+type SubmissionResult = { ok: true } | { ok: false; code: string }
+
+/**
+ * The submit bookkeeping every command form repeats: one attempt at a time,
+ * the last failure's code kept for the banner, cleared on the next attempt.
+ */
+export function useCommandSubmission() {
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string>()
+
+  async function run<R extends SubmissionResult>(
+    attempt: () => Promise<R>,
+  ): Promise<R> {
+    setError(undefined)
+    setSubmitting(true)
+    const result = await attempt()
+    setSubmitting(false)
+    const settled: SubmissionResult = result
+    if (!settled.ok) setError(settled.code)
+    return result
+  }
+
+  return { submitting, error, setError, run }
+}

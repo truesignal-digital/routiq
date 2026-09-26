@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
@@ -11,16 +11,14 @@ import type {
   reportIssuePayload,
   WorkOrderStatus,
 } from "@routiq/contracts";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  CommandForm,
+  useCommandSubmission,
+  type CommandFormBack,
+  type CommandSurface,
+} from "@/components/command-form.js";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FileUpload } from "@/components/ui/file-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,9 +29,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ErrorBanner } from "@/components/error-banner.js";
 import { MoneyInput } from "@/components/money-input.js";
 import { useActiveSession } from "../auth/store.js";
+import { PinnedAssetField } from "../assets/PinnedAssetField.js";
+import { useCategories } from "../documents/useCategories.js";
+import { localizedLabel } from "../lib/format.js";
 import { useAssetOptions } from "../assets/useAssetOptions.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -41,7 +41,7 @@ import { parseMoneyXaf } from "../finance/model.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
 import { workOrderReference } from "./columns.js";
-import { maintenanceQueryKey } from "./useMaintenance.js";
+import { maintenanceQueryKey, useIssues } from "./useMaintenance.js";
 
 type ReportIssuePayload = z.infer<typeof reportIssuePayload>;
 type CreateWorkOrderPayload = z.infer<typeof createWorkOrderPayload>;
@@ -66,6 +66,9 @@ export interface WorkOrderRef {
   rowVersion: number;
 }
 
+/** What a decision on a signalement needs: the row, its version, what it says. */
+export type IssueRef = Pick<IssueListItem, "id" | "rowVersion" | "description">;
+
 export type WorkOrderDecision =
   | "approve"
   | "reject"
@@ -86,6 +89,20 @@ export type MaintenanceDialog =
   | { kind: "decide-issue"; decision: IssueDecision; issue: IssueListItem };
 
 /**
+ * What every maintenance form takes from its host: where it renders, the
+ * record it was opened from, and what to do once it is finished. `onDone` runs
+ * after a commit (the host refreshes its own reads there), `onDismiss` after
+ * either a commit or a cancel.
+ */
+export interface MaintenanceFormHost {
+  surface: CommandSurface;
+  client?: CommandClient | undefined;
+  back?: CommandFormBack | undefined;
+  onDone?: (() => void) | undefined;
+  onDismiss: () => void;
+}
+
+/**
  * Every maintenance write moves the queue, the signalements and the open
  * sheet's detail; one prefix covers all three (ADR-0001 — the server decides
  * what a row now says, never the client).
@@ -93,77 +110,43 @@ export type MaintenanceDialog =
 function useMaintenanceCommit() {
   const queryClient = useQueryClient();
   const session = useActiveSession();
-
-  return async (successKey: string, warnings: readonly string[]) => {
-    notifyCommandSuccess("maintenance", successKey, warnings);
-    await queryClient.invalidateQueries({
+  const invalidate = () =>
+    queryClient.invalidateQueries({
       queryKey: maintenanceQueryKey(session?.workspaceSlug),
     });
+
+  return {
+    commit: async (successKey: string, warnings: readonly string[]) => {
+      notifyCommandSuccess("maintenance", successKey, warnings);
+      await invalidate();
+    },
+    invalidate,
   };
 }
 
-/**
- * The shell every maintenance form shares: title, error banner, fields, and the
- * two-button footer. Keeps each dialog down to the fields that differ.
- */
-function CommandDialog({
-  title,
-  description,
-  error,
-  submitLabel,
-  ready,
-  submitting,
-  onSubmit,
-  onDismiss,
-  children,
-}: {
-  title: string;
-  description?: string;
-  error: string | undefined;
-  submitLabel: string;
-  ready: boolean;
-  submitting: boolean;
-  onSubmit: () => void;
-  onDismiss: () => void;
-  children: ReactNode;
-}) {
+/** The labels and outcome wiring every maintenance form shares. */
+function useMaintenanceChrome(host: MaintenanceFormHost) {
   const { t } = useTranslation();
+  const { commit, invalidate } = useMaintenanceCommit();
 
-  return (
-    <Dialog open onOpenChange={(open) => !open && onDismiss()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description !== undefined && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
-        </DialogHeader>
-
-        {error !== undefined && <ErrorBanner code={error} />}
-
-        {children}
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11 flex-1 sm:flex-none"
-            onClick={onDismiss}
-          >
-            {t("maintenance.actions.cancel")}
-          </Button>
-          <Button
-            type="button"
-            className="min-h-11 flex-1 sm:flex-none"
-            disabled={!ready}
-            onClick={onSubmit}
-          >
-            {submitting ? t("maintenance.actions.submitting") : submitLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  return {
+    commit,
+    finish: () => {
+      host.onDone?.();
+      host.onDismiss();
+    },
+    chrome: {
+      surface: host.surface,
+      back: host.back,
+      submittingLabel: t("maintenance.actions.submitting"),
+      cancelLabel: t("maintenance.actions.cancel"),
+      onReload: async () => {
+        await invalidate();
+        host.onDismiss();
+      },
+      onDismiss: host.onDismiss,
+    },
+  };
 }
 
 function AssetField({
@@ -209,65 +192,72 @@ function AssetField({
   );
 }
 
-export function ReportIssueDialog({
-  client = commandClient,
-  onDismiss,
-}: {
-  client?: CommandClient;
-  onDismiss: () => void;
+export function ReportIssueForm({
+  pinnedAssetId,
+  pinnedAssetLabel,
+  ...host
+}: MaintenanceFormHost & {
+  /** Opened from a vehicle, the signalement is filed against it alone. */
+  pinnedAssetId?: string | undefined;
+  pinnedAssetLabel?: string | undefined;
 }) {
   const { t } = useTranslation();
-  const commit = useMaintenanceCommit();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
   // Minted once per opening: a retry replays the same signalement rather than
   // filing a second one beside it (§6, offline capture).
   const issueId = useRef(crypto.randomUUID());
-  const [assetId, setAssetId] = useState("");
+  const [chosenAssetId, setAssetId] = useState("");
   const [description, setDescription] = useState("");
   const [safetyCritical, setSafetyCritical] = useState(false);
   const [category, setCategory] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
+  const issueTypes = useCategories("ISSUE_TYPE");
+  const [artifactIds, setArtifactIds] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const intent = useRef<CommandIntent<ReportIssuePayload> | undefined>(undefined);
 
+  const assetId = pinnedAssetId ?? chosenAssetId;
   const trimmedDescription = description.trim();
-  const trimmedCategory = category.trim();
-  const ready = !submitting && assetId !== "" && trimmedDescription !== "";
+  const ready = !uploading && assetId !== "" && trimmedDescription !== "";
 
   async function submit() {
     if (!ready) return;
-    setError(undefined);
-    setSubmitting(true);
-
-    intent.current ??= createCommandIntent<ReportIssuePayload>(client, "report-issue", 1);
-    const result = await intent.current.submit({
-      issueId: issueId.current,
-      assetId,
-      description: trimmedDescription,
-      safetyCritical,
-      ...(trimmedCategory === "" ? {} : { category: trimmedCategory }),
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<ReportIssuePayload>(client, "report-issue", 1);
+      return intent.current.submit(
+        {
+          issueId: issueId.current,
+          assetId,
+          description: trimmedDescription,
+          safetyCritical,
+          // The category's stable code, like every other category reference.
+          ...(category === "" ? {} : { category }),
+        },
+        artifactIds.length > 0 ? { sourceArtifactIds: artifactIds } : {},
+      );
     });
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.code);
-      return;
-    }
+    if (!result.ok) return;
     await commit("issueReported", result.outcome.warnings);
-    onDismiss();
+    finish();
   }
 
   return (
-    <CommandDialog
+    <CommandForm
+      {...chrome}
       title={t("maintenance.issues.new")}
       description={t("maintenance.issues.newHint")}
-      error={error}
+      error={submission.error}
       submitLabel={t("maintenance.issues.newSubmit")}
       ready={ready}
-      submitting={submitting}
+      submitting={submission.submitting}
       onSubmit={() => void submit()}
-      onDismiss={onDismiss}
     >
-      <AssetField id="issue-asset" value={assetId} onChange={setAssetId} />
+      {pinnedAssetId === undefined ? (
+        <AssetField id="issue-asset" value={chosenAssetId} onChange={setAssetId} />
+      ) : (
+        <PinnedAssetField assetId={pinnedAssetId} label={pinnedAssetLabel} />
+      )}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="issue-description">{t("maintenance.fields.description")}</Label>
@@ -281,13 +271,32 @@ export function ReportIssueDialog({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="issue-category">{t("maintenance.fields.category")}</Label>
-        <Input
-          id="issue-category"
-          maxLength={80}
-          placeholder={t("maintenance.fields.categoryPlaceholder")}
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-        />
+        <Select
+          value={category || null}
+          onValueChange={(next) => {
+            const code = (next as string | null) ?? "";
+            setCategory(code);
+            // A kind of fault that is usually dangerous pre-checks the box; the
+            // reporter can still untick it.
+            const picked = issueTypes.data?.find((type) => type.code === code);
+            if (picked !== undefined) setSafetyCritical(picked.defaultSafetyCritical === true);
+          }}
+        >
+          <SelectTrigger
+            id="issue-category"
+            className="w-full"
+            aria-label={t("maintenance.fields.category")}
+          >
+            <SelectValue placeholder={t("maintenance.fields.choose")} />
+          </SelectTrigger>
+          <SelectContent>
+            {(issueTypes.data ?? []).map((type) => (
+              <SelectItem key={type.code} value={type.code}>
+                {localizedLabel(type)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Safety-critical grounds the truck the moment it is filed — the caption
@@ -306,39 +315,71 @@ export function ReportIssueDialog({
           </span>
         </Label>
       </div>
-    </CommandDialog>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">{t("maintenance.fields.photos")}</span>
+        <FileUpload
+          accept="image/*"
+          onChange={setArtifactIds}
+          onUploadingChange={setUploading}
+        />
+      </div>
+    </CommandForm>
   );
 }
 
-export function CreateWorkOrderDialog({
-  issue,
-  issues,
-  client = commandClient,
-  onDismiss,
-}: {
+interface CreateWorkOrderProps extends MaintenanceFormHost {
   /** Prefilled when the form was opened from a signalement row. */
   issue?: IssueListItem | undefined;
-  /** Signalements already loaded by the screen, offered for the chosen asset. */
-  issues: readonly IssueListItem[];
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
+  /**
+   * Signalements the host already loaded, offered for the chosen asset. A
+   * form pinned to one vehicle loads that vehicle's open ones itself.
+   */
+  issues?: readonly IssueListItem[] | undefined;
+  pinnedAssetId?: string | undefined;
+  pinnedAssetLabel?: string | undefined;
+}
+
+export function CreateWorkOrderForm(props: CreateWorkOrderProps) {
+  if (props.issues === undefined && props.pinnedAssetId !== undefined) {
+    return <CreateWorkOrderWithOpenIssues {...props} assetId={props.pinnedAssetId} />;
+  }
+  return <CreateWorkOrderFields {...props} issues={props.issues ?? []} />;
+}
+
+function CreateWorkOrderWithOpenIssues(props: CreateWorkOrderProps & { assetId: string }) {
+  const issuesQuery = useIssues({
+    assetId: props.assetId,
+    status: "OPEN",
+    branchId: ALL_BRANCHES,
+  });
+  const issues = issuesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  return <CreateWorkOrderFields {...props} issues={issues} />;
+}
+
+function CreateWorkOrderFields({
+  issue,
+  issues,
+  pinnedAssetId,
+  pinnedAssetLabel,
+  ...host
+}: CreateWorkOrderProps & { issues: readonly IssueListItem[] }) {
   const { t } = useTranslation();
-  const commit = useMaintenanceCommit();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
   const workOrderId = useRef(crypto.randomUUID());
-  const [assetId, setAssetId] = useState(issue?.asset.id ?? "");
+  const [chosenAssetId, setAssetId] = useState(issue?.asset.id ?? "");
   const [issueId, setIssueId] = useState(issue?.id ?? "");
   const [description, setDescription] = useState("");
   const [expectedCost, setExpectedCost] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
   const intent = useRef<CommandIntent<CreateWorkOrderPayload> | undefined>(undefined);
 
+  const assetId = pinnedAssetId ?? chosenAssetId;
   const trimmedDescription = description.trim();
   // Required: the approval threshold is read against it; 0 means no spend foreseen.
   const expectedCostMinor = parseMoneyXaf(expectedCost);
-  const ready =
-    !submitting && assetId !== "" && trimmedDescription !== "" && expectedCostMinor !== null;
+  const ready = assetId !== "" && trimmedDescription !== "" && expectedCostMinor !== null;
 
   // A work order references at most one signalement, and it has to be one filed
   // against the same truck — the server rejects the pairing otherwise. A
@@ -349,54 +390,52 @@ export function CreateWorkOrderDialog({
 
   async function submit() {
     if (!ready || expectedCostMinor === null) return;
-    setError(undefined);
-    setSubmitting(true);
-
-    intent.current ??= createCommandIntent<CreateWorkOrderPayload>(
-      client,
-      "create-work-order",
-      1,
-    );
-    const result = await intent.current.submit({
-      workOrderId: workOrderId.current,
-      assetId,
-      description: trimmedDescription,
-      currency: "XAF",
-      ...(issueId === "" ? {} : { issueId }),
-      expectedCostMinor,
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<CreateWorkOrderPayload>(
+        client,
+        "create-work-order",
+        1,
+      );
+      return intent.current.submit({
+        workOrderId: workOrderId.current,
+        assetId,
+        description: trimmedDescription,
+        currency: "XAF",
+        ...(issueId === "" ? {} : { issueId }),
+        expectedCostMinor,
+      });
     });
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.code);
-      return;
-    }
+    if (!result.ok) return;
     await commit("workOrderCreated", result.outcome.warnings);
-    onDismiss();
+    finish();
   }
 
   return (
-    <CommandDialog
+    <CommandForm
+      {...chrome}
       title={t("maintenance.workOrders.new")}
       description={t("maintenance.workOrders.newHint")}
-      error={error}
+      error={submission.error}
       submitLabel={t("maintenance.workOrders.newSubmit")}
       ready={ready}
-      submitting={submitting}
+      submitting={submission.submitting}
       onSubmit={() => void submit()}
-      onDismiss={onDismiss}
     >
-      <AssetField
-        id="work-order-asset"
-        value={assetId}
-        disabled={issue !== undefined}
-        onChange={(next) => {
-          setAssetId(next);
-          // The signalement belongs to the old truck; keeping it would send an
-          // ISSUE_ASSET_MISMATCH the operator never chose.
-          setIssueId("");
-        }}
-      />
+      {pinnedAssetId === undefined ? (
+        <AssetField
+          id="work-order-asset"
+          value={chosenAssetId}
+          disabled={issue !== undefined}
+          onChange={(next) => {
+            setAssetId(next);
+            // The signalement belongs to the old truck; keeping it would send an
+            // ISSUE_ASSET_MISMATCH the operator never chose.
+            setIssueId("");
+          }}
+        />
+      ) : (
+        <PinnedAssetField assetId={pinnedAssetId} label={pinnedAssetLabel} />
+      )}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="work-order-issue">{t("maintenance.fields.issue")}</Label>
@@ -413,7 +452,10 @@ export function CreateWorkOrderDialog({
             <SelectValue placeholder={t("maintenance.fields.preventive")} />
           </SelectTrigger>
           <SelectContent>
-            {linkable.map((candidate) => (
+            {(issue !== undefined && !linkable.some((c) => c.id === issue.id)
+              ? [issue, ...linkable]
+              : linkable
+            ).map((candidate) => (
               <SelectItem key={candidate.id} value={candidate.id}>
                 {candidate.description}
               </SelectItem>
@@ -448,74 +490,62 @@ export function CreateWorkOrderDialog({
           onValueChange={setExpectedCost}
         />
       </div>
-    </CommandDialog>
+    </CommandForm>
   );
 }
 
-export function CompleteWorkOrderDialog({
+export function CompleteWorkOrderForm({
   workOrder,
-  client = commandClient,
-  onDismiss,
-}: {
-  workOrder: WorkOrderRef;
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
+  ...host
+}: MaintenanceFormHost & { workOrder: WorkOrderRef }) {
   const { t } = useTranslation();
-  const commit = useMaintenanceCommit();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
   const [actualCost, setActualCost] = useState("");
   const [summary, setSummary] = useState("");
   const [resolveLinkedIssue, setResolveLinkedIssue] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
   const intent = useRef<CommandIntent<CompleteWorkOrderPayload> | undefined>(undefined);
 
   const actualCostMinor = parseMoneyXaf(actualCost);
   const costUsable = actualCost.trim() === "" || actualCostMinor !== null;
   const trimmedSummary = summary.trim();
   const hasIssue = workOrder.issueId !== null;
-  const ready = !submitting && costUsable;
 
   async function submit() {
-    if (!ready) return;
-    setError(undefined);
-    setSubmitting(true);
-
-    intent.current ??= createCommandIntent<CompleteWorkOrderPayload>(
-      client,
-      "complete-work-order",
-      1,
-    );
-    const result = await intent.current.submit(
-      {
-        workOrderId: workOrder.id,
-        currency: "XAF",
-        ...(actualCostMinor === null ? {} : { actualCostMinor }),
-        ...(trimmedSummary === "" ? {} : { summary: trimmedSummary }),
-        ...(hasIssue ? { resolveLinkedIssue } : {}),
-      },
-      { expectedVersion: workOrder.rowVersion },
-    );
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.code);
-      return;
-    }
+    if (!costUsable) return;
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<CompleteWorkOrderPayload>(
+        client,
+        "complete-work-order",
+        1,
+      );
+      return intent.current.submit(
+        {
+          workOrderId: workOrder.id,
+          currency: "XAF",
+          ...(actualCostMinor === null ? {} : { actualCostMinor }),
+          ...(trimmedSummary === "" ? {} : { summary: trimmedSummary }),
+          ...(hasIssue ? { resolveLinkedIssue } : {}),
+        },
+        { expectedVersion: workOrder.rowVersion },
+      );
+    });
+    if (!result.ok) return;
     await commit("completionDeclared", result.outcome.warnings);
-    onDismiss();
+    finish();
   }
 
   return (
-    <CommandDialog
+    <CommandForm
+      {...chrome}
       title={t("maintenance.actions.completeTitle")}
       description={t("maintenance.actions.completeHint")}
-      error={error}
+      error={submission.error}
       submitLabel={t("maintenance.actions.complete")}
-      ready={ready}
-      submitting={submitting}
+      ready={costUsable}
+      submitting={submission.submitting}
       onSubmit={() => void submit()}
-      onDismiss={onDismiss}
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="work-order-actual-cost">
@@ -558,65 +588,54 @@ export function CompleteWorkOrderDialog({
           </Label>
         </div>
       )}
-    </CommandDialog>
+    </CommandForm>
   );
 }
 
-export function CancelWorkOrderDialog({
+export function CancelWorkOrderForm({
   workOrder,
-  client = commandClient,
-  onDismiss,
-}: {
-  workOrder: WorkOrderRef;
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
+  ...host
+}: MaintenanceFormHost & { workOrder: WorkOrderRef }) {
   const { t } = useTranslation();
-  const commit = useMaintenanceCommit();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
   const [reason, setReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
   const intent = useRef<CommandIntent<CancelWorkOrderPayload> | undefined>(undefined);
 
   // A cancellation with no motive leaves the audit trail unable to answer why
   // the job never happened, which is the only question it will be asked.
   const trimmedReason = reason.trim();
-  const ready = !submitting && trimmedReason !== "";
+  const ready = trimmedReason !== "";
 
   async function submit() {
     if (!ready) return;
-    setError(undefined);
-    setSubmitting(true);
-
-    intent.current ??= createCommandIntent<CancelWorkOrderPayload>(
-      client,
-      "cancel-work-order",
-      1,
-    );
-    const result = await intent.current.submit(
-      { workOrderId: workOrder.id, reason: trimmedReason },
-      { expectedVersion: workOrder.rowVersion },
-    );
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.code);
-      return;
-    }
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<CancelWorkOrderPayload>(
+        client,
+        "cancel-work-order",
+        1,
+      );
+      return intent.current.submit(
+        { workOrderId: workOrder.id, reason: trimmedReason },
+        { expectedVersion: workOrder.rowVersion },
+      );
+    });
+    if (!result.ok) return;
     await commit("workOrderCancelled", result.outcome.warnings);
-    onDismiss();
+    finish();
   }
 
   return (
-    <CommandDialog
+    <CommandForm
+      {...chrome}
       title={t("maintenance.actions.cancelWorkOrderTitle")}
       description={t("maintenance.actions.cancelWorkOrderHint")}
-      error={error}
+      error={submission.error}
       submitLabel={t("maintenance.actions.cancelWorkOrder")}
       ready={ready}
-      submitting={submitting}
+      submitting={submission.submitting}
       onSubmit={() => void submit()}
-      onDismiss={onDismiss}
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="work-order-cancel-reason">{t("maintenance.fields.reason")}</Label>
@@ -627,92 +646,7 @@ export function CancelWorkOrderDialog({
           onChange={(event) => setReason(event.target.value)}
         />
       </div>
-    </CommandDialog>
-  );
-}
-
-/**
- * One decision on one record. An approval or a resolution may carry a note; a
- * refusal or a dismissal must say why, because the trail is the only place the
- * motive survives.
- */
-function DecisionDialog({
-  commandName,
-  subject,
-  expectedVersion,
-  text,
-  copy,
-  context,
-  successKey,
-  client,
-  onDismiss,
-}: {
-  commandName: string;
-  subject: DecisionPayload;
-  expectedVersion: number;
-  text: "note" | "reason";
-  copy: { title: string; hint: string; submit: string };
-  /** What the decision is about, when the dialog was not opened from its sheet. */
-  context?: string | undefined;
-  successKey: string;
-  client: CommandClient;
-  onDismiss: () => void;
-}) {
-  const { t } = useTranslation();
-  const commit = useMaintenanceCommit();
-  const [value, setValue] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
-  const intent = useRef<CommandIntent<DecisionPayload> | undefined>(undefined);
-
-  const trimmed = value.trim();
-  const ready = !submitting && (text === "note" || trimmed !== "");
-
-  async function submit() {
-    if (!ready) return;
-    setError(undefined);
-    setSubmitting(true);
-
-    intent.current ??= createCommandIntent<DecisionPayload>(client, commandName, 1);
-    const result = await intent.current.submit(
-      { ...subject, ...(trimmed === "" ? {} : { [text]: trimmed }) },
-      { expectedVersion },
-    );
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.code);
-      return;
-    }
-    await commit(successKey, result.outcome.warnings);
-    onDismiss();
-  }
-
-  return (
-    <CommandDialog
-      title={copy.title}
-      description={copy.hint}
-      error={error}
-      submitLabel={copy.submit}
-      ready={ready}
-      submitting={submitting}
-      onSubmit={() => void submit()}
-      onDismiss={onDismiss}
-    >
-      {context !== undefined && (
-        <p className="text-sm text-muted-foreground">{context}</p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="decision-text">{t(`maintenance.fields.${text}`)}</Label>
-        <Textarea
-          id="decision-text"
-          maxLength={500}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </div>
-    </CommandDialog>
+    </CommandForm>
   );
 }
 
@@ -723,6 +657,76 @@ interface DecisionSpec {
   title: string;
   hint: string;
   submit: string;
+}
+
+/**
+ * One decision on one record. An approval or a resolution may carry a note; a
+ * refusal or a dismissal must say why, because the trail is the only place the
+ * motive survives.
+ */
+function DecisionForm({
+  spec,
+  subject,
+  expectedVersion,
+  context,
+  ...host
+}: MaintenanceFormHost & {
+  spec: DecisionSpec;
+  subject: DecisionPayload;
+  expectedVersion: number;
+  /** What the decision is about, when the form was not opened from its record. */
+  context?: string | undefined;
+}) {
+  const { t } = useTranslation();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
+  const [value, setValue] = useState("");
+  const intent = useRef<CommandIntent<DecisionPayload> | undefined>(undefined);
+
+  const trimmed = value.trim();
+  const ready = spec.text === "note" || trimmed !== "";
+
+  async function submit() {
+    if (!ready) return;
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<DecisionPayload>(client, spec.command, 1);
+      return intent.current.submit(
+        { ...subject, ...(trimmed === "" ? {} : { [spec.text]: trimmed }) },
+        { expectedVersion },
+      );
+    });
+    if (!result.ok) return;
+    await commit(spec.successKey, result.outcome.warnings);
+    finish();
+  }
+
+  return (
+    <CommandForm
+      {...chrome}
+      title={t(spec.title)}
+      description={t(spec.hint)}
+      error={submission.error}
+      submitLabel={t(spec.submit)}
+      ready={ready}
+      submitting={submission.submitting}
+      onSubmit={() => void submit()}
+    >
+      {context !== undefined && (
+        <p className="text-sm text-muted-foreground">{context}</p>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="decision-text">{t(`maintenance.fields.${spec.text}`)}</Label>
+        <Textarea
+          id="decision-text"
+          maxLength={500}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </div>
+    </CommandForm>
+  );
 }
 
 /**
@@ -784,125 +788,125 @@ const ISSUE_DECISIONS: Record<IssueDecision, DecisionSpec> = {
   },
 };
 
-export function WorkOrderDecisionDialog({
+export function WorkOrderDecisionForm({
   workOrder,
   decision,
-  client = commandClient,
-  onDismiss,
-}: {
-  workOrder: WorkOrderRef;
-  decision: WorkOrderDecision;
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
-  const { t } = useTranslation();
-  const spec = WORK_ORDER_DECISIONS[decision];
-
+  ...host
+}: MaintenanceFormHost & { workOrder: WorkOrderRef; decision: WorkOrderDecision }) {
   return (
-    <DecisionDialog
-      commandName={spec.command}
+    <DecisionForm
+      {...host}
+      spec={WORK_ORDER_DECISIONS[decision]}
       subject={{ workOrderId: workOrder.id }}
       expectedVersion={workOrder.rowVersion}
-      text={spec.text}
-      copy={{ title: t(spec.title), hint: t(spec.hint), submit: t(spec.submit) }}
-      successKey={spec.successKey}
-      client={client}
-      onDismiss={onDismiss}
     />
   );
 }
 
-export function IssueDecisionDialog({
+export function IssueDecisionForm({
   issue,
   decision,
-  client = commandClient,
-  onDismiss,
-}: {
-  issue: IssueListItem;
-  decision: IssueDecision;
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
-  const { t } = useTranslation();
-  const spec = ISSUE_DECISIONS[decision];
-
+  ...host
+}: MaintenanceFormHost & { issue: IssueRef; decision: IssueDecision }) {
   return (
-    <DecisionDialog
-      commandName={spec.command}
+    <DecisionForm
+      {...host}
+      spec={ISSUE_DECISIONS[decision]}
       subject={{ issueId: issue.id }}
       expectedVersion={issue.rowVersion}
-      text={spec.text}
-      copy={{ title: t(spec.title), hint: t(spec.hint), submit: t(spec.submit) }}
       context={issue.description}
-      successKey={spec.successKey}
-      client={client}
-      onDismiss={onDismiss}
     />
   );
 }
 
-export function ReleaseAssetDialog({
-  workOrder,
-  client = commandClient,
-  onDismiss,
-}: {
-  workOrder: WorkOrderRef;
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
+/**
+ * What a return to service stands on. Normally the completed work order that
+ * answered the grounding signalement; failing that, the signalement itself once
+ * it was resolved or dismissed, with a reason saying why no repair was needed.
+ */
+export type ReleaseSubject =
+  | { kind: "work-order"; workOrder: WorkOrderRef }
+  | { kind: "override"; assetId: string; issue: IssueRef };
+
+export function ReleaseForm({
+  subject,
+  ...host
+}: MaintenanceFormHost & { subject: ReleaseSubject }) {
   const { t } = useTranslation();
-  const commit = useMaintenanceCommit();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
   const [note, setNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
+  const [overrideReason, setOverrideReason] = useState("");
   const intent = useRef<CommandIntent<ReleaseAssetPayload> | undefined>(undefined);
 
   const trimmedNote = note.trim();
+  const trimmedReason = overrideReason.trim();
+  const ready = subject.kind === "work-order" || trimmedReason !== "";
 
   async function submit() {
-    if (submitting) return;
-    setError(undefined);
-    setSubmitting(true);
+    if (!ready) return;
+    // The version quoted is the record the release stands on: the work order,
+    // or on the override path the grounding signalement (the server checks
+    // the same row).
+    const payload: ReleaseAssetPayload =
+      subject.kind === "work-order"
+        ? { assetId: subject.workOrder.assetId, workOrderId: subject.workOrder.id }
+        : { assetId: subject.assetId, overrideReason: trimmedReason };
+    const expectedVersion =
+      subject.kind === "work-order" ? subject.workOrder.rowVersion : subject.issue.rowVersion;
 
-    intent.current ??= createCommandIntent<ReleaseAssetPayload>(
-      client,
-      "release-asset-to-service",
-      1,
-    );
-    const result = await intent.current.submit(
-      {
-        assetId: workOrder.assetId,
-        workOrderId: workOrder.id,
-        ...(trimmedNote === "" ? {} : { note: trimmedNote }),
-      },
-      { expectedVersion: workOrder.rowVersion },
-    );
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setError(result.code);
-      return;
-    }
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<ReleaseAssetPayload>(
+        client,
+        "release-asset-to-service",
+        1,
+      );
+      return intent.current.submit(
+        { ...payload, ...(trimmedNote === "" ? {} : { note: trimmedNote }) },
+        { expectedVersion },
+      );
+    });
+    if (!result.ok) return;
     await commit("assetReleased", result.outcome.warnings);
-    onDismiss();
+    finish();
   }
 
   return (
-    <CommandDialog
+    <CommandForm
+      {...chrome}
       title={t("maintenance.actions.releaseTitle")}
       description={t("maintenance.actions.releaseHint")}
-      error={error}
+      error={submission.error}
       submitLabel={t("maintenance.actions.release")}
-      ready={!submitting}
-      submitting={submitting}
+      ready={ready}
+      submitting={submission.submitting}
       onSubmit={() => void submit()}
-      onDismiss={onDismiss}
     >
       <p className="text-sm text-muted-foreground">
-        {t("maintenance.actions.releaseSubject", {
-          reference: workOrderReference(workOrder.id),
-        })}
+        {subject.kind === "work-order"
+          ? t("maintenance.actions.releaseSubject", {
+              reference: workOrderReference(subject.workOrder.id),
+            })
+          : subject.issue.description}
       </p>
+
+      {subject.kind === "override" && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="release-override-reason">
+            {t("maintenance.fields.overrideReason")}
+          </Label>
+          <Textarea
+            id="release-override-reason"
+            maxLength={500}
+            value={overrideReason}
+            onChange={(event) => setOverrideReason(event.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("maintenance.fields.overrideReasonHint")}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="work-order-release-note">{t("maintenance.fields.note")}</Label>
@@ -913,6 +917,56 @@ export function ReleaseAssetDialog({
           onChange={(event) => setNote(event.target.value)}
         />
       </div>
-    </CommandDialog>
+    </CommandForm>
+  );
+}
+
+// The /maintenance screen opens each form as a dialog.
+
+interface DialogHost {
+  client?: CommandClient;
+  onDismiss: () => void;
+}
+
+export function ReportIssueDialog(props: DialogHost) {
+  return <ReportIssueForm surface="dialog" {...props} />;
+}
+
+export function CreateWorkOrderDialog({
+  issues,
+  ...props
+}: DialogHost & {
+  issue?: IssueListItem | undefined;
+  issues: readonly IssueListItem[];
+}) {
+  return <CreateWorkOrderForm surface="dialog" issues={issues} {...props} />;
+}
+
+export function CompleteWorkOrderDialog(props: DialogHost & { workOrder: WorkOrderRef }) {
+  return <CompleteWorkOrderForm surface="dialog" {...props} />;
+}
+
+export function CancelWorkOrderDialog(props: DialogHost & { workOrder: WorkOrderRef }) {
+  return <CancelWorkOrderForm surface="dialog" {...props} />;
+}
+
+export function WorkOrderDecisionDialog(
+  props: DialogHost & { workOrder: WorkOrderRef; decision: WorkOrderDecision },
+) {
+  return <WorkOrderDecisionForm surface="dialog" {...props} />;
+}
+
+export function IssueDecisionDialog(
+  props: DialogHost & { issue: IssueListItem; decision: IssueDecision },
+) {
+  return <IssueDecisionForm surface="dialog" {...props} />;
+}
+
+export function ReleaseAssetDialog({
+  workOrder,
+  ...props
+}: DialogHost & { workOrder: WorkOrderRef }) {
+  return (
+    <ReleaseForm surface="dialog" subject={{ kind: "work-order", workOrder }} {...props} />
   );
 }
