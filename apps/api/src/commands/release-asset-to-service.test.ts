@@ -61,6 +61,7 @@ describe("release-asset-to-service.v1", () => {
           workOrderId: otherWorkspaceWorkOrderId,
           assetId: foreignAssetId,
           description: "Révision chez le voisin",
+          expectedCostMinor: 0,
         })
       ).statusCode,
     ).toBe(200);

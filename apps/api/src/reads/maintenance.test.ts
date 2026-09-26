@@ -186,6 +186,7 @@ describe("work order and signalement reads", () => {
       workOrderId: cancelledWorkOrderId,
       assetId: dlaAssetId,
       description: "Peinture de la cabine",
+      expectedCostMinor: 0,
     });
     await command(
       managerToken,
@@ -210,6 +211,7 @@ describe("work order and signalement reads", () => {
       workOrderId: ydeWorkOrderId,
       assetId: ydeAssetId,
       description: "Recharge de climatisation",
+      expectedCostMinor: 0,
     });
 
     // A second order on the same asset carries its own cost; the lifecycle
@@ -242,6 +244,7 @@ describe("work order and signalement reads", () => {
       assetId: flipAssetId,
       issueId: flipIssueId,
       description: "Géométrie et rotules",
+      expectedCostMinor: 0,
     });
     await command(
       managerToken,
@@ -282,6 +285,7 @@ describe("work order and signalement reads", () => {
       assetId: otherAssetId,
       issueId: otherIssueId,
       description: "Ne doit jamais apparaître",
+      expectedCostMinor: 0,
     });
   });
 
@@ -416,7 +420,7 @@ describe("work order and signalement reads", () => {
       expect(response.items[0]).toMatchObject({
         id: ydeWorkOrderId,
         issue: null,
-        expectedCostMinor: null,
+        expectedCostMinor: 0,
         actualCostMinor: null,
       });
     });
@@ -696,6 +700,7 @@ describe("work order and signalement reads", () => {
         workOrderId: costOrderId,
         assetId: dlaAssetId,
         description: "Embrayage",
+        expectedCostMinor: 0,
       });
       const expense = (
         token: string,
@@ -870,6 +875,7 @@ describe("work order makers and the issue detail read", () => {
       workOrderId,
       assetId: truck,
       description: "Vidange",
+      expectedCostMinor: 0,
     });
     const hervé = { principalId: mechanic.principalId, displayName: "Hervé", scope: "WORKSPACE" };
     expect(await order(workOrderId)).toMatchObject({ createdBy: hervé, completedBy: null });

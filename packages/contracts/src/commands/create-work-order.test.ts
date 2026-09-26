@@ -14,6 +14,7 @@ const valid = {
     workOrderId: "550e8400-e29b-41d4-a716-446655440000",
     assetId: "550e8400-e29b-41d4-a716-446655440001",
     description: "Replace tire",
+    expectedCostMinor: 0,
     currency: "XAF",
   },
 };
@@ -41,13 +42,26 @@ describe("createWorkOrderCommand", () => {
     ).toBe("550e8400-e29b-41d4-a716-446655440002");
   });
 
-  it("accepts optional expectedCostMinor", () => {
+  it("requires expectedCostMinor, which the approval threshold is read against", () => {
+    const { expectedCostMinor: _omitted, ...withoutCost } = valid.payload;
+    expect(
+      createWorkOrderCommand.safeParse({ ...valid, payload: withoutCost }).success,
+    ).toBe(false);
     expect(
       createWorkOrderCommand.parse({
         ...valid,
         payload: { ...valid.payload, expectedCostMinor: 50000 },
       }).payload.expectedCostMinor,
     ).toBe(50000);
+  });
+
+  it("rejects a fractional expectedCostMinor", () => {
+    expect(
+      createWorkOrderCommand.safeParse({
+        ...valid,
+        payload: { ...valid.payload, expectedCostMinor: 10.5 },
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects negative expectedCostMinor", () => {

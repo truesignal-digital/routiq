@@ -331,6 +331,7 @@ describe("GET /v1/assets/:assetId/attention", () => {
       assetId: truck,
       issueId,
       description: "Changer le rétroviseur",
+      expectedCostMinor: 0,
     });
     expect(codes((await attention(manager.token, truck)).items)).toEqual(["WORK_ORDER_IN_PROGRESS"]);
   });

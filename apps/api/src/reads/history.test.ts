@@ -571,7 +571,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         const workOrderId = randomUUID();
         await command(
           "create-work-order",
-          { workOrderId, assetId, description: "Révision" },
+          { workOrderId, assetId, description: "Révision", expectedCostMinor: 0 },
           as,
         );
         const issueId = randomUUID();

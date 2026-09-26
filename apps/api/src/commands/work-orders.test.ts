@@ -77,6 +77,7 @@ describe("work-order commands", () => {
           workOrderId: otherWorkspaceWorkOrderId,
           assetId: foreignAssetId,
           description: "Révision chez le voisin",
+          expectedCostMinor: 0,
         })
       ).statusCode,
     ).toBe(200);
@@ -119,6 +120,7 @@ describe("work-order commands", () => {
       workOrderId,
       assetId,
       description: "Remplacement plaquettes",
+      expectedCostMinor: 0,
       ...payload,
     });
     expect(response.statusCode).toBe(200);
@@ -249,6 +251,7 @@ describe("work-order commands", () => {
         assetId,
         issueId,
         description: "Travaux sur le mauvais camion",
+        expectedCostMinor: 0,
       });
       expect(response.statusCode).toBe(422);
       expect(response.json()).toMatchObject({
@@ -262,6 +265,7 @@ describe("work-order commands", () => {
         assetId,
         issueId: randomUUID(),
         description: "Travaux sur un signalement inexistant",
+        expectedCostMinor: 0,
       });
       expect(response.statusCode).toBe(422);
       expect(response.json()).toMatchObject({
@@ -283,6 +287,7 @@ describe("work-order commands", () => {
         workOrderId: randomUUID(),
         assetId: soldAssetId,
         description: "Réparer une épave",
+        expectedCostMinor: 0,
       });
       expect(response.statusCode).toBe(409);
       expect(response.json()).toMatchObject({

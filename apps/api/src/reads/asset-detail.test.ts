@@ -569,6 +569,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
       assetId,
       issueId,
       description: "Remplacer les flexibles",
+      expectedCostMinor: 0,
     });
     await api.ok(
       mechanic.token,

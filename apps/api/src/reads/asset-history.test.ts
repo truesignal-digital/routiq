@@ -280,6 +280,7 @@ describe("GET /v1/assets/:assetId/history", () => {
       assetId: truck,
       issueId,
       description: "Géométrie du train avant",
+      expectedCostMinor: 0,
     });
 
     const maintenance = await all(admin.token, truck, "&kind=MAINTENANCE");

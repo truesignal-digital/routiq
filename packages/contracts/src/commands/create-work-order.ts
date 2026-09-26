@@ -6,7 +6,11 @@ export const createWorkOrderPayload = z.object({
   assetId: z.uuid(),
   issueId: z.uuid().optional(),
   description: z.string().min(1).max(500),
-  expectedCostMinor: moneyMinor.nonnegative().optional(),
+  /**
+   * Required: the approval rule is read against it, so an order without one
+   * would slip under every amount threshold. 0 is an honest "no spend foreseen".
+   */
+  expectedCostMinor: moneyMinor.nonnegative(),
   currency: currencyCode.default("XAF"),
 });
 
