@@ -1557,7 +1557,8 @@
   },
   "vehicle": {
     "forms": {
-      "pinnedVehicle": "Véhicule"
+      "pinnedVehicle": "Véhicule",
+      "lastReading": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}"
     }
   }
 }
