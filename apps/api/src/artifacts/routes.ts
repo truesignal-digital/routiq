@@ -3,19 +3,29 @@ import type {
   FastifyBaseLogger,
   FastifyInstance,
   FastifyReply,
+  FastifyRequest,
   preHandlerHookHandler,
 } from "fastify";
-import { and, eq } from "drizzle-orm";
+import { and, eq, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
-import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
-import type { ObjectStorage } from "../storage/types.js";
 import { canReadLedger, FINANCE_READER_ROLES } from "@routiq/contracts";
-import { financialEntries, sourceArtifacts } from "../db/schema.js";
+import type { AuthContext } from "../auth/types.js";
+import type { Db } from "../db/client.js";
+import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import type { ObjectStorage } from "../storage/types.js";
+import {
+  commandSourceArtifacts,
+  documents,
+  financialEntries,
+  operationalIssues,
+  sourceArtifacts,
+} from "../db/schema.js";
+import { requireScopedAsset } from "../reads/asset-scope.js";
 import { entryEvidenceFiles, hasPostingWithoutWorkOrder } from "../reads/entry-evidence.js";
 import { invalidRequest, notFound, passReadGate, ReadRefusal } from "../reads/read-gate.js";
+import { linkedArtifact } from "../reads/record-artifacts.js";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -298,54 +308,144 @@ export function registerArtifactRoutes(
     },
   );
 
-  // GET /v1/artifacts/:id/download-url
+  /**
+   * Serves a stored file once `locate`, run inside the caller's workspace, has
+   * authorized the record it hangs off and returned the file's row. Every
+   * refusal is thrown from `locate`, so none of them ever reaches storage.
+   */
+  async function sendDownloadUrl(
+    req: FastifyRequest,
+    reply: FastifyReply,
+    event: string,
+    locate: (tx: TenantTx, auth: AuthContext) => Promise<ArtifactRow>,
+  ) {
+    if (!req.auth) {
+      return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
+    }
+    const auth = req.auth;
+    try {
+      const artifact = await inWorkspace(db, auth.workspaceId, (tx) => locate(tx, auth));
+      const presigned = await presignVerifiedArtifact(storage, auth.workspaceId, artifact, req.log);
+      if ("integrityMismatch" in presigned) {
+        return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
+      }
+      return presigned;
+    } catch (error) {
+      if (error instanceof ReadRefusal) {
+        return reply.status(error.status).send(error.body());
+      }
+      req.log.error({ err: error, event });
+      return reply.status(500).send({ error: { code: "DOWNLOAD_URL_FAILED" } });
+    }
+  }
+
+  /**
+   * The caller's own upload, before any command links it — the preview of a
+   * file still being attached. Once a command links a file it belongs to that
+   * record and downloads only through the record's route, which checks who may
+   * read the record (review P1). Anything else is the same 404.
+   */
   app.get(
     "/v1/artifacts/:id/download-url",
     { preHandler: requireAuth },
-    async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
-      }
-      const auth = req.auth;
+    async (req, reply) =>
+      sendDownloadUrl(req, reply, "download_url.failed", async (tx, auth) => {
+        const params = z.object({ id: z.uuid() }).safeParse(req.params);
+        if (!params.success) throw invalidRequest();
+        const { id } = params.data;
+        const [row] = await tx
+          .select()
+          .from(sourceArtifacts)
+          .where(
+            and(
+              eq(sourceArtifacts.workspaceId, auth.workspaceId),
+              eq(sourceArtifacts.id, id),
+              eq(sourceArtifacts.uploadedByPrincipalId, auth.principalId),
+              notExists(
+                tx
+                  .select({ one: sql`1` })
+                  .from(commandSourceArtifacts)
+                  .where(
+                    and(
+                      eq(commandSourceArtifacts.workspaceId, auth.workspaceId),
+                      eq(commandSourceArtifacts.artifactId, id),
+                    ),
+                  ),
+              ),
+            ),
+          )
+          .limit(1);
+        if (!row) throw notFound();
+        return row;
+      }),
+  );
 
-      const { id } = req.params as { id: string };
+  /**
+   * A scan of a vehicle document, for a caller who may read the vehicle's
+   * documents: the DOCUMENTS module, the vehicle in the caller's branches, the
+   * document on that vehicle, the file linked by the command that recorded it.
+   */
+  app.get(
+    "/v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url",
+    { preHandler: requireAuth },
+    async (req, reply) =>
+      sendDownloadUrl(req, reply, "document_download_url.failed", async (tx, auth) => {
+        const params = z
+          .object({ assetId: z.uuid(), documentId: z.uuid(), artifactId: z.uuid() })
+          .safeParse(req.params);
+        if (!params.success) throw invalidRequest();
+        const { assetId, documentId, artifactId } = params.data;
+        await passReadGate(tx, auth, { module: "DOCUMENTS" });
+        await requireScopedAsset(tx, auth, assetId);
+        const [document] = await tx
+          .select({ createdByCommandId: documents.createdByCommandId })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.workspaceId, auth.workspaceId),
+              eq(documents.id, documentId),
+              eq(documents.assetId, assetId),
+            ),
+          )
+          .limit(1);
+        if (!document) throw notFound();
+        return linkedArtifact(tx, auth.workspaceId, document.createdByCommandId, artifactId);
+      }),
+  );
 
-      try {
-        const artifact = await inWorkspace(
-          db,
-          auth.workspaceId,
-          async (tx) => {
-            const [row] = await tx
-              .select()
-              .from(sourceArtifacts)
-              .where(
-                and(
-                  eq(sourceArtifacts.id, id),
-                  eq(sourceArtifacts.workspaceId, auth.workspaceId),
-                ),
-              );
-            return row;
-          },
-        );
-
-        if (!artifact) {
-          return reply.status(404).send({
-            error: { code: "REFERENCE_NOT_FOUND" },
-          });
-        }
-
-        const presigned = await presignVerifiedArtifact(storage, auth.workspaceId, artifact, req.log);
-        if ("integrityMismatch" in presigned) {
-          return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
-        }
-        return presigned;
-      } catch (error) {
-        req.log.error({ err: error, event: "download_url.failed", id });
-        return reply.status(500).send({
-          error: { code: "DOWNLOAD_URL_FAILED" },
-        });
-      }
-    },
+  /**
+   * A photo taken with a signalement, for a caller who may read the issue: the
+   * MAINTENANCE module, the issue's vehicle in the caller's branches, the file
+   * linked by the report-issue call that recorded it.
+   */
+  app.get(
+    "/v1/issues/:issueId/artifacts/:artifactId/download-url",
+    { preHandler: requireAuth },
+    async (req, reply) =>
+      sendDownloadUrl(req, reply, "issue_download_url.failed", async (tx, auth) => {
+        const params = z
+          .object({ issueId: z.uuid(), artifactId: z.uuid() })
+          .safeParse(req.params);
+        if (!params.success) throw invalidRequest();
+        const { issueId, artifactId } = params.data;
+        await passReadGate(tx, auth, { module: "MAINTENANCE" });
+        const [issue] = await tx
+          .select({
+            assetId: operationalIssues.assetId,
+            createdByCommandId: operationalIssues.createdByCommandId,
+          })
+          .from(operationalIssues)
+          .where(
+            and(
+              eq(operationalIssues.workspaceId, auth.workspaceId),
+              eq(operationalIssues.id, issueId),
+            ),
+          )
+          .limit(1);
+        if (!issue) throw notFound();
+        await requireScopedAsset(tx, auth, issue.assetId);
+        return linkedArtifact(tx, auth.workspaceId, issue.createdByCommandId, artifactId);
+      }),
   );
 
   /**
@@ -362,80 +462,60 @@ export function registerArtifactRoutes(
   app.get(
     "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
     { preHandler: requireAuth },
-    async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
-      }
-      const auth = req.auth;
-
-      try {
+    async (req, reply) =>
+      sendDownloadUrl(req, reply, "entry_evidence_download_url.failed", async (tx, auth) => {
         const params = z
           .object({ entryId: z.uuid(), artifactId: z.uuid() })
           .safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { entryId, artifactId } = params.data;
 
-        const artifact = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, {
-            module: "FINANCE",
-            roles: [...FINANCE_READER_ROLES, "MAINTENANCE"],
-          });
-          const [entry] = await tx
-            .select({
-              id: financialEntries.id,
-              branchId: financialEntries.branchId,
-              createdByCommandId: financialEntries.createdByCommandId,
-            })
-            .from(financialEntries)
-            .where(
-              and(
-                eq(financialEntries.workspaceId, auth.workspaceId),
-                eq(financialEntries.id, entryId),
-              ),
-            )
-            .limit(1);
-          if (
-            !entry ||
-            (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
-          ) {
-            throw notFound();
-          }
-          if (
-            !canReadLedger(auth.role) &&
-            (await hasPostingWithoutWorkOrder(tx, auth.workspaceId, entry.id))
-          ) {
-            throw notFound();
-          }
-
-          const files = await entryEvidenceFiles(tx, auth.workspaceId, entry);
-          if (!files.some((file) => file.artifactId === artifactId)) throw notFound();
-
-          const [row] = await tx
-            .select()
-            .from(sourceArtifacts)
-            .where(
-              and(
-                eq(sourceArtifacts.workspaceId, auth.workspaceId),
-                eq(sourceArtifacts.id, artifactId),
-              ),
-            )
-            .limit(1);
-          if (!row) throw notFound();
-          return row;
+        await passReadGate(tx, auth, {
+          module: "FINANCE",
+          roles: [...FINANCE_READER_ROLES, "MAINTENANCE"],
         });
+        const [entry] = await tx
+          .select({
+            id: financialEntries.id,
+            branchId: financialEntries.branchId,
+            createdByCommandId: financialEntries.createdByCommandId,
+          })
+          .from(financialEntries)
+          .where(
+            and(
+              eq(financialEntries.workspaceId, auth.workspaceId),
+              eq(financialEntries.id, entryId),
+            ),
+          )
+          .limit(1);
+        if (
+          !entry ||
+          (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
+        ) {
+          throw notFound();
+        }
+        if (
+          !canReadLedger(auth.role) &&
+          (await hasPostingWithoutWorkOrder(tx, auth.workspaceId, entry.id))
+        ) {
+          throw notFound();
+        }
 
-        const presigned = await presignVerifiedArtifact(storage, auth.workspaceId, artifact, req.log);
-        if ("integrityMismatch" in presigned) {
-          return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
-        }
-        return presigned;
-      } catch (error) {
-        if (error instanceof ReadRefusal) {
-          return reply.status(error.status).send(error.body());
-        }
-        req.log.error({ err: error, event: "entry_evidence_download_url.failed" });
-        return reply.status(500).send({ error: { code: "DOWNLOAD_URL_FAILED" } });
-      }
-    },
+        const files = await entryEvidenceFiles(tx, auth.workspaceId, entry);
+        if (!files.some((file) => file.artifactId === artifactId)) throw notFound();
+
+        const [row] = await tx
+          .select()
+          .from(sourceArtifacts)
+          .where(
+            and(
+              eq(sourceArtifacts.workspaceId, auth.workspaceId),
+              eq(sourceArtifacts.id, artifactId),
+            ),
+          )
+          .limit(1);
+        if (!row) throw notFound();
+        return row;
+      }),
   );
 }

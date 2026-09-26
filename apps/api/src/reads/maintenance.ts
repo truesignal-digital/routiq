@@ -8,7 +8,7 @@ import {
   type HistoryActor,
   type ListSort,
 } from "@routiq/contracts";
-import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -22,7 +22,6 @@ import {
   assets,
   auditEvents,
   branches,
-  commandSourceArtifacts,
   commands,
   financialEntries,
   financialPostings,
@@ -33,6 +32,7 @@ import {
 import { inWorkspace, type TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { lastEventActors, toActor } from "./actors.js";
+import { commandArtifacts } from "./record-artifacts.js";
 import { invalidRequest, notFound, passReadGate, sendReadFailure } from "./read-gate.js";
 import {
   afterKeyset,
@@ -848,15 +848,10 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
-          const [artifacts] = await tx
-            .select({ count: sql<number>`count(*)::int` })
-            .from(commandSourceArtifacts)
-            .where(
-              and(
-                eq(commandSourceArtifacts.workspaceId, auth.workspaceId),
-                eq(commandSourceArtifacts.commandId, row.createdByCommandId),
-              ),
-            );
+          const artifacts =
+            (await commandArtifacts(tx, auth.workspaceId, [row.createdByCommandId])).get(
+              row.createdByCommandId,
+            ) ?? [];
 
           const closers =
             row.status === "OPEN"
@@ -885,7 +880,8 @@ export function registerMaintenanceReadRoutes(
               occurredAt: event.occurredAt.toISOString(),
               actor: toActor(event),
             })),
-            artifactCount: artifacts?.count ?? 0,
+            artifactCount: artifacts.length,
+            artifacts,
             closedBy: closers.get(row.id) ?? null,
           };
         });

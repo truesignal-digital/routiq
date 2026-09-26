@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { recordArtifact } from "./artifacts.js";
 import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
 
@@ -239,6 +240,11 @@ export const issueDetail = issueListItem.extend({
   chronologie: z.array(workOrderChronologieEvent),
   /** Photos attached when it was reported. */
   artifactCount: z.number().int().nonnegative(),
+  /**
+   * Those photos, oldest first. Download each through
+   * `GET /v1/issues/:issueId/artifacts/:artifactId/download-url`.
+   */
+  artifacts: z.array(recordArtifact),
   /** Who resolved or dismissed it; null while OPEN. */
   closedBy: historyActor.nullable(),
 });

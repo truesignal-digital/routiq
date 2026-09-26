@@ -139,7 +139,11 @@ Served on `feat/maintenance-on-develop`:
 | `GET /v1/assets/:assetId/attention` | ASSETS; items gated as above | Business date in the workspace timezone. |
 | `GET /v1/assets/:assetId/history` | ASSETS; MONEY for ledger readers only | None; newest first. |
 | `GET /v1/assets/:assetId/custodian-candidates` | ASSETS; ADMIN and OPS_MANAGER | None. |
-| `GET /v1/issues/:issueId` | MAINTENANCE | None. |
+| `GET /v1/issues/:issueId` | MAINTENANCE | None. Lists the photos taken with the report (`artifacts`: `artifactId`, `mimeType`, `sizeBytes`, `originalFileName`). |
+| `GET /v1/issues/:issueId/artifacts/:artifactId/download-url` | MAINTENANCE; the issue's vehicle in the caller's branches; the file linked by the report-issue call | None. |
+| `GET /v1/assets/:assetId/documents` | Branch scope of the vehicle | None. Each document lists its scans (`artifacts`, same shape) beside `artifactCount`. |
+| `GET /v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url` | DOCUMENTS; the vehicle in the caller's branches; the document on that vehicle; the file linked by the command that recorded it | None. |
+| `GET /v1/artifacts/:id/download-url` | The caller's own upload, not yet linked to any command; anything else answers 404 | None. A linked file downloads only through its record's route. |
 | `GET /v1/finance/entries` | FINANCE; FINANCE_READER_ROLES only | `periodCode` is the posting period; `economicMonth` is the economic month. `status=LEDGER` means POSTED and REVERSED. Each item carries its evidence state and file count; `evidence=MISSING` filters to NOT_SUPPLIED. With `assetId`, each item also carries the vehicle's signed share (`assetShareMinor`). |
 | `GET /v1/finance/entries/:entryId` | FINANCE; FINANCE_READER_ROLES only | Adds `evidenceFiles`. |
 | `GET /v1/finance/approvals` | FINANCE; FINANCE_READER_ROLES only | None. |
