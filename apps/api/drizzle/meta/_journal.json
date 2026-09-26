@@ -183,6 +183,13 @@
       "when": 1790461427409,
       "tag": "0025_tenant_fk_gaps",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790461577099,
+      "tag": "0026_postings_balance",
+      "breakpoints": true
     }
   ]
 }
