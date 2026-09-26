@@ -364,7 +364,12 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
   return { primary, offered };
 }
 
-/** The step beside the status sentence, and the record it acts on. */
+/**
+ * The step beside the status sentence, and the record it acts on. A manager's
+ * headline is always the release — the decision only they take — locked with
+ * what it still needs until the flow allows it; their workshop and approval
+ * steps stay on the work order and in the actions sheet.
+ */
 export function groundingStep(
   asset: Pick<AssetDetail, "availability">,
   viewer: Viewer,
@@ -372,6 +377,13 @@ export function groundingStep(
   const facts = groundingFacts(asset);
   if (facts === undefined || viewer.readOnly) return { step: { kind: "none" }, record: null };
   const wo = facts.workOrder;
+  if (may.release(viewer)) {
+    const record: PanelRef =
+      wo !== undefined ? { kind: "work_order", id: wo.id } : { kind: "issue", id: facts.grounded.issue.id };
+    const step: Step = { key: "release", record };
+    const lock = releaseBlocker(facts) ?? releaseLockFor(facts, viewer);
+    return { step: lock ? { kind: "locked", step, lock } : { kind: "go", step }, record };
+  }
   if (wo !== undefined) {
     return {
       step: workOrderSteps(wo, viewer, facts).primary,

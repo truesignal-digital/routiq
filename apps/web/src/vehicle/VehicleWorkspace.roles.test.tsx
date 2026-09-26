@@ -6,11 +6,13 @@ import type { Role } from "@routiq/contracts";
 import {
   ASSET_ID,
   ME_ID,
+  WORK_ORDER_ID,
   actor,
   asset,
   attention,
   grounded,
   groundingWorkOrder,
+  workOrderDetail,
 } from "./test/fixtures.js";
 import { closeVehicle, openVehicle } from "./test/harness.js";
 
@@ -45,22 +47,35 @@ async function sentence(): Promise<HTMLElement> {
 }
 
 describe("the status sentence and the step beside it, per role", () => {
-  const cases: Array<{ role: Role; button?: string; caption?: RegExp; doNotDrive?: boolean }> = [
-    { role: "ADMIN", button: "Complete work" },
-    { role: "OPS_MANAGER", button: "Complete work" },
+  const cases: Array<{
+    role: Role;
+    button?: string;
+    locked?: { button: string; reason: string };
+    caption?: RegExp;
+    doNotDrive?: boolean;
+  }> = [
+    { role: "ADMIN", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed and signed off.` } },
+    { role: "OPS_MANAGER", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed and signed off.` } },
     { role: "MAINTENANCE", button: "Complete work" },
     { role: "FINANCE_APPROVER", caption: new RegExp(`Sign off · Needs ${WO_REF} completed first\\.`) },
     { role: "FIELD_SUBMITTER", doNotDrive: true },
     { role: "EXECUTIVE_VIEWER" },
   ];
 
-  it.each(cases)("$role", async ({ role, button, caption, doNotDrive }) => {
+  it.each(cases)("$role", async ({ role, button, locked, caption, doNotDrive }) => {
     await openVehicle(`/assets/${ASSET_ID}`, { role, asset: inRepair });
     const block = within(await sentence());
     expect(block.getByText(/Brake pressure warning on the Kekem descent/)).toBeTruthy();
     expect(block.getByText(/Waiting on the workshop to finish the repair/)).toBeTruthy();
     if (button !== undefined) {
-      expect(block.getByRole("button", { name: button })).toBeTruthy();
+      const go = block.getByRole("button", { name: button }) as HTMLButtonElement;
+      expect(go.disabled).toBe(false);
+    } else if (locked !== undefined) {
+      const release = block.getByRole("button", { name: locked.button }) as HTMLButtonElement;
+      expect(release.disabled).toBe(true);
+      expect(release.getAttribute("aria-describedby")).toBeTruthy();
+      expect(document.getElementById(release.getAttribute("aria-describedby") ?? "")?.textContent).toBe(locked.reason);
+      expect(block.queryByRole("button", { name: /Complete work/ })).toBeNull();
     } else {
       expect(block.queryByRole("button", { name: /Complete work|Release|Authorize|Sign off/ })).toBeNull();
     }
@@ -84,6 +99,24 @@ describe("the status sentence and the step beside it, per role", () => {
     expect(block.queryByRole("button", { name: "Authorize" })).toBeNull();
   });
 
+  it("keeps Complete work for the managers in the work order's footer and the actions sheet", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+      role: "OPS_MANAGER",
+      asset: inRepair,
+      workOrderDetails: [workOrderDetail("APPROVED")],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+    expect(await within(panel).findByRole("button", { name: "Complete work" })).toBeTruthy();
+    cleanup();
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "OPS_MANAGER", asset: inRepair });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "More actions" }));
+    const sheet = await screen.findByRole("dialog", { name: "All actions" });
+    expect((within(sheet).getByRole("button", { name: /Complete work/ }) as HTMLButtonElement).disabled).toBe(false);
+    const release = within(sheet).getByRole("button", { name: /Release to service/ }) as HTMLButtonElement;
+    expect(release.disabled).toBe(true);
+  });
+
   it("offers the release, then locks it for whoever vouched for the repair", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, {
       role: "OPS_MANAGER",
@@ -99,6 +132,7 @@ describe("the status sentence and the step beside it, per role", () => {
     });
     const block = within(await sentence());
     expect(block.getByText(/You vouched for the repair of a safety-critical problem/)).toBeTruthy();
+    expect((block.getByRole("button", { name: "Release to service" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("speaks French, quoting the report", async () => {

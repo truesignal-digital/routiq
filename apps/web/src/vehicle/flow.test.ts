@@ -15,8 +15,10 @@ import {
 import type { RoleStep } from "./model.js";
 import {
   ENTRY_ID,
+  ISSUE_ID,
   ME_ID,
   OTHER_ID,
+  WORK_ORDER_ID,
   actor,
   asset,
   attention,
@@ -156,6 +158,94 @@ describe("a work order's next step, per role", () => {
 });
 
 describe("the step beside the status sentence", () => {
+  /** The headline on a grounding whose work order is in `status`; a completer other than the viewer. */
+  const headline = (role: Role, status: WorkOrderStatus | "none") => {
+    const workOrders = status === "none" ? [] : [groundingWorkOrder(status)];
+    return token(groundingStep(asset({ availability: grounded(workOrders) }), viewer(role)).step);
+  };
+
+  const expected: Record<WorkOrderStatus | "none", Record<Role, string>> = {
+    none: {
+      ADMIN: "locked:release:needsWorkOrder",
+      OPS_MANAGER: "locked:release:needsWorkOrder",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "go:create-work-order",
+      FINANCE_APPROVER: "none",
+      EXECUTIVE_VIEWER: "none",
+    },
+    SUBMITTED: {
+      ADMIN: "locked:release:needsAll",
+      OPS_MANAGER: "locked:release:needsAll",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "locked:complete-work-order:needsAuthorization",
+      FINANCE_APPROVER: "go:approve-work-order",
+      EXECUTIVE_VIEWER: "none",
+    },
+    APPROVED: {
+      ADMIN: "locked:release:needsCompletionAndSignOff",
+      OPS_MANAGER: "locked:release:needsCompletionAndSignOff",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "go:complete-work-order",
+      FINANCE_APPROVER: "locked:approve-completion:needsCompletion",
+      EXECUTIVE_VIEWER: "none",
+    },
+    COMPLETION_SUBMITTED: {
+      ADMIN: "locked:release:needsSignOff",
+      OPS_MANAGER: "locked:release:needsSignOff",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "none",
+      FINANCE_APPROVER: "go:approve-completion",
+      EXECUTIVE_VIEWER: "none",
+    },
+    COMPLETED: {
+      ADMIN: "go:release",
+      OPS_MANAGER: "go:release",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "none",
+      FINANCE_APPROVER: "none",
+      EXECUTIVE_VIEWER: "none",
+    },
+    REJECTED: {
+      ADMIN: "locked:release:needsWorkOrder",
+      OPS_MANAGER: "locked:release:needsWorkOrder",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "go:create-work-order",
+      FINANCE_APPROVER: "none",
+      EXECUTIVE_VIEWER: "none",
+    },
+    CANCELLED: {
+      ADMIN: "locked:release:needsWorkOrder",
+      OPS_MANAGER: "locked:release:needsWorkOrder",
+      FIELD_SUBMITTER: "none",
+      MAINTENANCE: "go:create-work-order",
+      FINANCE_APPROVER: "none",
+      EXECUTIVE_VIEWER: "none",
+    },
+  };
+
+  for (const status of Object.keys(expected) as Array<WorkOrderStatus | "none">) {
+    it.each(ROLES)(`headline with the grounding work order ${status}: %s`, (role) => {
+      expect(headline(role, status)).toBe(expected[status][role]);
+    });
+  }
+
+  it("keeps Complete work for the managers on the work order itself", () => {
+    const wo = groundingWorkOrder("APPROVED");
+    const facts = groundingFacts(asset({ availability: grounded([wo]) }));
+    for (const role of ["ADMIN", "OPS_MANAGER"] as const) {
+      const steps = workOrderSteps(wo, viewer(role), facts);
+      expect(token(steps.primary)).toBe("go:complete-work-order");
+      expect(steps.offered.map((offered) => offered.step.key)).toContain("complete-work-order");
+    }
+  });
+
+  it("points the manager's locked release at the work order, or at the problem without one", () => {
+    const withOrder = asset({ availability: grounded([groundingWorkOrder("APPROVED")]) });
+    expect(groundingStep(withOrder, viewer("OPS_MANAGER")).record).toEqual({ kind: "work_order", id: WORK_ORDER_ID });
+    const without = asset({ availability: grounded([]) });
+    expect(groundingStep(without, viewer("OPS_MANAGER")).record).toEqual({ kind: "issue", id: ISSUE_ID });
+  });
+
   it("plans the repair when the grounding has no work order", () => {
     const vehicle = asset({ availability: grounded([]) });
     expect(token(groundingStep(vehicle, viewer("MAINTENANCE")).step)).toBe("go:create-work-order");

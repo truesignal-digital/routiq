@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import {
@@ -187,6 +187,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
   const { panel } = useVehicle();
   const stepLabel = useStepLabel();
   const lockText = useLockText();
+  const reasonId = useId();
   if (record === null || step.kind === "none") return null;
 
   if (step.kind === "go") {
@@ -197,6 +198,24 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
           <StepIcon aria-hidden />
           {stepLabel(step.step)}
         </Button>
+      </div>
+    );
+  }
+
+  // The manager's own decision stays in view, disabled, with what it waits for;
+  // the sentence already links the record.
+  if (step.step.key === "release") {
+    const StepIcon = STEP_ICONS.release;
+    return (
+      <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:max-w-64 md:items-end md:pl-0">
+        <Button className="h-10 md:h-9" disabled aria-describedby={reasonId}>
+          <StepIcon aria-hidden />
+          {stepLabel(step.step)}
+        </Button>
+        <p id={reasonId} className="text-xs text-muted-foreground md:text-right">
+          <Lock className="mr-1 inline size-3 align-[-1px]" aria-hidden />
+          {lockText(step.lock)}
+        </p>
       </div>
     );
   }
