@@ -47,7 +47,7 @@ function Facts({ facts }: { facts: ReadonlyArray<[string, ReactNode]> }) {
  * seen — so the label is a lookup with the raw code as its own fallback, the
  * same contract the record history sheet keeps.
  */
-function Chronologie({
+export function Chronologie({
   events,
   locale,
 }: {
@@ -113,7 +113,7 @@ const ENTRY_STATUS_TONES = {
  * lines are money spent, the pending ones are awaiting finance review and are
  * never read into it.
  */
-function CostLines({
+export function CostLines({
   lines,
   locale,
 }: {
