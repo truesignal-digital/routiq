@@ -110,6 +110,8 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
       return json(answer.body, answer.status);
     }
 
+    if (p.endsWith("/download-url")) return json({ url: `https://files.test${p}` });
+
     const byId = <T extends { id: string }>(items: readonly T[] | undefined, id: string) =>
       items?.find((item) => item.id === id);
     const last = p.split("/").pop() ?? "";

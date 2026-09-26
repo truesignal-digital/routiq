@@ -1,14 +1,9 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Download, FileText } from "lucide-react";
 import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts";
-import { Button } from "@/components/ui/button";
-import { sessionStore } from "@/auth/store.js";
 import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
 import { ApproveEntryForm, RejectEntryForm, ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { errorMessage } from "@/lib/error-message.js";
 import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { entrySteps, missingReceipt } from "../flow.js";
@@ -19,6 +14,7 @@ import {
   PanelFooter,
   PanelLoading,
   PanelMissing,
+  RecordFileRow,
   useFormHost,
 } from "./shared.js";
 
@@ -189,42 +185,14 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
 /** A receipt opens through the entry-scoped route, never the workspace-wide one. */
 function EvidenceFileRow({ entryId, file }: { entryId: string; file: EntryEvidenceFile }) {
   const { t, i18n } = useTranslation();
-  const [error, setError] = useState<string>();
-
-  async function open() {
-    setError(undefined);
-    const token = sessionStore.getToken();
-    const response = await fetch(
-      `/v1/finance/entries/${entryId}/evidence/${file.artifactId}/download-url`,
-      { headers: token === undefined ? {} : { authorization: `Bearer ${token}` } },
-    );
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: { code?: string } } | null;
-      setError(body?.error?.code ?? "READ_FAILED");
-      return;
-    }
-    const { url } = (await response.json()) as { url: string };
-    window.open(url, "_blank", "noopener");
-  }
-
   return (
-    <li className="flex items-start justify-between gap-3 px-3 py-2.5">
-      <div className="flex min-w-0 gap-2">
-        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{file.originalFileName ?? file.mimeType}</p>
-          <p className="text-xs text-muted-foreground">
-            {t(`vehicle.panel.evidenceVia.${file.via}`, {
-              date: formatDateTime(file.attachedAt, i18n.language),
-              name: file.attachedBy.displayName ?? t("history.actor.unknown"),
-            })}
-          </p>
-          {error !== undefined && <p className="text-xs text-destructive">{errorMessage(i18n, error)}</p>}
-        </div>
-      </div>
-      <Button variant="ghost" size="icon-sm" aria-label={t("vehicle.panel.openFile")} onClick={() => void open()}>
-        <Download aria-hidden />
-      </Button>
-    </li>
+    <RecordFileRow
+      name={file.originalFileName ?? file.mimeType}
+      meta={t(`vehicle.panel.evidenceVia.${file.via}`, {
+        date: formatDateTime(file.attachedAt, i18n.language),
+        name: file.attachedBy.displayName ?? t("history.actor.unknown"),
+      })}
+      downloadPath={`/v1/finance/entries/${entryId}/evidence/${file.artifactId}/download-url`}
+    />
   );
 }

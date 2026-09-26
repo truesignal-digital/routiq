@@ -4,9 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   ASSET_ID,
+  ENTRY_ID,
   ISSUE_ID,
   WORK_ORDER_ID,
+  actor,
   asset,
+  entryDetail,
   grounded,
   groundingWorkOrder,
   issueDetail,
@@ -174,4 +177,37 @@ it("changes the custodian through the member picker, and can clear it", async ()
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   expect(recorded.commands[0]?.name).toBe("assign-asset");
   expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, custodianMembershipId: null });
+});
+
+it("opens a receipt through the entry's own route, never the generic artifact route", async () => {
+  const open = vi.fn();
+  vi.stubGlobal("open", open);
+  const artifactId = "00000000-0000-4000-8000-0000000000fa";
+  const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    role: "FINANCE_APPROVER",
+    entryDetails: [
+      entryDetail({
+        evidence: { state: "SUPPLIED", artifactCount: 1 },
+        evidenceFiles: [
+          {
+            artifactId,
+            mimeType: "image/jpeg",
+            sizeBytes: 120_000,
+            originalFileName: "recu-garage.jpg",
+            sha256: "0".repeat(64),
+            attachedAt: "2026-09-23T11:40:00.000Z",
+            attachedBy: actor(null, "Hervé"),
+            via: "ATTACHED",
+          },
+        ],
+      }),
+    ],
+  });
+  const user = userEvent.setup();
+  const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+  expect(within(panel).getByText("recu-garage.jpg")).toBeTruthy();
+  await user.click(within(panel).getByRole("button", { name: "Open the file" }));
+  const path = `/v1/finance/entries/${ENTRY_ID}/evidence/${artifactId}/download-url`;
+  await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
+  expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
 });
