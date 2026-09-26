@@ -37,6 +37,9 @@ import {
   financialPostings,
   workspaces,
 } from "../db/schema.js";
+import { registerAssetCustodianReadRoutes } from "./asset-custodians.js";
+import { loadAvailability, loadCustodian, loadLastReading } from "./asset-header.js";
+import { registerAssetReadingReadRoutes } from "./asset-readings.js";
 import { registerCategoryReadRoutes } from "./categories.js";
 import { LEDGER_ENTRY_STATUSES } from "./dashboard.js";
 import { registerDocumentReadRoutes } from "./documents.js";
@@ -49,6 +52,7 @@ import {
   keysetOrderBy,
   type KeysetColumn,
 } from "./cursor.js";
+import { enabledModuleSet } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import type { AuthContext } from "../auth/types.js";
 
@@ -161,6 +165,8 @@ export function registerAssetReadRoutes(
   registerReferenceReadRoutes(app, db, requireAuth);
   registerCategoryReadRoutes(app, db, requireAuth);
   registerDocumentReadRoutes(app, db, requireAuth);
+  registerAssetReadingReadRoutes(app, db, requireAuth);
+  registerAssetCustodianReadRoutes(app, db, requireAuth);
 
   app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -371,6 +377,7 @@ export function registerAssetReadRoutes(
               branchId: assets.branchId,
               branchCode: branches.code,
               branchName: branches.name,
+              custodianMembershipId: assets.custodianMembershipId,
             })
             .from(assets)
             .innerJoin(
@@ -521,7 +528,32 @@ export function registerAssetReadRoutes(
             .orderBy(desc(activities.startedAt), desc(activities.id))
             .limit(RECENT_ACTIVITY_LIMIT);
 
-          return { header, currency, totals, categoryRows, activityRows };
+          // Availability and readings belong to modules a workspace may turn
+          // off; a disabled module's section says so rather than guessing.
+          const modules = await enabledModuleSet(tx, auth.workspaceId);
+          const custodian = await loadCustodian(
+            tx,
+            auth.workspaceId,
+            assetId,
+            header.custodianMembershipId,
+          );
+          const availability = modules.has("MAINTENANCE")
+            ? await loadAvailability(tx, auth.workspaceId, assetId)
+            : ({ state: "NOT_ASSESSED" } as const);
+          const lastReading = modules.has("ACTIVITIES")
+            ? await loadLastReading(tx, auth, assetId)
+            : null;
+
+          return {
+            header,
+            currency,
+            totals,
+            categoryRows,
+            activityRows,
+            custodian,
+            availability,
+            lastReading,
+          };
         });
 
         if (!result) {
@@ -530,7 +562,16 @@ export function registerAssetReadRoutes(
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { header, currency, totals, categoryRows, activityRows } = result;
+        const {
+          header,
+          currency,
+          totals,
+          categoryRows,
+          activityRows,
+          custodian,
+          availability,
+          lastReading,
+        } = result;
         const revenueMinor = BigInt(totals?.revenueMinor ?? "0");
         const expenseMinor = BigInt(totals?.expenseMinor ?? "0");
 
@@ -588,6 +629,9 @@ export function registerAssetReadRoutes(
             startedAt: row.startedAt?.toISOString() ?? null,
             endedAt: row.endedAt?.toISOString() ?? null,
           })),
+          custodian,
+          availability,
+          lastReading,
         });
       } catch (error) {
         req.log.error({ err: error }, "asset detail read failed");

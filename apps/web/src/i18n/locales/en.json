@@ -156,6 +156,7 @@
     "HUMAN_PRINCIPAL_REQUIRED": "This action must be taken by a person, not by an integration or an automated agent.",
     "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
     "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the issue.",
+    "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
   "assets": {

@@ -10,6 +10,8 @@ export const assetDocumentRead = z.object({
   supersedesDocumentId: z.uuid().nullable(),
   supersededByDocumentId: z.uuid().nullable(),
   createdAt: z.iso.datetime(),
+  /** Files attached when the document was recorded (its command's source artifacts). */
+  artifactCount: z.number().int().nonnegative(),
 });
 
 export const assetDocumentsReadResponse = z.object({

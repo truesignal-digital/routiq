@@ -51,3 +51,4 @@ export * from "./commands/dismiss-issue.js";
 export * from "./commands/reject-work-order.js";
 export * from "./commands/reject-work-order-completion.js";
 export * from "./reads/maintenance.js";
+export * from "./reads/asset-workspace.js";

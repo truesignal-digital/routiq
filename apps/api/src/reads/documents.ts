@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { assetDocumentsReadResponse } from "@routiq/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import { inWorkspace } from "../db/tenant.js";
-import { assets, categories, documents } from "../db/schema.js";
+import { assets, categories, commandSourceArtifacts, documents } from "../db/schema.js";
 
 /** Documents of one asset, with type labels and the superseding back-link. */
 export function registerDocumentReadRoutes(
@@ -52,6 +52,13 @@ export function registerDocumentReadRoutes(
               supersedesDocumentId: documents.supersedesDocumentId,
               supersededByDocumentId: superseding.id,
               createdAt: documents.createdAt,
+              // A scan travels with the command that recorded the document, so
+              // the count is over that command's links, never another row's.
+              artifactCount: sql<number>`(
+                select count(*)::int from ${commandSourceArtifacts}
+                where ${commandSourceArtifacts.workspaceId} = ${documents.workspaceId}
+                  and ${commandSourceArtifacts.commandId} = ${documents.createdByCommandId}
+              )`,
             })
             .from(documents)
             .leftJoin(
@@ -99,6 +106,7 @@ export function registerDocumentReadRoutes(
             supersedesDocumentId: row.supersedesDocumentId,
             supersededByDocumentId: row.supersededByDocumentId,
             createdAt: row.createdAt.toISOString(),
+            artifactCount: row.artifactCount,
           })),
         });
       } catch (error) {
