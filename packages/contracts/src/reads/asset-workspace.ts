@@ -4,7 +4,7 @@ import { COMMAND_ORIGINS, moneyMinor } from "../envelope.js";
 import { ROLES } from "../roles.js";
 import { meterReadingSource, meterReadingType } from "./assets.js";
 import { monthCode } from "./finance.js";
-import { historyActor } from "./history.js";
+import { historyActor, historyEntityType } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
 
 /**
@@ -220,3 +220,88 @@ export type AttentionCode = z.infer<typeof attentionCode>;
 export type AttentionSeverity = z.infer<typeof attentionSeverity>;
 export type AssetAttentionItem = z.infer<typeof assetAttentionItem>;
 export type AssetAttentionResponse = z.infer<typeof assetAttentionResponse>;
+
+/**
+ * The vehicle's timeline: one query over the audit trail of every record that
+ * belongs to it — the vehicle itself, its trips, readings, documents, money,
+ * maintenance and notes. A read of the trail, never a ledger of its own.
+ */
+export const VEHICLE_HISTORY_KINDS = [
+  "MAINTENANCE",
+  "MONEY",
+  "TRIPS",
+  "DOCUMENTS",
+  "READINGS",
+  "ASSIGNMENTS",
+  "LIFECYCLE",
+  "NOTES",
+] as const;
+export const vehicleHistoryKind = z.enum(VEHICLE_HISTORY_KINDS);
+
+/** Newest first, fixed server-side. `kind` repeats for several kinds. */
+export const vehicleHistoryQuery = listQuery({
+  kind: z
+    .union([vehicleHistoryKind, z.array(vehicleHistoryKind).min(1)])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : Array.isArray(value) ? value : [value])),
+});
+
+/**
+ * The facts an item may carry, per subject — an allowlist, never a
+ * passthrough of the audit snapshots. `asset.assigned` resolves the ids it
+ * moved into names through same-workspace joins.
+ */
+export const VEHICLE_HISTORY_PARAMS = {
+  activity: ["activityNumber", "customerName"],
+  movement_leg: ["originName", "destinationName", "distanceKm"],
+  meter_reading: ["readingType", "value", "source"],
+  document: ["documentTypeLabelFr", "documentTypeLabelEn", "documentNumber", "expiresAt"],
+  financial_entry: [
+    "entryNumber",
+    "direction",
+    "categoryLabelFr",
+    "categoryLabelEn",
+    "status",
+    "artifactCount",
+  ],
+  operational_issue: ["description", "safetyCritical"],
+  work_order: ["description"],
+  asset_availability_interval: ["issueDescription"],
+  "asset.assigned": [
+    "custodianDisplayName",
+    "previousCustodianDisplayName",
+    "branchCode",
+    "previousBranchCode",
+  ],
+  note: ["body"],
+} as const;
+
+export const vehicleHistoryItem = z.object({
+  eventId: z.uuid(),
+  /** Open vocabulary, as on the record history; unknown codes render raw. */
+  eventType: z.string(),
+  kind: vehicleHistoryKind,
+  occurredAt: z.iso.datetime(),
+  actor: historyActor,
+  origin: z.enum(COMMAND_ORIGINS),
+  subject: z.object({
+    entityType: historyEntityType,
+    id: z.uuid(),
+    /** Entry, activity or document number; null where the record has none. */
+    number: z.string().nullable(),
+  }),
+  /** MONEY only: this vehicle's SIGNED share of the entry — a reversal is negative. */
+  amountMinor: z.number().int().nullable(),
+  currency: z.string().length(3).nullable(),
+  /** Keys from VEHICLE_HISTORY_PARAMS for the subject; `status` is the entry's current one. */
+  params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  /** The event's own reason, as the record history lifts it. */
+  note: z.string().nullable(),
+});
+
+export const vehicleHistoryResponse = listResponse(vehicleHistoryItem);
+
+export type VehicleHistoryKind = z.infer<typeof vehicleHistoryKind>;
+export type VehicleHistoryQuery = z.infer<typeof vehicleHistoryQuery>;
+export type VehicleHistoryItem = z.infer<typeof vehicleHistoryItem>;
+export type VehicleHistoryResponse = z.infer<typeof vehicleHistoryResponse>;

@@ -40,6 +40,7 @@ import {
 import { registerAssetAttentionReadRoutes } from "./asset-attention.js";
 import { registerAssetCustodianReadRoutes } from "./asset-custodians.js";
 import { registerAssetFinanceReadRoutes } from "./asset-finance.js";
+import { registerAssetHistoryReadRoutes } from "./asset-history.js";
 import { loadAvailability, loadCustodian, loadLastReading } from "./asset-header.js";
 import { registerAssetReadingReadRoutes } from "./asset-readings.js";
 import { registerCategoryReadRoutes } from "./categories.js";
@@ -171,6 +172,7 @@ export function registerAssetReadRoutes(
   registerAssetCustodianReadRoutes(app, db, requireAuth);
   registerAssetFinanceReadRoutes(app, db, requireAuth);
   registerAssetAttentionReadRoutes(app, db, requireAuth);
+  registerAssetHistoryReadRoutes(app, db, requireAuth);
 
   app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
     try {

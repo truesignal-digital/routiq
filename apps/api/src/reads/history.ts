@@ -73,7 +73,7 @@ const NOTE_STATE_KEYS = ["reason"] as const;
  * The first allowlisted key holding a JSON string. The `jsonb_typeof` guard
  * matters: `->>` would happily serialise an object into the note line.
  */
-function noteSql(): SQL<string | null> {
+export function noteSql(): SQL<string | null> {
   const candidates = NOTE_STATE_KEYS.map(
     (key) =>
       sql`case when jsonb_typeof(${auditEvents.afterState} -> ${key}::text) = 'string'
