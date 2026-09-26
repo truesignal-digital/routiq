@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "moduleCode": {
+      "type": "string",
+      "enum": [
+        "ASSETS",
+        "DOCUMENTS",
+        "FINANCE",
+        "ACTIVITIES"
+      ]
+    }
+  },
+  "required": [
+    "moduleCode"
+  ],
+  "additionalProperties": false
+}

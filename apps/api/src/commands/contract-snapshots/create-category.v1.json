@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "ASSET_CLASS",
+        "ACTIVITY_TYPE",
+        "REVENUE_CATEGORY",
+        "EXPENSE_CATEGORY",
+        "DOCUMENT_TYPE",
+        "ISSUE_TYPE"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    },
+    "labelFr": {
+      "type": "string",
+      "minLength": 1
+    },
+    "labelEn": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profitabilityLayer": {
+      "type": "string",
+      "enum": [
+        "DIRECT",
+        "MAINTENANCE",
+        "OWNERSHIP",
+        "SHARED"
+      ]
+    },
+    "evidencePolicy": {
+      "type": "string",
+      "enum": [
+        "RECEIPT_EXPECTED",
+        "NO_RECEIPT_EXPECTED"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "code",
+    "labelFr",
+    "labelEn"
+  ],
+  "additionalProperties": false
+}
