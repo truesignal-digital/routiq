@@ -12,7 +12,10 @@ import { corePack } from "../provisioning/packs/core.js";
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 /** The vehicle-workspace migrations (#44) and the command types each backfills. */
-const VEHICLE_MIGRATIONS = [{ file: "0028_notes.sql", commands: ["add-note"] }] as const;
+const VEHICLE_MIGRATIONS = [
+  { file: "0028_notes.sql", commands: ["add-note"] },
+  { file: "0029_attach_evidence_command_defaults.sql", commands: ["attach-evidence"] },
+] as const;
 
 const BACKFILLED_COMMANDS = VEHICLE_MIGRATIONS.flatMap((migration) => [...migration.commands]);
 
@@ -127,6 +130,8 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
         .sort();
       expect(backfilled).toEqual(provisioned);
       expect(backfilled).not.toContain("add-note:EXECUTIVE_VIEWER");
+      expect(backfilled).not.toContain("attach-evidence:EXECUTIVE_VIEWER");
+      expect(backfilled).toContain("attach-evidence:MAINTENANCE");
     }
   });
 

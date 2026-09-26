@@ -17,7 +17,8 @@ import { createTestApp } from "../test/fixture.js";
  * so a second pass inserts nothing. 0027 (the #28 state machines) guards its
  * columns, renames only legacy status values and backfills with NOT EXISTS /
  * ON CONFLICT DO NOTHING. 0028 (notes, #44) guards its table, constraints and
- * policy, and backfills add-note's rules with NOT EXISTS.
+ * policy, and backfills add-note's rules with NOT EXISTS; 0029 is the
+ * attach-evidence backfill alone, in the same shape.
  *
  * The suite's database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -29,6 +30,7 @@ const MIGRATIONS = [
   "0026_maintenance_command_defaults",
   "0027_maintenance_state_machines",
   "0028_notes",
+  "0029_attach_evidence_command_defaults",
 ];
 
 function statementsOf(migration: string): string[] {

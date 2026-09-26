@@ -32,6 +32,7 @@ import "./commands/work-orders.js";
 import "./commands/work-order-decisions.js";
 import "./commands/release-asset-to-service.js";
 import "./commands/add-note.js";
+import "./commands/attach-evidence.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";

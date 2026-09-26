@@ -1,4 +1,5 @@
 import type { CommandEnvelope, CommandWarningCode } from "@routiq/contracts";
+import { entryEvidenceState } from "@routiq/domain";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   activities,
@@ -314,13 +315,15 @@ export async function writeFinancialEntry(
       warnings.push("POSTING_DEFERRED_PERIOD_LOCKED");
     }
   }
-  const hasVerifiablePaymentReference =
-    request.paymentReference !== undefined &&
-    ["MOMO", "OM", "BANK"].includes(request.paymentMethod);
+  // The same predicate the reads use for the entry's evidence state, so the
+  // warning at capture and the badge on the list can never disagree.
   if (
-    category.evidencePolicy === "RECEIPT_EXPECTED" &&
-    envelope.sourceArtifactIds.length === 0 &&
-    !hasVerifiablePaymentReference
+    entryEvidenceState({
+      policy: category.evidencePolicy,
+      artifactCount: envelope.sourceArtifactIds.length,
+      paymentMethod: request.paymentMethod,
+      paymentReference: request.paymentReference,
+    }) === "NOT_SUPPLIED"
   ) {
     warnings.push("EVIDENCE_MISSING");
   }

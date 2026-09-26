@@ -248,6 +248,8 @@ export const HISTORY_STATE_KEYS = {
     "reason",
     "reversesEntryId",
     "reversedByEntryId",
+    /** `financial_entry.evidence_attached`: the files linked by that call. */
+    "artifactIds",
   ],
   meter_reading: [
     "readingType",

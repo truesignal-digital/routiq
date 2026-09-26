@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import type { FastifyInstance, FastifyReply, preHandlerHookHandler } from "fastify";
+import type {
+  FastifyBaseLogger,
+  FastifyInstance,
+  FastifyReply,
+  preHandlerHookHandler,
+} from "fastify";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { fileTypeFromBuffer } from "file-type";
@@ -7,7 +12,9 @@ import sharp from "sharp";
 import type { Db } from "../db/client.js";
 import { inWorkspace } from "../db/tenant.js";
 import type { ObjectStorage } from "../storage/types.js";
-import { sourceArtifacts } from "../db/schema.js";
+import { financialEntries, sourceArtifacts } from "../db/schema.js";
+import { entryEvidenceFiles } from "../reads/entry-evidence.js";
+import { invalidRequest, notFound, passReadGate, ReadRefusal } from "../reads/read-gate.js";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -33,6 +40,41 @@ function getStorageKey(workspaceId: string, artifactId: string): string {
 
 function getFinalStorageKey(workspaceId: string, artifactId: string, sha256: string): string {
   return `ws/${workspaceId}/finalized-artifacts/${artifactId}/${sha256}`;
+}
+
+type ArtifactRow = typeof sourceArtifacts.$inferSelect;
+
+/**
+ * A short-lived GET URL for a stored artifact, after checking the bytes still
+ * hash to what was recorded. Callers decide WHO may have the file; this decides
+ * only that what they get is the file that was recorded.
+ */
+async function presignVerifiedArtifact(
+  storage: ObjectStorage,
+  workspaceId: string,
+  artifact: ArtifactRow,
+  log: FastifyBaseLogger,
+): Promise<{ url: string } | { integrityMismatch: true }> {
+  const finalStorageKey = getFinalStorageKey(workspaceId, artifact.id, artifact.sha256);
+  if (artifact.storageKey !== finalStorageKey) {
+    // Older rows point at the mutable upload key. Preserve a verified
+    // snapshot before issuing a GET URL; do not grant UPDATE on evidence
+    // rows or trust a later replacement of the legacy upload object.
+    const preserved = await storage.getObject(finalStorageKey);
+    const candidate = preserved ?? await storage.getObject(artifact.storageKey);
+    if (!candidate || createHash("sha256").update(candidate.body).digest("hex") !== artifact.sha256) {
+      log.error({ event: "artifact.integrity_mismatch", artifactId: artifact.id });
+      return { integrityMismatch: true };
+    }
+    if (!preserved) {
+      await storage.putObject(finalStorageKey, candidate.body, artifact.mimeType);
+    }
+  }
+
+  const url = await storage.presignGet(finalStorageKey, {
+    expiresSeconds: 300,
+  });
+  return { url };
 }
 
 export function registerArtifactRoutes(
@@ -291,32 +333,96 @@ export function registerArtifactRoutes(
           });
         }
 
-        const finalStorageKey = getFinalStorageKey(auth.workspaceId, artifact.id, artifact.sha256);
-        if (artifact.storageKey !== finalStorageKey) {
-          // Older rows point at the mutable upload key. Preserve a verified
-          // snapshot before issuing a GET URL; do not grant UPDATE on evidence
-          // rows or trust a later replacement of the legacy upload object.
-          const preserved = await storage.getObject(finalStorageKey);
-          const candidate = preserved ?? await storage.getObject(artifact.storageKey);
-          if (!candidate || createHash("sha256").update(candidate.body).digest("hex") !== artifact.sha256) {
-            req.log.error({ event: "artifact.integrity_mismatch", artifactId: artifact.id });
-            return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
-          }
-          if (!preserved) {
-            await storage.putObject(finalStorageKey, candidate.body, artifact.mimeType);
-          }
+        const presigned = await presignVerifiedArtifact(storage, auth.workspaceId, artifact, req.log);
+        if ("integrityMismatch" in presigned) {
+          return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
         }
-
-        const url = await storage.presignGet(finalStorageKey, {
-          expiresSeconds: 300,
-        });
-
-        return { url };
+        return presigned;
       } catch (error) {
         req.log.error({ err: error, event: "download_url.failed", id });
         return reply.status(500).send({
           error: { code: "DOWNLOAD_URL_FAILED" },
         });
+      }
+    },
+  );
+
+  /**
+   * A file behind a financial entry, for a caller who may read that entry. The
+   * workspace-wide route above answers any member of the tenant; an entry is a
+   * financial record read against the caller's branches, so its receipt must be
+   * too — this route is the only one the finance screens use (PLAN §1.7).
+   * Checked in order: the FINANCE module, the entry in the caller's branches,
+   * the file among the entry's evidence; each miss is the same 404, and storage
+   * is never touched before all three pass.
+   */
+  app.get(
+    "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      if (!req.auth) {
+        return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
+      }
+      const auth = req.auth;
+
+      try {
+        const params = z
+          .object({ entryId: z.uuid(), artifactId: z.uuid() })
+          .safeParse(req.params);
+        if (!params.success) throw invalidRequest();
+        const { entryId, artifactId } = params.data;
+
+        const artifact = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          await passReadGate(tx, auth, { module: "FINANCE" });
+          const [entry] = await tx
+            .select({
+              id: financialEntries.id,
+              branchId: financialEntries.branchId,
+              createdByCommandId: financialEntries.createdByCommandId,
+            })
+            .from(financialEntries)
+            .where(
+              and(
+                eq(financialEntries.workspaceId, auth.workspaceId),
+                eq(financialEntries.id, entryId),
+              ),
+            )
+            .limit(1);
+          if (
+            !entry ||
+            (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
+          ) {
+            throw notFound();
+          }
+
+          const files = await entryEvidenceFiles(tx, auth.workspaceId, entry);
+          if (!files.some((file) => file.artifactId === artifactId)) throw notFound();
+
+          const [row] = await tx
+            .select()
+            .from(sourceArtifacts)
+            .where(
+              and(
+                eq(sourceArtifacts.workspaceId, auth.workspaceId),
+                eq(sourceArtifacts.id, artifactId),
+              ),
+            )
+            .limit(1);
+          if (!row) throw notFound();
+          return row;
+        });
+
+        const presigned = await presignVerifiedArtifact(storage, auth.workspaceId, artifact, req.log);
+        if ("integrityMismatch" in presigned) {
+          return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
+        }
+        return presigned;
+      } catch (error) {
+        if (error instanceof ReadRefusal) {
+          return reply.status(error.status).send(error.body());
+        }
+        req.log.error({ err: error, event: "entry_evidence_download_url.failed" });
+        return reply.status(500).send({ error: { code: "DOWNLOAD_URL_FAILED" } });
       }
     },
   );
