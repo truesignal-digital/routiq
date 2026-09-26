@@ -28,6 +28,12 @@ export const identity = { username: "vehicle-test", workspaceSlug: "vehicle-test
 
 export interface VehicleScenario {
   role: Role;
+  /**
+   * Members who can sign in through the login screen, by username; each gets
+   * the token `token-<username>`, and `/v1/me` answers the role behind the
+   * bearer token (`role` for the session the harness opens with).
+   */
+  members?: Record<string, Role>;
   modules?: ModuleCode[];
   principalType?: PrincipalType;
   width?: number;
@@ -116,8 +122,20 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
       items?.find((item) => item.id === id);
     const last = p.split("/").pop() ?? "";
 
+    if (method === "POST" && p === "/v1/auth/login") {
+      const { username } = JSON.parse(String(init?.body)) as { username: string };
+      if (scenario.members?.[username] === undefined) {
+        return json({ error: { code: "INVALID_CREDENTIALS" } }, 401);
+      }
+      return json({ token: `token-${username}`, expiresAt: "2099-01-01T00:00:00.000Z" });
+    }
     if (p === "/v1/me") {
-      return json({ ...me(scenario.role, scenario.modules ?? ALL_MODULES), principalType: scenario.principalType ?? "HUMAN" });
+      const bearer = new Headers(init?.headers).get("authorization")?.replace(/^Bearer /, "");
+      const member = bearer?.startsWith("token-") ? scenario.members?.[bearer.slice("token-".length)] : undefined;
+      return json({
+        ...me(member ?? scenario.role, scenario.modules ?? ALL_MODULES),
+        principalType: scenario.principalType ?? "HUMAN",
+      });
     }
     if (p === "/v1/reference/asset-registration") {
       return json({
