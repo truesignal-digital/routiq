@@ -6,8 +6,9 @@ import {
 } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { activities, meterReadings, movementLegs, places } from "../db/schema.js";
+import { activities, branches, meterReadings, movementLegs, places } from "../db/schema.js";
 import { createSession } from "../auth/local.js";
+import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
@@ -363,5 +364,151 @@ describe("record-movement-leg.v1 / record-meter-reading.v1", () => {
       },
     });
     expect(response.statusCode).toBe(200);
+  });
+
+  /**
+   * Review P8: a reading's references are writes into other records — a
+   * supersede marks an old reading, and a job files the new one under its
+   * branch (#58). Each has to be the caller's to touch.
+   */
+  describe("what a reading may point at", () => {
+    let api: ReturnType<typeof apiClient>;
+    let admin: Actor;
+    let dlaMechanic: Actor;
+    let dlaTruck: string;
+    let ydeTruck: string;
+    let ydeReading: string;
+
+    beforeAll(async () => {
+      api = apiClient(ctx.app);
+      const seeded = await seedWorkspace(ctx.db);
+      const ws = seeded.workspace.id;
+      await ctx.db.insert(branches).values({ workspaceId: ws, code: "YDE", name: "Yaoundé" });
+      admin = await seedActor(ctx.db, { workspaceId: ws, role: "ADMIN" });
+      dlaMechanic = await seedActor(ctx.db, {
+        workspaceId: ws,
+        role: "MAINTENANCE",
+        branchIds: [seeded.branch.id],
+      });
+      dlaTruck = await seedAsset(ctx.app, admin.token, { branchCode: "DLA" });
+      ydeTruck = await seedAsset(ctx.app, admin.token, { branchCode: "YDE" });
+      ydeReading = randomUUID();
+      await api.ok(admin.token, "record-meter-reading", {
+        readingId: ydeReading,
+        assetId: ydeTruck,
+        readingType: "ODOMETER",
+        value: 150_000,
+        observedAt: "2026-09-01T08:00:00Z",
+      });
+    });
+
+    function reading(extra: Record<string, unknown>) {
+      return {
+        readingId: randomUUID(),
+        assetId: dlaTruck,
+        readingType: "ODOMETER",
+        value: 1,
+        observedAt: "2026-09-02T08:00:00Z",
+        ...extra,
+      };
+    }
+
+    async function trip(branchCode: string, assetId: string): Promise<string> {
+      const activityId = randomUUID();
+      await api.ok(admin.token, "create-activity", {
+        activityId,
+        branchCode,
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: assetId,
+        startedAt: "2026-09-02T06:00:00Z",
+      });
+      return activityId;
+    }
+
+    it("refuses to supersede another branch's reading, leaving it current", async () => {
+      const attack = await api.send(
+        dlaMechanic.token,
+        "record-meter-reading",
+        reading({ supersedesReadingId: ydeReading, supersedeReason: "x" }),
+      );
+      expect(attack.status).toBe(403);
+      expect(attack.body).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
+
+      const [original] = await ctx.db
+        .select()
+        .from(meterReadings)
+        .where(eq(meterReadings.id, ydeReading));
+      expect(original?.supersededById).toBeNull();
+      const detail = await api.get(admin.token, `/v1/assets/${ydeTruck}`);
+      expect(detail.body).toMatchObject({ lastReading: { id: ydeReading, value: 150_000 } });
+    });
+
+    it("supersedes only a reading of the same meter on the same vehicle", async () => {
+      const otherTruck = await api.send(
+        admin.token,
+        "record-meter-reading",
+        reading({ supersedesReadingId: ydeReading, supersedeReason: "mauvais camion" }),
+      );
+      expect(otherTruck.status).toBe(422);
+      expect(otherTruck.body.error).toEqual({
+        code: "REFERENCE_NOT_FOUND",
+        metadata: { referenceType: "meter_reading", referenceCode: ydeReading },
+      });
+
+      const hours = randomUUID();
+      await api.ok(admin.token, "record-meter-reading", {
+        readingId: hours,
+        assetId: dlaTruck,
+        readingType: "HOURS",
+        value: 4_000,
+        observedAt: "2026-09-01T08:00:00Z",
+      });
+      const otherMeter = await api.send(
+        admin.token,
+        "record-meter-reading",
+        reading({ supersedesReadingId: hours, supersedeReason: "mauvais compteur" }),
+      );
+      expect(otherMeter.status).toBe(422);
+      expect(otherMeter.body.error).toMatchObject({
+        code: "REFERENCE_NOT_FOUND",
+        metadata: { referenceType: "meter_reading" },
+      });
+    });
+
+    it("files a reading only under a reachable job that carries the vehicle", async () => {
+      const ydeTrip = await trip("YDE", ydeTruck);
+      const outOfScope = await api.send(
+        dlaMechanic.token,
+        "record-meter-reading",
+        reading({ activityId: ydeTrip }),
+      );
+      expect(outOfScope.status).toBe(422);
+      expect(outOfScope.body.error).toEqual({
+        code: "REFERENCE_NOT_FOUND",
+        metadata: { referenceType: "activity", referenceCode: ydeTrip },
+      });
+
+      const otherTruckTrip = await trip("DLA", ydeTruck);
+      const wrongTruck = await api.send(
+        admin.token,
+        "record-meter-reading",
+        reading({ activityId: otherTruckTrip }),
+      );
+      expect(wrongTruck.status).toBe(422);
+      expect(wrongTruck.body.error).toMatchObject({
+        code: "REFERENCE_NOT_FOUND",
+        metadata: { referenceType: "activity" },
+      });
+
+      const ownTrip = await trip("DLA", dlaTruck);
+      const recorded = await api.send(
+        dlaMechanic.token,
+        "record-meter-reading",
+        reading({ activityId: ownTrip, value: 200_000 }),
+      );
+      expect(recorded.status).toBe(200);
+    });
   });
 });
