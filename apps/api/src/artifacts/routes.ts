@@ -6,6 +6,7 @@ import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 import type { Db } from "../db/client.js";
 import { inWorkspace } from "../db/tenant.js";
+import { ANY_ROLE, defineRead } from "../reads/define-read.js";
 import type { ObjectStorage } from "../storage/types.js";
 import { sourceArtifacts } from "../db/schema.js";
 
@@ -256,21 +257,18 @@ export function registerArtifactRoutes(
   );
 
   // GET /v1/artifacts/:id/download-url
-  app.get(
-    "/v1/artifacts/:id/download-url",
-    { preHandler: requireAuth },
-    async (req, reply) => {
-      if (!req.auth) {
-        return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
-      }
-      const auth = req.auth;
+  // branchScope "workspace" is what this route does today, not what it should
+  // do: an artifact inherits the scope of the records citing it (#69).
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/artifacts/:id/download-url", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
 
       const { id } = req.params as { id: string };
 
       try {
-        const artifact = await inWorkspace(
-          db,
-          auth.workspaceId,
+        const artifact = await read(
           async (tx) => {
             const [row] = await tx
               .select()

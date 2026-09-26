@@ -22,11 +22,11 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 import {
   activities,
   activityAssetSegments,
@@ -162,9 +162,12 @@ export function registerAssetReadRoutes(
   registerCategoryReadRoutes(app, db, requireAuth);
   registerDocumentReadRoutes(app, db, requireAuth);
 
-  app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
     try {
-      const auth = req.auth!;
       const parsedQuery = listQuerySchema.safeParse(req.query);
       if (!parsedQuery.success) {
         return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -196,7 +199,7 @@ export function registerAssetReadRoutes(
         );
       }
 
-      const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+      const rows = await read((tx) =>
         tx
           .select({
             id: assets.id,
@@ -269,12 +272,12 @@ export function registerAssetReadRoutes(
 
   // Registered ahead of `/v1/assets/:assetId` so the static segment reads as
   // the route it is, not as an asset id that happens to spell "summary".
-  app.get(
-    "/v1/assets/summary",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/summary", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = summaryQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -288,7 +291,7 @@ export function registerAssetReadRoutes(
         const countWhere = (statuses: readonly AssetLifecycleStatus[]) =>
           sql<number>`count(*) filter (where ${inArray(assets.lifecycleStatus, [...statuses])})::int`;
 
-        const [totals] = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const [totals] = await read((tx) =>
           tx
             .select({
               total: countAll,
@@ -324,12 +327,12 @@ export function registerAssetReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/assets/:assetId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({ assetId: z.uuid() })
           .safeParse(req.params);
@@ -338,7 +341,7 @@ export function registerAssetReadRoutes(
         }
         const { assetId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const headerConditions: SQL[] = [
             eq(assets.workspaceId, auth.workspaceId),
             eq(assets.id, assetId),

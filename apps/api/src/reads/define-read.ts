@@ -1,6 +1,5 @@
 import { ROLES, type ApiErrorCode, type ModuleCode, type Role } from "@routiq/contracts";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { RequireAuth } from "../auth/plugin.js";
+import type { FastifyInstance, FastifyReply, FastifyRequest, RouteShorthandOptions } from "fastify";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import { inWorkspaceRead, type TenantTx } from "../db/tenant.js";
@@ -25,6 +24,9 @@ export interface ReadGate {
 }
 
 export const ANY_ROLE: readonly Role[] = ROLES;
+
+/** Administrative reads: members and branch settings are facts for admins, not directory data. */
+export const ADMIN_ONLY: readonly Role[] = ["ADMIN"];
 
 declare module "fastify" {
   interface FastifyContextConfig {
@@ -59,7 +61,7 @@ export interface ReadContext {
  */
 export function defineRead(
   app: FastifyInstance,
-  deps: { db: Db; requireAuth: RequireAuth },
+  deps: { db: Db; requireAuth: NonNullable<RouteShorthandOptions["preHandler"]> },
   route: ReadGate & { path: string },
   handler: (ctx: ReadContext) => Promise<unknown>,
 ): void {
@@ -87,27 +89,10 @@ export function defineRead(
 }
 
 /**
- * GET routes still registered without a gate. The next step of the read-gate
- * work moves them onto defineRead and empties this set; add nothing to it.
+ * GET routes allowed to skip defineRead. Empty since every read moved onto it
+ * (#58, #59); keep it empty. A new read declares its gate instead.
  */
-export const UNGATED_READS: ReadonlySet<string> = new Set([
-  "/v1/me",
-  "/v1/commands",
-  "/v1/artifacts/:id/download-url",
-  "/v1/history/:entityType/:entityId",
-  "/v1/history/:entityType/:entityId/:eventId",
-  "/v1/reference/asset-registration",
-  "/v1/assets",
-  "/v1/assets/summary",
-  "/v1/assets/:assetId",
-  "/v1/categories",
-  "/v1/members",
-  "/v1/branches",
-  "/v1/activities",
-  "/v1/activities/:activityId",
-  "/v1/persons",
-  "/v1/places",
-]);
+export const UNGATED_READS: ReadonlySet<string> = new Set<string>([]);
 
 /** Fails the boot when a /v1 GET route skips defineRead, so an ungated read cannot ship. */
 export function requireReadGates(app: FastifyInstance): void {

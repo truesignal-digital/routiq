@@ -7,7 +7,7 @@ import { branches } from "../db/schema.js";
 import { inWorkspaceRead } from "../db/tenant.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
-import { ANY_ROLE, defineRead, requireReadGates } from "./define-read.js";
+import { ANY_ROLE, UNGATED_READS, defineRead, requireReadGates } from "./define-read.js";
 
 const FINANCE_READS = [
   "/v1/finance/entries",
@@ -63,7 +63,7 @@ describe("read gates (#59)", () => {
 
     const closed = await seedWorkspace(ctx.db);
     await member(closed.workspace.id, closed.branch.id, "ADMIN", "closedAdmin");
-    for (const moduleCode of ["FINANCE", "DOCUMENTS"]) {
+    for (const moduleCode of ["FINANCE", "DOCUMENTS", "ASSETS", "ACTIVITIES"]) {
       const response = await command(token("closedAdmin"), "disable-module", { moduleCode });
       expect(response.statusCode, response.body).toBe(200);
     }
@@ -105,6 +105,35 @@ describe("read gates (#59)", () => {
     });
   });
 
+  it("refuses asset and activity reads when their module is disabled", async () => {
+    for (const [url, module] of [
+      ["/v1/assets", "ASSETS"],
+      ["/v1/assets/summary", "ASSETS"],
+      [`/v1/assets/${randomUUID()}`, "ASSETS"],
+      ["/v1/activities", "ACTIVITIES"],
+      ["/v1/persons", "ACTIVITIES"],
+      ["/v1/places", "ACTIVITIES"],
+    ] as const) {
+      const response = await read(token("closedAdmin"), url);
+      expect(response.statusCode, url).toBe(403);
+      expect(response.json(), url).toEqual({ error: { code: "MODULE_DISABLED", metadata: { module } } });
+    }
+  });
+
+  it("keeps member and branch administration to admins", async () => {
+    for (const url of ["/v1/members", "/v1/branches"]) {
+      expect((await read(token("maintenance"), url)).json(), url).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+      expect((await read(token("admin"), url)).statusCode, url).toBe(200);
+    }
+  });
+
+  it("serves identity and reference reads to every role, whatever modules are off", async () => {
+    for (const url of ["/v1/me", "/v1/commands", "/v1/categories?kind=EXPENSE_CATEGORY", "/v1/reference/asset-registration"]) {
+      expect((await read(token("maintenance"), url)).statusCode, url).toBe(200);
+      expect((await read(token("closedAdmin"), url)).statusCode, url).toBe(200);
+    }
+  });
+
   it("gives a non-finance role the home screen without finance figures", async () => {
     const response = await read(token("maintenance"), "/v1/dashboard");
     expect(response.statusCode).toBe(200);
@@ -143,6 +172,12 @@ describe("read gates (#59)", () => {
 });
 
 describe("requireReadGates", () => {
+  it("has no ungated reads left: every /v1 GET on the server declares its gate", () => {
+    // The server under test booted with requireReadGates, so any ungated route
+    // would already have failed createTestApp; this pins the allowlist empty.
+    expect([...UNGATED_READS]).toEqual([]);
+  });
+
   it("fails the boot when a /v1 GET skips defineRead", () => {
     const app = Fastify();
     requireReadGates(app);

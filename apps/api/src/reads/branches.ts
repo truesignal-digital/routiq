@@ -6,10 +6,10 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { and, eq, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
+import { ADMIN_ONLY, defineRead } from "./define-read.js";
 import { branches } from "../db/schema.js";
 import {
   afterKeyset,
@@ -47,15 +47,12 @@ export function registerBranchReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/branches",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/branches", module: "CORE", roles: ADMIN_ONLY, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-        if (auth.role !== "ADMIN") {
-          return reply.status(403).send({ error: { code: "ROLE_FORBIDDEN" } });
-        }
 
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
@@ -77,7 +74,7 @@ export function registerBranchReadRoutes(
           );
         }
 
-        const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const rows = await read((tx) =>
           tx
             .select({
               id: branches.id,

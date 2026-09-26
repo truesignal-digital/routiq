@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import {
+  FINANCE_READ_ROLES,
   HISTORY_ENTITY_MODULE,
   HISTORY_MONEY_STATE_KEYS,
   HISTORY_STATE_KEYS,
@@ -10,15 +11,30 @@ import {
   type HistoryEntityType,
   type HistoryFieldChange,
   type ListSort,
+  type Role,
 } from "@routiq/contracts";
-import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { and, eq, sql, type SQL } from "drizzle-orm";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
-import { auditEvents, commands, financialEntries, principals, workspaces } from "../db/schema.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import {
+  activities,
+  activityAssetSegments,
+  assets,
+  auditEvents,
+  commands,
+  documents,
+  financialEntries,
+  meterReadings,
+  movementLegs,
+  persons,
+  principals,
+  workspaces,
+} from "../db/schema.js";
+import type { TenantTx } from "../db/tenant.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import {
   afterKeyset,
@@ -157,16 +173,86 @@ function diffCurrency(
   return workspaceDefault;
 }
 
-/** Tenant RLS alone does not enforce the financial entry's branch scope. */
-async function canReadFinancialHistory(tx: TenantTx, auth: AuthContext, entityType: HistoryEntityType, entityId: string) {
-  if (entityType !== "financial_entry" || auth.branchScope === "ALL") return true;
-  const [entry] = await tx.select({ id: financialEntries.id }).from(financialEntries)
-    .where(and(
-      eq(financialEntries.workspaceId, auth.workspaceId),
-      eq(financialEntries.id, entityId),
-      inArray(financialEntries.branchId, auth.branchScope),
-    )).limit(1);
-  return entry !== undefined;
+type BranchLookup = (tx: TenantTx, workspaceId: string, entityId: string) => Promise<
+  { found: false } | { found: true; branchId: string | null }
+>;
+
+function ownBranch(table: typeof assets | typeof activities | typeof persons | typeof financialEntries): BranchLookup {
+  return async (tx, workspaceId, entityId) => {
+    const [row] = await tx
+      .select({ branchId: table.branchId })
+      .from(table)
+      .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+      .limit(1);
+    return row === undefined ? { found: false } : { found: true, branchId: row.branchId };
+  };
+}
+
+function assetBranch(table: typeof documents | typeof meterReadings): BranchLookup {
+  return async (tx, workspaceId, entityId) => {
+    const [row] = await tx
+      .select({ branchId: assets.branchId })
+      .from(table)
+      .innerJoin(assets, and(eq(assets.workspaceId, table.workspaceId), eq(assets.id, table.assetId)))
+      .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+      .limit(1);
+    return row === undefined ? { found: false } : { found: true, branchId: row.branchId };
+  };
+}
+
+function activityBranch(table: typeof activityAssetSegments | typeof movementLegs): BranchLookup {
+  return async (tx, workspaceId, entityId) => {
+    const [row] = await tx
+      .select({ branchId: activities.branchId })
+      .from(table)
+      .innerJoin(
+        activities,
+        and(eq(activities.workspaceId, table.workspaceId), eq(activities.id, table.activityId)),
+      )
+      .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+      .limit(1);
+    return row === undefined ? { found: false } : { found: true, branchId: row.branchId };
+  };
+}
+
+/**
+ * How each history entity type reaches a branch (#58). Exhaustive by type, so a
+ * new entity type cannot ship without saying whether its history is
+ * branch-scoped; "workspace" types have no branch and stay visible to every
+ * member who may read their module.
+ */
+const HISTORY_BRANCH: Record<HistoryEntityType, BranchLookup | "workspace"> = {
+  activity: ownBranch(activities),
+  activity_asset_segment: activityBranch(activityAssetSegments),
+  approval_rule: "workspace",
+  asset: ownBranch(assets),
+  category: "workspace",
+  document: assetBranch(documents),
+  financial_entry: ownBranch(financialEntries),
+  meter_reading: assetBranch(meterReadings),
+  movement_leg: activityBranch(movementLegs),
+  person: ownBranch(persons),
+  posting_period: "workspace",
+  workspace: "workspace",
+  workspace_module: "workspace",
+  workspace_template: "workspace",
+};
+
+/** Outside the caller's branches a record's history answers 404, like its detail read. */
+async function canReadHistory(tx: TenantTx, auth: AuthContext, entityType: HistoryEntityType, entityId: string) {
+  const lookup = HISTORY_BRANCH[entityType];
+  if (lookup === "workspace" || auth.branchScope === "ALL") return true;
+  const record = await lookup(tx, auth.workspaceId, entityId);
+  if (!record.found) return false;
+  return record.branchId === null || auth.branchScope.includes(record.branchId);
+}
+
+/** Finance history is finance data: the same roles as the finance reads (#59). */
+function mayReadHistoryOf(auth: AuthContext, entityType: HistoryEntityType): boolean {
+  return (
+    HISTORY_ENTITY_MODULE[entityType] !== "FINANCE" ||
+    (FINANCE_READ_ROLES as readonly Role[]).includes(auth.role)
+  );
 }
 
 export function registerHistoryReadRoutes(
@@ -175,17 +261,17 @@ export function registerHistoryReadRoutes(
   requireAuth: RequireAuth,
 ) {
   /**
-   * History is visible to whoever can read the record: the gate is the owning
-   * module's entitlement plus RLS and the financial entry's branch scope,
-   * with no per-role rule on top. Field staff
-   * seeing "the office corrected my sheet" is the point, not a leak.
+   * History is visible to whoever can read the record: the owning module's
+   * entitlement, RLS, the record's branch scope (HISTORY_BRANCH) and, for
+   * finance records only, the finance read roles. Field staff seeing "the
+   * office corrected my sheet" is the point, not a leak.
    */
-  app.get(
-    "/v1/history/:entityType/:entityId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/history/:entityType/:entityId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({ entityType: historyEntityType, entityId: z.uuid() })
           .safeParse(req.params);
@@ -200,13 +286,16 @@ export function registerHistoryReadRoutes(
         }
         const { cursor, limit } = parsedQuery.data;
 
+        if (!mayReadHistoryOf(auth, entityType)) {
+          return reply.status(403).send({ error: { code: "ROLE_FORBIDDEN" } });
+        }
         const moduleCode = HISTORY_ENTITY_MODULE[entityType];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
           }
-          if (!(await canReadFinancialHistory(tx, auth, entityType, entityId))) {
+          if (!(await canReadHistory(tx, auth, entityType, entityId))) {
             return { error: "REFERENCE_NOT_FOUND" as const };
           }
 
@@ -330,15 +419,15 @@ export function registerHistoryReadRoutes(
 
   /**
    * What one event changed. Same gate as the timeline it hangs off — owning
-   * module, RLS and financial branch scope — and the same rule about the snapshots: they are projected
+   * module, RLS, branch scope and finance roles — and the same rule about the snapshots: they are projected
    * through `HISTORY_STATE_KEYS` here and never served raw.
    */
-  app.get(
-    "/v1/history/:entityType/:entityId/:eventId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/history/:entityType/:entityId/:eventId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({
             entityType: historyEntityType,
@@ -351,13 +440,16 @@ export function registerHistoryReadRoutes(
         }
         const { entityType, entityId, eventId } = parsedParams.data;
 
+        if (!mayReadHistoryOf(auth, entityType)) {
+          return reply.status(403).send({ error: { code: "ROLE_FORBIDDEN" } });
+        }
         const moduleCode = HISTORY_ENTITY_MODULE[entityType];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
           }
-          if (!(await canReadFinancialHistory(tx, auth, entityType, entityId))) {
+          if (!(await canReadHistory(tx, auth, entityType, entityId))) {
             return { error: "REFERENCE_NOT_FOUND" as const };
           }
 

@@ -31,8 +31,8 @@ export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];
 
 /**
  * History is visible to whoever can read the record, so the owning module's
- * entitlement and tenant RLS apply; financial entry history also respects
- * the actor's branch scope. Ownership mirrors the `module`
+ * entitlement, tenant RLS and the record's branch scope apply, and finance
+ * history needs a finance read role. Ownership mirrors the `module`
  * field on the commands that write each entity type — `person` sits under
  * ACTIVITIES because `register-person` does.
  */
