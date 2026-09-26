@@ -1,0 +1,162 @@
+import { randomUUID } from "node:crypto";
+import { dashboardResponse, type Role } from "@routiq/contracts";
+import Fastify from "fastify";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createSession } from "../auth/local.js";
+import { branches } from "../db/schema.js";
+import { inWorkspaceRead } from "../db/tenant.js";
+import { createTestApp } from "../test/fixture.js";
+import { seedMember, seedWorkspace } from "../test/seed.js";
+import { ANY_ROLE, defineRead, requireReadGates } from "./define-read.js";
+
+const FINANCE_READS = [
+  "/v1/finance/entries",
+  `/v1/finance/entries/${randomUUID()}`,
+  "/v1/finance/approvals",
+  "/v1/finance/periods",
+];
+
+describe("read gates (#59)", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let workspaceId: string;
+  const tokens = new Map<string, string>();
+
+  const read = (token: string, url: string) =>
+    ctx.app.inject({ method: "GET", url, headers: { authorization: `Bearer ${token}` } });
+
+  const command = (token: string, name: string, payload: object) =>
+    ctx.app.inject({
+      method: "POST",
+      url: `/v1/commands/${name}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        version: 1,
+        envelope: { commandId: randomUUID(), idempotencyKey: randomUUID(), origin: "HUMAN_UI" },
+        payload,
+      },
+    });
+
+  async function member(wsId: string, branchId: string, role: Role, key: string) {
+    const seeded = await seedMember(ctx.db, {
+      workspaceId: wsId,
+      role,
+      allBranches: role === "ADMIN",
+      branchIds: role === "ADMIN" ? [] : [branchId],
+    });
+    const session = await createSession(ctx.db, { principalId: seeded.principal.id, workspaceId: wsId });
+    tokens.set(key, session.token);
+  }
+
+  const token = (key: string) => {
+    const value = tokens.get(key);
+    if (value === undefined) throw new Error(`no token ${key}`);
+    return value;
+  };
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    const open = await seedWorkspace(ctx.db);
+    workspaceId = open.workspace.id;
+    await member(open.workspace.id, open.branch.id, "ADMIN", "admin");
+    await member(open.workspace.id, open.branch.id, "MAINTENANCE", "maintenance");
+    await member(open.workspace.id, open.branch.id, "EXECUTIVE_VIEWER", "executive");
+
+    const closed = await seedWorkspace(ctx.db);
+    await member(closed.workspace.id, closed.branch.id, "ADMIN", "closedAdmin");
+    for (const moduleCode of ["FINANCE", "DOCUMENTS"]) {
+      const response = await command(token("closedAdmin"), "disable-module", { moduleCode });
+      expect(response.statusCode, response.body).toBe(200);
+    }
+  });
+
+  afterAll(async () => {
+    await ctx?.close();
+  });
+
+  it("refuses finance reads to a role outside FINANCE_READ_ROLES", async () => {
+    for (const url of FINANCE_READS) {
+      const response = await read(token("maintenance"), url);
+      expect(response.statusCode, url).toBe(403);
+      expect(response.json(), url).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+    }
+  });
+
+  it("serves finance reads to a role inside FINANCE_READ_ROLES", async () => {
+    for (const url of ["/v1/finance/entries", "/v1/finance/approvals", "/v1/finance/periods"]) {
+      expect((await read(token("executive"), url)).statusCode, url).toBe(200);
+    }
+  });
+
+  it("refuses finance reads when FINANCE is disabled, even to an admin", async () => {
+    for (const url of FINANCE_READS) {
+      const response = await read(token("closedAdmin"), url);
+      expect(response.statusCode, url).toBe(403);
+      expect(response.json(), url).toEqual({
+        error: { code: "MODULE_DISABLED", metadata: { module: "FINANCE" } },
+      });
+    }
+  });
+
+  it("refuses an asset's documents when DOCUMENTS is disabled", async () => {
+    const response = await read(token("closedAdmin"), `/v1/assets/${randomUUID()}/documents`);
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      error: { code: "MODULE_DISABLED", metadata: { module: "DOCUMENTS" } },
+    });
+  });
+
+  it("gives a non-finance role the home screen without finance figures", async () => {
+    const response = await read(token("maintenance"), "/v1/dashboard");
+    expect(response.statusCode).toBe(200);
+    const body = dashboardResponse.parse(response.json());
+    expect(body.assets.total).toBeGreaterThanOrEqual(0);
+    expect(body.openPeriod).toBeNull();
+    expect(body.pendingApprovals).toBeNull();
+    expect(body.series).toBeNull();
+  });
+
+  it("gives the home screen without finance figures when FINANCE is disabled", async () => {
+    const body = dashboardResponse.parse((await read(token("closedAdmin"), "/v1/dashboard")).json());
+    expect(body.pendingApprovals).toBeNull();
+    expect(body.series).toBeNull();
+  });
+
+  it("keeps finance figures for a finance reader", async () => {
+    const body = dashboardResponse.parse((await read(token("admin"), "/v1/dashboard")).json());
+    expect(body.pendingApprovals).not.toBeNull();
+    expect(body.series?.length).toBeGreaterThan(0);
+  });
+
+  it("runs reads in a transaction Postgres will not write in", async () => {
+    const attempt = inWorkspaceRead(ctx.runtimeDb, workspaceId, (tx) =>
+      tx.insert(branches).values({
+        workspaceId,
+        code: "RO",
+        name: "Read only",
+        createdByCommandId: randomUUID(),
+      }),
+    );
+    await expect(attempt).rejects.toSatisfy((error: unknown) =>
+      /read-only transaction/.test(String((error as { cause?: unknown }).cause ?? error)),
+    );
+  });
+});
+
+describe("requireReadGates", () => {
+  it("fails the boot when a /v1 GET skips defineRead", () => {
+    const app = Fastify();
+    requireReadGates(app);
+    expect(() => app.get("/v1/new-report", async () => ({}))).toThrow(/has no read gate/);
+  });
+
+  it("accepts a route registered through defineRead, and routes outside /v1", () => {
+    const app = Fastify();
+    requireReadGates(app);
+    // Never called: registration alone is what the guard inspects.
+    const deps = {} as Parameters<typeof defineRead>[1];
+    expect(() =>
+      defineRead(app, deps, { path: "/v1/new-report", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async () => ({})),
+    ).not.toThrow();
+    expect(() => app.get("/health", async () => ({ status: "ok" }))).not.toThrow();
+  });
+});

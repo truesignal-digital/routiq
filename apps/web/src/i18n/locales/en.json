@@ -30,7 +30,8 @@
         "title": "Period revenue"
       },
       "periodDescription": "Open period {period}",
-      "noOpenPeriod": "No open period yet"
+      "noOpenPeriod": "No open period yet",
+      "financeUnavailable": "Not available for your role"
     },
     "chart": {
       "title": "Expense and revenue",

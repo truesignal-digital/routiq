@@ -31,8 +31,8 @@ const ALL_CARDS: DashboardCardGate[] = [
     role: canApproveEntries,
   },
   { key: "assets", module: "ASSETS" },
-  { key: "openPeriodExpense", module: "FINANCE" },
-  { key: "openPeriodRevenue", module: "FINANCE" },
+  { key: "openPeriodExpense", module: "FINANCE", role: canReadFinance },
+  { key: "openPeriodRevenue", module: "FINANCE", role: canReadFinance },
 ];
 
 /** While membership is loading no card can be justified, so none render. */

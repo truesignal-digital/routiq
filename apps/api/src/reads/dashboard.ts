@@ -1,11 +1,19 @@
 import type { AssetLifecycleStatus } from "@routiq/contracts";
-import { dashboardQuery, dashboardResponse, ledgerEntryStatuses } from "@routiq/contracts";
+import {
+  FINANCE_READ_ROLES,
+  dashboardQuery,
+  dashboardResponse,
+  ledgerEntryStatuses,
+  type Role,
+} from "@routiq/contracts";
 import { and, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { AuthContext } from "../auth/types.js";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
+import { isModuleEnabled } from "../modules/registry.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 import {
   assets,
   financialEntries,
@@ -13,7 +21,6 @@ import {
   postingPeriods,
   workspaces,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
 import {
   countPendingOutsideBranch,
   pendingApprovalConditions,
@@ -63,19 +70,19 @@ export function registerDashboardReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/dashboard",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/dashboard", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = dashboardQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { days, branchId } = parsedQuery.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const assetRows = await tx
             .select({
               lifecycleStatus: assets.lifecycleStatus,
@@ -89,6 +96,14 @@ export function registerDashboardReadRoutes(
               ),
             )
             .groupBy(assets.lifecycleStatus);
+
+          // The home screen is for every role, its finance figures are not
+          // (#59): a caller who may not read finance gets no finance numbers,
+          // not zeros, so nothing on the card can claim a balance.
+          const financeVisible =
+            (FINANCE_READ_ROLES as readonly Role[]).includes(auth.role) &&
+            (await isModuleEnabled(tx, auth.workspaceId, "FINANCE"));
+          if (!financeVisible) return { assetRows, finance: null };
 
           const [approvalsCount] = await tx
             .select({ count: sql<number>`count(*)::integer` })
@@ -170,11 +185,13 @@ export function registerDashboardReadRoutes(
           if (!openPeriod) {
             return {
               assetRows,
-              approvalsCount,
-              approvalsOutsideBranch,
-              openPeriod: null,
-              window: windowDates,
-              seriesRows,
+              finance: {
+                approvalsCount,
+                approvalsOutsideBranch,
+                openPeriod: null,
+                window: windowDates,
+                seriesRows,
+              },
             };
           }
 
@@ -206,16 +223,18 @@ export function registerDashboardReadRoutes(
 
           return {
             assetRows,
-            approvalsCount,
-            approvalsOutsideBranch,
-            openPeriod: {
-              periodCode: openPeriod.periodCode,
-              currency,
-              expenseMinor: totals?.expenseMinor ?? "0",
-              revenueMinor: totals?.revenueMinor ?? "0",
+            finance: {
+              approvalsCount,
+              approvalsOutsideBranch,
+              openPeriod: {
+                periodCode: openPeriod.periodCode,
+                currency,
+                expenseMinor: totals?.expenseMinor ?? "0",
+                revenueMinor: totals?.revenueMinor ?? "0",
+              },
+              window: windowDates,
+              seriesRows,
             },
-            window: windowDates,
-            seriesRows,
           };
         });
 
@@ -229,37 +248,44 @@ export function registerDashboardReadRoutes(
         // Zero-fill here rather than in the chart: a day the client never
         // received is indistinguishable from a day it failed to draw, and an
         // area chart bridges the gap silently.
+        const { finance } = result;
         const postedByDay = new Map(
-          result.seriesRows.map((row) => [row.date, row]),
+          (finance?.seriesRows ?? []).map((row) => [row.date, row]),
         );
-        const series = result.window.map((date) => {
-          const posted = postedByDay.get(date);
-          return {
-            date,
-            expenseMinor: serializeMinor(BigInt(posted?.expenseMinor ?? "0")),
-            revenueMinor: serializeMinor(BigInt(posted?.revenueMinor ?? "0")),
-          };
-        });
+        const series =
+          finance === null
+            ? null
+            : finance.window.map((date) => {
+                const posted = postedByDay.get(date);
+                return {
+                  date,
+                  expenseMinor: serializeMinor(BigInt(posted?.expenseMinor ?? "0")),
+                  revenueMinor: serializeMinor(BigInt(posted?.revenueMinor ?? "0")),
+                };
+              });
 
         return dashboardResponse.parse({
           assets: { total, byStatus },
           openPeriod:
-            result.openPeriod === null
+            finance === null || finance.openPeriod === null
               ? null
               : {
-                  periodCode: result.openPeriod.periodCode,
+                  periodCode: finance.openPeriod.periodCode,
                   postedExpenseMinor: serializeMinor(
-                    BigInt(result.openPeriod.expenseMinor),
+                    BigInt(finance.openPeriod.expenseMinor),
                   ),
                   postedRevenueMinor: serializeMinor(
-                    BigInt(result.openPeriod.revenueMinor),
+                    BigInt(finance.openPeriod.revenueMinor),
                   ),
-                  currency: result.openPeriod.currency,
+                  currency: finance.openPeriod.currency,
                 },
-          pendingApprovals: {
-            count: result.approvalsCount?.count ?? 0,
-            outsideBranchCount: result.approvalsOutsideBranch,
-          },
+          pendingApprovals:
+            finance === null
+              ? null
+              : {
+                  count: finance.approvalsCount?.count ?? 0,
+                  outsideBranchCount: finance.approvalsOutsideBranch,
+                },
           series,
         });
       } catch (error) {

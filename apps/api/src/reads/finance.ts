@@ -1,4 +1,5 @@
 import {
+  FINANCE_READ_ROLES,
   financialEntryDetail,
   financialEntryFilters,
   ledgerEntryStatuses,
@@ -9,10 +10,11 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { and, asc, desc, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
+import { defineRead } from "./define-read.js";
 import {
   assets,
   categories,
@@ -21,7 +23,6 @@ import {
   financialPostings,
   postingPeriods,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
 import {
   countPendingOutsideBranch,
   pendingApprovalConditions,
@@ -153,12 +154,12 @@ export function registerFinanceReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/finance/entries",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/entries", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -168,7 +169,7 @@ export function registerFinanceReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultEntrySort;
         const sortColumn = entrySortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeKeysetCursor(cursor, sort)
             : undefined;
@@ -333,19 +334,19 @@ export function registerFinanceReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/finance/entries/:entryId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/entries/:entryId", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z.object({ entryId: z.uuid() }).safeParse(req.params);
         if (!parsedParams.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { entryId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const [entry] = await tx
             .select({
               id: financialEntries.id,
@@ -518,12 +519,12 @@ export function registerFinanceReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/finance/approvals",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/approvals", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = approvalsQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -532,7 +533,7 @@ export function registerFinanceReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultApprovalSort;
         const sortColumn = approvalSortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeKeysetCursor(cursor, sort)
             : undefined;
@@ -683,14 +684,14 @@ export function registerFinanceReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/finance/periods",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/periods", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const rows = await tx
             .select({
               id: postingPeriods.id,

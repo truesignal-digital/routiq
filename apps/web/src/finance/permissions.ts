@@ -1,14 +1,11 @@
-import type { ModuleCode, Role } from "@routiq/contracts";
+import { FINANCE_READ_ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 
-const FINANCE_READERS: readonly Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "FINANCE_APPROVER",
-  "FIELD_SUBMITTER",
-  "EXECUTIVE_VIEWER",
-];
+const FINANCE_READERS: readonly Role[] = FINANCE_READ_ROLES;
 
-/** Read access is independent of command capabilities; server scope still applies. */
+/**
+ * Read access is independent of command capabilities. The API enforces the same
+ * role list (FINANCE_READ_ROLES), so hiding here only avoids offering a denial.
+ */
 export function canReadFinance(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
