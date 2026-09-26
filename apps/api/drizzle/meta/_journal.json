@@ -176,6 +176,13 @@
       "when": 1786825947084,
       "tag": "0024_branch_name_uq",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790461427409,
+      "tag": "0025_tenant_fk_gaps",
+      "breakpoints": true
     }
   ]
 }
