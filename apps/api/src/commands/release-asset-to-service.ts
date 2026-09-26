@@ -1,5 +1,5 @@
-import { releaseAssetToServicePayload } from "@routiq/contracts";
-import { and, eq } from "drizzle-orm";
+import { releaseAssetToServicePayload, type CommandWarningCode } from "@routiq/contracts";
+import { and, asc, eq, ne } from "drizzle-orm";
 import type { z } from "zod";
 import {
   assetAvailabilityIntervals,
@@ -39,6 +39,12 @@ type ReleaseAssetToServicePayload = z.infer<typeof releaseAssetToServicePayload>
  * one of those. Without one, only an explicit override reason on a signalement
  * already closed — resolved on the spot or dismissed — lets the release
  * through, because then a human has already asserted the fault is gone.
+ *
+ * Every OTHER safety-critical signalement on the asset must be closed too. A
+ * second one reported while the truck was down opened no interval of its own
+ * (report-issue.ts), so nothing but this check stands between it and the road.
+ * The grounding signalement keeps its own gate above: a completed work order
+ * answers it even while it stays OPEN, which the result flags.
  *
  * Closing the interval is the whole write: availability is derived from open
  * intervals, never stored on the asset, and the signalement's status is not
@@ -148,6 +154,26 @@ export const releaseAssetToService: CommandDefinition<ReleaseAssetToServicePaylo
         });
       }
 
+      const otherOpenSafetyIssues = await tx
+        .select({ id: operationalIssues.id })
+        .from(operationalIssues)
+        .where(
+          and(
+            eq(operationalIssues.workspaceId, ctx.workspaceId),
+            eq(operationalIssues.assetId, payload.assetId),
+            eq(operationalIssues.safetyCritical, true),
+            eq(operationalIssues.status, "OPEN"),
+            ne(operationalIssues.id, issue.id),
+          ),
+        )
+        .orderBy(asc(operationalIssues.id));
+      if (otherOpenSafetyIssues.length > 0) {
+        throw new CommandError(409, "SAFETY_ISSUE_OPEN", {
+          assetId: payload.assetId,
+          openIssueIds: otherOpenSafetyIssues.map((row) => row.id),
+        });
+      }
+
       /**
        * Releaser ≠ whoever vouched the fault is gone, after a safety-critical
        * report: every member who declared work on this grounding complete, or —
@@ -233,11 +259,13 @@ export const releaseAssetToService: CommandDefinition<ReleaseAssetToServicePaylo
         });
       }
 
+      const warnings: CommandWarningCode[] =
+        issue.status === "OPEN" ? ["GROUNDING_ISSUE_STILL_OPEN"] : [];
       return {
         recordId: interval.id,
         rowVersion,
         recordStatus: "AVAILABLE",
-        warnings: [],
+        warnings,
       };
     },
   };

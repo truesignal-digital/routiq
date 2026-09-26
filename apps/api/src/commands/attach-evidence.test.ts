@@ -327,6 +327,7 @@ describe("attach-evidence.v1", () => {
       workOrderId,
       assetId,
       description: "Vidange",
+      expectedCostMinor: 0,
     });
     const repair = await expense(mechanic, { workOrderId });
     expect((await attach(mechanic, repair.entryId, [await artifact()])).status).toBe(200);

@@ -161,6 +161,7 @@ export function attention(
 ): AssetAttentionItem {
   const subjects: Record<AssetAttentionItem["code"], AssetAttentionItem["subject"]> = {
     ISSUE_UNPLANNED: { entityType: "operational_issue", id: OTHER_ISSUE_ID, number: null, rowVersion: 1 },
+    ISSUE_OPEN_WHILE_AVAILABLE: { entityType: "operational_issue", id: ISSUE_ID, number: null, rowVersion: 2 },
     WORK_ORDER_AWAITING_AUTHORIZATION: { entityType: "work_order", id: WORK_ORDER_ID, number: null, rowVersion: 1 },
     WORK_ORDER_IN_PROGRESS: { entityType: "work_order", id: WORK_ORDER_ID, number: null, rowVersion: 2 },
     WORK_ORDER_AWAITING_SIGN_OFF: { entityType: "work_order", id: WORK_ORDER_ID, number: null, rowVersion: 3 },

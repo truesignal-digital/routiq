@@ -1,4 +1,5 @@
 import {
+  FINANCE_READER_ROLES,
   financialEntryDetail,
   financialEntryFilters,
   ledgerEntryStatuses,
@@ -48,7 +49,15 @@ import {
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
+import { passReadGate, sendReadFailure, type ReadGate } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+
+/**
+ * The ledger reads: the books are for the roles that read them, and a
+ * disabled FINANCE module's ledger must not stay readable by URL. MAINTENANCE
+ * sees the cost lines of its own work orders on the work-order reads instead.
+ */
+const LEDGER_GATE: ReadGate = { module: "FINANCE", roles: FINANCE_READER_ROLES };
 
 const entrySortFields = [
   "economicDate",
@@ -368,6 +377,7 @@ export function registerFinanceReadRoutes(
         const sortColumn = entrySortColumns[sort.field];
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          await passReadGate(tx, auth, LEDGER_GATE);
           const decodedCursor = cursor
             ? decodeKeysetCursor(cursor, sort)
             : undefined;
@@ -504,8 +514,7 @@ export function registerFinanceReadRoutes(
 
         return financialEntryListResponse.parse({ entries, nextCursor });
       } catch (error) {
-        req.log.error({ err: error }, "finance entries list read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance entries list");
       }
     },
   );
@@ -523,6 +532,7 @@ export function registerFinanceReadRoutes(
         const { entryId } = parsedParams.data;
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          await passReadGate(tx, auth, LEDGER_GATE);
           const [entry] = await tx
             .select({
               id: financialEntries.id,
@@ -719,8 +729,7 @@ export function registerFinanceReadRoutes(
 
         return financialEntryDetail.parse(response);
       } catch (error) {
-        req.log.error({ err: error }, "finance entry detail read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance entry detail");
       }
     },
   );
@@ -740,6 +749,7 @@ export function registerFinanceReadRoutes(
         const sortColumn = approvalSortColumns[sort.field];
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+          await passReadGate(tx, auth, LEDGER_GATE);
           const decodedCursor = cursor
             ? decodeKeysetCursor(cursor, sort)
             : undefined;
@@ -852,8 +862,7 @@ export function registerFinanceReadRoutes(
           outsideBranchCount,
         });
       } catch (error) {
-        req.log.error({ err: error }, "finance approvals read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance approvals");
       }
     },
   );

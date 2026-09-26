@@ -244,13 +244,16 @@ function MoneySection() {
         )}
       </section>
 
-      <p className="border-t pt-4 text-xs text-muted-foreground">
-        {t("vehicle.money.lifetime", {
-          revenue: money(lifetime.revenueMinor),
-          expenses: money(lifetime.expenseMinor),
-          net: money(lifetime.netMinor, true),
-        })}
-      </p>
+      {/* The detail carries it only for ledger readers; this section is theirs anyway. */}
+      {lifetime !== undefined && (
+        <p className="border-t pt-4 text-xs text-muted-foreground">
+          {t("vehicle.money.lifetime", {
+            revenue: money(lifetime.revenueMinor),
+            expenses: money(lifetime.expenseMinor),
+            net: money(lifetime.netMinor, true),
+          })}
+        </p>
+      )}
     </div>
   );
 }

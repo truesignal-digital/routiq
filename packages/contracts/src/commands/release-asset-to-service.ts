@@ -12,11 +12,16 @@ import { commandEnvelope } from "../envelope.js";
  * the spot or dismissed as reported in error) — the human assertion that the
  * problem is gone then comes from that decision, and this reason says why no
  * work order was needed.
+ *
+ * Either way, every other safety-critical signalement on the asset has to be
+ * closed first (409 SAFETY_ISSUE_OPEN). A release on a completed work order
+ * while the grounding signalement itself stays OPEN succeeds with the warning
+ * GROUNDING_ISSUE_STILL_OPEN.
  */
 export const releaseAssetToServicePayload = z.object({
   assetId: z.uuid(),
   workOrderId: z.uuid().optional(),
-  overrideReason: z.string().min(1).max(500).optional(),
+  overrideReason: z.string().trim().min(1).max(500).optional(),
   note: z.string().min(1).max(500).optional(),
 });
 

@@ -133,6 +133,13 @@ export const assetFinanceResponse = z.object({
  */
 export const ATTENTION_CODES = [
   "ISSUE_UNPLANNED",
+  /**
+   * A safety-critical signalement still OPEN on a vehicle that is not grounded:
+   * its work order was completed and the vehicle released, but nobody closed
+   * the signalement (release warned GROUNDING_ISSUE_STILL_OPEN). INFO — the
+   * release was a deliberate decision; what is left is resolving or dismissing.
+   */
+  "ISSUE_OPEN_WHILE_AVAILABLE",
   "WORK_ORDER_AWAITING_AUTHORIZATION",
   "WORK_ORDER_IN_PROGRESS",
   "WORK_ORDER_AWAITING_SIGN_OFF",

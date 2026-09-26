@@ -56,9 +56,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
     const [branchId] = await assetBranchIds(tx, ctx, [payload.assetId]);
     return {
       ...(branchId === undefined ? {} : { branchId }),
-      ...(payload.expectedCostMinor === undefined
-        ? {}
-        : { amountMinor: payload.expectedCostMinor }),
+      amountMinor: payload.expectedCostMinor,
     };
   },
 
@@ -105,9 +103,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
       ...(payload.issueId === undefined ? {} : { issueId: payload.issueId }),
       description: payload.description,
       status,
-      ...(payload.expectedCostMinor === undefined
-        ? {}
-        : { expectedCostMinor: BigInt(payload.expectedCostMinor) }),
+      expectedCostMinor: BigInt(payload.expectedCostMinor),
       currency: payload.currency,
       createdByCommandId: envelope.commandId,
     });
@@ -122,7 +118,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
         issueId: payload.issueId ?? null,
         description: payload.description,
         status,
-        expectedCostMinor: payload.expectedCostMinor ?? null,
+        expectedCostMinor: payload.expectedCostMinor,
         currency: payload.currency,
         rowVersion: 1,
       },
@@ -166,6 +162,7 @@ export const completeWorkOrder: CommandDefinition<CompleteWorkOrderPayload> = {
   allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE"],
   payloadSchema: completeWorkOrderPayload,
   approvalMode: "SUBMIT",
+  // No operationalAssetId on purpose: an open order on a disposed asset can still be closed; costs cannot attach, record-expense keeps that guard.
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 
   async approvalContext(tx, ctx, payload) {

@@ -1539,6 +1539,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       workOrderId,
       assetId: truckA,
       description: "Plaquettes",
+      expectedCostMinor: 0,
     });
 
     // 100 000 split 60 000 / 40 000 across two trucks, the A line carrying

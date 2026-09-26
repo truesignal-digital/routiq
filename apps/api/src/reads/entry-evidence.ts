@@ -1,12 +1,13 @@
 import type { EntryEvidenceFile } from "@routiq/contracts";
 import { REFERENCE_PAYMENT_METHODS } from "@routiq/domain";
-import { and, asc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import {
   auditEvents,
   categories,
   commandSourceArtifacts,
   commands,
   financialEntries,
+  financialPostings,
   principals,
   sourceArtifacts,
 } from "../db/schema.js";
@@ -75,6 +76,30 @@ export function entryEvidenceStateSql(): SQL<string> {
  */
 export function entryEvidenceMissingSql(): SQL {
   return sql`(${entryEvidenceStateSql()} = 'NOT_SUPPLIED' and ${financialEntries.reversesEntryId} is null)`;
+}
+
+/**
+ * Whether any line of the entry is NOT a work-order cost. The workshop's reach
+ * into an entry — attaching its paperwork, downloading it — stops at entries
+ * whose every line carries a work order.
+ */
+export async function hasPostingWithoutWorkOrder(
+  tx: TenantTx,
+  workspaceId: string,
+  entryId: string,
+): Promise<boolean> {
+  const [unattributed] = await tx
+    .select({ id: financialPostings.id })
+    .from(financialPostings)
+    .where(
+      and(
+        eq(financialPostings.workspaceId, workspaceId),
+        eq(financialPostings.financialEntryId, entryId),
+        isNull(financialPostings.workOrderId),
+      ),
+    )
+    .limit(1);
+  return unattributed !== undefined;
 }
 
 /**

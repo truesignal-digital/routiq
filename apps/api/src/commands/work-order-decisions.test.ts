@@ -101,6 +101,7 @@ describe("work-order decision commands", () => {
           workOrderId: otherWorkspaceWorkOrderId,
           assetId: foreignAssetId,
           description: "Révision chez le voisin",
+          expectedCostMinor: 0,
         })
       ).statusCode,
     ).toBe(200);

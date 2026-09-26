@@ -156,6 +156,7 @@
     "HUMAN_PRINCIPAL_REQUIRED": "This action must be taken by a person, not by an integration or an automated agent.",
     "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
     "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the issue.",
+    "SAFETY_ISSUE_OPEN": "Another safety-critical issue is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN."
   },
@@ -609,7 +610,8 @@
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
-    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated."
+    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
+    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the issue that grounded it is still open."
   },
   "activities": {
     "title": "Activities",
@@ -1804,6 +1806,10 @@
       "ISSUE_UNPLANNED": {
         "title": "Problem {ref} has no work order",
         "detail": "{description}"
+      },
+      "ISSUE_OPEN_WHILE_AVAILABLE": {
+        "title": "Problem {ref} is still open",
+        "detail": "{description}. The vehicle was released; resolve or dismiss the problem."
       },
       "WORK_ORDER_AWAITING_AUTHORIZATION": {
         "title": "{ref} awaiting authorization",

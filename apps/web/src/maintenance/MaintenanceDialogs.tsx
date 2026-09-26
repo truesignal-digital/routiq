@@ -377,9 +377,9 @@ function CreateWorkOrderFields({
 
   const assetId = pinnedAssetId ?? chosenAssetId;
   const trimmedDescription = description.trim();
+  // Required: the approval threshold is read against it; 0 means no spend foreseen.
   const expectedCostMinor = parseMoneyXaf(expectedCost);
-  const costUsable = expectedCost.trim() === "" || expectedCostMinor !== null;
-  const ready = assetId !== "" && trimmedDescription !== "" && costUsable;
+  const ready = assetId !== "" && trimmedDescription !== "" && expectedCostMinor !== null;
 
   // A work order references at most one signalement, and it has to be one filed
   // against the same truck — the server rejects the pairing otherwise. A
@@ -389,7 +389,7 @@ function CreateWorkOrderFields({
   );
 
   async function submit() {
-    if (!ready) return;
+    if (!ready || expectedCostMinor === null) return;
     const result = await submission.run(() => {
       intent.current ??= createCommandIntent<CreateWorkOrderPayload>(
         client,
@@ -402,7 +402,7 @@ function CreateWorkOrderFields({
         description: trimmedDescription,
         currency: "XAF",
         ...(issueId === "" ? {} : { issueId }),
-        ...(expectedCostMinor === null ? {} : { expectedCostMinor }),
+        expectedCostMinor,
       });
     });
     if (!result.ok) return;

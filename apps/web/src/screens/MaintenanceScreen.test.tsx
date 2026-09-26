@@ -855,9 +855,13 @@ describe("MaintenanceScreen — signalements tab", () => {
       screen.getByLabelText("maintenance.fields.description"),
       "Changer les plaquettes",
     );
-    await user.click(
-      screen.getByRole("button", { name: "maintenance.workOrders.newSubmit" }),
-    );
+    // The expected cost is required: the approval threshold is read against it.
+    const submitButton = screen.getByRole("button", {
+      name: "maintenance.workOrders.newSubmit",
+    });
+    expect(submitButton.hasAttribute("disabled")).toBe(true);
+    await user.type(screen.getByLabelText("maintenance.fields.expectedCost"), "45000");
+    await user.click(submitButton);
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
     expect(mocks.submit.mock.calls[0]?.[0].name).toBe("create-work-order");
@@ -865,6 +869,7 @@ describe("MaintenanceScreen — signalements tab", () => {
       assetId: ASSET_ID,
       issueId: ISSUE_ID,
       description: "Changer les plaquettes",
+      expectedCostMinor: 45_000,
     });
   });
 

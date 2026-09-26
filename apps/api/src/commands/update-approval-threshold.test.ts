@@ -370,4 +370,30 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
     );
     expect(completed.json()).toMatchObject({ recordStatus: "COMPLETION_SUBMITTED" });
   });
+
+  /** Review P4: an order without an expected cost used to be read as 0 and slip under every band. */
+  it("gives an order no way under the band by leaving its expected cost out", async () => {
+    expect(
+      (
+        await post(adminToken, "update-approval-threshold", {
+          commandType: "create-work-order",
+          amountMaxMinor: 50_000,
+        })
+      ).statusCode,
+    ).toBe(200);
+
+    const omitted = await post(mechanicToken, "create-work-order", {
+      workOrderId: randomUUID(),
+      assetId,
+      description: "Moteur",
+    });
+    expect(omitted.statusCode).toBe(400);
+    expect(omitted.json()).toMatchObject({
+      error: {
+        code: "VALIDATION_FAILED",
+        metadata: { issues: [{ path: ["expectedCostMinor"] }] },
+      },
+    });
+    expect(await createStatus(mechanicToken, 2_000_000)).toBe("SUBMITTED");
+  });
 });

@@ -56,6 +56,32 @@ interface Grounding {
   issueId: string;
 }
 
+/** When each signalement's grounding last ended, for those that grounded the vehicle. */
+async function lastReleases(
+  tx: TenantTx,
+  workspaceId: string,
+  issueIds: readonly string[],
+): Promise<Map<string, Date>> {
+  if (issueIds.length === 0) return new Map();
+  const rows = await tx
+    .select({
+      issueId: assetAvailabilityIntervals.openedByIssueId,
+      closedAt: sql<Date>`max(${assetAvailabilityIntervals.closedAt})`.mapWith(
+        assetAvailabilityIntervals.closedAt,
+      ),
+    })
+    .from(assetAvailabilityIntervals)
+    .where(
+      and(
+        eq(assetAvailabilityIntervals.workspaceId, workspaceId),
+        inArray(assetAvailabilityIntervals.openedByIssueId, [...issueIds]),
+        isNotNull(assetAvailabilityIntervals.closedAt),
+      ),
+    )
+    .groupBy(assetAvailabilityIntervals.openedByIssueId);
+  return new Map(rows.map((row) => [row.issueId, row.closedAt]));
+}
+
 async function maintenanceItems(
   tx: TenantTx,
   auth: AuthContext,
@@ -161,20 +187,42 @@ async function maintenanceItems(
     grounding !== undefined && order.issueId === grounding.issueId;
   const ACTIVE = new Set(["SUBMITTED", "APPROVED", "COMPLETION_SUBMITTED"]);
 
-  for (const issue of issues.filter((row) => row.status === "OPEN")) {
-    const own = orders.filter((order) => order.issueId === issue.id);
-    if (own.some((order) => ACTIVE.has(order.status))) continue;
+  const unplanned = issues
+    .filter((row) => row.status === "OPEN")
+    .map((issue) => {
+      const own = orders.filter((order) => order.issueId === issue.id);
+      const hasCompletedWorkOrder = own.some((order) => order.status === "COMPLETED");
+      return {
+        issue,
+        planned: own.some((order) => ACTIVE.has(order.status)),
+        hasCompletedWorkOrder,
+        // Released on its completed work order with the signalement left OPEN.
+        stillOpenAfterRelease:
+          grounding === undefined && issue.safetyCritical && hasCompletedWorkOrder,
+      };
+    })
+    .filter((entry) => !entry.planned);
+  const releasedAt = await lastReleases(
+    tx,
+    ws,
+    unplanned.filter((entry) => entry.stillOpenAfterRelease).map((entry) => entry.issue.id),
+  );
+
+  for (const { issue, hasCompletedWorkOrder, stillOpenAfterRelease } of unplanned) {
+    const since = stillOpenAfterRelease
+      ? (releasedAt.get(issue.id) ?? issue.reportedAt)
+      : issue.reportedAt;
     items.push({
-      code: "ISSUE_UNPLANNED",
-      severity: issue.safetyCritical ? "CRITICAL" : "WARNING",
+      code: stillOpenAfterRelease ? "ISSUE_OPEN_WHILE_AVAILABLE" : "ISSUE_UNPLANNED",
+      severity: stillOpenAfterRelease ? "INFO" : issue.safetyCritical ? "CRITICAL" : "WARNING",
       subject: { entityType: "operational_issue", id: issue.id, number: null, rowVersion: issue.rowVersion },
-      since: issue.reportedAt.toISOString(),
+      since: since.toISOString(),
       partOfGrounding: grounding?.issueId === issue.id,
       makerPrincipalIds: [],
       params: {
         description: clip(issue.description),
         safetyCritical: issue.safetyCritical,
-        hasCompletedWorkOrder: own.some((order) => order.status === "COMPLETED"),
+        hasCompletedWorkOrder,
         ...(issue.categoryLabelFr === null ? {} : { categoryLabelFr: issue.categoryLabelFr }),
         ...(issue.categoryLabelEn === null ? {} : { categoryLabelEn: issue.categoryLabelEn }),
       },
@@ -245,7 +293,12 @@ async function maintenanceItems(
       (order) => order.issueId === groundingIssue.id && order.status === "COMPLETED",
     );
     const issueClosed = groundingIssue.status !== "OPEN";
-    if (completed.length > 0 || issueClosed) {
+    // The release refuses while any other safety-critical signalement is
+    // OPEN (SAFETY_ISSUE_OPEN); those show as their own items meanwhile.
+    const blocked = issues.some(
+      (issue) => issue.status === "OPEN" && issue.safetyCritical && issue.id !== groundingIssue.id,
+    );
+    if ((completed.length > 0 || issueClosed) && !blocked) {
       // The release refuses whoever vouched the fault is gone after a
       // safety-critical report: every completer, or on the override path the
       // closer of the signalement (release-asset-to-service.ts).

@@ -194,10 +194,10 @@ describe("GET /v1/assets/:assetId", () => {
   });
 
   it("breaks expenses down by category, largest first", async () => {
-    const body = await fetchAsset(adminToken, camionId);
+    const body = await fetchFinance(adminToken, camionId);
 
     expect(
-      body.finance.expenseByCategory.map(({ code, totalMinor }) => [
+      body.expenseByCategory.map(({ code, totalMinor }) => [
         code,
         totalMinor,
       ]),
@@ -205,14 +205,14 @@ describe("GET /v1/assets/:assetId", () => {
       ["FUEL", 310_000],
       ["REPAIRS", 90_000],
     ]);
-    expect(body.finance.expenseByCategory[0]).toMatchObject({
+    expect(body.expenseByCategory[0]).toMatchObject({
       labelFr: "Carburant",
       labelEn: "Fuel",
     });
   });
 
   it("subtracts a reversal instead of counting it as a second charge", async () => {
-    const before = await fetchAsset(adminToken, camionId);
+    const before = await fetchFinance(adminToken, camionId);
 
     const { entryId, rowVersion } = await recordEntry(
       adminToken,
@@ -225,11 +225,11 @@ describe("GET /v1/assets/:assetId", () => {
       },
     );
 
-    const posted = await fetchAsset(adminToken, camionId);
-    expect(posted.finance.expenseMinor).toBe(before.finance.expenseMinor + 45_000);
-    expect(posted.finance.netMinor).toBe(before.finance.netMinor - 45_000);
+    const posted = await fetchFinance(adminToken, camionId);
+    expect(posted.expenseMinor).toBe(before.expenseMinor + 45_000);
+    expect(posted.netMinor).toBe(before.netMinor - 45_000);
     expect(
-      posted.finance.expenseByCategory.find(({ code }) => code === "TOLLS"),
+      posted.expenseByCategory.find(({ code }) => code === "TOLLS"),
     ).toMatchObject({ totalMinor: 45_000 });
 
     const reversal = await ctx.app.inject({
@@ -253,12 +253,12 @@ describe("GET /v1/assets/:assetId", () => {
     });
     expect(reversal.statusCode).toBe(200);
 
-    const after = await fetchAsset(adminToken, camionId);
-    expect(after.finance.expenseMinor).toBe(before.finance.expenseMinor);
-    expect(after.finance.netMinor).toBe(before.finance.netMinor);
+    const after = await fetchFinance(adminToken, camionId);
+    expect(after.expenseMinor).toBe(before.expenseMinor);
+    expect(after.netMinor).toBe(before.netMinor);
     // A category netted back to zero is gone, not shown as a 0 XAF cost.
     expect(
-      after.finance.expenseByCategory.some(({ code }) => code === "TOLLS"),
+      after.expenseByCategory.some(({ code }) => code === "TOLLS"),
     ).toBe(false);
   });
 
@@ -316,6 +316,13 @@ describe("GET /v1/assets/:assetId", () => {
 
     expect(response.statusCode).toBe(401);
   });
+
+  /** The money block, which every role that reads the books receives. */
+  async function fetchFinance(token: string, assetId: string) {
+    const { finance } = await fetchAsset(token, assetId);
+    if (finance === undefined) throw new Error("finance block missing");
+    return finance;
+  }
 
   async function fetchAsset(token: string, assetId: string) {
     const response = await ctx.app.inject({
@@ -569,6 +576,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
       assetId,
       issueId,
       description: "Remplacer les flexibles",
+      expectedCostMinor: 0,
     });
     await api.ok(
       mechanic.token,

@@ -148,6 +148,9 @@ describe("maintenance forms pinned to one vehicle", () => {
     await openSelect(user(), screen.getByRole("combobox", { name: "Issue" }));
     await userEvent.click(await screen.findByRole("option", { name: "Brakes squeal on the descent" }));
     await userEvent.type(screen.getByLabelText("Description"), "Replace pads");
+    // Required since the threshold is read against it.
+    expect((screen.getByRole("button", { name: "Open work order" }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.type(screen.getByLabelText("Expected cost"), "85000");
     await userEvent.click(screen.getByRole("button", { name: "Open work order" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
@@ -155,6 +158,7 @@ describe("maintenance forms pinned to one vehicle", () => {
       assetId: ASSET_ID,
       issueId: ISSUE_ID,
       description: "Replace pads",
+      expectedCostMinor: 85000,
     });
   });
 });

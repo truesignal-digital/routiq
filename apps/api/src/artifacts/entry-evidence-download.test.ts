@@ -25,6 +25,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
   let admin: Actor;
   let dlaOnly: Actor;
   let ydeOnly: Actor;
+  let mechanic: Actor;
   let assetId: string;
   let entryId: string;
   let recordedFile: string;
@@ -83,6 +84,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
       branchIds: [seeded.branch.id],
     });
     ydeOnly = await seedActor(db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    mechanic = await seedActor(db, { workspaceId, role: "MAINTENANCE" });
     assetId = await seedAsset(app, admin.token);
 
     recordedFile = await artifact();
@@ -154,6 +156,46 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
     expect((await api.get(admin.token, url(randomUUID(), recordedFile))).status).toBe(404);
     expect((await api.get(admin.token, url("nope", recordedFile))).status).toBe(400);
     expect(storage.presignGet).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Review P2: the workshop is outside the ledger readers. It reaches the
+   * paperwork of its own work — entries whose every line is a work-order cost,
+   * the attach-evidence rule — and no other receipt.
+   */
+  it("hands the workshop only the paperwork of work-order costs", async () => {
+    const refused = await api.get(mechanic.token, url(entryId, recordedFile));
+    expect(refused.status).toBe(404);
+    expect(refused.body).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+    expect(storage.presignGet).not.toHaveBeenCalled();
+
+    const workOrderId = randomUUID();
+    await api.ok(admin.token, "create-work-order", {
+      workOrderId,
+      assetId,
+      description: "Embrayage",
+      expectedCostMinor: 80_000,
+    });
+    const invoice = await artifact();
+    const repairId = randomUUID();
+    await api.ok(
+      mechanic.token,
+      "record-expense",
+      {
+        entryId: repairId,
+        branchCode: "DLA",
+        categoryCode: "REPAIRS",
+        economicDate: "2026-08-14",
+        amountMinor: 80_000,
+        paymentMethod: "CASH",
+        postings: [{ assetId, amountMinor: 80_000, workOrderId }],
+      },
+      { sourceArtifactIds: [invoice] },
+    );
+    const allowed = await api.get(mechanic.token, url(repairId, invoice));
+    expect(allowed.status).toBe(200);
+    expect(allowed.body).toEqual({ url: expect.stringContaining(`finalized-artifacts/${invoice}/`) });
+    expect(storage.presignGet).toHaveBeenCalledTimes(1);
   });
 
   it("answers MODULE_DISABLED when FINANCE is off", async () => {

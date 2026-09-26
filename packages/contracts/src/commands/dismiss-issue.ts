@@ -9,7 +9,7 @@ import { commandEnvelope } from "../envelope.js";
  */
 export const dismissIssuePayload = z.object({
   issueId: z.uuid(),
-  reason: z.string().min(1).max(500),
+  reason: z.string().trim().min(1).max(500),
 });
 
 export const dismissIssueCommand = z.object({

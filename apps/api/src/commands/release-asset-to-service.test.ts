@@ -61,6 +61,7 @@ describe("release-asset-to-service.v1", () => {
           workOrderId: otherWorkspaceWorkOrderId,
           assetId: foreignAssetId,
           description: "Révision chez le voisin",
+          expectedCostMinor: 0,
         })
       ).statusCode,
     ).toBe(200);
@@ -515,6 +516,74 @@ describe("release-asset-to-service.v1", () => {
       expect(stale.json()).toMatchObject({
         error: { code: "VERSION_CONFLICT", metadata: { currentVersion: 2 } },
       });
+    });
+  });
+
+  /**
+   * A second safety-critical report on a truck already down opens no interval
+   * of its own, so the release is where it must hold the truck back (review
+   * P3): repairing the brakes cannot put a truck with a jammed steering column
+   * back on the road.
+   */
+  describe("every other safety-critical signalement closed first", () => {
+    it("keeps the truck grounded until the second signalement is closed", async () => {
+      const { assetId, workOrderId } = await groundedAsset();
+      const steering = await reportIssue(assetId, true, "Direction bloquée");
+
+      const refused = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json()).toEqual({
+        error: { code: "SAFETY_ISSUE_OPEN", metadata: { assetId, openIssueIds: [steering] } },
+      });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+      const detail = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/assets/${assetId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(detail.json()).toMatchObject({ availability: { state: "GROUNDED" } });
+
+      expect(
+        (await post(mechanicToken, "resolve-issue", { issueId: steering }, { expectedVersion: 1 }))
+          .statusCode,
+      ).toBe(200);
+      const released = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
+      expect(released.statusCode).toBe(200);
+      expect(await openIntervals(assetId)).toHaveLength(0);
+    });
+
+    it("refuses the override path the same way", async () => {
+      const assetId = await seedAsset(ctx.app, adminToken);
+      const brakes = await reportIssue(assetId, true);
+      const steering = await reportIssue(assetId, true, "Direction bloquée");
+      await post(mechanicToken, "dismiss-issue", { issueId: brakes, reason: "Fausse alerte" }, {
+        expectedVersion: 1,
+      });
+
+      const refused = await post(adminToken, "release-asset-to-service", {
+        assetId,
+        overrideReason: "Signalement classé sans suite",
+      });
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json()).toMatchObject({
+        error: { code: "SAFETY_ISSUE_OPEN", metadata: { openIssueIds: [steering] } },
+      });
+      expect(await openIntervals(assetId)).toHaveLength(1);
+    });
+
+    it("lets a minor fault left open ride along", async () => {
+      const { assetId, workOrderId } = await groundedAsset();
+      await reportIssue(assetId, false, "Rétroviseur fissuré");
+      const response = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ warnings: [] });
+    });
+
+    it("warns when the release leaves the grounding signalement itself open", async () => {
+      const { assetId, workOrderId } = await groundedAsset({ resolveLinkedIssue: false });
+      const response = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ warnings: ["GROUNDING_ISSUE_STILL_OPEN"] });
     });
   });
 

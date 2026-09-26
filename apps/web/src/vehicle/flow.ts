@@ -499,6 +499,7 @@ export interface Todo {
 
 const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   ISSUE_UNPLANNED: "workshop",
+  ISSUE_OPEN_WHILE_AVAILABLE: "workshop",
   WORK_ORDER_AWAITING_AUTHORIZATION: "finance",
   WORK_ORDER_IN_PROGRESS: "workshop",
   WORK_ORDER_AWAITING_SIGN_OFF: "finance",
@@ -556,6 +557,9 @@ export function attentionStep(
   switch (item.code) {
     case "ISSUE_UNPLANNED":
       return may.manageWorkOrders(viewer) ? go("create-work-order") : { kind: "none" };
+    case "ISSUE_OPEN_WHILE_AVAILABLE":
+      // Released on a completed repair, but nobody closed the report.
+      return may.resolveIssues(viewer) ? go("resolve-issue") : { kind: "none" };
     case "WORK_ORDER_AWAITING_AUTHORIZATION":
       if (!may.approveWorkOrders(viewer)) return { kind: "none" };
       return maker

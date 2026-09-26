@@ -1,7 +1,7 @@
 import { attachEvidencePayload, type AttachEvidencePayload } from "@routiq/contracts";
-import { and, eq, isNull } from "drizzle-orm";
-import { financialEntries, financialPostings } from "../db/schema.js";
-import { EVIDENCE_ATTACHED_EVENT } from "../reads/entry-evidence.js";
+import { and, eq } from "drizzle-orm";
+import { financialEntries } from "../db/schema.js";
+import { EVIDENCE_ATTACHED_EVENT, hasPostingWithoutWorkOrder } from "../reads/entry-evidence.js";
 import {
   appendAuditEvent,
   CommandError,
@@ -89,18 +89,7 @@ export const attachEvidence: CommandDefinition<AttachEvidencePayload> = {
     }
 
     if (ctx.role === "MAINTENANCE") {
-      const [unattributed] = await tx
-        .select({ id: financialPostings.id })
-        .from(financialPostings)
-        .where(
-          and(
-            eq(financialPostings.workspaceId, ctx.workspaceId),
-            eq(financialPostings.financialEntryId, entry.id),
-            isNull(financialPostings.workOrderId),
-          ),
-        )
-        .limit(1);
-      if (unattributed) {
+      if (await hasPostingWithoutWorkOrder(tx, ctx.workspaceId, entry.id)) {
         throw new CommandError(403, "ROLE_FORBIDDEN", {
           command: "attach-evidence",
           reason: "WORK_ORDER_REQUIRED",
