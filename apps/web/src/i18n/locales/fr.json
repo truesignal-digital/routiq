@@ -1087,7 +1087,10 @@
       "cancelReason": "Motif d'annulation",
       "rejectReason": "Motif du rejet",
       "completionRejectReason": "Motif du refus de la fin des travaux",
-      "note": "Note"
+      "note": "Note",
+      "photos": "Photos (facultatif)",
+      "overrideReason": "Pourquoi aucun ordre de travail n'a été nécessaire",
+      "overrideReasonHint": "Le signalement a été clos sans ordre de travail terminé. Ce motif reste dans la piste d'audit."
     },
     "actions": {
       "cancel": "Annuler",
@@ -1551,5 +1554,10 @@
     "conflictBody": "Quelqu'un d'autre a modifié cet enregistrement. Actualisez, vérifiez, puis réappliquez votre action.",
     "approvalTitle": "Approbation requise",
     "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié."
+  },
+  "vehicle": {
+    "forms": {
+      "pinnedVehicle": "Véhicule"
+    }
   }
 }

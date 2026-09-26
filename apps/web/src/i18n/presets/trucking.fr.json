@@ -154,5 +154,10 @@
       "work_order-asset_released": "Camion remis en service",
       "asset_availability-opened": "Camion immobilisé"
     }
+  },
+  "vehicle": {
+    "forms": {
+      "pinnedVehicle": "Camion"
+    }
   }
 }
