@@ -55,6 +55,9 @@ jobs:
 
       - run: pnpm typecheck
 
+      # Repo rules from tools/guards; known violations may only shrink.
+      - run: pnpm lint
+
       - name: Apply migrations (drizzle-kit CLI path)
         run: pnpm db:migrate
         env:
