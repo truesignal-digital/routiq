@@ -24,11 +24,11 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import type { TenantTx } from "../db/tenant.js";
 import {
   activities,
   activityAssetSegments,
@@ -57,9 +57,9 @@ import {
   keysetOrderBy,
   type KeysetColumn,
 } from "./cursor.js";
-import { enabledModuleSet } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import type { AuthContext } from "../auth/types.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /** The filters both the list and the summary narrow the fleet by. */
 const assetFilters = {
@@ -270,119 +270,123 @@ export function registerAssetReadRoutes(
   registerAssetAttentionReadRoutes(app, db, requireAuth);
   registerAssetHistoryReadRoutes(app, db, requireAuth);
 
-  app.get("/v1/assets", { preHandler: requireAuth }, async (req: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const auth = req.auth!;
-      const parsedQuery = listQuerySchema.safeParse(req.query);
-      if (!parsedQuery.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
-      }
-      const { status, category, branchId, search, cursor, limit } =
-        parsedQuery.data;
-      const sort = parsedQuery.data.sort ?? defaultAssetSort;
-      const sortColumn = assetSortColumns[sort.field];
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
+      try {
+        const parsedQuery = listQuerySchema.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { status, category, branchId, search, cursor, limit } =
+          parsedQuery.data;
+        const sort = parsedQuery.data.sort ?? defaultAssetSort;
+        const sortColumn = assetSortColumns[sort.field];
 
-      // The sort rides inside the cursor, so a boundary minted under one
-      // ordering is refused rather than replayed against another (ADR-0003).
-      const decodedCursor = cursor
-        ? decodeKeysetCursor(cursor, sort)
-        : undefined;
-      if (cursor && !decodedCursor) {
-        return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
-      }
+        // The sort rides inside the cursor, so a boundary minted under one
+        // ordering is refused rather than replayed against another (ADR-0003).
+        const decodedCursor = cursor
+          ? decodeKeysetCursor(cursor, sort)
+          : undefined;
+        if (cursor && !decodedCursor) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
 
-      const conditions = assetScopeConditions(auth, {
-        status,
-        category,
-        branchId,
-        search,
-      });
+        const conditions = assetScopeConditions(auth, {
+          status,
+          category,
+          branchId,
+          search,
+        });
 
-      if (decodedCursor) {
-        conditions.push(
-          afterKeyset(sortColumn, sort.direction, assets.id, decodedCursor),
+        if (decodedCursor) {
+          conditions.push(
+            afterKeyset(sortColumn, sort.direction, assets.id, decodedCursor),
+          );
+        }
+
+        const rows = await read((tx) =>
+          tx
+            .select({
+              id: assets.id,
+              assetCode: assets.assetCode,
+              registrationNumber: assets.registrationNumber,
+              manufacturer: assets.manufacturer,
+              model: assets.model,
+              lifecycleStatus: assets.lifecycleStatus,
+              rowVersion: assets.rowVersion,
+              categoryCode: assets.assetClassCode,
+              categoryLabelFr: categories.labelFr,
+              categoryLabelEn: categories.labelEn,
+              branchCode: branches.code,
+              branchName: branches.name,
+            })
+            .from(assets)
+            .innerJoin(
+              branches,
+              and(
+                eq(branches.workspaceId, assets.workspaceId),
+                eq(branches.id, assets.branchId),
+              ),
+            )
+            .leftJoin(
+              categories,
+              and(
+                eq(categories.workspaceId, assets.workspaceId),
+                eq(categories.kind, "ASSET_CLASS"),
+                eq(categories.code, assets.assetClassCode),
+              ),
+            )
+            .where(and(...conditions))
+            .orderBy(...keysetOrderBy(sortColumn, sort.direction, assets.id))
+            // One extra row is the has-next probe, never returned.
+            .limit(limit + 1),
         );
+
+        const hasNextPage = rows.length > limit;
+        const items = rows.slice(0, limit).map((row) => ({
+          id: row.id,
+          assetCode: row.assetCode,
+          registrationNumber: row.registrationNumber,
+          manufacturer: row.manufacturer,
+          model: row.model,
+          lifecycleStatus: row.lifecycleStatus,
+          rowVersion: row.rowVersion,
+          category: {
+            code: row.categoryCode,
+            labelFr: row.categoryLabelFr ?? row.categoryCode,
+            labelEn: row.categoryLabelEn ?? row.categoryCode,
+          },
+          branch: {
+            code: row.branchCode,
+            name: row.branchName,
+          },
+        }));
+
+        let nextCursor: string | null = null;
+        if (hasNextPage && items.length > 0) {
+          const last = items[items.length - 1]!;
+          nextCursor = encodeKeysetCursor(sort, last.assetCode, last.id);
+        }
+
+        return assetListResponse.parse({ items, nextCursor });
+      } catch (error) {
+        req.log.error({ err: error }, "asset list read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
       }
-
-      const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
-        tx
-          .select({
-            id: assets.id,
-            assetCode: assets.assetCode,
-            registrationNumber: assets.registrationNumber,
-            manufacturer: assets.manufacturer,
-            model: assets.model,
-            lifecycleStatus: assets.lifecycleStatus,
-            rowVersion: assets.rowVersion,
-            categoryCode: assets.assetClassCode,
-            categoryLabelFr: categories.labelFr,
-            categoryLabelEn: categories.labelEn,
-            branchCode: branches.code,
-            branchName: branches.name,
-          })
-          .from(assets)
-          .innerJoin(
-            branches,
-            and(
-              eq(branches.workspaceId, assets.workspaceId),
-              eq(branches.id, assets.branchId),
-            ),
-          )
-          .leftJoin(
-            categories,
-            and(
-              eq(categories.workspaceId, assets.workspaceId),
-              eq(categories.kind, "ASSET_CLASS"),
-              eq(categories.code, assets.assetClassCode),
-            ),
-          )
-          .where(and(...conditions))
-          .orderBy(...keysetOrderBy(sortColumn, sort.direction, assets.id))
-          // One extra row is the has-next probe, never returned.
-          .limit(limit + 1),
-      );
-
-      const hasNextPage = rows.length > limit;
-      const items = rows.slice(0, limit).map((row) => ({
-        id: row.id,
-        assetCode: row.assetCode,
-        registrationNumber: row.registrationNumber,
-        manufacturer: row.manufacturer,
-        model: row.model,
-        lifecycleStatus: row.lifecycleStatus,
-        rowVersion: row.rowVersion,
-        category: {
-          code: row.categoryCode,
-          labelFr: row.categoryLabelFr ?? row.categoryCode,
-          labelEn: row.categoryLabelEn ?? row.categoryCode,
-        },
-        branch: {
-          code: row.branchCode,
-          name: row.branchName,
-        },
-      }));
-
-      let nextCursor: string | null = null;
-      if (hasNextPage && items.length > 0) {
-        const last = items[items.length - 1]!;
-        nextCursor = encodeKeysetCursor(sort, last.assetCode, last.id);
-      }
-
-      return assetListResponse.parse({ items, nextCursor });
-    } catch (error) {
-      req.log.error({ err: error }, "asset list read failed");
-      return reply.status(500).send({ error: { code: "READ_FAILED" } });
-    }
-  });
+    },
+  );
 
   // Registered ahead of `/v1/assets/:assetId` so the static segment reads as
   // the route it is, not as an asset id that happens to spell "summary".
-  app.get(
-    "/v1/assets/summary",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/summary", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = summaryQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -396,7 +400,7 @@ export function registerAssetReadRoutes(
         const countWhere = (statuses: readonly AssetLifecycleStatus[]) =>
           sql<number>`count(*) filter (where ${inArray(assets.lifecycleStatus, [...statuses])})::int`;
 
-        const [totals] = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const [totals] = await read((tx) =>
           tx
             .select({
               total: countAll,
@@ -432,12 +436,12 @@ export function registerAssetReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/assets/:assetId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, modules, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({ assetId: z.uuid() })
           .safeParse(req.params);
@@ -446,7 +450,7 @@ export function registerAssetReadRoutes(
         }
         const { assetId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const headerConditions: SQL[] = [
             eq(assets.workspaceId, auth.workspaceId),
             eq(assets.id, assetId),
@@ -567,7 +571,6 @@ export function registerAssetReadRoutes(
 
           // Availability and readings belong to modules a workspace may turn
           // off; a disabled module's section says so rather than guessing.
-          const modules = await enabledModuleSet(tx, auth.workspaceId);
           const custodian = await loadCustodian(
             tx,
             auth.workspaceId,

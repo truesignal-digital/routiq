@@ -63,7 +63,7 @@ describe("GET /v1/dashboard", () => {
       // zeros — an empty array would leave the chart with nothing to draw.
       expect(body.series).toHaveLength(DASHBOARD_SERIES_DAYS_DEFAULT);
       expect(
-        body.series.every((p) => p.expenseMinor === 0 && p.revenueMinor === 0),
+        body.series?.every((p) => p.expenseMinor === 0 && p.revenueMinor === 0),
       ).toBe(true);
     });
   });
@@ -207,7 +207,7 @@ describe("GET /v1/dashboard", () => {
         postedExpenseMinor: 50_000,
         postedRevenueMinor: 200_000,
       });
-      expect(body.pendingApprovals.count).toBe(1);
+      expect(body.pendingApprovals?.count).toBe(1);
     });
 
     it("sums signed postings of the open period in the workspace currency", async () => {
@@ -291,7 +291,7 @@ describe("GET /v1/dashboard", () => {
         postedExpenseMinor: 50_000,
         postedRevenueMinor: 200_000,
       });
-      expect(body.pendingApprovals.count).toBe(1);
+      expect(body.pendingApprovals?.count).toBe(1);
     });
 
     it("narrows within branch scope and never widens past it", async () => {
@@ -304,7 +304,7 @@ describe("GET /v1/dashboard", () => {
         postedExpenseMinor: 0,
         postedRevenueMinor: 0,
       });
-      expect(body.pendingApprovals.count).toBe(0);
+      expect(body.pendingApprovals?.count).toBe(0);
     });
 
     it("reports the pending work the branch narrowing is hiding", async () => {
@@ -312,22 +312,22 @@ describe("GET /v1/dashboard", () => {
 
       // YDE's submission never reaches the card's count; the overflow is the
       // only thing that says it exists.
-      expect(body.pendingApprovals.count).toBe(1);
-      expect(body.pendingApprovals.outsideBranchCount).toBe(1);
+      expect(body.pendingApprovals?.count).toBe(1);
+      expect(body.pendingApprovals?.outsideBranchCount).toBe(1);
     });
 
     it("reports no overflow without a branch narrowing", async () => {
       const body = await fetchDashboard(adminToken);
 
-      expect(body.pendingApprovals.outsideBranchCount).toBe(0);
+      expect(body.pendingApprovals?.outsideBranchCount).toBe(0);
     });
 
     it("counts the overflow inside the caller's branch scope only", async () => {
       const body = await fetchDashboard(scopedToken, undefined, dlaBranchId);
 
       // Scoped to DLA: YDE's submission is not work this member can widen to.
-      expect(body.pendingApprovals.count).toBe(1);
-      expect(body.pendingApprovals.outsideBranchCount).toBe(0);
+      expect(body.pendingApprovals?.count).toBe(1);
+      expect(body.pendingApprovals?.outsideBranchCount).toBe(0);
     });
 
     it("rejects a branchId that is not a uuid with VALIDATION_FAILED", async () => {
@@ -346,8 +346,8 @@ describe("GET /v1/dashboard", () => {
           fetchDashboard(token),
           fetchApprovals(token),
         ]);
-        expect(dashboard.pendingApprovals.count).toBe(queue.total);
-        expect(dashboard.pendingApprovals.count).toBe(queue.entries.length);
+        expect(dashboard.pendingApprovals?.count).toBe(queue.total);
+        expect(dashboard.pendingApprovals?.count).toBe(queue.entries.length);
       }
     });
 
@@ -357,7 +357,7 @@ describe("GET /v1/dashboard", () => {
           fetchDashboard(token, undefined, dlaBranchId),
           fetchApprovals(token, dlaBranchId),
         ]);
-        expect(dashboard.pendingApprovals.outsideBranchCount).toBe(
+        expect(dashboard.pendingApprovals?.outsideBranchCount).toBe(
           queue.outsideBranchCount,
         );
       }
@@ -444,7 +444,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("buckets each day on its economic date", async () => {
-      const { series } = await fetchDashboard(adminToken);
+      const series = seriesOf(await fetchDashboard(adminToken));
 
       expect(dayOf(series, today)).toEqual({
         date: today,
@@ -462,7 +462,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("zero-fills a day nothing was posted on", async () => {
-      const { series } = await fetchDashboard(adminToken);
+      const series = seriesOf(await fetchDashboard(adminToken));
 
       expect(dayOf(series, addDays(today, -5))).toEqual({
         date: addDays(today, -5),
@@ -473,7 +473,7 @@ describe("GET /v1/dashboard", () => {
 
     it("returns every day of the requested window, ascending and contiguous", async () => {
       for (const days of [DASHBOARD_SERIES_DAYS_DEFAULT, 30, 7]) {
-        const { series } = await fetchDashboard(adminToken, days);
+        const series = seriesOf(await fetchDashboard(adminToken, days));
 
         expect(series).toHaveLength(days);
         expect(series.at(-1)?.date).toBe(today);
@@ -485,7 +485,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("defaults the window to 90 days when the client asks for none", async () => {
-      const { series } = await fetchDashboard(adminToken);
+      const series = seriesOf(await fetchDashboard(adminToken));
       expect(series).toHaveLength(90);
     });
 
@@ -493,10 +493,10 @@ describe("GET /v1/dashboard", () => {
       const old = addDays(today, -120);
 
       const narrow = await fetchDashboard(adminToken, 90);
-      expect(dayOf(narrow.series, old)).toBeUndefined();
+      expect(dayOf(seriesOf(narrow), old)).toBeUndefined();
 
       const wide = await fetchDashboard(adminToken, 365);
-      expect(dayOf(wide.series, old)).toMatchObject({ expenseMinor: 70_000 });
+      expect(dayOf(seriesOf(wide), old)).toMatchObject({ expenseMinor: 70_000 });
     });
 
     it("nets a reversal back to zero on the day it was economically dated", async () => {
@@ -514,7 +514,7 @@ describe("GET /v1/dashboard", () => {
       );
 
       const posted = await fetchDashboard(adminToken);
-      expect(dayOf(posted.series, reversedDay)).toMatchObject({
+      expect(dayOf(seriesOf(posted), reversedDay)).toMatchObject({
         expenseMinor: 45_000,
       });
 
@@ -542,7 +542,7 @@ describe("GET /v1/dashboard", () => {
       // The reversal inherits the original's economic date, so the pair nets on
       // that day — not on the day the correction happened to be captured.
       const reversed = await fetchDashboard(adminToken);
-      expect(dayOf(reversed.series, reversedDay)).toEqual({
+      expect(dayOf(seriesOf(reversed), reversedDay)).toEqual({
         date: reversedDay,
         expenseMinor: 0,
         revenueMinor: 0,
@@ -550,7 +550,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("narrows the series to a branch-scoped member's branches", async () => {
-      const { series } = await fetchDashboard(scopedToken);
+      const series = seriesOf(await fetchDashboard(scopedToken));
 
       expect(dayOf(series, today)).toMatchObject({ expenseMinor: 50_000 });
       // YDE's 30_000 is out of scope, and its day still arrives as a zero.
@@ -562,7 +562,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("narrows the series to the branch the client asked for", async () => {
-      const { series } = await fetchDashboard(adminToken, undefined, dlaBranchId);
+      const series = seriesOf(await fetchDashboard(adminToken, undefined, dlaBranchId));
 
       expect(dayOf(series, today)).toMatchObject({ expenseMinor: 50_000 });
       // YDE's 30_000 is filtered out, and its day is still a zero, not a gap.
@@ -588,6 +588,12 @@ describe("GET /v1/dashboard", () => {
       },
     );
   });
+
+  /** Admins may read finance, so their dashboard always carries a series. */
+  function seriesOf<TPoint>(body: { series: TPoint[] | null }): TPoint[] {
+    if (body.series === null) throw new Error("expected finance figures for this caller");
+    return body.series;
+  }
 
   function dayOf<TPoint extends { date: string }>(
     series: readonly TPoint[],

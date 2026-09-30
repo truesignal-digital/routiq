@@ -79,6 +79,11 @@ function cardBody(
   if (key === "pendingApprovals") {
     // The count follows the shell's agency, so the card has to say what that
     // narrowing leaves out or the rest of the queue goes unmentioned.
+    // Null only when the API withholds finance from this caller; the card is
+    // gated to approvers, so this is the brief window before /v1/me agrees.
+    if (data.pendingApprovals === null) {
+      return { value: "—", description: t("home.cards.financeUnavailable") };
+    }
     const { count, outsideBranchCount } = data.pendingApprovals;
     return {
       value: String(count),
