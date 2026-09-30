@@ -13,6 +13,7 @@
       "maxLength": 500
     }
   },
-  "required": ["issueId"],
-  "additionalProperties": false
+  "required": [
+    "issueId"
+  ]
 }

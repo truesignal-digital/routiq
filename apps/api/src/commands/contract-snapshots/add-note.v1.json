@@ -9,7 +9,9 @@
     },
     "entityType": {
       "type": "string",
-      "enum": ["asset"]
+      "enum": [
+        "asset"
+      ]
     },
     "entityId": {
       "type": "string",

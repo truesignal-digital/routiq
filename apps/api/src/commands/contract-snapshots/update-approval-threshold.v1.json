@@ -6,7 +6,9 @@
       "type": "string",
       "enum": [
         "record-revenue",
-        "record-expense"
+        "record-expense",
+        "create-work-order",
+        "complete-work-order"
       ]
     },
     "amountMaxMinor": {

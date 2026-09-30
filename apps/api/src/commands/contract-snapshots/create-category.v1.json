@@ -46,6 +46,9 @@
         "RECEIPT_EXPECTED",
         "NO_RECEIPT_EXPECTED"
       ]
+    },
+    "defaultSafetyCritical": {
+      "type": "boolean"
     }
   },
   "required": [
