@@ -51,8 +51,19 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
   },
   {
     id: "A18",
-    bad: [file("apps/api/src/commands/x.test.ts", 'fetch("/v1/commands", { method: "POST" })')],
-    good: [file("apps/api/src/commands/x.test.ts", 'url: "/v1/commands/register-asset",')],
+    bad: [
+      file("apps/api/src/commands/x.test.ts", 'const res = await fetch("/v1/commands", { method: "POST" });'),
+      file("apps/api/src/commands/x.test.ts", 'await post("/v1/commands", payload);'),
+    ],
+    good: [
+      file("apps/api/src/commands/x.test.ts", 'url: "/v1/commands/register-asset",'),
+      // Bare string in a list (define-read.ts pattern)
+      file("apps/api/src/reads/define-read.ts", '  "/v1/commands",'),
+      // GET registration
+      file("apps/api/src/server.ts", 'app.get("/v1/commands", async (request) => {'),
+      // In a dictionary
+      file("apps/api/src/reads/x.ts", 'const READS = { "/v1/commands": { method: "GET" } };'),
+    ],
   },
   {
     id: "A24",
