@@ -8,6 +8,7 @@
     "provision": "tsx scripts/provision.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "smoke": "tsx scripts/smoke.ts",
+    "contracts:snapshot": "tsx scripts/contract-snapshots.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",

@@ -23,6 +23,8 @@ pnpm workspace monorepo (never npm/yarn). Node ≥ 24.
 
 ```bash
 pnpm typecheck                    # all packages (tsc --noEmit)
+pnpm lint                         # repo guards (tools/guards); see "Guards and the ratchet"
+pnpm lint:tighten                 # lower guard baselines after you remove violations
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
 pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file
@@ -46,6 +48,7 @@ docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API 
 | `apps/web` | `@routiq/web` | Vite + React 19 PWA |
 | `packages/contracts` | `@routiq/contracts` | Zod command envelopes + payload schemas — shared by API, web, offline sync, future AI |
 | `packages/domain` | `@routiq/domain` | Pure domain logic (money, invariants); no I/O deps |
+| `tools` | `@routiq/tools` | Repo guards (`tools/guards`) and agent tooling; never imported by app code |
 
 TypeScript strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `verbatimModuleSyntax` (`tsconfig.base.json`). ESM everywhere; intra-package imports use `.js` extensions. No `any`, no `@ts-ignore`; `@ts-expect-error` only in type tests.
 
@@ -62,6 +65,8 @@ Adding a command touches three places:
 
 Never change the payload shape of a shipped command version. Add `vN+1` with a compatibility handler for `vN`, as `provision-workspace` v1 → v2 did (#20).
 
+Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/commands/contract-snapshots/`. `contract-snapshots.test.ts` fails when a version has no snapshot, when a snapshot has no handler, or when the current schema rejects a payload the stored one accepted (a removed field, a newly required field, a removed enum value, a type change, a tighter bound). Widening passes. After adding a command version or widening one, run `pnpm --filter @routiq/api contracts:snapshot` and commit the files it writes. Never write a snapshot by hand; the script refuses to rewrite a narrowed one.
+
 **Command envelope rules** (`packages/contracts/src/envelope.ts`): tenant, actor, and branch scope are NEVER accepted from the client — the server derives them from auth. Envelope carries `commandId`, `idempotencyKey` (workspace-scoped unique; exact retry returns original result, same key + different payload → 409), `origin`, optional `expectedVersion`, `sourceArtifactIds`.
 
 **Reads** are GET routes in `apps/api/src/reads/`, running inside `inWorkspace`. Every read must declare and check its gates itself: the module it belongs to, the roles allowed to see it, and the branch scope of the caller. Reads that skipped a gate caused #40, #58 and #59; a `defineRead` wrapper that makes the gates required is planned. List reads use `listQuery`/`listResponse` with keyset cursors from `reads/cursor.ts` (ADR-0003). Business days come from `reads/business-date.ts` (workspace time zone).
@@ -70,7 +75,7 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 
 - **Money:** minor units + `char(3)` currency; `bigint` in the database and domain, a safe integer (`moneyMinor = z.number().int()`) on the wire. **XAF has exponent 0 — 1 XAF = 1 minor unit; never divide by 100.** Use `moneyMinor` from contracts and `packages/domain/src/money.ts`.
 - **Tenant isolation:** `workspace_id` on every tenant table; composite tenant FKs (`FOREIGN KEY (workspace_id, asset_id)`) so cross-tenant references are structurally impossible. New tables need explicit GRANTs to `routiq_app` in their migration (`db/grants.test.ts`).
-- **Append-only corrections:** approved/posted financial and stock records, meter readings, documents, and notes are never edited — corrections supersede or reverse (`superseded_by_id`, `reverses_entry_id`), preserving the original. Posting amounts are SIGNED so reversals subtract.
+- **Append-only corrections:** approved/posted financial and stock records, meter readings, documents, and notes are never edited — corrections supersede or reverse (`superseded_by_id`, `reverses_entry_id`), preserving the original. Posting amounts are SIGNED so reversals subtract. (UI edits vs corrections: ADR-0008.)
 - **Postings sum exactly to their entry;** one canonical cost posting per economic fact.
 - **Warn, don't block:** activity close with missing data sets completeness `COMPLETE_WITH_EXCEPTIONS`; period lock is the strict boundary. Reports never invent missing values.
 - **Provenance:** every business row carries `created_by_command_id`; UUIDs are client-generatable (offline requirement); `row_version` on every mutable table.
@@ -91,9 +96,18 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 1. The contract lives in `packages/contracts` with a test, and any shape change to a shipped command is a new version.
 2. Writes go through `registerCommand`; reads check module, role and branch scope.
 3. The UI follows the paved paths in `apps/web/AGENTS.md`.
-4. `pnpm typecheck` and `pnpm test` pass.
+4. `pnpm typecheck`, `pnpm lint` and `pnpm test` pass, and no guard baseline went up.
 5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions.
 6. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
+
+## Guards and the ratchet
+
+`pnpm lint` runs the rules in `tools/guards/rules.ts`. Each rule names a mistake that must not spread and says what to do instead. Known violations are counted per file in `tools/guards/baselines.json`, and those counts may only go down:
+
+- A new violation fails, and so does a violation in a new file.
+- When you remove violations, the count drops below its baseline and `pnpm lint` fails until you run `pnpm lint:tighten` and commit the lower baseline. That locks the improvement in.
+- If a guard blocks you, change the code, or stop and ask. Never edit a rule to let your change through, never delete a rule, and never raise a baseline by hand. The only exception is an ADR in `docs/adr/`, cited by a `Trust-Exception: ADR-NNNN` commit trailer.
+- When a bug or review finding shows a new class of mistake, add a rule for it, with a case in `tools/guards/rules.test.ts`.
 
 ## Git and PRs
 

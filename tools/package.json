@@ -1,0 +1,18 @@
+{
+  "name": "@routiq/tools",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "vitest run guards/guards.test.ts && tsx guards/report.ts",
+    "tighten": "tsx guards/tighten.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
