@@ -225,6 +225,13 @@
       "when": 1790461577099,
       "tag": "0031_postings_balance",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790777080332,
+      "tag": "0032_update_asset_details_command_defaults",
+      "breakpoints": true
     }
   ]
 }

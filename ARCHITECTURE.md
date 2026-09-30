@@ -243,6 +243,7 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | Command | Approval default |
 |---|---|
 | RegisterAsset / CommissionAsset | Auto (asset manager permission) |
+| UpdateAssetDetails | Auto (ADMIN, OPS_MANAGER). ADR-0008 level 1: a plain edit of plate, make, model, year, chassis, acquisition and template specifications, with before/after on the audit event. `expectedVersion` required; the acquisition amount only from ledger readers with FINANCE on; refused on SOLD/RETIRED/WRITTEN_OFF; never queued. Fleet code and class stay fixed |
 | AssignAsset (branch/custodian) | Auto; cross-branch transfer → 1 approval. A custodian must be an active member whose branch scope covers the vehicle's branch (`CUSTODIAN_INELIGIBLE`) |
 | **RecordJourneySheet** / **RecordHaulageJobSheet** | Auto — composite: one form emits activity + segments + crew + legs + readings atomically |
 | CreateActivity / RecordMovementLeg / SubstituteAsset | Auto (granular fallbacks for corrections) |

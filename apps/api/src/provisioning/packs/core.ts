@@ -306,7 +306,9 @@ function defaultApprovalRules(): Array<
     );
   }
 
-  for (const commandType of ["release-asset-to-service"]) {
+  // Editing what a vehicle is (update-asset-details) follows register-asset:
+  // the fleet managers.
+  for (const commandType of ["release-asset-to-service", "update-asset-details"]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
         commandType,

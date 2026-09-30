@@ -15,6 +15,7 @@ const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 const VEHICLE_MIGRATIONS = [
   { file: "0028_notes.sql", commands: ["add-note"] },
   { file: "0029_attach_evidence_command_defaults.sql", commands: ["attach-evidence"] },
+  { file: "0032_update_asset_details_command_defaults.sql", commands: ["update-asset-details"] },
 ] as const;
 
 const BACKFILLED_COMMANDS = VEHICLE_MIGRATIONS.flatMap((migration) => [...migration.commands]);
@@ -137,6 +138,8 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
       expect(backfilled).not.toContain("add-note:EXECUTIVE_VIEWER");
       expect(backfilled).not.toContain("attach-evidence:EXECUTIVE_VIEWER");
       expect(backfilled).toContain("attach-evidence:MAINTENANCE");
+      expect(backfilled).toContain("update-asset-details:OPS_MANAGER");
+      expect(backfilled).not.toContain("update-asset-details:MAINTENANCE");
     }
   });
 
