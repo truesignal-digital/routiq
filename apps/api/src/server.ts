@@ -50,6 +50,7 @@ import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
+import { requireReadGates } from "./reads/define-read.js";
 
 export interface ServerDeps {
   db: Db;
@@ -70,6 +71,8 @@ export function buildServer({
   // before routes can attach commandId/workspaceId (§8: both on every log line).
   const app = Fastify({ logger, disableRequestLogging: true });
   const requireAuth = makeRequireAuth(authDb, identity);
+  // Before any route: a /v1 GET registered without defineRead fails the boot.
+  requireReadGates(app);
 
   app.addHook("onReady", async () => {
     const result = await db.execute(sql`

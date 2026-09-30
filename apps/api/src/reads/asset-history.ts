@@ -12,7 +12,7 @@ import {
 } from "@routiq/contracts";
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
@@ -38,14 +38,15 @@ import {
   principals,
   workOrders,
 } from "../db/schema.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import type { TenantTx } from "../db/tenant.js";
 import { toActor } from "./actors.js";
 import { readingBranchScope } from "./asset-readings.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import { decodeTimestampCursor, encodeKeysetCursor, microsecondKey } from "./cursor.js";
 import { noteSql } from "./history.js";
-import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
+import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /**
  * The vehicle timeline as ONE statement (PLAN §1.5): a CTE lists every record
@@ -663,12 +664,12 @@ export function registerAssetHistoryReadRoutes(
    * first, filterable by kind. Gated by ASSETS; each source by its own module,
    * and MONEY by the ledger-reading roles.
    */
-  app.get(
-    "/v1/assets/:assetId/history",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/history", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, modules, read }) => {
       try {
-        const auth = req.auth!;
         const params = z.object({ assetId: z.uuid() }).safeParse(req.params);
         const query = vehicleHistoryQuery.safeParse(req.query);
         if (!params.success || !query.success) throw invalidRequest();
@@ -678,8 +679,7 @@ export function registerAssetHistoryReadRoutes(
         const position = cursor ? decodeTimestampCursor(cursor, historySort) : undefined;
         if (cursor && !position) throw invalidRequest();
 
-        const page = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          const modules = await passReadGate(tx, auth, { module: "ASSETS" });
+        const page = await read(async (tx) => {
           await requireScopedAsset(tx, auth, assetId);
           const context = { workspaceId: auth.workspaceId, assetId, auth };
           const sources = activeSources(modules, auth, kinds);
