@@ -8,6 +8,7 @@ export * from "./commands/add-or-renew-document.js";
 export * from "./templates.js";
 export * from "./commands/provision-workspace.js";
 export * from "./commands/register-asset.js";
+export * from "./commands/update-asset-details.js";
 export * from "./commands/module-toggle.js";
 export * from "./commands/categories.js";
 export * from "./commands/category.js";

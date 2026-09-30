@@ -90,6 +90,13 @@ export const COMMAND_QUEUEABILITY = {
   "reset-member-pin": false,
   "cancel-work-order": false,
   "release-asset-to-service": false,
+  /*
+   * An edit of what the vehicle is, made against the version on screen. Held
+   * in an outbox it would replay onto a record others may have changed since,
+   * and the version check would refuse it anyway; the editor has to see the
+   * current values.
+   */
+  "update-asset-details": false,
 
   /*
    * The two work-order decisions. A creation or a completion is a fact the

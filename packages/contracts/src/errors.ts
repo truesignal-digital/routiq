@@ -30,6 +30,11 @@ export const COMMAND_ERROR_CODES = [
    * so it has to be as unique as the code.
    */
   "DUPLICATE_BRANCH_NAME",
+  /**
+   * A plate another vehicle in this workspace already carries, compared without
+   * spaces or case (`LT 482 AB` = `lt482ab`). Checked by `update-asset-details`.
+   */
+  "DUPLICATE_REGISTRATION_NUMBER",
   "UNIQUE_CONSTRAINT_VIOLATION",
   "COMMAND_FAILED",
   "EXPECTED_VERSION_REQUIRED",

@@ -106,6 +106,7 @@
     "DUPLICATE_ASSET_CODE": "Ce code d'actif existe déjà dans votre espace.",
     "DUPLICATE_BRANCH_CODE": "Ce code d'agence existe déjà dans votre espace.",
     "DUPLICATE_BRANCH_NAME": "Ce nom d'agence existe déjà dans votre espace.",
+    "DUPLICATE_REGISTRATION_NUMBER": "Un autre véhicule a déjà cette immatriculation.",
     "TEMPLATE_FIELD_INVALID": "Un champ spécifique au modèle est invalide ou manquant.",
     "APPROVAL_REQUIRED": "Cette action nécessite une approbation. Elle sera disponible prochainement.",
     "IDEMPOTENCY_KEY_REUSED": "Cette soumission entre en conflit avec un envoi précédent. Vérifiez la liste puis réessayez.",
