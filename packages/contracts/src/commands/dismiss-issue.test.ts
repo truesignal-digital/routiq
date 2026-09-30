@@ -9,6 +9,13 @@ const envelope = {
 };
 const issueId = "550e8400-e29b-41d4-a716-446655440000";
 
+
+/** Paths of the fields a parse rejects, so a rejection is proven to come from the field under test. */
+function rejectedPaths(input: unknown): string[] {
+  const result = dismissIssueCommand.safeParse(input);
+  return result.success ? [] : result.error.issues.map((issue) => issue.path.join("."));
+}
+
 describe("dismiss-issue contract", () => {
   const valid = {
     name: "dismiss-issue",
@@ -27,7 +34,7 @@ describe("dismiss-issue contract", () => {
       payload: { reason: valid.payload.reason },
     };
 
-    expect(dismissIssueCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.issueId"]);
   });
 
   it("rejects an invalid issueId UUID", () => {
@@ -36,7 +43,7 @@ describe("dismiss-issue contract", () => {
       payload: { ...valid.payload, issueId: "not-a-uuid" },
     };
 
-    expect(dismissIssueCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.issueId"]);
   });
 
   it("rejects a missing reason", () => {
@@ -45,7 +52,7 @@ describe("dismiss-issue contract", () => {
       payload: { issueId: valid.payload.issueId },
     };
 
-    expect(dismissIssueCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
   });
 
   it("rejects an empty reason", () => {
@@ -54,7 +61,16 @@ describe("dismiss-issue contract", () => {
       payload: { ...valid.payload, reason: "" },
     };
 
-    expect(dismissIssueCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
+  });
+
+  it("rejects a whitespace-only reason", () => {
+    const command = {
+      ...valid,
+      payload: { ...valid.payload, reason: "   " },
+    };
+
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
   });
 
   it("rejects a reason longer than 500 characters", () => {
@@ -63,6 +79,6 @@ describe("dismiss-issue contract", () => {
       payload: { ...valid.payload, reason: "x".repeat(501) },
     };
 
-    expect(dismissIssueCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
   });
 });

@@ -9,6 +9,13 @@ const envelope = {
 };
 const workOrderId = "550e8400-e29b-41d4-a716-446655440001";
 
+
+/** Paths of the fields a parse rejects, so a rejection is proven to come from the field under test. */
+function rejectedPaths(input: unknown): string[] {
+  const result = rejectWorkOrderCommand.safeParse(input);
+  return result.success ? [] : result.error.issues.map((issue) => issue.path.join("."));
+}
+
 describe("reject-work-order contract", () => {
   const valid = {
     name: "reject-work-order",
@@ -27,7 +34,7 @@ describe("reject-work-order contract", () => {
       payload: { reason: valid.payload.reason },
     };
 
-    expect(rejectWorkOrderCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.workOrderId"]);
   });
 
   it("rejects an invalid workOrderId UUID", () => {
@@ -36,7 +43,7 @@ describe("reject-work-order contract", () => {
       payload: { ...valid.payload, workOrderId: "not-a-uuid" },
     };
 
-    expect(rejectWorkOrderCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.workOrderId"]);
   });
 
   it("rejects a missing reason", () => {
@@ -45,7 +52,7 @@ describe("reject-work-order contract", () => {
       payload: { workOrderId: valid.payload.workOrderId },
     };
 
-    expect(rejectWorkOrderCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
   });
 
   it("rejects an empty reason", () => {
@@ -54,7 +61,16 @@ describe("reject-work-order contract", () => {
       payload: { ...valid.payload, reason: "" },
     };
 
-    expect(rejectWorkOrderCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
+  });
+
+  it("rejects a whitespace-only reason", () => {
+    const command = {
+      ...valid,
+      payload: { ...valid.payload, reason: "   " },
+    };
+
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
   });
 
   it("rejects a reason longer than 500 characters", () => {
@@ -63,6 +79,6 @@ describe("reject-work-order contract", () => {
       payload: { ...valid.payload, reason: "x".repeat(501) },
     };
 
-    expect(rejectWorkOrderCommand.safeParse(command).success).toBe(false);
+    expect(rejectedPaths(command)).toEqual(["payload.reason"]);
   });
 });
