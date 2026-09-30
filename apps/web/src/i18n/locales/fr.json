@@ -31,7 +31,8 @@
         "title": "Recettes de la période"
       },
       "periodDescription": "Période ouverte {period}",
-      "noOpenPeriod": "Aucune période ouverte"
+      "noOpenPeriod": "Aucune période ouverte",
+      "financeUnavailable": "Non disponible pour votre rôle"
     },
     "chart": {
       "title": "Dépenses et recettes",

@@ -39,7 +39,6 @@ import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
 import { workspaceModules } from "./db/schema.js";
-import { inWorkspace } from "./db/tenant.js";
 import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
@@ -50,6 +49,7 @@ import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
+import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
 
 export interface ServerDeps {
   db: Db;
@@ -70,6 +70,8 @@ export function buildServer({
   // before routes can attach commandId/workspaceId (§8: both on every log line).
   const app = Fastify({ logger, disableRequestLogging: true });
   const requireAuth = makeRequireAuth(authDb, identity);
+  // Before any route: a /v1 GET registered without defineRead fails the boot.
+  requireReadGates(app);
 
   app.addHook("onReady", async () => {
     const result = await db.execute(sql`
@@ -119,10 +121,9 @@ export function buildServer({
   registerHistoryReadRoutes(app, db, requireAuth);
   registerMaintenanceReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
-  app.get("/v1/me", { preHandler: requireAuth }, async (req) => {
-    const auth = req.auth;
-    if (!auth) return req.auth;
-    const { disabled, presets } = await inWorkspace(db, auth.workspaceId, async (tx) => ({
+  const readDeps = { db, requireAuth };
+  defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {
+    const { disabled, presets } = await read(async (tx) => ({
       disabled: await tx
         .select({ moduleCode: workspaceModules.moduleCode })
         .from(workspaceModules)
@@ -143,7 +144,7 @@ export function buildServer({
       enabledPresets: presets,
     };
   });
-  app.get("/v1/commands", { preHandler: requireAuth }, async () => ({
+  defineRead(app, readDeps, { path: "/v1/commands", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async () => ({
     commands: listCommands(),
   }));
 

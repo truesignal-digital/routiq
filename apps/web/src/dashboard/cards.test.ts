@@ -58,6 +58,12 @@ describe("visibleDashboardCards (role gate)", () => {
   });
 });
 
+describe("visibleDashboardCards (finance read gate, #59)", () => {
+  it("a role the API refuses finance to sees no finance card, only its assets", () => {
+    expect(visibleDashboardCards("MAINTENANCE", ALL_MODULES)).toEqual(["assets"]);
+  });
+});
+
 describe("canOpenEntriesList", () => {
   it("matches the gate the entries screen itself applies", () => {
     const admitted: Role[] = ["ADMIN", "OPS_MANAGER", "FINANCE_APPROVER", "FIELD_SUBMITTER"];
