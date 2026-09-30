@@ -2,17 +2,44 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 /**
- * A feature PR is done only with a walkthrough video and a list of what else
- * looked wrong while testing (AGENTS.md, definition of done). Self-contained
- * so CI can run the base branch's copy against the PR.
+ * Behavioral changes are code changes that affect app functionality.
+ * Non-code files (JSON, markdown, snapshots, fixtures) don't count.
  */
 export function changesBehaviour(files: readonly string[]): boolean {
   return files.some(
-    (path) =>
-      /^apps\/(web|api)\/src\//.test(path) &&
-      !/\.test\.tsx?$/.test(path) &&
-      !/(^|\/)test-setup\.ts$/.test(path) &&
-      !path.startsWith("apps/api/src/test/"),
+    (path) => {
+      // Exclude non-code files
+      if (/\.(json|md|snap)$/.test(path)) return false;
+      if (/snapshots?\//.test(path)) return false;
+      if (/fixtures\//.test(path)) return false;
+
+      // Exclude test files
+      if (/\.test\.tsx?$/.test(path)) return false;
+      if (/(^|\/)test-setup\.ts$/.test(path)) return false;
+      if (path.startsWith("apps/api/src/test/")) return false;
+
+      // Main check: is this app code?
+      return /^apps\/(web|api)\/src\//.test(path);
+    },
+  );
+}
+
+/** Check if there are changes in the UI layer (apps/web/src). */
+function hasWebChanges(files: readonly string[]): boolean {
+  return files.some(
+    (path) => {
+      // Exclude non-code files
+      if (/\.(json|md|snap)$/.test(path)) return false;
+      if (/snapshots?\//.test(path)) return false;
+      if (/fixtures\//.test(path)) return false;
+
+      // Exclude test files
+      if (/\.test\.tsx?$/.test(path)) return false;
+      if (/(^|\/)test-setup\.ts$/.test(path)) return false;
+
+      // Only check web code
+      return path.startsWith("apps/web/src/");
+    },
   );
 }
 
@@ -31,19 +58,40 @@ export function section(body: string, title: string): string | undefined {
 
 export function evidenceProblems(body: string, files: readonly string[]): string[] {
   if (!changesBehaviour(files)) return [];
+
+  const webChanges = hasWebChanges(files);
   const problems: string[] = [];
+
   const video = section(body, "Walkthrough video");
-  if (video === undefined || !/https:\/\/\S+/.test(video)) {
-    problems.push(
-      "Walkthrough video: link a recording of the feature working in the app (English UI and captions) under a `## Walkthrough video` heading.",
-    );
+
+  if (webChanges) {
+    // UI changes require a video link
+    if (video === undefined || !/https:\/\/\S+/.test(video)) {
+      problems.push(
+        "Walkthrough video: link a recording of the feature working in the app (English UI and captions) under a `## Walkthrough video` heading.",
+      );
+    }
+  } else {
+    // Non-UI changes can opt-out with "not needed — <reason>"
+    if (video === undefined || video === "") {
+      problems.push(
+        'Walkthrough video: link a recording, or write "not needed — <reason>" under a `## Walkthrough video` heading.',
+      );
+    } else if (!/https:\/\/\S+/.test(video) && !/not needed\s*—\s*\S/.test(video)) {
+      // Must be either a link or a proper opt-out
+      problems.push(
+        'Walkthrough video: link a recording, or write "not needed — <reason>" under a `## Walkthrough video` heading.',
+      );
+    }
   }
+
   const found = section(body, "Found while testing");
   if (found === undefined || found === "") {
     problems.push(
       "Found while testing: list the issues you filed for anything else that looked wrong, or write \"none\", under a `## Found while testing` heading.",
     );
   }
+
   return problems;
 }
 

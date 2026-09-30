@@ -72,6 +72,29 @@ describe("pr-evidence", () => {
   it("reads a section up to the next heading", () => {
     expect(section("## Walkthrough video\nhttps://a\n## Found while testing\nnone", "Found while testing")).toBe("none");
   });
+
+  it("exempts non-code files from behavior check", () => {
+    expect(changesBehaviour(["apps/api/src/commands/contract-snapshots/x.json"])).toBe(false);
+    expect(changesBehaviour(["apps/web/src/i18n/locales/en.json"])).toBe(false);
+    expect(changesBehaviour(["docs/reference/vehicle.md"])).toBe(false);
+    expect(changesBehaviour(["apps/web/src/x.snap"])).toBe(false);
+    expect(changesBehaviour(["apps/api/src/test/fixtures/data.json"])).toBe(false);
+    // But actual code still counts
+    expect(changesBehaviour(["apps/web/src/x.tsx"])).toBe(true);
+  });
+
+  it("allows opt-out for non-UI changes with reason", () => {
+    const files = ["apps/api/src/commands/x.ts"];
+    expect(evidenceProblems(body("not needed — tests only", "none"), files)).toEqual([]);
+    // But requires a reason
+    expect(evidenceProblems(body("not needed", "none"), files)).toHaveLength(1);
+  });
+
+  it("requires video for UI changes, opt-out not allowed", () => {
+    const files = ["apps/web/src/screens/X.tsx"];
+    expect(evidenceProblems(body("not needed — reason", "none"), files)).toHaveLength(1);
+    expect(evidenceProblems(body("https://example.com/video.mp4", "none"), files)).toEqual([]);
+  });
 });
 
 describe("ratchet", () => {

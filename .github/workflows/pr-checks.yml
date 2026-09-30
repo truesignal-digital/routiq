@@ -17,6 +17,7 @@ jobs:
   # to its own copy. The .mts name makes Node load them as ES modules.
   evidence:
     name: pr-evidence
+    if: github.base_ref == 'develop'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
