@@ -315,6 +315,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 },
     assetShareMinor: null,
     assetLinks: null,
+    links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
     description: "Plaquettes de frein",
     paymentReference: "MP-778",
     sourceReference: null,
