@@ -18,7 +18,9 @@ import { createTestApp } from "../test/fixture.js";
  * columns, renames only legacy status values and backfills with NOT EXISTS /
  * ON CONFLICT DO NOTHING. 0028 (notes, #44) guards its table, constraints and
  * policy, and backfills add-note's rules with NOT EXISTS; 0029 is the
- * attach-evidence backfill alone, in the same shape.
+ * attach-evidence backfill alone, in the same shape. 0034 (#85) replaces its
+ * functions, drops each trigger before creating it, and backfills
+ * update-pending-entry's rules with NOT EXISTS.
  *
  * The suite's database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -31,6 +33,7 @@ const MIGRATIONS = [
   "0027_maintenance_state_machines",
   "0028_notes",
   "0029_attach_evidence_command_defaults",
+  "0034_edit_pending_entry",
 ];
 
 function statementsOf(migration: string): string[] {

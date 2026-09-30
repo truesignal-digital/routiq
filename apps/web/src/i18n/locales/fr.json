@@ -161,7 +161,8 @@
     "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
     "SAFETY_ISSUE_OPEN": "Un autre signalement critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
-    "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
+    "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
+    "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter."
   },
   "assets": {
     "notify": {
@@ -387,7 +388,9 @@
         "reopened": "Période rouverte",
         "posted": "Transaction enregistrée et comptabilisée",
         "submitted": "Transaction envoyée pour approbation",
-        "recorded": "Transaction enregistrée"
+        "recorded": "Transaction enregistrée",
+        "updated": "Écriture modifiée, toujours en attente d'approbation",
+        "updatedPosted": "Écriture modifiée et comptabilisée"
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
@@ -485,7 +488,8 @@
         "reverseAction": "Contre-passer",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
-        "breadcrumb": "Détail"
+        "breadcrumb": "Détail",
+        "editAction": "Modifier"
       },
       "viewer": {
         "description": "Date comptable {date}",
@@ -571,6 +575,15 @@
       "warningsLabel": "Avis",
       "warningSubmittedEntries": "Cette période contient des écritures en attente d'approbation.",
       "done": "Fermer"
+    },
+    "edit": {
+      "title": "Modifier l'écriture {number}",
+      "description": "Vous pouvez la modifier tant que personne ne l'a approuvée ni rejetée. L'approbateur verra ce que vous avez changé.",
+      "submit": "Enregistrer les modifications",
+      "submitting": "Enregistrement…",
+      "decidedTitle": "Cette écriture a déjà été traitée",
+      "decidedBody": "Un approbateur l'a approuvée ou rejetée pendant que vous la modifiiez. Vos changements n'ont pas été enregistrés.",
+      "branchUnknown": "L'agence d'origine"
     }
   },
   "common": {
@@ -1433,7 +1446,8 @@
       "work_order-closed": "Ordre de travail clôturé",
       "work_order-closure_approved": "Clôture validée",
       "asset_availability-opened": "Actif immobilisé",
-      "asset_availability-closed": "Immobilisation levée"
+      "asset_availability-closed": "Immobilisation levée",
+      "financial_entry-updated": "Écriture modifiée"
     },
     "field": {
       "status": "statut",
@@ -1581,7 +1595,8 @@
       "resolvedByWorkOrderId": "résolu par l'ordre de travail",
       "dismissedAt": "classement sans suite",
       "dismissReason": "motif du classement",
-      "defaultSafetyCritical": "critique pour la sécurité par défaut"
+      "defaultSafetyCritical": "critique pour la sécurité par défaut",
+      "postings": "lignes d'imputation"
     }
   },
   "commandForm": {
@@ -1770,7 +1785,8 @@
       "dismiss-issue": "Classer sans suite",
       "approve-entry": "Approuver",
       "reject-entry": "Rejeter",
-      "add-cost": "Ajouter un coût"
+      "add-cost": "Ajouter un coût",
+      "edit-entry": "Modifier"
     },
     "locked": {
       "needsAuthorization": "Il faut d'abord que la finance autorise {ref}.",
@@ -2094,7 +2110,8 @@
         "work_order-asset_released": "Remis en service",
         "asset_availability-opened": "Immobilisé",
         "asset_availability-closed": "Immobilisation levée",
-        "note-added": "Note ajoutée"
+        "note-added": "Note ajoutée",
+        "financial_entry-updated": "Écriture modifiée avant examen"
       }
     },
     "panel": {
@@ -2152,7 +2169,7 @@
       "reversedBy": "Contre-passée par",
       "openOriginal": "L'écriture d'origine",
       "openReversal": "La contre-passation",
-      "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur ne peut pas l'approuver.",
+      "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur peut la modifier d'ici là, mais pas l'approuver.",
       "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige par une contre-passation ; l'original reste.",
       "receipt": "Justificatif",
       "noFiles": "Aucun fichier sur cette écriture.",
@@ -2172,7 +2189,8 @@
         "entryReceipt": "En attente du reçu de {name}.",
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
-      "photoNumber": "Photo {number}"
+      "photoNumber": "Photo {number}",
+      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"

@@ -239,6 +239,13 @@
       "when": 1790775400782,
       "tag": "0033_drop_work_order_actual_cost",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790776416375,
+      "tag": "0034_edit_pending_entry",
+      "breakpoints": true
     }
   ]
 }

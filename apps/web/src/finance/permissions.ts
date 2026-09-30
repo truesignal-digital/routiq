@@ -100,3 +100,26 @@ export function canAddWorkOrderCost(
     (enabledModules?.includes("FINANCE") ?? false) && role === "MAINTENANCE"
   );
 }
+
+/**
+ * "Modifier" on a pending entry (#85): its author only, whatever their role,
+ * and only while it waits. Everyone else rejects it instead. The roles are the
+ * ones that record entries at all, the workshop included; the server checks
+ * authorship and status again on every save.
+ */
+export function canEditPendingEntry(
+  entry: { status: string; recordedBy: { principalId: string | null } } | undefined,
+  viewer: {
+    principalId: string | undefined;
+    role: Role | undefined;
+    enabledModules: readonly ModuleCode[] | undefined;
+  },
+): boolean {
+  return (
+    entry !== undefined &&
+    entry.status === "SUBMITTED" &&
+    entry.recordedBy.principalId !== null &&
+    entry.recordedBy.principalId === viewer.principalId &&
+    canAttachEvidence(viewer.role, viewer.enabledModules)
+  );
+}

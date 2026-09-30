@@ -323,6 +323,8 @@ export function entryDetail(overrides: Partial<FinancialEntryDetail> = {}): Fina
         assetId: ASSET_ID,
         assetCode: "VH003",
         assetAttribution: "DIRECT",
+        activityId: null,
+        workOrderId: WORK_ORDER_ID,
         category: { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs" },
       },
     ],

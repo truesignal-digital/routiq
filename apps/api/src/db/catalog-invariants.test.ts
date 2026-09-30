@@ -47,11 +47,20 @@ const APPEND_ONLY = [
   "audit_events",
   "command_source_artifacts",
   "documents",
-  "financial_postings",
   "meter_readings",
   "notes",
   "source_artifacts",
 ];
+
+/**
+ * Append-only once decided: never UPDATEd by the runtime, and DELETE only
+ * through a trigger that refuses it unless the parent record is still pending.
+ * Each entry names that trigger.
+ */
+const APPEND_ONLY_ONCE_DECIDED: Record<string, string> = {
+  // #85: the author's edit replaces a pending entry's lines (0034).
+  financial_postings: "financial_postings_pending_delete",
+};
 
 /** Records whose status moves forward but which are never deleted. */
 const NEVER_DELETED = [
@@ -155,6 +164,18 @@ describe("schema catalog invariants", () => {
       return t === undefined || t.update || t.delete;
     });
     expect(writable).toEqual([]);
+  });
+
+  it("lets the runtime delete append-only-once-decided rows only behind their guard", async () => {
+    for (const [name, trigger] of Object.entries(APPEND_ONLY_ONCE_DECIDED)) {
+      const t = tables.find((row) => row.name === name);
+      expect(t?.update, `${name} must stay free of UPDATE`).toBe(false);
+      const guard = await ctx.db.execute(sql`
+        select 1 from pg_trigger
+        where tgrelid = ${name}::regclass and tgname = ${trigger} and not tgisinternal
+      `);
+      expect(guard.rows, `${name} is deletable without ${trigger}`).toHaveLength(1);
+    }
   });
 
   it("never lets the runtime delete records whose history matters", () => {
