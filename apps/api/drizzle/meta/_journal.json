@@ -211,6 +211,13 @@
       "when": 1790386417516,
       "tag": "0029_attach_evidence_command_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790461427409,
+      "tag": "0030_tenant_fk_gaps",
+      "breakpoints": true
     }
   ]
 }
