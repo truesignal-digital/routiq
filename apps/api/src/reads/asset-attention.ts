@@ -9,7 +9,7 @@ import {
 } from "@routiq/contracts";
 import { alias } from "drizzle-orm/pg-core";
 import { and, eq, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
@@ -31,13 +31,14 @@ import {
   workOrders,
   workspaces,
 } from "../db/schema.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import type { TenantTx } from "../db/tenant.js";
 import { commandActors, eventPrincipalIds, lastEvents, toActor } from "./actors.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import { addDays, currentBusinessDate } from "./business-date.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
-import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
+import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
 
@@ -555,18 +556,17 @@ export function registerAssetAttentionReadRoutes(
    * branch scope and module gates live. Sources whose module is off are simply
    * absent; the read itself belongs to ASSETS.
    */
-  app.get(
-    "/v1/assets/:assetId/attention",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/attention", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, modules, read }) => {
       try {
-        const auth = req.auth!;
         const params = z.object({ assetId: z.uuid() }).safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { assetId } = params.data;
 
-        const body = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          const modules = await passReadGate(tx, auth, { module: "ASSETS" });
+        const body = await read(async (tx) => {
           await requireScopedAsset(tx, auth, assetId);
           return loadAttention(tx, auth, assetId, modules);
         });

@@ -1,10 +1,9 @@
 import type { AssetLifecycleStatus } from "@routiq/contracts";
 import {
-  FINANCE_READER_ROLES,
+  canReadLedger,
   dashboardQuery,
   dashboardResponse,
   ledgerEntryStatuses,
-  type Role,
 } from "@routiq/contracts";
 import { and, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
@@ -12,7 +11,6 @@ import type { FastifyInstance } from "fastify";
 import type { AuthContext } from "../auth/types.js";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { isModuleEnabled } from "../modules/registry.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import {
   assets,
@@ -74,7 +72,7 @@ export function registerDashboardReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/dashboard", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = dashboardQuery.safeParse(req.query);
         if (!parsedQuery.success) {
@@ -101,8 +99,7 @@ export function registerDashboardReadRoutes(
           // (#59): a caller who may not read finance gets no finance numbers,
           // not zeros, so nothing on the card can claim a balance.
           const financeVisible =
-            (FINANCE_READER_ROLES as readonly Role[]).includes(auth.role) &&
-            (await isModuleEnabled(tx, auth.workspaceId, "FINANCE"));
+            canReadLedger(auth.role) && modules.has("FINANCE");
           if (!financeVisible) return { assetRows, finance: null };
 
           const [approvalsCount] = await tx

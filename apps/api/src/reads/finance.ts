@@ -1,5 +1,4 @@
 import {
-  FINANCE_READER_ROLES,
   financialEntryDetail,
   financialEntryFilters,
   ledgerEntryStatuses,
@@ -51,7 +50,7 @@ import {
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
-import { defineRead } from "./define-read.js";
+import { defineRead, LEDGER_GATE } from "./define-read.js";
 import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 
@@ -349,7 +348,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/entries", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "per-record" },
+    { path: "/v1/finance/entries", ...LEDGER_GATE, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedQuery = listQuerySchema.safeParse(req.query);
@@ -518,7 +517,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/entries/:entryId", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "per-record" },
+    { path: "/v1/finance/entries/:entryId", ...LEDGER_GATE, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedParams = z.object({ entryId: z.uuid() }).safeParse(req.params);
@@ -732,7 +731,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/approvals", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "per-record" },
+    { path: "/v1/finance/approvals", ...LEDGER_GATE, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedQuery = approvalsQuerySchema.safeParse(req.query);
@@ -865,7 +864,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/periods", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "workspace" },
+    { path: "/v1/finance/periods", ...LEDGER_GATE, branchScope: "workspace" },
     async ({ req, reply, auth, read }) => {
       try {
         const result = await read(async (tx) => {

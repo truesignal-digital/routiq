@@ -1,30 +1,21 @@
-import { ROLES, type ApiErrorCode, type ModuleCode, type Role } from "@routiq/contracts";
+import { FINANCE_READER_ROLES, ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import { inWorkspaceRead, type TenantTx } from "../db/tenant.js";
-import { isModuleEnabled } from "../modules/registry.js";
+import { passReadGate, sendReadFailure, type ReadGate } from "./read-gate.js";
 
+export type { ReadGate } from "./read-gate.js";
 export type ReadTx = TenantTx;
 
-/**
- * What a read route must declare before it can exist, the read-side twin of
- * CommandDefinition's module, allowedRoles and branchAuthorization. Reads that
- * decided these in their handlers forgot them (#40, #58, #59).
- */
-export interface ReadGate {
-  module: ModuleCode;
-  roles: readonly Role[];
-  /**
-   * "workspace": the data belongs to no branch (periods, categories).
-   * "per-record": the handler filters rows by `auth.branchScope`, and a detail
-   * read answers 404 outside it, exactly like a record that does not exist.
-   */
-  branchScope: "workspace" | "per-record";
-}
-
 export const ANY_ROLE: readonly Role[] = ROLES;
+
+/** The books: the ledger-reading roles, and FINANCE on. */
+export const LEDGER_GATE = {
+  module: "FINANCE",
+  roles: FINANCE_READER_ROLES,
+} as const satisfies Pick<ReadGate, "module" | "roles">;
 
 declare module "fastify" {
   interface FastifyContextConfig {
@@ -32,30 +23,20 @@ declare module "fastify" {
   }
 }
 
-/** Thrown inside a read handler to answer with a stable error code. */
-export class ReadError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: ApiErrorCode,
-    readonly metadata?: Record<string, unknown>,
-  ) {
-    super(code);
-    this.name = "ReadError";
-  }
-}
-
 export interface ReadContext {
   req: FastifyRequest;
   reply: FastifyReply;
   auth: AuthContext;
+  /** The workspace's enabled modules, as the gate found them. */
+  modules: ReadonlySet<ModuleCode>;
   /** Runs inside the caller's workspace, in a READ ONLY transaction. */
   read<T>(execute: (tx: ReadTx) => Promise<T>): Promise<T>;
 }
 
 /**
- * Registers a GET route behind its gate. Order matters: the role check comes
- * before the module check, so a role that may not read a module learns
- * nothing about the module's state (#16).
+ * Registers a GET route behind its gate (`passReadGate`: role, then module).
+ * A `ReadRefusal` thrown from the handler answers with its code; anything
+ * else is 500 READ_FAILED.
  */
 export function defineRead(
   app: FastifyInstance,
@@ -67,21 +48,13 @@ export function defineRead(
   app.get(path, { preHandler: deps.requireAuth, config: { readGate: gate } }, async (req, reply) => {
     const auth = req.auth;
     if (auth === undefined) return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
-    if (!gate.roles.includes(auth.role)) {
-      return reply.status(403).send({ error: { code: "ROLE_FORBIDDEN" } });
-    }
     const read = <T>(execute: (tx: ReadTx) => Promise<T>) =>
       inWorkspaceRead(deps.db, auth.workspaceId, execute);
-    if (!(await read((tx) => isModuleEnabled(tx, auth.workspaceId, gate.module)))) {
-      return reply.status(403).send({ error: { code: "MODULE_DISABLED", metadata: { module: gate.module } } });
-    }
     try {
-      return await handler({ req, reply, auth, read });
+      const modules = await read((tx) => passReadGate(tx, auth, gate));
+      return await handler({ req, reply, auth, modules, read });
     } catch (error) {
-      if (!(error instanceof ReadError)) throw error;
-      return reply.status(error.status).send({
-        error: { code: error.code, ...(error.metadata === undefined ? {} : { metadata: error.metadata }) },
-      });
+      return sendReadFailure(req, reply, error, `GET ${path}`);
     }
   });
 }
