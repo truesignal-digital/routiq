@@ -44,6 +44,11 @@ export const COMMAND_ERROR_CODES = [
   "DOCUMENT_ALREADY_SUPERSEDED",
   "POSTINGS_SUM_MISMATCH",
   "MAKER_CANNOT_APPROVE",
+  /**
+   * Editing a pending entry someone else recorded (#85). Only its author may
+   * change it while it waits; anyone else with the right role rejects it.
+   */
+  "NOT_ENTRY_AUTHOR",
   "ENTRY_ALREADY_REVERSED",
   "PERIOD_LOCKED",
   "CATEGORY_KIND_MISMATCH",
