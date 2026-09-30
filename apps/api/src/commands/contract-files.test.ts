@@ -14,7 +14,6 @@ const KNOWN_WITHOUT_TEST = [
   "activity-close.ts",
   "activity-legs.ts",
   "add-or-renew-document.ts",
-  "asset-lifecycle.ts",
   "create-activity.ts",
   "module-toggle.ts",
   "register-person.ts",
