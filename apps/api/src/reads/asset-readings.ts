@@ -4,13 +4,12 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { and, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import { activities, commands, meterReadings, principals } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
 import { toActor } from "./actors.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import {
@@ -21,8 +20,9 @@ import {
   microsecondKey,
   timestampKeyset,
 } from "./cursor.js";
-import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
+import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 const readingSort: ListSort<"observedAt"> = { field: "observedAt", direction: "desc" };
 
@@ -56,12 +56,12 @@ export function registerAssetReadingReadRoutes(
    * Every observation of the vehicle's meters, superseded ones included and
    * flagged. Owned by ACTIVITIES, the module whose command records them.
    */
-  app.get(
-    "/v1/assets/:assetId/readings",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/readings", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const params = z.object({ assetId: z.uuid() }).safeParse(req.params);
         const query = assetReadingsQuery.safeParse(req.query);
         if (!params.success || !query.success) throw invalidRequest();
@@ -71,8 +71,7 @@ export function registerAssetReadingReadRoutes(
         const decodedCursor = cursor ? decodeTimestampCursor(cursor, readingSort) : undefined;
         if (cursor && !decodedCursor) throw invalidRequest();
 
-        const rows = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, { module: "ACTIVITIES" });
+        const rows = await read(async (tx) => {
           await requireScopedAsset(tx, auth, assetId);
 
           const conditions: SQL[] = [

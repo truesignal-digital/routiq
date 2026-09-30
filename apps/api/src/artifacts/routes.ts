@@ -4,13 +4,13 @@ import type {
   FastifyInstance,
   FastifyReply,
   FastifyRequest,
-  preHandlerHookHandler,
 } from "fastify";
 import { and, eq, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 import { canReadLedger, FINANCE_READER_ROLES } from "@routiq/contracts";
+import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import { inWorkspace, type TenantTx } from "../db/tenant.js";
@@ -24,7 +24,8 @@ import {
 } from "../db/schema.js";
 import { requireScopedAsset } from "../reads/asset-scope.js";
 import { entryEvidenceFiles, hasPostingWithoutWorkOrder } from "../reads/entry-evidence.js";
-import { invalidRequest, notFound, passReadGate, ReadRefusal } from "../reads/read-gate.js";
+import { ANY_ROLE, defineRead, type ReadTx } from "../reads/define-read.js";
+import { invalidRequest, notFound, ReadRefusal } from "../reads/read-gate.js";
 import { linkedArtifact } from "../reads/record-artifacts.js";
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -92,7 +93,7 @@ export function registerArtifactRoutes(
   app: FastifyInstance,
   db: Db,
   storage: ObjectStorage,
-  requireAuth: preHandlerHookHandler,
+  requireAuth: RequireAuth,
 ): void {
   // POST /v1/artifacts/presign
   app.post(
@@ -316,15 +317,13 @@ export function registerArtifactRoutes(
   async function sendDownloadUrl(
     req: FastifyRequest,
     reply: FastifyReply,
+    auth: AuthContext,
+    read: <T>(execute: (tx: ReadTx) => Promise<T>) => Promise<T>,
     event: string,
     locate: (tx: TenantTx, auth: AuthContext) => Promise<ArtifactRow>,
   ) {
-    if (!req.auth) {
-      return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
-    }
-    const auth = req.auth;
     try {
-      const artifact = await inWorkspace(db, auth.workspaceId, (tx) => locate(tx, auth));
+      const artifact = await read((tx) => locate(tx, auth));
       const presigned = await presignVerifiedArtifact(storage, auth.workspaceId, artifact, req.log);
       if ("integrityMismatch" in presigned) {
         return reply.status(409).send({ error: { code: "ARTIFACT_INTEGRITY_MISMATCH" } });
@@ -345,11 +344,13 @@ export function registerArtifactRoutes(
    * record and downloads only through the record's route, which checks who may
    * read the record (review P1). Anything else is the same 404.
    */
-  app.get(
-    "/v1/artifacts/:id/download-url",
-    { preHandler: requireAuth },
-    async (req, reply) =>
-      sendDownloadUrl(req, reply, "download_url.failed", async (tx, auth) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    // "workspace": an unlinked upload belongs to its uploader, not to a branch.
+    { path: "/v1/artifacts/:id/download-url", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) =>
+      sendDownloadUrl(req, reply, auth, read, "download_url.failed", async (tx, auth) => {
         const params = z.object({ id: z.uuid() }).safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { id } = params.data;
@@ -385,17 +386,22 @@ export function registerArtifactRoutes(
    * documents: the DOCUMENTS module, the vehicle in the caller's branches, the
    * document on that vehicle, the file linked by the command that recorded it.
    */
-  app.get(
-    "/v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url",
-    { preHandler: requireAuth },
-    async (req, reply) =>
-      sendDownloadUrl(req, reply, "document_download_url.failed", async (tx, auth) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    {
+      path: "/v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url",
+      module: "DOCUMENTS",
+      roles: ANY_ROLE,
+      branchScope: "per-record",
+    },
+    async ({ req, reply, auth, read }) =>
+      sendDownloadUrl(req, reply, auth, read, "document_download_url.failed", async (tx, auth) => {
         const params = z
           .object({ assetId: z.uuid(), documentId: z.uuid(), artifactId: z.uuid() })
           .safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { assetId, documentId, artifactId } = params.data;
-        await passReadGate(tx, auth, { module: "DOCUMENTS" });
         await requireScopedAsset(tx, auth, assetId);
         const [document] = await tx
           .select({ createdByCommandId: documents.createdByCommandId })
@@ -418,17 +424,22 @@ export function registerArtifactRoutes(
    * MAINTENANCE module, the issue's vehicle in the caller's branches, the file
    * linked by the report-issue call that recorded it.
    */
-  app.get(
-    "/v1/issues/:issueId/artifacts/:artifactId/download-url",
-    { preHandler: requireAuth },
-    async (req, reply) =>
-      sendDownloadUrl(req, reply, "issue_download_url.failed", async (tx, auth) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    {
+      path: "/v1/issues/:issueId/artifacts/:artifactId/download-url",
+      module: "MAINTENANCE",
+      roles: ANY_ROLE,
+      branchScope: "per-record",
+    },
+    async ({ req, reply, auth, read }) =>
+      sendDownloadUrl(req, reply, auth, read, "issue_download_url.failed", async (tx, auth) => {
         const params = z
           .object({ issueId: z.uuid(), artifactId: z.uuid() })
           .safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { issueId, artifactId } = params.data;
-        await passReadGate(tx, auth, { module: "MAINTENANCE" });
         const [issue] = await tx
           .select({
             assetId: operationalIssues.assetId,
@@ -459,21 +470,23 @@ export function registerArtifactRoutes(
    * The workshop, outside the ledger readers, reaches only entries whose every
    * line is a work-order cost — the rule attach-evidence applies to it.
    */
-  app.get(
-    "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
-    { preHandler: requireAuth },
-    async (req, reply) =>
-      sendDownloadUrl(req, reply, "entry_evidence_download_url.failed", async (tx, auth) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    {
+      path: "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
+      module: "FINANCE",
+      roles: [...FINANCE_READER_ROLES, "MAINTENANCE"],
+      branchScope: "per-record",
+    },
+    async ({ req, reply, auth, read }) =>
+      sendDownloadUrl(req, reply, auth, read, "entry_evidence_download_url.failed", async (tx, auth) => {
         const params = z
           .object({ entryId: z.uuid(), artifactId: z.uuid() })
           .safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { entryId, artifactId } = params.data;
 
-        await passReadGate(tx, auth, {
-          module: "FINANCE",
-          roles: [...FINANCE_READER_ROLES, "MAINTENANCE"],
-        });
         const [entry] = await tx
           .select({
             id: financialEntries.id,

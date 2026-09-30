@@ -37,21 +37,10 @@ const UPDATABLE_WITHOUT_ROW_VERSION: Record<string, string> = {
 };
 
 /** Baseline: single-column tenant references with no composite (workspace_id, column) key (#72). */
-const KNOWN_MISSING_TENANT_FK = [
-  "activities.closed_by_command_id → commands",
-  "activities.created_by_command_id → commands",
-  "activity_asset_segments.created_by_command_id → commands",
-  "activity_people.created_by_command_id → commands",
-  "categories.created_by_command_id → commands",
-  "meter_readings.created_by_command_id → commands",
-  "movement_legs.created_by_command_id → commands",
-  "persons.created_by_command_id → commands",
-  "persons.membership_id → memberships",
-  "places.created_by_command_id → commands",
-];
+const KNOWN_MISSING_TENANT_FK: string[] = [];
 
 /** Baseline: UPDATE granted by the blanket 0004 grant, used by no code, and no row_version (#72). */
-const KNOWN_UPDATABLE_WITHOUT_VERSION = ["activity_people", "movement_legs", "principals", "sessions", "workspaces"];
+const KNOWN_UPDATABLE_WITHOUT_VERSION: string[] = [];
 
 /** Records corrected only by superseding or reversing, never edited (§3.4). */
 const APPEND_ONLY = [
@@ -60,11 +49,20 @@ const APPEND_ONLY = [
   "documents",
   "financial_postings",
   "meter_readings",
+  "notes",
   "source_artifacts",
 ];
 
 /** Records whose status moves forward but which are never deleted. */
-const NEVER_DELETED = ["activity_people", "financial_entries", "movement_legs", "workspace_templates"];
+const NEVER_DELETED = [
+  "activity_people",
+  "asset_availability_intervals",
+  "financial_entries",
+  "movement_legs",
+  "operational_issues",
+  "work_orders",
+  "workspace_templates",
+];
 
 describe("schema catalog invariants", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;

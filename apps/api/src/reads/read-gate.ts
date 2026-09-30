@@ -56,24 +56,37 @@ export async function enabledModuleSet(
   return new Set(MODULE_CODES.filter((code) => code === "CORE" || !disabled.has(code)));
 }
 
+/**
+ * What a read route must declare before it can exist, the read-side twin of
+ * CommandDefinition's module, allowedRoles and branchAuthorization. Reads that
+ * decided these in their handlers forgot them (#40, #58, #59). Routes declare
+ * it through `defineRead` (define-read.ts), the only way a /v1 GET registers.
+ */
 export interface ReadGate {
   /** The module that owns the read; off means 403 MODULE_DISABLED. */
   module: ModuleCode;
-  /** Roles allowed to read at all; omitted means every member. */
-  roles?: readonly Role[];
+  /** Roles allowed to read at all; anyone else gets 403 ROLE_FORBIDDEN. */
+  roles: readonly Role[];
+  /**
+   * "workspace": the data belongs to no branch (periods, categories).
+   * "per-record": the handler filters rows by `auth.branchScope`, and a detail
+   * read answers 404 outside it, exactly like a record that does not exist.
+   */
+  branchScope: "workspace" | "per-record";
 }
 
 /**
- * The one gate every vehicle-workspace read passes first: the caller's role,
- * then the owning module. Returns the enabled modules so the read can drop the
- * sections of other modules without asking again.
+ * The caller's role, then the owning module: a role that may not read a
+ * module learns nothing about the module's state (#16). Returns the enabled
+ * modules so a read can drop the sections of other modules without asking
+ * again.
  */
 export async function passReadGate(
   tx: TenantTx,
   auth: AuthContext,
-  gate: ReadGate,
+  gate: Pick<ReadGate, "module" | "roles">,
 ): Promise<ReadonlySet<ModuleCode>> {
-  if (gate.roles !== undefined && !gate.roles.includes(auth.role)) {
+  if (!gate.roles.includes(auth.role)) {
     throw new ReadRefusal(403, "ROLE_FORBIDDEN");
   }
   const modules = await enabledModuleSet(tx, auth.workspaceId);

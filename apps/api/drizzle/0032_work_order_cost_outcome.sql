@@ -6,5 +6,5 @@ ALTER TABLE "work_orders" ADD COLUMN "declared_cost_minor" bigint;--> statement-
 ALTER TABLE "work_orders" ADD COLUMN "cost_outcome" text;--> statement-breakpoint
 -- Every amount typed so far was a v1 declaration: it never became a financial
 -- entry. Moved as-is; nothing is invented and no cost outcome is guessed.
--- 0031 drops the old column once this copy has run.
+-- 0033 drops the old column once this copy has run.
 UPDATE "work_orders" SET "declared_cost_minor" = "actual_cost_minor" WHERE "actual_cost_minor" IS NOT NULL;

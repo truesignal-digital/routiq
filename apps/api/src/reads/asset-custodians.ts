@@ -1,14 +1,14 @@
 import { custodianCandidatesResponse } from "@routiq/contracts";
 import { and, asc, eq, isNull } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import { custodianIneligibility } from "../commands/custodian-eligibility.js";
 import type { Db } from "../db/client.js";
 import { memberships, principals } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
 import { requireScopedAsset } from "./asset-scope.js";
-import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
+import { invalidRequest, sendReadFailure } from "./read-gate.js";
+import { defineRead } from "./define-read.js";
 
 /** The roles `assign-asset` lets change a custodian without an approval step. */
 const CUSTODY_ROLES = ["ADMIN", "OPS_MANAGER"] as const;
@@ -23,18 +23,17 @@ export function registerAssetCustodianReadRoutes(
    * an operations manager changing a custodian needs this narrower list: names
    * and roles of the members `assign-asset` would accept, nothing more.
    */
-  app.get(
-    "/v1/assets/:assetId/custodian-candidates",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/custodian-candidates", module: "ASSETS", roles: CUSTODY_ROLES, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const params = z.object({ assetId: z.uuid() }).safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { assetId } = params.data;
 
-        const items = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, { module: "ASSETS", roles: CUSTODY_ROLES });
+        const items = await read(async (tx) => {
           const asset = await requireScopedAsset(tx, auth, assetId);
 
           const rows = await tx

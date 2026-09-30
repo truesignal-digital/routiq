@@ -9,7 +9,7 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
@@ -29,11 +29,10 @@ import {
   principals,
   workOrders,
 } from "../db/schema.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
-import { isModuleEnabled } from "../modules/registry.js";
+import type { TenantTx } from "../db/tenant.js";
 import { lastEventActors, toActor } from "./actors.js";
 import { commandArtifacts } from "./record-artifacts.js";
-import { invalidRequest, notFound, passReadGate, sendReadFailure } from "./read-gate.js";
+import { invalidRequest, notFound, sendReadFailure } from "./read-gate.js";
 import {
   afterKeyset,
   bindTimestampText,
@@ -45,6 +44,7 @@ import {
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { parseActualCost, workOrderActualCostSql } from "./work-order-cost.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /**
  * Newest first, always — both maintenance queues read that way and neither
@@ -81,19 +81,6 @@ function serializeOptionalMinor(value: bigint | null): number | null {
   return value === null ? null : serializeMinor(value);
 }
 
-/**
- * Every maintenance read answers MODULE_DISABLED when the workspace turned the
- * module off, the same gate the commands and the history timeline apply — a
- * disabled module's queue must not stay readable by URL.
- */
-async function maintenanceEnabled(tx: TenantTx, workspaceId: string): Promise<boolean> {
-  return isModuleEnabled(tx, workspaceId, "MAINTENANCE");
-}
-
-const MODULE_DISABLED_BODY = {
-  error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } },
-} as const;
-
 /** Statuses in which a completion stands, so its declarer is a live maker. */
 const COMPLETION_DECLARED = new Set(["COMPLETION_SUBMITTED", "COMPLETED"]);
 
@@ -126,22 +113,19 @@ export function registerMaintenanceReadRoutes(
    * so the branch lens — and the `branchId` filter — resolve through the asset,
    * which is why every query in this file joins the fleet.
    */
-  app.get(
-    "/v1/work-orders",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/work-orders", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = workOrderListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { status, branchId, assetId, cursor, limit } = parsedQuery.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          if (!(await maintenanceEnabled(tx, auth.workspaceId))) {
-            return { error: "MODULE_DISABLED" as const };
-          }
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeTimestampCursor(cursor, workOrderSort)
             : undefined;
@@ -244,9 +228,7 @@ export function registerMaintenanceReadRoutes(
         });
 
         if ("error" in result) {
-          return result.error === "MODULE_DISABLED"
-            ? reply.status(403).send(MODULE_DISABLED_BODY)
-            : reply.status(400).send({ error: { code: result.error } });
+          return reply.status(400).send({ error: { code: result.error } });
         }
 
         const hasNextPage = result.rows.length > limit;
@@ -307,12 +289,12 @@ export function registerMaintenanceReadRoutes(
    * only the current state, while who approved the spend and who signed the
    * truck back into service exist nowhere else.
    */
-  app.get(
-    "/v1/work-orders/:workOrderId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/work-orders/:workOrderId", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({ workOrderId: z.uuid() })
           .safeParse(req.params);
@@ -321,10 +303,7 @@ export function registerMaintenanceReadRoutes(
         }
         const { workOrderId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          if (!(await maintenanceEnabled(tx, auth.workspaceId))) {
-            return { error: "MODULE_DISABLED" as const };
-          }
+        const result = await read(async (tx) => {
           const conditions: SQL[] = [
             eq(workOrders.workspaceId, auth.workspaceId),
             eq(workOrders.id, workOrderId),
@@ -475,9 +454,6 @@ export function registerMaintenanceReadRoutes(
             .status(404)
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
-        if ("error" in result) {
-          return reply.status(403).send(MODULE_DISABLED_BODY);
-        }
 
         const { header, eventRows, costRows, completedBy } = result;
         const costLine = (line: (typeof costRows)[number]) => ({
@@ -557,12 +533,12 @@ export function registerMaintenanceReadRoutes(
    * elsewhere — the availability intervals — and are resolved here so the
    * screen renders a row without a second round trip on 2G.
    */
-  app.get(
-    "/v1/issues",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/issues", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = issueListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -570,10 +546,7 @@ export function registerMaintenanceReadRoutes(
         const { branchId, assetId, safetyCritical, status, cursor, limit } =
           parsedQuery.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          if (!(await maintenanceEnabled(tx, auth.workspaceId))) {
-            return { error: "MODULE_DISABLED" as const };
-          }
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeTimestampCursor(cursor, issueSort)
             : undefined;
@@ -700,9 +673,7 @@ export function registerMaintenanceReadRoutes(
         });
 
         if ("error" in result) {
-          return result.error === "MODULE_DISABLED"
-            ? reply.status(403).send(MODULE_DISABLED_BODY)
-            : reply.status(400).send({ error: { code: result.error } });
+          return reply.status(400).send({ error: { code: result.error } });
         }
 
         const hasNextPage = result.rows.length > limit;
@@ -765,18 +736,17 @@ export function registerMaintenanceReadRoutes(
    * The list row's fields plus its own trail, its photos and who closed it;
    * scope resolves through the asset like every maintenance read.
    */
-  app.get(
-    "/v1/issues/:issueId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/issues/:issueId", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const params = z.object({ issueId: z.uuid() }).safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { issueId } = params.data;
 
-        const body = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, { module: "MAINTENANCE" });
+        const body = await read(async (tx) => {
 
           const conditions: SQL[] = [
             eq(operationalIssues.workspaceId, auth.workspaceId),

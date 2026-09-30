@@ -11,13 +11,13 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 /**
- * 0030/0031 (#81) on a database that predates them: a work order closed with a
+ * 0032/0033 (#81) on a database that predates them: a work order closed with a
  * typed amount keeps that amount as its declared cost, and no cost outcome is
- * guessed for it. Migrated to 0029 from a truncated journal, then brought
+ * guessed for it. Migrated to 0031 from a truncated journal, then brought
  * forward by the real migrator — the path a deployed box takes.
  */
 describe("work-order cost migrations on a database that predates them", () => {
-  const databaseName = `pre0030_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const databaseName = `pre0032_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   let adminPool: pg.Pool;
   let pool: pg.Pool;
   let truncatedFolder: string;
@@ -39,18 +39,18 @@ describe("work-order cost migrations on a database that predates them", () => {
     pool = new pg.Pool({ connectionString: url.toString() });
     pool.on("error", () => {});
 
-    truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0030-"));
+    truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0032-"));
     await cp(MIGRATIONS, truncatedFolder, { recursive: true });
     const journalPath = join(truncatedFolder, "meta", "_journal.json");
     const journal = JSON.parse(await readFile(journalPath, "utf8")) as {
       entries: Array<{ idx: number }>;
     };
-    journal.entries = journal.entries.filter((entry) => entry.idx <= 29);
+    journal.entries = journal.entries.filter((entry) => entry.idx <= 31);
     await writeFile(journalPath, JSON.stringify(journal));
     await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
 
     await pool.query(`
-      INSERT INTO workspaces (id, slug, name) VALUES ('${ws}', 'pre-0030-${ws.slice(0, 8)}', 'Transports Pré-0030');
+      INSERT INTO workspaces (id, slug, name) VALUES ('${ws}', 'pre-0032-${ws.slice(0, 8)}', 'Transports Pré-0032');
       INSERT INTO branches (id, workspace_id, code, name) VALUES ('${branch}', '${ws}', 'DLA', 'Douala');
       INSERT INTO principals (id, principal_type, display_name) VALUES ('${principal}', 'HUMAN', 'Boris');
       INSERT INTO memberships (id, workspace_id, principal_id, role, all_branches) VALUES
