@@ -1043,7 +1043,18 @@ export const workOrders = pgTable(
       .default("APPROVED"),
     expectedCostMinor: bigint("expected_cost_minor", { mode: "bigint" }),
     currency: char("currency", { length: 3 }).notNull().default("XAF"),
-    actualCostMinor: bigint("actual_cost_minor", { mode: "bigint" }),
+    /**
+     * The amount a complete-work-order v1 close typed (#81). The closer's
+     * declaration only: it never reached the books, and the order's actual cost
+     * is derived from its cost lines on read. NULL for every v2 close.
+     */
+    declaredCostMinor: bigint("declared_cost_minor", { mode: "bigint" }),
+    /**
+     * What the closer said about the cost at completion: LINES, NO_COST or
+     * INVOICE_PENDING. Plain `text` like `status`; the value set is held by
+     * the contract. NULL before completion and for v1 closes.
+     */
+    costOutcome: text("cost_outcome", { enum: ["LINES", "NO_COST", "INVOICE_PENDING"] }),
     summary: text("summary"),
     /**
      * The completion's resolve-the-issue flag, held with the other completion

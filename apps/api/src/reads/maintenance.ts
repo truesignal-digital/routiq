@@ -44,6 +44,7 @@ import {
   type KeysetColumn,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { parseActualCost, workOrderActualCostSql } from "./work-order-cost.js";
 
 /**
  * Newest first, always — both maintenance queues read that way and neither
@@ -182,7 +183,9 @@ export function registerMaintenanceReadRoutes(
               branchCode: branches.code,
               branchName: branches.name,
               expectedCostMinor: workOrders.expectedCostMinor,
-              actualCostMinor: workOrders.actualCostMinor,
+              actualCostMinor: workOrderActualCostSql(),
+              declaredCostMinor: workOrders.declaredCostMinor,
+              costOutcome: workOrders.costOutcome,
               currency: workOrders.currency,
               issueId: workOrders.issueId,
               safetyCritical: operationalIssues.safetyCritical,
@@ -263,7 +266,9 @@ export function registerMaintenanceReadRoutes(
             name: row.branchName,
           },
           expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
-          actualCostMinor: serializeOptionalMinor(row.actualCostMinor),
+          actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
+          declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+          costOutcome: row.costOutcome,
           currency: row.currency,
           issue:
             row.issueId === null
@@ -340,7 +345,9 @@ export function registerMaintenanceReadRoutes(
               branchCode: branches.code,
               branchName: branches.name,
               expectedCostMinor: workOrders.expectedCostMinor,
-              actualCostMinor: workOrders.actualCostMinor,
+              actualCostMinor: workOrderActualCostSql(),
+              declaredCostMinor: workOrders.declaredCostMinor,
+              costOutcome: workOrders.costOutcome,
               currency: workOrders.currency,
               issueId: workOrders.issueId,
               safetyCritical: operationalIssues.safetyCritical,
@@ -492,7 +499,9 @@ export function registerMaintenanceReadRoutes(
             name: header.branchName,
           },
           expectedCostMinor: serializeOptionalMinor(header.expectedCostMinor),
-          actualCostMinor: serializeOptionalMinor(header.actualCostMinor),
+          actualCostMinor: serializeOptionalMinor(parseActualCost(header.actualCostMinor)),
+          declaredCostMinor: serializeOptionalMinor(header.declaredCostMinor),
+          costOutcome: header.costOutcome,
           currency: header.currency,
           issue:
             header.issueId === null

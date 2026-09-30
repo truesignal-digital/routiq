@@ -40,6 +40,14 @@ _Avoid_: task, alert, notification
 What stands behind a financial entry: supplied (a file is linked), payment reference (paid by mobile money or bank with a reference), not expected (the category needs no receipt) or not supplied (evidence missing). It says what is attached, never that anyone checked it.
 _Avoid_: verified, receipt status
 
+**Actual Cost (of a work order)**:
+The sum of the work order's non-rejected cost lines, pending ones included and reversals netted. Derived on read once the work is declared complete, never typed. An amount typed by an old client at close is kept apart as the **declared cost**.
+_Avoid_: final cost, invoiced amount, typed cost
+
+**Cost Outcome**:
+What the closer says about a repair's cost when completing its work order: the cost is in cost lines, it cost nothing, or the invoice has not arrived yet. Every close names one; there is no silent close.
+_Avoid_: cost status, payment status
+
 **Note**:
 A free-text remark a member writes on a vehicle. Append-only: a correction is another note. Executive viewers write none.
 _Avoid_: comment thread, description, edit

@@ -211,6 +211,20 @@
       "when": 1790386417516,
       "tag": "0029_attach_evidence_command_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790770871756,
+      "tag": "0030_work_order_cost_outcome",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790770879680,
+      "tag": "0031_drop_work_order_actual_cost",
+      "breakpoints": true
     }
   ]
 }

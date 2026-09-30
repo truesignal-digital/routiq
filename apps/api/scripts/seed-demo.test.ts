@@ -223,12 +223,14 @@ describe("seed-demo", () => {
 
   it("closes VH001's A/C job: completed work order, resolved issue, no grounding", async () => {
     const vh001 = await assetId("VH001");
-    const orders = await rows<{ status: string; actual: string }>(
-      `select status, actual_cost_minor::text as actual from work_orders
+    const orders = await rows<{ status: string; outcome: string; declared: string | null }>(
+      `select status, cost_outcome as outcome, declared_cost_minor::text as declared
+         from work_orders
         where workspace_id = $1 and asset_id = $2`,
       [workspaceId, vh001],
     );
-    expect(orders).toEqual([{ status: "COMPLETED", actual: "85000" }]);
+    // The cost is the A/C entry already in the books; nothing is typed at close.
+    expect(orders).toEqual([{ status: "COMPLETED", outcome: "LINES", declared: null }]);
     const issues = await rows<{ status: string }>(
       "select status from operational_issues where workspace_id = $1 and asset_id = $2",
       [workspaceId, vh001],

@@ -473,8 +473,9 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         after: "COMPLETED",
       });
       // MONEY, not VALUE: the client formats it against `currency`, never divides.
+      // A v1 close's typed amount is recorded as the closer's declaration (#81).
       expect(diff.changes).toContainEqual({
-        field: "actualCostMinor",
+        field: "declaredCostMinor",
         kind: "MONEY",
         before: null,
         after: 325_000,

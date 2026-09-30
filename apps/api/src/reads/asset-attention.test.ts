@@ -152,7 +152,9 @@ describe("GET /v1/assets/:assetId/attention", () => {
     expect(codes(body.items)).toEqual(["WORK_ORDER_AWAITING_SIGN_OFF"]);
     expect(body.items[0]).toMatchObject({
       makerPrincipalIds: [mechanic.principalId],
-      params: { actualCostMinor: 240_000 },
+      // A v1 close's typed amount is a declaration, not cost (#81): the actual
+      // cost is what the books hold against the order, and here they hold none.
+      params: { actualCostMinor: 0 },
     });
 
     // Sent back: in progress again, flagged with why.
