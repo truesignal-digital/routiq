@@ -42,10 +42,11 @@ import { inWorkspace } from "../db/tenant.js";
 import {
   afterKeyset,
   bindText,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeColumnCursor,
   encodeKeysetCursor,
   keysetOrderBy,
+  microsecondKey,
+  timestampKeyset,
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
@@ -59,16 +60,13 @@ const defaultActivitySort: ListSort<"startedAt"> = {
 type ActivitySortField = "startedAt" | "activityNumber";
 
 const activitySortColumns: Record<ActivitySortField, KeysetColumn> = {
-  startedAt: {
-    column: activities.startedAt,
-    bind: bindTimestamp,
-    nullable: true,
-  },
+  startedAt: timestampKeyset(activities.startedAt, { nullable: true }),
   activityNumber: { column: activities.activityNumber, bind: bindText },
 };
 
 interface ActivitySortRow {
-  startedAt: Date | null;
+  /** `startedAt` as microsecond keyset text. */
+  startedAtKey: string | null;
   activityNumber: string;
 }
 
@@ -76,9 +74,7 @@ function activitySortValue(
   field: ActivitySortField,
   row: ActivitySortRow,
 ): KeysetValue {
-  return field === "startedAt"
-    ? row.startedAt?.toISOString() ?? null
-    : row.activityNumber;
+  return field === "startedAt" ? row.startedAtKey : row.activityNumber;
 }
 
 function likePattern(search: string): string {
@@ -114,6 +110,58 @@ function legCountSql(): SQL<number> {
     from ${movementLegs}
     where ${movementLegs.workspaceId} = ${activities.workspaceId}
       and ${movementLegs.activityId} = ${activities.id}
+  )`;
+}
+
+/**
+ * One end of the trip: the first leg's origin or the last leg's destination,
+ * as the detail read names it — the place, else the text typed for an ad-hoc
+ * stop. Null for an activity with no legs.
+ */
+function legEndSql(end: "origin" | "destination"): SQL<string | null> {
+  const placeId = end === "origin" ? movementLegs.originPlaceId : movementLegs.destinationPlaceId;
+  const text = end === "origin" ? movementLegs.originText : movementLegs.destinationText;
+  const order = end === "origin" ? sql`asc` : sql`desc`;
+  return sql<string | null>`(
+    select coalesce(${places.name}, ${text})
+    from ${movementLegs}
+    left join ${places}
+      on ${places.workspaceId} = ${movementLegs.workspaceId}
+      and ${places.id} = ${placeId}
+    where ${movementLegs.workspaceId} = ${activities.workspaceId}
+      and ${movementLegs.activityId} = ${activities.id}
+    order by ${movementLegs.legNo} ${order}
+    limit 1
+  )`;
+}
+
+/** Kilometres over the legs that carry them; null when none does. */
+function distanceKmSql(): SQL<number | null> {
+  return sql<number | null>`(
+    select sum(${movementLegs.distanceKm})::integer
+    from ${movementLegs}
+    where ${movementLegs.workspaceId} = ${activities.workspaceId}
+      and ${movementLegs.activityId} = ${activities.id}
+  )`;
+}
+
+/**
+ * The first DRIVER put on the crew; the trip row names one driver. Crew given
+ * in one command shares a timestamp, so the name breaks the tie — the order
+ * the detail read lists the crew in.
+ */
+function driverNameSql(): SQL<string | null> {
+  return sql<string | null>`(
+    select ${persons.displayName}
+    from ${activityPeople}
+    inner join ${persons}
+      on ${persons.workspaceId} = ${activityPeople.workspaceId}
+      and ${persons.id} = ${activityPeople.personId}
+    where ${activityPeople.workspaceId} = ${activities.workspaceId}
+      and ${activityPeople.activityId} = ${activities.id}
+      and ${activityPeople.role} = 'DRIVER'
+    order by ${activityPeople.createdAt} asc, ${persons.displayName} asc, ${activityPeople.id} asc
+    limit 1
   )`;
 }
 
@@ -158,7 +206,7 @@ export function registerActivityReadRoutes(
 
         const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -223,6 +271,7 @@ export function registerActivityReadRoutes(
               completeness: activities.completeness,
               completenessCodes: activities.completenessCodes,
               startedAt: activities.startedAt,
+              startedAtKey: microsecondKey(activities.startedAt),
               endedAt: activities.endedAt,
               customerName: activities.customerName,
               clientReference: activities.clientReference,
@@ -230,6 +279,10 @@ export function registerActivityReadRoutes(
               primaryAssetCode: primaryAssetCodeSql(),
               legCount: legCountSql(),
               crewCount: crewCountSql(),
+              originName: legEndSql("origin"),
+              destinationName: legEndSql("destination"),
+              distanceKm: distanceKmSql(),
+              driverName: driverNameSql(),
             })
             .from(activities)
             .innerJoin(
@@ -274,6 +327,10 @@ export function registerActivityReadRoutes(
           primaryAssetCode: row.primaryAssetCode,
           legCount: row.legCount,
           crewCount: row.crewCount,
+          originName: row.originName,
+          destinationName: row.destinationName,
+          distanceKm: row.distanceKm,
+          driverName: row.driverName,
         }));
 
         let nextCursor: string | null = null;
@@ -343,6 +400,12 @@ export function registerActivityReadRoutes(
               branchId: activities.branchId,
               branchCode: branches.code,
               rowVersion: activities.rowVersion,
+              // Same expressions as the list, so a trip row and its detail
+              // can never name a different route or driver.
+              originName: legEndSql("origin"),
+              destinationName: legEndSql("destination"),
+              distanceKm: distanceKmSql(),
+              driverName: driverNameSql(),
             })
             .from(activities)
             .innerJoin(
@@ -586,6 +649,10 @@ export function registerActivityReadRoutes(
           primaryAssetCode,
           legCount: legRows.length,
           crewCount: crewRows.length,
+          originName: header.originName,
+          destinationName: header.destinationName,
+          distanceKm: header.distanceKm,
+          driverName: header.driverName,
           rowVersion: header.rowVersion,
           segments: segmentRows.map((segment) => ({
             ...segment,

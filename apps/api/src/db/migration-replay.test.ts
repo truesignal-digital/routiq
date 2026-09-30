@@ -5,15 +5,33 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestApp } from "../test/fixture.js";
 
 /**
- * These two migrations were numbered 0018 before feat/record-history claimed
- * that slot, so a database that applied the earlier numbering already holds
- * their effects. Re-applying must be a no-op rather than a duplicate-column
- * error, or renumbering would strand any box that ran the old file.
+ * Migrations that claim to be re-appliable, held to that claim.
  *
- * The suite's database has already had both applied by the migrator, so running
- * them here IS the replay.
+ * 0019/0020 were numbered 0018 before feat/record-history claimed that slot, so
+ * a database that applied the earlier numbering already holds their effects.
+ * Re-applying must be a no-op rather than a duplicate-column error, or
+ * renumbering would strand any box that ran the old file.
+ *
+ * 0025/0026 carry the same promise for the maintenance tables: 0025 guards
+ * every CREATE and ADD CONSTRAINT, and 0026's approval-rule backfill is written
+ * so a second pass inserts nothing. 0027 (the #28 state machines) guards its
+ * columns, renames only legacy status values and backfills with NOT EXISTS /
+ * ON CONFLICT DO NOTHING. 0028 (notes, #44) guards its table, constraints and
+ * policy, and backfills add-note's rules with NOT EXISTS; 0029 is the
+ * attach-evidence backfill alone, in the same shape.
+ *
+ * The suite's database has already had all of them applied by the migrator, so
+ * running them here IS the replay.
  */
-const MIGRATIONS = ["0019_member_administration", "0020_member_command_defaults"];
+const MIGRATIONS = [
+  "0019_member_administration",
+  "0020_member_command_defaults",
+  "0025_dark_sheva_callister",
+  "0026_maintenance_command_defaults",
+  "0027_maintenance_state_machines",
+  "0028_notes",
+  "0029_attach_evidence_command_defaults",
+];
 
 function statementsOf(migration: string): string[] {
   return migration

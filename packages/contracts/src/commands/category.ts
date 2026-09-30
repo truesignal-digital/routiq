@@ -14,6 +14,12 @@ export const createCategoryPayload = z.strictObject({
   labelEn: z.string().min(1),
   profitabilityLayer: z.enum(PROFITABILITY_LAYERS).optional(),
   evidencePolicy: z.enum(EVIDENCE_POLICIES).optional(),
+  /**
+   * ISSUE_TYPE only: whether picking this kind of fault pre-checks the
+   * reporter's safety-critical box (#28). The reporter overrides it either way;
+   * the flag is a default, never a decision.
+   */
+  defaultSafetyCritical: z.boolean().optional(),
 });
 
 export const relabelCategoryPayload = z.strictObject({

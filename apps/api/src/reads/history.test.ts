@@ -10,7 +10,7 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { auditEvents, commands, principals } from "../db/schema.js";
+import { auditEvents, branches, categories, commands, principals } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { diffStates } from "./history.js";
@@ -22,6 +22,10 @@ describe("GET /v1/history/:entityType/:entityId", () => {
   let workspaceId: string;
   let adminPrincipalId: string;
   let activityId: string;
+  let maintenanceAssetId: string;
+  let issueId: string;
+  let workOrderId: string;
+  let availabilityIntervalId: string;
 
   async function command(
     name: string,
@@ -164,6 +168,58 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       { activityId },
       { expectedVersion: await activityRowVersion() },
     );
+
+    // A second truck carrying the maintenance chain: a safety-critical
+    // signalement grounds it, one work order repairs it, and a release puts it
+    // back on the road. Three entity types, three timelines, one story.
+    const mechanic = await seedMember(ctx.db, {
+      workspaceId,
+      role: "OPS_MANAGER",
+      allBranches: true,
+    });
+    const mechanicToken = (
+      await createSession(ctx.db, {
+        workspaceId,
+        principalId: mechanic.principal.id,
+      })
+    ).token;
+
+    maintenanceAssetId = await seedAsset(ctx.app, token, {
+      assetCode: "HIST-WO-TRUCK",
+    });
+    issueId = randomUUID();
+    await command("report-issue", {
+      issueId,
+      assetId: maintenanceAssetId,
+      description: "Fuite de liquide de frein",
+      safetyCritical: true,
+      category: "BRAKES",
+    });
+
+    workOrderId = randomUUID();
+    const createdWorkOrder = await command("create-work-order", {
+      workOrderId,
+      assetId: maintenanceAssetId,
+      issueId,
+      description: "Réfection du circuit de freinage",
+      expectedCostMinor: 300_000,
+    });
+    await command(
+      "complete-work-order",
+      {
+        workOrderId,
+        actualCostMinor: 325_000,
+        summary: "Maître-cylindre et flexibles remplacés",
+      },
+      { token: mechanicToken, expectedVersion: createdWorkOrder.rowVersion },
+    );
+    // Releaser ≠ performer, because the originating signalement is safety-critical.
+    const released = await command("release-asset-to-service", {
+      assetId: maintenanceAssetId,
+      workOrderId,
+      note: "Essai routier concluant",
+    });
+    availabilityIntervalId = released.recordId;
   });
 
   afterAll(async () => ctx.close());
@@ -336,6 +392,370 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     const response = await history("activity", activityId, "?cursor=bm90LWEtY3Vyc29y");
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  describe("maintenance entity types", () => {
+    async function timeline(entityType: string, entityId: string) {
+      const response = await history(entityType, entityId);
+      expect(response.statusCode).toBe(200);
+      return historyListResponse.parse(response.json());
+    }
+
+    it("returns a work order's whole workflow, newest first", async () => {
+      const body = await timeline("work_order", workOrderId);
+
+      expect(body.items.map((item) => item.eventType)).toEqual([
+        "work_order.asset_released",
+        "work_order.completed",
+        "work_order.created",
+      ]);
+      expect(body.items.map((item) => item.command.name)).toEqual([
+        "release-asset-to-service",
+        "complete-work-order",
+        "create-work-order",
+      ]);
+      for (const item of body.items) {
+        expect(item.actor.scope).toBe("WORKSPACE");
+        expect(item.actor.displayName).toEqual(expect.any(String));
+      }
+      // The mechanic declared it complete; the admin signed it back into service.
+      const [released, closed] = body.items;
+      expect(released?.actor.principalId).toBe(adminPrincipalId);
+      expect(closed?.actor.principalId).not.toBe(adminPrincipalId);
+    });
+
+    it("serves the signalement that started it, and the completion that resolved it", async () => {
+      const body = await timeline("operational_issue", issueId);
+      expect(body.items.map((item) => item.eventType)).toEqual([
+        "operational_issue.resolved",
+        "operational_issue.reported",
+      ]);
+      expect(body.items[1]?.changedFields).toContain("safetyCritical");
+      expect(body.items[0]?.command.name).toBe("complete-work-order");
+    });
+
+    it("serves the grounding as an opening and a closing", async () => {
+      const body = await timeline(
+        "asset_availability_interval",
+        availabilityIntervalId,
+      );
+      expect(body.items.map((item) => item.eventType)).toEqual([
+        "asset_availability.closed",
+        "asset_availability.opened",
+      ]);
+    });
+
+    it("shows another tenant nothing for the same work order id", async () => {
+      const response = await history("work_order", workOrderId, "", otherToken);
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ items: [], nextCursor: null });
+    });
+
+    it("diffs the completion as a status move and a declared cost", async () => {
+      const body = await timeline("work_order", workOrderId);
+      const closure = body.items.find(
+        (item) => item.eventType === "work_order.completed",
+      );
+      if (!closure) throw new Error("no closure event on the seeded work order");
+
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/work_order/${workOrderId}/${closure.eventId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.statusCode).toBe(200);
+
+      const diff = historyEventDiff.parse(response.json());
+      expect(diff.changes).toContainEqual({
+        field: "status",
+        kind: "VALUE",
+        before: "APPROVED",
+        after: "COMPLETED",
+      });
+      // MONEY, not VALUE: the client formats it against `currency`, never divides.
+      expect(diff.changes).toContainEqual({
+        field: "actualCostMinor",
+        kind: "MONEY",
+        before: null,
+        after: 325_000,
+      });
+      expect(diff.changes).toContainEqual({
+        field: "summary",
+        kind: "VALUE",
+        before: null,
+        after: "Maître-cylindre et flexibles remplacés",
+      });
+      expect(diff.changes.map((change) => change.field)).not.toContain(
+        "rowVersion",
+      );
+    });
+
+    it("diffs the release as the grounding's closing timestamp", async () => {
+      const body = await timeline(
+        "asset_availability_interval",
+        availabilityIntervalId,
+      );
+      const closed = body.items.find(
+        (item) => item.eventType === "asset_availability.closed",
+      );
+      if (!closed) throw new Error("no closing event on the seeded interval");
+
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/asset_availability_interval/${availabilityIntervalId}/${closed.eventId}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.statusCode).toBe(200);
+
+      const diff = historyEventDiff.parse(response.json());
+      const fields = diff.changes.map((change) => change.field);
+      expect(fields).toContain("closedAt");
+      expect(fields).toContain("releaseNote");
+      // Bookkeeping: the command that closed it is provenance, not history.
+      expect(fields).not.toContain("closedByCommandId");
+      expect(
+        diff.changes.find((change) => change.field === "releaseNote")?.after,
+      ).toBe("Essai routier concluant");
+    });
+  });
+
+  /**
+   * #58: every history type with a branch — its own or its parent's — is read
+   * against the actor's branch scope, with the same 404 the detail reads give.
+   * Workspace-level types keep the module gate alone.
+   */
+  describe("branch scope", () => {
+    let scopedToken: string;
+    let scopedAdminToken: string;
+    const records: Record<"DLA" | "YDE", Record<string, string>> = { DLA: {}, YDE: {} };
+    let categoryId: string;
+
+    beforeAll(async () => {
+      const seeded = await seedWorkspace(ctx.db);
+      const wsId = seeded.workspace.id;
+      await ctx.db
+        .insert(branches)
+        .values({ workspaceId: wsId, code: "YDE", name: "Yaoundé" });
+      const admin = await seedMember(ctx.db, { workspaceId: wsId, role: "ADMIN", allBranches: true });
+      scopedAdminToken = (await createSession(ctx.db, { workspaceId: wsId, principalId: admin.principal.id })).token;
+      const doualaOnly = await seedMember(ctx.db, {
+        workspaceId: wsId,
+        role: "OPS_MANAGER",
+        branchIds: [seeded.branch.id],
+      });
+      scopedToken = (await createSession(ctx.db, { workspaceId: wsId, principalId: doualaOnly.principal.id })).token;
+
+      for (const branchCode of ["DLA", "YDE"] as const) {
+        const as = { token: scopedAdminToken };
+        const assetId = await seedAsset(ctx.app, scopedAdminToken, { branchCode });
+        const activityId = randomUUID();
+        await command(
+          "create-activity",
+          {
+            activityId,
+            branchCode,
+            activityTypeCode: "HAULAGE_JOB",
+            templateCode: "TRUCKING",
+            primarySegmentId: randomUUID(),
+            primaryAssetId: assetId,
+            startedAt: "2026-07-10T06:00:00Z",
+          },
+          as,
+        );
+        const documentId = randomUUID();
+        await command(
+          "add-or-renew-document",
+          { documentId, assetId, documentTypeCode: "INSURANCE", expiresAt: "2027-01-01" },
+          as,
+        );
+        const workOrderId = randomUUID();
+        await command(
+          "create-work-order",
+          { workOrderId, assetId, description: "Révision", expectedCostMinor: 0 },
+          as,
+        );
+        const issueId = randomUUID();
+        await command(
+          "report-issue",
+          { issueId, assetId, description: "Bruit", safetyCritical: false },
+          as,
+        );
+        const personId = randomUUID();
+        await command(
+          "register-person",
+          { personId, displayName: `Chauffeur ${branchCode}`, branchCode, defaultRole: "DRIVER" },
+          as,
+        );
+        const readingId = randomUUID();
+        await command(
+          "record-meter-reading",
+          {
+            readingId,
+            assetId,
+            readingType: "ODOMETER",
+            value: 120_000,
+            observedAt: "2026-07-12T08:00:00Z",
+          },
+          as,
+        );
+        records[branchCode] = {
+          asset: assetId,
+          activity: activityId,
+          document: documentId,
+          work_order: workOrderId,
+          operational_issue: issueId,
+          person: personId,
+          meter_reading: readingId,
+        };
+      }
+
+      const [category] = await ctx.db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.workspaceId, wsId))
+        .limit(1);
+      categoryId = category!.id;
+    });
+
+    for (const entityType of [
+      "asset",
+      "activity",
+      "document",
+      "work_order",
+      "operational_issue",
+      "person",
+      "meter_reading",
+    ] as const) {
+      it(`404s a ${entityType} outside the reader's branches and serves one inside`, async () => {
+        const outside = await history(entityType, records.YDE[entityType]!, "", scopedToken);
+        expect(outside.statusCode).toBe(404);
+        expect(outside.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+
+        const inside = await history(entityType, records.DLA[entityType]!, "", scopedToken);
+        expect(inside.statusCode).toBe(200);
+        expect(historyListResponse.parse(inside.json()).items.length).toBeGreaterThan(0);
+
+        // The diff is the same side door, and has the same lock.
+        const [event] = historyListResponse.parse(
+          (await history(entityType, records.YDE[entityType]!, "", scopedAdminToken)).json(),
+        ).items;
+        const diffResponse = await ctx.app.inject({
+          method: "GET",
+          url: `/v1/history/${entityType}/${records.YDE[entityType]}/${event!.eventId}`,
+          headers: { authorization: `Bearer ${scopedToken}` },
+        });
+        expect(diffResponse.statusCode).toBe(404);
+      });
+    }
+
+    it("404s an unknown id of a branch-bearing type for a scoped reader", async () => {
+      const response = await history("work_order", randomUUID(), "", scopedToken);
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("keeps workspace-level types readable across branches", async () => {
+      const response = await history("category", categoryId, "", scopedToken);
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  /**
+   * Review P9: an entry's snapshots carry its amounts, and the workshop is
+   * outside the ledger readers. Its reach into an entry's timeline is the
+   * entry-evidence rule — every line a work-order cost — and any other entry is
+   * the same 404 as one outside its branches, on the timeline and the diff.
+   */
+  describe("ledger money", () => {
+    let plainEntryId: string;
+    let repairEntryId: string;
+    let mechanicToken: string;
+    let approverToken: string;
+
+    async function sessionFor(role: "MAINTENANCE" | "FINANCE_APPROVER") {
+      const member = await seedMember(ctx.db, { workspaceId, role, allBranches: true });
+      return (await createSession(ctx.db, { workspaceId, principalId: member.principal.id })).token;
+    }
+
+    async function eventDiff(entryId: string, authToken: string) {
+      const [event] = historyListResponse.parse(
+        (await history("financial_entry", entryId)).json(),
+      ).items;
+      return ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/financial_entry/${entryId}/${event!.eventId}`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+    }
+
+    beforeAll(async () => {
+      mechanicToken = await sessionFor("MAINTENANCE");
+      approverToken = await sessionFor("FINANCE_APPROVER");
+      const assetId = await seedAsset(ctx.app, token, { assetCode: "HIST-LEDGER-TRUCK" });
+      const expense = {
+        branchCode: "DLA",
+        economicDate: "2026-08-12",
+        paymentMethod: "CASH",
+      };
+
+      plainEntryId = randomUUID();
+      await command("record-expense", {
+        ...expense,
+        entryId: plainEntryId,
+        categoryCode: "FUEL",
+        amountMinor: 30_000,
+        postings: [{ assetId, amountMinor: 30_000 }],
+      });
+
+      const workOrderId = randomUUID();
+      await command("create-work-order", {
+        workOrderId,
+        assetId,
+        description: "Embrayage",
+        expectedCostMinor: 80_000,
+      });
+      repairEntryId = randomUUID();
+      await command("record-expense", {
+        ...expense,
+        entryId: repairEntryId,
+        categoryCode: "REPAIRS",
+        amountMinor: 80_000,
+        postings: [{ assetId, amountMinor: 80_000, workOrderId }],
+      });
+    });
+
+    it("404s the workshop on an entry that is not a work-order cost", async () => {
+      const timeline = await history("financial_entry", plainEntryId, "", mechanicToken);
+      expect(timeline.statusCode).toBe(404);
+      expect(timeline.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+
+      const diffResponse = await eventDiff(plainEntryId, mechanicToken);
+      expect(diffResponse.statusCode).toBe(404);
+      expect(diffResponse.json()).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+    });
+
+    it("serves the workshop an entry whose every line is a work-order cost", async () => {
+      const timeline = await history("financial_entry", repairEntryId, "", mechanicToken);
+      expect(timeline.statusCode).toBe(200);
+      expect(historyListResponse.parse(timeline.json()).items.length).toBeGreaterThan(0);
+
+      const diffResponse = await eventDiff(repairEntryId, mechanicToken);
+      expect(diffResponse.statusCode).toBe(200);
+      expect(historyEventDiff.parse(diffResponse.json()).changes).toContainEqual(
+        expect.objectContaining({ field: "amountMinor", after: 80_000 }),
+      );
+    });
+
+    it("serves a ledger reader any entry", async () => {
+      const timeline = await history("financial_entry", plainEntryId, "", approverToken);
+      expect(timeline.statusCode).toBe(200);
+      expect(historyListResponse.parse(timeline.json()).items.length).toBeGreaterThan(0);
+
+      const diffResponse = await eventDiff(plainEntryId, approverToken);
+      expect(diffResponse.statusCode).toBe(200);
+      expect(historyEventDiff.parse(diffResponse.json()).changes).toContainEqual(
+        expect.objectContaining({ field: "amountMinor", after: 30_000 }),
+      );
+    });
   });
 
   describe("GET /v1/history/:entityType/:entityId/:eventId", () => {

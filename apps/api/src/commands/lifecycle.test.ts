@@ -9,6 +9,8 @@ import { createSession } from "../auth/local.js";
 import { assets, auditEvents, branches } from "../db/schema.js";
 import type { Db } from "../db/client.js";
 import { buildServer } from "../server.js";
+import { apiClient, seedActor, type Actor } from "../test/client.js";
+import { seedAsset } from "../test/seed.js";
 
 describe("Asset Lifecycle Commands", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -694,5 +696,182 @@ describe("Asset Lifecycle Commands", () => {
       const body = JSON.parse(res.body);
       expect(body.error.code).toBe("TEMPLATE_FIELD_INVALID");
     });
+  });
+});
+
+/**
+ * Custody through assign-asset (#44): `null` clears it, and only an active
+ * member whose branches cover the vehicle's branch may hold it.
+ */
+describe("assign-asset custodian", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let admin: Actor;
+  let financeApprover: Actor;
+  let dlaDriver: Actor;
+  let garDriver: Actor;
+  let leaver: Actor;
+  let outsider: Actor;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    const workspaceId = seeded.workspace.id;
+    const [garoua] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId, code: "GAR", name: "Garoua" })
+      .returning();
+    if (!garoua) throw new Error("branch insert returned no row");
+
+    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
+    financeApprover = await seedActor(ctx.db, { workspaceId, role: "FINANCE_APPROVER" });
+    dlaDriver = await seedActor(ctx.db, {
+      workspaceId,
+      role: "FIELD_SUBMITTER",
+      branchIds: [seeded.branch.id],
+    });
+    garDriver = await seedActor(ctx.db, {
+      workspaceId,
+      role: "FIELD_SUBMITTER",
+      branchIds: [garoua.id],
+    });
+    leaver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER" });
+    await api.ok(admin.token, "deactivate-member", { principalId: leaver.principalId });
+
+    const other = await seedWorkspace(ctx.db);
+    outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function custodianOf(assetId: string) {
+    const [row] = await ctx.db
+      .select({ custodian: assets.custodianMembershipId, rowVersion: assets.rowVersion })
+      .from(assets)
+      .where(eq(assets.id, assetId));
+    return row!;
+  }
+
+  it("sets, then clears, the custodian", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const set = await api.ok(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: dlaDriver.membershipId },
+      { expectedVersion: 1 },
+    );
+    expect(await custodianOf(assetId)).toEqual({ custodian: dlaDriver.membershipId, rowVersion: 2 });
+
+    const cleared = await api.ok(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: null },
+      { expectedVersion: set.rowVersion },
+    );
+    expect(cleared.rowVersion).toBe(3);
+    expect(await custodianOf(assetId)).toEqual({ custodian: null, rowVersion: 3 });
+
+    const [event] = await ctx.db
+      .select()
+      .from(auditEvents)
+      .where(and(eq(auditEvents.commandId, cleared.commandId), eq(auditEvents.eventType, "asset.assigned")));
+    expect(event?.changedFields).toContain("custodianMembershipId");
+    expect(event?.afterState).toMatchObject({ custodianMembershipId: null });
+  });
+
+  it("refuses a deactivated member", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const reply = await api.send(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: leaver.membershipId },
+      { expectedVersion: 1 },
+    );
+    expect(reply.status).toBe(422);
+    expect(reply.body.error).toEqual({
+      code: "CUSTODIAN_INELIGIBLE",
+      metadata: { reason: "DEACTIVATED", membershipId: leaver.membershipId },
+    });
+    expect(await custodianOf(assetId)).toEqual({ custodian: null, rowVersion: 1 });
+  });
+
+  it("refuses a member whose branches do not cover the vehicle's", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const reply = await api.send(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: garDriver.membershipId },
+      { expectedVersion: 1 },
+    );
+    expect(reply.status).toBe(422);
+    expect(reply.body.error).toMatchObject({
+      code: "CUSTODIAN_INELIGIBLE",
+      metadata: { reason: "OUT_OF_SCOPE" },
+    });
+  });
+
+  it("checks the custodian against the branch the vehicle moves to", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    // The cross-branch rule makes the finance approver the one who may move it.
+    const refused = await api.send(
+      financeApprover.token,
+      "assign-asset",
+      { assetId, branchCode: "GAR", custodianMembershipId: dlaDriver.membershipId },
+      { expectedVersion: 1 },
+    );
+    expect(refused.status).toBe(422);
+    expect(refused.body.error).toMatchObject({
+      code: "CUSTODIAN_INELIGIBLE",
+      metadata: { reason: "OUT_OF_SCOPE" },
+    });
+
+    const moved = await api.send(
+      financeApprover.token,
+      "assign-asset",
+      { assetId, branchCode: "GAR", custodianMembershipId: garDriver.membershipId },
+      { expectedVersion: 1 },
+    );
+    expect(moved.status).toBe(200);
+    expect(await custodianOf(assetId)).toEqual({ custodian: garDriver.membershipId, rowVersion: 2 });
+  });
+
+  it("refuses a membership from another workspace as not found", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const reply = await api.send(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: outsider.membershipId },
+      { expectedVersion: 1 },
+    );
+    expect(reply.status).toBe(422);
+    expect(reply.body.error?.code).toBe("REFERENCE_NOT_FOUND");
+  });
+
+  it("refuses a stale version", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    await api.ok(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: dlaDriver.membershipId },
+      { expectedVersion: 1 },
+    );
+    const reply = await api.send(
+      admin.token,
+      "assign-asset",
+      { assetId, custodianMembershipId: null },
+      { expectedVersion: 1 },
+    );
+    expect(reply.status).toBe(409);
+    expect(reply.body.error?.code).toBe("VERSION_CONFLICT");
+  });
+
+  it("still requires a target: an empty assignment is invalid", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const reply = await api.send(admin.token, "assign-asset", { assetId }, { expectedVersion: 1 });
+    expect(reply.status).toBe(400);
+    expect(reply.body.error?.code).toBe("VALIDATION_FAILED");
   });
 });

@@ -1,9 +1,17 @@
-import { DollarSign, House, Menu, Route, Truck, type LucideIcon } from "lucide-react";
+import {
+  DollarSign,
+  House,
+  Menu,
+  Route,
+  Truck,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import type { ModuleCode } from "@routiq/contracts";
 import { isRouteActive } from "../lib/route-match.js";
 
 export interface ShellSection {
-  key: "home" | "assets" | "activities" | "finances" | "more";
+  key: "home" | "assets" | "activities" | "maintenance" | "finances" | "more";
   /** Where the nav entry navigates. */
   to: string;
   /** Route subtree the section owns; defaults to `to` for single-route sections. */
@@ -24,6 +32,13 @@ const ALL_SECTIONS: ShellSection[] = [
     match: "/activities",
     icon: Route,
     module: "ACTIVITIES",
+  },
+  {
+    key: "maintenance",
+    to: "/maintenance",
+    match: "/maintenance",
+    icon: Wrench,
+    module: "MAINTENANCE",
   },
   {
     key: "finances",

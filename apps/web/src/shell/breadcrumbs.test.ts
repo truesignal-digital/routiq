@@ -40,12 +40,14 @@ describe("breadcrumbTrail", () => {
     expect(trailAt("/assets/new").at(-1)).toEqual(["assets.register", undefined]);
   });
 
-  it("resolves a param segment", () => {
-    expect(trailAt("/assets/00000000-0000-4000-8000-000000000001/documents")).toEqual([
-      ["nav.home", "/"],
-      ["nav.assets", "/assets"],
-      ["documents.link", undefined],
-    ]);
+  it("keeps the vehicle's crumb on every workspace section", () => {
+    for (const section of ["maintenance", "money", "trips", "documents", "history"]) {
+      expect(trailAt(`/assets/00000000-0000-4000-8000-000000000001/${section}`), section).toEqual([
+        ["nav.home", "/"],
+        ["nav.assets", "/assets"],
+        ["assets.detail.breadcrumb", undefined],
+      ]);
+    }
   });
 
   it("labels a finance list under Finance", () => {

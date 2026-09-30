@@ -69,6 +69,70 @@ export const COMMAND_ERROR_CODES = [
   "BRANCH_INACTIVE",
   /** A branch status flip that would change nothing — the caller's list is stale. */
   "BRANCH_STATUS_ALREADY_SET",
+  /**
+   * A work order naming an operational issue reported against a different
+   * asset. Both rows are in the workspace, so the composite tenant FK is
+   * satisfied and only the command layer can catch it.
+   */
+  "ISSUE_ASSET_MISMATCH",
+  /**
+   * A work order that belongs to a different asset than the record naming it:
+   * a release citing another truck's repair, or a cost posting whose assetId
+   * and workOrderId point at two different vehicles.
+   */
+  "WORK_ORDER_ASSET_MISMATCH",
+  /**
+   * Releasing an asset with no COMPLETED work order answering the signalement
+   * that grounded it. Completion is what says the repair is finished and, above
+   * the band, that its cost was accepted; without it the release would put an
+   * unrepaired truck back on the road. `metadata.overrideAllowed` says whether
+   * the grounding signalement is already closed, which is the one case an
+   * explicit override reason can stand in for the work order.
+   */
+  "WORK_ORDER_NOT_COMPLETED",
+  /**
+   * A release citing a completed work order that does not answer the
+   * signalement behind the current grounding — an older repair, or preventive
+   * work, cannot vouch for a fault it was never about.
+   */
+  "WORK_ORDER_ISSUE_MISMATCH",
+  /**
+   * A cost attributed to a work order that is not APPROVED (#28): pending work
+   * has not been authorized, and completed, rejected or cancelled work is closed
+   * to new spend. Reversals are exempt — they correct what already stands.
+   */
+  "WORK_ORDER_NOT_OPEN",
+  /**
+   * A command reserved for a human principal — release to service (§5.1:
+   * "never AI") — called by an AI agent or an integration.
+   */
+  "HUMAN_PRINCIPAL_REQUIRED",
+  /**
+   * Releasing an asset that holds no open availability interval — it was never
+   * taken out of service, or someone released it first.
+   */
+  "ASSET_NOT_UNAVAILABLE",
+  /**
+   * The member who declared the work complete — or who closed the grounding
+   * signalement themselves — trying to release the asset, after a
+   * safety-critical report. Two pairs of eyes before a truck flagged unsafe
+   * carries passengers again.
+   */
+  "SELF_RELEASE_FORBIDDEN",
+  /**
+   * Releasing a vehicle while a safety-critical signalement OTHER than the one
+   * that grounded it is still OPEN. A second safety-critical report on a truck
+   * already down opens no interval of its own, so the release is the last point
+   * where it can hold the truck back. `metadata.openIssueIds` lists them; each
+   * has to be resolved or dismissed first. Applies to the override path too.
+   */
+  "SAFETY_ISSUE_OPEN",
+  /**
+   * A custodian who cannot hold the vehicle: `metadata.reason` is DEACTIVATED
+   * (the membership was revoked) or OUT_OF_SCOPE (their branches do not cover
+   * the vehicle's branch after the move).
+   */
+  "CUSTODIAN_INELIGIBLE",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
@@ -92,6 +156,13 @@ export const COMMAND_WARNING_CODES = [
    * command receipt keeps the discrepancy for reconciliation.
    */
   "BRANCH_INACTIVE_AT_COMMIT",
+  /**
+   * A release that went through on a completed work order while the signalement
+   * that grounded the truck is still OPEN — the work was declared done but not
+   * the problem. The release stands (#28 decouples the two); the signalement
+   * still needs resolving or dismissing.
+   */
+  "GROUNDING_ISSUE_STILL_OPEN",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];
