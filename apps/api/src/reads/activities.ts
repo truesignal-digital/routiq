@@ -20,7 +20,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
@@ -38,7 +38,6 @@ import {
   persons,
   places,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
 import {
   afterKeyset,
   bindText,
@@ -51,6 +50,7 @@ import {
   type KeysetValue,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -179,12 +179,12 @@ export function registerActivityReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/activities",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/activities", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = activityListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -204,7 +204,7 @@ export function registerActivityReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultActivitySort;
         const sortColumn = activitySortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
@@ -351,12 +351,12 @@ export function registerActivityReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/activities/:activityId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/activities/:activityId", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({ activityId: z.uuid() })
           .safeParse(req.params);
@@ -365,7 +365,7 @@ export function registerActivityReadRoutes(
         }
         const { activityId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const conditions: SQL[] = [
             eq(activities.workspaceId, auth.workspaceId),
             eq(activities.id, activityId),
@@ -682,12 +682,12 @@ export function registerActivityReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/persons",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/persons", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = personListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -706,7 +706,7 @@ export function registerActivityReadRoutes(
           conditions.push(ilike(persons.displayName, likePattern(search)));
         }
 
-        const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const rows = await read((tx) =>
           tx
             .select({
               id: persons.id,
@@ -729,13 +729,13 @@ export function registerActivityReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/places",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/places", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-        const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const rows = await read((tx) =>
           tx
             .select({ id: places.id, name: places.name })
             .from(places)
