@@ -14,6 +14,7 @@ export interface CommandReply {
     recordStatus?: string;
     warnings?: string[];
     idempotentReplay?: boolean;
+    children?: Array<{ entityType: string; id: string; status: string; warnings: string[] }>;
     error?: { code: string; metadata?: Record<string, unknown> };
   };
 }
