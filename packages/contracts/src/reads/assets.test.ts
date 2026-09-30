@@ -74,3 +74,16 @@ describe("asset summary contract", () => {
     ]);
   });
 });
+
+describe("asset availability contract", () => {
+  it("keeps NOT_ASSESSED distinct from AVAILABLE", async () => {
+    const { assetAvailability } = await import("./assets.js");
+    expect(assetAvailability.parse({ state: "NOT_ASSESSED" })).toEqual({ state: "NOT_ASSESSED" });
+    expect(assetAvailability.parse({ state: "AVAILABLE", since: null })).toEqual({
+      state: "AVAILABLE",
+      since: null,
+    });
+    expect(assetAvailability.safeParse({ state: "AVAILABLE" }).success).toBe(false);
+    expect(assetAvailability.safeParse({ state: "UNKNOWN" }).success).toBe(false);
+  });
+});

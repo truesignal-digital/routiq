@@ -11,6 +11,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 
@@ -27,6 +28,15 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("../auth/api.js", () => ({ login: mocks.login }));
 
 const { LoginScreen } = await import("./LoginScreen.js");
+
+function renderLogin(client = new QueryClient()) {
+  render(
+    <QueryClientProvider client={client}>
+      <LoginScreen />
+    </QueryClientProvider>,
+  );
+  return client;
+}
 
 beforeAll(async () => {
   await i18n.changeLanguage("en");
@@ -48,7 +58,7 @@ afterEach(() => {
 describe("login form", () => {
   it("reports an empty field through the form's own message, without calling the API", async () => {
     const user = userEvent.setup();
-    render(<LoginScreen />);
+    renderLogin();
 
     await user.type(screen.getByLabelText("Workspace"), "sotrafret");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
@@ -66,7 +76,7 @@ describe("login form", () => {
   it("shows a rejected sign-in as a localized banner and clears the PIN", async () => {
     mocks.login.mockResolvedValue({ ok: false, code: "AUTH_FAILED" });
     const user = userEvent.setup();
-    render(<LoginScreen />);
+    renderLogin();
 
     await user.type(screen.getByLabelText("Workspace"), "sotrafret");
     await user.type(screen.getByLabelText("Username"), "amina");
@@ -82,7 +92,7 @@ describe("login form", () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it("saves the session and lands on the home screen after a successful sign-in", async () => {
+  it("saves the session, forgets reads from any earlier session, and lands on the home screen", async () => {
     mocks.login.mockResolvedValue({
       ok: true,
       session: {
@@ -93,7 +103,10 @@ describe("login form", () => {
       },
     });
     const user = userEvent.setup();
-    render(<LoginScreen />);
+    const client = new QueryClient();
+    // An expired session never signed out: its profile is still cached.
+    client.setQueryData(["ws", "sotrafret", "me"], { role: "ADMIN" });
+    renderLogin(client);
 
     await user.type(screen.getByLabelText("Workspace"), "sotrafret");
     await user.type(screen.getByLabelText("Username"), "amina");
@@ -103,6 +116,7 @@ describe("login form", () => {
     await waitFor(() =>
       expect(mocks.navigate).toHaveBeenCalledWith({ to: "/" }),
     );
+    expect(client.getQueryData(["ws", "sotrafret", "me"])).toBeUndefined();
     expect(mocks.login).toHaveBeenCalledWith({
       workspaceSlug: "sotrafret",
       username: "amina",

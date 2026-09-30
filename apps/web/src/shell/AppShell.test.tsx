@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -90,6 +91,8 @@ const SCREEN_PATHS = [
   "/more",
 ] as const;
 
+let client = new QueryClient();
+
 async function renderShell(initialPath: string) {
   const rootRoute = createRootRoute();
   const shellRoute = createRoute({
@@ -118,10 +121,13 @@ async function renderShell(initialPath: string) {
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
 
+  client = new QueryClient();
   render(
-    <I18nextProvider i18n={i18n}>
-      <RouterProvider router={router} />
-    </I18nextProvider>,
+    <QueryClientProvider client={client}>
+      <I18nextProvider i18n={i18n}>
+        <RouterProvider router={router} />
+      </I18nextProvider>
+    </QueryClientProvider>,
   );
   await screen.findByTestId("screen");
   return router;
@@ -281,10 +287,13 @@ describe("AppShell (sidebar frame)", () => {
     expect(live?.textContent).toBe("You are viewing: Yaoundé");
   });
 
-  it("logs out from the sidebar footer", async () => {
+  it("logs out from the sidebar footer, forgetting every read made under the session", async () => {
     await renderShell("/assets");
+    client.setQueryData(["ws", session.workspaceSlug, "me"], me.current);
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(logout).toHaveBeenCalledWith(session);
+    expect(client.getQueryCache().getAll()).toEqual([]);
+    expect(await screen.findByText("login screen")).toBeTruthy();
   });
 
   describe("preset vocabulary", () => {

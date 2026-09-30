@@ -34,6 +34,21 @@ export interface FinanceFormState {
   description?: string;
   paymentReference?: string;
   assetId?: string;
+  /** The trip the amount was spent on: a dimension on the line, never a second entry. */
+  activityId?: string;
+  /** The repair the amount pays for, counted once on the work order and the vehicle. */
+  workOrderId?: string;
+}
+
+/** The entry's single line: its whole amount, on the dimensions the form named. */
+function singlePosting(form: FinanceFormState) {
+  return {
+    assetId: form.assetId,
+    amountMinor: form.amountMinor,
+    assetAttribution: "DIRECT" as const,
+    ...(form.activityId === undefined ? {} : { activityId: form.activityId }),
+    ...(form.workOrderId === undefined ? {} : { workOrderId: form.workOrderId }),
+  };
 }
 
 /**
@@ -55,13 +70,7 @@ export function toRecordExpensePayload(
     counterpartyName: form.counterpartyName,
     description: form.description,
     estimateStatus: "ACTUAL",
-    postings: [
-      {
-        assetId: form.assetId,
-        amountMinor: form.amountMinor,
-        assetAttribution: "DIRECT",
-      },
-    ],
+    postings: [singlePosting(form)],
   };
 }
 
@@ -80,13 +89,7 @@ export function toRecordRevenuePayload(
     counterpartyName: form.counterpartyName,
     description: form.description,
     estimateStatus: "ACTUAL",
-    postings: [
-      {
-        assetId: form.assetId,
-        amountMinor: form.amountMinor,
-        assetAttribution: "DIRECT",
-      },
-    ],
+    postings: [singlePosting(form)],
   };
 }
 

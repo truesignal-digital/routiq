@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { PROFITABILITY_LAYERS } from "../commands/categories.js";
+import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
 
 const categoryType = z.object({
@@ -6,6 +8,39 @@ const categoryType = z.object({
   labelFr: z.string(),
   labelEn: z.string(),
 });
+
+/** An entry's category, with the profitability layer it rolls up into (§4.2). */
+const entryCategory = categoryType.extend({
+  layer: z.enum(PROFITABILITY_LAYERS).nullable(),
+});
+
+/**
+ * An entry's paperwork in four honest states — none of them "verified" (see
+ * `entryEvidenceState` in @routiq/domain for the rule and its precedence).
+ */
+export const ENTRY_EVIDENCE_STATES = [
+  "SUPPLIED",
+  "PAYMENT_REFERENCE",
+  "NOT_EXPECTED",
+  "NOT_SUPPLIED",
+] as const;
+export const entryEvidenceState = z.enum(ENTRY_EVIDENCE_STATES);
+
+/**
+ * `artifactCount` counts distinct files linked to the entry: those of the
+ * command that recorded it plus every `attach-evidence`. A reversal row is
+ * computed like any other; it never needs paperwork of its own, so clients
+ * ignore it where `reversesEntryId` is set, and `evidence=MISSING` skips it.
+ * Known imprecision: a file attached to a composite sheet counts for every
+ * entry that sheet created.
+ */
+export const entryEvidence = z.object({
+  state: entryEvidenceState,
+  artifactCount: z.number().int().nonnegative(),
+});
+
+/** `YYYY-MM`, a calendar month. */
+export const monthCode = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 /** Both the original and negative reversal contribute to signed ledger totals. */
 export const ledgerEntryStatuses = ["POSTED", "REVERSED"] as const;
@@ -15,6 +50,10 @@ export const financialEntryFilters = z.object({
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED", "LEDGER"]).optional(),
   direction: z.enum(["EXPENSE", "REVENUE"]).optional(),
   periodCode: z.string().optional(),
+  /** Month of the ECONOMIC date — the basis for pending and rejected money. */
+  economicMonth: monthCode.optional(),
+  /** Entries still waiting for paperwork: NOT_SUPPLIED, reversals excluded. */
+  evidence: z.enum(["MISSING"]).optional(),
   assetId: z.uuid().optional(),
   branchId: z.uuid().optional(),
 });
@@ -24,7 +63,7 @@ export const financialEntryListItem = z.object({
   entryNumber: z.string(),
   direction: z.enum(["REVENUE", "EXPENSE"]),
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]),
-  category: categoryType,
+  category: entryCategory,
   amountMinor: z.number(),
   currency: z.string(),
   economicDate: z.iso.date(),
@@ -36,6 +75,27 @@ export const financialEntryListItem = z.object({
   estimateStatus: z.enum(["ACTUAL", "ESTIMATED"]),
   postedAt: z.iso.datetime().nullable(),
   rowVersion: z.number(),
+  /** Set on a reversal row: the entry it cancels. */
+  reversesEntryId: z.uuid().nullable(),
+  /** Who recorded the entry, masked for PLATFORM actors like the history read. */
+  recordedBy: historyActor,
+  evidence: entryEvidence,
+  /**
+   * With an `assetId` filter: the SIGNED sum of this entry's lines on that
+   * vehicle — a split entry contributes only its share. Null without the filter.
+   */
+  assetShareMinor: z.number().int().nullable(),
+  /**
+   * With an `assetId` filter: what the vehicle's lines are attributed to, from
+   * its first line carrying each dimension. Null without the filter.
+   */
+  assetLinks: z
+    .object({
+      activityId: z.uuid().nullable(),
+      activityNumber: z.string().nullable(),
+      workOrderId: z.uuid().nullable(),
+    })
+    .nullable(),
 });
 
 /** `entries`, not `items`: the published key on /v1/finance/entries (ADR-0003). */
@@ -52,16 +112,36 @@ const financialPosting = z.object({
   category: categoryType,
 });
 
+/**
+ * One file behind an entry. `via` says how it got there: with the command that
+ * recorded the entry, or through a later `attach-evidence`. Downloads go
+ * through the entry-scoped route, never the workspace-wide one.
+ */
+export const entryEvidenceFile = z.object({
+  artifactId: z.uuid(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  originalFileName: z.string().nullable(),
+  sha256: z.string(),
+  attachedAt: z.iso.datetime(),
+  attachedBy: historyActor,
+  via: z.enum(["RECORDED", "ATTACHED"]),
+});
+
 export const financialEntryDetail = financialEntryListItem.extend({
   description: z.string().nullable(),
   paymentReference: z.string().nullable(),
   sourceReference: z.string().nullable(),
   rejectedReason: z.string().nullable(),
-  reversesEntryId: z.uuid().nullable(),
   reversedByEntryId: z.uuid().nullable(),
   postings: z.array(financialPosting),
+  /** The files counted by `evidence.artifactCount`, oldest first. */
+  evidenceFiles: z.array(entryEvidenceFile),
 });
 
+export type EntryEvidenceState = z.infer<typeof entryEvidenceState>;
+export type EntryEvidence = z.infer<typeof entryEvidence>;
+export type EntryEvidenceFile = z.infer<typeof entryEvidenceFile>;
 export type FinancialEntryListItem = z.infer<typeof financialEntryListItem>;
 export type FinancialEntryListResponse = z.infer<typeof financialEntryListResponse>;
 export type FinancialPosting = z.infer<typeof financialPosting>;

@@ -164,6 +164,10 @@ registerCommand<ReverseEntryPayload>({
       categoryId: posting.categoryId,
       branchId: posting.branchId,
       ...(posting.assetId === null ? {} : { assetId: posting.assetId }),
+      // The reversal subtracts from the same repair it corrects: the work
+      // order's cost trace filters on this column (#47 finding 4). Never
+      // re-checked against the order's status — a correction is always allowed.
+      ...(posting.workOrderId === null ? {} : { workOrderId: posting.workOrderId }),
       amountMinor: -posting.amountMinor,
       assetAttribution: posting.assetAttribution,
       createdByCommandId: envelope.commandId,

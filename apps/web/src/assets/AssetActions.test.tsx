@@ -129,6 +129,18 @@ describe("which actions an asset offers", () => {
     }
   });
 
+  it("follows each command's roles: no transfer for the field, no commission for finance", () => {
+    expect(assetActions(baseAsset, "FIELD_SUBMITTER", ["CORE", "ASSETS"])).toEqual([]);
+    expect(assetActions(baseAsset, "MAINTENANCE", ["CORE", "ASSETS"])).toEqual([]);
+    expect(assetActions(baseAsset, "FINANCE_APPROVER", ["CORE", "ASSETS"])).toEqual([
+      "assign",
+    ]);
+    expect(assetActions(baseAsset, "OPS_MANAGER", ["CORE", "ASSETS"])).toEqual([
+      "commission",
+      "assign",
+    ]);
+  });
+
   it("offers nothing to a viewer role, or without the module", () => {
     expect(assetActions(baseAsset, "EXECUTIVE_VIEWER", ["CORE", "ASSETS"])).toEqual(
       [],

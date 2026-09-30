@@ -8,19 +8,22 @@ import { afterEach, expect, it, vi } from "vitest";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { router as applicationRouter } from "../router.js";
+import { entryVehicleFields } from "../test-entry-fields.js";
 
 const identity = { username: "executive-test", workspaceSlug: "executive-test" };
 const branchId = "00000000-0000-4000-8000-000000000020";
 const entry: FinancialEntryDetail = {
   id: "00000000-0000-4000-8000-000000000010",
   entryNumber: "FIN-EXEC", direction: "EXPENSE", status: "POSTED",
-  category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+  category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: null },
   amountMinor: 25000, currency: "XAF", economicDate: "2026-09-04",
   postingPeriodCode: "2026-09", isLatePosting: false, branchId,
   counterpartyName: "Station Douala", paymentMethod: "CASH", estimateStatus: "ACTUAL",
   postedAt: "2026-09-04T12:00:00Z", rowVersion: 1,
   description: "Vehicle fuel", paymentReference: null, sourceReference: null,
-  rejectedReason: null, reversesEntryId: null, reversedByEntryId: null, postings: [],
+  rejectedReason: null, reversesEntryId: null, reversedByEntryId: null,
+  ...entryVehicleFields,
+  evidenceFiles: [], postings: [],
 };
 let client: QueryClient;
 

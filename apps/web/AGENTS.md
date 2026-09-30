@@ -1,0 +1,32 @@
+# apps/web — conventions
+
+Read this with the root [`AGENTS.md`](../../AGENTS.md). Each row names the one way to do a common job in the web app. When you find a second way already in the code, follow this table, not the neighbour.
+
+## Paved paths
+
+| Job | The one way | Never |
+|---|---|---|
+| Read server data | A TanStack Query hook per resource in its feature folder (e.g. `assets/useAssets.ts`) over a fetch function typed from `@routiq/contracts`. Check responses with structural guards (`is*` functions typed from the contract's types). | Parsing responses with the contract's Zod schemas: test fixtures use ids like `"a1"`, and the server's uuid columns already guarantee the format. |
+| Write data | A command through `commandClient` and `createCommandIntent` (`src/commands/`). Render server truth plus the pending state from the command status store (ADR-0001). | `useMutation`, raw `fetch` POSTs, or optimistic cache patches (`setQueryData`, `onMutate`). |
+| Forms | react-hook-form through `components/ui/form.tsx` with `zodResolver`. Validation must match what the API enforces: reuse the contract's field helpers (`packages/contracts/src/commands/branch-fields.ts` is the example). | Re-typing a rule the API enforces. Hand-written copies drifted in #19 and #22. |
+| Feedback after a command | `notifyCommandSuccess` / `notifyCommandError` from `lib/notify.ts`. `shell/AppShell.tsx` mounts the only `<Toaster />`. | Importing `components/ui/toast` elsewhere; large inline success panels. |
+| Tables | `DataTable` (`components/data-table.tsx`). `primaryColumn` is the descriptive column and the only click target; row actions go in `rowActions` (the ⋯ menu), with role gating in the screen's `// role-config` seam. Filters are server-side. Use `loadMore` (keyset) for server lists and `pagination` only for fully loaded data; the type allows one or the other. Sort on the server through declared sort fields. | Fake page counts under keyset paging (ADR-0003); raw `<table>` in screens. |
+| Dates and times | The registry date pickers (`components/date-range-picker.tsx` today). If a screen needs a single date or date-time and no picker exists yet, add `components/date-picker.tsx` as a registry component in its own PR first. | `<input type="date">` or `type="datetime-local"`. 16 older native inputs are being replaced; add no more. |
+| UI primitives | `components/ui/` (shadcn `base-nova` on Base UI), vendored with the shadcn CLI. Register every new file under `src/components/` in `registry.json` in the same change. | Anything from `@radix-ui`. |
+| Colour | Semantic tokens (`success`, `warning`, `info`, `signal`, and the theme tokens in `styles.css`). `palette.test.ts` enforces this. | Raw palette shades like `bg-red-500`. |
+| Tabs | Height on `TabsList` (44 px touch target). | `min-h-*` on `TabsTrigger` (the broken-pill bug, `08b5502`). |
+| Touch targets | Interactive controls at least 44 px (`min-h-11`); users are on low-end Android (#23). | Smaller hit areas in toolbars and switchers. |
+| Text | Every user-visible string through `t()`, ICU syntax (`{name}`), with identical keys in `fr.json` and `en.json` (`i18n/locales.test.ts`). fr-CM is the default. | `{{name}}` interpolation; building sentences by concatenation; raw enum values or UUIDs on screen. |
+| Active navigation item | `isRouteActive` from `lib/route-match.ts`, the single matcher for the sidebar and finance navigation. | A second matcher. |
+| Dashboard numbers | Server aggregates from `/v1/dashboard`. | Counting rows client-side. |
+| Access in the UI | Role gating in each screen's `// role-config` seam, as a render hint only; the server enforces every write. A server-computed capabilities read with a typed `useCan(commandName)` is the chosen replacement. | CASL, or new role-string comparisons outside the `// role-config` seams. |
+| Tests that open a select | `openSelect` from `src/test-select.ts` (`test-select.test.ts` guards the idiom). | `user.click` followed by arrow keys on the next line. |
+
+## Walkthrough videos
+
+Every feature PR links a walkthrough video (see the definition of done in the root `AGENTS.md`). When you record one:
+
+- Switch the app to English first (More → Language) and write captions in English. The language choice is held in memory only: any full page load (`page.goto`) resets it to French, so navigate by clicking.
+- Match buttons by exact name. "Reverse", for example, also matches the "Reverses entry #…" link.
+- Do a dry run with a screenshot per step, reset the database between runs, and check the frames before uploading.
+- While you click through, note anything else that looks wrong and file it as its own issue.

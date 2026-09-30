@@ -21,12 +21,32 @@ The branch administratively responsible for a vehicle; not its physical location
 _Avoid_: current location, GPS location
 
 **Custodian**:
-The person currently accountable for a vehicle. A custodian is not necessarily its driver, permanent manager or last user.
+The member of the workspace currently accountable for a vehicle. Never a person without a login, and not necessarily its driver, permanent manager or last user.
 _Avoid_: driver, reporting manager
 
 **Availability**:
-An assessment of whether a vehicle can take on work, distinct from its lifecycle and physical location.
-_Avoid_: lifecycle status, absence of recorded problems
+Whether a vehicle may take on work, read from its availability intervals: **Grounded** while one is open, available otherwise. Not assessed when the maintenance module is off. Distinct from lifecycle and physical location.
+_Avoid_: lifecycle status, absence of recorded problems, absence of work orders
+
+**Grounded**:
+A vehicle with an open availability interval. A safety-critical issue opens one the moment it is reported; only a release to service closes it. Resolving the issue or completing the work does not.
+_Avoid_: out of service (a lifecycle word), broken down, unavailable flag
+
+**Attention Item**:
+A fact about one vehicle that needs someone's next step: an issue with no work order, work awaiting authorization or sign-off, a vehicle awaiting release, a document expired or expiring, an entry awaiting review or its paperwork. Derived on read, never stored; it names who may not take the step, not who must.
+_Avoid_: task, alert, notification
+
+**Evidence State**:
+What stands behind a financial entry: supplied (a file is linked), payment reference (paid by mobile money or bank with a reference), not expected (the category needs no receipt) or not supplied (evidence missing). It says what is attached, never that anyone checked it.
+_Avoid_: verified, receipt status
+
+**Note**:
+A free-text remark a member writes on a vehicle. Append-only: a correction is another note. Executive viewers write none.
+_Avoid_: comment thread, description, edit
+
+**Vehicle History**:
+A vehicle's timeline, read as one query over the audit trail of every record that belongs to it. A view of the trail, never a ledger or an editable log.
+_Avoid_: timeline ledger, activity log table
 
 **Recorded Vehicle Expenses**:
 The signed posted expenses attributed to a vehicle across the stated cost layers, period and currency; not proof of cash paid or complete ownership cost.
@@ -103,4 +123,5 @@ _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing
 - **Scope (historical 2026-07-29, refined by the internal-fleet direction):** the original profit-center-only test excluded a store. The current boundary admits a company's operated fleet without admitting its retail/inventory business. The refusal of configurable entities and a general business engine remains.
 - **"Workflow" (resolved 2026-07-29):** pinned to **Approval Chains** + **Entry Roles**, both tenant data. **Lifecycles** (status machines) stay fixed code with configurable labels — per-tenant state machines are the refused configuration engine.
 - **Template binding (resolved 2026-07-29; server enforcement shipped 2026-07-30):** a Workspace enables a SET of Template Presets (mixed fleets are real in Cameroon); single-preset tenants see single-preset UX. Enforced server-side like module flags — `workspace_templates` rows written at Provisioning, checked in the command pipeline (`PRESET_DISABLED`). Workspaces with zero rows (pre-provisioning pilots) are grandfathered all-enabled with a `preset.unenforced` warning until backfilled. Remaining gap: web UX still shows both presets to single-preset tenants.
+- **Vehicle workspace terms (2026-09-25):** Grounded, Attention Item, Evidence State, Note and Vehicle History, and the refined Custodian and Availability, describe behaviour implemented on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. See [the vehicle workspace reference](docs/reference/vehicle-workspace-v1.md).
 - **Terminology variance (resolved 2026-07-29):** a tenant's words come from its enabled **Template Presets** (preset-level string overlays merged over base locale) plus its own category labels. Per-tenant renames of UI terms are NOT built — market survey: 4 of 5 mature vertical SaaS offer at most a two-value toggle. Revisit only if a paying tenant refuses the preset's word.

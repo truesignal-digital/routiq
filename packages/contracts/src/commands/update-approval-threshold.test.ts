@@ -25,6 +25,23 @@ describe("updateApprovalThresholdPayload", () => {
     });
   });
 
+  it("accepts the work-order pair, whose bands a tenant configures here (#47)", () => {
+    for (const commandType of ["create-work-order", "complete-work-order"] as const) {
+      expect(
+        updateApprovalThresholdPayload.parse({ commandType, amountMaxMinor: 500_000 }),
+      ).toEqual({ commandType, amountMaxMinor: 500_000 });
+    }
+  });
+
+  it("rejects a command type with no amount band, like a work-order decision", () => {
+    expect(
+      updateApprovalThresholdPayload.safeParse({
+        commandType: "approve-work-order",
+        amountMaxMinor: 1,
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects negative amountMaxMinor", () => {
     expect(
       updateApprovalThresholdPayload.safeParse({

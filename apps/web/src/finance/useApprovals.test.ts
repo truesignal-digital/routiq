@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isOwnSubmission, validateRejectionReason } from "./model.js";
 import { canApproveEntries } from "./permissions.js";
 import type { PendingApprovalItem } from "@routiq/contracts";
+import { entryVehicleFields } from "../test-entry-fields.js";
 
 describe("Approvals - Maker guard comparison", () => {
   it("identifies own submissions by comparing principal IDs", () => {
@@ -11,7 +12,7 @@ describe("Approvals - Maker guard comparison", () => {
       entryNumber: "ENT001",
       direction: "EXPENSE",
       status: "SUBMITTED",
-      category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+      category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: null },
       amountMinor: 50000,
       currency: "XAF",
       economicDate: "2026-07-26",
@@ -23,6 +24,8 @@ describe("Approvals - Maker guard comparison", () => {
       estimateStatus: "ACTUAL",
       postedAt: null,
       rowVersion: 1,
+      reversesEntryId: null,
+      ...entryVehicleFields,
       submittedByPrincipalId: sessionPrincipalId,
       submittedAt: "2026-07-26T10:00:00Z",
     };
