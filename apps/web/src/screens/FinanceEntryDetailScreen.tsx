@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { formatMoney, localizedLabel } from "@/lib/format.js";
@@ -11,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { useMeContext } from "@/auth/me.js";
+import { useActiveSession } from "@/auth/store.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { canReadFinance, canReverseEntry } from "@/finance/permissions.js";
+import { canEditPendingEntry, canReadFinance, canReverseEntry } from "@/finance/permissions.js";
+import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import { ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
 import { ReversalLink } from "@/finance/ReversalLink.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
@@ -42,11 +45,29 @@ function FinanceEntryDetailContent() {
     from: "/app/finance/entries/$entryId",
   });
   const [reverseOpen, setReverseOpen] = useState(openReverse === true);
+  const [editOpen, setEditOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const session = useActiveSession();
 
   const labelOf = (item: { labelFr: string; labelEn: string }) =>
     localizedLabel(item);
 
   const canReverse = canReverseEntry(me?.role, entryQuery.data?.status);
+  // role-config: the author alone, while it waits, and only an entry this
+  // single-line form can write back whole.
+  const canEdit =
+    canEditPendingEntry(entryQuery.data, {
+      principalId: me?.principalId,
+      role: me?.role,
+      enabledModules: me?.enabledModules,
+    }) && entryQuery.data?.postings.length === 1;
+
+  /** ADR-0001: server truth after the save or the conflict, never a local patch. */
+  const refreshFinance = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["ws", session?.workspaceSlug, "finance"],
+    });
+  };
 
   return (
     <PageContainer>
@@ -110,6 +131,31 @@ function FinanceEntryDetailContent() {
                 )}
               </div>
             </div>
+          )}
+
+          {canEdit && (
+            <Button
+              variant="outline"
+              onClick={() => setEditOpen(true)}
+              className="min-h-11 w-full"
+            >
+              {t("finance.entries.detail.editAction")}
+            </Button>
+          )}
+
+          {canEdit && editOpen && (
+            <RecordEntryForm
+              surface="dialog"
+              editing={entryQuery.data}
+              onRecorded={() => {
+                setEditOpen(false);
+                void refreshFinance();
+              }}
+              onDismiss={() => {
+                setEditOpen(false);
+                void refreshFinance();
+              }}
+            />
           )}
 
           {canReverse && (

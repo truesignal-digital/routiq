@@ -159,7 +159,8 @@
     "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the issue.",
     "SAFETY_ISSUE_OPEN": "Another safety-critical issue is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
-    "AUTH_FAILED": "Incorrect workspace, username, or PIN."
+    "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
+    "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it."
   },
   "assets": {
     "notify": {
@@ -385,7 +386,9 @@
         "reopened": "Period reopened",
         "posted": "Transaction recorded and posted",
         "submitted": "Transaction sent for approval",
-        "recorded": "Transaction recorded"
+        "recorded": "Transaction recorded",
+        "updated": "Entry updated, still awaiting approval",
+        "updatedPosted": "Entry updated and posted"
       },
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
@@ -483,7 +486,8 @@
         "reverseAction": "Reverse",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
-        "breadcrumb": "Detail"
+        "breadcrumb": "Detail",
+        "editAction": "Edit"
       },
       "viewer": {
         "description": "Economic date {date}",
@@ -569,6 +573,15 @@
       "warningsLabel": "Warnings",
       "warningSubmittedEntries": "This period contains entries awaiting approval.",
       "done": "Close"
+    },
+    "edit": {
+      "title": "Edit entry {number}",
+      "description": "You can change it until someone approves or rejects it. The approver will see what you changed.",
+      "submit": "Save changes",
+      "submitting": "Saving…",
+      "decidedTitle": "This entry has already been decided",
+      "decidedBody": "An approver approved or rejected it while you were editing. Your changes were not saved.",
+      "branchUnknown": "The branch it was recorded in"
     }
   },
   "common": {
@@ -1404,7 +1417,8 @@
       "work_order-closed": "Work order closed",
       "work_order-closure_approved": "Closure validated",
       "asset_availability-opened": "Asset grounded",
-      "asset_availability-closed": "Grounding lifted"
+      "asset_availability-closed": "Grounding lifted",
+      "financial_entry-updated": "Entry edited"
     },
     "field": {
       "status": "status",
@@ -1550,7 +1564,8 @@
       "resolvedByWorkOrderId": "resolved by work order",
       "dismissedAt": "dismissed",
       "dismissReason": "dismissal reason",
-      "defaultSafetyCritical": "safety-critical by default"
+      "defaultSafetyCritical": "safety-critical by default",
+      "postings": "posting lines"
     }
   },
   "commandForm": {
@@ -1739,7 +1754,8 @@
       "dismiss-issue": "Dismiss",
       "approve-entry": "Approve",
       "reject-entry": "Reject",
-      "add-cost": "Add a cost"
+      "add-cost": "Add a cost",
+      "edit-entry": "Edit"
     },
     "locked": {
       "needsAuthorization": "Needs finance to authorize {ref} first.",
@@ -2063,7 +2079,8 @@
         "work_order-asset_released": "Released to service",
         "asset_availability-opened": "Grounded",
         "asset_availability-closed": "Grounding lifted",
-        "note-added": "Note added"
+        "note-added": "Note added",
+        "financial_entry-updated": "Entry edited before review"
       }
     },
     "panel": {
@@ -2120,7 +2137,7 @@
       "reversedBy": "Reversed by",
       "openOriginal": "The original entry",
       "openReversal": "The reversal",
-      "awaitingReviewNote": "Awaiting review: not counted in posted totals until approved. Whoever recorded it cannot approve it.",
+      "awaitingReviewNote": "Awaiting review: not counted in posted totals until approved. Whoever recorded it can edit it until then, but cannot approve it.",
       "postedNotPaid": "Posted means recorded in the books, not paid. A mistake is corrected by a reversal; the original stays.",
       "receipt": "Receipt",
       "noFiles": "No file on this entry.",
@@ -2140,7 +2157,8 @@
         "entryReceipt": "Waiting on {name} to attach the receipt.",
         "documentRenewal": "Waiting on operations to renew it."
       },
-      "photoNumber": "Photo {number}"
+      "photoNumber": "Photo {number}",
+      "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again."
     },
     "rows": {
       "actionsFor": "Actions for {record}"
