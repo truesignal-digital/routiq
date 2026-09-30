@@ -16,3 +16,23 @@ export function inWorkspace<T>(
     return execute(tx);
   });
 }
+
+/**
+ * The same RLS context in a READ ONLY transaction: Postgres refuses any write
+ * inside it, so a read route cannot become a second write path (§5).
+ */
+export function inWorkspaceRead<T>(
+  db: Db,
+  workspaceId: string,
+  execute: (tx: TenantTx) => Promise<T>,
+): Promise<T> {
+  return db.transaction(
+    async (tx) => {
+      await tx.execute(
+        sql`select set_config('app.workspace_id', ${workspaceId}, true)`,
+      );
+      return execute(tx);
+    },
+    { accessMode: "read only" },
+  );
+}

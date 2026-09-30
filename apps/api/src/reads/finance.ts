@@ -1,5 +1,4 @@
 import {
-  FINANCE_READER_ROLES,
   financialEntryDetail,
   financialEntryFilters,
   ledgerEntryStatuses,
@@ -12,7 +11,7 @@ import {
 } from "@routiq/contracts";
 import { entryEvidenceState } from "@routiq/domain";
 import { and, asc, desc, eq, exists, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
@@ -26,7 +25,6 @@ import {
   postingPeriods,
   principals,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
 import { commandActors, toActor } from "./actors.js";
 import {
   entryArtifactCountSql,
@@ -52,15 +50,9 @@ import {
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
-import { passReadGate, sendReadFailure, type ReadGate } from "./read-gate.js";
+import { defineRead, LEDGER_GATE } from "./define-read.js";
+import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
-
-/**
- * The ledger reads: the books are for the roles that read them, and a
- * disabled FINANCE module's ledger must not stay readable by URL. MAINTENANCE
- * sees the cost lines of its own work orders on the work-order reads instead.
- */
-const LEDGER_GATE: ReadGate = { module: "FINANCE", roles: FINANCE_READER_ROLES };
 
 const entrySortFields = [
   "economicDate",
@@ -353,12 +345,12 @@ export function registerFinanceReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/finance/entries",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/entries", ...LEDGER_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -377,8 +369,7 @@ export function registerFinanceReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultEntrySort;
         const sortColumn = entrySortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, LEDGER_GATE);
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
@@ -523,20 +514,19 @@ export function registerFinanceReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/finance/entries/:entryId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/entries/:entryId", ...LEDGER_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z.object({ entryId: z.uuid() }).safeParse(req.params);
         if (!parsedParams.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { entryId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, LEDGER_GATE);
+        const result = await read(async (tx) => {
           const [entry] = await tx
             .select({
               id: financialEntries.id,
@@ -738,12 +728,12 @@ export function registerFinanceReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/finance/approvals",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/approvals", ...LEDGER_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = approvalsQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -752,8 +742,7 @@ export function registerFinanceReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultApprovalSort;
         const sortColumn = approvalSortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, LEDGER_GATE);
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
             ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
@@ -872,14 +861,13 @@ export function registerFinanceReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/finance/periods",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/periods", ...LEDGER_GATE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const rows = await tx
             .select({
               id: postingPeriods.id,

@@ -1,11 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { assetDocumentsReadResponse } from "@routiq/contracts";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 import { assets, categories, documents } from "../db/schema.js";
 import { commandArtifacts } from "./record-artifacts.js";
 
@@ -15,19 +15,19 @@ export function registerDocumentReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/assets/:assetId/documents",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/documents", module: "DOCUMENTS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z.object({ assetId: z.uuid() }).safeParse(req.params);
         if (!parsedParams.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { assetId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const [asset] = await tx
             .select({ id: assets.id, branchId: assets.branchId })
             .from(assets)
