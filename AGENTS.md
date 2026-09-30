@@ -65,6 +65,8 @@ Adding a command touches three places:
 
 Never change the payload shape of a shipped command version. Add `vN+1` with a compatibility handler for `vN`, as `provision-workspace` v1 → v2 did (#20).
 
+Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/commands/contract-snapshots/`. `contract-snapshots.test.ts` fails when a version has no snapshot, when a snapshot has no handler, or when the current schema rejects a payload the stored one accepted (a removed field, a newly required field, a removed enum value, a type change, a tighter bound). Widening passes. After adding a command version or widening one, run `pnpm --filter @routiq/api contracts:snapshot` and commit the files it writes. Never write a snapshot by hand; the script refuses to rewrite a narrowed one.
+
 **Command envelope rules** (`packages/contracts/src/envelope.ts`): tenant, actor, and branch scope are NEVER accepted from the client — the server derives them from auth. Envelope carries `commandId`, `idempotencyKey` (workspace-scoped unique; exact retry returns original result, same key + different payload → 409), `origin`, optional `expectedVersion`, `sourceArtifactIds`.
 
 **Reads** are GET routes in `apps/api/src/reads/`, running inside `inWorkspace`. Every read must declare and check its gates itself: the module it belongs to, the roles allowed to see it, and the branch scope of the caller. Reads that skipped a gate caused #40, #58 and #59; a `defineRead` wrapper that makes the gates required is planned. List reads use `listQuery`/`listResponse` with keyset cursors from `reads/cursor.ts` (ADR-0003). Business days come from `reads/business-date.ts` (workspace time zone).
