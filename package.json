@@ -11,7 +11,8 @@
     "lint": "pnpm --filter @routiq/tools lint",
     "lint:tighten": "pnpm --filter @routiq/tools tighten",
     "db:generate": "pnpm --filter @routiq/api db:generate",
-    "db:migrate": "pnpm --filter @routiq/api db:migrate"
+    "db:migrate": "pnpm --filter @routiq/api db:migrate",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "packageManager": "pnpm@10.28.0"
 }
