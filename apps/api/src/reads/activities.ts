@@ -2,6 +2,7 @@ import {
   activityDetail,
   activityListQuery,
   activityListResponse,
+  canReadLedger,
   personListQuery,
   personListResponse,
   placeListResponse,
@@ -50,7 +51,7 @@ import {
   type KeysetValue,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
-import { ANY_ROLE, defineRead } from "./define-read.js";
+import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -355,7 +356,7 @@ export function registerActivityReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/activities/:activityId", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedParams = z
           .object({ activityId: z.uuid() })
@@ -364,6 +365,7 @@ export function registerActivityReadRoutes(
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { activityId } = parsedParams.data;
+        const ledgerVisible = canReadLedger(auth.role) && modules.has("FINANCE");
 
         const result = await read(async (tx) => {
           const conditions: SQL[] = [
@@ -554,43 +556,11 @@ export function registerActivityReadRoutes(
             )
             .orderBy(asc(meterReadings.observedAt), asc(meterReadings.id));
 
-          const financialRows = await tx
-            .selectDistinct({
-              entryId: financialEntries.id,
-              entryNumber: financialEntries.entryNumber,
-              direction: financialEntries.direction,
-              categoryCode: categories.code,
-              amountMinor: financialEntries.amountMinor,
-              status: financialEntries.status,
-            })
-            .from(financialPostings)
-            .innerJoin(
-              financialEntries,
-              and(
-                eq(
-                  financialEntries.workspaceId,
-                  financialPostings.workspaceId,
-                ),
-                eq(financialEntries.id, financialPostings.financialEntryId),
-              ),
-            )
-            .innerJoin(
-              categories,
-              and(
-                eq(categories.workspaceId, financialEntries.workspaceId),
-                eq(categories.id, financialEntries.categoryId),
-              ),
-            )
-            .where(
-              and(
-                eq(financialPostings.workspaceId, auth.workspaceId),
-                eq(financialPostings.activityId, activityId),
-              ),
-            )
-            .orderBy(
-              asc(financialEntries.entryNumber),
-              asc(financialEntries.id),
-            );
+          // Every role reads the trip, not its money (#103). Null, never an
+          // empty list, so a hidden ledger cannot pass for a trip with no money.
+          const financialRows = ledgerVisible
+            ? await activityFinancialRows(tx, auth.workspaceId, activityId)
+            : null;
 
           return {
             header,
@@ -670,10 +640,11 @@ export function registerActivityReadRoutes(
             value: serializeReadingValue(reading.value),
             observedAt: reading.observedAt.toISOString(),
           })),
-          financialEntries: financialRows.map((entry) => ({
-            ...entry,
-            amountMinor: serializeMinor(entry.amountMinor),
-          })),
+          financialEntries:
+            financialRows?.map((entry) => ({
+              ...entry,
+              amountMinor: serializeMinor(entry.amountMinor),
+            })) ?? null,
         });
       } catch (error) {
         req.log.error({ err: error }, "activity detail read failed");
@@ -749,4 +720,48 @@ export function registerActivityReadRoutes(
       }
     },
   );
+}
+
+/**
+ * The trip's entries with their amounts: ledger figures, so the detail read
+ * loads them only for the roles that read the books, with FINANCE on (#103).
+ */
+function activityFinancialRows(tx: ReadTx, workspaceId: string, activityId: string) {
+  return tx
+    .selectDistinct({
+      entryId: financialEntries.id,
+      entryNumber: financialEntries.entryNumber,
+      direction: financialEntries.direction,
+      categoryCode: categories.code,
+      amountMinor: financialEntries.amountMinor,
+      status: financialEntries.status,
+    })
+    .from(financialPostings)
+    .innerJoin(
+      financialEntries,
+      and(
+        eq(
+          financialEntries.workspaceId,
+          financialPostings.workspaceId,
+        ),
+        eq(financialEntries.id, financialPostings.financialEntryId),
+      ),
+    )
+    .innerJoin(
+      categories,
+      and(
+        eq(categories.workspaceId, financialEntries.workspaceId),
+        eq(categories.id, financialEntries.categoryId),
+      ),
+    )
+    .where(
+      and(
+        eq(financialPostings.workspaceId, workspaceId),
+        eq(financialPostings.activityId, activityId),
+      ),
+    )
+    .orderBy(
+      asc(financialEntries.entryNumber),
+      asc(financialEntries.id),
+    );
 }

@@ -1,10 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import type { z } from "zod";
+import { z } from "zod";
 import type {
   cancelWorkOrderPayload,
-  completeWorkOrderPayload,
+  CompleteWorkOrderInput,
   createWorkOrderPayload,
   IssueListItem,
   releaseAssetToServicePayload,
@@ -17,8 +20,17 @@ import {
   type CommandFormBack,
   type CommandSurface,
 } from "@/components/command-form.js";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileUpload } from "@/components/ui/file-upload";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,10 +42,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/money-input.js";
+import { useMeContext } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
 import { useCategories } from "../documents/useCategories.js";
-import { localizedLabel } from "../lib/format.js";
+import { canAddWorkOrderCost } from "../finance/permissions.js";
+import { formatDate, formatMoney, localizedLabel } from "../lib/format.js";
+import { cn } from "../lib/utils.js";
 import { useAssetOptions } from "../assets/useAssetOptions.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -41,11 +56,20 @@ import { parseMoneyXaf } from "../finance/model.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
 import { workOrderReference } from "./columns.js";
-import { maintenanceQueryKey, useIssues } from "./useMaintenance.js";
+import {
+  defaultCostChoice,
+  newCostLine,
+  recordedCost,
+  REPAIR_CATEGORY_CODE,
+  todayIsoDate,
+  toCompletionCost,
+  type CostChoice,
+  type CostLineDraft,
+} from "./close-cost.js";
+import { maintenanceQueryKey, useIssues, useWorkOrder } from "./useMaintenance.js";
 
 type ReportIssuePayload = z.infer<typeof reportIssuePayload>;
 type CreateWorkOrderPayload = z.infer<typeof createWorkOrderPayload>;
-type CompleteWorkOrderPayload = z.infer<typeof completeWorkOrderPayload>;
 type CancelWorkOrderPayload = z.infer<typeof cancelWorkOrderPayload>;
 type ReleaseAssetPayload = z.infer<typeof releaseAssetToServicePayload>;
 type DecisionPayload = Readonly<Record<string, string>>;
@@ -494,101 +518,397 @@ function CreateWorkOrderFields({
   );
 }
 
+interface CloseFormValues {
+  summary: string;
+  resolveLinkedIssue: boolean;
+  lines: CostLineDraft[];
+}
+
+/**
+ * Closing a work order, with its cost (#81). The closer says what was done and
+ * what it cost: one amount with everything else pre-filled (the repair
+ * category, today, the truck, its branch, this order), or one of two explicit
+ * alternatives. The expected cost is a hint, never a value. Costs already in
+ * the books are shown first and nothing is added unless the closer says so.
+ */
 export function CompleteWorkOrderForm({
   workOrder,
   ...host
 }: MaintenanceFormHost & { workOrder: WorkOrderRef }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
   const client = host.client ?? commandClient;
-  const [actualCost, setActualCost] = useState("");
-  const [summary, setSummary] = useState("");
-  const [resolveLinkedIssue, setResolveLinkedIssue] = useState(true);
-  const intent = useRef<CommandIntent<CompleteWorkOrderPayload> | undefined>(undefined);
+  const me = useMeContext();
+  // role-config: recording cost is record-expense's right (the workshop's too).
+  const canRecordCost = canAddWorkOrderCost(me?.role, me?.enabledModules);
+  const detailQuery = useWorkOrder(workOrder.id);
+  const detail = detailQuery.data;
+  const categoriesQuery = useCategories("EXPENSE_CATEGORY", canRecordCost);
+  const categories = categoriesQuery.data ?? [];
+  const repairCategory = categories.find((category) => category.code === REPAIR_CATEGORY_CODE);
+  // Loaded and without the repair category: the first line asks for one.
+  const askCategory = categoriesQuery.isSuccess && repairCategory === undefined;
+  const [economicDate] = useState(() => todayIsoDate());
+  const intent = useRef<CommandIntent<CompleteWorkOrderInput> | undefined>(undefined);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
-  const actualCostMinor = parseMoneyXaf(actualCost);
-  const costUsable = actualCost.trim() === "" || actualCostMinor !== null;
-  const trimmedSummary = summary.trim();
+  const recorded = detail === undefined ? { totalMinor: 0, count: 0 } : recordedCost(detail);
+  const hasRecorded = recorded.totalMinor !== 0;
+  const [choice, setChoice] = useState<CostChoice | null | undefined>(undefined);
+  const effectiveChoice =
+    choice === undefined ? defaultCostChoice(recorded, canRecordCost) : choice;
+
+  const formSchema = useMemo(
+    () =>
+      z.object({
+        summary: z.string().max(500),
+        resolveLinkedIssue: z.boolean(),
+        lines: z.array(
+          z.object({
+            entryId: z.string(),
+            categoryCode: z.string(),
+            amountInput: z.string(),
+            note: z.string().max(500),
+            artifactIds: z.array(z.string()),
+          }),
+        ),
+      }),
+    [],
+  );
+  const form = useForm<CloseFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      summary: "",
+      resolveLinkedIssue: true,
+      lines: [newCostLine(askCategory ? "" : REPAIR_CATEGORY_CODE)],
+    },
+  });
+  const lines = useFieldArray({ control: form.control, name: "lines", keyName: "key" });
+  // The list arrived without the repair category: the first line has to ask.
+  useEffect(() => {
+    if (askCategory && form.getValues("lines.0.categoryCode") === REPAIR_CATEGORY_CODE) {
+      form.setValue("lines.0.categoryCode", "");
+    }
+  }, [askCategory, form]);
+  const values = form.watch();
   const hasIssue = workOrder.issueId !== null;
+  const cost = toCompletionCost(effectiveChoice, values.lines, economicDate);
+  const anyUploading = Object.values(uploading).some(Boolean);
+  const ready = detail !== undefined && cost !== null && !anyUploading;
 
-  async function submit() {
-    if (!costUsable) return;
+  const money = (minor: number) => formatMoney(minor, { currency: "XAF", locale });
+  const categoryLabel = (code: string) => {
+    const category = categories.find((candidate) => candidate.code === code);
+    return category === undefined ? code : localizedLabel(category);
+  };
+
+  async function onValid(formValues: CloseFormValues) {
+    const completion = toCompletionCost(effectiveChoice, formValues.lines, economicDate);
+    if (completion === null) return;
+    const summary = formValues.summary.trim();
     const result = await submission.run(() => {
-      intent.current ??= createCommandIntent<CompleteWorkOrderPayload>(
+      intent.current ??= createCommandIntent<CompleteWorkOrderInput>(
         client,
         "complete-work-order",
-        1,
+        2,
       );
       return intent.current.submit(
         {
           workOrderId: workOrder.id,
           currency: "XAF",
-          ...(actualCostMinor === null ? {} : { actualCostMinor }),
-          ...(trimmedSummary === "" ? {} : { summary: trimmedSummary }),
-          ...(hasIssue ? { resolveLinkedIssue } : {}),
+          costOutcome: completion.costOutcome,
+          costLines: completion.costLines,
+          ...(summary === "" ? {} : { summary }),
+          ...(hasIssue ? { resolveLinkedIssue: formValues.resolveLinkedIssue } : {}),
         },
-        { expectedVersion: workOrder.rowVersion },
+        {
+          expectedVersion: workOrder.rowVersion,
+          ...(completion.sourceArtifactIds.length === 0
+            ? {}
+            : { sourceArtifactIds: completion.sourceArtifactIds }),
+        },
       );
     });
     if (!result.ok) return;
-    await commit("completionDeclared", result.outcome.warnings);
+    // Say who has it next only when something went to review; no approval
+    // vocabulary otherwise.
+    const sentOn =
+      result.outcome.recordStatus === "COMPLETION_SUBMITTED" ||
+      (result.outcome.children ?? []).some((child) => child.status === "SUBMITTED");
+    await commit(sentOn ? "workOrderClosedSentOn" : "workOrderClosed", result.outcome.warnings);
     finish();
   }
 
-  return (
-    <CommandForm
-      {...chrome}
-      title={t("maintenance.actions.completeTitle")}
-      description={t("maintenance.actions.completeHint")}
-      error={submission.error}
-      submitLabel={t("maintenance.actions.complete")}
-      ready={costUsable}
-      submitting={submission.submitting}
-      onSubmit={() => void submit()}
-    >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="work-order-actual-cost">
-          {t("maintenance.fields.actualCost")}
-        </Label>
-        <MoneyInput
-          id="work-order-actual-cost"
-          aria-label={t("maintenance.fields.actualCost")}
-          value={actualCost}
-          onValueChange={setActualCost}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="work-order-summary">{t("maintenance.fields.summary")}</Label>
-        <Textarea
-          id="work-order-summary"
-          maxLength={500}
-          value={summary}
-          onChange={(event) => setSummary(event.target.value)}
-        />
-      </div>
-
-      {hasIssue && (
-        <div className="flex items-start gap-2">
-          <Checkbox
-            id="work-order-resolve-issue"
-            checked={resolveLinkedIssue}
-            aria-label={t("maintenance.fields.resolveLinkedIssue")}
-            onCheckedChange={(checked) => setResolveLinkedIssue(checked === true)}
-          />
-          <Label
-            htmlFor="work-order-resolve-issue"
-            className="flex flex-col items-start gap-0.5"
-          >
-            <span>{t("maintenance.fields.resolveLinkedIssue")}</span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {t("maintenance.fields.resolveLinkedIssueHint")}
-            </span>
-          </Label>
-        </div>
+  const choose = (next: CostChoice) => setChoice(next);
+  const choiceButton = (value: CostChoice, label: string) => (
+    <Button
+      key={value}
+      type="button"
+      variant="outline"
+      aria-pressed={effectiveChoice === value}
+      className={cn(
+        "min-h-11 justify-start whitespace-normal text-left",
+        effectiveChoice === value && "border-foreground bg-muted",
       )}
-    </CommandForm>
+      onClick={() => choose(value)}
+    >
+      {label}
+    </Button>
+  );
+
+  const amountSection = (
+    <div className="flex flex-col gap-4">
+      {lines.fields.map((field, index) => {
+        const first = index === 0;
+        const line = values.lines[index];
+        return (
+          <div
+            key={field.key}
+            className={cn("flex flex-col gap-3", !first && "border-t pt-4")}
+            data-testid="cost-line"
+          >
+            {(!first || askCategory) && (
+              <FormField
+                control={form.control}
+                name={`lines.${index}.categoryCode`}
+                render={({ field: categoryField }) => (
+                  <FormItem>
+                    <FormLabel>{t("maintenance.close.category")}</FormLabel>
+                    <Select
+                      value={categoryField.value || null}
+                      onValueChange={(value) => categoryField.onChange(value ?? "")}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="min-h-11 w-full">
+                          <SelectValue placeholder={t("maintenance.fields.choose")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.code} value={category.code}>
+                            {localizedLabel(category)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            )}
+            <FormField
+              control={form.control}
+              name={`lines.${index}.amountInput`}
+              render={({ field: amountField }) => (
+                <FormItem>
+                  <FormLabel>
+                    {first
+                      ? hasRecorded
+                        ? t("maintenance.close.amountToAdd")
+                        : t("maintenance.close.amountQuestion")
+                      : t("maintenance.close.lineAmount")}
+                  </FormLabel>
+                  <FormControl>
+                    <MoneyInput
+                      name={amountField.name}
+                      ref={amountField.ref}
+                      value={amountField.value}
+                      onValueChange={amountField.onChange}
+                      onBlur={amountField.onBlur}
+                    />
+                  </FormControl>
+                  {first && (
+                    <FormDescription>
+                      {[
+                        detail?.expectedCostMinor != null && detail.expectedCostMinor > 0
+                          ? t("maintenance.close.expectedHint", {
+                              amount: money(detail.expectedCostMinor),
+                            })
+                          : null,
+                        askCategory
+                          ? null
+                          : t("maintenance.close.prefilled", {
+                              category: categoryLabel(line?.categoryCode ?? REPAIR_CATEGORY_CODE),
+                              date: formatDate(economicDate, locale),
+                            }),
+                      ]
+                        .filter((part) => part !== null)
+                        .join(" · ")}
+                    </FormDescription>
+                  )}
+                </FormItem>
+              )}
+            />
+            {!first && (
+              <FormField
+                control={form.control}
+                name={`lines.${index}.note`}
+                render={({ field: noteField }) => (
+                  <FormItem>
+                    <FormLabel>{t("maintenance.close.lineNote")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="min-h-11"
+                        maxLength={500}
+                        placeholder={t("maintenance.close.lineNotePlaceholder")}
+                        {...noteField}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium">{t("maintenance.close.receipt")}</span>
+              <FileUpload
+                accept="image/*"
+                onChange={(ids) =>
+                  form.setValue(`lines.${index}.artifactIds`, ids, { shouldDirty: true })
+                }
+                onUploadingChange={(busy) =>
+                  setUploading((current) => ({ ...current, [field.entryId]: busy }))
+                }
+              />
+            </div>
+            {!first && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11 self-start"
+                onClick={() => {
+                  setUploading((current) => ({ ...current, [field.entryId]: false }));
+                  lines.remove(index);
+                }}
+              >
+                {t("maintenance.close.removeLine")}
+              </Button>
+            )}
+          </div>
+        );
+      })}
+      <Button
+        type="button"
+        variant="ghost"
+        className="min-h-11 self-start"
+        onClick={() => lines.append(newCostLine(askCategory ? "" : REPAIR_CATEGORY_CODE))}
+      >
+        <Plus aria-hidden />
+        {t("maintenance.close.addLine")}
+      </Button>
+    </div>
+  );
+
+  return (
+    <Form {...form}>
+      <CommandForm
+        {...chrome}
+        title={t("maintenance.actions.completeTitle")}
+        description={t("maintenance.close.hint")}
+        error={submission.error}
+        submitLabel={t("maintenance.actions.complete")}
+        ready={ready}
+        submitting={submission.submitting}
+        onSubmit={() => void form.handleSubmit(onValid)()}
+      >
+        <FormField
+          control={form.control}
+          name="summary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("maintenance.fields.summary")}</FormLabel>
+              <FormControl>
+                <Textarea maxLength={500} {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {detail === undefined ? (
+          <p className="text-sm text-muted-foreground" role="status">
+            {detailQuery.isError ? t("maintenance.close.costsFailed") : t("maintenance.close.loading")}
+          </p>
+        ) : hasRecorded ? (
+          <section className="flex flex-col gap-3" aria-label={t("maintenance.close.costSection")}>
+            <p className="text-sm">
+              {t("maintenance.close.recorded", {
+                amount: money(recorded.totalMinor),
+                count: recorded.count,
+              })}
+            </p>
+            <div
+              role="group"
+              aria-label={t("maintenance.close.anythingElse")}
+              className="flex flex-col gap-2"
+            >
+              <span className="text-sm font-medium">{t("maintenance.close.anythingElse")}</span>
+              {choiceButton("NOTHING_MORE", t("maintenance.close.nothingMore"))}
+              {canRecordCost && choiceButton("AMOUNT", t("maintenance.close.addMore"))}
+              {choiceButton("INVOICE_PENDING", t("maintenance.close.invoicePending"))}
+            </div>
+            {effectiveChoice === "AMOUNT" && amountSection}
+          </section>
+        ) : (
+          <section className="flex flex-col gap-3" aria-label={t("maintenance.close.costSection")}>
+            {canRecordCost && effectiveChoice === "AMOUNT" && amountSection}
+            {canRecordCost && effectiveChoice !== "AMOUNT" && (
+              <div className="flex flex-col gap-1">
+                <p className="text-sm">
+                  {effectiveChoice === "NO_COST"
+                    ? t("maintenance.close.noCostChosen")
+                    : t("maintenance.close.invoicePendingChosen")}
+                </p>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="min-h-11 self-start px-0"
+                  onClick={() => choose("AMOUNT")}
+                >
+                  {t("maintenance.close.enterAmount")}
+                </Button>
+              </div>
+            )}
+            <div
+              role="group"
+              aria-label={t("maintenance.close.alternatives")}
+              className="flex flex-col gap-2"
+            >
+              {!canRecordCost && (
+                <span className="text-sm font-medium">{t("maintenance.close.costQuestion")}</span>
+              )}
+              {choiceButton("NO_COST", t("maintenance.close.noCost"))}
+              {choiceButton("INVOICE_PENDING", t("maintenance.close.invoicePending"))}
+            </div>
+          </section>
+        )}
+
+        {hasIssue && (
+          <FormField
+            control={form.control}
+            name="resolveLinkedIssue"
+            render={({ field }) => (
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="work-order-resolve-issue"
+                  checked={field.value}
+                  aria-label={t("maintenance.fields.resolveLinkedIssue")}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                />
+                <Label
+                  htmlFor="work-order-resolve-issue"
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <span>{t("maintenance.fields.resolveLinkedIssue")}</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {t("maintenance.fields.resolveLinkedIssueHint")}
+                  </span>
+                </Label>
+              </div>
+            )}
+          />
+        )}
+      </CommandForm>
+    </Form>
   );
 }
 

@@ -88,6 +88,14 @@ jobs:
           $COMPOSE logs --tail 50 api web
           exit 1
 
+      - name: Smoke test (deep link)
+        run: |
+          set -euo pipefail
+          # A truck URL must load the app shell on a direct visit (#124).
+          body=$(curl -fsS --max-time 5 http://127.0.0.1:8080/assets/00000000-0000-4000-8000-000000000000)
+          grep -q '<div id="root"' <<<"$body" || { echo "::error::/assets/<id> did not return the app shell"; exit 1; }
+          echo "deep link serves the app shell"
+
       # The hostname lives in the box env file, not here: swapping nip.io for a
       # real subdomain is then a box change, not a repo change.
       - name: Smoke test (public URL)

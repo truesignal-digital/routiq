@@ -108,6 +108,18 @@ export const COMMAND_ERROR_CODES = [
    */
   "WORK_ORDER_NOT_OPEN",
   /**
+   * A close that says its cost is in the books (`costOutcome: LINES`) when the
+   * order has no cost recorded and the close carries none (#81). Closing is
+   * where money is declared; "no cost" is its own explicit choice.
+   */
+  "WORK_ORDER_COST_MISSING",
+  /**
+   * A close declaring the repair cost nothing (`costOutcome: NO_COST`) while the
+   * order already carries recorded cost — someone added a line since the form
+   * was opened. The closer reopens the form and sees it.
+   */
+  "WORK_ORDER_HAS_COSTS",
+  /**
    * A command reserved for a human principal — release to service (§5.1:
    * "never AI") — called by an AI agent or an integration.
    */

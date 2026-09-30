@@ -199,6 +199,8 @@ export function workOrderRow(status: WorkOrderStatus, overrides: Partial<WorkOrd
     branch: branchRef,
     expectedCostMinor: 450_000,
     actualCostMinor: null,
+    declaredCostMinor: null,
+    costOutcome: null,
     currency: "XAF",
     issue: { id: ISSUE_ID, safetyCritical: true },
     createdAt: "2026-09-22T18:05:00.000Z",

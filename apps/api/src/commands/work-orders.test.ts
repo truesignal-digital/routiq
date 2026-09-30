@@ -320,7 +320,9 @@ describe("work-order commands", () => {
       const [workOrder] = await readWorkOrder(workOrderId);
       expect(workOrder).toMatchObject({
         status: "COMPLETED",
-        actualCostMinor: 62_500n,
+        // v1's typed amount is a declaration only; it never becomes cost (#81).
+        declaredCostMinor: 62_500n,
+        costOutcome: null,
         summary: "Plaquettes et disques avant remplacés",
         rowVersion: 2,
       });
@@ -354,7 +356,7 @@ describe("work-order commands", () => {
         const [workOrder] = await readWorkOrder(workOrderId);
         expect(workOrder).toMatchObject({
           status: "COMPLETION_SUBMITTED",
-          actualCostMinor: 640_000n,
+          declaredCostMinor: 640_000n,
           summary: "Boîte reconditionnée",
         });
         expect(workOrder?.completedAt).toBeInstanceOf(Date);

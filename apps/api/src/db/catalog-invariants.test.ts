@@ -58,7 +58,7 @@ const APPEND_ONLY = [
  * Each entry names that trigger.
  */
 const APPEND_ONLY_ONCE_DECIDED: Record<string, string> = {
-  // #85: the author's edit replaces a pending entry's lines (0032).
+  // #85: the author's edit replaces a pending entry's lines (0034).
   financial_postings: "financial_postings_pending_delete",
 };
 

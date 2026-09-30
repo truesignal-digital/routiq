@@ -90,7 +90,7 @@ function auditLines(rows: Array<PostingRow | PostingInsert>) {
  * record-revenue (as the sheets do): an edit into the auto-approve band posts
  * the entry, an edit that stays above it leaves it waiting. The lines are
  * replaced only when their content moves; the database still checks at commit
- * that they sum to the entry (0031, 0032).
+ * that they sum to the entry (0031, 0034).
  */
 export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = {
   name: COMMAND,

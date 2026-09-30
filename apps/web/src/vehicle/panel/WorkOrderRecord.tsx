@@ -105,7 +105,9 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               t("vehicle.panel.actualCost"),
               wo.actualCostMinor === null
                 ? t("vehicle.panel.actualCostLater")
-                : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
+                : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
+                  ? t("vehicle.panel.invoicePending")
+                  : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
             ],
             ...(wo.completedAt === null
               ? []

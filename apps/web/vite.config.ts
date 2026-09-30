@@ -5,6 +5,8 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // /assets/* is the app's truck routes; built files must not share it (#124).
+  build: { assetsDir: "static" },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

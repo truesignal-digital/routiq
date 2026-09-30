@@ -1,6 +1,6 @@
 {
-  "id": "aaa963b0-4dbd-48ac-812d-0954380f8005",
-  "prevId": "ebd8bba0-e19d-4cfb-a34e-73c3ae104fb8",
+  "id": "ee06c7b2-7f3e-465e-82ef-63798470f1d5",
+  "prevId": "aaa963b0-4dbd-48ac-812d-0954380f8005",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4610,12 +4610,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'XAF'"
-        },
-        "actual_cost_minor": {
-          "name": "actual_cost_minor",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
         },
         "declared_cost_minor": {
           "name": "declared_cost_minor",

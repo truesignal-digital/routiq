@@ -1,6 +1,6 @@
 import type { ActivityDetail } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
-import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
+import { MetricStrip, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { formatDateTime, formatMoney } from "@/lib/format.js";
 import { postedNetMinor } from "./ActivityMoney.js";
 
@@ -21,24 +21,36 @@ export interface ActivityOverviewProps {
 export function ActivityOverview({ activity }: ActivityOverviewProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const net = postedNetMinor(activity.financialEntries);
   const running = activity.endedAt === null && activity.status === "OPEN";
 
+  const started: MetricTile = {
+    label: t("activities.detail.overview.started"),
+    value:
+      activity.startedAt === null ? null : formatDateTime(activity.startedAt, locale),
+  };
+  const ended: MetricTile = {
+    label: t("activities.detail.overview.ended"),
+    value: running
+      ? t("activities.detail.overview.running")
+      : activity.endedAt === null
+        ? null
+        : formatDateTime(activity.endedAt, locale),
+    ...(running ? { tone: "warning" as const } : {}),
+  };
+  const legs: MetricTile = {
+    label: t("activities.detail.overview.legs"),
+    value: new Intl.NumberFormat(locale).format(activity.legCount),
+  };
+
+  // No net for a reader the server kept the ledger from (#103).
+  if (activity.financialEntries === null) {
+    return <MetricStrip tiles={[started, ended, legs]} />;
+  }
+
+  const net = postedNetMinor(activity.financialEntries);
   const tiles: MetricTiles = [
-    {
-      label: t("activities.detail.overview.started"),
-      value:
-        activity.startedAt === null ? null : formatDateTime(activity.startedAt, locale),
-    },
-    {
-      label: t("activities.detail.overview.ended"),
-      value: running
-        ? t("activities.detail.overview.running")
-        : activity.endedAt === null
-          ? null
-          : formatDateTime(activity.endedAt, locale),
-      ...(running ? { tone: "warning" as const } : {}),
-    },
+    started,
+    ended,
     {
       label: t("activities.detail.overview.net"),
       // The sign is spelled out, never left to colour alone; a job that lost
@@ -47,10 +59,7 @@ export function ActivityOverview({ activity }: ActivityOverviewProps) {
       hint: t("activities.detail.overview.postedOnly"),
       ...(net < 0 ? { tone: "warning" as const } : {}),
     },
-    {
-      label: t("activities.detail.overview.legs"),
-      value: new Intl.NumberFormat(locale).format(activity.legCount),
-    },
+    legs,
   ];
 
   return <MetricStrip tiles={tiles} />;

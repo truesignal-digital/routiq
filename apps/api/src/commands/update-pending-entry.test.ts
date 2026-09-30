@@ -383,7 +383,7 @@ describe("update-pending-entry.v1", () => {
     });
   });
 
-  describe("the database backstop (0032)", () => {
+  describe("the database backstop (0034)", () => {
     it("refuses changing a decided entry's amount", async () => {
       const { entryId } = await recordExpense(40_000);
       const attempt = inWorkspace(ctx.runtimeDb, workspaceId, (tx) =>

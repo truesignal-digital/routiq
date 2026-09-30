@@ -329,7 +329,7 @@ describe("work-order decision commands", () => {
       });
       expect((await readWorkOrder(workOrderId))[0]).toMatchObject({
         status: "COMPLETED",
-        actualCostMinor: 812_000n,
+        declaredCostMinor: 812_000n,
         rowVersion: 4,
       });
     });
@@ -576,7 +576,8 @@ describe("work-order decision commands", () => {
       expect(response.json()).toMatchObject({ recordStatus: "APPROVED", rowVersion: 4 });
       expect((await readWorkOrder(workOrderId))[0]).toMatchObject({
         status: "APPROVED",
-        actualCostMinor: null,
+        declaredCostMinor: null,
+        costOutcome: null,
         summary: null,
         completedAt: null,
         resolveLinkedIssue: false,
@@ -595,7 +596,7 @@ describe("work-order decision commands", () => {
       expect(resubmitted.json()).toMatchObject({ recordStatus: "COMPLETION_SUBMITTED" });
       expect((await readWorkOrder(workOrderId))[0]).toMatchObject({
         completionRejectReason: null,
-        actualCostMinor: 790_000n,
+        declaredCostMinor: 790_000n,
       });
     });
 
