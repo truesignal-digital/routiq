@@ -4,7 +4,7 @@ import { COMMAND_ORIGINS, moneyMinor } from "../envelope.js";
 import { ROLES } from "../roles.js";
 import { meterReadingSource, meterReadingType } from "./assets.js";
 import { monthCode } from "./finance.js";
-import { historyActor, historyEntityType } from "./history.js";
+import { historyActor, historyEntityType, historyFieldChange } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
 
 /**
@@ -304,6 +304,12 @@ export const vehicleHistoryItem = z.object({
   params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
   /** The event's own reason, as the record history lifts it. */
   note: z.string().nullable(),
+  /**
+   * What an edit of the vehicle's details changed (`asset.details_updated`),
+   * before and after, in allowlist order. Money fields reach only the roles
+   * that read the books. Absent on every other event.
+   */
+  changes: z.array(historyFieldChange).optional(),
 });
 
 export const vehicleHistoryResponse = listResponse(vehicleHistoryItem);

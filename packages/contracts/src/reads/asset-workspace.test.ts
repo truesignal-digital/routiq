@@ -75,4 +75,22 @@ describe("asset workspace read contracts", () => {
       vehicleHistoryItem.safeParse({ ...history, params: { state: { pinHash: "x" } } }).success,
     ).toBe(false);
   });
+
+  it("carries a details edit's before and after", () => {
+    const edit = {
+      eventId: "3f6b2a7c-9d41-4a52-8b0e-2c1d5e6f7a8b",
+      eventType: "asset.details_updated",
+      kind: "LIFECYCLE",
+      occurredAt: "2026-09-30T10:00:00.000Z",
+      actor: { principalId: null, displayName: "Boris", scope: "WORKSPACE" },
+      origin: "HUMAN_UI",
+      subject: { entityType: "asset", id: "0b8a4c1e-6f2d-4e3a-9c5b-7d1e2f3a4b5c", number: null },
+      amountMinor: null,
+      currency: null,
+      params: {},
+      note: null,
+      changes: [{ field: "registrationNumber", kind: "VALUE", before: "LT 123 AB", after: "LT 132 AB" }],
+    };
+    expect(vehicleHistoryItem.parse(edit)).toEqual(edit);
+  });
 });

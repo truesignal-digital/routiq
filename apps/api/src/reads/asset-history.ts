@@ -5,6 +5,7 @@ import {
   vehicleHistoryResponse,
   type CommandOrigin,
   type HistoryEntityType,
+  type HistoryFieldChange,
   type ListSort,
   type ModuleCode,
   type VehicleHistoryItem,
@@ -40,6 +41,7 @@ import {
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { toActor } from "./actors.js";
+import { diffStates } from "./history.js";
 import { readingBranchScope } from "./asset-readings.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import { decodeTimestampCursor, encodeKeysetCursor, microsecondKey } from "./cursor.js";
@@ -584,6 +586,38 @@ async function pageParams(
   return byEvent;
 }
 
+/** The event a details edit writes (`update-asset-details`). */
+const DETAILS_UPDATED = "asset.details_updated";
+
+/**
+ * What each details edit on the page changed, from its own before and after
+ * through the record history's allowlist. Money fields stay with the roles
+ * that read the books in a workspace running finance — the people the card
+ * shows the acquisition amount to.
+ */
+async function detailChanges(
+  tx: TenantTx,
+  workspaceId: string,
+  rows: readonly EventRow[],
+  showMoney: boolean,
+): Promise<Map<string, HistoryFieldChange[]>> {
+  const result = new Map<string, HistoryFieldChange[]>();
+  const eventIds = rows.filter((row) => row.event_type === DETAILS_UPDATED).map((row) => row.event_id);
+  if (eventIds.length === 0) return result;
+  for (const event of await tx
+    .select({ id: auditEvents.id, beforeState: auditEvents.beforeState, afterState: auditEvents.afterState })
+    .from(auditEvents)
+    .where(and(eq(auditEvents.workspaceId, workspaceId), inArray(auditEvents.id, eventIds)))) {
+    result.set(
+      event.id,
+      diffStates("asset", event.beforeState, event.afterState).filter(
+        (change) => showMoney || change.kind !== "MONEY",
+      ),
+    );
+  }
+  return result;
+}
+
 const uuidOrNull = (value: unknown): string | null =>
   typeof value === "string" && z.uuid().safeParse(value).success ? value : null;
 
@@ -686,7 +720,13 @@ export function registerAssetHistoryReadRoutes(
           const rows = await pageOfEvents(tx, context, sources, kinds, position, limit);
           const pageRows = rows.slice(0, limit);
           const paramsByEvent = await pageParams(tx, auth.workspaceId, pageRows);
-          return { rows, pageRows, paramsByEvent };
+          const changesByEvent = await detailChanges(
+            tx,
+            auth.workspaceId,
+            pageRows,
+            canReadLedger(auth.role) && modules.has("FINANCE"),
+          );
+          return { rows, pageRows, paramsByEvent, changesByEvent };
         });
 
         const items: VehicleHistoryItem[] = page.pageRows.map((row) => ({
@@ -702,6 +742,9 @@ export function registerAssetHistoryReadRoutes(
           currency: row.kind === "MONEY" ? row.currency : null,
           params: page.paramsByEvent.get(row.event_id) ?? {},
           note: row.note,
+          ...(row.event_type === DETAILS_UPDATED
+            ? { changes: page.changesByEvent.get(row.event_id) ?? [] }
+            : {}),
         }));
 
         const last = page.pageRows[page.pageRows.length - 1];
