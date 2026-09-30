@@ -78,10 +78,19 @@ describe("net sums", () => {
     entry({ direction: "EXPENSE", amountMinor: 250_000, status: "SUBMITTED" }),
     entry({ direction: "REVENUE", amountMinor: 700_000, status: "REJECTED" }),
     entry({ direction: "REVENUE", amountMinor: 100_000, status: "REVERSED" }),
+    entry({ direction: "REVENUE", amountMinor: -100_000, status: "POSTED" }),
   ];
 
   it("counts posted lines only, expenses subtracting", () => {
     expect(postedNetMinor(entries)).toBe(500_000);
+  });
+
+  it("nets a reversed entry and its reversal to zero (#60)", () => {
+    const pair = [
+      entry({ direction: "EXPENSE", amountMinor: 45_000, status: "REVERSED" }),
+      entry({ direction: "EXPENSE", amountMinor: -45_000, status: "POSTED" }),
+    ];
+    expect(postedNetMinor(pair)).toBe(0);
   });
 
   it("keeps lines awaiting approval in their own total", () => {
