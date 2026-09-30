@@ -7,6 +7,7 @@ import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { assets, categories, documents } from "../db/schema.js";
+import { commandArtifacts } from "./record-artifacts.js";
 
 /** Documents of one asset, with type labels and the superseding back-link. */
 export function registerDocumentReadRoutes(
@@ -52,6 +53,7 @@ export function registerDocumentReadRoutes(
               supersedesDocumentId: documents.supersedesDocumentId,
               supersededByDocumentId: superseding.id,
               createdAt: documents.createdAt,
+              createdByCommandId: documents.createdByCommandId,
             })
             .from(documents)
             .leftJoin(
@@ -76,12 +78,19 @@ export function registerDocumentReadRoutes(
               ),
             )
             .orderBy(asc(documents.documentTypeCode), asc(documents.createdAt));
-          return { rows };
+          // A scan travels with the command that recorded the document, so the
+          // files are that command's links, never another row's.
+          const files = await commandArtifacts(
+            tx,
+            auth.workspaceId,
+            rows.map((row) => row.createdByCommandId),
+          );
+          return { rows, files };
         });
         if (!result) {
           return reply.status(404).send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
-        const { rows } = result;
+        const { rows, files } = result;
 
         return assetDocumentsReadResponse.parse({
           assetId,
@@ -99,6 +108,8 @@ export function registerDocumentReadRoutes(
             supersedesDocumentId: row.supersedesDocumentId,
             supersededByDocumentId: row.supersededByDocumentId,
             createdAt: row.createdAt.toISOString(),
+            artifactCount: files.get(row.createdByCommandId)?.length ?? 0,
+            artifacts: files.get(row.createdByCommandId) ?? [],
           })),
         });
       } catch (error) {

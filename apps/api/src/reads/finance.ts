@@ -1,5 +1,5 @@
 import {
-  FINANCE_READ_ROLES,
+  FINANCE_READER_ROLES,
   financialEntryDetail,
   financialEntryFilters,
   ledgerEntryStatuses,
@@ -7,22 +7,31 @@ import {
   listQuery,
   pendingApprovalsResponse,
   periodsResponse,
+  type FinancialEntryListItem,
   type ListSort,
 } from "@routiq/contracts";
-import { and, asc, desc, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
+import { entryEvidenceState } from "@routiq/domain";
+import { and, asc, desc, eq, exists, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { defineRead } from "./define-read.js";
 import {
+  activities,
   assets,
   categories,
   commands,
   financialEntries,
   financialPostings,
   postingPeriods,
+  principals,
 } from "../db/schema.js";
+import { commandActors, toActor } from "./actors.js";
+import {
+  entryArtifactCountSql,
+  entryEvidenceFiles,
+  entryEvidenceMissingSql,
+} from "./entry-evidence.js";
 import {
   countPendingOutsideBranch,
   pendingApprovalConditions,
@@ -32,13 +41,18 @@ import {
   bindBigint,
   bindDate,
   bindText,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeColumnCursor,
   encodeKeysetCursor,
+  isInt64Text,
+  isIsoDate,
   keysetOrderBy,
+  microsecondKey,
+  timestampKeyset,
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
+import { defineRead } from "./define-read.js";
+import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 
 const entrySortFields = [
@@ -56,22 +70,19 @@ const defaultEntrySort: ListSort<EntrySortField> = {
 };
 
 const entrySortColumns: Record<EntrySortField, KeysetColumn> = {
-  economicDate: { column: financialEntries.economicDate, bind: bindDate },
+  economicDate: { column: financialEntries.economicDate, bind: bindDate, accepts: isIsoDate },
   // Null until an entry posts, so the null tail is part of this ordering.
-  postedAt: {
-    column: financialEntries.postedAt,
-    bind: bindTimestamp,
-    nullable: true,
-  },
+  postedAt: timestampKeyset(financialEntries.postedAt, { nullable: true }),
   // The entry's own SIGNED total. Postings sum to it by invariant (§3.4), so
   // there is nothing to aggregate — and a reversal sorts below its original.
-  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  amount: { column: financialEntries.amountMinor, bind: bindBigint, accepts: isInt64Text },
   entryNumber: { column: financialEntries.entryNumber, bind: bindText },
 };
 
 interface EntrySortRow {
   economicDate: string;
-  postedAt: Date | null;
+  /** `postedAt` as microsecond keyset text. */
+  postedAtKey: string | null;
   amountMinor: bigint;
   entryNumber: string;
 }
@@ -81,7 +92,7 @@ function entrySortValue(field: EntrySortField, row: EntrySortRow): KeysetValue {
     case "economicDate":
       return row.economicDate;
     case "postedAt":
-      return row.postedAt?.toISOString() ?? null;
+      return row.postedAtKey;
     // Minor units are bigint; a string survives the round trip exactly.
     case "amount":
       return row.amountMinor.toString();
@@ -108,13 +119,14 @@ const defaultApprovalSort: ListSort<ApprovalSortField> = {
 };
 
 const approvalSortColumns: Record<ApprovalSortField, KeysetColumn> = {
-  submittedAt: { column: financialEntries.createdAt, bind: bindTimestamp },
-  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  submittedAt: timestampKeyset(financialEntries.createdAt),
+  amount: { column: financialEntries.amountMinor, bind: bindBigint, accepts: isInt64Text },
   entryNumber: { column: financialEntries.entryNumber, bind: bindText },
 };
 
 interface ApprovalSortRow {
-  submittedAt: Date;
+  /** `submittedAt` as microsecond keyset text. */
+  submittedAtKey: string;
   amountMinor: bigint;
   entryNumber: string;
 }
@@ -125,7 +137,7 @@ function approvalSortValue(
 ): KeysetValue {
   switch (field) {
     case "submittedAt":
-      return row.submittedAt.toISOString();
+      return row.submittedAtKey;
     case "amount":
       return row.amountMinor.toString();
     case "entryNumber":
@@ -149,6 +161,186 @@ const approvalsQuerySchema = listQuery(
   },
 );
 
+/** The first day of `YYYY-MM` and of the month after it, as ISO dates. */
+export function monthBounds(month: string): { from: string; to: string } {
+  const [year, monthNumber] = month.split("-").map(Number) as [number, number];
+  const nextYear = monthNumber === 12 ? year + 1 : year;
+  const nextMonth = monthNumber === 12 ? 1 : monthNumber + 1;
+  return {
+    from: `${month}-01`,
+    to: `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`,
+  };
+}
+
+/**
+ * The vehicle's lines of the outer entry, first by line number, carrying a
+ * value in `column` — the attribution the Money tab links an entry to.
+ */
+function firstAssetLineSql(
+  assetId: string,
+  column: typeof financialPostings.activityId | typeof financialPostings.workOrderId,
+): SQL {
+  return sql`(
+    select ${column} from ${financialPostings}
+    where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+      and ${financialPostings.financialEntryId} = ${financialEntries.id}
+      and ${financialPostings.assetId} = ${assetId}
+      and ${column} is not null
+    order by ${financialPostings.lineNo}
+    limit 1
+  )`;
+}
+
+/**
+ * The columns every entry row carries, list and approvals queue alike, so the
+ * two can never drift apart. Reads `categories`, `postingPeriods`, `commands`
+ * and `principals` as the queries below join them.
+ */
+function entryItemColumns(assetId: string | undefined) {
+  return {
+    id: financialEntries.id,
+    entryNumber: financialEntries.entryNumber,
+    direction: financialEntries.direction,
+    status: financialEntries.status,
+    categoryCode: categories.code,
+    categoryLabelFr: categories.labelFr,
+    categoryLabelEn: categories.labelEn,
+    categoryLayer: categories.profitabilityLayer,
+    evidencePolicy: categories.evidencePolicy,
+    amountMinor: financialEntries.amountMinor,
+    currency: financialEntries.currency,
+    economicDate: financialEntries.economicDate,
+    postingPeriodCode: postingPeriods.periodCode,
+    isLatePosting: financialEntries.isLatePosting,
+    branchId: financialEntries.branchId,
+    counterpartyName: financialEntries.counterpartyName,
+    paymentMethod: financialEntries.paymentMethod,
+    paymentReference: financialEntries.paymentReference,
+    estimateStatus: financialEntries.estimateStatus,
+    postedAt: financialEntries.postedAt,
+    rowVersion: financialEntries.rowVersion,
+    reversesEntryId: financialEntries.reversesEntryId,
+    artifactCount: entryArtifactCountSql(),
+    // The generated masking column: NULL for PLATFORM receipts, so the
+    // principals join finds nothing and the operator stays unnamed.
+    recorderPrincipalId: commands.tenantActorPrincipalId,
+    recorderDisplayName: principals.displayName,
+    recorderScope: commands.scope,
+    assetShareMinor:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`(
+            select sum(${financialPostings.amountMinor})::text from ${financialPostings}
+            where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+              and ${financialPostings.financialEntryId} = ${financialEntries.id}
+              and ${financialPostings.assetId} = ${assetId}
+          )`,
+    assetActivityId:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`${firstAssetLineSql(assetId, financialPostings.activityId)}`,
+    assetActivityNumber:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`(
+            select ${activities.activityNumber} from ${activities}
+            where ${activities.workspaceId} = ${financialEntries.workspaceId}
+              and ${activities.id} = ${firstAssetLineSql(assetId, financialPostings.activityId)}
+          )`,
+    assetWorkOrderId:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`${firstAssetLineSql(assetId, financialPostings.workOrderId)}`,
+  };
+}
+
+type EntryRow = typeof financialEntries.$inferSelect;
+type CategoryRow = typeof categories.$inferSelect;
+
+/** A row of `entryItemColumns` as the joins above leave it. */
+interface EntryItemRow {
+  id: string;
+  entryNumber: string;
+  direction: EntryRow["direction"];
+  status: EntryRow["status"];
+  categoryCode: string;
+  categoryLabelFr: string;
+  categoryLabelEn: string;
+  categoryLayer: CategoryRow["profitabilityLayer"];
+  evidencePolicy: CategoryRow["evidencePolicy"];
+  amountMinor: bigint;
+  currency: string;
+  economicDate: string;
+  postingPeriodCode: string | null;
+  isLatePosting: boolean;
+  branchId: string;
+  counterpartyName: string | null;
+  paymentMethod: EntryRow["paymentMethod"];
+  paymentReference: string | null;
+  estimateStatus: EntryRow["estimateStatus"];
+  postedAt: Date | null;
+  rowVersion: number;
+  reversesEntryId: string | null;
+  artifactCount: number;
+  recorderPrincipalId: string | null;
+  recorderDisplayName: string | null;
+  recorderScope: "WORKSPACE" | "PLATFORM";
+  assetShareMinor: string | null;
+  assetActivityId: string | null;
+  assetActivityNumber: string | null;
+  assetWorkOrderId: string | null;
+}
+
+function toEntryItem(row: EntryItemRow, withAsset: boolean): FinancialEntryListItem {
+  return {
+    id: row.id,
+    entryNumber: row.entryNumber,
+    direction: row.direction,
+    status: row.status,
+    category: {
+      code: row.categoryCode,
+      labelFr: row.categoryLabelFr,
+      labelEn: row.categoryLabelEn,
+      layer: row.categoryLayer,
+    },
+    amountMinor: serializeMinor(row.amountMinor),
+    currency: row.currency,
+    economicDate: row.economicDate,
+    postingPeriodCode: row.postingPeriodCode ?? null,
+    isLatePosting: row.isLatePosting,
+    branchId: row.branchId,
+    counterpartyName: row.counterpartyName,
+    paymentMethod: row.paymentMethod,
+    estimateStatus: row.estimateStatus,
+    postedAt: row.postedAt?.toISOString() ?? null,
+    rowVersion: row.rowVersion,
+    reversesEntryId: row.reversesEntryId,
+    recordedBy: toActor({
+      principalId: row.recorderPrincipalId,
+      displayName: row.recorderDisplayName,
+      scope: row.recorderScope,
+    }),
+    evidence: {
+      state: entryEvidenceState({
+        policy: row.evidencePolicy,
+        artifactCount: row.artifactCount,
+        paymentMethod: row.paymentMethod,
+        paymentReference: row.paymentReference,
+      }),
+      artifactCount: row.artifactCount,
+    },
+    assetShareMinor:
+      withAsset && row.assetShareMinor !== null ? serializeMinor(BigInt(row.assetShareMinor)) : null,
+    assetLinks: withAsset
+      ? {
+          activityId: row.assetActivityId,
+          activityNumber: row.assetActivityNumber,
+          workOrderId: row.assetWorkOrderId,
+        }
+      : null,
+  };
+}
+
 export function registerFinanceReadRoutes(
   app: FastifyInstance,
   db: Db,
@@ -157,21 +349,30 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/entries", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "per-record" },
+    { path: "/v1/finance/entries", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, direction, periodCode, assetId, branchId, cursor, limit } =
-          parsedQuery.data;
+        const {
+          status,
+          direction,
+          periodCode,
+          economicMonth,
+          evidence,
+          assetId,
+          branchId,
+          cursor,
+          limit,
+        } = parsedQuery.data;
         const sort = parsedQuery.data.sort ?? defaultEntrySort;
         const sortColumn = entrySortColumns[sort.field];
 
         const result = await read(async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" };
@@ -201,6 +402,14 @@ export function registerFinanceReadRoutes(
 
           if (periodCode) {
             conditions.push(eq(postingPeriods.periodCode, periodCode));
+          }
+          if (economicMonth) {
+            const { from, to } = monthBounds(economicMonth);
+            conditions.push(gte(financialEntries.economicDate, from));
+            conditions.push(lt(financialEntries.economicDate, to));
+          }
+          if (evidence === "MISSING") {
+            conditions.push(entryEvidenceMissingSql());
           }
 
           // EXISTS, not a join: an entry may carry several postings on the same
@@ -243,24 +452,8 @@ export function registerFinanceReadRoutes(
 
           const rows = await tx
             .select({
-              id: financialEntries.id,
-              entryNumber: financialEntries.entryNumber,
-              direction: financialEntries.direction,
-              status: financialEntries.status,
-              categoryCode: categories.code,
-              categoryLabelFr: categories.labelFr,
-              categoryLabelEn: categories.labelEn,
-              amountMinor: financialEntries.amountMinor,
-              currency: financialEntries.currency,
-              economicDate: financialEntries.economicDate,
-              postingPeriodCode: postingPeriods.periodCode,
-              isLatePosting: financialEntries.isLatePosting,
-              branchId: financialEntries.branchId,
-              counterpartyName: financialEntries.counterpartyName,
-              paymentMethod: financialEntries.paymentMethod,
-              estimateStatus: financialEntries.estimateStatus,
-              postedAt: financialEntries.postedAt,
-              rowVersion: financialEntries.rowVersion,
+              ...entryItemColumns(assetId),
+              postedAtKey: microsecondKey(financialEntries.postedAt),
             })
             .from(financialEntries)
             .innerJoin(
@@ -277,6 +470,14 @@ export function registerFinanceReadRoutes(
                 eq(postingPeriods.id, financialEntries.postingPeriodId),
               ),
             )
+            .innerJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, financialEntries.workspaceId),
+                eq(commands.id, financialEntries.createdByCommandId),
+              ),
+            )
+            .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...conditions))
             .orderBy(...keysetOrderBy(sortColumn, sort.direction, financialEntries.id))
             // One extra row is the has-next probe, never returned.
@@ -291,33 +492,14 @@ export function registerFinanceReadRoutes(
 
         const { rows } = result || { rows: [] };
         const hasNextPage = rows.length > limit;
-        const entries = rows.slice(0, limit).map((row) => ({
-          id: row.id,
-          entryNumber: row.entryNumber,
-          direction: row.direction,
-          status: row.status,
-          category: {
-            code: row.categoryCode,
-            labelFr: row.categoryLabelFr,
-            labelEn: row.categoryLabelEn,
-          },
-          amountMinor: serializeMinor(row.amountMinor),
-          currency: row.currency,
-          economicDate: row.economicDate,
-          postingPeriodCode: row.postingPeriodCode ?? null,
-          isLatePosting: row.isLatePosting,
-          branchId: row.branchId,
-          counterpartyName: row.counterpartyName,
-          paymentMethod: row.paymentMethod,
-          estimateStatus: row.estimateStatus,
-          postedAt: row.postedAt?.toISOString() ?? null,
-          rowVersion: row.rowVersion,
-        }));
+        const entries = rows
+          .slice(0, limit)
+          .map((row) => toEntryItem(row, assetId !== undefined));
 
         let nextCursor: string | null = null;
         if (hasNextPage && entries.length > 0) {
           // Encoded off the raw row: the mapped item has already lost the
-          // bigint amount and the Date to their wire forms.
+          // bigint amount to its wire form and never carries the microsecond key.
           const lastRow = rows[entries.length - 1]!;
           nextCursor = encodeKeysetCursor(
             sort,
@@ -328,8 +510,7 @@ export function registerFinanceReadRoutes(
 
         return financialEntryListResponse.parse({ entries, nextCursor });
       } catch (error) {
-        req.log.error({ err: error }, "finance entries list read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance entries list");
       }
     },
   );
@@ -337,7 +518,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/entries/:entryId", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "per-record" },
+    { path: "/v1/finance/entries/:entryId", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedParams = z.object({ entryId: z.uuid() }).safeParse(req.params);
@@ -370,6 +551,7 @@ export function registerFinanceReadRoutes(
               reversesEntryId: financialEntries.reversesEntryId,
               postedAt: financialEntries.postedAt,
               rowVersion: financialEntries.rowVersion,
+              createdByCommandId: financialEntries.createdByCommandId,
             })
             .from(financialEntries)
             .where(
@@ -391,6 +573,8 @@ export function registerFinanceReadRoutes(
               labelFr: categories.labelFr,
               labelEn: categories.labelEn,
               code: categories.code,
+              layer: categories.profitabilityLayer,
+              evidencePolicy: categories.evidencePolicy,
             })
             .from(categories)
             .where(
@@ -453,12 +637,17 @@ export function registerFinanceReadRoutes(
             reversedByEntryId = reversedByEntry.id;
           }
 
+          const evidenceFiles = await entryEvidenceFiles(tx, auth.workspaceId, entry);
+          const recorders = await commandActors(tx, auth.workspaceId, [entry.createdByCommandId]);
+
           return {
             entry,
             category,
             periodCode,
             postings: postingsRows,
             reversedByEntryId,
+            evidenceFiles,
+            recordedBy: recorders.get(entry.createdByCommandId),
           };
         });
 
@@ -466,7 +655,15 @@ export function registerFinanceReadRoutes(
           return reply.status(404).send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { entry, category, periodCode, postings, reversedByEntryId } = result;
+        const {
+          entry,
+          category,
+          periodCode,
+          postings,
+          reversedByEntryId,
+          evidenceFiles,
+          recordedBy,
+        } = result;
 
         const mappedPostings = postings.map((p) => ({
           lineNo: p.lineNo,
@@ -490,6 +687,7 @@ export function registerFinanceReadRoutes(
             code: category?.code ?? entry.categoryId,
             labelFr: category?.labelFr ?? entry.categoryId,
             labelEn: category?.labelEn ?? entry.categoryId,
+            layer: category?.layer ?? null,
           },
           amountMinor: serializeMinor(entry.amountMinor),
           currency: entry.currency,
@@ -509,12 +707,24 @@ export function registerFinanceReadRoutes(
           reversesEntryId: entry.reversesEntryId,
           reversedByEntryId,
           postings: mappedPostings,
+          recordedBy: recordedBy ?? { principalId: null, displayName: null, scope: "WORKSPACE" },
+          evidence: {
+            state: entryEvidenceState({
+              policy: category?.evidencePolicy ?? "RECEIPT_EXPECTED",
+              artifactCount: evidenceFiles.length,
+              paymentMethod: entry.paymentMethod,
+              paymentReference: entry.paymentReference,
+            }),
+            artifactCount: evidenceFiles.length,
+          },
+          assetShareMinor: null,
+          assetLinks: null,
+          evidenceFiles,
         };
 
         return financialEntryDetail.parse(response);
       } catch (error) {
-        req.log.error({ err: error }, "finance entry detail read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance entry detail");
       }
     },
   );
@@ -522,7 +732,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/approvals", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "per-record" },
+    { path: "/v1/finance/approvals", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedQuery = approvalsQuerySchema.safeParse(req.query);
@@ -535,7 +745,7 @@ export function registerFinanceReadRoutes(
 
         const result = await read(async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -576,26 +786,10 @@ export function registerFinanceReadRoutes(
 
           const rows = await tx
             .select({
-              id: financialEntries.id,
-              entryNumber: financialEntries.entryNumber,
-              direction: financialEntries.direction,
-              status: financialEntries.status,
-              categoryCode: categories.code,
-              categoryLabelFr: categories.labelFr,
-              categoryLabelEn: categories.labelEn,
-              amountMinor: financialEntries.amountMinor,
-              currency: financialEntries.currency,
-              economicDate: financialEntries.economicDate,
-              postingPeriodCode: postingPeriods.periodCode,
-              isLatePosting: financialEntries.isLatePosting,
-              branchId: financialEntries.branchId,
-              counterpartyName: financialEntries.counterpartyName,
-              paymentMethod: financialEntries.paymentMethod,
-              estimateStatus: financialEntries.estimateStatus,
-              postedAt: financialEntries.postedAt,
-              rowVersion: financialEntries.rowVersion,
+              ...entryItemColumns(undefined),
               submittedByPrincipalId: commands.initiatedByPrincipalId,
               submittedAt: financialEntries.createdAt,
+              submittedAtKey: microsecondKey(financialEntries.createdAt),
             })
             .from(financialEntries)
             .innerJoin(
@@ -612,10 +806,14 @@ export function registerFinanceReadRoutes(
                 eq(postingPeriods.id, financialEntries.postingPeriodId),
               ),
             )
-            .leftJoin(
+            .innerJoin(
               commands,
-              eq(commands.id, financialEntries.createdByCommandId),
+              and(
+                eq(commands.workspaceId, financialEntries.workspaceId),
+                eq(commands.id, financialEntries.createdByCommandId),
+              ),
             )
+            .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...pageConditions))
             .orderBy(...keysetOrderBy(sortColumn, sort.direction, financialEntries.id))
             // One extra row is the has-next probe, never returned.
@@ -637,26 +835,7 @@ export function registerFinanceReadRoutes(
         const pageRows = rows.slice(0, limit);
 
         const entries = pageRows.map((row) => ({
-          id: row.id,
-          entryNumber: row.entryNumber,
-          direction: row.direction,
-          status: row.status,
-          category: {
-            code: row.categoryCode,
-            labelFr: row.categoryLabelFr,
-            labelEn: row.categoryLabelEn,
-          },
-          amountMinor: serializeMinor(row.amountMinor),
-          currency: row.currency,
-          economicDate: row.economicDate,
-          postingPeriodCode: row.postingPeriodCode ?? null,
-          isLatePosting: row.isLatePosting,
-          branchId: row.branchId,
-          counterpartyName: row.counterpartyName,
-          paymentMethod: row.paymentMethod,
-          estimateStatus: row.estimateStatus,
-          postedAt: row.postedAt?.toISOString() ?? null,
-          rowVersion: row.rowVersion,
+          ...toEntryItem(row, false),
           submittedByPrincipalId: row.submittedByPrincipalId,
           submittedAt: row.submittedAt.toISOString(),
         }));
@@ -678,8 +857,7 @@ export function registerFinanceReadRoutes(
           outsideBranchCount,
         });
       } catch (error) {
-        req.log.error({ err: error }, "finance approvals read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance approvals");
       }
     },
   );
@@ -687,10 +865,9 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/periods", module: "FINANCE", roles: FINANCE_READ_ROLES, branchScope: "workspace" },
+    { path: "/v1/finance/periods", module: "FINANCE", roles: FINANCE_READER_ROLES, branchScope: "workspace" },
     async ({ req, reply, auth, read }) => {
       try {
-
         const result = await read(async (tx) => {
           const rows = await tx
             .select({

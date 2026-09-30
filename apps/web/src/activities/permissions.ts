@@ -24,3 +24,20 @@ export function canReopenActivity(
   if (!canViewActivities(enabledModules)) return false;
   return role === "ADMIN" || role === "OPS_MANAGER";
 }
+
+/**
+ * A standalone meter reading. The workshop reads the odometer when a truck
+ * comes in, so MAINTENANCE may record one although it records no trips.
+ */
+export function canRecordReadings(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  if (!canViewActivities(enabledModules)) return false;
+  return (
+    role === "ADMIN" ||
+    role === "OPS_MANAGER" ||
+    role === "FIELD_SUBMITTER" ||
+    role === "MAINTENANCE"
+  );
+}

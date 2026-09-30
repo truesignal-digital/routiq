@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { LogOut, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,8 +14,9 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { sessionStore, useActiveSession } from "../auth/store.js";
 import { useMeContext } from "../auth/me.js";
+import { useSignOut } from "../auth/sign-out.js";
+import { useActiveSession } from "../auth/store.js";
 import { isSectionActive, visibleSections } from "./sections.js";
 
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
@@ -23,9 +24,9 @@ const MENU_BUTTON = "min-h-11 md:min-h-8";
 
 export function AppSidebar() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const me = useMeContext();
   const session = useActiveSession();
+  const signOut = useSignOut();
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const sections = visibleSections(me?.enabledModules);
@@ -38,8 +39,7 @@ export function AppSidebar() {
 
   function onLogout() {
     closeOnMobile();
-    if (session) sessionStore.logout(session);
-    void navigate({ to: "/login" });
+    signOut();
   }
 
   return (

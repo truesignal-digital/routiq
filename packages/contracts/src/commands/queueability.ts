@@ -21,6 +21,23 @@ export const COMMAND_QUEUEABILITY = {
   "record-haulage-job-sheet": true,
   "record-expense": true,
   "record-revenue": true,
+  "report-issue": true,
+  /*
+   * Resolving is the fault fixed on the spot — the mechanic tightened the
+   * clamp on a roadside with no signal, and that happened whether or not the
+   * server hears about it for an hour. The version it quotes still decides a
+   * race with a dismissal.
+   */
+  "resolve-issue": true,
+  "create-work-order": true,
+  "complete-work-order": true,
+  /* A remark written in the yard with no signal is still what the driver saw. */
+  "add-note": true,
+  /*
+   * A receipt photographed offline is a fact about a spend already recorded;
+   * attaching it changes nothing the entry says, so a late replay is harmless.
+   */
+  "attach-evidence": true,
 
   /*
    * Decisions — never queued.
@@ -71,6 +88,25 @@ export const COMMAND_QUEUEABILITY = {
   "deactivate-member": false,
   "reactivate-member": false,
   "reset-member-pin": false,
+  "cancel-work-order": false,
+  "release-asset-to-service": false,
+
+  /*
+   * The two work-order decisions. A creation or a completion is a fact the
+   * workshop can capture offline; deciding that the spend is authorized and
+   * that the declared costs are accepted is a judgement about a record whose
+   * current state the approver must see. Queuing either would let an approval
+   * replayed an hour later land on a work order that had since been cancelled.
+   */
+  "approve-work-order": false,
+  "approve-work-order-closure": false,
+  /*
+   * Their refusing pairs, for the same reason — and a dismissal is a judgement
+   * that someone's report was wrong, made against the issue as it stands now.
+   */
+  "reject-work-order": false,
+  "reject-work-order-completion": false,
+  "dismiss-issue": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

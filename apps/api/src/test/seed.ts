@@ -27,10 +27,12 @@ export async function seedWorkspace(db: Db, slug = `ws-${randomUUID().slice(0, 8
     .returning();
   if (!branch) throw new Error("branch insert returned no row");
 
-  // Insert preset categories for this workspace
+  // Insert preset categories for this workspace. A migration-replay suite
+  // running alongside re-applies backfills (0027's ISSUE_TYPE rows) to every
+  // workspace, this fresh one included, so a row may already be there.
   const categoryPresets = presetCategories(workspace.id);
   if (categoryPresets.length > 0) {
-    await db.insert(categories).values(categoryPresets);
+    await db.insert(categories).values(categoryPresets).onConflictDoNothing();
   }
 
   // Insert default approval rules for this workspace

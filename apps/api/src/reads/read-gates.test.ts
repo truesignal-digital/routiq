@@ -73,7 +73,7 @@ describe("read gates (#59)", () => {
     await ctx?.close();
   });
 
-  it("refuses finance reads to a role outside FINANCE_READ_ROLES", async () => {
+  it("refuses finance reads to a role outside FINANCE_READER_ROLES", async () => {
     for (const url of FINANCE_READS) {
       const response = await read(token("maintenance"), url);
       expect(response.statusCode, url).toBe(403);
@@ -81,7 +81,7 @@ describe("read gates (#59)", () => {
     }
   });
 
-  it("serves finance reads to a role inside FINANCE_READ_ROLES", async () => {
+  it("serves finance reads to a role inside FINANCE_READER_ROLES", async () => {
     for (const url of ["/v1/finance/entries", "/v1/finance/approvals", "/v1/finance/periods"]) {
       expect((await read(token("executive"), url)).statusCode, url).toBe(200);
     }

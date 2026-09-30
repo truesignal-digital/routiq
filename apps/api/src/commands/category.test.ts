@@ -325,4 +325,64 @@ describe("category commands", () => {
       expect(fresh.statusCode).toBe(200);
     });
   });
+
+  /** #28: fault types carry the default that pre-checks the safety-critical box. */
+  describe("ISSUE_TYPE safety-critical defaults", () => {
+    function issueTypes() {
+      return testApp.app
+        .inject({
+          method: "GET",
+          url: "/v1/categories?kind=ISSUE_TYPE",
+          headers: { authorization: `Bearer ${adminToken}` },
+        })
+        .then(
+          (response) =>
+            response.json().categories as Array<{ code: string; defaultSafetyCritical: boolean }>,
+        );
+    }
+
+    it("serves the seeded fault types with their defaults", async () => {
+      const rows = await issueTypes();
+      expect(rows.find((row) => row.code === "BRAKES")).toMatchObject({
+        defaultSafetyCritical: true,
+      });
+      expect(rows.find((row) => row.code === "BODYWORK")).toMatchObject({
+        defaultSafetyCritical: false,
+      });
+    });
+
+    it("lets an admin add a fault type that grounds by default", async () => {
+      const response = await post("create-category", {
+        id: randomUUID(),
+        kind: "ISSUE_TYPE",
+        code: "SUSPENSION",
+        labelFr: "Suspension",
+        labelEn: "Suspension",
+        defaultSafetyCritical: true,
+      });
+      expect(response.statusCode).toBe(200);
+      expect((await issueTypes()).find((row) => row.code === "SUSPENSION")).toMatchObject({
+        defaultSafetyCritical: true,
+      });
+    });
+
+    it("refuses the flag on a kind a reporter never picks", async () => {
+      const response = await post("create-category", {
+        id: randomUUID(),
+        kind: "EXPENSE_CATEGORY",
+        code: "PNEUS_NEUFS",
+        labelFr: "Pneus",
+        labelEn: "Tyres",
+        profitabilityLayer: "MAINTENANCE",
+        defaultSafetyCritical: true,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error: {
+          code: "VALIDATION_FAILED",
+          metadata: { issues: [{ path: ["defaultSafetyCritical"] }] },
+        },
+      });
+    });
+  });
 });

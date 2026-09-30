@@ -12,6 +12,11 @@ const APPROVAL_REQUIRED: ApprovalDecision = { outcome: "APPROVAL_REQUIRED", rule
 
 export interface ApprovalContext {
   branchCode?: string;
+  /**
+   * For commands whose branch is resolved rather than named — a work order
+   * lives in its asset's branch. Takes precedence over `branchCode`.
+   */
+  branchId?: string;
   categoryCode?: string;
   amountMinor?: number;
 }
@@ -56,8 +61,8 @@ export async function evaluateApproval(
 
   if (rules.length === 0) return APPROVAL_REQUIRED;
 
-  let resolvedBranchId: string | undefined;
-  if (approvalContext.branchCode) {
+  let resolvedBranchId: string | undefined = approvalContext.branchId;
+  if (resolvedBranchId === undefined && approvalContext.branchCode) {
     const [resolvedBranch] = await tx
       .select({ id: branches.id })
       .from(branches)

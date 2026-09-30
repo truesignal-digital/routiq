@@ -1,6 +1,6 @@
 import type { AssetLifecycleStatus } from "@routiq/contracts";
 import {
-  FINANCE_READ_ROLES,
+  FINANCE_READER_ROLES,
   dashboardQuery,
   dashboardResponse,
   ledgerEntryStatuses,
@@ -101,7 +101,7 @@ export function registerDashboardReadRoutes(
           // (#59): a caller who may not read finance gets no finance numbers,
           // not zeros, so nothing on the card can claim a balance.
           const financeVisible =
-            (FINANCE_READ_ROLES as readonly Role[]).includes(auth.role) &&
+            (FINANCE_READER_ROLES as readonly Role[]).includes(auth.role) &&
             (await isModuleEnabled(tx, auth.workspaceId, "FINANCE"));
           if (!financeVisible) return { assetRows, finance: null };
 

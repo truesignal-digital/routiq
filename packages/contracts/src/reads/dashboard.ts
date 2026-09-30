@@ -75,7 +75,7 @@ export const dashboardResponse = z.object({
    * or when the caller may not read finance.
    */
   openPeriod: dashboardOpenPeriod.nullable(),
-  /** Null when the caller may not read finance: FINANCE disabled, or a role outside FINANCE_READ_ROLES. */
+  /** Null when the caller may not read finance: FINANCE disabled, or a role outside FINANCE_READER_ROLES. */
   pendingApprovals: dashboardPendingApprovals.nullable(),
   /**
    * Every day of the requested window, ascending, zero-filled: a day with no

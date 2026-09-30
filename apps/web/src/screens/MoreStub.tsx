@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Building2, ChevronRight, ShieldUser, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
@@ -6,7 +6,8 @@ import { PageContainer } from "@/components/page-container";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useMeContext } from "@/auth/me.js";
-import { sessionStore, useActiveSession } from "@/auth/store.js";
+import { useSignOut } from "@/auth/sign-out.js";
+import { useActiveSession } from "@/auth/store.js";
 import { canViewActivities } from "@/activities/permissions.js";
 import { canAdministerBranches } from "@/branches/permissions.js";
 import { canAdministerMembers } from "@/members/permissions.js";
@@ -18,14 +19,9 @@ const languages = [
 
 export function MoreStub() {
   const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
   const session = useActiveSession();
   const me = useMeContext();
-
-  function onLogout() {
-    if (session) sessionStore.logout(session);
-    void navigate({ to: "/login" });
-  }
+  const onLogout = useSignOut();
 
   return (
     <PageContainer>

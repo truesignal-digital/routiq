@@ -20,6 +20,7 @@ import {
   type AssetVersionedChanges,
 } from "./versioned-write.js";
 import { assetBranchIds } from "./branch-authorization.js";
+import { custodianIneligibility } from "./custodian-eligibility.js";
 
 export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   name: "commission-asset",
@@ -213,7 +214,10 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
       newBranchId = branch.id;
     }
 
-    if (payload.custodianMembershipId) {
+    // `null` clears the custodian; `undefined` leaves it alone.
+    if (payload.custodianMembershipId === null) {
+      newCustodianMembershipId = null;
+    } else if (payload.custodianMembershipId !== undefined) {
       const membership = await tx.query.memberships.findFirst({
         where: and(
           eq(memberships.workspaceId, ctx.workspaceId),
@@ -225,6 +229,17 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
         throw new CommandError(422, "REFERENCE_NOT_FOUND", {
           referenceType: "membership",
           referenceCode: payload.custodianMembershipId,
+        });
+      }
+
+      // Checked against the branch the vehicle lands in, so a transfer and a
+      // new custodian in one call cannot hand the truck to someone who can no
+      // longer see it.
+      const reason = custodianIneligibility(membership, newBranchId);
+      if (reason !== undefined) {
+        throw new CommandError(422, "CUSTODIAN_INELIGIBLE", {
+          reason,
+          membershipId: membership.id,
         });
       }
 

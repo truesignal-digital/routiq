@@ -14,17 +14,22 @@ export const ROLES = [
 export type Role = (typeof ROLES)[number];
 
 /**
- * Who may read finance data: the ledger, entry detail, the approvals queue,
- * periods and the dashboard's finance figures. MAINTENANCE may not (#59).
- * The API enforces it; the web hides what the API would refuse.
+ * Roles that may read ledger figures. MAINTENANCE is left out on purpose: the
+ * workshop sees the cost lines of its own work orders, never the books. The
+ * server's vehicle reads gate money on this list; the web's `canReadFinance`
+ * mirrors it.
  */
-export const FINANCE_READ_ROLES = [
+export const FINANCE_READER_ROLES = [
   "ADMIN",
   "OPS_MANAGER",
-  "FINANCE_APPROVER",
   "FIELD_SUBMITTER",
+  "FINANCE_APPROVER",
   "EXECUTIVE_VIEWER",
 ] as const satisfies readonly Role[];
+
+export function canReadLedger(role: Role): boolean {
+  return (FINANCE_READER_ROLES as readonly Role[]).includes(role);
+}
 
 /**
  * VENDOR_OPERATOR is the only workspace-free principal: it holds no membership
