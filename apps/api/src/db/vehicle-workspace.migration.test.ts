@@ -189,6 +189,10 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
     const applied = await query<{ n: string }>(
       `SELECT count(*)::text AS n FROM drizzle.__drizzle_migrations`,
     );
-    expect(Number(applied[0]?.n)).toBe(28 + VEHICLE_MIGRATIONS.length);
+    // Every migration in the real journal ran once — later ones included.
+    const journal = JSON.parse(
+      await readFile(join(MIGRATIONS, "meta", "_journal.json"), "utf8"),
+    ) as { entries: unknown[] };
+    expect(Number(applied[0]?.n)).toBe(journal.entries.length);
   });
 });
