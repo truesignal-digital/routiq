@@ -30,9 +30,9 @@ interface FinancialEntryCommandConfig {
  * member's expense is accepted only when every line is attributed to a work
  * order, which the writer then holds to APPROVED status and branch scope.
  */
-function requireWorkOrderAttribution(
+export function requireWorkOrderAttribution(
   role: Role,
-  payload: FinancialEntryPayload,
+  payload: Pick<FinancialEntryPayload, "postings">,
   command: string,
 ): void {
   if (role !== "MAINTENANCE") return;

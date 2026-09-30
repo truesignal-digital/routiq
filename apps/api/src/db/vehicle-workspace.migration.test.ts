@@ -15,7 +15,7 @@ const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 const VEHICLE_MIGRATIONS = [
   { file: "0028_notes.sql", commands: ["add-note"] },
   { file: "0029_attach_evidence_command_defaults.sql", commands: ["attach-evidence"] },
-  { file: "0032_update_asset_details_command_defaults.sql", commands: ["update-asset-details"] },
+  { file: "0035_update_asset_details_command_defaults.sql", commands: ["update-asset-details"] },
 ] as const;
 
 const BACKFILLED_COMMANDS = VEHICLE_MIGRATIONS.flatMap((migration) => [...migration.commands]);

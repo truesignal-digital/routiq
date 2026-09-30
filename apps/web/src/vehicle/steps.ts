@@ -3,6 +3,7 @@ import {
   CircleCheck,
   CircleX,
   ClipboardX,
+  Pencil,
   ReceiptText,
   ShieldX,
   type LucideIcon,
@@ -23,5 +24,6 @@ export const STEP_ICONS: Record<StepKey, LucideIcon> = {
   "dismiss-issue": CircleX,
   "approve-entry": BadgeCheck,
   "reject-entry": CircleX,
+  "edit-entry": Pencil,
   "add-cost": ReceiptText,
 };

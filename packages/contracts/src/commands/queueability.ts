@@ -114,6 +114,14 @@ export const COMMAND_QUEUEABILITY = {
   "reject-work-order": false,
   "reject-work-order-completion": false,
   "dismiss-issue": false,
+  /*
+   * Not a fact about the road but an edit to a record someone else is about to
+   * judge. It is valid only while the entry is still pending, and an approver
+   * may decide it at any moment; a replay an hour later would meet a conflict
+   * the author is no longer there to read. The author edits online, or has it
+   * rejected and records it again.
+   */
+  "update-pending-entry": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

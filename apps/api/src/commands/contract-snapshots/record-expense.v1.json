@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "entryId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "branchCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "categoryCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "economicDate": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+    },
+    "counterpartyName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "amountMinor": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "currency": {
+      "default": "XAF",
+      "type": "string",
+      "const": "XAF"
+    },
+    "paymentMethod": {
+      "type": "string",
+      "enum": [
+        "CASH",
+        "MOMO",
+        "OM",
+        "BANK",
+        "OTHER"
+      ]
+    },
+    "paymentReference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "sourceReference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "estimateStatus": {
+      "default": "ACTUAL",
+      "type": "string",
+      "enum": [
+        "ACTUAL",
+        "ESTIMATED"
+      ]
+    },
+    "postings": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "workOrderId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "assetAttribution": {
+            "default": "DIRECT",
+            "type": "string",
+            "enum": [
+              "DIRECT",
+              "ALLOCATED"
+            ]
+          }
+        },
+        "required": [
+          "amountMinor"
+        ]
+      }
+    }
+  },
+  "required": [
+    "entryId",
+    "branchCode",
+    "categoryCode",
+    "economicDate",
+    "amountMinor",
+    "paymentMethod",
+    "postings"
+  ]
+}

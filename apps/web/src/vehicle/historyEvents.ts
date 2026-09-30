@@ -65,6 +65,8 @@ export function describeEvent(
       return {
         icon: evidence
           ? Paperclip
+          : item.eventType === "financial_entry.updated"
+            ? Pencil
           : reversal
             ? Undo2
             : item.eventType === "financial_entry.approved"

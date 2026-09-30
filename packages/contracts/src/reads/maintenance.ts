@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workOrderCostOutcome } from "../commands/complete-work-order.js";
 import { recordArtifact } from "./artifacts.js";
 import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
@@ -73,7 +74,19 @@ export const workOrderListItem = z.object({
   branch: maintenanceBranchRef,
   /** Minor units, XAF exponent 0 — the client formats, it never divides. */
   expectedCostMinor: z.number().int().nullable(),
+  /**
+   * What the repair cost: the sum of the order's non-rejected cost lines (#81),
+   * pending ones included, signed so a reversal pair nets out. Derived, never
+   * typed. Null until the work is declared complete.
+   */
   actualCostMinor: z.number().int().nullable(),
+  /**
+   * The amount a v1 close typed. Kept as the closer's declaration only — it
+   * never reached the books. Null for every v2 close.
+   */
+  declaredCostMinor: z.number().int().nullable(),
+  /** What the closer said about the cost; null before completion and for v1 closes. */
+  costOutcome: workOrderCostOutcome.nullable(),
   currency: z.string().length(3),
   issue: workOrderIssueRef.nullable(),
   /** The work order row has no timestamp of its own; this is when its creating command executed. */

@@ -64,9 +64,16 @@ describe("routiq_app grants", () => {
     expect(entries?.has("UPDATE")).toBe(true);
     expect(entries?.has("DELETE")).toBe(false);
 
+    // DELETE only for the lines of a pending entry its author edits (#85):
+    // financial_postings_pending_delete refuses every other delete (0034).
     const postings = grants.get("financial_postings");
     expect(postings?.has("UPDATE")).toBe(false);
-    expect(postings?.has("DELETE")).toBe(false);
+    expect(postings?.has("DELETE")).toBe(true);
+    const deleteGuard = await ctx.db.execute(sql`
+      select tgname from pg_trigger
+      where tgrelid = 'financial_postings'::regclass and tgname = 'financial_postings_pending_delete'
+    `);
+    expect(deleteGuard.rows).toHaveLength(1);
 
     const columnGrants = await ctx.db.execute(sql`
       select column_name

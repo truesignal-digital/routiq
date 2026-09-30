@@ -1,7 +1,10 @@
 import {
   S3Client,
+  CreateBucketCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
+  type BucketLocationConstraint,
   type GetObjectCommandInput,
   type PutObjectCommandInput,
 } from "@aws-sdk/client-s3";
@@ -10,6 +13,13 @@ import type { ObjectStorage } from "./types.js";
 
 export interface S3StorageConfig {
   endpoint: string;
+  /**
+   * Where the browser reaches the same store, when that differs from
+   * `endpoint` (a compose-internal host such as http://storage:9000). Presigned
+   * URLs are opened by the browser and the host is part of the signature, so
+   * they are signed against this endpoint.
+   */
+  publicEndpoint?: string | undefined;
   region: string;
   bucket: string;
   accessKeyId: string;
@@ -17,16 +27,54 @@ export interface S3StorageConfig {
   forcePathStyle?: boolean;
 }
 
-export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
-  const client = new S3Client({
+function s3Client(cfg: S3StorageConfig, endpoint: string): S3Client {
+  return new S3Client({
     region: cfg.region,
-    endpoint: cfg.endpoint,
+    endpoint,
     credentials: {
       accessKeyId: cfg.accessKeyId,
       secretAccessKey: cfg.secretAccessKey,
     },
     forcePathStyle: cfg.forcePathStyle ?? false,
   });
+}
+
+/**
+ * Creates the bucket when it does not exist yet. The appliance's own storage
+ * starts empty on a cold start; an existing bucket is left untouched.
+ */
+export async function ensureBucket(cfg: S3StorageConfig): Promise<"exists" | "created"> {
+  const client = s3Client(cfg, cfg.endpoint);
+  try {
+    await client.send(new HeadBucketCommand({ Bucket: cfg.bucket }));
+    return "exists";
+  } catch (error) {
+    if (!(error instanceof Error && (error.name === "NotFound" || error.name === "NoSuchBucket"))) {
+      throw error;
+    }
+  }
+  await client.send(
+    new CreateBucketCommand({
+      Bucket: cfg.bucket,
+      // us-east-1 is the one region S3 rejects as an explicit constraint.
+      ...(cfg.region === "us-east-1"
+        ? {}
+        : {
+            CreateBucketConfiguration: {
+              LocationConstraint: cfg.region as BucketLocationConstraint,
+            },
+          }),
+    }),
+  );
+  return "created";
+}
+
+export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
+  const client = s3Client(cfg, cfg.endpoint);
+  const presignClient =
+    cfg.publicEndpoint && cfg.publicEndpoint !== cfg.endpoint
+      ? s3Client(cfg, cfg.publicEndpoint)
+      : client;
 
   return {
     async presignPut(
@@ -38,7 +86,7 @@ export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
         Key: key,
         ContentType: opts?.contentType,
       } as PutObjectCommandInput);
-      return getSignedUrl(client, command, {
+      return getSignedUrl(presignClient, command, {
         expiresIn: opts?.expiresSeconds ?? 900,
       });
     },
@@ -51,7 +99,7 @@ export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
         Bucket: cfg.bucket,
         Key: key,
       } as GetObjectCommandInput);
-      return getSignedUrl(client, command, {
+      return getSignedUrl(presignClient, command, {
         expiresIn: opts?.expiresSeconds ?? 300,
       });
     },

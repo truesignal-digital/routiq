@@ -34,6 +34,7 @@ import "./commands/release-asset-to-service.js";
 import "./commands/update-asset-details.js";
 import "./commands/add-note.js";
 import "./commands/attach-evidence.js";
+import "./commands/update-pending-entry.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";

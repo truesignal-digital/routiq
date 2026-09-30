@@ -11,6 +11,7 @@ import {
   canAddWorkOrderCost,
   canApproveEntries,
   canAttachEvidence,
+  canEditPendingEntry,
   canReverseEntry,
 } from "../finance/permissions.js";
 import {
@@ -341,6 +342,10 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
     const step: Step = { key: "attach-evidence", record };
     offered.push({ step });
     primary = { kind: "go", step };
+  }
+  // The author alone, while it waits (#85); anyone else rejects it instead.
+  if (!viewer.readOnly && canEditPendingEntry(entry, viewer)) {
+    offered.push({ step: { key: "edit-entry", record } });
   }
   if (entry.status === "SUBMITTED" && may.approveEntries(viewer)) {
     const lock: Lock | undefined = same(entry.recordedBy, viewer)

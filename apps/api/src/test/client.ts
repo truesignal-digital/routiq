@@ -14,6 +14,7 @@ export interface CommandReply {
     recordStatus?: string;
     warnings?: string[];
     idempotentReplay?: boolean;
+    children?: Array<{ entityType: string; id: string; status: string; warnings: string[] }>;
     error?: { code: string; metadata?: Record<string, unknown> };
   };
 }
@@ -73,13 +74,14 @@ export function apiClient(app: FastifyInstance) {
     name: string,
     payload: Record<string, unknown>,
     envelope: Record<string, unknown> = {},
+    version = 1,
   ): Promise<CommandReply> {
     const response = await app.inject({
       method: "POST",
       url: `/v1/commands/${name}`,
       headers: { authorization: `Bearer ${token}` },
       payload: {
-        version: 1,
+        version,
         envelope: {
           commandId: randomUUID(),
           idempotencyKey: `test-${randomUUID()}`,
@@ -97,8 +99,9 @@ export function apiClient(app: FastifyInstance) {
     name: string,
     payload: Record<string, unknown>,
     envelope: Record<string, unknown> = {},
+    version = 1,
   ): Promise<CommandSuccess> {
-    const reply = await send(token, name, payload, envelope);
+    const reply = await send(token, name, payload, envelope, version);
     if (reply.status !== 200) {
       throw new Error(`${name} failed: ${reply.status} ${JSON.stringify(reply.body)}`);
     }

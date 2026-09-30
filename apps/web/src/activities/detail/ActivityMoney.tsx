@@ -1,4 +1,4 @@
-import type { ActivityDetail } from "@routiq/contracts";
+import { ledgerEntryStatuses, type ActivityDetail } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatMoney } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
-type Entry = ActivityDetail["financialEntries"][number];
+type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
 
 const STATUS_TONES: Record<Entry["status"], "success" | "warning" | "danger" | "neutral"> =
   {
@@ -22,14 +22,18 @@ function signedMinor(entry: Entry): number {
   return entry.direction === "REVENUE" ? entry.amountMinor : -entry.amountMinor;
 }
 
+const IN_THE_BOOKS: ReadonlySet<Entry["status"]> = new Set(ledgerEntryStatuses);
+
 /**
  * §3.4: only posted lines are money in the books. A net that quietly folded in
  * lines still awaiting an approver would be a number nobody could reconcile,
- * so pending amounts are totalled separately and never merged in.
+ * so pending amounts are totalled separately and never merged in. A reversed
+ * entry stays in the books beside its negative reversal, so the pair nets to
+ * zero only when both count (#60).
  */
 export function postedNetMinor(entries: readonly Entry[]): number {
   return entries.reduce(
-    (total, entry) => (entry.status === "POSTED" ? total + signedMinor(entry) : total),
+    (total, entry) => (IN_THE_BOOKS.has(entry.status) ? total + signedMinor(entry) : total),
     0,
   );
 }
@@ -48,7 +52,7 @@ export function netToneClass(minor: number): string {
 }
 
 export interface ActivityMoneyProps {
-  entries: ActivityDetail["financialEntries"];
+  entries: readonly Entry[];
 }
 
 export function ActivityMoney({ entries }: ActivityMoneyProps) {

@@ -28,8 +28,8 @@ function seedEnv(): NodeJS.ProcessEnv {
 }
 
 /** Rejects, with the seed's output, when it exits non-zero. */
-async function runSeed(): Promise<SeedRun> {
-  return run(tsx, ["scripts/seed-demo.ts"], {
+async function runSeed(...args: string[]): Promise<SeedRun> {
+  return run(tsx, ["scripts/seed-demo.ts", ...args], {
     cwd: apiRoot,
     env: seedEnv(),
     timeout: 150_000,
@@ -223,12 +223,14 @@ describe("seed-demo", () => {
 
   it("closes VH001's A/C job: completed work order, resolved issue, no grounding", async () => {
     const vh001 = await assetId("VH001");
-    const orders = await rows<{ status: string; actual: string }>(
-      `select status, actual_cost_minor::text as actual from work_orders
+    const orders = await rows<{ status: string; outcome: string; declared: string | null }>(
+      `select status, cost_outcome as outcome, declared_cost_minor::text as declared
+         from work_orders
         where workspace_id = $1 and asset_id = $2`,
       [workspaceId, vh001],
     );
-    expect(orders).toEqual([{ status: "COMPLETED", actual: "85000" }]);
+    // The cost is the A/C entry already in the books; nothing is typed at close.
+    expect(orders).toEqual([{ status: "COMPLETED", outcome: "LINES", declared: null }]);
     const issues = await rows<{ status: string }>(
       "select status from operational_issues where workspace_id = $1 and asset_id = $2",
       [workspaceId, vh001],
@@ -256,5 +258,99 @@ describe("seed-demo", () => {
     expect(second.stdout).toContain("Already provisioned");
     expect(second.stderr).not.toContain("Skipped");
     expect(summaryOf(second.stdout)).toEqual(summaryOf(first.stdout));
+  });
+});
+
+describe("seed-demo --reset on a populated database (#128)", () => {
+  let owner: pg.Client;
+  let reset: SeedRun;
+  let countsBefore: Record<string, number>;
+  let countsAfter: Record<string, number>;
+
+  async function workspaceId(): Promise<string> {
+    const { rows } = await owner.query<{ id: string }>(
+      "select id from workspaces where slug = 'transports-ngwa'",
+    );
+    return rows[0]!.id;
+  }
+
+  async function counts(id: string): Promise<Record<string, number>> {
+    const result: Record<string, number> = {};
+    for (const table of WORKSPACE_TABLES) {
+      const { rows } = await owner.query<{ n: number }>(
+        `select count(*)::int as n from ${table} where workspace_id = $1`,
+        [id],
+      );
+      result[table] = rows[0]!.n;
+    }
+    return result;
+  }
+
+  beforeAll(async () => {
+    owner = new pg.Client({ connectionString: inject("databaseUrl") });
+    await owner.connect();
+    // The suite above leaves the demo seeded, posted lines included.
+    countsBefore = await counts(await workspaceId());
+    reset = await runSeed("--reset");
+    countsAfter = await counts(await workspaceId());
+  }, 200_000);
+
+  afterAll(async () => {
+    await owner.end();
+  });
+
+  it("deletes the populated workspace and seeds it again", () => {
+    expect(countsBefore["financial_postings"]).toBeGreaterThan(0);
+    expect(reset.stdout).toContain("Reset: deleted existing workspace");
+    expect(countsAfter).toEqual(countsBefore);
+  });
+
+  it("leaves the posting delete guards switched on", async () => {
+    const { rows } = await owner.query<{ name: string; enabled: string }>(
+      `select tgname as name, tgenabled as enabled from pg_trigger
+        where tgrelid = 'financial_postings'::regclass
+          and tgname in ('financial_postings_pending_delete', 'financial_postings_balance_on_delete')
+        order by tgname`,
+    );
+    expect(rows).toEqual([
+      { name: "financial_postings_balance_on_delete", enabled: "O" },
+      { name: "financial_postings_pending_delete", enabled: "O" },
+    ]);
+  });
+
+  it("still refuses the app role deleting a posted entry's lines", async () => {
+    const id = await workspaceId();
+    const { rows: posted } = await owner.query<{ entryId: string }>(
+      `select e.id as "entryId" from financial_entries e
+        where e.workspace_id = $1 and e.status = 'POSTED'
+          and exists (select 1 from financial_postings p
+                       where p.workspace_id = e.workspace_id and p.financial_entry_id = e.id)
+        limit 1`,
+      [id],
+    );
+    expect(posted).toHaveLength(1);
+    const entryId = posted[0]!.entryId;
+
+    const app = new pg.Client({ connectionString: seedEnv()["DATABASE_URL"] });
+    await app.connect();
+    try {
+      await app.query("begin");
+      await app.query("select set_config('app.workspace_id', $1, true)", [id]);
+      await expect(
+        app.query("delete from financial_postings where workspace_id = $1 and financial_entry_id = $2", [
+          id,
+          entryId,
+        ]),
+      ).rejects.toThrow(/removable only from a pending entry/);
+      await app.query("rollback");
+    } finally {
+      await app.end();
+    }
+
+    const { rows: lines } = await owner.query(
+      "select 1 from financial_postings where workspace_id = $1 and financial_entry_id = $2",
+      [id, entryId],
+    );
+    expect(lines.length).toBeGreaterThan(0);
   });
 });

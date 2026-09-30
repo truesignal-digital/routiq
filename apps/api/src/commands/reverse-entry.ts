@@ -163,13 +163,17 @@ registerCommand<ReverseEntryPayload>({
       direction: original.direction,
       categoryId: posting.categoryId,
       branchId: posting.branchId,
-      ...(posting.assetId === null ? {} : { assetId: posting.assetId }),
-      // The reversal subtracts from the same repair it corrects: the work
-      // order's cost trace filters on this column (#47 finding 4). Never
-      // re-checked against the order's status — a correction is always allowed.
-      ...(posting.workOrderId === null ? {} : { workOrderId: posting.workOrderId }),
+      // Every attribution of the original line, so the negative line subtracts
+      // wherever the original counted: the truck, the trip, the person and the
+      // repair (§4.2, #60). Never re-checked against the trip's or order's
+      // status: a correction is always allowed.
+      assetId: posting.assetId,
+      activityId: posting.activityId,
+      workOrderId: posting.workOrderId,
+      personId: posting.personId,
       amountMinor: -posting.amountMinor,
       assetAttribution: posting.assetAttribution,
+      activityAttribution: posting.activityAttribution,
       createdByCommandId: envelope.commandId,
       createdAt,
     }));
@@ -221,7 +225,6 @@ registerCommand<ReverseEntryPayload>({
         reason: payload.reason,
         postings: postingRows.map((posting) => ({
           ...posting,
-          assetId: posting.assetId ?? null,
           amountMinor: Number(posting.amountMinor),
           createdAt: posting.createdAt.toISOString(),
         })),

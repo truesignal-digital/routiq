@@ -2,11 +2,13 @@ import { z } from "zod";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
+  updatePendingEntryPayload,
   PeriodRead,
 } from "@routiq/contracts";
 
 type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
 type RecordRevenuePayload = z.infer<typeof recordRevenuePayload>;
+type UpdatePendingEntryPayload = z.infer<typeof updatePendingEntryPayload>;
 
 /**
  * Parse user input string to XAF minor units (positive integer).
@@ -80,6 +82,29 @@ export function toRecordRevenuePayload(
   return {
     entryId: form.entryId,
     branchCode: form.branchCode,
+    economicDate: form.economicDate,
+    categoryCode: form.categoryCode,
+    amountMinor: form.amountMinor,
+    currency: "XAF",
+    paymentMethod: form.paymentMethod,
+    paymentReference: form.paymentReference,
+    counterpartyName: form.counterpartyName,
+    description: form.description,
+    estimateStatus: "ACTUAL",
+    postings: [singlePosting(form)],
+  };
+}
+
+/**
+ * The author's edit of a pending entry: the recording payload without the
+ * branch, which stays where the entry was recorded. A field left empty is sent
+ * absent, which clears it.
+ */
+export function toUpdatePendingEntryPayload(
+  form: FinanceFormState,
+): UpdatePendingEntryPayload {
+  return {
+    entryId: form.entryId,
     economicDate: form.economicDate,
     categoryCode: form.categoryCode,
     amountMinor: form.amountMinor,

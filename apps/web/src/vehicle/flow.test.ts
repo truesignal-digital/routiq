@@ -427,12 +427,25 @@ describe("an entry's steps", () => {
   const keys = (facts: EntryFacts, role: Role) =>
     entrySteps(facts, viewer(role)).offered.map((o) => `${o.step.key}${o.lock ? `:${o.lock.key}` : ""}`);
 
-  it("keeps the recorder from reviewing their own entry", () => {
+  it("keeps the recorder from reviewing their own entry, and lets them edit it", () => {
     expect(keys(entry({ recordedBy: actor(ME_ID) }), "FINANCE_APPROVER")).toEqual([
       "attach-evidence",
+      "edit-entry",
       "approve-entry:youRecordedIt",
       "reject-entry:youRecordedIt",
     ]);
+  });
+
+  it("offers the edit to the author only, and only while the entry waits", () => {
+    expect(keys(entry({ recordedBy: actor(ME_ID) }), "FIELD_SUBMITTER")).toEqual([
+      "attach-evidence",
+      "edit-entry",
+    ]);
+    expect(keys(entry(), "FIELD_SUBMITTER")).toEqual(["attach-evidence"]);
+    expect(keys(entry(), "ADMIN")).not.toContain("edit-entry");
+    for (const status of ["POSTED", "REJECTED", "REVERSED"] as const) {
+      expect(keys(entry({ status, recordedBy: actor(ME_ID) }), "FIELD_SUBMITTER")).not.toContain("edit-entry");
+    }
   });
 
   it("asks no receipt of a reversal and offers reverse on posted entries only", () => {

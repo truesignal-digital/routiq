@@ -1,0 +1,1 @@
+ALTER TABLE "work_orders" DROP COLUMN "actual_cost_minor";
