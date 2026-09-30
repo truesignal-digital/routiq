@@ -1622,14 +1622,13 @@
       "trips": "Activités",
       "documents": "Documents",
       "history": "Historique",
+      "details": "Détails",
       "toDoCount": "{count, plural, one {chose à faire} other {choses à faire}}",
       "needsYou": "Vous attend"
     },
     "header": {
       "home": "Agence : {branch}",
       "noPlate": "Sans immatriculation",
-      "details": "Détails",
-      "hideDetails": "Masquer les détails",
       "viewOnly": "Consultation seule",
       "moreActions": "Plus d'actions"
     },
