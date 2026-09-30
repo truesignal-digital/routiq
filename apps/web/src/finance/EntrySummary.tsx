@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
+import { EntryLinks } from "@/finance/EntryLinks.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { useEntry } from "@/finance/useEntry.js";
 import {
@@ -99,6 +100,16 @@ export function EntrySummary({ entryId }: { entryId: string }) {
             {t("finance.entries.detail.counterparty")}
           </dt>
           <dd className="mt-1">{entry.counterpartyName}</dd>
+        </div>
+      )}
+      {(entry.links.workOrderId !== null || entry.links.activityId !== null) && (
+        <div>
+          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            {t("finance.entries.detail.linkedTo")}
+          </dt>
+          <dd className="mt-1">
+            <EntryLinks links={entry.links} />
+          </dd>
         </div>
       )}
       <div>

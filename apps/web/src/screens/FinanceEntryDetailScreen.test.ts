@@ -98,6 +98,7 @@ beforeEach(() => {
       reversesEntryId: null,
       reversedByEntryId: null,
       postings: [],
+      links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
     },
     isPending: false,
     isError: false,

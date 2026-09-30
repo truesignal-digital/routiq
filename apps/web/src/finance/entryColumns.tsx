@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
+import { EntryLinks } from "@/finance/EntryLinks.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 
@@ -13,7 +14,8 @@ export type FinanceEntryColumnId =
   | "postedAt"
   | "category"
   | "amount"
-  | "counterpartyName";
+  | "counterpartyName"
+  | "linkedTo";
 
 /**
  * One definition per column, shared by every screen that lists entries, so the
@@ -104,6 +106,12 @@ function buildColumns(
         label: t("finance.entries.detail.counterparty"),
       },
       cell: ({ row }) => row.original.counterpartyName ?? "—",
+    },
+    linkedTo: {
+      id: "linkedTo",
+      header: t("finance.entries.detail.linkedTo"),
+      meta: { mobile: "secondary", label: t("finance.entries.detail.linkedTo") },
+      cell: ({ row }) => <EntryLinks links={row.original.links} />,
     },
   };
 }
