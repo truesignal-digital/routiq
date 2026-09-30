@@ -8,7 +8,8 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm --filter @routiq/tools lint",
+    "lint:tighten": "pnpm --filter @routiq/tools tighten",
     "db:generate": "pnpm --filter @routiq/api db:generate",
     "db:migrate": "pnpm --filter @routiq/api db:migrate"
   },
