@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ASSET_ID,
   ENTRY_ID,
   ISSUE_ID,
+  ME_ID,
+  OTHER_ID,
   WORK_ORDER_ID,
   actor,
   asset,
@@ -223,4 +225,75 @@ it("opens an issue's photo through the issue's own route", async () => {
   const path = `/v1/issues/${ISSUE_ID}/artifacts/00000000-0000-4000-8000-0000000000e1/download-url`;
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
+});
+
+describe("the author's own pending entry (#85)", () => {
+  const fuel = { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" };
+  const mine = (overrides: Parameters<typeof entryDetail>[0] = {}) =>
+    entryDetail({
+      recordedBy: actor(ME_ID, "Amina"),
+      category: { ...fuel, layer: "DIRECT" },
+      amountMinor: 145_000,
+      rowVersion: 3,
+      postings: [
+        {
+          lineNo: 1,
+          amountMinor: 145_000,
+          assetId: ASSET_ID,
+          assetCode: "VH003",
+          assetAttribution: "DIRECT",
+          activityId: null,
+          workOrderId: WORK_ORDER_ID,
+          category: fuel,
+        },
+      ],
+      ...overrides,
+    });
+
+  it("offers Edit to the author and saves the pre-filled form with update-pending-entry", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FIELD_SUBMITTER",
+      entryDetails: [mine()],
+    });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+
+    await user.click(within(panel).getByRole("button", { name: "Edit" }));
+
+    const form = await screen.findByRole("dialog", { name: "Edit entry DLA-2026-00006" });
+    const amount = within(form).getByLabelText("Amount (XAF)") as HTMLInputElement;
+    expect(amount.value).toMatch(/^145\s?000$/);
+    await user.clear(amount);
+    await user.type(amount, "54000");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.name).toBe("update-pending-entry");
+    expect(recorded.commands[0]?.body.envelope["expectedVersion"]).toBe(3);
+    expect(recorded.commands[0]?.body.payload).toMatchObject({
+      entryId: ENTRY_ID,
+      amountMinor: 54_000,
+      postings: [{ assetId: ASSET_ID, workOrderId: WORK_ORDER_ID, amountMinor: 54_000 }],
+    });
+    expect(recorded.commands[0]?.body.payload).not.toHaveProperty("branchCode");
+  });
+
+  it("offers no Edit to anyone else, an admin included", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "ADMIN",
+      entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+    expect(within(panel).getByRole("button", { name: "Approve" })).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  it("offers no Edit once the entry is decided", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FIELD_SUBMITTER",
+      entryDetails: [mine({ status: "POSTED", postingPeriodCode: "2026-09" })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+    expect(within(panel).queryByRole("button", { name: "Edit" })).toBeNull();
+  });
 });

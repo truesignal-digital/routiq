@@ -73,6 +73,7 @@ export type StepKey =
   | "dismiss-issue"
   | "approve-entry"
   | "reject-entry"
+  | "edit-entry"
   | "add-cost";
 
 /** One thing to do, on the record it is done to. */

@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts";
 import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
 import { ApproveEntryForm, RejectEntryForm, ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
+import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
+import { SheetTitle } from "@/components/ui/sheet";
 import { useEntry } from "@/finance/useEntry.js";
 import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
@@ -27,7 +29,7 @@ export function vehicleShare(entry: Pick<FinancialEntryDetail, "postings">, asse
 
 export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
-  const { asset, viewer, panel, gates } = useVehicle();
+  const { asset, viewer, panel, gates, pinnedLabel } = useVehicle();
   // The books are read only by the roles that may read them; the workshop never fetches them.
   const query = useEntry(gates.money ? id : undefined);
   const host = useFormHost(t("vehicle.panel.entryTitle"));
@@ -65,6 +67,36 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
         return <RejectEntryForm {...common} />;
       case "reverse-entry":
         return <ReverseEntryForm {...common} />;
+      case "edit-entry": {
+        // The recording form writes one line, so it cannot write a split entry
+        // back whole; that one is rejected and recorded again.
+        if (entry.postings.length !== 1) {
+          return (
+            <div className="space-y-3 p-4 pr-12">
+              <SheetTitle>{t("finance.edit.title", { number: entry.entryNumber })}</SheetTitle>
+              <Note>{t("vehicle.panel.splitEntryNotEditable")}</Note>
+            </div>
+          );
+        }
+        const onThisVehicle = entry.postings[0]?.assetId === asset.id;
+        return (
+          <RecordEntryForm
+            surface="panel"
+            editing={entry}
+            back={back}
+            {...(onThisVehicle ? { pinnedAssetId: asset.id, pinnedAssetLabel: pinnedLabel } : {})}
+            onRecorded={() => {
+              void query.refetch();
+              host.onDone();
+              host.onDismiss();
+            }}
+            onDismiss={() => {
+              void query.refetch();
+              host.onDismiss();
+            }}
+          />
+        );
+      }
       default:
         return null;
     }
