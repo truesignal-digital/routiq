@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
-import { S3Client, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { GenericContainer, type StartedTestContainer } from "testcontainers";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql } from "drizzle-orm";
@@ -9,7 +8,7 @@ import sharp from "sharp";
 import { inject } from "vitest";
 import * as schema from "../db/schema.js";
 import { buildServer } from "../server.js";
-import { createS3Storage } from "../storage/s3.js";
+import { createS3Storage, ensureBucket } from "../storage/s3.js";
 import { seedWorkspace, seedMember } from "../test/seed.js";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
@@ -43,28 +42,17 @@ describe(
         .start();
       minioEndpoint = `http://${minio.getHost()}:${minio.getMappedPort(9000)}`;
 
-      const s3Client = new S3Client({
-        region: "us-east-1",
+      // The appliance's cold start: no bucket yet, then a second boot finds it.
+      const bucketConfig = {
         endpoint: minioEndpoint,
-        credentials: {
-          accessKeyId: "minioadmin",
-          secretAccessKey: "minioadmin",
-        },
+        region: "us-east-1",
+        bucket: "artifacts",
+        accessKeyId: "minioadmin",
+        secretAccessKey: "minioadmin",
         forcePathStyle: true,
-      });
-
-      try {
-        await s3Client.send(
-          new CreateBucketCommand({ Bucket: "artifacts" }),
-        );
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          !error.message.includes("BucketAlreadyOwnedByYou")
-        ) {
-          throw error;
-        }
-      }
+      };
+      expect(await ensureBucket(bucketConfig)).toBe("created");
+      expect(await ensureBucket(bucketConfig)).toBe("exists");
 
       // Set up database and app
       pool = new pg.Pool({ connectionString: inject("databaseUrl") });
