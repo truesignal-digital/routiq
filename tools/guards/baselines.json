@@ -32,11 +32,15 @@
     "apps/web/src/shell/branch-context.tsx": 1
   },
   "H9": {
-    "apps/web/src/activities/ActivityActions.tsx": 6,
+    "apps/web/src/activities/ActivityActions.tsx": 5,
     "apps/web/src/activities/sheet/LegRows.tsx": 2,
     "apps/web/src/screens/ActivitySheetScreen.tsx": 4,
-    "apps/web/src/screens/AssetDocumentsScreen.tsx": 2,
+    "apps/web/src/screens/AssetDocumentsScreen.tsx": 0,
     "apps/web/src/screens/AssetRegisterScreen.tsx": 1,
-    "apps/web/src/screens/FinanceRecordScreen.tsx": 1
+    "apps/web/src/screens/FinanceRecordScreen.tsx": 0,
+    "apps/web/src/activities/ReadingForm.tsx": 1,
+    "apps/web/src/documents/DocumentForm.tsx": 2,
+    "apps/web/src/finance/RecordEntryForm.tsx": 1,
+    "apps/web/src/vehicle/forms/LogFuelForm.tsx": 1
   }
 }
