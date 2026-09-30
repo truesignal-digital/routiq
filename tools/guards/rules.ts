@@ -128,13 +128,14 @@ export const RULES: readonly Rule[] = [
     id: "A18",
     name: "named-command-routes",
     fix: "Call POST /v1/commands/:name (ADR-0002); the generic facade takes no new callers, tests included.",
-    check: linesMatching(
-      /["'`]\/v1\/commands["'`]/,
-      (path) =>
-        isSource(path) &&
-        path !== "apps/api/src/commands/routes.ts" &&
-        path !== "apps/api/src/server.ts",
-    ),
+    check: (files) => {
+      const genericEndpoint = /["'`]\/v1\/commands["'`]/;
+      // Only flag if line has POST context: post(), fetch(), inject, or method: "POST"
+      const postContext = /\b(?:post|fetch|inject)\b|.post\s*\(|method\s*:\s*["\'`]POST["\'`]/i;
+      return files
+        .filter((file) => isSource(file.path) && file.path !== "apps/api/src/commands/routes.ts" && file.path !== "apps/api/src/server.ts")
+        .flatMap((file) => matchLines(file, genericEndpoint).filter((v) => postContext.test(v.text)));
+    },
   },
   {
     id: "A24",
