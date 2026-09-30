@@ -1,13 +1,13 @@
 -- #72: the catalog invariants test found tenant references that only had the
 -- single-column FK drizzle declares. Postgres checks foreign keys without RLS,
 -- so each could cite a command in another workspace; the composite key makes
--- that structurally impossible, as 0023 did for branches (#15). All targets
--- are commands, whose (workspace_id, id) key is commands_ws_id_uq
--- (0004_m1_tenant_isolation.sql). NULLs satisfy a composite FK vacuously, so
--- rows born before a column was stamped need no backfill.
---
--- persons.membership_id is left to the identity work (#47), which adds the
--- memberships (workspace_id, id) key it needs.
+-- that structurally impossible, as 0023 did for branches (#15). The command
+-- targets use commands_ws_id_uq (0004_m1_tenant_isolation.sql); the
+-- persons.membership_id target uses memberships_ws_id_uq
+-- (0005_cloudy_thundra.sql). NULLs satisfy a composite FK vacuously, so rows
+-- born before a column was stamped need no backfill. No command sets
+-- persons.membership_id yet (register-person writes NULL), so no row can
+-- break the new key.
 
 ALTER TABLE activities ADD CONSTRAINT activities_ws_command_fk
   FOREIGN KEY (workspace_id, created_by_command_id) REFERENCES commands(workspace_id, id);
@@ -35,6 +35,9 @@ ALTER TABLE persons ADD CONSTRAINT persons_ws_command_fk
 --> statement-breakpoint
 ALTER TABLE places ADD CONSTRAINT places_ws_command_fk
   FOREIGN KEY (workspace_id, created_by_command_id) REFERENCES commands(workspace_id, id);
+--> statement-breakpoint
+ALTER TABLE persons ADD CONSTRAINT persons_ws_membership_fk
+  FOREIGN KEY (workspace_id, membership_id) REFERENCES memberships(workspace_id, id);
 --> statement-breakpoint
 
 -- UPDATE came from the blanket grant in 0004 and no code uses it on these
