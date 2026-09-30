@@ -148,6 +148,38 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  it("renames the vehicle inside the workshop too", () => {
+    const instance = freshInstance();
+
+    expect(instance.t("maintenance.fields.asset")).toBe("Actif");
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(instance.t("maintenance.fields.asset")).toBe("Camion");
+    expect(instance.t("maintenance.detail.unavailableTitle")).toBe("Camion immobilisé");
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(instance.t("maintenance.workOrders.columns.asset")).toBe("Véhicule");
+    expect(instance.t("maintenance.notify.success.assetReleased")).toBe(
+      "Véhicule remis en service",
+    );
+  });
+
+  // The work-order sheet reads its timeline labels out of `history.event.*`,
+  // so an unrenamed event would contradict the columns beside it.
+  it("renames the vehicle in the chronologie's shared event labels", () => {
+    const instance = freshInstance();
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(instance.t("history.event.work_order-asset_released")).toBe(
+      "Camion remis en service",
+    );
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(instance.t("history.event.asset_availability-opened")).toBe(
+      "Véhicule immobilisé",
+    );
+  });
+
   it("leaves a mixed fleet on the base vocabulary", () => {
     const instance = freshInstance();
 

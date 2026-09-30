@@ -4,11 +4,12 @@ import {
   type CommandWarningCode,
   type LegEndpoint,
 } from "@routiq/contracts";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, exists, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
 import {
   activities,
   activityAssetSegments,
+  assets,
   meterReadings,
   movementLegs,
 } from "../db/schema.js";
@@ -206,6 +207,91 @@ const recordMovementLeg: CommandDefinition<RecordMovementLegPayload> = {
   },
 };
 
+/**
+ * The branches a reading belongs to by the read side's rule (#58): its
+ * vehicle's, and its job's when it was taken during one. Superseding a reading
+ * writes to it, so the caller must hold them all. Empty for an unknown id, so
+ * the handler answers REFERENCE_NOT_FOUND rather than scope answering 403.
+ */
+async function readingBranchIds(
+  tx: Tx,
+  ctx: CommandContext,
+  readingId: string,
+): Promise<string[]> {
+  const [reading] = await tx
+    .select({ assetBranchId: assets.branchId, activityBranchId: activities.branchId })
+    .from(meterReadings)
+    .innerJoin(
+      assets,
+      and(eq(assets.workspaceId, meterReadings.workspaceId), eq(assets.id, meterReadings.assetId)),
+    )
+    .leftJoin(
+      activities,
+      and(
+        eq(activities.workspaceId, meterReadings.workspaceId),
+        eq(activities.id, meterReadings.activityId),
+      ),
+    )
+    .where(and(eq(meterReadings.workspaceId, ctx.workspaceId), eq(meterReadings.id, readingId)))
+    .limit(1);
+  if (!reading) return [];
+  return reading.activityBranchId === null
+    ? [reading.assetBranchId]
+    : [reading.assetBranchId, reading.activityBranchId];
+}
+
+/**
+ * The job a reading is taken during: open, in the caller's branches, and
+ * carrying this vehicle on one of its segments. A reading follows its job's
+ * branch (#58), so any other job would file it where the caller has no reach
+ * or where the truck never ran. Out of scope and not carrying the truck answer
+ * as an unknown activity, so the refusal says nothing about other branches.
+ */
+async function loadReadingActivity(
+  tx: Tx,
+  ctx: CommandContext,
+  activityId: string,
+  assetId: string,
+): Promise<void> {
+  const [activity] = await tx
+    .select({ branchId: activities.branchId, status: activities.status })
+    .from(activities)
+    .where(
+      and(
+        eq(activities.workspaceId, ctx.workspaceId),
+        eq(activities.id, activityId),
+        exists(
+          tx
+            .select({ one: sql`1` })
+            .from(activityAssetSegments)
+            .where(
+              and(
+                eq(activityAssetSegments.workspaceId, activities.workspaceId),
+                eq(activityAssetSegments.activityId, activities.id),
+                eq(activityAssetSegments.assetId, assetId),
+              ),
+            ),
+        ),
+      ),
+    )
+    .limit(1);
+  if (
+    !activity ||
+    (ctx.branchScope !== "ALL" && !ctx.branchScope.includes(activity.branchId))
+  ) {
+    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+      referenceType: "activity",
+      referenceCode: activityId,
+    });
+  }
+  if (activity.status === "CLOSED") {
+    throw new CommandError(409, "INVALID_STATE_TRANSITION", {
+      entityType: "activity",
+      status: activity.status,
+    });
+  }
+}
+
 const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
   name: "record-meter-reading",
   version: 1,
@@ -216,12 +302,53 @@ const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
 
   branchAuthorization: {
     kind: "branches",
-    resolve: (tx, ctx, payload) => assetBranchIds(tx, ctx, [payload.assetId]),
+    async resolve(tx, ctx, payload) {
+      const branchIds = [...(await assetBranchIds(tx, ctx, [payload.assetId]))];
+      if (payload.supersedesReadingId !== undefined) {
+        branchIds.push(...(await readingBranchIds(tx, ctx, payload.supersedesReadingId)));
+      }
+      return branchIds;
+    },
   },
 
   async execute(tx, ctx, envelope, payload) {
     if (payload.activityId !== undefined) {
-      await loadOpenActivity(tx, ctx, payload.activityId);
+      await loadReadingActivity(tx, ctx, payload.activityId, payload.assetId);
+    }
+
+    // A correction replaces an observation of the same meter on the same
+    // vehicle; anything else answers as an unknown reading.
+    if (payload.supersedesReadingId !== undefined) {
+      const [original] = await tx
+        .select({
+          assetId: meterReadings.assetId,
+          readingType: meterReadings.readingType,
+          supersededById: meterReadings.supersededById,
+        })
+        .from(meterReadings)
+        .where(
+          and(
+            eq(meterReadings.workspaceId, ctx.workspaceId),
+            eq(meterReadings.id, payload.supersedesReadingId),
+          ),
+        )
+        .limit(1);
+      if (
+        !original ||
+        original.assetId !== payload.assetId ||
+        original.readingType !== payload.readingType
+      ) {
+        throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+          referenceType: "meter_reading",
+          referenceCode: payload.supersedesReadingId,
+        });
+      }
+      if (original.supersededById !== null) {
+        throw new CommandError(409, "INVALID_STATE_TRANSITION", {
+          entityType: "meter_reading",
+          reason: "already superseded",
+        });
+      }
     }
 
     // Latest live observation of the same meter — superseded rows are history.
@@ -264,28 +391,6 @@ const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
     });
 
     if (payload.supersedesReadingId !== undefined) {
-      const [original] = await tx
-        .select({ id: meterReadings.id, supersededById: meterReadings.supersededById })
-        .from(meterReadings)
-        .where(
-          and(
-            eq(meterReadings.workspaceId, ctx.workspaceId),
-            eq(meterReadings.id, payload.supersedesReadingId),
-          ),
-        )
-        .limit(1);
-      if (!original) {
-        throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-          referenceType: "meterReading",
-          referenceCode: payload.supersedesReadingId,
-        });
-      }
-      if (original.supersededById !== null) {
-        throw new CommandError(409, "INVALID_STATE_TRANSITION", {
-          entityType: "meter_reading",
-          reason: "already superseded",
-        });
-      }
       // The original row is never edited beyond this link — the observation it
       // recorded stays exactly as it was written.
       await tx

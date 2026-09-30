@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,7 @@ interface LoginFormValues {
 export function LoginScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { redirect: redirectTo } = useSearch({ from: "/login" });
   const last = sessionStore.getLastIdentity();
 
@@ -59,6 +61,9 @@ export function LoginScreen() {
       form.setValue("pin", "");
       return;
     }
+    // A session that expired never signed out: nothing read under it may
+    // render this member's screens.
+    queryClient.clear();
     sessionStore.save(result.session);
     void navigate({ to: safeInternalPath(redirectTo) ?? "/" });
   }

@@ -142,6 +142,42 @@ describe("SiteHeader breadcrumb", () => {
     expect(separator?.className).toContain("data-vertical:self-auto");
   });
 
+  describe("on a phone", () => {
+    const phoneCrumb = (container: HTMLElement) =>
+      container.querySelector<HTMLElement>('[data-slot="breadcrumb-back"], [data-slot="breadcrumb-phone-page"]');
+
+    it("keeps only the way back up on a vehicle, hiding the full trail and the tick", () => {
+      pathname = "/assets/00000000-0000-4000-8000-00000000a001";
+      const { container } = render(<SiteHeader />);
+
+      const back = phoneCrumb(container);
+      expect(back?.tagName).toBe("A");
+      expect(back?.getAttribute("href")).toBe("/assets");
+      expect(back?.textContent).toBe("nav.assets");
+      expect(back?.className).toContain("md:hidden");
+      expect(container.querySelector('[data-slot="breadcrumb-list"]')?.className).toContain("max-md:hidden");
+      expect(container.querySelector('[data-slot="separator"]')?.className).toContain("max-md:hidden");
+    });
+
+    it("steps back to the list from an entry", () => {
+      pathname = "/finance/entries/00000000-0000-4000-8000-000000000010";
+      const { container } = render(<SiteHeader />);
+
+      expect(phoneCrumb(container)?.getAttribute("href")).toBe("/finance/entries");
+      expect(phoneCrumb(container)?.textContent).toBe("finance.navigation.entries");
+    });
+
+    it("names the section at its root, unlinked", () => {
+      pathname = "/assets";
+      const { container } = render(<SiteHeader />);
+
+      const page = phoneCrumb(container);
+      expect(page?.tagName).toBe("SPAN");
+      expect(page?.textContent).toBe("nav.assets");
+      expect(page?.getAttribute("aria-current")).toBe("page");
+    });
+  });
+
   it("replaces the old plain section title", () => {
     pathname = "/assets";
     render(<SiteHeader />);

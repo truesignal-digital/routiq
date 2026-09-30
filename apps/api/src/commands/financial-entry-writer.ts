@@ -1,4 +1,5 @@
 import type { CommandEnvelope, CommandWarningCode } from "@routiq/contracts";
+import { entryEvidenceState } from "@routiq/domain";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   activities,
@@ -7,6 +8,7 @@ import {
   financialEntries,
   financialPostings,
   persons,
+  workOrders,
 } from "../db/schema.js";
 import type { ApprovalDecision } from "./approvals.js";
 import { resolveTargetBranch } from "./branch-authorization.js";
@@ -22,6 +24,7 @@ import { resolvePostingPeriod } from "./periods.js";
 export interface FinancialEntryPostingWriteRequest {
   assetId?: string | undefined;
   activityId?: string | undefined;
+  workOrderId?: string | undefined;
   personId?: string | undefined;
   amountMinor: number;
   assetAttribution: "DIRECT" | "ALLOCATED";
@@ -181,6 +184,81 @@ export async function writeFinancialEntry(
     }
   }
 
+  const requestedWorkOrderIds = [
+    ...new Set(
+      request.postings.flatMap((posting) =>
+        posting.workOrderId === undefined ? [] : [posting.workOrderId],
+      ),
+    ),
+  ];
+  if (requestedWorkOrderIds.length > 0) {
+    const workOrderRows = await tx
+      .select({
+        id: workOrders.id,
+        status: workOrders.status,
+        assetId: workOrders.assetId,
+        branchId: assets.branchId,
+      })
+      .from(workOrders)
+      .innerJoin(
+        assets,
+        and(eq(assets.workspaceId, workOrders.workspaceId), eq(assets.id, workOrders.assetId)),
+      )
+      .where(
+        and(
+          eq(workOrders.workspaceId, ctx.workspaceId),
+          inArray(workOrders.id, requestedWorkOrderIds),
+        ),
+      );
+    const workOrdersById = new Map(workOrderRows.map((row) => [row.id, row]));
+    const missing = requestedWorkOrderIds.filter(
+      (workOrderId) => !workOrdersById.has(workOrderId),
+    );
+    if (missing.length > 0) {
+      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+        referenceType: "workOrder",
+        missing,
+      });
+    }
+    // Branch scope reads through the order's asset (#47 finding 3): with the
+    // posting's assetId omitted, nothing else would stop a member from putting
+    // spend on another branch's repair. Same refusal as the pipeline's own
+    // branch check, so an out-of-scope order is indistinguishable from an
+    // out-of-scope asset.
+    if (ctx.branchScope !== "ALL") {
+      const scope = ctx.branchScope;
+      const outside = workOrderRows.find((row) => !scope.includes(row.branchId));
+      if (outside) {
+        throw new CommandError(403, "ROLE_FORBIDDEN", {
+          referenceType: "workOrder",
+          workOrderId: outside.id,
+        });
+      }
+    }
+    for (const posting of request.postings) {
+      if (posting.workOrderId === undefined || posting.assetId === undefined) continue;
+      const workOrder = workOrdersById.get(posting.workOrderId)!;
+      if (workOrder.assetId !== posting.assetId) {
+        throw new CommandError(422, "WORK_ORDER_ASSET_MISMATCH", {
+          workOrderId: workOrder.id,
+          workOrderAssetId: workOrder.assetId,
+          assetId: posting.assetId,
+        });
+      }
+    }
+    // Costs attach only to APPROVED work (#28): SUBMITTED spend is not yet
+    // authorized, and COMPLETED, REJECTED and CANCELLED orders are closed to
+    // new cost. Reversals do not come through here — they copy the original
+    // attribution and are always allowed.
+    const notOpen = workOrderRows.find((row) => row.status !== "APPROVED");
+    if (notOpen) {
+      throw new CommandError(409, "WORK_ORDER_NOT_OPEN", {
+        workOrderId: notOpen.id,
+        status: notOpen.status,
+      });
+    }
+  }
+
   const requestedPersonIds = [
     ...new Set(
       request.postings.flatMap((posting) =>
@@ -237,13 +315,15 @@ export async function writeFinancialEntry(
       warnings.push("POSTING_DEFERRED_PERIOD_LOCKED");
     }
   }
-  const hasVerifiablePaymentReference =
-    request.paymentReference !== undefined &&
-    ["MOMO", "OM", "BANK"].includes(request.paymentMethod);
+  // The same predicate the reads use for the entry's evidence state, so the
+  // warning at capture and the badge on the list can never disagree.
   if (
-    category.evidencePolicy === "RECEIPT_EXPECTED" &&
-    envelope.sourceArtifactIds.length === 0 &&
-    !hasVerifiablePaymentReference
+    entryEvidenceState({
+      policy: category.evidencePolicy,
+      artifactCount: envelope.sourceArtifactIds.length,
+      paymentMethod: request.paymentMethod,
+      paymentReference: request.paymentReference,
+    }) === "NOT_SUPPLIED"
   ) {
     warnings.push("EVIDENCE_MISSING");
   }
@@ -298,6 +378,9 @@ export async function writeFinancialEntry(
     ...(posting.activityId === undefined
       ? {}
       : { activityId: posting.activityId }),
+    ...(posting.workOrderId === undefined
+      ? {}
+      : { workOrderId: posting.workOrderId }),
     ...(posting.personId === undefined ? {} : { personId: posting.personId }),
     amountMinor: BigInt(posting.amountMinor),
     assetAttribution: posting.assetAttribution,

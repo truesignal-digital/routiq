@@ -117,5 +117,56 @@
         "rowAttribute": "Imputer la ligne {position} à ce voyage"
       }
     }
+  },
+  "maintenance": {
+    "workOrders": {
+      "newHint": "Ouvrez un ordre de travail sur un véhicule, avec ou sans signalement à l'origine.",
+      "columns": {
+        "asset": "Véhicule"
+      }
+    },
+    "issues": {
+      "newHint": "Décrivez le défaut constaté sur le véhicule. Un signalement critique pour la sécurité immobilise le véhicule immédiatement.",
+      "columns": {
+        "asset": "Véhicule"
+      }
+    },
+    "fields": {
+      "asset": "Véhicule",
+      "safetyCriticalHint": "Le véhicule est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
+    },
+    "actions": {
+      "releaseHint": "Le véhicule redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement."
+    },
+    "detail": {
+      "unavailableTitle": "Véhicule immobilisé"
+    },
+    "notify": {
+      "success": {
+        "assetReleased": "Véhicule remis en service"
+      }
+    }
+  },
+  "history": {
+    "event": {
+      "work_order-asset_released": "Véhicule remis en service",
+      "asset_availability-opened": "Véhicule immobilisé"
+    }
+  },
+  "vehicle": {
+    "tabs": {
+      "trips": "Trajets"
+    },
+    "trips": {
+      "title": "Trajets",
+      "description": "Trajets avec ce véhicule",
+      "descriptionWithKm": "Trajets avec ce véhicule · {km, number} km enregistrés",
+      "empty": "Aucun trajet pour l'instant. Démarrez-en un quand le véhicule quitte le dépôt."
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trajets"
+      }
+    }
   }
 }

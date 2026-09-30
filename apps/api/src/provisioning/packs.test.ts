@@ -37,12 +37,35 @@ describe("starter packs", () => {
       "EXPENSE_CATEGORY:PARKING",
       "EXPENSE_CATEGORY:REPAIRS",
       "EXPENSE_CATEGORY:TOLLS",
+      "ISSUE_TYPE:BODYWORK",
+      "ISSUE_TYPE:BRAKES",
+      "ISSUE_TYPE:ENGINE",
+      "ISSUE_TYPE:LIGHTING",
+      "ISSUE_TYPE:OTHER",
+      "ISSUE_TYPE:STEERING",
+      "ISSUE_TYPE:TYRES",
       "REVENUE_CATEGORY:FREIGHT_REVENUE",
       "REVENUE_CATEGORY:TICKET_REVENUE",
     ]);
     expect(
       packCategories.map((category) => ({ ...category, workspaceId })),
     ).toEqual(presetCategories(workspaceId));
+  });
+
+  it("pre-checks the safety-critical box only for faults that ground a truck", () => {
+    const issueTypes = corePack.categories.filter((category) => category.kind === "ISSUE_TYPE");
+    expect(
+      issueTypes
+        .filter((category) => category.defaultSafetyCritical === true)
+        .map((category) => category.code)
+        .sort(),
+    ).toEqual(["BRAKES", "STEERING", "TYRES"]);
+    // Only fault types carry the flag; every other kind leaves the column default.
+    expect(
+      corePack.categories.filter(
+        (category) => category.kind !== "ISSUE_TYPE" && category.defaultSafetyCritical !== undefined,
+      ),
+    ).toEqual([]);
   });
 
   it("keeps every default approval rule in the core pack", () => {
