@@ -1,9 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
 import { branches, categories } from "../db/schema.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /** Reference data the register form needs: asset classes + visible branches. */
 export function registerReferenceReadRoutes(
@@ -11,16 +11,13 @@ export function registerReferenceReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/reference/asset-registration",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/reference/asset-registration", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-
-        const { assetClasses, visibleBranches } = await inWorkspace(
-          db,
-          auth.workspaceId,
+        const { assetClasses, visibleBranches } = await read(
           async (tx) => ({
             assetClasses: await tx
               .select({

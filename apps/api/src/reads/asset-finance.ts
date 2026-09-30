@@ -1,11 +1,10 @@
 import {
   assetFinanceQuery,
   assetFinanceResponse,
-  FINANCE_READER_ROLES,
   PROFITABILITY_LAYERS,
 } from "@routiq/contracts";
 import { and, desc, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
@@ -18,13 +17,14 @@ import {
   postingPeriods,
   workspaces,
 } from "../db/schema.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import type { TenantTx } from "../db/tenant.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import { LEDGER_ENTRY_STATUSES } from "./dashboard.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { monthBounds } from "./finance.js";
-import { invalidRequest, passReadGate, sendReadFailure } from "./read-gate.js";
+import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { defineRead, LEDGER_GATE } from "./define-read.js";
 
 const SERIES_MONTHS = 6;
 
@@ -223,19 +223,18 @@ export function registerAssetFinanceReadRoutes(
    * the books get them (DECISIONS 1): the workshop sees its work orders' cost
    * lines, not this.
    */
-  app.get(
-    "/v1/assets/:assetId/finance",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/finance", ...LEDGER_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const params = z.object({ assetId: z.uuid() }).safeParse(req.params);
         const query = assetFinanceQuery.safeParse(req.query);
         if (!params.success || !query.success) throw invalidRequest();
         const { assetId } = params.data;
 
-        const body = await inWorkspace(db, auth.workspaceId, async (tx) => {
-          await passReadGate(tx, auth, { module: "FINANCE", roles: FINANCE_READER_ROLES });
+        const body = await read(async (tx) => {
           await requireScopedAsset(tx, auth, assetId);
           return loadFinance(tx, auth, assetId, query.data.periodCode);
         });

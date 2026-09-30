@@ -1641,30 +1641,33 @@ describe("finance entry fields for the vehicle workspace", () => {
       .from(categories)
       .where(and(eq(categories.workspaceId, workspaceId), eq(categories.code, "FUEL")));
     const entryId = randomUUID();
-    await ctx.db.insert(financialEntries).values({
-      id: entryId,
-      workspaceId,
-      entryNumber: `PLAT-${entryId.slice(0, 8)}`,
-      direction: "EXPENSE",
-      categoryId: fuel!.id,
-      economicDate: "2026-08-02",
-      branchId,
-      amountMinor: 5_000n,
-      paymentMethod: "CASH",
-      status: "SUBMITTED",
-      createdByCommandId: commandId,
-    });
-    await ctx.db.insert(financialPostings).values({
-      workspaceId,
-      financialEntryId: entryId,
-      lineNo: 1,
-      economicDate: "2026-08-02",
-      direction: "EXPENSE",
-      categoryId: fuel!.id,
-      branchId,
-      assetId: truckB,
-      amountMinor: 5_000n,
-      createdByCommandId: commandId,
+    // One transaction: the balance trigger checks the entry against its postings at commit.
+    await ctx.db.transaction(async (tx) => {
+      await tx.insert(financialEntries).values({
+        id: entryId,
+        workspaceId,
+        entryNumber: `PLAT-${entryId.slice(0, 8)}`,
+        direction: "EXPENSE",
+        categoryId: fuel!.id,
+        economicDate: "2026-08-02",
+        branchId,
+        amountMinor: 5_000n,
+        paymentMethod: "CASH",
+        status: "SUBMITTED",
+        createdByCommandId: commandId,
+      });
+      await tx.insert(financialPostings).values({
+        workspaceId,
+        financialEntryId: entryId,
+        lineNo: 1,
+        economicDate: "2026-08-02",
+        direction: "EXPENSE",
+        categoryId: fuel!.id,
+        branchId,
+        assetId: truckB,
+        amountMinor: 5_000n,
+        createdByCommandId: commandId,
+      });
     });
 
     const listed = (await entries(`?assetId=${truckB}`)).find((entry) => entry.id === entryId);

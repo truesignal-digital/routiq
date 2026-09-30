@@ -73,7 +73,7 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 
 - **Money:** minor units + `char(3)` currency; `bigint` in the database and domain, a safe integer (`moneyMinor = z.number().int()`) on the wire. **XAF has exponent 0 — 1 XAF = 1 minor unit; never divide by 100.** Use `moneyMinor` from contracts and `packages/domain/src/money.ts`.
 - **Tenant isolation:** `workspace_id` on every tenant table; composite tenant FKs (`FOREIGN KEY (workspace_id, asset_id)`) so cross-tenant references are structurally impossible. New tables need explicit GRANTs to `routiq_app` in their migration (`db/grants.test.ts`).
-- **Append-only corrections:** approved/posted financial and stock records, meter readings, documents, and notes are never edited — corrections supersede or reverse (`superseded_by_id`, `reverses_entry_id`), preserving the original. Posting amounts are SIGNED so reversals subtract.
+- **Append-only corrections:** approved/posted financial and stock records, meter readings, documents, and notes are never edited — corrections supersede or reverse (`superseded_by_id`, `reverses_entry_id`), preserving the original. Posting amounts are SIGNED so reversals subtract. (UI edits vs corrections: ADR-0008.)
 - **Postings sum exactly to their entry;** one canonical cost posting per economic fact.
 - **Warn, don't block:** activity close with missing data sets completeness `COMPLETE_WITH_EXCEPTIONS`; period lock is the strict boundary. Reports never invent missing values.
 - **Provenance:** every business row carries `created_by_command_id`; UUIDs are client-generatable (offline requirement); `row_version` on every mutable table.
