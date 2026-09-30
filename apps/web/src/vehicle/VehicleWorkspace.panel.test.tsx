@@ -97,16 +97,41 @@ it("opens a step's form inside the panel, submits it pinned to the record, and c
   await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Complete work" }));
   const again = await screen.findByRole("dialog", { name: "Declare the work complete" });
   await user.type(within(again).getByLabelText("Work summary"), "Pads and air valve replaced");
+  // Closing says what the repair cost; with nothing typed and nothing picked it stays shut.
+  expect(within(again).getByRole("button", { name: "Declare complete" }).hasAttribute("disabled")).toBe(true);
+  await user.type(within(again).getByLabelText("How much did the repair cost?"), "50000");
   await user.click(within(again).getByRole("button", { name: "Declare complete" }));
 
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   const [command] = recorded.commands;
   expect(command?.name).toBe("complete-work-order");
-  expect(command?.body.payload).toMatchObject({ workOrderId: WORK_ORDER_ID, summary: "Pads and air valve replaced" });
+  expect(command?.body.payload).toMatchObject({
+    workOrderId: WORK_ORDER_ID,
+    summary: "Pads and air valve replaced",
+    costOutcome: "LINES",
+    costLines: [{ categoryCode: "REPAIRS", amountMinor: 50_000 }],
+  });
   expect(command?.body.envelope["expectedVersion"]).toBe(3);
   // Back on the record, re-read from the server.
   await screen.findByRole("dialog", { name: /Brake repair/ });
   await waitFor(() => expect(detailReads()).toBeGreaterThan(before));
+});
+
+it("reads a close with the invoice still to come as such, not as a zero cost", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 0,
+        costOutcome: "INVOICE_PENDING",
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
 it("shows a refusal in place and keeps the form", async () => {
