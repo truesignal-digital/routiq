@@ -14,7 +14,7 @@ export type NotifyNamespace =
   | "maintenance"
   | "vehicle";
 
-type NotifyKind = "success" | "warnings" | "errors";
+type NotifyKind = "success" | "info" | "warnings" | "errors";
 
 function localizedNotifyMessage(
   namespace: NotifyNamespace,
@@ -30,7 +30,7 @@ function localizedNotifyMessage(
   // The shared code catalogs (`warnings.*`, `errors.*`) are where a code's
   // wording lives when no domain overrides it.
   const catalog = `${kind}.${key}`;
-  if (kind !== "success" && i18n.exists(catalog)) return i18n.t(catalog);
+  if ((kind === "warnings" || kind === "errors") && i18n.exists(catalog)) return i18n.t(catalog);
 
   console.warn(`[notify] no translation for ${scoped}`);
   const scopedGeneric = `${namespace}.notify.${kind}.generic`;
@@ -105,5 +105,16 @@ export function notifyCommandError(
     type: "error",
     priority: "high",
     title: localizedNotifyMessage(namespace, "errors", code),
+  });
+}
+
+/**
+ * A note about a command the user asked for but that did not need sending —
+ * "nothing to save" — so it reads as information, not as an error.
+ */
+export function notifyInfo(namespace: NotifyNamespace, messageKey: string): void {
+  toast.add({
+    type: "info",
+    title: localizedNotifyMessage(namespace, "info", messageKey),
   });
 }

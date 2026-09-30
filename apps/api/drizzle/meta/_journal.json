@@ -246,6 +246,13 @@
       "when": 1790776416375,
       "tag": "0034_edit_pending_entry",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790777080332,
+      "tag": "0035_update_asset_details_command_defaults",
+      "breakpoints": true
     }
   ]
 }
