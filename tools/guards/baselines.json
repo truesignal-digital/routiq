@@ -38,6 +38,7 @@
     "apps/api/src/commands/routes.test.ts": 2,
     "apps/api/src/commands/update-approval-threshold.test.ts": 1,
     "apps/api/src/observability/sentry.test.ts": 5,
+    "apps/api/src/reads/read-gates.test.ts": 1,
     "apps/api/src/test/seed.ts": 1
   }
 }
