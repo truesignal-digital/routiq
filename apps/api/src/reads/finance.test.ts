@@ -886,6 +886,8 @@ describe("finance reads", () => {
           assetId,
           assetCode: "FIN-TRUCK-001",
           assetAttribution: "DIRECT",
+          activityId: null,
+          workOrderId: null,
           category: original.postings[0]!.category,
         },
       ]);
