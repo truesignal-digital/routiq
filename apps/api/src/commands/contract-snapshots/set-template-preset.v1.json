@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "presetCode": {
+      "type": "string",
+      "enum": [
+        "TRUCKING",
+        "PASSENGER_TRANSPORT"
+      ]
+    },
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "presetCode",
+    "enabled"
+  ],
+  "additionalProperties": false
+}

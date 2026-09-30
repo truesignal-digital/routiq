@@ -52,6 +52,14 @@ _Avoid_: cost status, payment status
 A free-text remark a member writes on a vehicle. Append-only: a correction is another note. Executive viewers write none.
 _Avoid_: comment thread, description, edit
 
+**Correction**:
+What saving "Modifier" does to approved or posted money, a meter reading or stock. One command reverses the original and records the replacement, so the original stays. Lists show the current value with a "corrigé" badge; history shows the old value struck through. A changed amount goes back for approval. Users never choose between an edit and a correction; the **Edit Level** decides (ADR-0008).
+_Avoid_: edit (for approved money), reversal (in the interface), void, overwrite
+
+**Edit Level**:
+Which of four things "Modifier" does, decided by the record, never by the user (ADR-0008). **Plain edit**: descriptive details (plate, make and model, chassis, a phone number) change in place with an audit event. **Free until decided**: the author changes their own pending record in place until someone approves or rejects it. **Correction**: approved money, readings and stock. **Locked**: in a locked period, the correction posts to the open period as a late posting.
+_Avoid_: edit mode, correction mode (users see one action)
+
 **Vehicle History**:
 A vehicle's timeline, read as one query over the audit trail of every record that belongs to it. A view of the trail, never a ledger or an editable log.
 _Avoid_: timeline ledger, activity log table
