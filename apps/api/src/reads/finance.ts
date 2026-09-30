@@ -659,6 +659,8 @@ export function registerFinanceReadRoutes(
               assetId: financialPostings.assetId,
               assetCode: assets.assetCode,
               assetAttribution: financialPostings.assetAttribution,
+              activityId: financialPostings.activityId,
+              workOrderId: financialPostings.workOrderId,
               categoryId: financialPostings.categoryId,
               categoryLabelFr: categories.labelFr,
               categoryLabelEn: categories.labelEn,
@@ -730,6 +732,8 @@ export function registerFinanceReadRoutes(
           assetId: p.assetId,
           assetCode: p.assetCode ?? null,
           assetAttribution: p.assetAttribution,
+          activityId: p.activityId,
+          workOrderId: p.workOrderId,
           category: {
             code: p.categoryCode,
             labelFr: p.categoryLabelFr,

@@ -130,4 +130,11 @@ describe("activity overview band", () => {
     expect(digits(tile("Net"))).toBe("-120000");
     expect(tone("Net")).toBe("warning");
   });
+
+  it("leaves the net out when the server kept the ledger back (#103)", () => {
+    render(<ActivityOverview activity={overview({ financialEntries: null })} />);
+
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(tile("Legs").textContent).toContain("2");
+  });
 });

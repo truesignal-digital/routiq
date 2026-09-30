@@ -6,12 +6,12 @@ import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/f
 import { useVehicle } from "../context.js";
 import { recordReference } from "../model.js";
 import { LinkButton } from "../parts.js";
-import { makeAndModel } from "./IdentityStrip.js";
+import { makeAndModel } from "../header/IdentityStrip.js";
 
 type Row = readonly [string, ReactNode];
 
-/** Everything the header leaves out, in three columns: right now, the vehicle, its specifications. */
-export function DetailsCard() {
+/** The Details section: everything the header leaves out, in three columns: right now, the vehicle, its specifications. */
+export function DetailsTab() {
   const { t, i18n } = useTranslation();
   const { asset, gates, panel } = useVehicle();
   const locale = i18n.language;
@@ -125,13 +125,18 @@ export function DetailsCard() {
   });
 
   return (
-    <Card className="gap-0 py-0">
-      <div className="grid divide-y md:grid-cols-[1.25fr_1fr_0.8fr] md:divide-x md:divide-y-0">
-        <DetailsColumn title={t("vehicle.details.rightNow")} rows={now} />
-        <DetailsColumn title={t("vehicle.details.vehicle")} rows={vehicle} />
-        <DetailsColumn title={t("vehicle.details.specifications")} rows={specifications} />
-      </div>
-    </Card>
+    <section aria-labelledby="vehicle-details-title">
+      <h2 id="vehicle-details-title" className="sr-only">
+        {t("vehicle.tabs.details")}
+      </h2>
+      <Card className="gap-0 py-0">
+        <div className="grid divide-y md:grid-cols-[1.25fr_1fr_0.8fr] md:divide-x md:divide-y-0">
+          <DetailsColumn title={t("vehicle.details.rightNow")} rows={now} />
+          <DetailsColumn title={t("vehicle.details.vehicle")} rows={vehicle} />
+          <DetailsColumn title={t("vehicle.details.specifications")} rows={specifications} />
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -139,7 +144,7 @@ function DetailsColumn({ title, rows }: { title: string; rows: readonly Row[] })
   const { t } = useTranslation();
   return (
     <section className="p-4">
-      <h2 className="mb-2.5 text-xs font-medium text-muted-foreground">{title}</h2>
+      <h3 className="mb-2.5 text-xs font-medium text-muted-foreground">{title}</h3>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("vehicle.details.noSpecifications")}</p>
       ) : (

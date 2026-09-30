@@ -142,7 +142,12 @@ export const activityDetail = activityListItem.extend({
   crew: z.array(activityCrewRead),
   legs: z.array(activityLegRead),
   readings: z.array(activityReadingRead),
-  financialEntries: z.array(activityFinancialEntryRead),
+  /**
+   * The trip's entries with their amounts. Null when the caller may not read
+   * the ledger (`canReadLedger`) or FINANCE is off (#103): hidden, never an
+   * empty list that would claim the trip had no money.
+   */
+  financialEntries: z.array(activityFinancialEntryRead).nullable(),
 });
 
 const queryBoolean = z

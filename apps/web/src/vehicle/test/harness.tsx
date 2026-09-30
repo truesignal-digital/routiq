@@ -200,7 +200,10 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
               { code: "BODYWORK", labelFr: "Carrosserie", labelEn: "Bodywork", defaultSafetyCritical: false },
             ]
           : kind === "EXPENSE_CATEGORY"
-            ? [{ code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", defaultSafetyCritical: false }]
+            ? [
+                { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", defaultSafetyCritical: false },
+                { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs", defaultSafetyCritical: false },
+              ]
             : kind === "REVENUE_CATEGORY"
               ? [{ code: "FREIGHT", labelFr: "Fret", labelEn: "Freight", defaultSafetyCritical: false }]
               : [];

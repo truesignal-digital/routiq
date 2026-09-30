@@ -27,6 +27,7 @@ import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
 import { AppShell } from "./shell/AppShell.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
 import { VehicleWorkspaceScreen } from "./vehicle/VehicleWorkspaceScreen.js";
+import { DetailsTab } from "./vehicle/tabs/DetailsTab.js";
 import { DocumentsTab } from "./vehicle/tabs/DocumentsTab.js";
 import { HistoryTab } from "./vehicle/tabs/HistoryTab.js";
 import { MaintenanceTab } from "./vehicle/tabs/MaintenanceTab.js";
@@ -141,6 +142,12 @@ const vehicleHistoryRoute = createRoute({
   component: HistoryTab,
 });
 
+const vehicleDetailsRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "details",
+  component: DetailsTab,
+});
+
 const financeRecordRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/record",
@@ -250,6 +257,7 @@ const routeTree = rootRoute.addChildren([
       vehicleTripsRoute,
       vehicleDocumentsRoute,
       vehicleHistoryRoute,
+      vehicleDetailsRoute,
     ]),
     activitiesRoute,
     // Before the $activityId route, or "record" reads as an activity id.

@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ASSET_ID,
   ENTRY_ID,
   ISSUE_ID,
+  ME_ID,
+  OTHER_ID,
   WORK_ORDER_ID,
   actor,
   asset,
@@ -97,16 +99,41 @@ it("opens a step's form inside the panel, submits it pinned to the record, and c
   await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Complete work" }));
   const again = await screen.findByRole("dialog", { name: "Declare the work complete" });
   await user.type(within(again).getByLabelText("Work summary"), "Pads and air valve replaced");
+  // Closing says what the repair cost; with nothing typed and nothing picked it stays shut.
+  expect(within(again).getByRole("button", { name: "Declare complete" }).hasAttribute("disabled")).toBe(true);
+  await user.type(within(again).getByLabelText("How much did the repair cost?"), "50000");
   await user.click(within(again).getByRole("button", { name: "Declare complete" }));
 
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   const [command] = recorded.commands;
   expect(command?.name).toBe("complete-work-order");
-  expect(command?.body.payload).toMatchObject({ workOrderId: WORK_ORDER_ID, summary: "Pads and air valve replaced" });
+  expect(command?.body.payload).toMatchObject({
+    workOrderId: WORK_ORDER_ID,
+    summary: "Pads and air valve replaced",
+    costOutcome: "LINES",
+    costLines: [{ categoryCode: "REPAIRS", amountMinor: 50_000 }],
+  });
   expect(command?.body.envelope["expectedVersion"]).toBe(3);
   // Back on the record, re-read from the server.
   await screen.findByRole("dialog", { name: /Brake repair/ });
   await waitFor(() => expect(detailReads()).toBeGreaterThan(before));
+});
+
+it("reads a close with the invoice still to come as such, not as a zero cost", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 0,
+        costOutcome: "INVOICE_PENDING",
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
 it("shows a refusal in place and keeps the form", async () => {
@@ -223,4 +250,75 @@ it("opens an issue's photo through the issue's own route", async () => {
   const path = `/v1/issues/${ISSUE_ID}/artifacts/00000000-0000-4000-8000-0000000000e1/download-url`;
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
+});
+
+describe("the author's own pending entry (#85)", () => {
+  const fuel = { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" };
+  const mine = (overrides: Parameters<typeof entryDetail>[0] = {}) =>
+    entryDetail({
+      recordedBy: actor(ME_ID, "Amina"),
+      category: { ...fuel, layer: "DIRECT" },
+      amountMinor: 145_000,
+      rowVersion: 3,
+      postings: [
+        {
+          lineNo: 1,
+          amountMinor: 145_000,
+          assetId: ASSET_ID,
+          assetCode: "VH003",
+          assetAttribution: "DIRECT",
+          activityId: null,
+          workOrderId: WORK_ORDER_ID,
+          category: fuel,
+        },
+      ],
+      ...overrides,
+    });
+
+  it("offers Edit to the author and saves the pre-filled form with update-pending-entry", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FIELD_SUBMITTER",
+      entryDetails: [mine()],
+    });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+
+    await user.click(within(panel).getByRole("button", { name: "Edit" }));
+
+    const form = await screen.findByRole("dialog", { name: "Edit entry DLA-2026-00006" });
+    const amount = within(form).getByLabelText("Amount (XAF)") as HTMLInputElement;
+    expect(amount.value).toMatch(/^145\s?000$/);
+    await user.clear(amount);
+    await user.type(amount, "54000");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.name).toBe("update-pending-entry");
+    expect(recorded.commands[0]?.body.envelope["expectedVersion"]).toBe(3);
+    expect(recorded.commands[0]?.body.payload).toMatchObject({
+      entryId: ENTRY_ID,
+      amountMinor: 54_000,
+      postings: [{ assetId: ASSET_ID, workOrderId: WORK_ORDER_ID, amountMinor: 54_000 }],
+    });
+    expect(recorded.commands[0]?.body.payload).not.toHaveProperty("branchCode");
+  });
+
+  it("offers no Edit to anyone else, an admin included", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "ADMIN",
+      entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+    expect(within(panel).getByRole("button", { name: "Approve" })).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  it("offers no Edit once the entry is decided", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FIELD_SUBMITTER",
+      entryDetails: [mine({ status: "POSTED", postingPeriodCode: "2026-09" })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+    expect(within(panel).queryByRole("button", { name: "Edit" })).toBeNull();
+  });
 });

@@ -120,6 +120,9 @@ const financialPosting = z.object({
   assetId: z.uuid().nullable(),
   assetCode: z.string().nullable(),
   assetAttribution: z.enum(["DIRECT", "ALLOCATED"]),
+  /** The trip and work order the line is attributed to, so an edit keeps them. */
+  activityId: z.uuid().nullable(),
+  workOrderId: z.uuid().nullable(),
   category: categoryType,
 });
 
