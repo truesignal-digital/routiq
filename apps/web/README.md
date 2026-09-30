@@ -20,10 +20,10 @@ Every new file under `src/components/` must be registered in `registry.json` in 
 
 ### Building the registry
 
-The registry is built as part of deployment:
+Build the registry descriptors with:
 
 ```bash
 pnpm --filter @routiq/web registry:build
 ```
 
-This generates JSON descriptors under `apps/web/public/r/` for each registered component. Run this before `vite build` when deploying the appliance.
+This generates JSON descriptors under `apps/web/public/r/` for each registered component. `public/r/` is gitignored and the Docker image does not build it (`apps/web/Dockerfile` runs `vite build` only), so run this locally when you need to serve the descriptors.

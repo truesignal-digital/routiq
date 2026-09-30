@@ -17,6 +17,10 @@ export default defineConfig({
     },
   },
   test: {
+    // jsdom interaction tests take under a second alone but 5-8 s when every
+    // file runs in parallel on a CI runner; the 5 s default made them flaky
+    // (#67). Still short enough to catch a hung test.
+    testTimeout: 15_000,
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
