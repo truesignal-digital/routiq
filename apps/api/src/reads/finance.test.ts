@@ -89,13 +89,14 @@ describe("finance reads", () => {
   });
 
   describe("contract schemas", () => {
-    /** The #44 fields every entry row carries. */
+    /** The #44 and #87 fields every entry row carries. */
     const vehicleFields = {
       reversesEntryId: null,
       recordedBy: { principalId: randomUUID(), displayName: "Sali", scope: "WORKSPACE" as const },
       evidence: { state: "NOT_SUPPLIED" as const, artifactCount: 0 },
       assetShareMinor: null,
       assetLinks: null,
+      links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
     };
 
     it("parses financialEntryListItem", () => {
@@ -1601,6 +1602,38 @@ describe("finance entry fields for the vehicle workspace", () => {
     expect(all.find((entry) => entry.id === splitEntryId)).toMatchObject({
       assetShareMinor: null,
       assetLinks: null,
+    });
+  });
+
+  it("names the trip and work order of every entry without a filter (#87)", async () => {
+    const all = await entries("");
+    expect(all.find((entry) => entry.id === splitEntryId)?.links).toEqual({
+      activityId: jobId,
+      activityNumber: jobNumber,
+      workOrderId,
+      workOrderAssetId: truckA,
+    });
+    const tolls = all.find((entry) => entry.category.code === "TOLLS");
+    expect(tolls?.links).toEqual({
+      activityId: null,
+      activityNumber: null,
+      workOrderId: null,
+      workOrderAssetId: null,
+    });
+    // The same answer under a filter on the other truck: the entry belongs to
+    // the work order even where this vehicle's own line does not.
+    const onB = await entries(`?assetId=${truckB}`);
+    expect(onB.find((entry) => entry.id === splitEntryId)?.links).toMatchObject({ workOrderId });
+  });
+
+  it("names the trip and work order on the entry detail (#87)", async () => {
+    const response = await api.get(admin.token, `/v1/finance/entries/${splitEntryId}`);
+    expect(response.status).toBe(200);
+    expect(financialEntryDetail.parse(response.body).links).toEqual({
+      activityId: jobId,
+      activityNumber: jobNumber,
+      workOrderId,
+      workOrderAssetId: truckA,
     });
   });
 

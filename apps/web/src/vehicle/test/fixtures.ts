@@ -300,6 +300,12 @@ export function entryRow(overrides: Partial<FinancialEntryListItem> = {}): Finan
     evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
     assetShareMinor: 310_000,
     assetLinks: { activityId: null, activityNumber: null, workOrderId: WORK_ORDER_ID },
+    links: {
+      activityId: null,
+      activityNumber: null,
+      workOrderId: WORK_ORDER_ID,
+      workOrderAssetId: ASSET_ID,
+    },
     ...overrides,
   };
 }

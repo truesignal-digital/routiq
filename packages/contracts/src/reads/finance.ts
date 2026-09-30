@@ -96,6 +96,17 @@ export const financialEntryListItem = z.object({
       workOrderId: z.uuid().nullable(),
     })
     .nullable(),
+  /**
+   * The trip and the work order the entry belongs to, from its first line
+   * carrying each, on any vehicle (#87). Set with or without a filter. The
+   * work order opens in its vehicle's workspace, so its asset comes along.
+   */
+  links: z.object({
+    activityId: z.uuid().nullable(),
+    activityNumber: z.string().nullable(),
+    workOrderId: z.uuid().nullable(),
+    workOrderAssetId: z.uuid().nullable(),
+  }),
 });
 
 /** `entries`, not `items`: the published key on /v1/finance/entries (ADR-0003). */
