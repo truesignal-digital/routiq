@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   activityDetail,
   activityListResponse,
+  FINANCE_READER_ROLES,
   personListResponse,
   placeListResponse,
 } from "@routiq/contracts";
@@ -667,5 +668,89 @@ describe("activity list route fields", () => {
       distanceKm: 240,
       driverName: "Alain",
     });
+  });
+});
+
+/**
+ * #103: every role reads the trip, only the roles that read the books see its
+ * money, and nobody does with FINANCE off.
+ */
+describe("activity detail ledger gate", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
+  let adminToken: string;
+  let tripId: string;
+  let entryId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    adminToken = (await seedActor(ctx.db, { workspaceId, role: "ADMIN" })).token;
+    const truck = await seedAsset(ctx.app, adminToken);
+
+    tripId = randomUUID();
+    await api.ok(adminToken, "create-activity", {
+      activityId: tripId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truck,
+      startedAt: "2026-08-01T05:00:00Z",
+    });
+    entryId = randomUUID();
+    await api.ok(adminToken, "record-expense", {
+      entryId,
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: "2026-08-01",
+      amountMinor: 45_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truck, activityId: tripId, amountMinor: 45_000 }],
+    });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function detailAs(token: string) {
+    const response = await api.get(token, `/v1/activities/${tripId}`);
+    expect(response.status).toBe(200);
+    return activityDetail.parse(response.body);
+  }
+
+  it("shows the trip's entries to every role that reads the books", async () => {
+    for (const role of FINANCE_READER_ROLES) {
+      const { token } = await seedActor(ctx.db, { workspaceId, role });
+      const detail = await detailAs(token);
+      expect({ role, entries: detail.financialEntries }).toEqual({
+        role,
+        entries: [expect.objectContaining({ entryId, amountMinor: 45_000 })],
+      });
+    }
+  });
+
+  it("gives the workshop the trip without its money", async () => {
+    const { token } = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
+    const detail = await detailAs(token);
+    expect(detail.id).toBe(tripId);
+    expect(detail.financialEntries).toBeNull();
+  });
+
+  it("gives nobody the money with FINANCE off", async () => {
+    await api.ok(adminToken, "disable-module", { moduleCode: "FINANCE" });
+    try {
+      for (const role of ["ADMIN", "FINANCE_APPROVER", "MAINTENANCE"] as const) {
+        const { token } = await seedActor(ctx.db, { workspaceId, role });
+        const detail = await detailAs(token);
+        expect({ role, entries: detail.financialEntries }).toEqual({ role, entries: null });
+      }
+    } finally {
+      await api.ok(adminToken, "enable-module", { moduleCode: "FINANCE" });
+    }
   });
 });
