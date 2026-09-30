@@ -64,6 +64,15 @@ jobs:
       # present on ubuntu-latest, so no DATABASE_URL is needed here.
       - run: pnpm test
 
+      # End to end over HTTP against the migrated service Postgres above:
+      # login, idempotent replay, module gates, finance approval and reversal.
+      - name: Smoke the API end to end
+        run: pnpm --filter @routiq/api smoke
+        env:
+          DATABASE_URL: postgres://routiq_app:routiq_app@localhost:5432/routiq_dev
+          AUTH_DATABASE_URL: postgres://routiq:routiq@localhost:5432/routiq_dev
+          COMMAND_PAYLOAD_HMAC_KEY: ci-smoke-only-0123456789abcdef0123456789abcdef
+
       - run: pnpm --filter @routiq/web build
 
       # §6a guard 4: docker-compose.yml is the distribution artifact. Cheap
