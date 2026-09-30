@@ -1,10 +1,16 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { Pencil, RotateCw, TriangleAlert } from "lucide-react";
-import { TEMPLATE_FIELDS, type TemplateCode, type UpdateAssetDetailsPayload } from "@routiq/contracts";
+import {
+  TEMPLATE_FIELDS,
+  type AssetDetail,
+  type TemplateCode,
+  type UpdateAssetDetailsPayload,
+} from "@routiq/contracts";
 import { DatePicker } from "@/components/date-picker";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { MoneyInput } from "@/components/money-input.js";
@@ -13,6 +19,8 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { assetDetailQueryKey } from "@/assets/useAssetDetail.js";
+import { useActiveSession } from "@/auth/store.js";
 import { applyTemplateFieldMetadata } from "@/commands/field-errors";
 import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess, notifyInfo } from "@/lib/notify.js";
@@ -48,8 +56,20 @@ type Row = readonly [string, ReactNode];
 export function DetailsTab() {
   const { t } = useTranslation();
   const { asset, viewer, refresh } = useVehicle();
-  const [editing, setEditing] = useState(false);
+  /** The vehicle as it stood when editing began: what the edit is compared and versioned against. */
+  const [base, setBase] = useState<AssetDetail>();
   const [conflict, setConflict] = useState(false);
+  const editing = base !== undefined;
+  const queryClient = useQueryClient();
+  const session = useActiveSession();
+
+  // A refetch while editing leaves the form alone; only Reload moves it to
+  // the vehicle as it now stands.
+  async function reload() {
+    await refresh();
+    setBase(queryClient.getQueryData<AssetDetail>(assetDetailQueryKey(session?.workspaceSlug, asset.id)) ?? asset);
+    setConflict(false);
+  }
   const nowRows = useNowRows();
   const vehicleRows = useVehicleRows();
   const specificationRows = useSpecificationRows();
@@ -69,7 +89,7 @@ export function DetailsTab() {
         <div className="flex justify-end">
           <Tooltip>
             <TooltipTrigger
-              render={<Button variant="outline" className="h-11" onClick={() => setEditing(true)} />}
+              render={<Button variant="outline" className="h-11" onClick={() => setBase(asset)} />}
             >
               <Pencil aria-hidden />
               {t("vehicle.details.edit.button")}
@@ -93,24 +113,23 @@ export function DetailsTab() {
           <Button
             variant="outline"
             className="h-11 bg-background"
-            onClick={() => {
-              void refresh().then(() => setConflict(false));
-            }}
+            onClick={() => void reload()}
           >
             <RotateCw aria-hidden />
             {t("vehicle.details.edit.reload")}
           </Button>
         </div>
       )}
-      {editing ? (
+      {base !== undefined ? (
         // Reload brings a new version: the form starts again from it.
         <DetailsEditCard
-          key={asset.rowVersion}
+          key={base.rowVersion}
+          base={base}
           nowRows={nowRows}
           onConflict={() => setConflict(true)}
           onClose={() => {
             setConflict(false);
-            setEditing(false);
+            setBase(undefined);
           }}
         />
       ) : (
@@ -308,16 +327,18 @@ const formShape = z.object({
 });
 
 function DetailsEditCard({
+  base: asset,
   nowRows,
   onConflict,
   onClose,
 }: {
+  base: AssetDetail;
   nowRows: readonly Row[];
   onConflict: () => void;
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { asset, gates, refresh } = useVehicle();
+  const { gates, refresh } = useVehicle();
   const locale = i18n.language;
   const [submitting, setSubmitting] = useState(false);
   const [errorCode, setErrorCode] = useState<string>();
@@ -450,8 +471,8 @@ function DetailsEditCard({
               note={t("vehicle.details.edit.ownActions")}
               rows={nowRows}
             />
-            <section className="space-y-3 p-4">
-              <h3 className="text-xs font-medium text-muted-foreground">{t("vehicle.details.vehicle")}</h3>
+            <section className="grid content-start gap-3 p-4 md:grid-cols-[minmax(7.5rem,auto)_1fr] md:gap-x-4">
+              <h3 className="text-xs font-medium text-muted-foreground md:col-span-2">{t("vehicle.details.vehicle")}</h3>
               <StaticRow label={t("vehicle.details.fleetCode")} value={asset.assetCode} />
               {textField("registrationNumber", t("vehicle.details.plate"), { maxLength: 40 })}
               {textField("manufacturer", t("vehicle.details.edit.make"), { maxLength: 80 })}
@@ -499,10 +520,10 @@ function DetailsEditCard({
                 />
               )}
             </section>
-            <section className="space-y-3 p-4">
-              <h3 className="text-xs font-medium text-muted-foreground">{t("vehicle.details.specifications")}</h3>
+            <section className="grid content-start gap-3 p-4 md:grid-cols-[minmax(7.5rem,auto)_1fr] md:gap-x-4">
+              <h3 className="text-xs font-medium text-muted-foreground md:col-span-2">{t("vehicle.details.specifications")}</h3>
               {specifications.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("vehicle.details.noSpecifications")}</p>
+                <p className="text-sm text-muted-foreground md:col-span-2">{t("vehicle.details.noSpecifications")}</p>
               ) : (
                 specifications.map((spec) =>
                   textField(
@@ -535,10 +556,13 @@ function DetailsEditCard({
   );
 }
 
-/** Label beside the value on a wide screen, above it on a phone. */
+/**
+ * Label beside the value on a wide screen, above it on a phone. The rows share
+ * their column's label width (subgrid), so the inputs line up.
+ */
 function EditRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <FormItem className="gap-1.5 md:grid-cols-[minmax(7.5rem,auto)_1fr] md:items-start md:gap-x-4">
+    <FormItem className="gap-1.5 md:col-span-2 md:grid-cols-subgrid md:items-start">
       <FormLabel className="text-sm font-normal text-muted-foreground md:pt-2">{label}</FormLabel>
       <div className="grid min-w-0 gap-1.5">
         {children}
@@ -550,7 +574,7 @@ function EditRow({ label, children }: { label: string; children: ReactNode }) {
 
 function StaticRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid gap-1.5 text-sm md:grid-cols-[minmax(7.5rem,auto)_1fr] md:gap-x-4">
+    <div className="grid gap-1.5 text-sm md:col-span-2 md:grid-cols-subgrid">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>

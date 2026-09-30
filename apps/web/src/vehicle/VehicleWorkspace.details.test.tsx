@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { latestModelYear, type Role } from "@routiq/contracts";
@@ -117,6 +117,25 @@ describe("the Details card's edit mode", () => {
     await waitFor(() => expect(field("Plate").value).toBe("LT 999 ZZ"));
     expect(field("Model").value).toBe("Actros 2644");
     expect(screen.queryByText(/Someone else changed this vehicle/)).toBeNull();
+  });
+
+  it("keeps what is being typed when the vehicle is read again in the background", async () => {
+    const { recorded, user } = await startEditing({
+      role: "OPS_MANAGER",
+      assetReads: [asset(), asset({ registrationNumber: "LT 999 ZZ", rowVersion: 5 })],
+    });
+    await user.clear(field("Model"));
+    await user.type(field("Model"), "Actros 1845");
+    await act(async () => {
+      await recorded.client.invalidateQueries();
+    });
+    await waitFor(() => expect(screen.getAllByText("LT 999 ZZ").length).toBeGreaterThan(0));
+    expect(field("Model").value).toBe("Actros 1845");
+    expect(field("Plate").value).toBe("LT 482 AB");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    // Still versioned against what the editor started from.
+    expect(recorded.commands[0]?.body.envelope["expectedVersion"]).toBe(4);
   });
 
   it("names each wrong field in the card's own words and sends nothing", async () => {
