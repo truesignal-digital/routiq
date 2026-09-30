@@ -61,6 +61,54 @@ jobs:
           echo "API failed to become healthy after $max_attempts attempts"
           exit 1
 
+      - name: Verify storage integration (artifact endpoints registered)
+        run: |
+          set -euo pipefail
+          api_url="http://localhost:3001"
+          
+          # The artifact endpoints require auth. We test that they return 401
+          # (AUTH_REQUIRED) rather than 404 (route not found), proving storage
+          # was initialized and the routes are registered.
+          echo "Testing presign endpoint is registered..."
+          presign_status=$(curl -s -w "%{http_code}" -o /tmp/presign_response.txt \
+            -X POST "$api_url/v1/artifacts/presign" \
+            -H "Content-Type: application/json" \
+            -d '{"artifactId":"test","fileName":"test.bin","sizeBytes":1024}')
+          
+          presign_body=$(cat /tmp/presign_response.txt)
+          
+          # 401 means the endpoint exists but auth failed (expected behavior)
+          # 404 means the endpoint was not registered (storage not configured)
+          if [ "$presign_status" = "401" ]; then
+            echo "✓ Presign endpoint is registered (got 401 AUTH_REQUIRED)"
+          elif [ "$presign_status" = "404" ]; then
+            echo "✗ Presign endpoint not found (404) — storage not configured"
+            exit 1
+          else
+            echo "✗ Unexpected status $presign_status: $presign_body"
+            exit 1
+          fi
+          
+          echo "Testing finalize endpoint is registered..."
+          finalize_status=$(curl -s -w "%{http_code}" -o /tmp/finalize_response.txt \
+            -X POST "$api_url/v1/artifacts/finalize" \
+            -H "Content-Type: application/json" \
+            -d '{"artifactId":"test","fileName":"test.bin","sizeBytes":1024,"mediaType":"application/octet-stream","checksumSha256":"abc"}')
+          
+          finalize_body=$(cat /tmp/finalize_response.txt)
+          
+          if [ "$finalize_status" = "401" ]; then
+            echo "✓ Finalize endpoint is registered (got 401 AUTH_REQUIRED)"
+          elif [ "$finalize_status" = "404" ]; then
+            echo "✗ Finalize endpoint not found (404) — storage not configured"
+            exit 1
+          else
+            echo "✗ Unexpected status $finalize_status: $finalize_body"
+            exit 1
+          fi
+          
+          echo "✓ All artifact endpoints are registered"
+
       # --profile appliance, or compose ignores the api service; -a, or an
       # exited api container is hidden.
       - name: Dump diagnostics on failure
