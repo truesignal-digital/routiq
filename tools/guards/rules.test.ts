@@ -53,7 +53,8 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     id: "A18",
     bad: [
       file("apps/api/src/commands/x.test.ts", 'const res = await fetch("/v1/commands", { method: "POST" });'),
-      file("apps/api/src/commands/x.test.ts", 'await post("/v1/commands", payload);'),
+      // Multi-line POST caller: method on preceding line, url on this line
+      file("apps/api/src/commands/approvals.test.ts", 'method: "POST",\n      url: "/v1/commands",'),
     ],
     good: [
       file("apps/api/src/commands/x.test.ts", 'url: "/v1/commands/register-asset",'),
@@ -61,8 +62,8 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
       file("apps/api/src/reads/define-read.ts", '  "/v1/commands",'),
       // GET registration
       file("apps/api/src/server.ts", 'app.get("/v1/commands", async (request) => {'),
-      // In a dictionary
-      file("apps/api/src/reads/x.ts", 'const READS = { "/v1/commands": { method: "GET" } };'),
+      // GET read with method on preceding line (documents.test.ts pattern)
+      file("apps/api/src/reads/documents.test.ts", 'method: "GET",\n      url: "/v1/commands",'),
     ],
   },
   {

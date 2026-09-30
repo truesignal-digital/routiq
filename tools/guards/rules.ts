@@ -130,11 +130,26 @@ export const RULES: readonly Rule[] = [
     fix: "Call POST /v1/commands/:name (ADR-0002); the generic facade takes no new callers, tests included.",
     check: (files) => {
       const genericEndpoint = /["'`]\/v1\/commands["'`]/;
-      // Only flag if line has POST context: post(), fetch(), inject, or method: "POST"
-      const postContext = /\b(?:post|fetch|inject)\b|.post\s*\(|method\s*:\s*["\'`]POST["\'`]/i;
       return files
         .filter((file) => isSource(file.path) && file.path !== "apps/api/src/commands/routes.ts" && file.path !== "apps/api/src/server.ts")
-        .flatMap((file) => matchLines(file, genericEndpoint).filter((v) => postContext.test(v.text)));
+        .flatMap((file) => {
+          const lines = file.content.split('\n');
+          const violations: Violation[] = [];
+          lines.forEach((line, index) => {
+            if (!genericEndpoint.test(line)) return;
+            // Exception (a): bare string entry in a list
+            if (/^\s*["'`]\/v1\/commands["'`]\s*,?\s*$/.test(line)) return;
+            // Exception (b): GET registration on same line
+            if (/\.get\(\s*["'`]\/v1\/commands/.test(line)) return;
+            // Exception (c): method: "GET" within 3 preceding lines
+            for (let j = Math.max(0, index - 3); j < index && j < lines.length; j++) {
+              const prevLine = lines[j];
+              if (prevLine && /method\s*:\s*["'`]GET["'`]/i.test(prevLine)) return;
+            }
+            violations.push({ path: file.path, line: index + 1, text: line });
+          });
+          return violations;
+        });
     },
   },
   {
