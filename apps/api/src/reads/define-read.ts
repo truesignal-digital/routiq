@@ -11,6 +11,9 @@ export type ReadTx = TenantTx;
 
 export const ANY_ROLE: readonly Role[] = ROLES;
 
+/** Administrative reads: members and branch settings are facts for admins, not directory data. */
+export const ADMIN_ONLY: readonly Role[] = ["ADMIN"];
+
 /** The books: the ledger-reading roles, and FINANCE on. */
 export const LEDGER_GATE = {
   module: "FINANCE",
@@ -60,27 +63,10 @@ export function defineRead(
 }
 
 /**
- * GET routes still registered without a gate. The next step of the read-gate
- * work moves them onto defineRead and empties this set; add nothing to it.
+ * GET routes allowed to skip defineRead. Empty since every read moved onto it
+ * (#58, #59); keep it empty. A new read declares its gate instead.
  */
-export const UNGATED_READS: ReadonlySet<string> = new Set([
-  "/v1/me",
-  "/v1/commands",
-  "/v1/artifacts/:id/download-url",
-  "/v1/history/:entityType/:entityId",
-  "/v1/history/:entityType/:entityId/:eventId",
-  "/v1/reference/asset-registration",
-  "/v1/assets",
-  "/v1/assets/summary",
-  "/v1/assets/:assetId",
-  "/v1/categories",
-  "/v1/members",
-  "/v1/branches",
-  "/v1/activities",
-  "/v1/activities/:activityId",
-  "/v1/persons",
-  "/v1/places",
-]);
+export const UNGATED_READS: ReadonlySet<string> = new Set<string>([]);
 
 /** Fails the boot when a /v1 GET route skips defineRead, so an ungated read cannot ship. */
 export function requireReadGates(app: FastifyInstance): void {

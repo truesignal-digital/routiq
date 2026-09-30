@@ -344,15 +344,13 @@ export function registerArtifactRoutes(
    * record and downloads only through the record's route, which checks who may
    * read the record (review P1). Anything else is the same 404.
    */
-  app.get(
-    "/v1/artifacts/:id/download-url",
-    { preHandler: requireAuth },
-    async (req, reply) => {
-      const auth = req.auth;
-      if (!auth) return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });
-      const read = <T>(execute: (tx: TenantTx) => Promise<T>) =>
-        inWorkspace(db, auth.workspaceId, execute);
-      return sendDownloadUrl(req, reply, auth, read, "download_url.failed", async (tx, auth) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    // "workspace": an unlinked upload belongs to its uploader, not to a branch.
+    { path: "/v1/artifacts/:id/download-url", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) =>
+      sendDownloadUrl(req, reply, auth, read, "download_url.failed", async (tx, auth) => {
         const params = z.object({ id: z.uuid() }).safeParse(req.params);
         if (!params.success) throw invalidRequest();
         const { id } = params.data;
@@ -380,8 +378,7 @@ export function registerArtifactRoutes(
           .limit(1);
         if (!row) throw notFound();
         return row;
-      });
-    },
+      }),
   );
 
   /**
