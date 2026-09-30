@@ -23,6 +23,8 @@ pnpm workspace monorepo (never npm/yarn). Node ≥ 24.
 
 ```bash
 pnpm typecheck                    # all packages (tsc --noEmit)
+pnpm lint                         # repo guards (tools/guards); see "Guards and the ratchet"
+pnpm lint:tighten                 # lower guard baselines after you remove violations
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
 pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file
@@ -46,6 +48,7 @@ docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API 
 | `apps/web` | `@routiq/web` | Vite + React 19 PWA |
 | `packages/contracts` | `@routiq/contracts` | Zod command envelopes + payload schemas — shared by API, web, offline sync, future AI |
 | `packages/domain` | `@routiq/domain` | Pure domain logic (money, invariants); no I/O deps |
+| `tools` | `@routiq/tools` | Repo guards (`tools/guards`) and agent tooling; never imported by app code |
 
 TypeScript strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `verbatimModuleSyntax` (`tsconfig.base.json`). ESM everywhere; intra-package imports use `.js` extensions. No `any`, no `@ts-ignore`; `@ts-expect-error` only in type tests.
 
@@ -91,9 +94,18 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 1. The contract lives in `packages/contracts` with a test, and any shape change to a shipped command is a new version.
 2. Writes go through `registerCommand`; reads check module, role and branch scope.
 3. The UI follows the paved paths in `apps/web/AGENTS.md`.
-4. `pnpm typecheck` and `pnpm test` pass.
+4. `pnpm typecheck`, `pnpm lint` and `pnpm test` pass, and no guard baseline went up.
 5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions.
 6. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
+
+## Guards and the ratchet
+
+`pnpm lint` runs the rules in `tools/guards/rules.ts`. Each rule names a mistake that must not spread and says what to do instead. Known violations are counted per file in `tools/guards/baselines.json`, and those counts may only go down:
+
+- A new violation fails, and so does a violation in a new file.
+- When you remove violations, the count drops below its baseline and `pnpm lint` fails until you run `pnpm lint:tighten` and commit the lower baseline. That locks the improvement in.
+- If a guard blocks you, change the code, or stop and ask. Never edit a rule to let your change through, never delete a rule, and never raise a baseline by hand. The only exception is an ADR in `docs/adr/`, cited by a `Trust-Exception: ADR-NNNN` commit trailer.
+- When a bug or review finding shows a new class of mistake, add a rule for it, with a case in `tools/guards/rules.test.ts`.
 
 ## Git and PRs
 
