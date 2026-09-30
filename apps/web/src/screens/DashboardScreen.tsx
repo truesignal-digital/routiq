@@ -59,9 +59,9 @@ export function DashboardScreen() {
       <div className="mt-6 flex flex-col gap-6">
         <SectionCards data={dashboard.data} isPending={dashboard.isPending} />
 
-        {(me?.enabledModules.includes("FINANCE") ?? false) && (
+        {showFinance && (
           <ChartAreaInteractive
-            series={dashboard.data?.series}
+            series={dashboard.data?.series ?? undefined}
             currency={dashboard.data?.openPeriod?.currency ?? "XAF"}
             days={range}
             onDaysChange={setRange}
