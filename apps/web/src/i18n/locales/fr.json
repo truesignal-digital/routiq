@@ -1554,6 +1554,10 @@
       "defaultSafetyCritical": "critique pour la sécurité par défaut"
     }
   },
+  "datePicker": {
+    "placeholder": "Choisir une date",
+    "clear": "Effacer"
+  },
   "commandForm": {
     "cancel": "Annuler",
     "submitting": "Enregistrement…",
@@ -1672,7 +1676,31 @@
       "acquired": "Acquisition",
       "acquiredWithAmount": "{date} · {amount}",
       "notRecorded": "Non renseigné",
-      "noSpecifications": "Aucune caractéristique pour ce modèle."
+      "noSpecifications": "Aucune caractéristique pour ce modèle.",
+      "edit": {
+        "button": "Modifier",
+        "tooltip": "Modifier les informations du véhicule",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "cancel": "Annuler",
+        "make": "Marque",
+        "model": "Modèle",
+        "acquisitionDate": "Date d'acquisition",
+        "acquisitionAmount": "Montant d'acquisition",
+        "ownActions": "Se modifie par ses propres actions",
+        "conflict": "Quelqu'un d'autre a modifié ce véhicule. Actualisez pour voir ses changements.",
+        "reload": "Actualiser",
+        "disposed": "{status, select, SOLD {Ce véhicule est vendu ; ses informations ne peuvent plus être modifiées.} RETIRED {Ce véhicule est retiré du service ; ses informations ne peuvent plus être modifiées.} other {Ce véhicule est mis au rebut ; ses informations ne peuvent plus être modifiées.}}",
+        "errors": {
+          "yearRange": "Saisissez une année entre {min} et {max}.",
+          "dateInFuture": "La date d'acquisition ne peut pas être dans le futur.",
+          "amountWhole": "Saisissez le montant en francs, sans décimales.",
+          "amountNeedsDate": "Ajoutez la date d'acquisition pour saisir un montant.",
+          "chassisTooLong": "Le numéro de châssis est trop long ({max} caractères au plus).",
+          "notANumber": "Saisissez un nombre.",
+          "fixFields": "Corrigez les champs en rouge, puis enregistrez de nouveau."
+        }
+      }
     },
     "status": {
       "grounded": {
@@ -2063,8 +2091,10 @@
         "work_order-asset_released": "Remis en service",
         "asset_availability-opened": "Immobilisé",
         "asset_availability-closed": "Immobilisation levée",
-        "note-added": "Note ajoutée"
-      }
+        "note-added": "Note ajoutée",
+        "asset-details_updated": "Informations modifiées"
+      },
+      "change": "{field} : {before} → {after}"
     },
     "panel": {
       "loading": "Chargement…",
@@ -2152,7 +2182,11 @@
     "notify": {
       "success": {
         "noteAdded": "Note ajoutée",
-        "evidenceAttached": "Reçu joint"
+        "evidenceAttached": "Reçu joint",
+        "detailsSaved": "Informations du véhicule enregistrées."
+      },
+      "info": {
+        "nothingToSave": "Rien à enregistrer : aucun changement."
       }
     },
     "actions": {

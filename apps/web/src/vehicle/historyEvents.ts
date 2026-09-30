@@ -6,6 +6,7 @@ import {
   Flag,
   Gauge,
   Paperclip,
+  Pencil,
   Receipt,
   Route,
   ShieldAlert,
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
 import { historyEventLabelKey } from "@/components/record-history-sheet.js";
-import { localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { VehicleGates } from "./context.js";
 import type { PanelRef } from "./model.js";
 
@@ -174,9 +175,67 @@ export function describeEvent(
           record: null,
         };
       }
+      if (item.eventType === "asset.details_updated") {
+        return { icon: Pencil, tone: "neutral", title: title(), detail: detailChangeLines(item, t, locale), record: null };
+      }
       return { icon: Flag, tone: "neutral", title: title(), detail: null, record: null };
     }
     default:
       return { icon: Flag, tone: "neutral", title: title(), detail: null, record: null };
   }
+}
+
+const DETAIL_FIELD_LABEL: Record<string, string> = {
+  registrationNumber: "vehicle.details.plate",
+  manufacturer: "vehicle.details.edit.make",
+  model: "vehicle.details.edit.model",
+  modelYear: "vehicle.details.year",
+  chassisNumber: "vehicle.details.chassis",
+  acquisitionDate: "vehicle.details.edit.acquisitionDate",
+  acquisitionAmountMinor: "vehicle.details.edit.acquisitionAmount",
+};
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
+/**
+ * "Plate: LT 123 AB → LT 132 AB", one line per field a details edit moved;
+ * specifications are listed key by key. The read has already left out the
+ * money a viewer may not see.
+ */
+function detailChangeLines(item: VehicleHistoryItem, t: TFunction, locale: string): string | null {
+  const shown = (field: string, kind: string, value: unknown): string => {
+    if (value === null || value === undefined || value === "") return t("vehicle.details.notRecorded");
+    if (kind === "MONEY" && typeof value === "number") return formatMoney(value, { locale });
+    if (field === "acquisitionDate" && typeof value === "string") return formatDate(value, locale);
+    return String(value);
+  };
+  const lines: string[] = [];
+  for (const change of item.changes ?? []) {
+    if (change.field === "customValues") {
+      const before = asRecord(change.before);
+      const after = asRecord(change.after);
+      for (const key of [...new Set([...Object.keys(before), ...Object.keys(after)])]) {
+        if (before[key] === after[key]) continue;
+        lines.push(
+          t("vehicle.history.change", {
+            field: t(`assets.form.custom.${key}`, { defaultValue: key }),
+            before: shown(key, "VALUE", before[key]),
+            after: shown(key, "VALUE", after[key]),
+          }),
+        );
+      }
+      continue;
+    }
+    const label = DETAIL_FIELD_LABEL[change.field];
+    if (label === undefined) continue;
+    lines.push(
+      t("vehicle.history.change", {
+        field: t(label),
+        before: shown(change.field, change.kind, change.before),
+        after: shown(change.field, change.kind, change.after),
+      }),
+    );
+  }
+  return lines.length === 0 ? null : lines.join("\n");
 }

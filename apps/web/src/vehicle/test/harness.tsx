@@ -39,6 +39,11 @@ export interface VehicleScenario {
   width?: number;
   locale?: "en" | "fr-CM";
   asset?: AssetDetail;
+  /**
+   * The vehicle as successive reads find it — the first read gets the first,
+   * the last repeats — for a change made elsewhere between two reads.
+   */
+  assetReads?: AssetDetail[];
   /** HTTP status for the vehicle read, when it should fail. */
   assetStatus?: number;
   /**
@@ -97,6 +102,7 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
     dispatchEvent: () => false,
   }));
   const vehicle = scenario.asset ?? assetFixture();
+  let assetReadCount = 0;
 
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://localhost");
@@ -150,8 +156,11 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
     }
     if (p === "/v1/assets") return json({ items: [], nextCursor: null });
     if (p === `/v1/assets/${ASSET_ID}`) {
+      const reads = scenario.assetReads ?? [];
+      const read = reads.length === 0 ? vehicle : (reads[assetReadCount] ?? reads[reads.length - 1] ?? vehicle);
+      assetReadCount += 1;
       return scenario.assetStatus === undefined
-        ? json(vehicle)
+        ? json(read)
         : json({ error: { code: "REFERENCE_NOT_FOUND" } }, scenario.assetStatus);
     }
     if (p === `/v1/assets/${ASSET_ID}/attention`) {
