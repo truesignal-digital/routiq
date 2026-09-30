@@ -30,6 +30,11 @@ services:
       # variables, so they cannot drift apart.
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-appliance-demo-storage}
       RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-appliance-demo-storage-secret-change-me}
+      # The web app and storage are different origins, so the browser's PUT
+      # needs CORS; without this RustFS answers the preflight with no allow
+      # headers. The presigned URL is the credential, so any origin is safe
+      # for the demo; a real box may narrow it to the app's own origin.
+      RUSTFS_CORS_ALLOWED_ORIGINS: ${S3_CORS_ALLOWED_ORIGINS:-*}
     ports:
       - "9000:9000"
     volumes:

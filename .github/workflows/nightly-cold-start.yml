@@ -138,12 +138,16 @@ jobs:
           expect "GET from storage" "$status" 200
           echo "downloaded $(stat -c %s "$work/downloaded") bytes"
 
-          # Informational only: a browser on another origin also needs CORS
-          # from storage. Printed so a regression is visible, not gated.
-          echo "CORS preflight for PUT from http://localhost:5173:"
-          curl -sS -o /dev/null -D - -X OPTIONS "$upload_url" \
+          # The web app is another origin, so the browser preflights its PUT.
+          status=$(curl -sS -o /dev/null -D "$work/headers" -w '%{http_code}' -X OPTIONS "$upload_url" \
             -H "Origin: http://localhost:5173" -H "Access-Control-Request-Method: PUT" \
-            -H "Access-Control-Request-Headers: content-type" | grep -i -E '^(HTTP|access-control)' || true
+            -H "Access-Control-Request-Headers: content-type")
+          echo "CORS preflight for PUT from http://localhost:5173: HTTP $status"
+          grep -i '^access-control-' "$work/headers" || true
+          if ! grep -qi '^access-control-allow-origin:' "$work/headers"; then
+            echo "storage sent no Access-Control-Allow-Origin, so a browser upload would be blocked"
+            exit 1
+          fi
 
       # --profile appliance, or compose ignores the api service; -a, or an
       # exited api container is hidden.
