@@ -133,7 +133,10 @@ export function ActivityDetailScreen() {
         )}
 
         <ActivityLegs legs={activity.legs} />
-        <ActivityMoney entries={activity.financialEntries} />
+        {/* Null for roles that don't read the books, or with FINANCE off (#103). */}
+        {activity.financialEntries !== null && (
+          <ActivityMoney entries={activity.financialEntries} />
+        )}
       </div>
 
       <ProvenanceStamp

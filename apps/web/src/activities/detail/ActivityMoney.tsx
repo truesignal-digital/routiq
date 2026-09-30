@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatMoney } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
-type Entry = ActivityDetail["financialEntries"][number];
+type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
 
 const STATUS_TONES: Record<Entry["status"], "success" | "warning" | "danger" | "neutral"> =
   {
@@ -52,7 +52,7 @@ export function netToneClass(minor: number): string {
 }
 
 export interface ActivityMoneyProps {
-  entries: ActivityDetail["financialEntries"];
+  entries: readonly Entry[];
 }
 
 export function ActivityMoney({ entries }: ActivityMoneyProps) {

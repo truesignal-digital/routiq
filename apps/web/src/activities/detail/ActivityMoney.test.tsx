@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "../../i18n/index.js";
 
-type Entry = ActivityDetail["financialEntries"][number];
+type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
