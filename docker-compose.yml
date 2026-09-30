@@ -40,7 +40,7 @@ services:
   # After storage is healthy, this creates the bucket if it doesn't exist, then exits.
   # Idempotent: subsequent starts skip creation.
   storage-init:
-    image: amazon/aws-cli:latest
+    image: amazon/aws-cli@sha256:3c0b9f22dbfad1cdbece67701d9ac5a1acf61e71c9283e863dbbf98b5f936fea
     profiles: ["appliance"]
     environment:
       AWS_ACCESS_KEY_ID: ${RUSTFS_ACCESS_KEY:-minioadmin}
@@ -52,9 +52,9 @@ services:
       storage:
         condition: service_healthy
 
-  # One-shot container to bootstrap the appliance (create operator + test workspace).
+  # One-shot container to bootstrap the appliance (run migrations, create operator + test workspace).
   # Only runs if BOOTSTRAP_ADMIN_PIN is set (nightly test, CI, dev).
-  # Idempotent: subsequent starts skip if workspace already exists.
+  # Idempotent: migrations are idempotent; subsequent starts skip workspace provisioning if it exists.
   api-bootstrap:
     build:
       context: .

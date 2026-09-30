@@ -1,5 +1,6 @@
 /**
  * Bootstrap appliance with test workspace for cold-start validation.
+ * Runs migrations first (using owner credentials), then provisions workspace.
  * Used only when BOOTSTRAP_ADMIN_PIN is set (nightly test, CI, dev).
  * 
  * Creates:
@@ -10,7 +11,9 @@
  * Idempotent: subsequent runs skip if workspace already exists.
  */
 import "dotenv/config";
+import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { authDb, db } from "../src/db/client.js";
 import { principals, workspaces } from "../src/db/schema.js";
 import { resolveOperatorContext } from "../src/auth/context.js";
@@ -26,14 +29,22 @@ if (!adminPin) {
 }
 
 try {
-  // Check if workspace already exists
+  // Run migrations first (same as boot.ts does).
+  // Uses authDb (owner credentials) so routiq_app role is created.
+  console.log("Running migrations...");
+  await migrate(authDb, {
+    migrationsFolder: fileURLToPath(new URL("../drizzle", import.meta.url)),
+  });
+  console.log("Migrations complete");
+
+  // Check if workspace already exists (idempotency).
   const existing = await db
     .select()
     .from(workspaces)
     .where(eq(workspaces.slug, "test-appliance"));
   
   if (existing.length > 0) {
-    console.log("Bootstrap workspace already exists, skipping");
+    console.log("Bootstrap workspace already exists, skipping provisioning");
     process.exit(0);
   }
 
