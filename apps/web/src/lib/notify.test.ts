@@ -69,6 +69,16 @@ describe("command notifications", () => {
     });
   });
 
+  it("falls back to the shared warnings catalog for a code no domain words itself", () => {
+    notifyCommandSuccess("maintenance", "assetReleased", ["GROUNDING_ISSUE_STILL_OPEN"]);
+
+    expect(mocks.add).toHaveBeenCalledWith({
+      type: "success",
+      title: "Asset returned to service",
+      description: "Vehicle released, but the issue that grounded it is still open.",
+    });
+  });
+
   it("omits the description when a command reports no warnings", () => {
     notifyCommandSuccess("finance", "locked", []);
 

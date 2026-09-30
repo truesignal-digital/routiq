@@ -170,18 +170,22 @@ function defaultApprovalRules(): Array<
   }
 
   for (const commandType of ["record-expense", "record-revenue"]) {
+    // MAINTENANCE records expenses only, and only against a work order (the
+    // handler enforces that), inside the same band as the field submitter.
+    const bandedRoles =
+      commandType === "record-expense"
+        ? (["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const)
+        : (["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const);
     rules.push(
-      ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const).map(
-        (requiredRole) => ({
-          commandType,
-          categoryCode: null,
-          branchId: null,
-          amountMinMinor: null,
-          amountMaxMinor: 100_000n,
-          requiredRole,
-          createdByCommandId: null,
-        }),
-      ),
+      ...bandedRoles.map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: 100_000n,
+        requiredRole,
+        createdByCommandId: null,
+      })),
     );
     rules.push(
       ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
@@ -252,6 +256,126 @@ function defaultApprovalRules(): Array<
     );
   }
 
+  // The workshop reads the odometer when a truck comes in; the handler has
+  // always accepted the role, and without this rule every such reading 403'd.
+  rules.push({
+    commandType: "record-meter-reading",
+    categoryCode: null,
+    branchId: null,
+    amountMinMinor: null,
+    amountMaxMinor: null,
+    requiredRole: "MAINTENANCE",
+    createdByCommandId: null,
+  });
+
+  // Maintenance commands: issue reporting, work order management, and asset release.
+  // resolve-issue matches report-issue: whoever could report the fault can say
+  // it was fixed on the spot.
+  for (const commandType of ["report-issue", "resolve-issue"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"] as const).map(
+        (requiredRole) => ({
+          commandType,
+          categoryCode: null,
+          branchId: null,
+          amountMinMinor: null,
+          amountMaxMinor: null,
+          requiredRole,
+          createdByCommandId: null,
+        }),
+      ),
+    );
+  }
+
+  for (const commandType of [
+    "create-work-order",
+    "complete-work-order",
+    "cancel-work-order",
+    "dismiss-issue",
+  ]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER", "MAINTENANCE"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  for (const commandType of ["release-asset-to-service"]) {
+    rules.push(
+      ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
+
+  // Attaching a receipt to an existing entry is open to whoever could have
+  // attached it at capture — record-expense's roles, without its amount band:
+  // a file changes no amount, so there is nothing for a threshold to weigh.
+  rules.push(
+    ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const).map(
+      (requiredRole) => ({
+        commandType: "attach-evidence",
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      }),
+    ),
+  );
+
+  // A note is a remark, not a decision: every role that records anything may
+  // write one. EXECUTIVE_VIEWER records nothing, notes included.
+  rules.push(
+    ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE", "FINANCE_APPROVER"] as const).map(
+      (requiredRole) => ({
+        commandType: "add-note",
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      }),
+    ),
+  );
+
+  // The two work-order decisions, on the same footing as approve-entry: what
+  // they resolve is money — the expected spend on creation, the declared actual
+  // cost on closure — so the finance approver is the role that holds them.
+  // No amount bounds, so a workspace that never configures a threshold never
+  // meets a pending work order in the first place.
+  for (const commandType of [
+    "approve-work-order",
+    "reject-work-order",
+    "approve-work-order-closure",
+    "reject-work-order-completion",
+  ]) {
+    rules.push(
+      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
+        commandType,
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      })),
+    );
+  }
   return rules;
 }
 
@@ -332,6 +456,27 @@ export const corePack: {
       profitabilityLayer: "DIRECT",
       evidencePolicy: "NO_RECEIPT_EXPECTED",
     },
+    // Fault types a reporter picks from (#28). `defaultSafetyCritical` only
+    // pre-checks the box; the reporter's confirmed flag is what grounds a
+    // truck. Mirrored for existing workspaces by migration 0027.
+    ...(
+      [
+        ["BRAKES", "Freins", "Brakes", true],
+        ["STEERING", "Direction", "Steering", true],
+        ["TYRES", "Pneumatiques", "Tyres", true],
+        ["LIGHTING", "Éclairage", "Lighting", false],
+        ["ENGINE", "Moteur", "Engine", false],
+        ["BODYWORK", "Carrosserie", "Bodywork", false],
+        ["OTHER", "Autre", "Other", false],
+      ] as const
+    ).map(([code, labelFr, labelEn, defaultSafetyCritical]) => ({
+      kind: "ISSUE_TYPE" as const,
+      code,
+      active: true,
+      labelFr,
+      labelEn,
+      defaultSafetyCritical,
+    })),
   ],
   approvalRules: defaultApprovalRules(),
 };

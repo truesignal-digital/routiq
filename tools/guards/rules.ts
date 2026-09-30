@@ -141,7 +141,7 @@ export const RULES: readonly Rule[] = [
     name: "money-no-cents",
     fix: "XAF has exponent 0: amounts are whole minor units. Format with @routiq/domain (formatXAF).",
     check: linesMatching(
-      /^(?=.*(?:amount|minor|price|cost|total|balance|xaf))(?=.*(?:[/*]\s*100\b|\.toFixed\()).*/i,
+      /\b\w+Minor\s*[/*]\s*100\b|(?:amount|cost|total|balance|price)\w*.*\.toFixed\(2\)/i,
       isProductionSource,
     ),
   },

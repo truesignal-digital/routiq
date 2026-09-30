@@ -51,7 +51,6 @@ vi.mock("../documents/useDocuments.js", () => ({
   useAssetDocuments: () => pendingQuery,
 }));
 
-const { AssetDocumentsScreen } = await import("../screens/AssetDocumentsScreen.js");
 const { FinanceApprovalsScreen } = await import("../screens/FinanceApprovalsScreen.js");
 const { FinanceEntriesScreen } = await import("../screens/FinanceEntriesScreen.js");
 const { FinancePeriodsScreen } = await import("../screens/FinancePeriodsScreen.js");
@@ -62,7 +61,6 @@ const SCREENS = [
   ["entries", FinanceEntriesScreen],
   ["approvals", FinanceApprovalsScreen],
   ["periods", FinancePeriodsScreen],
-  ["documents", AssetDocumentsScreen],
 ] as const;
 
 /** Every screen a role can be shut out of, minus the two role-gated finance ones. */

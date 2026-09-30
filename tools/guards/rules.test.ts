@@ -51,13 +51,19 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
   },
   {
     id: "A18",
-    bad: [file("apps/api/src/commands/x.test.ts", 'url: "/v1/commands",')],
+    bad: [file("apps/api/src/commands/x.test.ts", 'fetch("/v1/commands", { method: "POST" })')],
     good: [file("apps/api/src/commands/x.test.ts", 'url: "/v1/commands/register-asset",')],
   },
   {
     id: "A24",
     bad: [file("apps/web/src/x.ts", "const xaf = amountMinor / 100;")],
-    good: [file("apps/web/src/x.ts", "const left = (offset / span) * 100;")],
+    good: [
+      file("apps/web/src/x.ts", "const left = (offset / span) * 100;"),
+      // Percentages should not flag
+      file("apps/web/src/vehicle/tabs/MaintenanceTab.tsx", "percent: Math.round(((wo.actualCostMinor - wo.expectedCostMinor) / wo.expectedCostMinor) * 100),"),
+      file("apps/web/src/vehicle/tabs/MoneyTab.tsx", "{Math.round((category.expenseMinor / Math.max(1, total)) * 100)}%"),
+      file("apps/web/src/vehicle/tabs/MoneyTab.tsx", "style={{ width: `${Math.max(0, (category.expenseMinor / max) * 100)}%` }}"),
+    ],
   },
   {
     id: "A33a",
