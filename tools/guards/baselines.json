@@ -17,5 +17,27 @@
     "apps/web/src/screens/ActivitySheetScreen.tsx": 4,
     "apps/web/src/screens/AssetRegisterScreen.tsx": 1,
     "apps/web/src/vehicle/forms/LogFuelForm.tsx": 1
+  },
+  "A18": {
+    "apps/api/src/artifacts/artifacts.test.ts": 2,
+    "apps/api/src/auth/auth.test.ts": 1,
+    "apps/api/src/commands/approvals.test.ts": 1,
+    "apps/api/src/commands/branch-authorization.test.ts": 1,
+    "apps/api/src/commands/documents.test.ts": 1,
+    "apps/api/src/commands/entry-decisions.test.ts": 1,
+    "apps/api/src/commands/lifecycle.test.ts": 2,
+    "apps/api/src/commands/modules.test.ts": 1,
+    "apps/api/src/commands/period-commands.test.ts": 1,
+    "apps/api/src/commands/pipeline.test.ts": 2,
+    "apps/api/src/commands/preset-enforcement.test.ts": 2,
+    "apps/api/src/commands/provision-workspace.test.ts": 1,
+    "apps/api/src/commands/receipts.test.ts": 4,
+    "apps/api/src/commands/record-expense.test.ts": 1,
+    "apps/api/src/commands/record-revenue.test.ts": 1,
+    "apps/api/src/commands/reverse-entry.test.ts": 1,
+    "apps/api/src/commands/routes.test.ts": 2,
+    "apps/api/src/commands/update-approval-threshold.test.ts": 1,
+    "apps/api/src/observability/sentry.test.ts": 5,
+    "apps/api/src/test/seed.ts": 1
   }
 }
