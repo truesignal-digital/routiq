@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { recordExpensePayload } from "@routiq/contracts";
+import {
+  recordExpensePayload,
+  updatePendingEntryPayload,
+  type FinancialEntryDetail,
+} from "@routiq/contracts";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -282,5 +286,166 @@ describe("entry decisions on a record panel", () => {
     expect(payload.originalEntryId).toBe(ENTRY_ID);
     expect(onReversed).toHaveBeenCalledWith(payload.reversalEntryId);
     expect(client.seen[0]!.envelope.expectedVersion).toBe(3);
+  });
+});
+
+describe("RecordEntryForm editing the author's pending entry", () => {
+  const BRANCH_ID = "00000000-0000-4000-8000-000000000070";
+  const AUTHOR_ID = "00000000-0000-4000-8000-000000000080";
+
+  const pending: FinancialEntryDetail = {
+    id: ENTRY_ID,
+    entryNumber: "DLA-2026-00012",
+    direction: "EXPENSE",
+    status: "SUBMITTED",
+    category: { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs", layer: "DIRECT" },
+    amountMinor: 45_000,
+    currency: "XAF",
+    economicDate: "2026-09-12",
+    postingPeriodCode: null,
+    isLatePosting: false,
+    branchId: BRANCH_ID,
+    counterpartyName: "Garage Tchinda",
+    paymentMethod: "MOMO",
+    estimateStatus: "ACTUAL",
+    postedAt: null,
+    rowVersion: 4,
+    reversesEntryId: null,
+    recordedBy: { principalId: AUTHOR_ID, displayName: "Amina", scope: "WORKSPACE" },
+    evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 },
+    assetShareMinor: null,
+    assetLinks: null,
+    description: "Plaquettes de frein",
+    paymentReference: "MP-778",
+    sourceReference: null,
+    rejectedReason: null,
+    reversedByEntryId: null,
+    postings: [
+      {
+        lineNo: 1,
+        amountMinor: 45_000,
+        assetId: ASSET_ID,
+        assetCode: "DLA-T-001",
+        assetAttribution: "DIRECT",
+        activityId: null,
+        workOrderId: WORK_ORDER_ID,
+        category: { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs" },
+      },
+    ],
+    evidenceFiles: [],
+  };
+
+  const submitted: SubmitResult = {
+    ok: true,
+    outcome: {
+      commandId: "c2",
+      recordId: ENTRY_ID,
+      rowVersion: 5,
+      recordStatus: "SUBMITTED",
+      warnings: [],
+      idempotentReplay: false,
+    },
+  };
+
+  beforeEach(() => {
+    mocks.useAssetRegistrationReference.mockReturnValue({
+      data: {
+        assetClasses: [],
+        branches: [
+          { id: BRANCH_ID, code: "DLA", name: "Douala" },
+          { id: "00000000-0000-4000-8000-000000000071", code: "YDE", name: "Yaoundé" },
+        ],
+      },
+      isPending: false,
+      isError: false,
+    });
+  });
+
+  function openEdit(client: CommandClient, onRecorded = vi.fn()) {
+    inPanel(
+      <RecordEntryForm
+        surface="panel"
+        editing={pending}
+        pinnedAssetId={ASSET_ID}
+        pinnedAssetLabel="DLA-T-001"
+        client={client}
+        onRecorded={onRecorded}
+        onDismiss={vi.fn()}
+      />,
+    );
+    return screen.getByRole("dialog", { name: "Edit entry DLA-2026-00012" });
+  }
+
+  it("opens pre-filled with what the author recorded", () => {
+    const panel = openEdit(recordingClient(submitted));
+
+    expect((within(panel).getByLabelText("Amount (XAF)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
+    expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
+    expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("2026-09-12");
+    expect((within(panel).getByLabelText("Counterparty (optional)") as HTMLInputElement).value).toBe(
+      "Garage Tchinda",
+    );
+    expect((within(panel).getByLabelText("Description (optional)") as HTMLTextAreaElement).value).toBe(
+      "Plaquettes de frein",
+    );
+    expect((within(panel).getByLabelText("Payment reference (optional)") as HTMLInputElement).value).toBe(
+      "MP-778",
+    );
+    // Direction and branch stay as recorded; files go through "attach a receipt".
+    expect(within(panel).queryByRole("tablist")).toBeNull();
+    expect(within(panel).queryByRole("combobox", { name: "Branch" })).toBeNull();
+    expect(within(panel).getByText("Douala (DLA)")).toBeTruthy();
+    expect(within(panel).queryByText("Evidence (optional)")).toBeNull();
+  });
+
+  it("saves the new amount with update-pending-entry at the version shown, keeping the line's links", async () => {
+    const client = recordingClient(submitted);
+    const onRecorded = vi.fn();
+    const panel = openEdit(client, onRecorded);
+
+    const amount = within(panel).getByLabelText("Amount (XAF)");
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "54000");
+    await userEvent.click(within(panel).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(onRecorded).toHaveBeenCalledOnce());
+    expect(client.seen[0]!.name).toBe("update-pending-entry");
+    expect(client.seen[0]!.envelope.expectedVersion).toBe(4);
+    const payload = updatePendingEntryPayload.parse(client.seen[0]!.payload);
+    expect(payload).toMatchObject({
+      entryId: ENTRY_ID,
+      categoryCode: "REPAIRS",
+      amountMinor: 54_000,
+      paymentMethod: "MOMO",
+      paymentReference: "MP-778",
+      economicDate: "2026-09-12",
+    });
+    expect(payload.postings).toEqual([
+      { assetId: ASSET_ID, workOrderId: WORK_ORDER_ID, amountMinor: 54_000, assetAttribution: "DIRECT" },
+    ]);
+    expect(mocks.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "success", title: "Entry updated, still awaiting approval" }),
+    );
+  });
+
+  it("says the entry was decided meanwhile when an approver acted first", async () => {
+    const client = recordingClient({ ok: false, code: "VERSION_CONFLICT" });
+    const onRecorded = vi.fn();
+    const panel = openEdit(client, onRecorded);
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(within(panel).getByText("This entry has already been decided")).toBeTruthy());
+    expect(onRecorded).not.toHaveBeenCalled();
+    expect(within(panel).queryByRole("button", { name: "Save changes" })).toBeNull();
+  });
+
+  it("reads a refusal for status the same way", async () => {
+    const panel = openEdit(recordingClient({ ok: false, code: "INVALID_STATE_TRANSITION" }));
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(within(panel).getByText("This entry has already been decided")).toBeTruthy());
   });
 });

@@ -2,7 +2,7 @@ import "dotenv/config";
 import { DOCUMENT_EXPIRING_WINDOW_DAYS, type Role } from "@routiq/contracts";
 import type { CommandOutcome } from "../src/commands/dispatcher.js";
 import type { AuthContext } from "../src/auth/types.js";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { resolveAuthContext } from "../src/auth/context.js";
 import { authDb, authPool, db, pool } from "../src/db/client.js";
 import * as schema from "../src/db/schema.js";
@@ -211,9 +211,25 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
 
     // Child tables first. The explicit list mirrors every workspace-scoped
     // export in src/db/schema.ts so a reset does not depend on FK cascades.
+    // Posted lines are append-only for every role (0034): one trigger refuses
+    // the delete, and the deferred balance check would fail at COMMIT once the
+    // entry is gone too. Only the table owner may switch them off, and only
+    // inside this transaction: they are back on before it commits, so no other
+    // session ever sees them disabled, and the lock ALTER TABLE takes keeps
+    // other writers out of financial_postings until then.
+    await tx.execute(sql`
+      ALTER TABLE financial_postings
+        DISABLE TRIGGER financial_postings_pending_delete,
+        DISABLE TRIGGER financial_postings_balance_on_delete
+    `);
     await tx
       .delete(schema.financialPostings)
       .where(eq(schema.financialPostings.workspaceId, workspace.id));
+    await tx.execute(sql`
+      ALTER TABLE financial_postings
+        ENABLE TRIGGER financial_postings_pending_delete,
+        ENABLE TRIGGER financial_postings_balance_on_delete
+    `);
     await tx
       .delete(schema.notes)
       .where(eq(schema.notes.workspaceId, workspace.id));
@@ -411,12 +427,12 @@ async function runCommand(
   context: AuthContext,
   operation: string,
   payload: unknown,
-  options: { expectedVersion?: number; clientOccurredAt?: string } = {},
+  options: { expectedVersion?: number; clientOccurredAt?: string; version?: number } = {},
 ): Promise<CommandOutcome | undefined> {
   const name = operation.split(":", 1)[0]!;
   const result = await dispatchCommand(db, context, {
     name,
-    version: 1,
+    version: options.version ?? 1,
     envelope: {
       commandId: commandId(operation),
       idempotencyKey: idempotencyKey(operation),
@@ -601,7 +617,8 @@ async function vehicleSummary(assetId: string, today: string) {
       description: schema.workOrders.description,
       status: schema.workOrders.status,
       expectedCostMinor: schema.workOrders.expectedCostMinor,
-      actualCostMinor: schema.workOrders.actualCostMinor,
+      declaredCostMinor: schema.workOrders.declaredCostMinor,
+      costOutcome: schema.workOrders.costOutcome,
     })
     .from(schema.workOrders)
     .where(and(eq(schema.workOrders.workspaceId, ws), eq(schema.workOrders.assetId, assetId)));
@@ -675,7 +692,8 @@ async function vehicleSummary(assetId: string, today: string) {
       description: order.description,
       status: order.status,
       expectedCostMinor: order.expectedCostMinor?.toString() ?? null,
-      actualCostMinor: order.actualCostMinor?.toString() ?? null,
+      declaredCostMinor: order.declaredCostMinor?.toString() ?? null,
+      costOutcome: order.costOutcome,
       costLines: costLines
         .filter((line) => line.workOrderId === order.id)
         .map((line) => ({ amountMinor: line.amountMinor.toString(), status: line.status })),
@@ -1238,10 +1256,13 @@ try {
     "complete-work-order:VH001:air-conditioning",
     {
       workOrderId: ids.vh001AirConOrder,
-      actualCostMinor: 85_000,
+      // The A/C cost is already in the books (the entry above): the close
+      // declares it covered and adds no line (#81).
+      costOutcome: "LINES",
       summary: "Recharged the A/C; no leak found",
     },
     {
+      version: 2,
       expectedVersion: await workOrderRowVersion(ids.vh001AirConOrder),
       clientOccurredAt: at(-30, "16:30"),
     },

@@ -225,6 +225,34 @@
       "when": 1790461577099,
       "tag": "0031_postings_balance",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790775400376,
+      "tag": "0032_work_order_cost_outcome",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790775400782,
+      "tag": "0033_drop_work_order_actual_cost",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790776416375,
+      "tag": "0034_edit_pending_entry",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790777080332,
+      "tag": "0035_update_asset_details_command_defaults",
+      "breakpoints": true
     }
   ]
 }

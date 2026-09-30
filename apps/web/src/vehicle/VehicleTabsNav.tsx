@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useVehicle, type VehicleGates } from "./context.js";
 import { tabMarkers } from "./flow.js";
 
-export const VEHICLE_TABS = ["now", "maintenance", "money", "trips", "documents", "history"] as const;
+export const VEHICLE_TABS = ["now", "maintenance", "money", "trips", "documents", "history", "details"] as const;
 export type VehicleTab = (typeof VEHICLE_TABS)[number];
 
 const SEGMENT: Record<VehicleTab, string> = {
@@ -15,6 +15,7 @@ const SEGMENT: Record<VehicleTab, string> = {
   trips: "trips",
   documents: "documents",
   history: "history",
+  details: "details",
 };
 
 const GATE: Partial<Record<VehicleTab, keyof VehicleGates>> = {

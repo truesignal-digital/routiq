@@ -359,3 +359,24 @@ describe("activity detail — a sparse open journey", () => {
     expect((net?.textContent ?? "").replace(/[^\d+-]/g, "")).toBe("0");
   });
 });
+
+describe("activity detail — a reader the server keeps the ledger from (#103)", () => {
+  beforeEach(() => {
+    mocks.useActivity.mockReturnValue({
+      data: { ...fullHaulage(), financialEntries: null },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+  });
+
+  it("shows the trip without its money section or net", () => {
+    renderScreen();
+
+    expect(screen.getByRole("heading", { name: "DLA-2026-00042" })).toBeTruthy();
+    expect(sectionTitles()).toEqual(["Planned vs actual", "Assets and crew", "Legs"]);
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.queryByRole("link", { name: /FIN-2026-0001/ })).toBeNull();
+    expect(screen.getByText("Legs", { selector: "dt" })).toBeTruthy();
+  });
+});

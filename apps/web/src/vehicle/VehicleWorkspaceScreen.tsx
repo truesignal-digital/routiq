@@ -16,7 +16,6 @@ import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { actionAvailability, actionDef, actionPermitted, type VehicleFacts } from "./actions.js";
 import { AllActionsSheet } from "./AllActionsSheet.js";
 import { VehicleCtx, type PanelControls, type PanelForm, type VehicleContextValue } from "./context.js";
-import { DetailsCard } from "./header/DetailsCard.js";
 import { FactsLine } from "./header/FactsLine.js";
 import { IdentityStrip } from "./header/IdentityStrip.js";
 import { StatusBlock } from "./header/StatusBlock.js";
@@ -96,7 +95,6 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
   const panel = usePanelControls();
   const refresh = useVehicleRefresh(asset.id);
   const [allOpen, setAllOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const availability = (key: VehicleActionKey) => actionAvailability(key, facts, viewer);
 
@@ -149,11 +147,10 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
     <VehicleCtx.Provider value={value}>
       <PageContainer width="wide" className="pb-48 md:pb-28">
         <header className="space-y-2.5">
-          <IdentityStrip detailsOpen={detailsOpen} onToggleDetails={() => setDetailsOpen((o) => !o)} />
+          <IdentityStrip />
           <OtherBranchNotice branchCode={asset.branch.code} />
           <StatusBlock />
-          <FactsLine open={detailsOpen} onToggle={() => setDetailsOpen((o) => !o)} />
-          {detailsOpen && <DetailsCard />}
+          <FactsLine />
         </header>
         <VehicleTabsNav />
         <div className="mt-5">

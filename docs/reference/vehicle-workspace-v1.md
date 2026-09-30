@@ -149,7 +149,7 @@ Served on `feat/maintenance-on-develop`:
 | `GET /v1/finance/approvals` | FINANCE; FINANCE_READER_ROLES only | None. |
 | `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` | FINANCE; FINANCE_READER_ROLES, or MAINTENANCE on an entry whose every posting names a work order; entry in the caller's branches | None. |
 
-Commands served for the workspace: `add-note.v1`, `attach-evidence.v1`, custodian changes through `assign-asset` (`custodianMembershipId`), and the maintenance commands listed in ARCHITECTURE §5.1. Migrations 0025 to 0029 on the branch add the maintenance tables (issues, work orders, availability intervals and the work-order column on postings), their approval defaults, the state machines, notes and the attach-evidence defaults. No stored balance, monthly total, vehicle ledger, availability flag or location field was added.
+Commands served for the workspace: `add-note.v1`, `attach-evidence.v1`, `update-asset-details.v1` (the Details tab's edit mode, #84), custodian changes through `assign-asset` (`custodianMembershipId`), and the maintenance commands listed in ARCHITECTURE §5.1. Migrations 0025 to 0029 on the branch add the maintenance tables (issues, work orders, availability intervals and the work-order column on postings), their approval defaults, the state machines, notes and the attach-evidence defaults. No stored balance, monthly total, vehicle ledger, availability flag or location field was added.
 
 Still **Planned**:
 

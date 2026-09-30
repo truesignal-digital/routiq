@@ -47,6 +47,66 @@ export function formatMoney(
   return normalizeMoneySpacing(formatted);
 }
 
+const plainSpaces = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
+
+/**
+ * A whole amount laid out the way `formatMoney` shows it, taken apart: the
+ * grouped figure and the currency symbol, and which comes first. An amount
+ * input uses it to look exactly like the figure it edits.
+ */
+export function moneyAmountParts(
+  minor: number | null,
+  options: { currency?: string; locale?: string | undefined } = {},
+): { amount: string; symbol: string; symbolFirst: boolean } {
+  const currency = options.currency ?? "XAF";
+  const parts = new Intl.NumberFormat(options.locale ?? i18n.resolvedLanguage, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).formatToParts(minor ?? 0);
+  const symbolAt = parts.findIndex((part) => part.type === "currency");
+  const integerAt = parts.findIndex((part) => part.type === "integer");
+  return {
+    amount:
+      minor === null
+        ? ""
+        : plainSpaces(
+            parts
+              .filter((part) => part.type === "integer" || part.type === "group")
+              .map((part) => part.value)
+              .join(""),
+          ),
+    symbol: parts[symbolAt]?.value ?? currency,
+    symbolFirst: symbolAt !== -1 && symbolAt < integerAt,
+  };
+}
+
+export type WholeAmount =
+  | { kind: "empty" }
+  | { kind: "invalid" }
+  | { kind: "amount"; minor: number };
+
+/**
+ * A typed amount in whole units (XAF has exponent 0), in the reader's
+ * grouping: "45,000,000" in English, "45 000 000" in French, where
+ * "45.000.000" is also how people write it. A decimal part is invalid, never
+ * rounded away.
+ */
+export function parseWholeAmount(text: string, locale?: string): WholeAmount {
+  const trimmed = plainSpaces(text).trim();
+  if (trimmed === "") return { kind: "empty" };
+  const resolved = locale ?? i18n.resolvedLanguage;
+  const group = plainSpaces(
+    new Intl.NumberFormat(resolved).formatToParts(1_000_000).find((part) => part.type === "group")?.value ?? ",",
+  );
+  let digits = trimmed.replace(/ /g, "");
+  if (group.trim() !== "") digits = digits.split(group).join("");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(digits)) digits = digits.replace(/\./g, "");
+  if (!/^\d+$/.test(digits)) return { kind: "invalid" };
+  const minor = Number(digits);
+  return Number.isSafeInteger(minor) ? { kind: "amount", minor } : { kind: "invalid" };
+}
+
 function toDate(value: string | Date | null | undefined): Date | null {
   if (value == null) return null;
   const date = value instanceof Date ? value : new Date(value);

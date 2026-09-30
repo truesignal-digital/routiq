@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Eye, LayoutGrid, Truck } from "lucide-react";
+import { Eye, LayoutGrid, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { actionDef, headerActions } from "../actions.js";
 import { useVehicle } from "../context.js";
 import { Sep } from "../parts.js";
@@ -22,13 +21,7 @@ export function Plate({ plate }: { plate: string | null }) {
 }
 
 /** Code, name, plate and home branch on one line; the role's own buttons beside them. */
-export function IdentityStrip({
-  detailsOpen,
-  onToggleDetails,
-}: {
-  detailsOpen: boolean;
-  onToggleDetails: () => void;
-}) {
+export function IdentityStrip() {
   const { t } = useTranslation();
   const { asset } = useVehicle();
   const name = makeAndModel(asset);
@@ -66,16 +59,6 @@ export function IdentityStrip({
         </p>
       </div>
       <HeaderActions />
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-9 shrink-0 text-muted-foreground md:hidden"
-        aria-expanded={detailsOpen}
-        onClick={onToggleDetails}
-      >
-        {t("vehicle.header.details")}
-        <ChevronDown className={cn("transition-transform", detailsOpen && "rotate-180")} aria-hidden />
-      </Button>
     </div>
   );
 }

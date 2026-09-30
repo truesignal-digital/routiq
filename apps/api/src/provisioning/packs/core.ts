@@ -306,7 +306,9 @@ function defaultApprovalRules(): Array<
     );
   }
 
-  for (const commandType of ["release-asset-to-service"]) {
+  // Editing what a vehicle is (update-asset-details) follows register-asset:
+  // the fleet managers.
+  for (const commandType of ["release-asset-to-service", "update-asset-details"]) {
     rules.push(
       ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
         commandType,
@@ -327,6 +329,24 @@ function defaultApprovalRules(): Array<
     ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const).map(
       (requiredRole) => ({
         commandType: "attach-evidence",
+        categoryCode: null,
+        branchId: null,
+        amountMinMinor: null,
+        amountMaxMinor: null,
+        requiredRole,
+        createdByCommandId: null,
+      }),
+    ),
+  );
+
+  // The author's edit of their own pending entry (#85): record-expense's roles,
+  // with no band of its own. The band that decides the edited entry is
+  // record-expense's or record-revenue's, which the handler re-reads for the
+  // new amount, so a tenant's threshold is set in one place.
+  rules.push(
+    ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const).map(
+      (requiredRole) => ({
+        commandType: "update-pending-entry",
         categoryCode: null,
         branchId: null,
         amountMinMinor: null,

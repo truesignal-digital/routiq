@@ -256,7 +256,8 @@ export const rejectWorkOrderCompletion: CommandDefinition<RejectWorkOrderComplet
       );
       const rowVersion = await writeStatus(tx, ctx, workOrder, {
         status: "APPROVED",
-        actualCostMinor: null,
+        declaredCostMinor: null,
+        costOutcome: null,
         summary: null,
         resolveLinkedIssue: false,
         completedAt: null,
@@ -269,7 +270,8 @@ export const rejectWorkOrderCompletion: CommandDefinition<RejectWorkOrderComplet
         entityId: workOrder.id,
         beforeState: {
           status: "COMPLETION_SUBMITTED",
-          actualCostMinor: workOrder.actualCostMinor?.toString() ?? null,
+          declaredCostMinor: workOrder.declaredCostMinor?.toString() ?? null,
+          costOutcome: workOrder.costOutcome,
           summary: workOrder.summary,
           resolveLinkedIssue: workOrder.resolveLinkedIssue,
           completedAt: workOrder.completedAt?.toISOString() ?? null,
@@ -278,7 +280,8 @@ export const rejectWorkOrderCompletion: CommandDefinition<RejectWorkOrderComplet
         },
         afterState: {
           status: "APPROVED",
-          actualCostMinor: null,
+          declaredCostMinor: null,
+          costOutcome: null,
           summary: null,
           resolveLinkedIssue: false,
           completedAt: null,
@@ -287,7 +290,8 @@ export const rejectWorkOrderCompletion: CommandDefinition<RejectWorkOrderComplet
         },
         changedFields: [
           "status",
-          "actualCostMinor",
+          "declaredCostMinor",
+          "costOutcome",
           "summary",
           "resolveLinkedIssue",
           "completedAt",

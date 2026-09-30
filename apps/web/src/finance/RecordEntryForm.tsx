@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { CommandResult } from "@routiq/contracts";
+import type { CommandResult, FinancialEntryDetail } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -47,6 +47,7 @@ import {
   parseMoneyXaf,
   toRecordExpensePayload,
   toRecordRevenuePayload,
+  toUpdatePendingEntryPayload,
   type FinanceFormState,
 } from "./model.js";
 
@@ -78,9 +79,30 @@ export interface RecordEntryFormProps {
    */
   onRecorded: (outcome: CommandResult, branchCode: string) => void;
   onDismiss?: (() => void) | undefined;
+  /**
+   * The author's own pending entry (#85): the same form, pre-filled, saving
+   * with update-pending-entry at the version shown. Direction and branch stay
+   * as recorded, files go through "attach a receipt", and the host offers
+   * this only for a single-line entry, which is all this form writes.
+   */
+  editing?: FinancialEntryDetail | undefined;
 }
 
 type RecordPayload = ReturnType<typeof toRecordExpensePayload>;
+type UpdatePayload = ReturnType<typeof toUpdatePendingEntryPayload>;
+
+/** What an entry's single line is attributed to besides the vehicle. */
+function lineLink(entry: FinancialEntryDetail): EntryLink | undefined {
+  const line = entry.postings[0];
+  if (line?.workOrderId) return { workOrderId: line.workOrderId };
+  if (line?.activityId) return { activityId: line.activityId };
+  return undefined;
+}
+
+/** An approver who acted first moves the version or the status: both mean "decided". */
+function editErrorCode(code: string): string {
+  return code === "INVALID_STATE_TRANSITION" ? "VERSION_CONFLICT" : code;
+}
 
 const PAYMENT_METHODS = ["CASH", "MOMO", "OM", "BANK", "OTHER"] as const;
 
@@ -122,12 +144,16 @@ export function RecordEntryForm({
   back,
   onRecorded,
   onDismiss,
+  editing,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
-  const [entryId] = useState(() => crypto.randomUUID());
+  const [entryId] = useState(() => editing?.id ?? crypto.randomUUID());
   // Created on first submit, not on render: cancelling opens no intent.
   const intentExpenseRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
   const intentRevenueRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
+  const intentUpdateRef = useRef<CommandIntent<UpdatePayload> | undefined>(undefined);
+  const entryLink = editing === undefined ? link : lineLink(editing);
+  const directionLocked = lockDirection || editing !== undefined;
   const reference = useAssetRegistrationReference();
   const branches = reference.data?.branches ?? [];
   const createdElsewhereNotice = useCreatedElsewhereNotice();
@@ -136,7 +162,8 @@ export function RecordEntryForm({
     () =>
       z.object({
         direction: z.enum(["EXPENSE", "REVENUE"]),
-        branchCode: z.string().min(1, t("form.errors.required")),
+        // An edit keeps the branch it was recorded in and never sends one.
+        branchCode: editing === undefined ? z.string().min(1, t("form.errors.required")) : z.string(),
         categoryCode: z.string().min(1, t("form.errors.required")),
         amountInput: z.string().refine(
           (value) => {
@@ -152,25 +179,39 @@ export function RecordEntryForm({
         paymentReference: z.string(),
         assetId: z.string(),
       }),
-    [t],
+    [t, editing],
   );
   const form = useForm<RecordFormValues>({
     resolver: zodResolver(formSchema),
     // Validate as the user edits, matching the eager `shouldValidate` the
     // hand-wired setValue calls used to pass.
     mode: "onChange",
-    defaultValues: {
-      direction: initialDirection,
-      branchCode: defaultBranchCode ?? "",
-      categoryCode: defaultCategoryCode ?? "",
-      amountInput: "",
-      paymentMethod: "CASH",
-      economicDate: new Date().toISOString().split("T")[0]!,
-      counterpartyName: "",
-      description: "",
-      paymentReference: "",
-      assetId: pinnedAssetId ?? "",
-    },
+    defaultValues:
+      editing === undefined
+        ? {
+            direction: initialDirection,
+            branchCode: defaultBranchCode ?? "",
+            categoryCode: defaultCategoryCode ?? "",
+            amountInput: "",
+            paymentMethod: "CASH",
+            economicDate: new Date().toISOString().split("T")[0]!,
+            counterpartyName: "",
+            description: "",
+            paymentReference: "",
+            assetId: pinnedAssetId ?? "",
+          }
+        : {
+            direction: editing.direction,
+            branchCode: "",
+            categoryCode: editing.category.code,
+            amountInput: String(editing.amountMinor),
+            paymentMethod: editing.paymentMethod,
+            economicDate: editing.economicDate,
+            counterpartyName: editing.counterpartyName ?? "",
+            description: editing.description ?? "",
+            paymentReference: editing.paymentReference ?? "",
+            assetId: editing.postings[0]?.assetId ?? pinnedAssetId ?? "",
+          },
   });
   const direction = form.watch("direction");
   const branchCode = form.watch("branchCode");
@@ -191,19 +232,22 @@ export function RecordEntryForm({
   const [attachmentsUploading, setAttachmentsUploading] = useState(false);
 
   // A branch the host named stands; only an open form follows the shell.
+  const followsShell = defaultBranchCode === undefined && editing === undefined;
   useFollowShellBranch(
-    defaultBranchCode === undefined ? branches : [],
+    followsShell ? branches : [],
     branchCode,
     (code) => {
-      if (defaultBranchCode === undefined) {
+      if (followsShell) {
         form.setValue("branchCode", code, { shouldValidate: true });
       }
     },
   );
+  const editedBranch =
+    editing === undefined ? undefined : branches.find((branch) => branch.id === editing.branchId);
 
   const amountMinor = parseMoneyXaf(amountInput);
   const isValid = Boolean(
-    branchCode &&
+    (branchCode || editing !== undefined) &&
       categoryCode &&
       amountMinor !== null &&
       amountMinor > 0 &&
@@ -227,8 +271,31 @@ export function RecordEntryForm({
       ...(values.description ? { description: values.description } : {}),
       ...(values.paymentReference ? { paymentReference: values.paymentReference } : {}),
       ...(values.assetId ? { assetId: values.assetId } : {}),
-      ...link,
+      ...entryLink,
     };
+
+    if (editing !== undefined) {
+      intentUpdateRef.current ??= createCommandIntent<UpdatePayload>(
+        client,
+        "update-pending-entry",
+        1,
+      );
+      const result = await intentUpdateRef.current.submit(
+        toUpdatePendingEntryPayload(financeForm),
+        { expectedVersion: editing.rowVersion },
+      );
+      if (!result.ok) {
+        setErrorCode(editErrorCode(result.code));
+        return;
+      }
+      notifyCommandSuccess(
+        "finance",
+        result.outcome.recordStatus === "POSTED" ? "updatedPosted" : "updated",
+        result.outcome.warnings,
+      );
+      onRecorded(result.outcome, editedBranch?.code ?? "");
+      return;
+    }
 
     const payload =
       values.direction === "EXPENSE"
@@ -264,7 +331,9 @@ export function RecordEntryForm({
     onRecorded(result.outcome, values.branchCode);
   }
 
-  const title = !lockDirection
+  const title = editing !== undefined
+    ? t("finance.edit.title", { number: editing.entryNumber })
+    : !lockDirection
     ? t("finance.record.title")
     : direction === "EXPENSE"
       ? t("finance.record.expenseTitle")
@@ -279,14 +348,25 @@ export function RecordEntryForm({
       <CommandForm
         {...chrome}
         error={errorCode}
-        submitLabel={t("finance.record.submit")}
-        submittingLabel={t("finance.record.submitting")}
+        {...(editing === undefined
+          ? {}
+          : {
+              description: t("finance.edit.description"),
+              conflict: {
+                title: t("finance.edit.decidedTitle"),
+                body: t("finance.edit.decidedBody"),
+              },
+            })}
+        submitLabel={t(editing === undefined ? "finance.record.submit" : "finance.edit.submit")}
+        submittingLabel={t(
+          editing === undefined ? "finance.record.submitting" : "finance.edit.submitting",
+        )}
         ready={isValid && !attachmentsUploading}
         submitting={form.formState.isSubmitting}
         onSubmit={() => void form.handleSubmit(onValid)()}
         onDismiss={onDismiss ?? (() => {})}
       >
-        {!lockDirection && (
+        {!directionLocked && (
           <FormField
             control={form.control}
             name="direction"
@@ -324,6 +404,16 @@ export function RecordEntryForm({
           <PinnedAssetField assetId={pinnedAssetId} label={pinnedAssetLabel} />
         )}
 
+        {editing !== undefined ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium">{t("finance.record.branchLabel")}</span>
+            <p className="text-sm text-muted-foreground">
+              {editedBranch === undefined
+                ? t("finance.edit.branchUnknown")
+                : `${editedBranch.name} (${editedBranch.code})`}
+            </p>
+          </div>
+        ) : (
         <FormField
           control={form.control}
           name="branchCode"
@@ -357,6 +447,7 @@ export function RecordEntryForm({
             </FormItem>
           )}
         />
+        )}
 
         <FormField
           control={form.control}
@@ -546,16 +637,18 @@ export function RecordEntryForm({
           />
         )}
 
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">
-            {t("finance.record.evidenceLabel")}
-          </span>
-          <FileUpload
-            accept="image/*"
-            onChange={setArtifactIds}
-            onUploadingChange={setAttachmentsUploading}
-          />
-        </div>
+        {editing === undefined && (
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium">
+              {t("finance.record.evidenceLabel")}
+            </span>
+            <FileUpload
+              accept="image/*"
+              onChange={setArtifactIds}
+              onUploadingChange={setAttachmentsUploading}
+            />
+          </div>
+        )}
       </CommandForm>
     </Form>
   );

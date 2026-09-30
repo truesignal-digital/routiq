@@ -243,12 +243,14 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | Command | Approval default |
 |---|---|
 | RegisterAsset / CommissionAsset | Auto (asset manager permission) |
+| UpdateAssetDetails | Auto (ADMIN, OPS_MANAGER). ADR-0008 level 1: a plain edit of plate, make, model, year, chassis, acquisition and template specifications, with before/after on the audit event. `expectedVersion` required; the acquisition amount only from ledger readers with FINANCE on; refused on SOLD/RETIRED/WRITTEN_OFF; never queued. Fleet code and class stay fixed |
 | AssignAsset (branch/custodian) | Auto; cross-branch transfer → 1 approval. A custodian must be an active member whose branch scope covers the vehicle's branch (`CUSTODIAN_INELIGIBLE`) |
 | **RecordJourneySheet** / **RecordHaulageJobSheet** | Auto — composite: one form emits activity + segments + crew + legs + readings atomically |
 | CreateActivity / RecordMovementLeg / SubstituteAsset | Auto (granular fallbacks for corrections) |
 | CloseActivity | Auto; sets completeness state, warnings not blocks |
 | ReopenActivity | 1 approval |
 | RecordRevenue / RecordExpense | **Auto-post below threshold; approval above** (thresholds per category/branch, tenant-editable) |
+| UpdatePendingEntry | The entry's **author only**, while it is SUBMITTED, at `expectedVersion` (#85, ADR-0008 level 2). Replaces its facts and lines in place; branch and direction stay as recorded. RecordExpense's or RecordRevenue's rules run again on the new amount, so an edit into the band posts it. Anyone else rejects instead. Never queued |
 | ReportIssue | Auto (ADMIN, OPS_MANAGER, FIELD_SUBMITTER, MAINTENANCE); a fact, queueable offline. Safety-critical → asset grounded immediately (opens an availability interval; a second report on a grounded asset opens none) |
 | ResolveIssue / DismissIssue | Auto. Resolve: the reporting roles; dismiss: ADMIN, OPS_MANAGER, MAINTENANCE. Neither ends a grounding |
 | CreateWorkOrder | Rule read against the **expected** cost (required, 0 or more) and the asset's branch: APPROVED (open, costs may attach) when a rule authorizes the actor, else SUBMITTED for ApproveWorkOrder / RejectWorkOrder. No DRAFT. The defaults (ADMIN, OPS_MANAGER, MAINTENANCE) carry no amount bounds, so orders land APPROVED until a tenant sets a threshold |

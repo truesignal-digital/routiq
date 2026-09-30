@@ -154,7 +154,7 @@ function EventRow({ item }: { item: VehicleHistoryItem }) {
             </span>
           )}
         </div>
-        {view.detail !== null && <p className="mt-0.5 text-sm text-muted-foreground">{view.detail}</p>}
+        {view.detail !== null && <p className="mt-0.5 text-sm whitespace-pre-line text-muted-foreground">{view.detail}</p>}
         {item.note !== null && <p className="mt-0.5 text-sm text-muted-foreground">{item.note}</p>}
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
           <span>{actor}</span>

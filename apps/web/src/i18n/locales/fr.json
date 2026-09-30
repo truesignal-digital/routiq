@@ -106,6 +106,7 @@
     "DUPLICATE_ASSET_CODE": "Ce code d'actif existe déjà dans votre espace.",
     "DUPLICATE_BRANCH_CODE": "Ce code d'agence existe déjà dans votre espace.",
     "DUPLICATE_BRANCH_NAME": "Ce nom d'agence existe déjà dans votre espace.",
+    "DUPLICATE_REGISTRATION_NUMBER": "Un autre véhicule a déjà cette immatriculation.",
     "TEMPLATE_FIELD_INVALID": "Un champ spécifique au modèle est invalide ou manquant.",
     "APPROVAL_REQUIRED": "Cette action nécessite une approbation. Elle sera disponible prochainement.",
     "IDEMPOTENCY_KEY_REUSED": "Cette soumission entre en conflit avec un envoi précédent. Vérifiez la liste puis réessayez.",
@@ -154,12 +155,15 @@
     "WORK_ORDER_NOT_COMPLETED": "Aucun ordre de travail terminé ne répond au signalement qui a immobilisé cet actif. Terminez les travaux avant la remise en service.",
     "WORK_ORDER_ISSUE_MISMATCH": "Cet ordre de travail ne répond pas au signalement qui a immobilisé l'actif.",
     "WORK_ORDER_NOT_OPEN": "Cet ordre de travail n'est pas en cours : un coût ne peut y être imputé qu'une fois l'ordre approuvé, et tant qu'il n'est ni terminé, ni rejeté, ni annulé.",
+    "WORK_ORDER_COST_MISSING": "Indiquez le coût de la réparation, ou choisissez « Aucun coût » ou « Facture pas encore reçue ».",
+    "WORK_ORDER_HAS_COSTS": "Des coûts ont déjà été enregistrés sur cet ordre de travail. Rouvrez le formulaire pour les voir.",
     "HUMAN_PRINCIPAL_REQUIRED": "Cette action doit être faite par une personne, pas par une intégration ni un agent automatique.",
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
     "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
     "SAFETY_ISSUE_OPEN": "Un autre signalement critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
-    "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect."
+    "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
+    "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter."
   },
   "assets": {
     "notify": {
@@ -385,7 +389,9 @@
         "reopened": "Période rouverte",
         "posted": "Transaction enregistrée et comptabilisée",
         "submitted": "Transaction envoyée pour approbation",
-        "recorded": "Transaction enregistrée"
+        "recorded": "Transaction enregistrée",
+        "updated": "Écriture modifiée, toujours en attente d'approbation",
+        "updatedPosted": "Écriture modifiée et comptabilisée"
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
@@ -483,7 +489,8 @@
         "reverseAction": "Contre-passer",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
-        "breadcrumb": "Détail"
+        "breadcrumb": "Détail",
+        "editAction": "Modifier"
       },
       "viewer": {
         "description": "Date comptable {date}",
@@ -569,6 +576,15 @@
       "warningsLabel": "Avis",
       "warningSubmittedEntries": "Cette période contient des écritures en attente d'approbation.",
       "done": "Fermer"
+    },
+    "edit": {
+      "title": "Modifier l'écriture {number}",
+      "description": "Vous pouvez la modifier tant que personne ne l'a approuvée ni rejetée. L'approbateur verra ce que vous avez changé.",
+      "submit": "Enregistrer les modifications",
+      "submitting": "Enregistrement…",
+      "decidedTitle": "Cette écriture a déjà été traitée",
+      "decidedBody": "Un approbateur l'a approuvée ou rejetée pendant que vous la modifiiez. Vos changements n'ont pas été enregistrés.",
+      "branchUnknown": "L'agence d'origine"
     }
   },
   "common": {
@@ -1088,7 +1104,6 @@
       "issueHint": "Sans signalement, l'ordre de travail est préventif.",
       "preventive": "Préventif",
       "expectedCost": "Coût prévu",
-      "actualCost": "Coût réel",
       "summary": "Compte rendu",
       "resolveLinkedIssue": "Clore le signalement lié",
       "resolveLinkedIssueHint": "Décochez si les travaux sont faits mais que le problème persiste.",
@@ -1112,7 +1127,6 @@
       "rejectHint": "Vous refusez la dépense prévue. Le rejet est définitif et le motif reste au journal.",
       "complete": "Déclarer terminé",
       "completeTitle": "Déclarer les travaux terminés",
-      "completeHint": "Déclarez le coût réel et le compte rendu des travaux.",
       "approveCompletion": "Valider la fin des travaux",
       "approveCompletionTitle": "Valider la fin des travaux",
       "approveCompletionHint": "Vous acceptez les coûts réels déclarés. L'ordre de travail est terminé.",
@@ -1132,6 +1146,34 @@
       "dismissIssue": "Classer sans suite",
       "dismissIssueTitle": "Classer le signalement sans suite",
       "dismissIssueHint": "Le signalement n'aurait pas dû être ouvert : erreur, doublon, rien constaté. Le motif reste au journal."
+    },
+    "close": {
+      "hint": "Indiquez ce qui a été fait et ce que la réparation a coûté.",
+      "costSection": "Coût de la réparation",
+      "loading": "Chargement des coûts déjà enregistrés…",
+      "costsFailed": "Impossible de lire les coûts déjà enregistrés. Réessayez.",
+      "recorded": "Déjà enregistré : {amount} ({count, plural, one {# ligne} other {# lignes}})",
+      "anythingElse": "Autre chose à ajouter ?",
+      "nothingMore": "Non, c'est tout",
+      "addMore": "Oui, ajouter un coût",
+      "invoicePending": "Facture pas encore reçue",
+      "noCost": "Aucun coût",
+      "alternatives": "Autres réponses",
+      "costQuestion": "Combien a coûté la réparation ?",
+      "noCostChosen": "Aucun coût : garantie ou travail fait en interne.",
+      "invoicePendingChosen": "Les travaux sont clos maintenant ; la facture sera ajoutée à sa réception.",
+      "enterAmount": "Saisir un montant",
+      "amountQuestion": "Combien a coûté la réparation ?",
+      "amountToAdd": "Montant à ajouter",
+      "lineAmount": "Montant",
+      "expectedHint": "Prévu : {amount}",
+      "prefilled": "{category} · {date}",
+      "category": "Catégorie",
+      "lineNote": "Détail (facultatif)",
+      "lineNotePlaceholder": "Pièces, main-d'œuvre…",
+      "receipt": "Photo du reçu (facultatif)",
+      "removeLine": "Retirer la ligne",
+      "addLine": "Ajouter une ligne"
     },
     "detail": {
       "chronologie": "Chronologie",
@@ -1160,7 +1202,8 @@
         "workOrderCreated": "Ordre de travail ouvert",
         "workOrderApproved": "Ordre de travail approuvé",
         "workOrderRejected": "Ordre de travail rejeté",
-        "completionDeclared": "Fin des travaux déclarée",
+        "workOrderClosed": "Travaux terminés",
+        "workOrderClosedSentOn": "Travaux terminés. Envoyé à la finance.",
         "completionApproved": "Fin des travaux validée",
         "completionRejected": "Fin des travaux refusée",
         "workOrderCancelled": "Ordre de travail annulé",
@@ -1404,7 +1447,8 @@
       "work_order-closed": "Ordre de travail clôturé",
       "work_order-closure_approved": "Clôture validée",
       "asset_availability-opened": "Actif immobilisé",
-      "asset_availability-closed": "Immobilisation levée"
+      "asset_availability-closed": "Immobilisation levée",
+      "financial_entry-updated": "Écriture modifiée"
     },
     "field": {
       "status": "statut",
@@ -1526,6 +1570,8 @@
       "presetCode": "modèle métier",
       "expectedCostMinor": "coût prévu",
       "actualCostMinor": "coût réel",
+      "declaredCostMinor": "coût déclaré",
+      "costOutcome": "coût à la clôture",
       "summary": "compte rendu",
       "completedAt": "travaux terminés",
       "cancelReason": "motif d'annulation",
@@ -1550,8 +1596,13 @@
       "resolvedByWorkOrderId": "résolu par l'ordre de travail",
       "dismissedAt": "classement sans suite",
       "dismissReason": "motif du classement",
-      "defaultSafetyCritical": "critique pour la sécurité par défaut"
+      "defaultSafetyCritical": "critique pour la sécurité par défaut",
+      "postings": "lignes d'imputation"
     }
+  },
+  "datePicker": {
+    "placeholder": "Choisir une date",
+    "clear": "Effacer"
   },
   "commandForm": {
     "cancel": "Annuler",
@@ -1622,14 +1673,13 @@
       "trips": "Activités",
       "documents": "Documents",
       "history": "Historique",
+      "details": "Détails",
       "toDoCount": "{count, plural, one {chose à faire} other {choses à faire}}",
       "needsYou": "Vous attend"
     },
     "header": {
       "home": "Agence : {branch}",
       "noPlate": "Sans immatriculation",
-      "details": "Détails",
-      "hideDetails": "Masquer les détails",
       "viewOnly": "Consultation seule",
       "moreActions": "Plus d'actions"
     },
@@ -1672,7 +1722,31 @@
       "acquired": "Acquisition",
       "acquiredWithAmount": "{date} · {amount}",
       "notRecorded": "Non renseigné",
-      "noSpecifications": "Aucune caractéristique pour ce modèle."
+      "noSpecifications": "Aucune caractéristique pour ce modèle.",
+      "edit": {
+        "button": "Modifier",
+        "tooltip": "Modifier les informations du véhicule",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "cancel": "Annuler",
+        "make": "Marque",
+        "model": "Modèle",
+        "acquisitionDate": "Date d'acquisition",
+        "acquisitionAmount": "Montant d'acquisition",
+        "ownActions": "Se modifie par ses propres actions",
+        "conflict": "Quelqu'un d'autre a modifié ce véhicule. Actualisez pour voir ses changements.",
+        "reload": "Actualiser",
+        "disposed": "{status, select, SOLD {Ce véhicule est vendu ; ses informations ne peuvent plus être modifiées.} RETIRED {Ce véhicule est retiré du service ; ses informations ne peuvent plus être modifiées.} other {Ce véhicule est mis au rebut ; ses informations ne peuvent plus être modifiées.}}",
+        "errors": {
+          "yearRange": "Saisissez une année entre {min} et {max}.",
+          "dateInFuture": "La date d'acquisition ne peut pas être dans le futur.",
+          "amountWhole": "Saisissez le montant en francs, sans décimales.",
+          "amountNeedsDate": "Ajoutez la date d'acquisition pour saisir un montant.",
+          "chassisTooLong": "Le numéro de châssis est trop long ({max} caractères au plus).",
+          "notANumber": "Saisissez un nombre.",
+          "fixFields": "Corrigez les champs en rouge, puis enregistrez de nouveau."
+        }
+      }
     },
     "status": {
       "grounded": {
@@ -1739,7 +1813,8 @@
       "dismiss-issue": "Classer sans suite",
       "approve-entry": "Approuver",
       "reject-entry": "Rejeter",
-      "add-cost": "Ajouter un coût"
+      "add-cost": "Ajouter un coût",
+      "edit-entry": "Modifier"
     },
     "locked": {
       "needsAuthorization": "Il faut d'abord que la finance autorise {ref}.",
@@ -2063,8 +2138,11 @@
         "work_order-asset_released": "Remis en service",
         "asset_availability-opened": "Immobilisé",
         "asset_availability-closed": "Immobilisation levée",
-        "note-added": "Note ajoutée"
-      }
+        "note-added": "Note ajoutée",
+        "financial_entry-updated": "Écriture modifiée avant examen",
+        "asset-details_updated": "Informations modifiées"
+      },
+      "change": "{field} : {before} → {after}"
     },
     "panel": {
       "loading": "Chargement…",
@@ -2093,6 +2171,7 @@
       "expectedCost": "Coût prévu",
       "actualCost": "Coût réel",
       "actualCostLater": "Renseigné à la fin des travaux",
+      "invoicePending": "Facture pas encore reçue",
       "completed": "Terminé",
       "whatWasDone": "Travaux réalisés",
       "reason": "Motif",
@@ -2120,7 +2199,7 @@
       "reversedBy": "Contre-passée par",
       "openOriginal": "L'écriture d'origine",
       "openReversal": "La contre-passation",
-      "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur ne peut pas l'approuver.",
+      "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur peut la modifier d'ici là, mais pas l'approuver.",
       "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige par une contre-passation ; l'original reste.",
       "receipt": "Justificatif",
       "noFiles": "Aucun fichier sur cette écriture.",
@@ -2140,7 +2219,8 @@
         "entryReceipt": "En attente du reçu de {name}.",
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
-      "photoNumber": "Photo {number}"
+      "photoNumber": "Photo {number}",
+      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"
@@ -2152,7 +2232,11 @@
     "notify": {
       "success": {
         "noteAdded": "Note ajoutée",
-        "evidenceAttached": "Reçu joint"
+        "evidenceAttached": "Reçu joint",
+        "detailsSaved": "Informations du véhicule enregistrées."
+      },
+      "info": {
+        "nothingToSave": "Rien à enregistrer : aucun changement."
       }
     },
     "actions": {
