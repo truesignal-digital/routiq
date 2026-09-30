@@ -184,6 +184,8 @@ describe("finance reads", () => {
             assetId: randomUUID(),
             assetCode: "FIN-TRUCK-001",
             assetAttribution: "DIRECT" as const,
+            activityId: null,
+            workOrderId: null,
             category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
           },
         ],
