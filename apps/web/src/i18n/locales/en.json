@@ -106,6 +106,7 @@
     "DUPLICATE_ASSET_CODE": "This asset code already exists in your workspace.",
     "DUPLICATE_BRANCH_CODE": "This branch code already exists in your workspace.",
     "DUPLICATE_BRANCH_NAME": "This branch name already exists in your workspace.",
+    "DUPLICATE_REGISTRATION_NUMBER": "Another vehicle already has this plate.",
     "TEMPLATE_FIELD_INVALID": "A template-specific field is invalid or missing.",
     "APPROVAL_REQUIRED": "This action requires an approval. It will be available soon.",
     "IDEMPOTENCY_KEY_REUSED": "This submission conflicts with a previous one. Check the list, then retry.",
@@ -1599,6 +1600,10 @@
       "postings": "posting lines"
     }
   },
+  "datePicker": {
+    "placeholder": "Pick a date",
+    "clear": "Clear"
+  },
   "commandForm": {
     "cancel": "Cancel",
     "submitting": "Saving…",
@@ -1717,7 +1722,31 @@
       "acquired": "Acquired",
       "acquiredWithAmount": "{date} · {amount}",
       "notRecorded": "Not recorded",
-      "noSpecifications": "No specifications for this template."
+      "noSpecifications": "No specifications for this template.",
+      "edit": {
+        "button": "Edit details",
+        "tooltip": "Edit vehicle details",
+        "save": "Save",
+        "saving": "Saving…",
+        "cancel": "Cancel",
+        "make": "Make",
+        "model": "Model",
+        "acquisitionDate": "Acquisition date",
+        "acquisitionAmount": "Acquisition amount",
+        "ownActions": "Changed through its own actions",
+        "conflict": "Someone else changed this vehicle. Reload to see their changes.",
+        "reload": "Reload",
+        "disposed": "{status, select, SOLD {This vehicle is sold; its details can't be changed.} RETIRED {This vehicle is retired; its details can't be changed.} other {This vehicle is written off; its details can't be changed.}}",
+        "errors": {
+          "yearRange": "Enter a year between {min} and {max}.",
+          "dateInFuture": "The acquisition date can't be in the future.",
+          "amountWhole": "Enter the amount in whole francs, without decimals.",
+          "amountNeedsDate": "Add the acquisition date to record an amount.",
+          "chassisTooLong": "The chassis number is too long ({max} characters at most).",
+          "notANumber": "Enter a number.",
+          "fixFields": "Fix the fields in red, then save again."
+        }
+      }
     },
     "status": {
       "grounded": {
@@ -2110,8 +2139,10 @@
         "asset_availability-opened": "Grounded",
         "asset_availability-closed": "Grounding lifted",
         "note-added": "Note added",
-        "financial_entry-updated": "Entry edited before review"
-      }
+        "financial_entry-updated": "Entry edited before review",
+        "asset-details_updated": "Details edited"
+      },
+      "change": "{field}: {before} → {after}"
     },
     "panel": {
       "loading": "Loading…",
@@ -2201,7 +2232,11 @@
     "notify": {
       "success": {
         "noteAdded": "Note added",
-        "evidenceAttached": "Receipt attached"
+        "evidenceAttached": "Receipt attached",
+        "detailsSaved": "Vehicle details saved."
+      },
+      "info": {
+        "nothingToSave": "Nothing to save: no changes."
       }
     },
     "actions": {

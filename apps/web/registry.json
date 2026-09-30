@@ -853,6 +853,26 @@
       ]
     },
     {
+      "name": "date-picker",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/date-picker.tsx",
+          "type": "registry:file",
+          "target": "components/date-picker.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "date-range-picker",
       "type": "registry:component",
       "files": [

@@ -31,6 +31,7 @@ import "./commands/issue-decisions.js";
 import "./commands/work-orders.js";
 import "./commands/work-order-decisions.js";
 import "./commands/release-asset-to-service.js";
+import "./commands/update-asset-details.js";
 import "./commands/add-note.js";
 import "./commands/attach-evidence.js";
 import "./commands/update-pending-entry.js";
