@@ -123,6 +123,8 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
     expectedCostMinor: 40_000,
     actualCostMinor:
       status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? 45_000 : null,
+    declaredCostMinor: null,
+    costOutcome: status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? "LINES" : null,
     currency: "XAF",
     issue: { id: ISSUE_ID, safetyCritical: true },
     createdAt: "2026-08-01T08:00:00.000Z",
@@ -548,20 +550,30 @@ describe("MaintenanceScreen — commands", () => {
       within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
     );
 
-    const cost = await screen.findByLabelText("maintenance.fields.actualCost");
-    await user.type(cost, "45000");
+    // The 45 000 already booked against the order is shown first, and
+    // "nothing more" is the default: the close adds no line.
+    expect(await screen.findByText("maintenance.close.recorded")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "maintenance.close.nothingMore" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
     await user.click(
       screen.getByRole("button", { name: "maintenance.actions.complete" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
-    expect(mocks.submit.mock.calls[0]?.[0].name).toBe("complete-work-order");
+    expect(mocks.submit.mock.calls[0]?.[0]).toMatchObject({
+      name: "complete-work-order",
+      version: 2,
+    });
     expect(submittedPayload()).toMatchObject({
       workOrderId: WORK_ORDER_ID,
       currency: "XAF",
-      // XAF has exponent 0: 45 000 francs are 45 000 minor units.
-      actualCostMinor: 45_000,
+      costOutcome: "LINES",
+      costLines: [],
     });
+    expect("actualCostMinor" in submittedPayload()).toBe(false);
     // §5.3 optimistic concurrency — every work-order mutation quotes the version.
     expect(submittedEnvelope()["expectedVersion"]).toBe(3);
   });
@@ -610,7 +622,7 @@ describe("MaintenanceScreen — commands", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
     );
-    await screen.findByLabelText("maintenance.fields.actualCost");
+    await screen.findByText("maintenance.close.recorded");
     expect(screen.queryByLabelText("maintenance.fields.resolveLinkedIssue")).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "maintenance.actions.complete" }),
@@ -753,10 +765,7 @@ describe("MaintenanceScreen — commands", () => {
     await user.click(
       within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
     );
-    await user.type(
-      await screen.findByLabelText("maintenance.fields.actualCost"),
-      "485000",
-    );
+    await screen.findByText("maintenance.close.recorded");
     await user.click(
       screen.getByRole("button", { name: "maintenance.actions.complete" }),
     );

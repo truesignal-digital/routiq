@@ -29,6 +29,8 @@ const listItem = {
   branch,
   expectedCostMinor: 60_000,
   actualCostMinor: null,
+  declaredCostMinor: null,
+  costOutcome: null,
   currency: "XAF",
   issue: {
     id: "aabbccdd-1122-4334-8556-677889900aab",
@@ -85,6 +87,26 @@ describe("work order list contract", () => {
     ).toBe(false);
   });
 
+  it("carries a v1 close's typed amount apart from the derived actual cost", () => {
+    const legacy = {
+      ...listItem,
+      status: "COMPLETED",
+      actualCostMinor: 0,
+      declaredCostMinor: 50_000,
+      completedAt: "2026-09-30T10:00:00.000Z",
+    };
+    expect(workOrderListItem.parse(legacy)).toEqual(legacy);
+  });
+
+  it("names the close's cost outcome from the closed set", () => {
+    expect(
+      workOrderListItem.safeParse({ ...listItem, costOutcome: "INVOICE_PENDING" }).success,
+    ).toBe(true);
+    expect(workOrderListItem.safeParse({ ...listItem, costOutcome: "LATER" }).success).toBe(
+      false,
+    );
+  });
+
   it("wraps rows under `items` with a keyset cursor", () => {
     expect(
       workOrderListResponse.parse({ items: [listItem], nextCursor: null }),
@@ -126,6 +148,7 @@ describe("work order detail contract", () => {
     ...listItem,
     status: "COMPLETED",
     actualCostMinor: 58_000,
+    costOutcome: "LINES",
     completedAt: "2026-08-13T16:30:00.000Z",
     summary: "Pompe remplacée, circuit purgé",
     cancelReason: null,

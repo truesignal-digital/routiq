@@ -321,6 +321,8 @@ export const HISTORY_STATE_KEYS = {
     "issueId",
     "expectedCostMinor",
     "actualCostMinor",
+    "declaredCostMinor",
+    "costOutcome",
     "currency",
     "summary",
     "resolveLinkedIssue",
@@ -366,6 +368,7 @@ export const HISTORY_MONEY_STATE_KEYS = [
   "acquisitionAmountMinor",
   "expectedCostMinor",
   "actualCostMinor",
+  "declaredCostMinor",
 ] as const;
 
 export const historyValueKinds = ["MONEY", "VALUE"] as const;

@@ -411,12 +411,12 @@ async function runCommand(
   context: AuthContext,
   operation: string,
   payload: unknown,
-  options: { expectedVersion?: number; clientOccurredAt?: string } = {},
+  options: { expectedVersion?: number; clientOccurredAt?: string; version?: number } = {},
 ): Promise<CommandOutcome | undefined> {
   const name = operation.split(":", 1)[0]!;
   const result = await dispatchCommand(db, context, {
     name,
-    version: 1,
+    version: options.version ?? 1,
     envelope: {
       commandId: commandId(operation),
       idempotencyKey: idempotencyKey(operation),
@@ -601,7 +601,8 @@ async function vehicleSummary(assetId: string, today: string) {
       description: schema.workOrders.description,
       status: schema.workOrders.status,
       expectedCostMinor: schema.workOrders.expectedCostMinor,
-      actualCostMinor: schema.workOrders.actualCostMinor,
+      declaredCostMinor: schema.workOrders.declaredCostMinor,
+      costOutcome: schema.workOrders.costOutcome,
     })
     .from(schema.workOrders)
     .where(and(eq(schema.workOrders.workspaceId, ws), eq(schema.workOrders.assetId, assetId)));
@@ -675,7 +676,8 @@ async function vehicleSummary(assetId: string, today: string) {
       description: order.description,
       status: order.status,
       expectedCostMinor: order.expectedCostMinor?.toString() ?? null,
-      actualCostMinor: order.actualCostMinor?.toString() ?? null,
+      declaredCostMinor: order.declaredCostMinor?.toString() ?? null,
+      costOutcome: order.costOutcome,
       costLines: costLines
         .filter((line) => line.workOrderId === order.id)
         .map((line) => ({ amountMinor: line.amountMinor.toString(), status: line.status })),
@@ -1238,10 +1240,13 @@ try {
     "complete-work-order:VH001:air-conditioning",
     {
       workOrderId: ids.vh001AirConOrder,
-      actualCostMinor: 85_000,
+      // The A/C cost is already in the books (the entry above): the close
+      // declares it covered and adds no line (#81).
+      costOutcome: "LINES",
       summary: "Recharged the A/C; no leak found",
     },
     {
+      version: 2,
       expectedVersion: await workOrderRowVersion(ids.vh001AirConOrder),
       clientOccurredAt: at(-30, "16:30"),
     },
