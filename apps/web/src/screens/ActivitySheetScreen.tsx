@@ -80,7 +80,7 @@ export function ActivitySheetScreen() {
   const { t } = useTranslation();
   const me = useMeContext();
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
-  const search = useSearch({ strict: false }) as { template?: unknown };
+  const search = useSearch({ strict: false }) as { template?: unknown; assetId?: unknown };
   const templates = useMemo(
     () => sheetTemplatesFor(me?.enabledPresets),
     [me?.enabledPresets],
@@ -108,7 +108,11 @@ export function ActivitySheetScreen() {
         {t("activities.record.subtitle")}
       </p>
 
-      <SheetForm initialTemplate={initialTemplate} templates={templates} />
+      <SheetForm
+        initialTemplate={initialTemplate}
+        templates={templates}
+        initialAssetId={typeof search.assetId === "string" ? search.assetId : undefined}
+      />
     </PageContainer>
   );
 }
@@ -116,9 +120,12 @@ export function ActivitySheetScreen() {
 function SheetForm({
   initialTemplate,
   templates,
+  initialAssetId,
 }: {
   initialTemplate: SheetTemplate;
   templates: SheetTemplate[];
+  /** "Start a trip" on a vehicle opens the sheet with that vehicle as primary. */
+  initialAssetId?: string | undefined;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -289,7 +296,10 @@ function SheetForm({
       });
   }, [t]);
 
-  const [defaultValues] = useState(() => defaultSheetValues(initialTemplate));
+  const [defaultValues] = useState(() => ({
+    ...defaultSheetValues(initialTemplate),
+    ...(initialAssetId === undefined ? {} : { primaryAssetId: initialAssetId }),
+  }));
   const form = useForm<SheetFormValues>({
     resolver: zodResolver(formSchema),
     // A sheet is long; validating every field on every keystroke is what makes

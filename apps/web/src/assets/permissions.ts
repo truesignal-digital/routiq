@@ -16,3 +16,38 @@ export function canManageAssets(
   if (!canViewAssets(enabledModules)) return false;
   return !isReadOnlyRole(role);
 }
+
+function assetRole(
+  roles: readonly Role[],
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return canViewAssets(enabledModules) && role !== undefined && roles.includes(role);
+}
+
+/** Naming who answers for the vehicle day to day: a manager's call (assign-asset). */
+export function canAssignCustodian(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return assetRole(["ADMIN", "OPS_MANAGER"], role, enabledModules);
+}
+
+/**
+ * Moving the vehicle's home branch. The finance approver holds the cross-branch
+ * rule, so it may start a transfer too.
+ */
+export function canTransferAsset(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return assetRole(["ADMIN", "OPS_MANAGER", "FINANCE_APPROVER"], role, enabledModules);
+}
+
+/** Putting a registered vehicle into service. */
+export function canCommissionAsset(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return assetRole(["ADMIN", "OPS_MANAGER"], role, enabledModules);
+}

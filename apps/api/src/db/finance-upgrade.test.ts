@@ -92,7 +92,9 @@ it(
          where workspace_id = $1 and command_type = 'record-expense'`,
         [workspaceId],
       );
-      expect(rules.rows).toHaveLength(6);
+      // Four bands and two unbounded approver rules from 0012, plus the
+      // MAINTENANCE band 0027 adds for work-order expenses.
+      expect(rules.rows).toHaveLength(7);
 
       const [constraint] = (
         await upgradePool.query<{ convalidated: boolean }>(

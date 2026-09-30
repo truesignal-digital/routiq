@@ -1,6 +1,7 @@
 import type { AssetDetail } from "@routiq/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { retryUnlessNotFound } from "../lib/query-retry.js";
 
 export async function fetchAssetDetail(
   token: string,
@@ -23,6 +24,8 @@ export function useAssetDetail(assetId: string) {
     // Shares the `["ws", slug, "asset", id]` prefix with this asset's
     // documents, so a write to either can invalidate the pair.
     queryKey: ["ws", session?.workspaceSlug, "asset", assetId, "detail"],
+    // A vehicle outside the caller's scope is a 404: show that at once.
+    retry: retryUnlessNotFound,
     enabled: session !== undefined,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();

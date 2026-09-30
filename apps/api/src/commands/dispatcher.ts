@@ -111,6 +111,12 @@ export interface CommandDefinition<P> {
   version: number;
   module: ModuleCode;
   allowedRoles: readonly Role[];
+  /**
+   * Refuse every principal but a HUMAN, whatever its role. For decisions §5.1
+   * reserves to people outright — release to service is "never AI" — so an AI
+   * agent or integration granted an eligible role still cannot make them.
+   */
+  requiresHumanPrincipal?: true;
   payloadSchema: z.ZodType<P>;
   /**
    * Declares which asset the command writes operational records against. The
@@ -416,6 +422,12 @@ export async function dispatchCommand(
 
     if (!definition.allowedRoles.includes(ctx.role)) {
       throw new CommandError(403, "ROLE_FORBIDDEN", { command });
+    }
+    if (definition.requiresHumanPrincipal && ctx.principalType !== "HUMAN") {
+      throw new CommandError(403, "HUMAN_PRINCIPAL_REQUIRED", {
+        command,
+        principalType: ctx.principalType,
+      });
     }
 
     const parsedPayload = definition.payloadSchema.safeParse(outer.data.payload);

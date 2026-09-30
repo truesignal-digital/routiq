@@ -119,5 +119,62 @@
         "rowAttribute": "Imputer la ligne {position} à ce trajet"
       }
     }
+  },
+  "maintenance": {
+    "workOrders": {
+      "newHint": "Ouvrez un ordre de travail sur un camion, avec ou sans signalement à l'origine.",
+      "columns": {
+        "asset": "Camion"
+      }
+    },
+    "issues": {
+      "newHint": "Décrivez le défaut constaté sur le camion. Un signalement critique pour la sécurité immobilise le camion immédiatement.",
+      "columns": {
+        "asset": "Camion"
+      }
+    },
+    "fields": {
+      "asset": "Camion",
+      "safetyCriticalHint": "Le camion est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
+    },
+    "actions": {
+      "releaseHint": "Le camion redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement."
+    },
+    "detail": {
+      "unavailableTitle": "Camion immobilisé"
+    },
+    "notify": {
+      "success": {
+        "assetReleased": "Camion remis en service"
+      }
+    }
+  },
+  "history": {
+    "event": {
+      "work_order-asset_released": "Camion remis en service",
+      "asset_availability-opened": "Camion immobilisé"
+    }
+  },
+  "vehicle": {
+    "forms": {
+      "pinnedVehicle": "Camion"
+    },
+    "tabs": {
+      "trips": "Trajets"
+    },
+    "trips": {
+      "title": "Trajets",
+      "description": "Trajets avec ce camion",
+      "descriptionWithKm": "Trajets avec ce camion · {km, number} km enregistrés",
+      "empty": "Aucun trajet pour l'instant. Démarrez-en un quand le camion quitte le dépôt."
+    },
+    "locked": {
+      "notGrounded": "Le camion n'est pas immobilisé."
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trajets"
+      }
+    }
   }
 }
