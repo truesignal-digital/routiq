@@ -2,7 +2,7 @@ import "dotenv/config";
 import { DOCUMENT_EXPIRING_WINDOW_DAYS, type Role } from "@routiq/contracts";
 import type { CommandOutcome } from "../src/commands/dispatcher.js";
 import type { AuthContext } from "../src/auth/types.js";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { resolveAuthContext } from "../src/auth/context.js";
 import { authDb, authPool, db, pool } from "../src/db/client.js";
 import * as schema from "../src/db/schema.js";
@@ -211,9 +211,25 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
 
     // Child tables first. The explicit list mirrors every workspace-scoped
     // export in src/db/schema.ts so a reset does not depend on FK cascades.
+    // Posted lines are append-only for every role (0032): one trigger refuses
+    // the delete, and the deferred balance check would fail at COMMIT once the
+    // entry is gone too. Only the table owner may switch them off, and only
+    // inside this transaction: they are back on before it commits, so no other
+    // session ever sees them disabled, and the lock ALTER TABLE takes keeps
+    // other writers out of financial_postings until then.
+    await tx.execute(sql`
+      ALTER TABLE financial_postings
+        DISABLE TRIGGER financial_postings_pending_delete,
+        DISABLE TRIGGER financial_postings_balance_on_delete
+    `);
     await tx
       .delete(schema.financialPostings)
       .where(eq(schema.financialPostings.workspaceId, workspace.id));
+    await tx.execute(sql`
+      ALTER TABLE financial_postings
+        ENABLE TRIGGER financial_postings_pending_delete,
+        ENABLE TRIGGER financial_postings_balance_on_delete
+    `);
     await tx
       .delete(schema.notes)
       .where(eq(schema.notes.workspaceId, workspace.id));
