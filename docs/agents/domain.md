@@ -6,9 +6,9 @@ How the engineering skills should consume this repo's domain documentation when 
 
 - **`CONTEXT.md`** at the repo root — the domain glossary.
 - **`docs/adr/`** — read ADRs that touch the area you're about to work in.
-- **`ARCHITECTURE.md`** at the repo root — the authoritative design document (v0.2); consult it before any non-trivial design decision.
+- **`ARCHITECTURE.md`** at the repo root — the authoritative design document; consult it before any non-trivial design decision.
 
-If `CONTEXT.md` or ADRs don't exist yet, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
+When a term or decision gets resolved, record it through the `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`).
 
 ## File structure
 
