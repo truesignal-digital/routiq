@@ -10,6 +10,12 @@ export const financialEntryPostingPayload = z.object({
    * a clerk records from the activity, without waiting for the sheet at close.
    */
   activityId: z.uuid().optional(),
+  /**
+   * Attributes the cost to a work order — how labour and parts reach the
+   * chronologie of the repair that incurred them (§4.2). Same shape as
+   * activityId: a dimension on the line, never a second entry.
+   */
+  workOrderId: z.uuid().optional(),
   amountMinor: positiveMoneyMinor,
   assetAttribution: z.enum(["DIRECT", "ALLOCATED"]).default("DIRECT"),
 });

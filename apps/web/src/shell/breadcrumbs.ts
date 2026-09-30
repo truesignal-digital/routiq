@@ -22,19 +22,12 @@ interface PageTrail {
  */
 const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/assets/new", trail: [{ labelKey: "assets.register" }] },
-  {
-    pattern: "/assets/$assetId",
+  // The vehicle workspace: its sections are tabs on one record, so every
+  // section shares the record's crumb and the tabs say where you are.
+  ...["", "/maintenance", "/money", "/trips", "/documents", "/history"].map((section) => ({
+    pattern: `/assets/$assetId${section}`,
     trail: [{ labelKey: "assets.detail.breadcrumb" }],
-  },
-  {
-    pattern: "/assets/$assetId/documents",
-    trail: [
-      // Documents hang off one asset, so the trail passes through it — but
-      // the crumb cannot link there without the id, which this module has
-      // no access to; the section crumb remains the way back.
-      { labelKey: "documents.link" },
-    ],
-  },
+  })),
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
   { pattern: "/finance/entries", trail: [{ labelKey: "finance.navigation.entries" }] },
   {

@@ -51,6 +51,14 @@ export const activityListItem = z.object({
   primaryAssetCode: z.string().nullable(),
   legCount: z.number().int().nonnegative(),
   crewCount: z.number().int().nonnegative(),
+  /** Where the first leg set out from (place name, else the typed text); null without legs. */
+  originName: z.string().nullable(),
+  /** Where the last leg arrived. */
+  destinationName: z.string().nullable(),
+  /** Sum of the legs' kilometres; null when no leg carries one. */
+  distanceKm: z.number().int().nonnegative().nullable(),
+  /** The first DRIVER added to the crew (by name among those added together); null without one. */
+  driverName: z.string().nullable(),
 });
 
 export const activityListResponse = listResponse(activityListItem);

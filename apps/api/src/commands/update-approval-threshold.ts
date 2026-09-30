@@ -2,11 +2,70 @@ import { updateApprovalThresholdPayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq, isNull } from "drizzle-orm";
 import { approvalRules } from "../db/schema.js";
-import { appendAuditEvent, CommandError, registerCommand, type CommandDefinition } from "./dispatcher.js";
+import {
+  appendAuditEvent,
+  CommandError,
+  registerCommand,
+  type CommandContext,
+  type CommandDefinition,
+  type Tx,
+} from "./dispatcher.js";
 
 type UpdateApprovalThresholdPayload = z.infer<
   typeof updateApprovalThresholdPayload
 >;
+type ApprovalRuleRow = typeof approvalRules.$inferSelect;
+
+/**
+ * Command types whose catalog defaults carry no band at all: every maker role
+ * auto-approves any amount until a tenant sets a threshold.
+ */
+const UNBANDED_BY_DEFAULT = new Set(["create-work-order", "complete-work-order"]);
+
+/**
+ * The first threshold on a work-order command turns its unbounded defaults into
+ * a band of the same shape record-expense ships with: every maker role
+ * auto-approves up to the threshold, and ADMIN keeps its unbounded rule beside
+ * a new band so an admin's order never waits on an approver. Bounding ADMIN's
+ * only rule instead would invert it — the band is the more specific rule, so it
+ * wins wherever it matches, and an admin would auto-approve large orders while
+ * queueing small ones.
+ */
+async function bandUnboundedDefaults(
+  tx: Tx,
+  ctx: CommandContext,
+  commandId: string,
+  commandType: string,
+  unbounded: ApprovalRuleRow[],
+  amountMaxMinor: bigint,
+): Promise<ApprovalRuleRow[]> {
+  const banded: ApprovalRuleRow[] = [];
+  for (const rule of unbounded) {
+    const [row] =
+      rule.requiredRole === "ADMIN"
+        ? await tx
+            .insert(approvalRules)
+            .values({
+              workspaceId: ctx.workspaceId,
+              commandType,
+              categoryCode: null,
+              branchId: null,
+              amountMinMinor: null,
+              amountMaxMinor,
+              requiredRole: "ADMIN",
+              createdByCommandId: commandId,
+            })
+            .returning()
+        : await tx
+            .update(approvalRules)
+            .set({ amountMaxMinor, rowVersion: rule.rowVersion + 1 })
+            .where(eq(approvalRules.id, rule.id))
+            .returning();
+    if (!row) throw new Error("approval_rules write returned no row");
+    banded.push(row);
+  }
+  return banded;
+}
 
 const updateApprovalThresholdCommand: CommandDefinition<
   UpdateApprovalThresholdPayload
@@ -18,8 +77,9 @@ const updateApprovalThresholdCommand: CommandDefinition<
   payloadSchema: updateApprovalThresholdPayload,
   branchAuthorization: { kind: "workspace" },
   async execute(tx, ctx, envelope, payload) {
-    // Get the band rules (those with non-null amountMaxMinor) for this commandType
-    const bandRules = await tx
+    // The workspace-wide rules for this command type: no category, no branch,
+    // no lower bound. Branch- and category-specific rules are left alone.
+    const wildcardRules = await tx
       .select()
       .from(approvalRules)
       .where(
@@ -31,25 +91,45 @@ const updateApprovalThresholdCommand: CommandDefinition<
           isNull(approvalRules.amountMinMinor),
         ),
       );
+    const rulesToUpdate = wildcardRules.filter((r) => r.amountMaxMinor !== null);
+    const newAmountMaxMinor = BigInt(payload.amountMaxMinor);
 
-    // Filter in JS to get only the rules with amountMaxMinor set
-    const rulesToUpdate = bandRules.filter((r) => r.amountMaxMinor !== null);
+    if (rulesToUpdate.length === 0 && UNBANDED_BY_DEFAULT.has(payload.commandType)) {
+      const banded = await bandUnboundedDefaults(
+        tx,
+        ctx,
+        envelope.commandId,
+        payload.commandType,
+        wildcardRules,
+        newAmountMaxMinor,
+      );
+      const [first] = banded;
+      if (!first) throw new CommandError(422, "REFERENCE_NOT_FOUND");
+
+      await appendAuditEvent(tx, ctx, envelope, {
+        eventType: "approval-threshold.updated",
+        entityType: "approval_rule",
+        entityId: first.id,
+        beforeState: { commandType: payload.commandType, amountMaxMinor: null },
+        afterState: {
+          commandType: payload.commandType,
+          amountMaxMinor: payload.amountMaxMinor.toString(),
+        },
+        changedFields: ["amountMaxMinor", "rowVersion"],
+      });
+      return { recordId: first.id, rowVersion: first.rowVersion };
+    }
 
     if (rulesToUpdate.length === 0) {
       throw new CommandError(422, "REFERENCE_NOT_FOUND");
     }
 
-    // Update each band rule and collect audit info
-    const newAmountMaxMinor = BigInt(payload.amountMaxMinor);
-    
     for (const rule of rulesToUpdate) {
-      const newRowVersion = rule.rowVersion + 1;
-
       const [updated] = await tx
         .update(approvalRules)
         .set({
           amountMaxMinor: newAmountMaxMinor,
-          rowVersion: newRowVersion,
+          rowVersion: rule.rowVersion + 1,
         })
         .where(eq(approvalRules.id, rule.id))
         .returning();
@@ -57,7 +137,6 @@ const updateApprovalThresholdCommand: CommandDefinition<
       if (!updated) throw new Error("approval_rules update returned no row");
     }
 
-    // Audit event with before/after amounts
     await appendAuditEvent(tx, ctx, envelope, {
       eventType: "approval-threshold.updated",
       entityType: "approval_rule",

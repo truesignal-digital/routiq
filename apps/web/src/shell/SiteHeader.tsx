@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ChevronLeft } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { ThemeToggleMenu } from "@/components/theme-toggle";
@@ -25,6 +26,12 @@ export function SiteHeader() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const crumbs = breadcrumbTrail(visibleSections(me?.enabledModules), pathname);
   const { scoped } = useBranchScope();
+  // Beside the branch pill a phone has room for one crumb: the full trail
+  // shrank to initials there. Below a section it is the way back up; at a
+  // section's root, where you are (Home is in the sidebar).
+  const current = crumbs[crumbs.length - 1];
+  const parent = crumbs.length >= 3 ? crumbs[crumbs.length - 2] : undefined;
+  const phoneBack = parent?.to === undefined ? undefined : { labelKey: parent.labelKey, to: parent.to };
 
   return (
     // One accent for "a branch is in force", the same whichever branch it is:
@@ -46,11 +53,31 @@ export function SiteHeader() {
           a 1rem rule instead. */}
       <Separator
         orientation="vertical"
-        className="mx-2 h-4 data-vertical:self-auto"
+        className="mx-2 h-4 data-vertical:self-auto max-md:hidden"
       />
       {/* Screens own the page <h1>; this is wayfinding, not a heading. */}
       <Breadcrumb className="min-w-0">
-        <BreadcrumbList className="flex-nowrap">
+        {phoneBack !== undefined ? (
+          <Link
+            to={phoneBack.to}
+            data-slot="breadcrumb-back"
+            className="-ms-1 flex min-h-11 min-w-0 items-center gap-0.5 pe-1 text-sm text-muted-foreground transition-colors hover:text-foreground md:hidden"
+          >
+            <ChevronLeft className="size-4 shrink-0" aria-hidden />
+            <span className="truncate">{t(phoneBack.labelKey)}</span>
+          </Link>
+        ) : (
+          current !== undefined && (
+            <span
+              data-slot="breadcrumb-phone-page"
+              aria-current="page"
+              className="block truncate text-sm text-foreground md:hidden"
+            >
+              {t(current.labelKey)}
+            </span>
+          )
+        )}
+        <BreadcrumbList className="flex-nowrap max-md:hidden">
           {crumbs.map((crumb, index) => (
             <Fragment key={crumb.labelKey}>
               {index > 0 && <BreadcrumbSeparator />}

@@ -4,7 +4,12 @@ import {
   assetBranchIds,
   branchIdsByCode,
 } from "./branch-authorization.js";
-import { registerCommand, type CommandDefinition } from "./dispatcher.js";
+import type { Role } from "@routiq/contracts";
+import {
+  CommandError,
+  registerCommand,
+  type CommandDefinition,
+} from "./dispatcher.js";
 import {
   writeFinancialEntry,
   type FinancialEntryWriteRequest,
@@ -17,6 +22,26 @@ interface FinancialEntryCommandConfig {
   direction: FinancialEntryWriteRequest["direction"];
   categoryKind: FinancialEntryWriteRequest["categoryKind"];
   categoryRefType: FinancialEntryWriteRequest["categoryRefType"];
+  allowedRoles: readonly Role[];
+}
+
+/**
+ * The workshop records what a repair cost, and nothing else: a MAINTENANCE
+ * member's expense is accepted only when every line is attributed to a work
+ * order, which the writer then holds to APPROVED status and branch scope.
+ */
+function requireWorkOrderAttribution(
+  role: Role,
+  payload: FinancialEntryPayload,
+  command: string,
+): void {
+  if (role !== "MAINTENANCE") return;
+  if (payload.postings.some((posting) => posting.workOrderId === undefined)) {
+    throw new CommandError(403, "ROLE_FORBIDDEN", {
+      command,
+      reason: "WORK_ORDER_REQUIRED",
+    });
+  }
 }
 
 function financialEntryCommand(
@@ -26,7 +51,7 @@ function financialEntryCommand(
     name: config.name,
     version: 1,
     module: "FINANCE",
-    allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"],
+    allowedRoles: config.allowedRoles,
     payloadSchema: financialEntryPayload,
     approvalMode: "SUBMIT",
     branchAuthorization: {
@@ -52,6 +77,7 @@ function financialEntryCommand(
     },
 
     async execute(tx, ctx, envelope, payload, approval) {
+      requireWorkOrderAttribution(ctx.role, payload, config.name);
       const request: FinancialEntryWriteRequest = {
         direction: config.direction,
         categoryKind: config.categoryKind,
@@ -82,6 +108,13 @@ registerCommand(
     direction: "EXPENSE",
     categoryKind: "EXPENSE_CATEGORY",
     categoryRefType: "expenseCategory",
+    allowedRoles: [
+      "FIELD_SUBMITTER",
+      "OPS_MANAGER",
+      "FINANCE_APPROVER",
+      "ADMIN",
+      "MAINTENANCE",
+    ],
   }),
 );
 registerCommand(
@@ -90,5 +123,6 @@ registerCommand(
     direction: "REVENUE",
     categoryKind: "REVENUE_CATEGORY",
     categoryRefType: "revenueCategory",
+    allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"],
   }),
 );

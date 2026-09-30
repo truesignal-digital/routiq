@@ -5,10 +5,8 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
-import { financialEntryFilters } from "@routiq/contracts";
+import { financialEntryFilters, VEHICLE_HISTORY_KINDS } from "@routiq/contracts";
 import { sessionStore } from "./auth/store.js";
-import { AssetDetailScreen } from "./screens/AssetDetailScreen.js";
-import { AssetDocumentsScreen } from "./screens/AssetDocumentsScreen.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
 import { BranchesScreen } from "./screens/BranchesScreen.js";
@@ -20,12 +18,21 @@ import { UsersScreen } from "./screens/UsersScreen.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
 import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
 import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
+import { MaintenanceScreen } from "./screens/MaintenanceScreen.js";
 import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
 import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
 import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
 import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
 import { AppShell } from "./shell/AppShell.js";
+import { PANEL_PATTERN } from "./vehicle/model.js";
+import { VehicleWorkspaceScreen } from "./vehicle/VehicleWorkspaceScreen.js";
+import { DocumentsTab } from "./vehicle/tabs/DocumentsTab.js";
+import { HistoryTab } from "./vehicle/tabs/HistoryTab.js";
+import { MaintenanceTab } from "./vehicle/tabs/MaintenanceTab.js";
+import { MoneyTab } from "./vehicle/tabs/MoneyTab.js";
+import { NowTab } from "./vehicle/tabs/NowTab.js";
+import { TripsTab } from "./vehicle/tabs/TripsTab.js";
 
 const rootRoute = createRootRoute();
 
@@ -68,16 +75,70 @@ const assetsNewRoute = createRoute({
   component: AssetRegisterScreen,
 });
 
+/**
+ * The vehicle workspace: the page is the vehicle, its sections are child
+ * routes, and everything a link should reproduce lives in the URL — the record
+ * open in the panel and the month the money is read for. An invalid value is
+ * dropped rather than failing the page.
+ */
 const assetDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets/$assetId",
-  component: AssetDetailScreen,
+  validateSearch: z.object({
+    panel: z.string().regex(PANEL_PATTERN).optional().catch(undefined),
+    period: z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+      .optional()
+      .catch(undefined),
+  }),
+  component: VehicleWorkspaceScreen,
 });
 
-const assetDocumentsRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: "/assets/$assetId/documents",
-  component: AssetDocumentsScreen,
+const vehicleNowRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "/",
+  component: NowTab,
+});
+
+const vehicleMaintenanceRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "maintenance",
+  component: MaintenanceTab,
+});
+
+const vehicleMoneyRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "money",
+  validateSearch: z.object({
+    entries: z.enum(["posted", "review", "rejected"]).optional().catch(undefined),
+    direction: z.enum(["EXPENSE", "REVENUE"]).optional().catch(undefined),
+    evidence: z.literal("missing").optional().catch(undefined),
+  }),
+  component: MoneyTab,
+});
+
+const vehicleTripsRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "trips",
+  component: TripsTab,
+});
+
+// The old asset documents screen lived at this same URL, so its links and its
+// route id keep working as the Documents section.
+const vehicleDocumentsRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "documents",
+  component: DocumentsTab,
+});
+
+const vehicleHistoryRoute = createRoute({
+  getParentRoute: () => assetDetailRoute,
+  path: "history",
+  validateSearch: z.object({
+    kind: z.enum(VEHICLE_HISTORY_KINDS).optional().catch(undefined),
+  }),
+  component: HistoryTab,
 });
 
 const financeRecordRoute = createRoute({
@@ -103,8 +164,10 @@ const activityRecordRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/record",
   // A tile on the home screen can open the sheet already on the right flavour.
+  // "Start a trip" on a vehicle names the vehicle, so the sheet opens with it.
   validateSearch: z.object({
     template: z.enum(["journey", "haulage"]).optional(),
+    assetId: z.uuid().optional().catch(undefined),
   }),
   component: ActivitySheetScreen,
 });
@@ -113,6 +176,14 @@ const activityDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/$activityId",
   component: ActivityDetailScreen,
+});
+
+// The screen gates itself on the MAINTENANCE module, as every module-owned
+// screen does; the nav entry disappears with the module (`sections.ts`).
+const maintenanceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/maintenance",
+  component: MaintenanceScreen,
 });
 
 const financeEntryDetailRoute = createRoute({
@@ -172,12 +243,19 @@ const routeTree = rootRoute.addChildren([
     assetsRoute,
     // Before the $assetId route, or "new" reads as an asset id.
     assetsNewRoute,
-    assetDetailRoute,
-    assetDocumentsRoute,
+    assetDetailRoute.addChildren([
+      vehicleNowRoute,
+      vehicleMaintenanceRoute,
+      vehicleMoneyRoute,
+      vehicleTripsRoute,
+      vehicleDocumentsRoute,
+      vehicleHistoryRoute,
+    ]),
     activitiesRoute,
     // Before the $activityId route, or "record" reads as an activity id.
     activityRecordRoute,
     activityDetailRoute,
+    maintenanceRoute,
     financeRecordRoute,
     financeEntriesRoute,
     financeEntryDetailRoute,

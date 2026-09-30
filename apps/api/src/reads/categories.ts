@@ -41,6 +41,9 @@ export function registerCategoryReadRoutes(
               code: categories.code,
               labelFr: categories.labelFr,
               labelEn: categories.labelEn,
+              // Meaningful on ISSUE_TYPE only (pre-checks the reporter's
+              // safety-critical box); false on every other kind.
+              defaultSafetyCritical: categories.defaultSafetyCritical,
             })
             .from(categories)
             .where(

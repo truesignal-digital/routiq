@@ -10,6 +10,7 @@ import { createSession } from "../auth/local.js";
 import { branches } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { apiClient, seedActor } from "../test/client.js";
 
 describe("activity, person and place reads", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -566,4 +567,105 @@ describe("activity, person and place reads", () => {
     });
   });
 
+});
+
+/** The trip row's route, distance and driver (#44 Trips tab). */
+describe("activity list route fields", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let token: string;
+  let truck: string;
+  let tripId: string;
+  let bareId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    const admin = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN" });
+    token = admin.token;
+    truck = await seedAsset(ctx.app, token);
+
+    const person = async (displayName: string) => {
+      const personId = randomUUID();
+      await api.ok(token, "register-person", { personId, displayName, branchCode: "DLA" });
+      return personId;
+    };
+    const conductor = await person("Aaron");
+    const firstDriver = await person("Zacharie");
+    const relief = await person("Alain");
+
+    tripId = randomUUID();
+    await api.ok(token, "create-activity", {
+      activityId: tripId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truck,
+      startedAt: "2026-08-01T05:00:00Z",
+      crew: [
+        { activityPersonId: randomUUID(), personId: conductor, role: "CONDUCTOR" },
+        { activityPersonId: randomUUID(), personId: firstDriver, role: "DRIVER" },
+        { activityPersonId: randomUUID(), personId: relief, role: "DRIVER" },
+      ],
+    });
+    const leg = (legNo: number, origin: object, destination: object, distanceKm?: number) =>
+      api.ok(token, "record-movement-leg", {
+        legId: randomUUID(),
+        activityId: tripId,
+        legNo,
+        origin,
+        destination,
+        ...(distanceKm === undefined ? {} : { distanceKm }),
+      });
+    // Recorded out of order: the row reads by leg number, not by insertion.
+    await leg(2, { kind: "text", text: "Edéa" }, { kind: "place", placeId: randomUUID(), name: "Yaoundé" }, 180);
+    await leg(1, { kind: "place", placeId: randomUUID(), name: "Douala" }, { kind: "text", text: "Edéa" }, 60);
+    await leg(3, { kind: "text", text: "Yaoundé" }, { kind: "text", text: "Obala" });
+
+    bareId = randomUUID();
+    await api.ok(token, "create-activity", {
+      activityId: bareId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truck,
+      startedAt: "2026-07-01T05:00:00Z",
+    });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  it("names the route end to end, sums the kilometres and names the first driver", async () => {
+    const list = activityListResponse.parse(
+      (await api.get(token, `/v1/activities?assetId=${truck}`)).body,
+    );
+    // Both drivers joined in one command, so the name decides; the
+    // conductor is not a driver whatever their name.
+    expect(list.items.find((item) => item.id === tripId)).toMatchObject({
+      originName: "Douala",
+      destinationName: "Obala",
+      distanceKm: 240,
+      driverName: "Alain",
+      legCount: 3,
+    });
+    expect(list.items.find((item) => item.id === bareId)).toMatchObject({
+      originName: null,
+      destinationName: null,
+      distanceKm: null,
+      driverName: null,
+    });
+
+    const detail = activityDetail.parse((await api.get(token, `/v1/activities/${tripId}`)).body);
+    expect(detail).toMatchObject({
+      originName: "Douala",
+      destinationName: "Obala",
+      distanceKm: 240,
+      driverName: "Alain",
+    });
+  });
 });
