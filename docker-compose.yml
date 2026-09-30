@@ -17,60 +17,28 @@ services:
       timeout: 3s
       retries: 10
 
-  # S3-compatible storage for artifact uploads. Uses RustFS, an Apache 2.0
-  # drop-in MinIO successor positioned for on-prem deployments (testcontainers
-  # version pinned in artifacts.test.ts). The appliance profile exposes this
-  # publicly for browser presigned PUT; a real box would network isolation or
-  # front it with auth.
+  # S3-compatible storage for artifact uploads (§6a guard 2: S3 API only).
+  # Same RustFS image, pinned by digest, as the artifacts test fixture. The
+  # API creates the bucket at boot. Port 9000 is published because presigned
+  # upload URLs are opened by the browser, not by the API.
   storage:
     image: rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
     profiles: ["appliance"]
     environment:
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-minioadmin}
-      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-minioadmin}
+      # Demo defaults, like the postgres password: a real box supplies its own
+      # pair from the deploy env file. The api service reads the same two
+      # variables, so they cannot drift apart.
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-appliance-demo-storage}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-appliance-demo-storage-secret-change-me}
     ports:
       - "9000:9000"
+    volumes:
+      - storagedata:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/health/live"]
       interval: 5s
       timeout: 3s
       retries: 10
-
-  # One-shot container to create the artifacts bucket on first start.
-  # After storage is healthy, this creates the bucket if it doesn't exist, then exits.
-  # Idempotent: subsequent starts skip creation.
-  storage-init:
-    image: amazon/aws-cli@sha256:3c0b9f22dbfad1cdbece67701d9ac5a1acf61e71c9283e863dbbf98b5f936fea
-    profiles: ["appliance"]
-    environment:
-      AWS_ACCESS_KEY_ID: ${RUSTFS_ACCESS_KEY:-minioadmin}
-      AWS_SECRET_ACCESS_KEY: ${RUSTFS_SECRET_KEY:-minioadmin}
-      AWS_DEFAULT_REGION: us-east-1
-    entrypoint: /bin/sh
-    command: -c "aws s3api create-bucket --bucket ${S3_BUCKET:-artifacts} --endpoint-url http://storage:9000 2>/dev/null || true"
-    depends_on:
-      storage:
-        condition: service_healthy
-
-  # One-shot container to bootstrap the appliance (run migrations, create operator + test workspace).
-  # Only runs if BOOTSTRAP_ADMIN_PIN is set (nightly test, CI, dev).
-  # Idempotent: migrations are idempotent; subsequent starts skip workspace provisioning if it exists.
-  api-bootstrap:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    profiles: ["appliance"]
-    environment:
-      DATABASE_URL: postgres://routiq_app:routiq_app@postgres:5432/routiq_dev
-      AUTH_DATABASE_URL: postgres://routiq:routiq@postgres:5432/routiq_dev
-      BOOTSTRAP_ADMIN_PIN: ${BOOTSTRAP_ADMIN_PIN:-}
-    entrypoint: "pnpm"
-    command: exec tsx scripts/bootstrap-appliance.ts
-    depends_on:
-      postgres:
-        condition: service_healthy
-      storage-init:
-        condition: service_completed_successfully
 
   # §6a guard 4: this file is the distribution artifact — the API must come up
   # cold from it. Dev workflow ignores this service (run `pnpm --filter dev`);
@@ -94,16 +62,17 @@ services:
       # postgres password above — a real box supplies its own from the deploy
       # env file, generated with `openssl rand -hex 32`.
       COMMAND_PAYLOAD_HMAC_KEY: ${COMMAND_PAYLOAD_HMAC_KEY:-appliance-demo-command-payload-hmac-key-change-me}
-      # S3-compatible object storage for artifact uploads. RustFS is the service
-      # above; a real box would use a managed S3 service or on-prem RustFS.
-      # S3_ENDPOINT is internal to the container network (storage:9000).
-      # S3_PUBLIC_ENDPOINT is what the browser uses for PUT (defaults to localhost:9000).
-      S3_ENDPOINT: ${S3_ENDPOINT:-http://storage:9000}
+      # Artifact uploads (#88). Without S3_ENDPOINT the API registers no
+      # upload routes. S3_ENDPOINT is how the API reaches storage inside the
+      # compose network; S3_PUBLIC_ENDPOINT is the address the browser uses
+      # for presigned uploads and downloads — set it to the box's own
+      # host:9000 when the browser is not on this machine.
+      S3_ENDPOINT: http://storage:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      S3_BUCKET: ${S3_BUCKET:-artifacts}
-      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
-      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_REGION: us-east-1
+      S3_BUCKET: artifacts
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-appliance-demo-storage}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-appliance-demo-storage-secret-change-me}
     ports:
       - "3001:3001"
     depends_on:
@@ -111,10 +80,6 @@ services:
         condition: service_healthy
       storage:
         condition: service_healthy
-      storage-init:
-        condition: service_completed_successfully
-      api-bootstrap:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
       interval: 10s
@@ -127,3 +92,4 @@ services:
 volumes:
   pgdata:
     name: routiq_pgdata
+  storagedata:

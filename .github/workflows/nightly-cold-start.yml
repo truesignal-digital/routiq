@@ -13,10 +13,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start appliance stack (with bootstrap)
+      - name: Start appliance stack
         run: docker compose --profile appliance up -d --build
-        env:
-          BOOTSTRAP_ADMIN_PIN: "1234"
 
       - name: Wait for API health
         run: |
@@ -63,106 +61,89 @@ jobs:
           echo "API failed to become healthy after $max_attempts attempts"
           exit 1
 
-      - name: Test artifact upload end-to-end (presign + PUT + finalize)
+      # A workspace comes from the vendor CLI, as on a real box: the compose
+      # file ships no user. The PIN is random per run.
+      - name: Provision a workspace with the vendor CLI
         run: |
           set -euo pipefail
-          api_url="http://localhost:3001"
-          
-          echo "=== Step 1: Login ==="
-          login_response=$(curl -s -X POST "$api_url/v1/auth/login" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "workspace": "test-appliance",
-              "username": "admin",
-              "pin": "1234"
-            }')
-          
-          token=$(echo "$login_response" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
-          if [ -z "$token" ]; then
-            echo "Login failed: $login_response"
-            exit 1
-          fi
-          echo "✓ Login successful"
-          
-          echo ""
-          echo "=== Step 2: Request presigned PUT URL ==="
-          artifact_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
-          presign_response=$(curl -s -w "\n%{http_code}" -X POST "$api_url/v1/artifacts/presign" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $token" \
-            -d "{
-              \"artifactId\": \"$artifact_id\",
-              \"fileName\": \"test-file.bin\",
-              \"sizeBytes\": 1024
-            }")
-          
-          presign_status=$(echo "$presign_response" | tail -1)
-          presign_body=$(echo "$presign_response" | head -1)
-          
-          if [ "$presign_status" != "200" ]; then
-            echo "Presign failed (HTTP $presign_status): $presign_body"
-            exit 1
-          fi
-          
-          upload_url=$(echo "$presign_body" | grep -o '"uploadUrl":"[^"]*' | cut -d'"' -f4)
-          if [ -z "$upload_url" ]; then
-            echo "Failed to extract uploadUrl from presign response: $presign_body"
-            exit 1
-          fi
-          echo "✓ Presigned URL obtained (first 80 chars): ${upload_url:0:80}..."
-          
-          echo ""
-          echo "=== Step 3: Upload file via presigned URL ==="
-          test_file=$(mktemp)
-          dd if=/dev/zero of="$test_file" bs=1024 count=1 2>/dev/null
-          
-          upload_status=$(curl -s -w "%{http_code}" -o /dev/null -X PUT "$upload_url" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary "@$test_file")
-          
-          if [ "$upload_status" != "200" ]; then
-            echo "Upload failed with HTTP $upload_status"
-            rm -f "$test_file"
-            exit 1
-          fi
-          echo "✓ File uploaded successfully (HTTP $upload_status)"
-          
-          # Compute checksum for finalize
-          checksum=$(sha256sum "$test_file" | cut -d' ' -f1)
-          rm -f "$test_file"
-          
-          echo ""
-          echo "=== Step 4: Finalize upload ==="
-          finalize_response=$(curl -s -w "\n%{http_code}" -X POST "$api_url/v1/artifacts/finalize" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $token" \
-            -d "{
-              \"artifactId\": \"$artifact_id\",
-              \"fileName\": \"test-file.bin\",
-              \"sizeBytes\": 1024,
-              \"mediaType\": \"application/octet-stream\",
-              \"checksumSha256\": \"$checksum\"
-            }")
-          
-          finalize_status=$(echo "$finalize_response" | tail -1)
-          finalize_body=$(echo "$finalize_response" | head -1)
-          
-          if [ "$finalize_status" != "200" ]; then
-            echo "Finalize failed (HTTP $finalize_status): $finalize_body"
-            exit 1
-          fi
-          
-          # Verify artifact record in response
-          if ! echo "$finalize_body" | grep -q "\"artifactId\":\"$artifact_id\""; then
-            echo "Finalize response missing artifact: $finalize_body"
-            exit 1
-          fi
-          
-          echo "✓ Upload finalized successfully (HTTP $finalize_status)"
-          echo "  Artifact JSON:"
-          echo "  $finalize_body" | grep -o '{"artifact[^}]*}'
-          echo ""
-          echo "✓ End-to-end artifact upload flow passed"
+          pin="$(openssl rand -hex 8)"
+          echo "COLD_START_PIN=$pin" >> "$GITHUB_ENV"
+          jq -n --arg pin "$pin" '{
+            workspace: { slug: "cold-start", name: "Cold start" },
+            branches: [{ code: "CS", name: "Cold start" }],
+            admin: { displayName: "Cold start admin", username: "admin", pin: $pin },
+            enabledPresets: ["TRUCKING"]
+          }' | docker compose --profile appliance exec -T api sh -c 'cat > /tmp/tenant.json'
+          docker compose --profile appliance exec -T api pnpm exec tsx scripts/provision.ts --file /tmp/tenant.json
+
+      # #88: the browser uploads straight to storage with a presigned URL, so
+      # the URL must name the public endpoint and work from outside the
+      # compose network. This runner stands in for the browser.
+      - name: Upload a file (login, presign, PUT, finalize, download)
+        run: |
+          set -euo pipefail
+          api="http://localhost:3001"
+          public_endpoint="http://localhost:9000"
+          work="$(mktemp -d)"
+
+          call() { # method url [json] -> prints the status; body lands in $work/body
+            local method="$1" url="$2" data="${3:-}"
+            local args=(-sS -o "$work/body" -w '%{http_code}' -X "$method" "$url" -H "Content-Type: application/json")
+            if [ -n "${token:-}" ]; then args+=(-H "Authorization: Bearer $token"); fi
+            if [ -n "$data" ]; then args+=(--data "$data"); fi
+            curl "${args[@]}"
+          }
+          expect() { # step status wanted
+            echo "$1: HTTP $2"
+            if [ "$2" != "$3" ]; then echo "expected $3, body:"; cat "$work/body"; echo; exit 1; fi
+          }
+
+          status=$(call POST "$api/v1/auth/login" \
+            "$(jq -nc --arg pin "$COLD_START_PIN" '{workspaceSlug: "cold-start", username: "admin", pin: $pin}')")
+          expect "login" "$status" 200
+          token=$(jq -r .token "$work/body")
+
+          # A 1x1 PNG: finalize keeps only files whose bytes sniff as an image or PDF.
+          echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' \
+            | base64 -d > "$work/receipt.png"
+          size=$(stat -c %s "$work/receipt.png")
+          artifact_id=$(cat /proc/sys/kernel/random/uuid)
+
+          status=$(call POST "$api/v1/artifacts/presign" \
+            "$(jq -nc --arg id "$artifact_id" --argjson size "$size" '{artifactId: $id, fileName: "receipt.png", sizeBytes: $size}')")
+          expect "presign" "$status" 200
+          upload_url=$(jq -r .uploadUrl "$work/body")
+          echo "uploadUrl (query stripped): ${upload_url%%\?*}"
+          case "$upload_url" in
+            "$public_endpoint"/*) ;;
+            *) echo "uploadUrl does not point at the public endpoint $public_endpoint"; exit 1 ;;
+          esac
+
+          status=$(curl -sS -o "$work/body" -w '%{http_code}' -X PUT "$upload_url" \
+            -H "Content-Type: application/octet-stream" --data-binary "@$work/receipt.png")
+          expect "PUT to storage" "$status" 200
+
+          status=$(call POST "$api/v1/artifacts/finalize" \
+            "$(jq -nc --arg id "$artifact_id" '{artifactId: $id, fileName: "receipt.png"}')")
+          expect "finalize" "$status" 200
+          echo "finalized artifact:"
+          jq . "$work/body"
+          jq -e --arg id "$artifact_id" '.id == $id and .mimeType == "image/png"' "$work/body" > /dev/null
+
+          status=$(call GET "$api/v1/artifacts/$artifact_id/download-url")
+          expect "download-url" "$status" 200
+          download_url=$(jq -r .url "$work/body")
+          echo "download url (query stripped): ${download_url%%\?*}"
+          status=$(curl -sS -o "$work/downloaded" -w '%{http_code}' "$download_url")
+          expect "GET from storage" "$status" 200
+          echo "downloaded $(stat -c %s "$work/downloaded") bytes"
+
+          # Informational only: a browser on another origin also needs CORS
+          # from storage. Printed so a regression is visible, not gated.
+          echo "CORS preflight for PUT from http://localhost:5173:"
+          curl -sS -o /dev/null -D - -X OPTIONS "$upload_url" \
+            -H "Origin: http://localhost:5173" -H "Access-Control-Request-Method: PUT" \
+            -H "Access-Control-Request-Headers: content-type" | grep -i -E '^(HTTP|access-control)' || true
 
       # --profile appliance, or compose ignores the api service; -a, or an
       # exited api container is hidden.
@@ -172,8 +153,8 @@ jobs:
           echo "=== Docker Compose Status ==="
           docker compose --profile appliance ps -a
           echo ""
-          echo "=== Docker Compose Logs (last 300 lines) ==="
-          docker compose --profile appliance logs --tail 300
+          echo "=== Docker Compose Logs (last 200 lines) ==="
+          docker compose --profile appliance logs --tail 200
 
       - name: Cleanup
         if: always()
