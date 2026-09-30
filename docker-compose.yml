@@ -36,6 +36,42 @@ services:
       timeout: 3s
       retries: 10
 
+  # One-shot container to create the artifacts bucket on first start.
+  # After storage is healthy, this creates the bucket if it doesn't exist, then exits.
+  # Idempotent: subsequent starts skip creation.
+  storage-init:
+    image: amazon/aws-cli:latest
+    profiles: ["appliance"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${RUSTFS_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${RUSTFS_SECRET_KEY:-minioadmin}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command: -c "aws s3api create-bucket --bucket ${S3_BUCKET:-artifacts} --endpoint-url http://storage:9000 2>/dev/null || true"
+    depends_on:
+      storage:
+        condition: service_healthy
+
+  # One-shot container to bootstrap the appliance (create operator + test workspace).
+  # Only runs if BOOTSTRAP_ADMIN_PIN is set (nightly test, CI, dev).
+  # Idempotent: subsequent starts skip if workspace already exists.
+  api-bootstrap:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    profiles: ["appliance"]
+    environment:
+      DATABASE_URL: postgres://routiq_app:routiq_app@postgres:5432/routiq_dev
+      AUTH_DATABASE_URL: postgres://routiq:routiq@postgres:5432/routiq_dev
+      BOOTSTRAP_ADMIN_PIN: ${BOOTSTRAP_ADMIN_PIN:-}
+    entrypoint: "pnpm"
+    command: exec tsx scripts/bootstrap-appliance.ts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+
   # §6a guard 4: this file is the distribution artifact — the API must come up
   # cold from it. Dev workflow ignores this service (run `pnpm --filter dev`);
   # it is built/started by `docker compose --profile appliance up`.
@@ -60,8 +96,10 @@ services:
       COMMAND_PAYLOAD_HMAC_KEY: ${COMMAND_PAYLOAD_HMAC_KEY:-appliance-demo-command-payload-hmac-key-change-me}
       # S3-compatible object storage for artifact uploads. RustFS is the service
       # above; a real box would use a managed S3 service or on-prem RustFS.
-      # S3_ENDPOINT must be reachable from the browser for presigned PUT requests.
+      # S3_ENDPOINT is internal to the container network (storage:9000).
+      # S3_PUBLIC_ENDPOINT is what the browser uses for PUT (defaults to localhost:9000).
       S3_ENDPOINT: ${S3_ENDPOINT:-http://storage:9000}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-artifacts}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
@@ -73,6 +111,10 @@ services:
         condition: service_healthy
       storage:
         condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+      api-bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
       interval: 10s

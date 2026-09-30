@@ -13,8 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Start appliance stack
+      - name: Start appliance stack (with bootstrap)
         run: docker compose --profile appliance up -d --build
+        env:
+          BOOTSTRAP_ADMIN_PIN: "1234"
 
       - name: Wait for API health
         run: |
@@ -61,53 +63,106 @@ jobs:
           echo "API failed to become healthy after $max_attempts attempts"
           exit 1
 
-      - name: Verify storage integration (artifact endpoints registered)
+      - name: Test artifact upload end-to-end (presign + PUT + finalize)
         run: |
           set -euo pipefail
           api_url="http://localhost:3001"
           
-          # The artifact endpoints require auth. We test that they return 401
-          # (AUTH_REQUIRED) rather than 404 (route not found), proving storage
-          # was initialized and the routes are registered.
-          echo "Testing presign endpoint is registered..."
-          presign_status=$(curl -s -w "%{http_code}" -o /tmp/presign_response.txt \
-            -X POST "$api_url/v1/artifacts/presign" \
+          echo "=== Step 1: Login ==="
+          login_response=$(curl -s -X POST "$api_url/v1/auth/login" \
             -H "Content-Type: application/json" \
-            -d '{"artifactId":"test","fileName":"test.bin","sizeBytes":1024}')
+            -d '{
+              "workspace": "test-appliance",
+              "username": "admin",
+              "pin": "1234"
+            }')
           
-          presign_body=$(cat /tmp/presign_response.txt)
-          
-          # 401 means the endpoint exists but auth failed (expected behavior)
-          # 404 means the endpoint was not registered (storage not configured)
-          if [ "$presign_status" = "401" ]; then
-            echo "✓ Presign endpoint is registered (got 401 AUTH_REQUIRED)"
-          elif [ "$presign_status" = "404" ]; then
-            echo "✗ Presign endpoint not found (404) — storage not configured"
+          token=$(echo "$login_response" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$token" ]; then
+            echo "Login failed: $login_response"
             exit 1
-          else
-            echo "✗ Unexpected status $presign_status: $presign_body"
+          fi
+          echo "✓ Login successful"
+          
+          echo ""
+          echo "=== Step 2: Request presigned PUT URL ==="
+          artifact_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          presign_response=$(curl -s -w "\n%{http_code}" -X POST "$api_url/v1/artifacts/presign" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $token" \
+            -d "{
+              \"artifactId\": \"$artifact_id\",
+              \"fileName\": \"test-file.bin\",
+              \"sizeBytes\": 1024
+            }")
+          
+          presign_status=$(echo "$presign_response" | tail -1)
+          presign_body=$(echo "$presign_response" | head -1)
+          
+          if [ "$presign_status" != "200" ]; then
+            echo "Presign failed (HTTP $presign_status): $presign_body"
             exit 1
           fi
           
-          echo "Testing finalize endpoint is registered..."
-          finalize_status=$(curl -s -w "%{http_code}" -o /tmp/finalize_response.txt \
-            -X POST "$api_url/v1/artifacts/finalize" \
-            -H "Content-Type: application/json" \
-            -d '{"artifactId":"test","fileName":"test.bin","sizeBytes":1024,"mediaType":"application/octet-stream","checksumSha256":"abc"}')
-          
-          finalize_body=$(cat /tmp/finalize_response.txt)
-          
-          if [ "$finalize_status" = "401" ]; then
-            echo "✓ Finalize endpoint is registered (got 401 AUTH_REQUIRED)"
-          elif [ "$finalize_status" = "404" ]; then
-            echo "✗ Finalize endpoint not found (404) — storage not configured"
+          upload_url=$(echo "$presign_body" | grep -o '"uploadUrl":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$upload_url" ]; then
+            echo "Failed to extract uploadUrl from presign response: $presign_body"
             exit 1
-          else
-            echo "✗ Unexpected status $finalize_status: $finalize_body"
+          fi
+          echo "✓ Presigned URL obtained (first 80 chars): ${upload_url:0:80}..."
+          
+          echo ""
+          echo "=== Step 3: Upload file via presigned URL ==="
+          test_file=$(mktemp)
+          dd if=/dev/zero of="$test_file" bs=1024 count=1 2>/dev/null
+          
+          upload_status=$(curl -s -w "%{http_code}" -o /dev/null -X PUT "$upload_url" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@$test_file")
+          
+          if [ "$upload_status" != "200" ]; then
+            echo "Upload failed with HTTP $upload_status"
+            rm -f "$test_file"
+            exit 1
+          fi
+          echo "✓ File uploaded successfully (HTTP $upload_status)"
+          
+          # Compute checksum for finalize
+          checksum=$(sha256sum "$test_file" | cut -d' ' -f1)
+          rm -f "$test_file"
+          
+          echo ""
+          echo "=== Step 4: Finalize upload ==="
+          finalize_response=$(curl -s -w "\n%{http_code}" -X POST "$api_url/v1/artifacts/finalize" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $token" \
+            -d "{
+              \"artifactId\": \"$artifact_id\",
+              \"fileName\": \"test-file.bin\",
+              \"sizeBytes\": 1024,
+              \"mediaType\": \"application/octet-stream\",
+              \"checksumSha256\": \"$checksum\"
+            }")
+          
+          finalize_status=$(echo "$finalize_response" | tail -1)
+          finalize_body=$(echo "$finalize_response" | head -1)
+          
+          if [ "$finalize_status" != "200" ]; then
+            echo "Finalize failed (HTTP $finalize_status): $finalize_body"
             exit 1
           fi
           
-          echo "✓ All artifact endpoints are registered"
+          # Verify artifact record in response
+          if ! echo "$finalize_body" | grep -q "\"artifactId\":\"$artifact_id\""; then
+            echo "Finalize response missing artifact: $finalize_body"
+            exit 1
+          fi
+          
+          echo "✓ Upload finalized successfully (HTTP $finalize_status)"
+          echo "  Artifact JSON:"
+          echo "  $finalize_body" | grep -o '{"artifact[^}]*}'
+          echo ""
+          echo "✓ End-to-end artifact upload flow passed"
 
       # --profile appliance, or compose ignores the api service; -a, or an
       # exited api container is hidden.
@@ -117,8 +172,8 @@ jobs:
           echo "=== Docker Compose Status ==="
           docker compose --profile appliance ps -a
           echo ""
-          echo "=== Docker Compose Logs (last 200 lines) ==="
-          docker compose --profile appliance logs --tail 200
+          echo "=== Docker Compose Logs (last 300 lines) ==="
+          docker compose --profile appliance logs --tail 300
 
       - name: Cleanup
         if: always()

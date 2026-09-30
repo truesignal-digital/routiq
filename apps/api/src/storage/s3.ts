@@ -14,6 +14,7 @@ export interface S3StorageConfig {
   bucket: string;
   accessKeyId: string;
   secretAccessKey: string;
+  publicEndpoint?: string; // Used only for presigning URLs (for browser access)
   forcePathStyle?: boolean;
 }
 
@@ -28,6 +29,20 @@ export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
     forcePathStyle: cfg.forcePathStyle ?? false,
   });
 
+  // Separate client for presigning: uses public endpoint so browsers can reach the URLs.
+  // Same credentials and bucket, different endpoint.
+  const presignClient = cfg.publicEndpoint && cfg.publicEndpoint !== cfg.endpoint
+    ? new S3Client({
+        region: cfg.region,
+        endpoint: cfg.publicEndpoint,
+        credentials: {
+          accessKeyId: cfg.accessKeyId,
+          secretAccessKey: cfg.secretAccessKey,
+        },
+        forcePathStyle: cfg.forcePathStyle ?? false,
+      })
+    : client;
+
   return {
     async presignPut(
       key: string,
@@ -38,7 +53,7 @@ export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
         Key: key,
         ContentType: opts?.contentType,
       } as PutObjectCommandInput);
-      return getSignedUrl(client, command, {
+      return getSignedUrl(presignClient, command, {
         expiresIn: opts?.expiresSeconds ?? 900,
       });
     },
@@ -51,7 +66,7 @@ export function createS3Storage(cfg: S3StorageConfig): ObjectStorage {
         Bucket: cfg.bucket,
         Key: key,
       } as GetObjectCommandInput);
-      return getSignedUrl(client, command, {
+      return getSignedUrl(presignClient, command, {
         expiresIn: opts?.expiresSeconds ?? 300,
       });
     },
