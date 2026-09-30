@@ -13,7 +13,7 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { and, eq, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
@@ -36,7 +36,7 @@ import {
   workOrders,
   workspaces,
 } from "../db/schema.js";
-import { inWorkspace, type TenantTx } from "../db/tenant.js";
+import type { TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { hasPostingWithoutWorkOrder } from "./entry-evidence.js";
 import {
@@ -48,6 +48,7 @@ import {
   microsecondKey,
   type KeysetColumn,
 } from "./cursor.js";
+import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /**
  * Newest first, always. A timeline has one meaningful order, so the sort is not
@@ -350,12 +351,12 @@ export function registerHistoryReadRoutes(
    * per-role rule on top — ledger money (`canReadHistory`). Field staff
    * seeing "the office corrected my sheet" is the point, not a leak.
    */
-  app.get(
-    "/v1/history/:entityType/:entityId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/history/:entityType/:entityId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({ entityType: historyEntityType, entityId: z.uuid() })
           .safeParse(req.params);
@@ -372,7 +373,7 @@ export function registerHistoryReadRoutes(
 
         const moduleCode = HISTORY_ENTITY_MODULE[entityType];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
           }
@@ -500,12 +501,12 @@ export function registerHistoryReadRoutes(
    * module, RLS, branch scope and the ledger rule — and the same rule about the snapshots: they are projected
    * through `HISTORY_STATE_KEYS` here and never served raw.
    */
-  app.get(
-    "/v1/history/:entityType/:entityId/:eventId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/history/:entityType/:entityId/:eventId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z
           .object({
             entityType: historyEntityType,
@@ -520,7 +521,7 @@ export function registerHistoryReadRoutes(
 
         const moduleCode = HISTORY_ENTITY_MODULE[entityType];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           if (!(await isModuleEnabled(tx, auth.workspaceId, moduleCode))) {
             return { error: "MODULE_DISABLED" as const };
           }
