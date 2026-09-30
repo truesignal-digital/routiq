@@ -59,7 +59,7 @@ it.each([1280, 390])("an executive reads the whole vehicle without one action co
   expect(screen.queryByRole("toolbar")).toBeNull();
   expect(screen.getByText("Needs attention")).toBeTruthy();
 
-  for (const tab of ["Maintenance", "Money", "Trips", "Documents", "History"]) {
+  for (const tab of ["Maintenance", "Money", "Trips", "Documents", "History", "Details"]) {
     await user.click(screen.getByRole("tab", { name: new RegExp(tab) }));
     await waitFor(() => expect(screen.getByRole("tab", { name: new RegExp(tab), selected: true })).toBeTruthy());
     expect(screen.queryAllByRole("button", { name: ACTION_LABELS }), tab).toEqual([]);

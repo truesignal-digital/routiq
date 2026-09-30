@@ -1668,14 +1668,13 @@
       "trips": "Activities",
       "documents": "Documents",
       "history": "History",
+      "details": "Details",
       "toDoCount": "{count, plural, one {thing to do} other {things to do}}",
       "needsYou": "Needs you"
     },
     "header": {
       "home": "Home: {branch}",
       "noPlate": "No plate",
-      "details": "Details",
-      "hideDetails": "Hide details",
       "viewOnly": "View only",
       "moreActions": "More actions"
     },

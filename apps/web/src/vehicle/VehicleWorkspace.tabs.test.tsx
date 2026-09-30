@@ -44,17 +44,17 @@ describe("which sections a viewer gets", () => {
   it("gives every section to a manager with every module", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "OPS_MANAGER" });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "Maintenance", "Money", "Trips", "Documents", "History"]);
+    expect(tabNames()).toEqual(["Now", "Maintenance", "Money", "Trips", "Documents", "History", "Details"]);
   });
 
   it("keeps the books from the workshop, and each module's section from a workspace without it", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "MAINTENANCE" });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "Documents", "History"]);
+    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "Documents", "History", "Details"]);
     cleanup();
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", modules: ["CORE", "ASSETS"] });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "History"]);
+    expect(tabNames()).toEqual(["Now", "History", "Details"]);
   });
 
   it("renders the workshop's header and Now without a money card, from a detail with no finance block", async () => {
@@ -69,7 +69,7 @@ describe("which sections a viewer gets", () => {
     expect(screen.queryByText("This vehicle's share")).toBeNull();
     expect(screen.queryByText(/Lifetime/)).toBeNull();
     const user = userEvent.setup();
-    await user.click(screen.getAllByRole("button", { name: "Details" }).at(-1)!);
+    await user.click(screen.getByRole("tab", { name: "Details" }));
     // The purchase price is money too: the date alone.
     expect(await screen.findByText("3/1/24")).toBeTruthy();
     expect(screen.queryByText(/45,000,000/)).toBeNull();
@@ -103,6 +103,43 @@ describe("which sections a viewer gets", () => {
     expect(await screen.findByText("Technical inspection")).toBeTruthy();
     expect(screen.getByText("Expired")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Documents", selected: true })).toBeTruthy();
+  });
+});
+
+describe("Details", () => {
+  it("is its own section after History, reached by a deep link, and the header no longer discloses it", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/details`, { role: "OPS_MANAGER" });
+    expect(await screen.findByRole("heading", { name: "Details" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Details", selected: true })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Right now" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Vehicle" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Specifications" })).toBeTruthy();
+    expect(screen.getByText("Chassis number")).toBeTruthy();
+    expect(screen.getByText(/45,000,000/)).toBeTruthy();
+    // Identity stays on top; nothing there opens or hides the details any more.
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("VH003");
+    expect(screen.queryByRole("button", { name: /Details/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Hide details" })).toBeNull();
+    expect(recorded.history.location.pathname).toBe(`/assets/${ASSET_ID}/details`);
+  });
+
+  it("opens from its tab and keeps the month on the way", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "OPS_MANAGER" });
+    const user = userEvent.setup();
+    await screen.findByRole("heading", { name: "Money · August 2026" });
+    await user.click(screen.getByRole("tab", { name: "Details" }));
+    await waitFor(() => expect(recorded.history.location.pathname).toBe(`/assets/${ASSET_ID}/details`));
+    expect(recorded.history.location.search).toContain("period=2026-08");
+    expect(await screen.findByText("Chassis number")).toBeTruthy();
+  });
+
+  it.each([
+    ["en", "Details"],
+    ["fr-CM", "Détails"],
+  ] as const)("%s: the phone's tab bar ends with %s", async (locale, name) => {
+    await openVehicle(`/assets/${ASSET_ID}/details`, { role: "FIELD_SUBMITTER", width: 390, locale });
+    await screen.findByRole("tab", { name, selected: true });
+    expect(tabNames().at(-1)).toBe(name);
   });
 });
 

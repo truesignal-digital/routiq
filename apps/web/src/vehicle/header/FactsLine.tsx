@@ -1,12 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format.js";
-import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import { LinkButton, Sep, withNodes } from "../parts.js";
 
-/** One quiet line of facts under the sentence; the Details card holds the rest. */
-export function FactsLine({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+/** One quiet line of facts under the sentence; the Details section holds the rest. */
+export function FactsLine() {
   const { t, i18n } = useTranslation();
   const { asset, gates, panel } = useVehicle();
   const locale = i18n.language;
@@ -73,15 +71,6 @@ export function FactsLine({ open, onToggle }: { open: boolean; onToggle: () => v
           },
         )}
       </span>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-      >
-        {open ? t("vehicle.header.hideDetails") : t("vehicle.header.details")}
-        <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden />
-      </button>
     </div>
   );
 }
