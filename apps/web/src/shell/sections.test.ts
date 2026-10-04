@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
+import { visibleFinanceSections } from "../finance/navigation.js";
+import { canAdministerBranches } from "../branches/permissions.js";
+import { canAdministerMembers } from "../members/permissions.js";
 import { activeSection, isSectionActive, visibleSections } from "./sections.js";
 
 const ALL = visibleSections(["CORE", "ASSETS", "FINANCE", "MAINTENANCE"]);
@@ -86,5 +90,46 @@ describe("isSectionActive (exact-or-child)", () => {
 
   it("a hidden section cannot be the active one", () => {
     expect(activeSection(visibleSections(["CORE"]), "/finance/entries")).toBeUndefined();
+  });
+});
+
+describe("navigation per role (ADR-0009)", () => {
+  const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
+
+  /** Shell sections (with where Finances leads), finance tabs, and the More admin links. */
+  const nav = (role: Role) => ({
+    sections: visibleSections(EVERY, role).map((s) => (s.key === "finances" ? `finances:${s.to}` : s.key)),
+    finance: visibleFinanceSections(role, EVERY).map((s) => s.key),
+    users: canAdministerMembers(role),
+    branches: canAdministerBranches(role),
+  });
+
+  const ALL_SECTIONS = ["home", "assets", "activities", "maintenance", "finances:/finance/entries", "more"];
+  const expected: Record<Role, ReturnType<typeof nav>> = {
+    DIRECTOR: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: true, branches: true },
+    ADMIN: { sections: ALL_SECTIONS, finance: ["entries"], users: true, branches: false },
+    FINANCE: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: false, branches: false },
+    CASHIER: {
+      sections: ["home", "assets", "finances:/finance/record", "more"],
+      finance: [],
+      users: false,
+      branches: false,
+    },
+    TECHNICIAN: {
+      sections: ["home", "assets", "activities", "maintenance", "more"],
+      finance: [],
+      users: false,
+      branches: false,
+    },
+    DRIVER: { sections: ALL_SECTIONS, finance: ["entries"], users: false, branches: false },
+  };
+
+  it.each(ROLES)("%s", (role) => {
+    expect(nav(role)).toEqual(expected[role]);
+  });
+
+  it("keeps a recording-only Finances entry lit across the finance subtree", () => {
+    const cashier = visibleSections(EVERY, "CASHIER");
+    expect(activeSection(cashier, "/finance/record")?.key).toBe("finances");
   });
 });

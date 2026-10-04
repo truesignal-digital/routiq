@@ -26,7 +26,7 @@ interface FinancialEntryCommandConfig {
 }
 
 /**
- * The workshop records what a repair cost, and nothing else: a MAINTENANCE
+ * The workshop records what a repair cost, and nothing else: a TECHNICIAN
  * member's expense is accepted only when every line is attributed to a work
  * order, which the writer then holds to APPROVED status and branch scope.
  */
@@ -35,7 +35,7 @@ export function requireWorkOrderAttribution(
   payload: Pick<FinancialEntryPayload, "postings">,
   command: string,
 ): void {
-  if (role !== "MAINTENANCE") return;
+  if (role !== "TECHNICIAN") return;
   if (payload.postings.some((posting) => posting.workOrderId === undefined)) {
     throw new CommandError(403, "ROLE_FORBIDDEN", {
       command,
@@ -108,13 +108,7 @@ registerCommand(
     direction: "EXPENSE",
     categoryKind: "EXPENSE_CATEGORY",
     categoryRefType: "expenseCategory",
-    allowedRoles: [
-      "FIELD_SUBMITTER",
-      "OPS_MANAGER",
-      "FINANCE_APPROVER",
-      "ADMIN",
-      "MAINTENANCE",
-    ],
+    allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
   }),
 );
 registerCommand(
@@ -123,6 +117,6 @@ registerCommand(
     direction: "REVENUE",
     categoryKind: "REVENUE_CATEGORY",
     categoryRefType: "revenueCategory",
-    allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"],
+    allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER"],
   }),
 );

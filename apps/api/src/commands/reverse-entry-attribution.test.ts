@@ -31,13 +31,13 @@ describe("reverse-entry.v1 keeps every attribution", () => {
     const seeded = await seedWorkspace(db);
     workspaceId = seeded.workspace.id;
 
-    const session = async (role: "ADMIN" | "FINANCE_APPROVER") => {
+    const session = async (role: "ADMIN" | "FINANCE") => {
       const member = await seedMember(db, { workspaceId, role, allBranches: true });
       return (await createSession(db, { workspaceId, principalId: member.principal.id }))
         .token;
     };
     adminToken = await session("ADMIN");
-    approverToken = await session("FINANCE_APPROVER");
+    approverToken = await session("FINANCE");
 
     assetId = await seedAsset(ctx.app, adminToken);
 

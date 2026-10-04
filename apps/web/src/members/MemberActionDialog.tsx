@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  ROLES,
   type DeactivateMemberPayload,
   type MemberBranchScope,
   type MemberListItem,
@@ -29,22 +28,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { scopedByBranch } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
+import {
+  canEditMemberRole,
+  canManageMember,
+  pickableRoles,
+  roleRequiresAllBranches,
+  type MemberActor,
+} from "./permissions.js";
 import { MIN_PIN_LENGTH } from "./pin.js";
 
 export type MemberActionKey = "role" | "pin" | "deactivate" | "reactivate";
 
 /**
- * Which actions a member's row offers. A deactivated member has exactly one
- * way back and nothing else: editing the role of someone who cannot log in
- * would write an audit event about a decision nobody made.
+ * Which actions a member's row offers this actor. A deactivated member has
+ * exactly one way back and nothing else: editing the role of someone who cannot
+ * log in would write an audit event about a decision nobody made.
+ *
+ * role-config: a member the actor may not manage (a role they cannot grant, or
+ * outside their branches) offers nothing, and nobody edits their own role.
  */
-export function memberActions(member: MemberListItem): MemberActionKey[] {
+export function memberActions(
+  member: MemberListItem,
+  actor: MemberActor | undefined,
+): MemberActionKey[] {
+  if (!canManageMember(actor, member)) return [];
   if (member.status === "DEACTIVATED") return ["reactivate"];
-  const actions: MemberActionKey[] = ["role"];
+  const actions: MemberActionKey[] = [];
+  if (canEditMemberRole(actor, member)) actions.push("role");
   // A membership with no credential has no PIN to reset — only a login has one.
   if (member.username !== null) actions.push("pin");
   actions.push("deactivate");
@@ -58,7 +73,7 @@ type Outcome =
 
 /**
  * One member command, asked for and answered in place. The guard refusals —
- * LAST_ADMIN, SELF_DEACTIVATION — are answers about this person that the admin
+ * LAST_DIRECTOR, SELF_DEACTIVATION — are answers about this person that the admin
  * has to read, so they replace nothing and appear in the open dialog rather
  * than as a toast that outlives it.
  */
@@ -66,12 +81,15 @@ export function MemberActionDialog({
   member,
   action,
   branches,
+  actor,
   client = commandClient,
   onDismiss,
 }: {
   member: MemberListItem;
   action: MemberActionKey;
   branches: readonly BranchOption[];
+  /** Who is acting: decides the roles offered and the branches they may give. */
+  actor: MemberActor | undefined;
   client?: CommandClient;
   onDismiss: () => void;
 }) {
@@ -93,9 +111,16 @@ export function MemberActionDialog({
   const pinIntent = useRef<CommandIntent<ResetMemberPinPayload> | undefined>(undefined);
   const statusIntent = useRef<CommandIntent<DeactivateMemberPayload> | undefined>(undefined);
 
+  const actorScope: MemberBranchScope = actor?.branchScope ?? "ALL";
+  const pickerBranches = useMemo(
+    () => scopedByBranch(actorScope, [...branches], (branch) => branch.id),
+    [actorScope, branches],
+  );
+  const forcedAll = roleRequiresAllBranches(role);
+  const effectiveScope: MemberBranchScope = forcedAll ? "ALL" : branchScope;
   const scopeChanged = useMemo(
-    () => JSON.stringify(branchScope) !== JSON.stringify(member.branchScope),
-    [branchScope, member.branchScope],
+    () => JSON.stringify(effectiveScope) !== JSON.stringify(member.branchScope),
+    [effectiveScope, member.branchScope],
   );
   const roleChanged = role !== member.role;
   const pinValid = pin.length >= MIN_PIN_LENGTH && pin === confirmPin;
@@ -127,12 +152,12 @@ export function MemberActionDialog({
       const payload: UpdateMemberRolePayload = {
         principalId: member.principalId,
         ...(roleChanged ? { role } : {}),
-        ...(scopeChanged ? { branchScope } : {}),
+        ...(scopeChanged ? { branchScope: effectiveScope } : {}),
       };
       roleIntent.current ??= createCommandIntent<UpdateMemberRolePayload>(
         client,
         "update-member-role",
-        1,
+        2,
       );
       result = await roleIntent.current.submit(payload, {
         expectedVersion: member.rowVersion,
@@ -240,7 +265,7 @@ export function MemberActionDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.map((option) => (
+                      {pickableRoles(actor).map((option) => (
                         <SelectItem key={option} value={option}>
                           {t(`users.roles.${option}`)}
                         </SelectItem>
@@ -250,9 +275,12 @@ export function MemberActionDialog({
                 </div>
 
                 <BranchScopeField
-                  branches={branches}
-                  value={branchScope}
+                  branches={pickerBranches}
+                  value={effectiveScope}
                   onChange={setBranchScope}
+                  disabled={forcedAll}
+                  allowAll={actorScope === "ALL"}
+                  hint={forcedAll ? t("users.form.directorAllBranches") : undefined}
                 />
               </div>
             )}

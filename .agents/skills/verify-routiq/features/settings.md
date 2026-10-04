@@ -1,6 +1,6 @@
 # Settings
 
-Under More, an admin manages branches and users (logins with a role and branch scope), and admins, managers and field submitters manage people (drivers and crew without a login). There is no modules screen; modules are switched by the `enable-module` and `disable-module` commands.
+Under More, Direction manages branches; Direction and administrators manage users (logins with a role and branch scope; an administrator only drivers, technicians and cashiers in their branches); Direction and administrators manage people (drivers and crew without a login). There is no modules screen; modules are switched by the `enable-module` and `disable-module` commands.
 
 ## Sub-features
 
@@ -19,12 +19,12 @@ Under More, an admin manages branches and users (logins with a role and branch s
 
 Preconditions:
 
-- Fresh seed: branches BAF, DLA, YDE; seven users; driver Jean Ngwa (DRV001). Use `--role admin`.
+- Fresh seed: branches BAF, DLA, YDE; eight users, one or more per role; driver Jean Ngwa (DRV001). Settings (branches) are Direction's: use `--role director`. Users is open to `admin` for drivers, technicians and cashiers in their branches.
 
-- **All three screens.** Run `pnpm verify drive flow:settings --role admin --lang en`. For each it clicks "More", then the link "Branches", "Users" or "People", waits for the heading, and screenshots. Cross-checks: every code from `GET /v1/branches` is a cell on the page; `GET /v1/members` returns 7 members; `GET /v1/persons` answers 200.
+- **All three screens.** Run `pnpm verify drive flow:settings --role director --lang en`. For each it clicks "More", then the link "Branches", "Users" or "People", waits for the heading, and screenshots. Cross-checks: every code from `GET /v1/branches` is a cell on the page; `GET /v1/members` returns 7 members; `GET /v1/persons` answers 200.
 - **Create a branch.** In a DriveScript on `/more/branches`: "New branch" → fill "Code", "Nom"/"Name", pick "Fuseau horaire"/"Time zone" → "Créer"/"Create". Read back with `pnpm verify api GET /v1/branches --role admin`. Mutates.
 - **Change a role.** On `/more/users`: the user's row "Actions" → "Change role" → pick the role → "Save". Read back with `GET /v1/members`. Mutates.
-- **Non-admin.** `pnpm verify drive /more/users --role manager` shows the heading "Utilisateurs" over "Votre rôle ne permet pas cette action."; the More page has no Users or Branches link for that role.
+- **Non-admin.** `pnpm verify drive /more/users --role finance` shows the heading "Utilisateurs" over "Votre rôle ne permet pas cette action."; the More page has no Users or Branches link for that role.
 - **Proof.** `01-branches.png`, `02-users.png`, `03-people.png` and the cross-check lines.
 
 ## Gotchas

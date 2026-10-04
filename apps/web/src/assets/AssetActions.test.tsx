@@ -100,10 +100,9 @@ const committed: SubmitResult = {
 
 describe("which actions an asset offers", () => {
   it("REGISTERED offers commission and assign", () => {
-    expect(assetActions(baseAsset, "ADMIN", ["CORE", "ASSETS"])).toEqual([
-      "commission",
-      "assign",
-    ]);
+    for (const role of ["DIRECTOR", "ADMIN"] as const) {
+      expect(assetActions(baseAsset, role, ["CORE", "ASSETS"])).toEqual(["commission", "assign"]);
+    }
   });
 
   it("IN_SERVICE drops commission and keeps assign", () => {
@@ -130,19 +129,18 @@ describe("which actions an asset offers", () => {
   });
 
   it("follows each command's roles: no transfer for the field, no commission for finance", () => {
-    expect(assetActions(baseAsset, "FIELD_SUBMITTER", ["CORE", "ASSETS"])).toEqual([]);
-    expect(assetActions(baseAsset, "MAINTENANCE", ["CORE", "ASSETS"])).toEqual([]);
-    expect(assetActions(baseAsset, "FINANCE_APPROVER", ["CORE", "ASSETS"])).toEqual([
+    expect(assetActions(baseAsset, "DRIVER", ["CORE", "ASSETS"])).toEqual([]);
+    expect(assetActions(baseAsset, "TECHNICIAN", ["CORE", "ASSETS"])).toEqual([]);
+    expect(assetActions(baseAsset, "FINANCE", ["CORE", "ASSETS"])).toEqual([
       "assign",
     ]);
-    expect(assetActions(baseAsset, "OPS_MANAGER", ["CORE", "ASSETS"])).toEqual([
-      "commission",
-      "assign",
-    ]);
+    for (const role of ["DIRECTOR", "ADMIN"] as const) {
+      expect(assetActions(baseAsset, role, ["CORE", "ASSETS"])).toEqual(["commission", "assign"]);
+    }
   });
 
   it("offers nothing to a viewer role, or without the module", () => {
-    expect(assetActions(baseAsset, "EXECUTIVE_VIEWER", ["CORE", "ASSETS"])).toEqual(
+    expect(assetActions(baseAsset, "CASHIER", ["CORE", "ASSETS"])).toEqual(
       [],
     );
     expect(assetActions(baseAsset, "ADMIN", ["CORE"])).toEqual([]);
@@ -165,7 +163,7 @@ describe("status-gated visibility", () => {
     expect(screen.getByRole("button", { name: "Affecter" })).toBeTruthy();
   });
 
-  it("RETIRED renders nothing; EXECUTIVE_VIEWER renders nothing", () => {
+  it("RETIRED renders nothing; CASHIER renders nothing", () => {
     renderActions(
       { ...baseAsset, lifecycleStatus: "RETIRED" },
       fakeClient({ ok: false, code: "COMMAND_FAILED" }),
@@ -174,7 +172,7 @@ describe("status-gated visibility", () => {
     cleanup();
     renderActions(baseAsset, fakeClient({ ok: false, code: "COMMAND_FAILED" }), {
       ...admin,
-      role: "EXECUTIVE_VIEWER",
+      role: "CASHIER",
     });
     expect(screen.queryByRole("button")).toBeNull();
   });

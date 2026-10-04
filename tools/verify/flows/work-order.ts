@@ -4,7 +4,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * VH003 Maintenance tab → create a work order from the open bodywork problem →
  * complete it with a repair cost. Reads the order back as COMPLETED with the cost.
  * Mutates the slot; reset with `pnpm verify up --reseed`.
- * Run: pnpm verify drive flow:work-order --role maintenance --lang en
+ * Run: pnpm verify drive flow:work-order --role technician --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const assets = await apiGet("/v1/assets?search=VH003");

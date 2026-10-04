@@ -44,7 +44,7 @@ const closeActivity: CommandDefinition<CloseActivityPayload> = {
   name: "close-activity",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "DRIVER"],
   payloadSchema: closeActivityPayload,
   branchAuthorization: {
     kind: "branches",
@@ -225,7 +225,7 @@ const reopenActivity: CommandDefinition<ReopenActivityPayload> = {
   // §5.1 gives reopen one approval; realized the way reopen-period already is —
   // a restricted role plus a mandatory reason in the audit trail, not a second
   // approval step (§5.2 keeps approvals single-step).
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: reopenActivityPayload,
   branchAuthorization: {
     kind: "branches",

@@ -32,7 +32,7 @@ describe("GET /v1/members", () => {
 
     const admin = await seedMember(ctx.db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminToken = (
@@ -41,7 +41,7 @@ describe("GET /v1/members", () => {
 
     const ops = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "CASHIER",
       allBranches: true,
     });
     opsToken = (
@@ -67,7 +67,7 @@ describe("GET /v1/members", () => {
       url: "/v1/commands/add-member",
       headers: { authorization: `Bearer ${adminToken}` },
       payload: {
-        version: 1,
+        version: 2,
         envelope: {
           commandId: randomUUID(),
           idempotencyKey: `idem-${randomUUID()}`,
@@ -88,7 +88,7 @@ describe("GET /v1/members", () => {
           displayName: "Aïcha Moussa",
           username,
           pin: "4821",
-          role: "MAINTENANCE",
+          role: "TECHNICIAN",
           branchScope: [branchId],
         })
       ).statusCode,
@@ -102,7 +102,7 @@ describe("GET /v1/members", () => {
     expect(row).toMatchObject({
       displayName: "Aïcha Moussa",
       username,
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
       branchScope: [branchId],
       status: "ACTIVE",
       rowVersion: 1,
@@ -113,7 +113,7 @@ describe("GET /v1/members", () => {
   it("shows a member who holds no credential with a null username", async () => {
     const bare = await seedMember(ctx.db, {
       workspaceId,
-      role: "EXECUTIVE_VIEWER",
+      role: "FINANCE",
       allBranches: true,
     });
 
@@ -131,7 +131,7 @@ describe("GET /v1/members", () => {
           displayName: "Verrouillé",
           username: `locked-${randomUUID().slice(0, 8)}`,
           pin: "4821",
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           branchScope: "ALL",
         })
       ).statusCode,
@@ -171,7 +171,7 @@ describe("GET /v1/members", () => {
           displayName: "Parti",
           username: `gone-${randomUUID().slice(0, 8)}`,
           pin: "4821",
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           branchScope: "ALL",
         })
       ).statusCode,
@@ -225,7 +225,7 @@ describe("GET /v1/members", () => {
     expect(resorted.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
   });
 
-  it("is ADMIN-only", async () => {
+  it("is for DIRECTOR and ADMIN only", async () => {
     const response = await list("", opsToken);
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });

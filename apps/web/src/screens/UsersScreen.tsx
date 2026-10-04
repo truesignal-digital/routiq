@@ -25,7 +25,7 @@ import {
   MemberActionDialog,
   type MemberActionKey,
 } from "@/members/MemberActionDialog.js";
-import { canAdministerMembers } from "@/members/permissions.js";
+import { canAdministerMembers, type MemberActor } from "@/members/permissions.js";
 import { useMembers } from "@/members/useMembers.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
@@ -49,12 +49,17 @@ const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
  * one place day-2 administration happens: before it existed a hire or a
  * departure meant hand-written SQL against `credentials`.
  *
- * ADMIN-only, matching `/v1/members` and the five commands behind the row menu.
+ * Direction and Administrateur, matching `/v1/members`. The row menu offers
+ * only the members this actor may manage (`memberActions`).
  */
 export function UsersScreen() {
   const { t } = useTranslation();
   const me = useMeContext();
   const canAdminister = canAdministerMembers(me?.role);
+  const actor: MemberActor | undefined =
+    me === undefined
+      ? undefined
+      : { principalId: me.principalId, role: me.role, branchScope: me.branchScope };
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -206,7 +211,7 @@ export function UsersScreen() {
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(member) =>
-              memberActions(member).map(
+              memberActions(member, actor).map(
                 (action): DataTableRowAction<MemberListItem> => ({
                   key: action,
                   label: t(`users.actions.${action}`),
@@ -239,6 +244,7 @@ export function UsersScreen() {
         open={adding}
         onOpenChange={setAdding}
         branches={branches}
+        actor={actor}
         onAdded={() => void membersQuery.refetch()}
       />
 
@@ -247,6 +253,7 @@ export function UsersScreen() {
           member={acting.member}
           action={acting.action}
           branches={branches}
+          actor={actor}
           onDismiss={() => setActing(undefined)}
         />
       )}

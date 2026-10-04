@@ -23,15 +23,15 @@ Preconditions:
 
 - Slot up and doctor PASS; the seven accounts in `../SKILL.md` exist (doctor's login checks).
 
-- **Sign in.** Run `pnpm verify login --role manager`. The form is filled by label: "Espace de travail" = `transports-ngwa`, "Nom d'utilisateur" = `boris`, "Code PIN" = `222222`, then "Se connecter". The step `log in as boris` passes and the screenshot shows Home with `boris` and `transports-ngwa` in the sidebar footer.
-- **Every role.** Repeat with `--role admin|field|field-yde|maintenance|finance|viewer`. `pnpm verify doctor` already proves each PIN works against the API.
-- **Switch role.** Run `pnpm verify drive flow:switch-user --role admin --lang en`. It clicks "Sign out", lands on `/login`, signs in as `amadou`, and checks Home has no `[data-kpi="pendingApprovals"]` card. The flow's API cross-check reads `GET /v1/me` → role `EXECUTIVE_VIEWER`.
+- **Sign in.** Run `pnpm verify login --role admin`. The form is filled by label: "Espace de travail" = `transports-ngwa`, "Nom d'utilisateur" = `boris`, "Code PIN" = `222222`, then "Se connecter". The step `log in as boris` passes and the screenshot shows Home with `boris` and `transports-ngwa` in the sidebar footer.
+- **Every role.** Repeat with `--role director|admin|admin-yde|finance|cashier|technician|driver|driver-yde`. `pnpm verify doctor` already proves each PIN works against the API.
+- **Switch role.** Run `pnpm verify drive flow:switch-user --role director --lang en`. It clicks "Sign out", lands on `/login`, signs in as `clarisse` (CASHIER), and checks Home has no `[data-kpi="pendingApprovals"]` card. The flow's API cross-check reads `GET /v1/me` → role `EXECUTIVE_VIEWER`.
 - **Wrong PIN.** In a DriveScript, sign out, fill the form with a wrong PIN and click "Se connecter". `getByRole("alert")` reads "Nom d'utilisateur ou code PIN incorrect." and the "Code PIN" field is empty. The API answers `401 {"error":{"code":"AUTH_INVALID_CREDENTIALS"}}`. Not yet a committed flow.
-- **Proof.** Screenshots `01-signed-out.png` and `02-home-as-amadou.png` in the run directory, plus the `/v1/me` line on stdout.
+- **Proof.** Screenshots `01-signed-out.png` and `02-home-as-clarisse.png` in the run directory, plus the `/v1/me` line on stdout.
 
 ## Gotchas
 
 - Five wrong PINs lock the account for 15 minutes (`AUTH_LOCKED`). Use a throwaway attempt count, or reseed.
 - Workspace and username are prefilled from the last identity on this browser profile. Each drive uses a fresh profile, so they start empty.
 - `patrice` is scoped to YDE and every seeded truck is in DLA, so his trucks list is empty. That is the expected branch-scoped view, not a bug.
-- `herve` (MAINTENANCE) sees "Finances" in the sidebar but gets a permission screen there; the sidebar gates by module, not role.
+- `herve` (TECHNICIAN) sees "Finances" in the sidebar but gets a permission screen there; the sidebar gates by module, not role.

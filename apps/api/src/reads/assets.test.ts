@@ -50,7 +50,7 @@ describe("GET /v1/assets", () => {
 
     const branchMember = await seedMember(ctx.db, {
       workspaceId: workspaceA.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [doualaId],
     });
     branchToken = (

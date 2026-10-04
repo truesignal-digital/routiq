@@ -72,10 +72,10 @@ Zero means “no qualifying recorded postings,” not free operation or complete
 
 ## Worked scenario using existing authority
 
-Fixture: one company, Douala branch, vehicle VEH-001, September open. A scoped FIELD_SUBMITTER records a 150,000 XAF repair with one posting attributed to VEH-001, a receipt and economic date September 4. Under the existing default 100,000 XAF auto-post threshold for that role, this is submitted for review. Thresholds are configuration, not a new universal company policy.
+Fixture: one company, Douala branch, vehicle VEH-001, September open. A scoped DRIVER records a 150,000 XAF repair with one posting attributed to VEH-001, a receipt and economic date September 4. Under the existing default 100,000 XAF auto-post threshold for that role, this is submitted for review. Thresholds are configuration, not a new universal company policy.
 
 1. Recording the expense creates one entry. Exact retry with the same command identity returns the same result; it does not create a second charge. The vehicle shows 150,000 awaiting review and 0 posted for this example.
-2. A FINANCE_APPROVER with the required branch scope reviews the entry/evidence and approves through the existing command. Pending becomes 0; posted expense becomes 150,000. Approval is not payment.
+2. A FINANCE member with the required branch scope reviews the entry/evidence and approves through the existing command. Pending becomes 0; posted expense becomes 150,000. Approval is not payment.
 3. The executive opens the vehicle's 150,000 figure, sees the matching posting and original entry, and opens history/evidence without write controls. The company/branch, vehicle and period remain consistent through navigation.
 4. Finance identifies a duplicate and reverses the posted entry with a reason and current record version. The original stays in history as REVERSED; a second POSTED entry carries -150,000. In the same open period the pair nets to 0. The receipt remains attached to its original record; it is not deleted or silently reassigned.
 5. If the original period is locked, the existing late-posting/reversal rules use the current calendar month in the workspace timezone. If that month is also locked, refuse with PERIOD_LOCKED; do not search for an arbitrary open month. Otherwise show the negative amount there, not a rewritten closed-period total. Explain the link back to the original.
@@ -125,7 +125,7 @@ Maintenance items need MAINTENANCE, document items need DOCUMENTS, and entry ite
 
 ## Notes
 
-`add-note` (**Served**, CORE module) writes a free-text remark on a vehicle. Notes are append-only: never edited or deleted, a correction is another note. Every role except EXECUTIVE_VIEWER may write one; notes on a sold, retired or written-off vehicle are refused. v1 annotates vehicles only: each new target will be a new nullable column on `notes` (an exclusive arc), so the tenant foreign key stays structural. Notes appear in History under NOTES.
+`add-note` (**Served**, CORE module) writes a free-text remark on a vehicle. Notes are append-only: never edited or deleted, a correction is another note. Every role may write one; notes on a sold, retired or written-off vehicle are refused. v1 annotates vehicles only: each new target will be a new nullable column on `notes` (an exclusive arc), so the tenant foreign key stays structural. Notes appear in History under NOTES.
 
 ## Contracts: served and planned
 
@@ -138,7 +138,7 @@ Served on `feat/maintenance-on-develop`:
 | `GET /v1/assets/:assetId/finance?periodCode=YYYY-MM` | FINANCE; FINANCE_READER_ROLES only | Posted by POSTING_PERIOD; pending and rejected by ECONOMIC_MONTH; `periodStatus` OPEN, LOCKED or NOT_STARTED; six-period series ending at the period. Defaults to the current month in the workspace timezone. Only this vehicle's signed posting lines, entries read by their own branch. |
 | `GET /v1/assets/:assetId/attention` | ASSETS; items gated as above | Business date in the workspace timezone. |
 | `GET /v1/assets/:assetId/history` | ASSETS; MONEY for ledger readers only | None; newest first. |
-| `GET /v1/assets/:assetId/custodian-candidates` | ASSETS; ADMIN and OPS_MANAGER | None. |
+| `GET /v1/assets/:assetId/custodian-candidates` | ASSETS; DIRECTOR and ADMIN | None. |
 | `GET /v1/issues/:issueId` | MAINTENANCE | None. Lists the photos taken with the report (`artifacts`: `artifactId`, `mimeType`, `sizeBytes`, `originalFileName`). |
 | `GET /v1/issues/:issueId/artifacts/:artifactId/download-url` | MAINTENANCE; the issue's vehicle in the caller's branches; the file linked by the report-issue call | None. |
 | `GET /v1/assets/:assetId/documents` | Branch scope of the vehicle | None. Each document lists its scans (`artifacts`, same shape) beside `artifactCount`. |

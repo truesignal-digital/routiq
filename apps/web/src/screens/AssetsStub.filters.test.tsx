@@ -319,7 +319,7 @@ describe("assets explorer server-side filtering", () => {
 
     it("offers a viewer no commands at all", async () => {
       stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
-      renderScreen("EXECUTIVE_VIEWER");
+      renderScreen("CASHIER");
       await screen.findByText("AST-001");
 
       await userEvent.click(screen.getByRole("button", { name: "Actions" }));

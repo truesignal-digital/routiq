@@ -1,6 +1,6 @@
 # Finance approvals
 
-Expenses above the approval threshold (100,000 XAF for submitters and managers) wait in the approvals queue. A finance approver or admin approves or rejects each one; nobody decides on an entry they recorded themselves.
+Expenses above the approval threshold (100,000 XAF for drivers, technicians and cashiers) wait in the approvals queue. Finance or Direction approves or rejects each one; nobody decides on an entry they recorded themselves.
 
 ## Sub-features
 
@@ -12,7 +12,7 @@ Expenses above the approval threshold (100,000 XAF for submitters and managers) 
 
 ## How to get to it (user POV)
 
-- Sidebar "Finances" → tab "Approbations" / "Approvals" in "Sections financières" / "Finance sections" (ADMIN, FINANCE_APPROVER only).
+- Sidebar "Finances" → tab "Approbations" / "Approvals" in "Sections financières" / "Finance sections" (FINANCE, DIRECTOR only).
 - Home → "Approbations en attente" / "Pending approvals" card.
 - Row "⋯" ("Actions") → "Approuver" / "Approve" or "Rejeter" / "Reject".
 
@@ -24,12 +24,12 @@ Preconditions:
 
 - **Approve.** Run `pnpm verify drive flow:approve-entry --role finance --lang en`. It takes the first entry from `GET /v1/finance/approvals`, clicks "Finance" → the "Approvals" tab, opens that row's "Actions" menu (row filtered by entry number), chooses "Approve", clicks the dialog's "Approve", and waits for "Entry approved". The cross-check reads the entry as `POSTED`.
 - **Reject.** In a DriveScript, same path with menu item "Reject"; fill "Rejection reason" (`#reason`) and click the dialog's "Reject". Read back `REJECTED`. Not yet a committed flow.
-- **Own submission.** Not reachable with the seed: entries recorded by ADMIN or FINANCE_APPROVER post at once, so an approver never has a pending entry of their own. Report it as `verified-unreachable` unless the approval rules change.
+- **Own submission.** Not reachable with the seed: entries recorded by DIRECTOR, ADMIN or FINANCE post at once, so an approver never has a pending entry of their own. Report it as `verified-unreachable` unless the approval rules change.
 - **Queue read.** `pnpm verify api GET /v1/finance/approvals --role finance` lists `entries` and `total`.
 - **Proof.** `01-approvals-queue.png`, `02-approve-dialog.png`, `03-approved.png`.
 
 ## Gotchas
 
 - Every row's menu trigger is named just "Actions"; filter the row by entry number first.
-- Entries recorded by ADMIN or FINANCE_APPROVER post at once with no upper bound. To create a pending entry, record more than 100,000 XAF as `field` or `manager`.
+- Entries recorded by DIRECTOR, ADMIN or FINANCE post at once with no upper bound. To create a pending entry, record more than 100,000 XAF as `driver` or `cashier`.
 - Approving changes the queue and the Home count; reseed before a run that expects two pending entries.

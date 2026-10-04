@@ -93,7 +93,7 @@ registerCommand<ApproveEntryPayload>({
   name: "approve-entry",
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR", "FINANCE"],
   payloadSchema: approveEntryPayload,
   branchAuthorization: {
     kind: "branches",
@@ -185,7 +185,7 @@ registerCommand<RejectEntryPayload>({
   name: "reject-entry",
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR", "FINANCE"],
   payloadSchema: rejectEntryPayload,
   branchAuthorization: {
     kind: "branches",

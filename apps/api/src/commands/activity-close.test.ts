@@ -26,7 +26,7 @@ describe("close-activity.v1 / reopen-activity.v1", () => {
     workspaceId = seeded.workspace.id;
     const manager = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     managerToken = (
@@ -34,7 +34,7 @@ describe("close-activity.v1 / reopen-activity.v1", () => {
     ).token;
     const clerk = await seedMember(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     clerkToken = (

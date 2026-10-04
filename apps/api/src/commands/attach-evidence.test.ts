@@ -21,7 +21,7 @@ describe("attach-evidence.v1", () => {
   let driver: Actor;
   let colleague: Actor;
   let mechanic: Actor;
-  let viewer: Actor;
+  let cashier: Actor;
   let dlaOnly: Actor;
   let otherAdmin: Actor;
   let assetId: string;
@@ -33,18 +33,18 @@ describe("attach-evidence.v1", () => {
     workspaceId = seeded.workspace.id;
     await ctx.db.insert(branches).values({ workspaceId, code: "YDE", name: "Yaoundé" });
 
-    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
+    admin = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
     colleague = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       displayName: "Awa",
     });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
-    viewer = await seedActor(ctx.db, { workspaceId, role: "EXECUTIVE_VIEWER" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
+    cashier = await seedActor(ctx.db, { workspaceId, role: "CASHIER" });
     dlaOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
     });
     assetId = await seedAsset(ctx.app, admin.token, { assetCode: "EV-01" });
@@ -306,11 +306,12 @@ describe("attach-evidence.v1", () => {
     expect(await missingIds()).not.toContain(reversalEntryId);
   });
 
-  it("refuses the executive viewer", async () => {
+  it("lets the cashier attach a receipt to a driver's spend", async () => {
     const { entryId } = await expense(driver);
-    const reply = await attach(viewer, entryId, [await artifact()]);
-    expect(reply.status).toBe(403);
-    expect(reply.body.error?.code).toBe("ROLE_FORBIDDEN");
+    const reply = await attach(cashier, entryId, [
+      await artifact({ workspaceId, principalId: cashier.principalId }),
+    ]);
+    expect(reply.status).toBe(200);
   });
 
   it("lets the workshop attach only to work-order costs", async () => {

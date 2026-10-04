@@ -17,7 +17,7 @@ const substituteAsset: CommandDefinition<SubstituteAssetPayload> = {
   name: "substitute-asset",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "DRIVER"],
   payloadSchema: substituteAssetPayload,
   operationalAssetId: (payload) => payload.substituteAssetId,
 

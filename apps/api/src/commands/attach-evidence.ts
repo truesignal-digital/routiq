@@ -24,7 +24,7 @@ export const attachEvidence: CommandDefinition<AttachEvidencePayload> = {
   name: "attach-evidence",
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
   payloadSchema: attachEvidencePayload,
   branchAuthorization: {
     kind: "branches",
@@ -88,7 +88,7 @@ export const attachEvidence: CommandDefinition<AttachEvidencePayload> = {
       });
     }
 
-    if (ctx.role === "MAINTENANCE") {
+    if (ctx.role === "TECHNICIAN") {
       if (await hasPostingWithoutWorkOrder(tx, ctx.workspaceId, entry.id)) {
         throw new CommandError(403, "ROLE_FORBIDDEN", {
           command: "attach-evidence",

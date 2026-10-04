@@ -3,10 +3,10 @@ import { canAccessDocuments, canManageDocuments } from "./permissions.js";
 
 describe("documents permissions", () => {
   it("allows writes only to roles accepted by add-or-renew-document", () => {
-    for (const role of ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const) {
+    for (const role of ["DIRECTOR", "ADMIN", "FINANCE"] as const) {
       expect(canManageDocuments(role, ["CORE", "DOCUMENTS"])).toBe(true);
     }
-    for (const role of ["MAINTENANCE", "FINANCE_APPROVER", "EXECUTIVE_VIEWER"] as const) {
+    for (const role of ["CASHIER", "TECHNICIAN", "DRIVER"] as const) {
       expect(canManageDocuments(role, ["CORE", "DOCUMENTS"])).toBe(false);
     }
   });

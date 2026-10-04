@@ -10,7 +10,6 @@ import { useVehicle } from "./context.js";
 export function QuickActionBar() {
   const { t } = useTranslation();
   const { viewer, facts, runAction, openAllActions } = useVehicle();
-  if (viewer.readOnly) return null;
   const keys = quickActions(facts, viewer);
 
   return (

@@ -476,7 +476,7 @@ export function registerArtifactRoutes(
     {
       path: "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
       module: "FINANCE",
-      roles: [...FINANCE_READER_ROLES, "MAINTENANCE"],
+      roles: [...FINANCE_READER_ROLES, "TECHNICIAN"],
       branchScope: "per-record",
     },
     async ({ req, reply, auth, read }) =>

@@ -42,13 +42,13 @@ const tabNames = () => screen.getAllByRole("tab").map((tab) => tab.textContent?.
 
 describe("which sections a viewer gets", () => {
   it("gives every section to a manager with every module", async () => {
-    await openVehicle(`/assets/${ASSET_ID}`, { role: "OPS_MANAGER" });
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
     await screen.findByText("Available.");
     expect(tabNames()).toEqual(["Now", "Maintenance", "Money", "Trips", "Documents", "History", "Details"]);
   });
 
   it("keeps the books from the workshop, and each module's section from a workspace without it", async () => {
-    await openVehicle(`/assets/${ASSET_ID}`, { role: "MAINTENANCE" });
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "TECHNICIAN" });
     await screen.findByText("Available.");
     expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "Documents", "History", "Details"]);
     cleanup();
@@ -59,7 +59,7 @@ describe("which sections a viewer gets", () => {
 
   it("renders the workshop's header and Now without a money card, from a detail with no finance block", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}`, {
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
       asset: asset({ finance: undefined }),
     });
     expect(await screen.findByText("Available.")).toBeTruthy();
@@ -79,7 +79,7 @@ describe("which sections a viewer gets", () => {
   });
 
   it("denies a direct link to Money for the workshop without ever asking for money", async () => {
-    const recorded = await openVehicle(`/assets/${ASSET_ID}/money`, { role: "MAINTENANCE" });
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money`, { role: "TECHNICIAN" });
     expect(await screen.findByText("Your role does not allow this action.")).toBeTruthy();
     await screen.findByText("Available.");
     expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.endsWith("/finance"))).toBe(false);
@@ -98,7 +98,7 @@ describe("which sections a viewer gets", () => {
   });
 
   it("keeps the old documents link: it opens the Documents section", async () => {
-    await openVehicle(`/assets/${ASSET_ID}/documents`, { role: "FIELD_SUBMITTER", documents: [documentRow()] });
+    await openVehicle(`/assets/${ASSET_ID}/documents`, { role: "DRIVER", documents: [documentRow()] });
     expect(await screen.findByRole("heading", { name: "Documents" })).toBeTruthy();
     expect(await screen.findByText("Technical inspection")).toBeTruthy();
     expect(screen.getByText("Expired")).toBeTruthy();
@@ -108,7 +108,7 @@ describe("which sections a viewer gets", () => {
 
 describe("Details", () => {
   it("is its own section after History, reached by a deep link, and the header no longer discloses it", async () => {
-    const recorded = await openVehicle(`/assets/${ASSET_ID}/details`, { role: "OPS_MANAGER" });
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/details`, { role: "ADMIN" });
     expect(await screen.findByRole("heading", { name: "Details" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Details", selected: true })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Right now" })).toBeTruthy();
@@ -124,7 +124,7 @@ describe("Details", () => {
   });
 
   it("opens from its tab and keeps the month on the way", async () => {
-    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "OPS_MANAGER" });
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "ADMIN" });
     const user = userEvent.setup();
     await screen.findByRole("heading", { name: "Money · August 2026" });
     await user.click(screen.getByRole("tab", { name: "Details" }));
@@ -137,7 +137,7 @@ describe("Details", () => {
     ["en", "Details"],
     ["fr-CM", "Détails"],
   ] as const)("%s: the phone's tab bar ends with %s", async (locale, name) => {
-    await openVehicle(`/assets/${ASSET_ID}/details`, { role: "FIELD_SUBMITTER", width: 390, locale });
+    await openVehicle(`/assets/${ASSET_ID}/details`, { role: "DRIVER", width: 390, locale });
     await screen.findByRole("tab", { name, selected: true });
     expect(tabNames().at(-1)).toBe(name);
   });
@@ -146,7 +146,7 @@ describe("Details", () => {
 describe("Money", () => {
   it("reads the month from the URL and names each chip's basis in its query", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       entries: [entryRow({ status: "POSTED", postingPeriodCode: "2026-08" })],
     });
     const user = userEvent.setup();
@@ -188,7 +188,7 @@ describe("Money", () => {
       ["fr-CM", "En attente d'examen", "Coûts en attente d'examen"],
     ] as const)("%s: Money, its entry badges and the work order's pending costs agree", async (locale, name, heading) => {
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09&entries=review&panel=work_order:${WORK_ORDER_ID}`, {
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         locale,
         entries: [entryRow({ status: "SUBMITTED" })],
         workOrderDetails: [pending],
@@ -199,7 +199,7 @@ describe("Money", () => {
       expect(within(panel).queryByText(/Pending|En attente$|approval|approbation/)).toBeNull();
       cleanup();
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09&entries=review`, {
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         locale,
         entries: [entryRow({ status: "SUBMITTED" })],
       });
@@ -212,7 +212,7 @@ describe("Money", () => {
   });
 
   it("steps back a month and keeps the lifetime figures at the foot", async () => {
-    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "OPS_MANAGER" });
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "ADMIN" });
     const user = userEvent.setup();
     await screen.findByRole("heading", { name: "Money · August 2026" });
     await user.click(screen.getByRole("button", { name: "Previous month" }));
@@ -225,7 +225,7 @@ describe("Money", () => {
 describe("History", () => {
   it("filters by kind through the URL and loads more with the cursor", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/history?kind=MAINTENANCE`, {
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       history: [historyItem()],
       historyNextCursor: "next-page",
     });
@@ -244,7 +244,7 @@ describe("History", () => {
 describe("Maintenance and Trips", () => {
   it("lists work in progress and unplanned problems, with the role's step marked", async () => {
     await openVehicle(`/assets/${ASSET_ID}/maintenance`, {
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
       workOrders: [workOrderRow("APPROVED")],
       issues: [
         issueRow({ workOrders: [{ id: workOrderRow("APPROVED").id, status: "APPROVED" }] }),
@@ -269,7 +269,7 @@ describe("Maintenance and Trips", () => {
         ...overrides,
       });
     await openVehicle(`/assets/${ASSET_ID}/maintenance`, {
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
       workOrders: [
         done("00000000-0000-4000-8000-00000000d101", "Weld the rear mudguard bracket", {
           costOutcome: "INVOICE_PENDING",
@@ -300,7 +300,7 @@ describe("Maintenance and Trips", () => {
 
   it("gives each trip one state and shows its start and end as times (#94)", async () => {
     await openVehicle(`/assets/${ASSET_ID}/trips`, {
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       trips: [
         tripRow(),
         tripRow({
@@ -327,7 +327,7 @@ describe("Maintenance and Trips", () => {
   });
 
   it("starts a trip on the sheet with this vehicle", async () => {
-    const recorded = await openVehicle(`/assets/${ASSET_ID}/trips`, { role: "FIELD_SUBMITTER", trips: [tripRow()] });
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/trips`, { role: "DRIVER", trips: [tripRow()] });
     const user = userEvent.setup();
     expect(await screen.findByText("Douala → Yaoundé")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Start a trip" }));

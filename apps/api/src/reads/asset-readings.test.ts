@@ -33,10 +33,10 @@ describe("GET /v1/assets/:assetId/readings", () => {
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
     dlaOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde.id] });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde.id] });
     const other = await seedWorkspace(ctx.db);
     outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
 
@@ -186,7 +186,7 @@ describe("GET /v1/assets/:assetId/readings", () => {
 
   it("answers MODULE_DISABLED when ACTIVITIES is off", async () => {
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const gatedAsset = await seedAsset(ctx.app, gatedAdmin.token);
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ACTIVITIES" });
 

@@ -20,7 +20,7 @@ describe("substitute-asset.v1", () => {
     const seeded = await seedWorkspace(ctx.db);
     const member = await seedMember(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     token = (

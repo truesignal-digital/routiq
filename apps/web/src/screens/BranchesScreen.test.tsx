@@ -100,8 +100,8 @@ vi.mock("../branches/BranchActionDialog.js", async () => {
   };
 });
 
-const admin = { role: "ADMIN" as const, enabledModules: ["CORE"] as const };
-let meValue: unknown = admin;
+const director = { role: "DIRECTOR" as const, enabledModules: ["CORE"] as const };
+let meValue: unknown = director;
 
 vi.mock("../auth/me.js", async () => {
   const actual = await vi.importActual<typeof import("../auth/me.js")>("../auth/me.js");
@@ -132,7 +132,7 @@ describe("BranchesScreen", () => {
   beforeEach(() => {
     issuedQueries.length = 0;
     vi.clearAllMocks();
-    meValue = admin;
+    meValue = director;
     mockDesktop();
   });
   afterEach(cleanup);
@@ -150,8 +150,8 @@ describe("BranchesScreen", () => {
     expect(issuedQueries[0]).toEqual({ sort: "code:asc" });
   });
 
-  it("shows a non-admin the reason rather than the workspace's branches", async () => {
-    meValue = { role: "OPS_MANAGER", enabledModules: ["CORE", "ACTIVITIES"] };
+  it("shows anyone but the Director the reason rather than the workspace's branches", async () => {
+    meValue = { role: "ADMIN", enabledModules: ["CORE", "ACTIVITIES"] };
     render(<BranchesScreen />);
 
     expect(await screen.findByText("branches.title")).toBeTruthy();

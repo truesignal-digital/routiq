@@ -312,26 +312,26 @@ describe("offset stamping", () => {
 });
 
 describe("role and status gating", () => {
-  it("FIELD_SUBMITTER may close and substitute an open job but never reopen a closed one", () => {
-    renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+  it("DRIVER may close and substitute an open job but never reopen a closed one", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Substitute asset" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Reopen" })).toBeNull();
 
     cleanup();
-    renderActions(closedActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    renderActions(closedActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("OPS_MANAGER gets reopen on a closed job, and nothing else", () => {
-    renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
+  it("ADMIN gets reopen on a closed job, and nothing else", () => {
+    renderActions(closedActivity, recordingClient(committed()), meWith("ADMIN"));
     expect(screen.getByRole("button", { name: "Reopen" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
   });
 
-  it("EXECUTIVE_VIEWER sees no write affordance at all", () => {
-    renderActions(openActivity, recordingClient(committed()), meWith("EXECUTIVE_VIEWER"));
+  it("CASHIER sees no write affordance at all", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("CASHIER"));
     expect(screen.queryByRole("button")).toBeNull();
   });
 
@@ -455,7 +455,7 @@ describe("reopen", () => {
   it("refuses to submit without a reason and sends the activity's rowVersion once given one", async () => {
     const user = userEvent.setup();
     const client = recordingClient(committed());
-    renderActions(closedActivity, client, meWith("OPS_MANAGER"));
+    renderActions(closedActivity, client, meWith("ADMIN"));
 
     await user.click(screen.getByRole("button", { name: "Reopen" }));
     const submit = screen.getByRole("button", { name: "Confirm reopening" });
@@ -612,13 +612,13 @@ describe("mid-trip capture", () => {
   };
 
   it("offers the three capture actions only while the job is open and writable", () => {
-    renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    renderActions(openActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.getByRole("button", { name: "Add leg" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Record reading" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Record expense" })).toBeTruthy();
 
     cleanup();
-    renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
+    renderActions(closedActivity, recordingClient(committed()), meWith("ADMIN"));
     expect(screen.queryByRole("button", { name: "Add leg" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record reading" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record expense" })).toBeNull();

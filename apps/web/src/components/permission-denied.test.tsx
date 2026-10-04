@@ -75,7 +75,7 @@ function me(overrides: Partial<MeContext>): MeContext {
     principalId: "00000000-0000-4000-8000-000000000002",
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-000000000003",
-    role: "EXECUTIVE_VIEWER",
+    role: "CASHIER",
     branchScope: "ALL",
     enabledModules: [],
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
@@ -133,7 +133,7 @@ describe("permission denied surface", () => {
     for (const [name, Screen] of ROLE_GATED) {
       renderScreen(
         Screen,
-        me({ role: "FIELD_SUBMITTER", enabledModules: ["CORE", "FINANCE"] }),
+        me({ role: "DRIVER", enabledModules: ["CORE", "FINANCE"] }),
       );
       expect(deniedSurface()?.message, name).toBe(
         "Your role does not allow this action.",

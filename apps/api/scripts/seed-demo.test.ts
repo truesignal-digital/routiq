@@ -128,13 +128,14 @@ describe("seed-demo", () => {
       [workspaceId],
     );
     expect(accounts).toEqual([
-      { username: "amadou", role: "EXECUTIVE_VIEWER", scope: "ALL" },
-      { username: "boris", role: "OPS_MANAGER", scope: "ALL" },
-      { username: "emilienne", role: "ADMIN", scope: "ALL" },
-      { username: "herve", role: "MAINTENANCE", scope: "ALL" },
-      { username: "nadege", role: "FINANCE_APPROVER", scope: "ALL" },
-      { username: "patrice", role: "FIELD_SUBMITTER", scope: "YDE" },
-      { username: "sali", role: "FIELD_SUBMITTER", scope: "ALL" },
+      { username: "amadou", role: "ADMIN", scope: "YDE" },
+      { username: "boris", role: "ADMIN", scope: "ALL" },
+      { username: "clarisse", role: "CASHIER", scope: "DLA" },
+      { username: "emilienne", role: "DIRECTOR", scope: "ALL" },
+      { username: "herve", role: "TECHNICIAN", scope: "ALL" },
+      { username: "nadege", role: "FINANCE", scope: "ALL" },
+      { username: "patrice", role: "DRIVER", scope: "YDE" },
+      { username: "sali", role: "DRIVER", scope: "ALL" },
     ]);
   });
 
@@ -246,7 +247,7 @@ describe("seed-demo", () => {
 
   it("prints the accounts and VH003's state in its summary", () => {
     const summary = summaryOf(first.stdout);
-    expect(summary.accounts.map((account) => account.username)).toHaveLength(7);
+    expect(summary.accounts.map((account) => account.username)).toHaveLength(8);
     expect(summary.vehicleWorkspace.VH003.groundedSince).not.toBeNull();
     // Hervé's brake parts plus Sali's July repair, both awaiting the approver.
     expect(summary.vehicleWorkspace.VH003.pendingAmountMinor).toBe("760000");

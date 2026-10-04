@@ -58,7 +58,7 @@ describe("activity, person and place reads", () => {
 
     const doualaMember = await seedMember(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [doualaBranchId],
     });
     doualaToken = (
@@ -691,7 +691,7 @@ describe("activity detail ledger gate", () => {
     api = apiClient(ctx.app);
     const seeded = await seedWorkspace(ctx.db);
     workspaceId = seeded.workspace.id;
-    adminToken = (await seedActor(ctx.db, { workspaceId, role: "ADMIN" })).token;
+    adminToken = (await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" })).token;
     const truck = await seedAsset(ctx.app, adminToken);
 
     tripId = randomUUID();
@@ -738,7 +738,7 @@ describe("activity detail ledger gate", () => {
   });
 
   it("gives the workshop the trip without its money", async () => {
-    const { token } = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
+    const { token } = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     const detail = await detailAs(token);
     expect(detail.id).toBe(tripId);
     expect(detail.financialEntries).toBeNull();
@@ -747,7 +747,7 @@ describe("activity detail ledger gate", () => {
   it("gives nobody the money with FINANCE off", async () => {
     await api.ok(adminToken, "disable-module", { moduleCode: "FINANCE" });
     try {
-      for (const role of ["ADMIN", "FINANCE_APPROVER", "MAINTENANCE"] as const) {
+      for (const role of ["ADMIN", "FINANCE", "TECHNICIAN"] as const) {
         const { token } = await seedActor(ctx.db, { workspaceId, role });
         const detail = await detailAs(token);
         expect({ role, entries: detail.financialEntries }).toEqual({ role, entries: null });

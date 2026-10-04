@@ -20,6 +20,7 @@ describe("update-pending-entry.v1", () => {
   let colleague: Actor;
   let approver: Actor;
   let admin: Actor;
+  let cashier: Actor;
   const economicDate = `${currentPeriodCode(new Date(), "Africa/Douala")}-15`;
 
   beforeAll(async () => {
@@ -27,11 +28,13 @@ describe("update-pending-entry.v1", () => {
     db = ctx.db;
     api = apiClient(ctx.app);
     workspaceId = (await seedWorkspace(db)).workspace.id;
-    [author, colleague, approver, admin] = await Promise.all([
-      seedActor(db, { workspaceId, role: "FIELD_SUBMITTER", allBranches: true }),
-      seedActor(db, { workspaceId, role: "FIELD_SUBMITTER", allBranches: true }),
-      seedActor(db, { workspaceId, role: "FINANCE_APPROVER", allBranches: true }),
-      seedActor(db, { workspaceId, role: "ADMIN", allBranches: true }),
+    [author, colleague, approver, admin, cashier] = await Promise.all([
+      seedActor(db, { workspaceId, role: "DRIVER", allBranches: true }),
+      seedActor(db, { workspaceId, role: "DRIVER", allBranches: true }),
+      seedActor(db, { workspaceId, role: "FINANCE", allBranches: true }),
+      seedActor(db, { workspaceId, role: "DIRECTOR", allBranches: true }),
+      // Revenue is the counter's to record now, no longer the driver's.
+      seedActor(db, { workspaceId, role: "CASHIER", allBranches: true }),
     ]);
     assetId = randomUUID();
     await api.ok(admin.token, "register-asset", {
@@ -47,7 +50,7 @@ describe("update-pending-entry.v1", () => {
     await ctx?.close();
   });
 
-  /** A FIELD_SUBMITTER expense: above the 100 000 band it waits for approval. */
+  /** A DRIVER expense: above the 100 000 band it waits for approval. */
   async function recordExpense(amountMinor: number, by: Actor = author) {
     const entryId = randomUUID();
     const outcome = await api.ok(by.token, "record-expense", {
@@ -275,7 +278,7 @@ describe("update-pending-entry.v1", () => {
 
     it("reads a revenue entry against record-revenue's band", async () => {
       const entryId = randomUUID();
-      const recorded = await api.ok(author.token, "record-revenue", {
+      const recorded = await api.ok(cashier.token, "record-revenue", {
         entryId,
         branchCode: "DLA",
         categoryCode: "FREIGHT_REVENUE",
@@ -287,7 +290,7 @@ describe("update-pending-entry.v1", () => {
       expect(recorded.recordStatus).toBe("SUBMITTED");
 
       const reply = await edit(
-        author,
+        cashier,
         entryId,
         { categoryCode: "FREIGHT_REVENUE", counterpartyName: undefined, amountMinor: 25_000 },
         1,
@@ -308,7 +311,7 @@ describe("update-pending-entry.v1", () => {
       expect((await entryRow(entryId))?.amountMinor).toBe(150_000n);
     });
 
-    it("refuses an admin, who may reject it instead", async () => {
+    it("refuses Direction, who may reject it instead", async () => {
       const { entryId } = await recordExpense(150_000);
       const reply = await edit(admin, entryId, { amountMinor: 1_000 }, 1);
       expect(reply.status).toBe(403);

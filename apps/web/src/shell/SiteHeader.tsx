@@ -24,7 +24,7 @@ export function SiteHeader() {
   const { t } = useTranslation();
   const me = useMeContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const crumbs = breadcrumbTrail(visibleSections(me?.enabledModules), pathname);
+  const crumbs = breadcrumbTrail(visibleSections(me?.enabledModules, me?.role), pathname);
   const { scoped } = useBranchScope();
   // Beside the branch pill a phone has room for one crumb: the full trail
   // shrank to initials there. Below a section it is the way back up; at a

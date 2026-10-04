@@ -1,16 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { isReadOnlyRole, scopedByBranch } from "./me.js";
-
-describe("role gate", () => {
-  it("EXECUTIVE_VIEWER is read-only; operating roles are not", () => {
-    expect(isReadOnlyRole("EXECUTIVE_VIEWER")).toBe(true);
-    expect(isReadOnlyRole(undefined)).toBe(true);
-    for (const role of ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE", "FINANCE_APPROVER"] as const) {
-      expect(isReadOnlyRole(role)).toBe(false);
-    }
-  });
-});
+import { scopedByBranch } from "./me.js";
 
 describe("branch gate", () => {
   const branches = [

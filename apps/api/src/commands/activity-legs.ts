@@ -90,7 +90,7 @@ const recordMovementLeg: CommandDefinition<RecordMovementLegPayload> = {
   name: "record-movement-leg",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "DRIVER"],
   payloadSchema: recordMovementLegPayload,
 
   branchAuthorization: {
@@ -296,7 +296,7 @@ const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
   name: "record-meter-reading",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"],
   payloadSchema: recordMeterReadingPayload,
   operationalAssetId: (payload) => payload.assetId,
 

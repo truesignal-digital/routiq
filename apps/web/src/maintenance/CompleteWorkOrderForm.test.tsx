@@ -140,7 +140,7 @@ function recordingClient(outcome: Partial<CommandResult> = {}): CommandClient & 
   };
 }
 
-function renderForm(client: CommandClient, viewer: MeContext = me("OPS_MANAGER"), workOrder = ref) {
+function renderForm(client: CommandClient, viewer: MeContext = me("ADMIN"), workOrder = ref) {
   const onDismiss = vi.fn();
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -333,13 +333,13 @@ describe("closing a work order with costs already recorded", () => {
 
 describe("who may put money on the close", () => {
   it("lets the workshop type the amount", () => {
-    const { panel } = renderForm(recordingClient(), me("MAINTENANCE"));
+    const { panel } = renderForm(recordingClient(), me("TECHNICIAN"));
     expect(within(panel).getByLabelText("How much did the repair cost?")).toBeTruthy();
   });
 
   it("offers only the two alternatives when the books are switched off, and makes no choice for the closer", async () => {
     const client = recordingClient();
-    const { panel } = renderForm(client, me("OPS_MANAGER", ["CORE", "MAINTENANCE"]));
+    const { panel } = renderForm(client, me("ADMIN", ["CORE", "MAINTENANCE"]));
 
     expect(within(panel).queryByLabelText("How much did the repair cost?")).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Add a line" })).toBeNull();
@@ -353,7 +353,7 @@ describe("who may put money on the close", () => {
 });
 
 describe("after the close", () => {
-  it("says it went to finance only when something waits for review", async () => {
+  it("says it went for review only when something waits for review", async () => {
     const client = recordingClient({
       children: [{ entityType: "financial_entry", id: "e1", status: "SUBMITTED", warnings: [] }],
     });
@@ -363,7 +363,7 @@ describe("after the close", () => {
 
     await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
     expect(mocks.toastAdd.mock.calls[0]![0]).toMatchObject({
-      title: "Work completed. Sent to finance.",
+      title: "Work completed. Sent for review.",
     });
   });
 
@@ -379,7 +379,7 @@ describe("after the close", () => {
     expect(mocks.toastAdd.mock.calls[0]![0]).toMatchObject({ title: "Work completed" });
   });
 
-  it("says it went to finance when the close itself is held", async () => {
+  it("says it went for review when the close itself is held", async () => {
     const client = recordingClient({ recordStatus: "COMPLETION_SUBMITTED" });
     const { panel } = renderForm(client);
     await userEvent.click(within(panel).getByRole("button", { name: "No cost" }));
@@ -387,7 +387,7 @@ describe("after the close", () => {
 
     await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
     expect(mocks.toastAdd.mock.calls[0]![0]).toMatchObject({
-      title: "Work completed. Sent to finance.",
+      title: "Work completed. Sent for review.",
     });
   });
 });

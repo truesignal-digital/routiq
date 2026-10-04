@@ -38,8 +38,8 @@ describe("release-asset-to-service.v1", () => {
     workspaceId = seeded.workspace.id;
 
     adminToken = await tokenFor("ADMIN");
-    managerToken = await tokenFor("OPS_MANAGER");
-    mechanicToken = await tokenFor("MAINTENANCE");
+    managerToken = await tokenFor("ADMIN");
+    mechanicToken = await tokenFor("TECHNICIAN");
 
     const otherSeeded = await seedWorkspace(db);
     const otherAdmin = await seedMember(db, {
@@ -72,7 +72,7 @@ describe("release-asset-to-service.v1", () => {
   });
 
   async function tokenFor(
-    role: "ADMIN" | "OPS_MANAGER" | "MAINTENANCE",
+    role: "ADMIN" | "TECHNICIAN",
     principalType: "HUMAN" | "AI_AGENT" | "INTEGRATION" = "HUMAN",
   ): Promise<string> {
     const member = await seedMember(db, {
@@ -282,7 +282,7 @@ describe("release-asset-to-service.v1", () => {
       [
         "waiting on a completion review",
         async (workOrderId: string) => {
-          // A threshold only an admin clears, so the manager's completion is held.
+          // A threshold only Direction clears, so the manager's completion is held.
           const [rule] = await db
             .insert(approvalRules)
             .values({
@@ -292,7 +292,7 @@ describe("release-asset-to-service.v1", () => {
               branchId: null,
               amountMinMinor: 10_000n,
               amountMaxMinor: null,
-              requiredRole: "ADMIN",
+              requiredRole: "DIRECTOR",
               createdByCommandId: null,
             })
             .returning({ id: approvalRules.id });

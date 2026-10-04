@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { commandEnvelope } from "../envelope.js";
-import { ROLES } from "../roles.js";
+import { legacyRoleInput, ROLES } from "../roles.js";
 
 /**
  * Day-2 member administration. Until these existed a workspace's users were
@@ -26,6 +26,7 @@ const pin = z.string().min(4).max(64);
 
 const username = z.string().min(1).max(80);
 
+/** v2: the six roles of ADR-0009. */
 export const addMemberPayload = z.strictObject({
   /** Client-generated, so an offline-drafted form and its retry name the same person. */
   principalId: z.uuid(),
@@ -38,33 +39,47 @@ export const addMemberPayload = z.strictObject({
 
 export const addMemberCommand = z.object({
   name: z.literal("add-member"),
-  version: z.literal(1),
+  version: z.literal(2),
   envelope: commandEnvelope,
   payload: addMemberPayload,
 });
+
+/** v1, shipped with the pre-ADR-0009 roles; each legacy code is read as the role it became. */
+export const addMemberV1Payload = addMemberPayload.extend({ role: legacyRoleInput });
 
 /**
  * Role and branch scope are both optional so the screen can send only what the
  * admin actually changed, but sending neither is a no-op dressed as a command —
  * refused here rather than written as an empty audit event.
  */
+function changesSomething(payload: { role?: unknown; branchScope?: unknown }): boolean {
+  return payload.role !== undefined || payload.branchScope !== undefined;
+}
+
+/** v2: the six roles of ADR-0009. */
 export const updateMemberRolePayload = z
   .strictObject({
     principalId: z.uuid(),
     role: z.enum(ROLES).optional(),
     branchScope: memberBranchScope.optional(),
   })
-  .refine(
-    (payload) => payload.role !== undefined || payload.branchScope !== undefined,
-    { message: "role or branchScope must be present" },
-  );
+  .refine(changesSomething, { message: "role or branchScope must be present" });
 
 export const updateMemberRoleCommand = z.object({
   name: z.literal("update-member-role"),
-  version: z.literal(1),
+  version: z.literal(2),
   envelope: commandEnvelope,
   payload: updateMemberRolePayload,
 });
+
+/** v1, shipped with the pre-ADR-0009 roles; each legacy code is read as the role it became. */
+export const updateMemberRoleV1Payload = z
+  .strictObject({
+    principalId: z.uuid(),
+    role: legacyRoleInput.optional(),
+    branchScope: memberBranchScope.optional(),
+  })
+  .refine(changesSomething, { message: "role or branchScope must be present" });
 
 export const deactivateMemberPayload = z.strictObject({
   principalId: z.uuid(),

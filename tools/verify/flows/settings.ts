@@ -3,7 +3,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
 /**
  * Settings under More: branches, users (members and roles) and people, each
  * cross-checked against its read. Admin only for branches and users.
- * Run: pnpm verify drive flow:settings --role admin --lang en
+ * Run: pnpm verify drive flow:settings --role director --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const openFromMore = async (fr: string, en: string) => {

@@ -65,8 +65,8 @@ describe("register affordances by role", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("EXECUTIVE_VIEWER sees zero mutating affordances", () => {
-    renderWith("EXECUTIVE_VIEWER");
+  it("CASHIER sees zero mutating affordances", () => {
+    renderWith("CASHIER");
     expect(screen.queryByRole("link", { name: /nouvel actif/i })).toBeNull();
     expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
   });
@@ -83,7 +83,7 @@ describe("module gating", () => {
   });
 
   it("serves the fleet to a role that may not register one", () => {
-    renderWith("EXECUTIVE_VIEWER");
+    renderWith("CASHIER");
 
     expect(screen.getByRole("searchbox")).toBeDefined();
   });

@@ -57,7 +57,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
           workspaceId: "00000000-0000-4000-8000-000000000001",
           principalId: "00000000-0000-4000-8000-000000000002",
           membershipId: "00000000-0000-4000-8000-000000000003",
-          principalType: "HUMAN", role: "EXECUTIVE_VIEWER", branchScope: [branchId],
+          principalType: "HUMAN", role: "ADMIN", branchScope: [branchId],
           enabledModules: options.financeEnabled === false ? ["CORE"] : ["CORE", "FINANCE"],
           enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
         };
@@ -110,12 +110,13 @@ const languages = [
 ];
 const viewers = languages.flatMap((language) => [390, 1280].map((width) => ({ ...language, width })));
 
-it.each(viewers)("lets an executive inspect the ledger and entry without financial write controls ($locale, $width px)", async (viewer) => {
+// The Administrateur reads the books of their branches but takes no money
+// decision (ADR-0009): no approvals, no periods, no reversal.
+it.each(viewers)("lets the Administrateur inspect the ledger and entry without money decisions ($locale, $width px)", async (viewer) => {
   const { requests } = await openFinance("/finance/entries", viewer);
   const user = userEvent.setup();
   const entryButton = await screen.findByRole("button", { name: "FIN-EXEC" });
   expect(screen.getByRole("tab", { name: viewer.entries })).toBeTruthy();
-  expect(screen.queryByRole("link", { name: viewer.record })).toBeNull();
   expect(screen.queryByRole("tab", { name: viewer.approvals })).toBeNull();
   expect(screen.queryByRole("tab", { name: viewer.periods })).toBeNull();
 
@@ -129,29 +130,29 @@ it.each(viewers)("lets an executive inspect the ledger and entry without financi
   expect(requests.some(({ url }) => url.pathname === "/v1/finance/approvals")).toBe(false);
 });
 
-it.each(viewers)("renders empty and error states without write controls ($locale, $width px)", async (viewer) => {
+it.each(viewers)("renders empty and error states without money decisions ($locale, $width px)", async (viewer) => {
   await openFinance("/finance/entries", { ...viewer, listState: "empty" });
   await screen.findByText(viewer.empty);
-  expect(screen.queryByRole("link", { name: viewer.record })).toBeNull();
+  expect(screen.queryByRole("tab", { name: viewer.approvals })).toBeNull();
   cleanup();
   client.clear();
   await openFinance("/finance/entries", { ...viewer, listState: "error" });
   await screen.findByText(viewer.error);
-  expect(screen.queryByRole("link", { name: viewer.record })).toBeNull();
+  expect(screen.queryByRole("tab", { name: viewer.approvals })).toBeNull();
 });
 
-it.each(viewers)("shows loading without a false denial or write controls ($locale, $width px)", async (viewer) => {
+it.each(viewers)("shows loading without a false denial or money decisions ($locale, $width px)", async (viewer) => {
   let release = () => {};
   const pending = new Promise<void>((resolve) => { release = resolve; });
   const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending });
   await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries")).toBe(true));
   expect(screen.getByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
-  expect(screen.queryByRole("link", { name: viewer.record })).toBeNull();
+  expect(screen.queryByRole("tab", { name: viewer.periods })).toBeNull();
   await act(async () => { release(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
 });
 
-it("does not expose a reversal form to an executive following a direct reversal link", async () => {
+it("does not expose a reversal form to an Administrateur following a direct reversal link", async () => {
   const { requests } = await openFinance(`/finance/entries/${entry.id}?reverse=true`);
   await screen.findByText("Station Douala");
   expect(screen.queryByRole("dialog", { name: "Reverse entry" })).toBeNull();

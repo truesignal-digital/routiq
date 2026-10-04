@@ -7,6 +7,8 @@ import type { CommandSubmission, MemberListItem } from "@routiq/contracts";
 import "../i18n/index.js";
 import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
+import { openSelect } from "../test-select.js";
+import type { MemberActor } from "./permissions.js";
 import {
   memberActions,
   MemberActionDialog,
@@ -20,11 +22,22 @@ const branches = [
   { id: "branch-yde", name: "Yaoundé" },
 ];
 
+const director: MemberActor = {
+  principalId: "99999999-9999-4999-8999-999999999999",
+  role: "DIRECTOR",
+  branchScope: "ALL",
+};
+const doualaAdmin: MemberActor = {
+  principalId: "88888888-8888-4888-8888-888888888888",
+  role: "ADMIN",
+  branchScope: ["branch-dla"],
+};
+
 const member: MemberListItem = {
   principalId: "11111111-1111-4111-8111-111111111111",
   displayName: "Estelle Ngo",
   username: "estelle",
-  role: "FIELD_SUBMITTER",
+  role: "DRIVER",
   branchScope: "ALL",
   status: "ACTIVE",
   rowVersion: 7,
@@ -59,6 +72,7 @@ function renderDialog(
   action: MemberActionKey,
   client: CommandClient,
   target: MemberListItem = member,
+  actor: MemberActor = director,
 ) {
   const onDismiss = vi.fn();
   render(
@@ -67,6 +81,7 @@ function renderDialog(
         member={target}
         action={action}
         branches={branches}
+        actor={actor}
         client={client}
         onDismiss={onDismiss}
       />
@@ -91,15 +106,100 @@ afterEach(() => {
 
 describe("memberActions", () => {
   it("offers a deactivated member the way back and nothing else", () => {
-    expect(memberActions({ ...member, status: "DEACTIVATED" })).toEqual(["reactivate"]);
+    expect(memberActions({ ...member, status: "DEACTIVATED" }, director)).toEqual(["reactivate"]);
   });
 
   it("offers a locked member a PIN reset — the reset is the unlock", () => {
-    expect(memberActions({ ...member, status: "LOCKED" })).toContain("pin");
+    expect(memberActions({ ...member, status: "LOCKED" }, director)).toContain("pin");
   });
 
   it("offers no PIN reset to a membership that has no login", () => {
-    expect(memberActions({ ...member, username: null })).not.toContain("pin");
+    expect(memberActions({ ...member, username: null }, director)).not.toContain("pin");
+  });
+
+  it("lets the Director act on every role", () => {
+    for (const role of ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+      expect(memberActions({ ...member, role }, director)).toEqual(["role", "pin", "deactivate"]);
+    }
+  });
+
+  it("lets an Administrateur act only on field roles in their own branches", () => {
+    const inDouala = { ...member, branchScope: ["branch-dla"] };
+    for (const role of ["DRIVER", "TECHNICIAN", "CASHIER"] as const) {
+      expect(memberActions({ ...inDouala, role }, doualaAdmin)).toEqual(["role", "pin", "deactivate"]);
+    }
+    for (const role of ["DIRECTOR", "ADMIN", "FINANCE"] as const) {
+      expect(memberActions({ ...inDouala, role }, doualaAdmin)).toEqual([]);
+    }
+    expect(memberActions({ ...member, branchScope: ["branch-yde"] }, doualaAdmin)).toEqual([]);
+    expect(memberActions({ ...member, branchScope: "ALL" }, doualaAdmin)).toEqual([]);
+    expect(
+      memberActions({ ...inDouala, status: "DEACTIVATED", role: "FINANCE" }, doualaAdmin),
+    ).toEqual([]);
+  });
+
+  it("never offers anyone their own role", () => {
+    const self = { ...member, principalId: director.principalId, role: "DIRECTOR" as const };
+    expect(memberActions(self, director)).toEqual(["pin", "deactivate"]);
+  });
+
+  it("offers nothing to a role that manages no one", () => {
+    const finance: MemberActor = { ...director, role: "FINANCE" };
+    expect(memberActions(member, finance)).toEqual([]);
+  });
+});
+
+describe("the role picker, per actor", () => {
+  async function pickerOptions(actor: MemberActor, target: MemberListItem = member) {
+    renderDialog("role", fakeClient(committed), target, actor);
+    await openSelect(userEvent.setup(), screen.getByRole("combobox", { name: "Rôle" }));
+    return (await screen.findAllByRole("option")).map((option) => option.textContent);
+  }
+
+  it("shows the Director all six roles", async () => {
+    expect(await pickerOptions(director)).toEqual([
+      "Direction",
+      "Administrateur",
+      "Finance",
+      "Caissier / Caissière",
+      "Technicien",
+      "Chauffeur",
+    ]);
+  });
+
+  it("shows an Administrateur the three field roles", async () => {
+    expect(
+      await pickerOptions(doualaAdmin, { ...member, branchScope: ["branch-dla"] }),
+    ).toEqual(["Chauffeur", "Technicien", "Caissier / Caissière"]);
+  });
+
+  it("offers an Administrateur only their own branches, never all of them", () => {
+    renderDialog("role", fakeClient(committed), { ...member, branchScope: ["branch-dla"] }, doualaAdmin);
+    expect(screen.queryByRole("checkbox", { name: "Toutes les agences" })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "Douala" })).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: "Yaoundé" })).toBeNull();
+  });
+
+  it("locks the scope to all branches when Direction is picked, and sends ALL", async () => {
+    const client = fakeClient(committed);
+    renderDialog("role", client, { ...member, branchScope: ["branch-yde"] });
+    const user = userEvent.setup();
+
+    await openSelect(user, screen.getByRole("combobox", { name: "Rôle" }));
+    await user.click(await screen.findByRole("option", { name: "Direction" }));
+
+    const all = screen.getByRole("checkbox", { name: "Toutes les agences" });
+    expect(all.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("La Direction couvre toujours toutes les agences.")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await waitFor(() => expect(client.seen).toHaveLength(1));
+    expect(client.seen[0]!.version).toBe(2);
+    expect(client.seen[0]!.payload).toEqual({
+      principalId: member.principalId,
+      role: "DIRECTOR",
+      branchScope: "ALL",
+    });
   });
 });
 
@@ -108,16 +208,18 @@ describe("MemberActionDialog", () => {
     const client = fakeClient(committed);
     renderDialog("role", client);
 
-    await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
-    await userEvent.click(await screen.findByRole("option", { name: "Maintenance" }));
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    const user = userEvent.setup();
+    await openSelect(user, screen.getByRole("combobox", { name: "Rôle" }));
+    await user.click(await screen.findByRole("option", { name: "Technicien" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
     expect(submission.name).toBe("update-member-role");
+    expect(submission.version).toBe(2);
     expect(submission.payload).toEqual({
       principalId: member.principalId,
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
     });
     expect(submission.envelope.expectedVersion).toBe(7);
   });
@@ -137,17 +239,17 @@ describe("MemberActionDialog", () => {
     await waitFor(() => expect(onDismiss).toHaveBeenCalled());
   });
 
-  it("explains the last-admin refusal in place, and keeps the dialog open", async () => {
-    const client = fakeClient({ ok: false, code: "LAST_ADMIN" });
+  it("explains the last-director refusal in place, and keeps the dialog open", async () => {
+    const client = fakeClient({ ok: false, code: "LAST_DIRECTOR" });
     const { onDismiss } = renderDialog("deactivate", client, {
       ...member,
-      role: "ADMIN",
+      role: "DIRECTOR",
     });
 
     await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
 
     expect(
-      await screen.findByText("Votre espace doit garder au moins un administrateur actif."),
+      await screen.findByText("Votre espace doit garder au moins un membre actif de la Direction."),
     ).toBeTruthy();
     expect(onDismiss).not.toHaveBeenCalled();
   });
@@ -200,11 +302,25 @@ describe("MemberActionDialog", () => {
     const client = fakeClient({ ok: false, code: "VERSION_CONFLICT" });
     const { onDismiss } = renderDialog("role", client);
 
-    await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
-    await userEvent.click(await screen.findByRole("option", { name: "Maintenance" }));
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    const user = userEvent.setup();
+    await openSelect(user, screen.getByRole("combobox", { name: "Rôle" }));
+    await user.click(await screen.findByRole("option", { name: "Technicien" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    await userEvent.click(await screen.findByRole("button", { name: "Recharger" }));
+    await user.click(await screen.findByRole("button", { name: "Recharger" }));
     await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+  });
+});
+
+describe("the member refusals the server answers", () => {
+  it.each([
+    ["SELF_ROLE_CHANGE", "Vous ne pouvez pas changer votre propre rôle ni vos agences. Demandez à la Direction."],
+    ["MEMBER_ROLE_NOT_GRANTABLE", "Vous ne pouvez pas donner ni retirer ce rôle. Demandez à la Direction."],
+    ["MEMBER_BRANCH_OUT_OF_SCOPE", "Ce membre ou ces agences sont hors de vos agences. Demandez à la Direction."],
+    ["DIRECTOR_REQUIRES_ALL_BRANCHES", "La Direction couvre toujours toutes les agences."],
+  ])("%s is read in place", async (code, text) => {
+    renderDialog("deactivate", fakeClient({ ok: false, code }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    expect(await screen.findByText(text)).toBeTruthy();
   });
 });

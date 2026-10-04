@@ -14,7 +14,7 @@ const registerPerson: CommandDefinition<RegisterPersonPayload> = {
   name: "register-person",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: registerPersonPayload,
   branchAuthorization: {
     kind: "branches",

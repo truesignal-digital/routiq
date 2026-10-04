@@ -18,7 +18,7 @@ import {
   keysetOrderBy,
   type KeysetColumn,
 } from "./cursor.js";
-import { ADMIN_ONLY, defineRead } from "./define-read.js";
+import { ADMINISTRATORS, defineRead } from "./define-read.js";
 
 const listQuerySchema = listQuery({}, { sortFields: branchListSortFields });
 
@@ -50,7 +50,7 @@ export function registerBranchReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/branches", module: "CORE", roles: ADMIN_ONLY, branchScope: "workspace" },
+    { path: "/v1/branches", module: "CORE", roles: ADMINISTRATORS, branchScope: "workspace" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedQuery = listQuerySchema.safeParse(req.query);

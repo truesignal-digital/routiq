@@ -69,10 +69,22 @@ export const COMMAND_ERROR_CODES = [
   "LAST_PRESET",
   /** A username already exists in this workspace (`credentials_ws_username_uq`). */
   "USERNAME_TAKEN",
-  /** Demoting or deactivating the workspace's only remaining active ADMIN. */
-  "LAST_ADMIN",
+  /** Demoting or deactivating the workspace's only remaining active DIRECTOR. */
+  "LAST_DIRECTOR",
   /** An admin deactivating their own membership — the lockout foot-gun. */
   "SELF_DEACTIVATION",
+  /** A member changing their own role or branches (ADR-0009: nobody changes their own role). */
+  "SELF_ROLE_CHANGE",
+  /**
+   * A member command on a role the actor may not manage: an ADMIN gives,
+   * changes or removes only DRIVER, TECHNICIAN and CASHIER, checked on both the
+   * member's current role and the new one.
+   */
+  "MEMBER_ROLE_NOT_GRANTABLE",
+  /** An ADMIN reaching a member, or a branch scope, outside their own branches. */
+  "MEMBER_BRANCH_OUT_OF_SCOPE",
+  /** DIRECTOR always covers every branch, so its branch scope can only be ALL. */
+  "DIRECTOR_REQUIRES_ALL_BRANCHES",
   /** Deactivating the workspace's only remaining active branch. */
   "LAST_BRANCH",
   /** A new record targeting a branch that has been deactivated. */

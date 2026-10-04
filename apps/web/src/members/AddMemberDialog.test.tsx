@@ -7,6 +7,8 @@ import type { AddMemberPayload, CommandSubmission } from "@routiq/contracts";
 import "../i18n/index.js";
 import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
+import { openSelect } from "../test-select.js";
+import type { MemberActor } from "./permissions.js";
 import { AddMemberDialog } from "./AddMemberDialog.js";
 
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
@@ -15,6 +17,17 @@ const branches = [
   { id: "branch-dla", name: "Douala" },
   { id: "branch-yde", name: "Yaoundé" },
 ];
+
+const director: MemberActor = {
+  principalId: "99999999-9999-4999-8999-999999999999",
+  role: "DIRECTOR",
+  branchScope: "ALL",
+};
+const doualaAdmin: MemberActor = {
+  principalId: "88888888-8888-4888-8888-888888888888",
+  role: "ADMIN",
+  branchScope: ["branch-dla"],
+};
 
 const committed: SubmitResult = {
   ok: true,
@@ -40,7 +53,7 @@ function fakeClient(
   };
 }
 
-function renderDialog(client: CommandClient, onAdded = vi.fn()) {
+function renderDialog(client: CommandClient, onAdded = vi.fn(), actor: MemberActor = director) {
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -48,6 +61,7 @@ function renderDialog(client: CommandClient, onAdded = vi.fn()) {
         open
         onOpenChange={onOpenChange}
         branches={branches}
+        actor={actor}
         onAdded={onAdded}
         client={client}
       />
@@ -58,6 +72,7 @@ function renderDialog(client: CommandClient, onAdded = vi.fn()) {
 
 /** Fills every required field; the caller overrides what its case is about. */
 async function fillForm(overrides: Partial<Record<string, string>> = {}) {
+  const user = userEvent.setup();
   await userEvent.type(
     screen.getByLabelText("Nom complet"),
     overrides["displayName"] ?? "Estelle Ngo",
@@ -66,8 +81,8 @@ async function fillForm(overrides: Partial<Record<string, string>> = {}) {
     screen.getByLabelText("Identifiant de connexion"),
     overrides["username"] ?? "estelle",
   );
-  await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
-  await userEvent.click(await screen.findByRole("option", { name: "Agent de terrain" }));
+  await openSelect(user, screen.getByRole("combobox", { name: "Rôle" }));
+  await user.click(await screen.findByRole("option", { name: overrides["role"] ?? "Chauffeur" }));
   await userEvent.type(screen.getByLabelText("Code PIN"), overrides["pin"] ?? "4821");
   await userEvent.type(
     screen.getByLabelText("Confirmer le code PIN"),
@@ -100,10 +115,11 @@ describe("AddMemberDialog", () => {
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
     expect(submission.name).toBe("add-member");
+    expect(submission.version).toBe(2);
     expect(submission.payload).toMatchObject({
       displayName: "Estelle Ngo",
       username: "estelle",
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchScope: "ALL",
       pin: "4821",
     });
@@ -163,5 +179,57 @@ describe("AddMemberDialog", () => {
     // Not in a field, not in a confirmation, not anywhere: the PIN leaves this
     // dialog only inside the command.
     expect(document.body.innerHTML).not.toContain("4821");
+  });
+
+  it("offers the Director all six roles", async () => {
+    renderDialog(fakeClient(committed));
+    await openSelect(userEvent.setup(), screen.getByRole("combobox", { name: "Rôle" }));
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
+      "Direction",
+      "Administrateur",
+      "Finance",
+      "Caissier / Caissière",
+      "Technicien",
+      "Chauffeur",
+    ]);
+  });
+
+  it("offers an Administrateur the three field roles, in their own branches only", async () => {
+    const client = fakeClient(committed);
+    renderDialog(client, vi.fn(), doualaAdmin);
+    await openSelect(userEvent.setup(), screen.getByRole("combobox", { name: "Rôle" }));
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
+      "Chauffeur",
+      "Technicien",
+      "Caissier / Caissière",
+    ]);
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("checkbox", { name: "Toutes les agences" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Yaoundé" })).toBeNull();
+
+    await fillForm({ role: "Caissier / Caissière" });
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await waitFor(() => expect(client.seen).toHaveLength(1));
+    expect(client.seen[0]!.payload).toMatchObject({ role: "CASHIER", branchScope: ["branch-dla"] });
+  });
+
+  it("locks the scope to all branches when Direction is picked", async () => {
+    const client = fakeClient(committed);
+    renderDialog(client);
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
+    expect(screen.getByRole("checkbox", { name: "Douala" })).toBeTruthy();
+
+    await fillForm({ role: "Direction" });
+    expect(screen.getByRole("checkbox", { name: "Toutes les agences" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(screen.queryByRole("checkbox", { name: "Douala" })).toBeNull();
+    expect(screen.getByText("La Direction couvre toujours toutes les agences.")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await waitFor(() => expect(client.seen).toHaveLength(1));
+    expect(client.seen[0]!.payload).toMatchObject({ role: "DIRECTOR", branchScope: "ALL" });
   });
 });

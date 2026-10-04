@@ -45,7 +45,7 @@ describe("work-order cost attribution", () => {
       .returning();
 
     const session = async (
-      role: "ADMIN" | "FINANCE_APPROVER" | "MAINTENANCE" | "OPS_MANAGER",
+      role: "ADMIN" | "FINANCE" | "TECHNICIAN" | "ADMIN",
       scope: { allBranches: true } | { branchIds: string[] },
     ) => {
       const member = await seedMember(db, { workspaceId, role, ...scope });
@@ -54,9 +54,9 @@ describe("work-order cost attribution", () => {
       ).token;
     };
     adminToken = await session("ADMIN", { allBranches: true });
-    approverToken = await session("FINANCE_APPROVER", { allBranches: true });
-    maintenanceToken = await session("MAINTENANCE", { allBranches: true });
-    doualaManagerToken = await session("OPS_MANAGER", {
+    approverToken = await session("FINANCE", { allBranches: true });
+    maintenanceToken = await session("TECHNICIAN", { allBranches: true });
+    doualaManagerToken = await session("ADMIN", {
       branchIds: [seeded.branch.id],
     });
 

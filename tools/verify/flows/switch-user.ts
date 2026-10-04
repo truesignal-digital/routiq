@@ -2,12 +2,12 @@ import type { DriveScript } from "../browser.js";
 import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
 
 /**
- * Role switching: sign out of the current account and sign in as the executive
- * viewer, whose home has no approvals card and whose truck page is view-only.
- * Run: pnpm verify drive flow:switch-user --role admin --lang en
+ * Role switching: sign out of the current account and sign in as the cashier,
+ * who approves nothing, so her home has no approvals card.
+ * Run: pnpm verify drive flow:switch-user --role director --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
-  const viewer = resolveAccount("viewer");
+  const viewer = resolveAccount("cashier");
   await page.getByRole("navigation", { name: "Navigation" }).waitFor();
   await page.getByRole("button", { name: t("Se déconnecter", "Sign out") }).first().click();
   await page.waitForURL((url) => url.pathname === "/login");
@@ -21,7 +21,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await page.locator('[data-slot="kpi-card"]').first().waitFor();
   await quiet();
   await shot(`home-as-${viewer.username}`);
-  if ((await page.locator('[data-kpi="pendingApprovals"]').count()) !== 0) throw new Error("the viewer sees the approvals card");
+  if ((await page.locator('[data-kpi="pendingApprovals"]').count()) !== 0) throw new Error("the cashier sees the approvals card");
 
   const me = await apiGet("/v1/me");
   const role = (me.body as { role?: string }).role;

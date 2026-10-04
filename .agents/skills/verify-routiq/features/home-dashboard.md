@@ -1,6 +1,6 @@
 # Home dashboard
 
-Home (`/`) shows KPI cards for the signed-in role, a spending and revenue chart, and recent entries. Finance cards and the chart need a finance reader; the pending-approvals card needs ADMIN or FINANCE_APPROVER.
+Home (`/`) shows KPI cards for the signed-in role, a spending and revenue chart, and recent entries. Finance cards and the chart need a finance reader; the pending-approvals card needs FINANCE or DIRECTOR.
 
 ## Sub-features
 
@@ -21,8 +21,8 @@ Preconditions:
 - Fresh seed: 2 pending approvals (VH003 repair 450,000 XAF by sali, VH003 brake parts 310,000 XAF by herve); 2 trucks in service.
 
 - **Cards for a finance approver.** Run `pnpm verify drive flow:home --role finance --lang en`. It logs `kpi cards shown: pendingApprovals, assets, openPeriodExpense, openPeriodRevenue` and checks the `[data-kpi="pendingApprovals"] [data-slot="kpi-value"]` text equals `pendingApprovals.count` from `GET /v1/dashboard?days=90` (2 on a fresh seed).
-- **Cards for maintenance.** Run `pnpm verify drive flow:home --role maintenance`. Only the `assets` card shows; the flow logs that the dashboard read has no approvals.
-- **Cards for the viewer.** Run `pnpm verify drive flow:home --role viewer`. No approvals card; finance cards show.
+- **Cards for the technician.** Run `pnpm verify drive flow:home --role technician`. Only the `assets` card shows; the flow logs that the dashboard read has no approvals.
+- **Cards for an administrator.** Run `pnpm verify drive flow:home --role admin`. No approvals card (ADMIN approves no money); finance cards show.
 - **Approvals link.** In a DriveScript, click `page.getByRole("link", { name: "Approbations en attente" })`. The URL becomes `/finance/approvals`.
 - **Proof.** `01-home.png` and the cross-check line on stdout.
 

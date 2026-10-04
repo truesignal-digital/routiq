@@ -132,7 +132,7 @@ describe("Asset Lifecycle Commands", () => {
       // Assign to custodian member
       const member = await seedMember(db, {
         workspaceId: workspace.id,
-        role: "OPS_MANAGER",
+        role: "ADMIN",
         allBranches: true,
       });
 
@@ -725,18 +725,18 @@ describe("assign-asset custodian", () => {
     if (!garoua) throw new Error("branch insert returned no row");
 
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    financeApprover = await seedActor(ctx.db, { workspaceId, role: "FINANCE_APPROVER" });
+    financeApprover = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
     dlaDriver = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
     });
     garDriver = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [garoua.id],
     });
-    leaver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER" });
+    leaver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
     await api.ok(admin.token, "deactivate-member", { principalId: leaver.principalId });
 
     const other = await seedWorkspace(ctx.db);

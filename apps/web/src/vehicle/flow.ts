@@ -84,15 +84,15 @@ const same = (actor: HistoryActor | null | undefined, viewer: Viewer) =>
   actor?.principalId != null && actor.principalId === viewer.principalId;
 
 const may = {
-  manageWorkOrders: (v: Viewer) => !v.readOnly && canManageWorkOrders(v.role, v.enabledModules),
-  approveWorkOrders: (v: Viewer) => !v.readOnly && canApproveWorkOrders(v.role, v.enabledModules),
-  release: (v: Viewer) => !v.readOnly && canReleaseAssets(v.role, v.enabledModules),
-  resolveIssues: (v: Viewer) => !v.readOnly && canResolveIssues(v.role, v.enabledModules),
-  dismissIssues: (v: Viewer) => !v.readOnly && canDismissIssues(v.role, v.enabledModules),
-  addCost: (v: Viewer) => !v.readOnly && canAddWorkOrderCost(v.role, v.enabledModules),
-  approveEntries: (v: Viewer) => !v.readOnly && canApproveEntries(v.role, v.enabledModules),
-  attachEvidence: (v: Viewer) => !v.readOnly && canAttachEvidence(v.role, v.enabledModules),
-  renewDocuments: (v: Viewer) => !v.readOnly && canManageDocuments(v.role, v.enabledModules),
+  manageWorkOrders: (v: Viewer) => canManageWorkOrders(v.role, v.enabledModules),
+  approveWorkOrders: (v: Viewer) => canApproveWorkOrders(v.role, v.enabledModules),
+  release: (v: Viewer) => canReleaseAssets(v.role, v.enabledModules),
+  resolveIssues: (v: Viewer) => canResolveIssues(v.role, v.enabledModules),
+  dismissIssues: (v: Viewer) => canDismissIssues(v.role, v.enabledModules),
+  addCost: (v: Viewer) => canAddWorkOrderCost(v.role, v.enabledModules),
+  approveEntries: (v: Viewer) => canApproveEntries(v.role, v.enabledModules),
+  attachEvidence: (v: Viewer) => canAttachEvidence(v.role, v.enabledModules),
+  renewDocuments: (v: Viewer) => canManageDocuments(v.role, v.enabledModules),
 };
 
 export { may };
@@ -344,7 +344,7 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
     primary = { kind: "go", step };
   }
   // The author alone, while it waits (#85); anyone else rejects it instead.
-  if (!viewer.readOnly && canEditPendingEntry(entry, viewer)) {
+  if (canEditPendingEntry(entry, viewer)) {
     offered.push({ step: { key: "edit-entry", record } });
   }
   if (entry.status === "SUBMITTED" && may.approveEntries(viewer)) {
@@ -361,7 +361,6 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
   if (
     entry.status === "POSTED" &&
     entry.reversesEntryId === null &&
-    !viewer.readOnly &&
     canReverseEntry(viewer.role, entry.status) &&
     viewer.enabledModules.includes("FINANCE")
   ) {
@@ -381,7 +380,7 @@ export function groundingStep(
   viewer: Viewer,
 ): { step: RoleStep; record: PanelRef | null } {
   const facts = groundingFacts(asset);
-  if (facts === undefined || viewer.readOnly) return { step: { kind: "none" }, record: null };
+  if (facts === undefined) return { step: { kind: "none" }, record: null };
   const wo = facts.workOrder;
   if (may.release(viewer)) {
     const record: PanelRef =
@@ -547,9 +546,9 @@ export interface Todo {
 const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   ISSUE_UNPLANNED: "workshop",
   ISSUE_OPEN_WHILE_AVAILABLE: "workshop",
-  WORK_ORDER_AWAITING_AUTHORIZATION: "finance",
+  WORK_ORDER_AWAITING_AUTHORIZATION: "manager",
   WORK_ORDER_IN_PROGRESS: "workshop",
-  WORK_ORDER_AWAITING_SIGN_OFF: "finance",
+  WORK_ORDER_AWAITING_SIGN_OFF: "manager",
   ASSET_AWAITING_RELEASE: "manager",
   DOCUMENT_EXPIRED: "operations",
   DOCUMENT_EXPIRING: "operations",
@@ -590,7 +589,6 @@ export function attentionStep(
   viewer: Viewer,
   asset: Pick<AssetDetail, "availability">,
 ): RoleStep {
-  if (viewer.readOnly) return { kind: "none" };
   const record = attentionRecord(item, asset) ?? undefined;
   const maker = item.makerPrincipalIds.includes(viewer.principalId);
   const go = (key: StepKey): RoleStep => ({ kind: "go", step: { key, record } });
@@ -660,7 +658,6 @@ export function tabMarkers(
   asset: Pick<AssetDetail, "availability">,
   viewer: Viewer,
 ): { todoCount: number; maintenanceNeedsYou: boolean } {
-  if (viewer.readOnly) return { todoCount: 0, maintenanceNeedsYou: false };
   const todoCount = buildTodos(items, asset, viewer).filter((t) => t.step.kind === "go").length;
   const maintenanceNeedsYou =
     groundingStep(asset, viewer).step.kind === "go" ||

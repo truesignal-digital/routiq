@@ -179,7 +179,7 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
     }
     if (p === `/v1/assets/${ASSET_ID}/readings`) return json({ items: [], nextCursor: null });
     if (p === `/v1/assets/${ASSET_ID}/custodian-candidates`) {
-      return json({ items: [{ membershipId: "00000000-0000-4000-8000-000000000091", displayName: "Boris", role: "OPS_MANAGER" }] });
+      return json({ items: [{ membershipId: "00000000-0000-4000-8000-000000000091", displayName: "Boris", role: "ADMIN" }] });
     }
     if (p === `/v1/assets/${ASSET_ID}/documents`) {
       return json({ assetId: ASSET_ID, documents: scenario.documents ?? [] });

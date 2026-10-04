@@ -56,7 +56,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
   name: "create-work-order",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN"],
   payloadSchema: createWorkOrderPayload,
   approvalMode: "SUBMIT",
   operationalAssetId: (payload) => payload.assetId,
@@ -401,7 +401,7 @@ async function executeCompletion(
 const completionDefinition = {
   name: "complete-work-order",
   module: "MAINTENANCE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN"],
   approvalMode: "SUBMIT",
   // No operationalAssetId on purpose: an open order on a disposed asset can still be closed; costs cannot attach, the writer keeps that guard.
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
@@ -514,7 +514,7 @@ export const cancelWorkOrder: CommandDefinition<CancelWorkOrderPayload> = {
   name: "cancel-work-order",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN"],
   payloadSchema: cancelWorkOrderPayload,
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 

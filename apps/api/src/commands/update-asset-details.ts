@@ -75,7 +75,7 @@ export const updateAssetDetails: CommandDefinition<UpdateAssetDetailsPayload> = 
   name: "update-asset-details",
   version: 1,
   module: "ASSETS",
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: updateAssetDetailsPayload,
   operationalAssetId: (payload) => payload.assetId,
   branchAuthorization: {

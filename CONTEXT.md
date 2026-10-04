@@ -69,7 +69,7 @@ What the closer says about a repair's cost when completing its work order: the c
 _Avoid_: cost status, payment status
 
 **Note**:
-A free-text remark a person with App Access writes on a vehicle. Append-only: a correction is another note. Every Role may write one (ADR-0009; the built EXECUTIVE_VIEWER still cannot).
+A free-text remark a person with App Access writes on a vehicle. Append-only: a correction is another note. Every Role may write one (ADR-0009).
 _Avoid_: comment thread, description, edit
 
 **Correction**:
@@ -159,6 +159,6 @@ _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing
 - **Scope (historical 2026-07-29, refined by the internal-fleet direction):** the original profit-center-only test excluded a store. The current boundary admits a company's operated fleet without admitting its retail/inventory business. The refusal of configurable entities and a general business engine remains.
 - **"Workflow" (resolved 2026-07-29):** pinned to **Approval Chains** + **Entry Roles**, both tenant data. **Lifecycles** (status machines) stay fixed code with configurable labels — per-tenant state machines are the refused configuration engine.
 - **Template binding (resolved 2026-07-29; server enforcement shipped 2026-07-30):** a Workspace enables a SET of Template Presets (mixed fleets are real in Cameroon); single-preset tenants see single-preset UX. Enforced server-side like module flags — `workspace_templates` rows written at Provisioning, checked in the command pipeline (`PRESET_DISABLED`). Workspaces with zero rows (pre-provisioning pilots) are grandfathered all-enabled with a `preset.unenforced` warning until backfilled. Remaining gap: web UX still shows both presets to single-preset tenants.
-- **Roles and people (resolved 2026-09-27, not yet built):** six fixed Roles named in the pilot team's words replace ADMIN/OPS_MANAGER/FIELD_SUBMITTER/MAINTENANCE/FINANCE_APPROVER/EXECUTIVE_VIEWER (ADR-0009). Persons and App Access stay separate records shown as one Personnel list; every App Access belongs to one Person; Custodian becomes Assigned Driver (ADR-0010). Feature map: [roles and access](docs/reference/roles-and-access.md).
+- **Roles and people (resolved 2026-09-27; roles built 2026-10, people not yet):** six fixed Roles named in the pilot team's words replace ADMIN/OPS_MANAGER/FIELD_SUBMITTER/MAINTENANCE/FINANCE_APPROVER/EXECUTIVE_VIEWER (ADR-0009). Persons and App Access stay separate records shown as one Personnel list; every App Access belongs to one Person; Custodian becomes Assigned Driver (ADR-0010). Feature map: [roles and access](docs/reference/roles-and-access.md).
 - **Vehicle workspace terms (2026-09-25):** Grounded, Attention Item, Evidence State, Note and Vehicle History, and the refined Custodian and Availability, describe behaviour implemented on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. See [the vehicle workspace reference](docs/reference/vehicle-workspace-v1.md).
 - **Terminology variance (resolved 2026-07-29):** a tenant's words come from its enabled **Template Presets** (preset-level string overlays merged over base locale) plus its own category labels. Per-tenant renames of UI terms are NOT built — market survey: 4 of 5 mature vertical SaaS offer at most a two-value toggle. Revisit only if a paying tenant refuses the preset's word.
