@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * Finance → Approvals → approve the oldest pending entry someone else recorded,
@@ -12,7 +12,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (queue.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/approvals → ${queue.status}, nothing pending (reseed?)`);
   log(`api: ${pending.length} pending; approving ${entry.entryNumber}`);
 
-  await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: t("Finances", "Finance") }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
   await page.getByRole("navigation", { name: t("Sections financières", "Finance sections") }).getByRole("tab", { name: new RegExp(`^${t("Approbations", "Approvals")}`) }).click();
   await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
   await quiet();

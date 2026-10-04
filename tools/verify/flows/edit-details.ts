@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * VH003 → Details → Edit details → set make and model → Save, then read the
@@ -6,7 +6,7 @@ import type { DriveScript } from "../browser.js";
  * Run: pnpm verify drive flow:edit-details --role manager --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
-  await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor();
   const assetId = /\/assets\/([0-9a-f-]{36})/.exec(page.url())?.[1];
