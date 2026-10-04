@@ -90,6 +90,7 @@
       "open": "Open trip"
     },
     "detail": {
+      "breadcrumb": "Trip",
       "loading": "Loading trip…",
       "readings": {
         "allSuperseded": "Every reading on this trip has been corrected."
@@ -111,6 +112,7 @@
       }
     },
     "record": {
+      "title": "Record a trip",
       "activityTypeLabel": "Trip type",
       "primaryAssetLabel": "Primary truck",
       "chooseAsset": "Choose a truck",

@@ -88,6 +88,7 @@
       "open": "Ouvrir le voyage"
     },
     "detail": {
+      "breadcrumb": "Voyage",
       "loading": "Chargement du voyage…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
@@ -109,6 +110,7 @@
       }
     },
     "record": {
+      "title": "Saisir un voyage",
       "activityTypeLabel": "Type de voyage",
       "primaryAssetLabel": "Véhicule principal",
       "chooseAsset": "Choisir un véhicule",

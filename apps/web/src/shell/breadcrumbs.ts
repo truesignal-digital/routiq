@@ -3,8 +3,12 @@ import { activeSection, type ShellSection } from "./sections.js";
 export interface Crumb {
   /** Translation key; this module stays free of i18n so it can be unit-tested. */
   labelKey: string;
+  /** The record's own name (a trip's number), shown instead of `labelKey` once the screen has it. */
+  label?: string;
   /** Where the crumb navigates. The trail's last crumb is the current page and has none. */
   to?: string;
+  /** The crumb naming the record a detail route shows. */
+  record?: true;
 }
 
 interface PageTrail {
@@ -26,15 +30,21 @@ const PAGE_TRAILS: readonly PageTrail[] = [
   // section shares the record's crumb and the tabs say where you are.
   ...["", "/maintenance", "/money", "/trips", "/documents", "/history", "/details"].map((section) => ({
     pattern: `/assets/$assetId${section}`,
-    trail: [{ labelKey: "assets.detail.breadcrumb" }],
+    trail: [{ labelKey: "assets.detail.breadcrumb", record: true as const }],
   })),
+  // Before the $activityId pattern, or "record" reads as a trip.
+  { pattern: "/activities/record", trail: [{ labelKey: "activities.record.title" }] },
+  {
+    pattern: "/activities/$activityId",
+    trail: [{ labelKey: "activities.detail.breadcrumb", record: true }],
+  },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
   { pattern: "/finance/entries", trail: [{ labelKey: "finance.navigation.entries" }] },
   {
     pattern: "/finance/entries/$entryId",
     trail: [
       { labelKey: "finance.navigation.entries", to: "/finance/entries" },
-      { labelKey: "finance.entries.detail.breadcrumb" },
+      { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
   },
   {
@@ -63,10 +73,13 @@ function matchesPattern(pattern: string, pathname: string): boolean {
 /**
  * `Accueil / <section> / <page>` for the current location. The last crumb is
  * always the page you are on and carries no `to`; everything before it links.
+ * `recordLabel` names the record on a detail route; until the screen has
+ * loaded it the crumb says what kind of record it is.
  */
 export function breadcrumbTrail(
   sections: readonly ShellSection[],
   pathname: string,
+  recordLabel?: string,
 ): Crumb[] {
   const crumbs: Crumb[] = [{ labelKey: "nav.home", to: "/" }];
 
@@ -84,7 +97,12 @@ export function breadcrumbTrail(
   const last = crumbs[crumbs.length - 1];
   if (last !== undefined) {
     // You are already here; a link back to the current page is noise.
-    crumbs[crumbs.length - 1] = { labelKey: last.labelKey };
+    const label = last.record === true ? recordLabel : undefined;
+    crumbs[crumbs.length - 1] = {
+      labelKey: last.labelKey,
+      ...(last.record === true && { record: true }),
+      ...(label !== undefined && { label }),
+    };
   }
 
   return crumbs;
