@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: audit findings</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  code { font-size: 12px; }
+  .src { font-size: 12px; color: var(--muted-foreground); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#users">Users notice these</a>
+    <a href="#pages">Page anatomy</a>
+    <a href="#forms">Forms</a>
+    <a href="#actions">Actions and feedback</a>
+    <a href="#visual">Visual system</a>
+    <a href="#live">Seen in the running app</a>
+    <a href="#order">Fix order</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Audit findings</h2>
+      <p class="lede">Five agents audited develop at <code>6399529</code>: page anatomy, every form, actions and feedback, the visual system, and a live run of the app on desktop and phone (182 screenshots). The raw reports are in <code>docs/design/consistency/audits/</code>. The headline findings below were re-checked against the code; anything not seen in the running app is marked "code only".</p>
+    </header>
+
+    <section class="section" id="users">
+      <div class="kicker">Priority</div>
+      <h3>Users notice these</h3>
+      <p class="rule">Bugs and mismatches someone hits during normal work. These come first, before any re-layout.</p>
+      <table class="spec-table">
+        <thead><tr><th></th><th>Finding</th><th>Evidence</th><th>Rule it breaks</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sev p0">P0</span></td><td>An approver can't open an entry from Approvals before deciding. Rows have no click target, so the receipt and postings are out of reach. The entry page has no Approve or Reject either.</td><td class="src"><code>FinanceApprovalsScreen.tsx</code> passes neither <code>onRowClick</code> nor <code>rowViewer</code> (checked)</td><td>Queue archetype: the title opens the record panel with the decision in its footer</td></tr>
+          <tr><td><span class="sev p0">P0</span></td><td>Trip detail and Record a trip have no breadcrumb trail. On a phone there is no way back up.</td><td class="src"><code>shell/breadcrumbs.ts:23-48</code>; <code>SiteHeader.tsx:33</code> needs 3 crumbs</td><td>Breadcrumb is the only back</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>The same status shows in different colours. "Waiting" entries are blue in Finance and amber in trips, maintenance and the vehicle. "Posted" is green in Finance and grey on the vehicle. "Closed" trips are grey in the list and green in the detail.</td><td class="src"><code>FinanceStatusBadge.tsx:11</code> vs <code>ActivityMoney.tsx:15</code> (checked); <code>panel/shared.tsx:162</code>; <code>activityColumns.tsx:50</code> vs <code>TripState.tsx:29</code></td><td>One status, one badge</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Work-order approval and release notes are invisible: the Chronologie drops notes.</td><td class="src"><code>WorkOrderSheet.tsx:69-97</code> (code only)</td><td>Every timeline shows actor, act, note, time</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>The same expense is positive in the finance table and negative in trip detail. In English, 6 of 7 money inputs still format French-style.</td><td class="src"><code>entryColumns.tsx</code> <code>signDisplay</code>; <code>ActivityMoney</code>; <code>money-input.tsx:75,89</code></td><td>One money formatter with explicit sign rules</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Adding, renaming or deactivating a branch or user shows no confirmation; the dialog just closes. PIN reset shows a large inline success panel instead.</td><td class="src"><code>notify.ts:9-15</code> has no branches/users namespace (checked); <code>MemberActionDialog.tsx:210-224</code></td><td>Every success is one toast</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Most tap targets on phone are below 44 px because the shared primitives default to 28 to 32 px. Every call site has to remember <code>min-h-11</code>, and many don't: the row ⋯ menu, pager, view options, filter chips, month arrows, selects.</td><td class="src"><code>ui/button.tsx:23</code> default <code>h-8</code>, <code>ui/input.tsx:12</code> <code>h-8</code> (checked); <code>data-table.tsx:983,1028,915</code></td><td>44 px minimum, enforced in primitives</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>"Annuler" sits next to "Annuler l'ordre de travail" in the same footer. In English, "Close" means both close the trip and close the dialog.</td><td class="src"><code>fr.json:1126,1142,2300</code>; <code>en.json:755,1616</code></td><td>A domain verb never equals a chrome verb</td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>French screen-reader users hear English: "Close" on every sheet and "Toggle Sidebar".</td><td class="src"><code>ui/sheet.tsx:73</code>; <code>ui/sidebar.tsx:277,289,292</code></td><td>All text through <code>t()</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>A read-only viewer sees "Consultation seule" on desktop only. On a phone, nothing explains why the action bar is empty.</td><td class="src"><code>IdentityStrip.tsx:70-75</code>; <code>QuickActionBar.tsx:13</code></td><td>Locked or read-only always says why</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="pages">
+      <div class="kicker">Audit 1</div>
+      <h3>Page anatomy</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>What's inconsistent</h4><ul>
+          <li>Only Home, Trucks, Trip detail and the vehicle (Now, Money) open with an overview. Trips, Maintenance, Finance entries, Approvals, Periods and the settings lists open straight on a table.</li>
+          <li>The KPI tile is built three ways: <code>MetricStrip</code>, <code>SectionCards</code> and the Money tab's <code>PeriodStats</code>.</li>
+          <li>A finance entry opens three ways (row drawer, full page, vehicle panel); a trip opens as a page from the list and as a panel from the vehicle.</li>
+          <li>The primary action has five homes: header button, toolbar <code>sm</code> button (28 px), a hand-styled Link plus yellow FAB (Trucks only), full-width buttons at the bottom (entry detail), and the vehicle's action bar.</li>
+          <li>Three tab styles: Finance pill tabs with badges, vehicle line tabs with markers, and Maintenance tabs held in local state (not linkable, not 44 px).</li>
+          <li>Page widths disagree: entry detail 768 px, trip and vehicle 1152 px. Trip detail also switches width between loading and loaded.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Proposed rule</h4><ul>
+          <li>Five archetypes (<a href="pages.html">see them</a>): Module list, Record workspace, Decision queue, Home, Settings list. Plus two form pages.</li>
+          <li>One <code>MetricStrip</code> for every overview strip, with tone and an optional filter link.</li>
+          <li>One detail surface per record type: a record workspace for big records, the record panel for sub-records.</li>
+          <li>One tab component: URL-routed, 44 px, server counts.</li>
+          <li><code>PageContainer</code> owns width for all states of a screen.</li>
+        </ul><p class="src">Source: <code>audits/page-anatomy.md</code></p></div>
+      </div>
+    </section>
+
+    <section class="section" id="forms">
+      <div class="kicker">Audit 2</div>
+      <h3>Forms</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>What's inconsistent</h4><ul>
+          <li>17 native date inputs remain (5 <code>date</code>, 12 <code>datetime-local</code>), against the AGENTS.md rule. Checked with grep.</li>
+          <li>Surfaces in use: 16 panel, 14 dialog, 1 page through <code>CommandForm</code>, plus 5 hand-written Dialog forms (create branch, add user, register person, branch and member actions) and one AlertDialog (lock period).</li>
+          <li>Two form techniques: react-hook-form + zod (branches, members, persons, asset register, trip sheet, entry form) and <code>useState</code> + hand-written checks (trip actions, reading, document, note, fuel, decisions). Money and whole-number parsing is repeated in 6+ forms.</li>
+          <li>No form marks required fields. A missing required reason only disables the submit button, with no message.</li>
+          <li>Submit labels: mostly "Enregistrer", but also "Créer", "Ajouter", verb phrases; button order is submit-first in panels and submit-last in dialogs.</li>
+          <li>Create forms open as centered dialogs in Settings and as panels on the vehicle.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Proposed rule</h4><ul>
+          <li>Three surfaces by job: panel for facts, dialog for decisions, page for long captures (<a href="forms.html#surfaces">details</a>).</li>
+          <li>Every form goes through <code>CommandForm</code> + react-hook-form + the contract schema. The hand-written dialogs move onto it.</li>
+          <li>A field kit (Text, Note, Money, Date, DateTime, Choice, Person, Vehicle, File, Reading) owns label, required marker, help, error and 44 px.</li>
+          <li>Submit repeats the verb of the action and is always last.</li>
+          <li>A six-test harness per form, plus guard tests (<a href="forms.html#recipe">recipe</a>).</li>
+        </ul><p class="src">Source: <code>audits/forms-inventory.md</code> (codex; read the correction note at the top)</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="actions">
+      <div class="kicker">Audit 3</div>
+      <h3>Actions and feedback</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>What's inconsistent</h4><ul>
+          <li>Destructive commands (reject, reverse, cancel WO, dismiss issue) use the default primary button inside <code>CommandForm</code>; deactivate uses red. Reverse is red in the row menu and primary on the entry page.</li>
+          <li>Two row-menu components with different rules: DataTable hides unavailable items, the vehicle <code>RowMenu</code> shows them locked with a reason.</li>
+          <li>Locked actions are hidden in the vehicle header, the quick bar and tab actions, but shown with a reason in All actions and the record footer. Quick-bar slots shift between vehicles.</li>
+          <li>Five pending labels ("Envoi…", "Envoi en cours…", "En cours…", "Enregistrement…", custom). <code>notifyCommandError</code> is unused. The generic error shows the raw code.</li>
+          <li>The same command has several labels: "Affecter" vs "Changer d'agence", "Saisir une fiche" vs "Démarrer un trajet", "Rejeter" vs "Refuser".</li>
+          <li>History is reachable from trip and entry pages only; not from the finance drawer, the vehicle's entry panel or maintenance issues.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Proposed rule</h4><ul>
+          <li>One label key per command, reused on every surface.</li>
+          <li><code>CommandForm tone="destructive"</code> for refusals and cancels; reason required, marked, max 500.</li>
+          <li>Role forbids → hidden. State blocks → shown locked with the reason, on every surface. Quick-bar slots fixed.</li>
+          <li>One row menu, one "Open" verb, destructive items marked.</li>
+          <li>One pending label from the command status store; every success is a toast through <code>notify.ts</code>.</li>
+          <li>Every record surface has the same History entry and the same timeline component.</li>
+        </ul><p class="src">Source: <code>audits/actions-feedback.md</code></p></div>
+      </div>
+    </section>
+
+    <section class="section" id="visual">
+      <div class="kicker">Audit 4</div>
+      <h3>Visual system</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>What's inconsistent</h4><ul>
+          <li>Titles: the page h1 is 24 px, the vehicle h1 is 16 to 18 px. Card titles use two font families (heading in <code>CardTitle</code>, body in the vehicle <code>CardHead</code>).</li>
+          <li>Vertical rhythm between vehicle tabs runs from 12 px to 28 px; half of all Card uses strip the card spacing and rebuild it.</li>
+          <li>Missing values show as "—" (32 places), "Not recorded" (10), "…", or blank.</li>
+          <li>Icons: "add" is <code>Plus</code>, <code>FilePlus2</code>, <code>UserPlus</code> or <code>ClipboardPlus</code>; history is <code>History</code> or <code>Clock</code>.</li>
+          <li>Phone sheet heights: 85, 88 and 92 vh. Scrim black hard-coded in four primitives. Three tiny literal text sizes.</li>
+          <li>Passenger preset says "Voyages" in the nav and "Trajets" in the tabs.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Proposed rule</h4><ul>
+          <li>Named text variants: page title, section title, card title, overlay title, label, meta. Each owns family, size, weight.</li>
+          <li>Section rhythm: 24 px between sections, 12 px inside a card.</li>
+          <li>Missing value: "Not recorded" (or "Non renseigné"), with an inline "Add" when the user can fill it.</li>
+          <li>An icon registry: one icon per concept, generic <code>Plus</code> for add.</li>
+          <li>One phone sheet height and one scrim token.</li>
+          <li>Each preset ships one full vocabulary; a guard checks nav and tab labels agree.</li>
+        </ul><p class="src">Source: <code>audits/visual-tokens.md</code> (codex)</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="live">
+      <div class="kicker">Audit 5</div>
+      <h3>Seen in the running app</h3>
+      <p class="rule">182 screenshots on an isolated slot (desktop 1440 × 900 and phone 390 × 844, English and French, admin role). No data changed. Raw report: <code>audits/live-visual.md</code>; six key shots in <code>audits/shots/</code>.</p>
+      <div class="cols even">
+        <div><div class="frame-label">Maintenance → New issue: centred dialog, Cancel then submit, 32 px selects</div><img src="audits/shots/16-form-new-issue-desktop-en.png" style="width:100%;border-radius:12px;border:1px solid var(--border)" alt="New issue opened from Maintenance as a centred dialog"></div>
+        <div><div class="frame-label">VH003 → Report a problem: the same form as a side sheet, submit then Cancel</div><img src="audits/shots/37-form-report-problem-desktop-en.png" style="width:100%;border-radius:12px;border:1px solid var(--border)" alt="The same form opened from the vehicle as a side sheet"></div>
+      </div>
+      <table class="spec-table" style="margin-top:18px">
+        <thead><tr><th></th><th>Seen live</th><th>Screenshot</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sev p0">P0</span></td><td>The same fuel expense DLA-2026-00008 shows "+FCFA 86,000" in Finance and "−FCFA 86,000" in trip detail. Home puts "+" on every expense; the vehicle Money tab shows expenses unsigned.</td><td class="src"><code>17-finance-entries</code>, <code>24-trip-detail</code></td></tr>
+          <tr><td><span class="sev p0">P0</span></td><td>Approvals "Economic date" column shows the submission date. Already filed as #55 (open).</td><td class="src"><code>21-approvals</code>; <code>FinanceApprovalsScreen.tsx:127</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Trucks overview says "Attention 0" while VH003 is grounded with an expired inspection.</td><td class="src"><code>02-trucks-list</code> vs <code>03-vh003-now</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Phone pages wider than the screen: Maintenance about 441 px in English and 561 px in French, People about 407 px ("Add a person" cut off).</td><td class="src"><code>12-maintenance-list-phone-fr</code>, <code>30-people-phone-en</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>New issue and New work order each open as a dialog from Maintenance and as a side sheet from the vehicle, with opposite button order. Record an expense is a full page from Finance and a sheet from the vehicle.</td><td class="src"><code>15/38</code>, <code>16/37</code>, <code>20/35</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Input heights mix inside one form (32 px selects next to 44 px fields). Native date inputs show US format "10/04/2026, 01:07 PM" on French phones, next to app dates "04/10/2026 12:57".</td><td class="src"><code>15</code>, <code>34-form-log-fuel-phone-fr</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Phone vehicle tabs are clipped ("Doc…") and don't scroll the active tab into view; on Details, "Maintenance" looks active.</td><td class="src"><code>09-vh003-details-phone-en</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>"Issue" and "Problem" name the same thing, sometimes on one screen; raw codes BODYWORK / BRAKES / OTHER in the Issues table in both languages.</td><td class="src"><code>38</code>, <code>13-maintenance-issues-desktop-fr</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>Four tab styles (underline, grey segmented, black pill chips, outlined segmented). Four stat-card styles. Two pagination styles.</td><td class="src"><code>03</code>, <code>12</code>, <code>05</code>, <code>22</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>Debug footer "TRUCKING v1 · created … · command d65f0997" on trip detail; "Job de halage" in French.</td><td class="src"><code>24-trip-detail</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>French branch switcher truncated to "Toutes mes agen" on every page.</td><td class="src"><code>03-vh003-now-desktop-fr</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>Entry detail and More are a narrow centred column; every other page is full width. The "View" button sits alone on its own row on most lists.</td><td class="src"><code>19</code>, <code>32</code>, <code>23</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>Money in three styles inside forms: "Amount (XAF)" label, "FCFA" prefix, or no unit. Amounts monospace in Finance and proportional on the vehicle.</td><td class="src"><code>20</code>, <code>40</code>, <code>15</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="order">
+      <div class="kicker">Plan</div>
+      <h3>Fix order</h3>
+      <p class="rule">Small slices, each with a guard test so the problem can't come back. Bugs first, then the shared pieces, then the screens move onto them.</p>
+      <table class="spec-table">
+        <thead><tr><th>#</th><th>Slice</th><th>Guard that keeps it fixed</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Approvals rows open the entry in the record panel with Approve / Reject in its footer</td><td>Screen test: click entry number → panel with decision buttons</td><td>S</td></tr>
+          <tr><td>1b</td><td>Data bugs seen live: one sign rule for money everywhere; Trucks "Attention" counts grounded vehicles; Approvals date (#55); phone overflow on Maintenance and People</td><td>Format tests per screen; 390 px no-horizontal-scroll check in <code>pnpm verify</code></td><td>M</td></tr>
+          <tr><td>1c</td><td>Sidebar hides Finance from roles that can't read it (#64); visibility from <code>sections.ts</code> data with group + read capability</td><td><code>sections.test.ts</code> asserts each role's rows</td><td>S</td></tr>
+          <tr><td>2</td><td>Breadcrumb trails for trip detail and Record a trip</td><td>Test that every route in <code>router.tsx</code> has a trail</td><td>S</td></tr>
+          <tr><td>3</td><td>Primitives default to 44 px (Button, Input, Select, TabsList, DataTable controls, chips, sheet close)</td><td>Primitives test reads the class lists; ban <code>h-8/h-9/size-sm</code> on interactive controls in screens</td><td>M</td></tr>
+          <tr><td>4</td><td>One status presentation per domain (entry, trip, work order, issue, asset, document, member)</td><td>Ban local <code>STATUS_TONES</code> maps outside the domain's badge file</td><td>S</td></tr>
+          <tr><td>5</td><td>Command labels keyed by command name; dismiss wording; <code>CommandForm tone="destructive"</code>; submit always last</td><td>Locale test: no two keys under one surface share "Annuler"/"Close"; <code>*.submit</code> lint</td><td>M</td></tr>
+          <tr><td>6</td><td>Toasts for branches and users; remove the PIN inline panel; one pending label</td><td>Ban <code>components/ui/toast</code> imports outside <code>notify.ts</code></td><td>S</td></tr>
+          <tr><td>7</td><td>DateField and DateTimeField in the registry; replace the 17 native inputs</td><td>Ban <code>type="date"</code> / <code>datetime-local</code> in <code>src/</code></td><td>M</td></tr>
+          <tr><td>8</td><td>Field kit + <code>useCommandForm</code> + form test harness; move the 5 hand-written dialogs and the <code>useState</code> forms onto it</td><td>Every <code>*Form.tsx</code> / <code>*Dialog.tsx</code> has a harness test</td><td>L</td></tr>
+          <tr><td>9</td><td>Panel as the default create surface: Settings creates, Record an entry (route opens the panel over Entries)</td><td>Allow-list of decision dialogs</td><td>M</td></tr>
+          <tr><td>10</td><td>Overview strips on Trips, Maintenance, Finance entries, Approvals; <code>SectionCards</code> and <code>PeriodStats</code> merged into <code>MetricStrip</code></td><td>Archetype test per list screen: <code>MetricStrip</code> before <code>DataTable</code></td><td>M</td></tr>
+          <tr><td>11</td><td>Record workspace shell for Trip detail and Finance entry detail; one detail surface per record type</td><td>Screen tests on region order</td><td>L</td></tr>
+          <tr><td>12</td><td>Money sign + locale, missing-value wording, text variants, icon registry</td><td>Ban literal "—" in JSX; ban <code>Intl.NumberFormat</code> outside <code>lib/format</code></td><td>M</td></tr>
+          <tr><td>12b</td><td>Navigation per <a href="sidebar.html">sidebar.html</a>: three groups, Finance pages as rows, Company out of More, name menu, counts, phone bottom bar, "What's coming" from the ported catalog</td><td>Per-role sidebar test; label = page title test</td><td>M</td></tr>
+          <tr><td>13</td><td>One timeline component with notes; History on every record surface</td><td>Test that WO approval notes render</td><td>M</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>

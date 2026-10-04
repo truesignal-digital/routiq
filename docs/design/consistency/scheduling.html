@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: scheduling</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .board { border: 1px solid var(--border); border-radius: 14px; background: white; overflow: hidden; }
+  .board-head, .board-row { display: grid; grid-template-columns: 170px repeat(7, minmax(0, 1fr)); }
+  .board-head > div { padding: 8px 10px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); }
+  .board-head > div:first-child { border-left: 0; }
+  .board-head .today { color: var(--foreground); background: color-mix(in oklch, var(--info) 10%, white); }
+  .board-row > div { min-height: 64px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); padding: 5px; position: relative; }
+  .board-row > div:first-child { border-left: 0; padding: 8px 10px; font-size: 13px; }
+  .board-row > div:first-child b { display: block; }
+  .board-row > div:first-child span { font-size: 11.5px; color: var(--muted-foreground); }
+  .board-row:last-child > div { border-bottom: 0; }
+  .board-row .todaycol { background: color-mix(in oklch, var(--info) 5%, white); }
+  .blk { position: absolute; top: 6px; bottom: 6px; border-radius: 8px; padding: 5px 8px; font-size: 11.5px; line-height: 1.3; overflow: hidden; border: 1px solid; z-index: 1; }
+  .blk b { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .blk span { color: oklch(0.4 0.01 256); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .blk.planned { background: color-mix(in oklch, var(--info) 14%, white); border-color: color-mix(in oklch, var(--info) 45%, white); }
+  .blk.live { background: color-mix(in oklch, var(--success) 18%, white); border-color: color-mix(in oklch, var(--success) 50%, white); }
+  .blk.done { background: var(--muted); border-color: var(--border); color: var(--muted-foreground); }
+  .blk.block { background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--destructive) 9%, white) 0 6px, white 6px 12px); border-color: color-mix(in oklch, var(--destructive) 35%, white); }
+  .blk.warn { box-shadow: 0 0 0 2px var(--warning); }
+  .queue { display: flex; flex-direction: column; gap: 8px; }
+  .qitem { border: 1px dashed var(--border); border-radius: 10px; padding: 9px 11px; font-size: 12.5px; background: white; }
+  .qitem b { display: block; font-size: 13px; }
+  .qitem span { color: var(--muted-foreground); }
+  .legend2 { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted-foreground); }
+  .legend2 span { display: inline-flex; gap: 6px; align-items: center; }
+  .legend2 i { width: 14px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid; }
+  .agenda .day { font: 650 12px var(--font-heading); color: var(--muted-foreground); margin: 10px 0 6px; text-transform: none; }
+  .tripcard { border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: white; }
+  .tripcard .top { display: flex; justify-content: space-between; align-items: center; }
+  .tripcard .top b { font-size: 15px; }
+  .tripcard .line { display: flex; gap: 8px; align-items: center; font-size: 13px; color: oklch(0.35 0.01 256); }
+  .tripcard .line .ic { color: var(--muted-foreground); }
+  .tt { border: 1px solid var(--border); border-radius: 14px; background: white; overflow: hidden; }
+  .tt-head, .tt-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); }
+  .tt-head .hours { display: grid; grid-template-columns: repeat(9, 1fr); font-size: 11px; color: var(--muted-foreground); }
+  .tt-head .hours div { padding: 6px 0 6px 4px; border-left: 1px solid var(--border); }
+  .tt-head > div:first-child, .tt-row > div:first-child { padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  .tt-row > div:last-child { position: relative; border-bottom: 1px solid var(--border); min-height: 52px; background-image: repeating-linear-gradient(90deg, transparent 0 calc(100%/9 - 1px), var(--border) calc(100%/9 - 1px) calc(100%/9)); }
+  .tt-row:last-child > div { border-bottom: 0; }
+  .month { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: white; }
+  .month > div { min-height: 78px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px; font-size: 11.5px; }
+  .month > div:nth-child(7n) { border-right: 0; }
+  .month .dn { font-weight: 650; color: var(--muted-foreground); margin-bottom: 4px; }
+  .month .ev { border-radius: 5px; padding: 2px 5px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .month .ev.p { background: color-mix(in oklch, var(--info) 14%, white); }
+  .month .ev.l { background: color-mix(in oklch, var(--success) 18%, white); }
+  .month .ev.d { background: var(--muted); color: var(--muted-foreground); }
+  .month .wk { font-size: 11px; font-weight: 650; color: var(--muted-foreground); padding: 6px; min-height: 0; background: var(--muted); }
+  .weekstrip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .weekstrip > div { border: 1px solid var(--border); border-radius: 10px; padding: 6px 4px; text-align: center; position: relative; }
+  .weekstrip span { display: block; font-size: 11px; color: var(--muted-foreground); }
+  .weekstrip b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .weekstrip .t { border-color: var(--foreground); }
+  .weekstrip i { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: #2a78d6; }
+  .weekstrip i.w { background: var(--warning); } .weekstrip i.g { background: var(--success); }
+  .mcal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: white; }
+  .mcal > div { min-height: 96px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; }
+  .mcal > div:nth-child(7n) { border-right: 0; }
+  .mcal .h { min-height: 0; padding: 7px 8px; font-weight: 650; color: var(--muted-foreground); background: oklch(0.985 0 0); font-size: 12px; }
+  .mcal .n { font-weight: 650; font-size: 12px; color: oklch(0.35 0 0); margin-bottom: 2px; }
+  .mcal .o { background: oklch(0.985 0 0); } .mcal .o .n { color: var(--muted-foreground); }
+  .mcal .we { background: oklch(0.99 0.002 256); }
+  .mcal .today { box-shadow: inset 0 0 0 2px var(--foreground); }
+  .mcal .sel { background: color-mix(in oklch, var(--info) 7%, white); }
+  .mcal .c { border-radius: 6px; padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid transparent; }
+  .mcal .c.p { background: color-mix(in oklch, var(--info) 14%, white); }
+  .mcal .c.l { background: color-mix(in oklch, var(--success) 18%, white); }
+  .mcal .c.d { background: var(--muted); color: var(--muted-foreground); }
+  .mcal .c.u { border: 1px dashed var(--warning); background: color-mix(in oklch, var(--warning) 8%, white); }
+  .mcal .c.b { background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--destructive) 9%, white) 0 5px, white 5px 10px); border-color: color-mix(in oklch, var(--destructive) 30%, white); }
+  .mcal .c.warn { box-shadow: 0 0 0 1.5px var(--warning); }
+  .mcal .more { font-size: 11px; font-weight: 600; color: var(--muted-foreground); padding-left: 4px; }
+  .pcal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .pcal > div { min-height: 44px; border-radius: 10px; font-size: 14px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-variant-numeric: tabular-nums; }
+  .pcal .h { min-height: 0; font-size: 11px; color: var(--muted-foreground); font-weight: 600; }
+  .pcal .o { color: var(--muted-foreground); font-weight: 500; }
+  .pcal .t { box-shadow: inset 0 0 0 2px var(--foreground); }
+  .pcal .s { background: var(--primary); color: var(--primary-foreground); }
+  .pcal i { width: 6px; height: 6px; border-radius: 50%; background: #2a78d6; display: block; }
+  .pcal i.d { background: var(--muted-foreground); } .pcal i.g { background: var(--success); } .pcal i.w { background: var(--warning); }
+  .pcal .s i { background: white; }
+  .steps-v2 { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; }
+  .steps-v2 > div { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; padding: 7px 0; font-size: 13px; position: relative; }
+  .steps-v2 i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); background: white; }
+  .steps-v2 .done i { background: var(--foreground); border-color: var(--foreground); }
+  .steps-v2 .now i { background: var(--success); border-color: var(--success); box-shadow: 0 0 0 4px color-mix(in oklch, var(--success) 25%, transparent); }
+  .steps-v2 span { font-size: 12px; color: var(--muted-foreground); }
+  .steps-v2 > div:not(.done):not(.now) b { color: var(--muted-foreground); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#direction">The direction</a>
+    <a href="#where">Where planning lives</a>
+    <a href="#home">Planned trips on Home</a>
+    <a href="#flow">From phone call to trip</a>
+    <a href="#book">Book a trip</a>
+    <a href="#board">Planning board</a>
+    <a href="#monthfull">Month view, full page</a>
+    <a href="#month">Month calendar (simple)</a>
+    <a href="#driverapp">Driver: schedule, calendar, status</a>
+    <a href="#driver">The driver's schedule (detail)</a>
+    <a href="#bus">Bus: timetable and charters</a>
+    <a href="#roles">Who sees what</a>
+    <a href="#charts">Charts</a>
+    <a href="#build">What it takes to build</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Scheduling</h2>
+      <p class="lede">A customer calls: "I need a truck on Thursday, Douala to Yaoundé, 30 tonnes of cement." Today ROUTIQ can only record a trip once it has started. Scheduling adds the step before: book the trip for a date, put it on a calendar, assign a truck and a driver, and let the driver see in their schedule who booked it and what it involves.</p>
+    </header>
+
+    <section class="section" id="direction">
+      <div class="kicker">Direction</div>
+      <h3>The direction for trucking (and bus)</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>One trip, one more status</h4><p>No separate "booking" object. A booked trip is the same trip record, with a new first status: <b>Planned</b> → In progress → Closed (or Cancelled). Booking creates a planned trip; starting it on the day turns it into the trip the driver already records today. Everything that already exists (crew, readings, expenses, closing) keeps working.</p></div>
+        <div class="spec-card"><h4>Why not a separate booking</h4><ul>
+          <li>Two records for one job means copying data and two places to cancel.</li>
+          <li>The customer, rate and route belong on the trip anyway, for revenue and what the customer owes.</li>
+          <li>The trucking and bus presets keep their own words (trip vs journey) on one shape.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="where">
+      <div class="kicker">Placement</div>
+      <h3>Where planning lives: a tab inside Trips, not a new sidebar row</h3>
+      <p class="rule">Planning is a view of trips (planned ones), so it lives on the Trips page as its first tab. The sidebar keeps one Trips row, whose count is "trips to assign". The one button, <b>Book a trip</b>, sits in the Trips header on every tab, on Home for dispatchers, and on a customer record.</p>
+      <div class="frame desktop" style="min-height:300px">
+        <div data-sidebar="trips" data-role="admin"></div>
+        <div class="main"><div class="topbar">Trips <span class="sep">/</span> <b>Planning</b><div class="right"><span class="chip set">Douala</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Trips</h1><div class="lead">Planned, running and closed trips for Douala.</div></div><button class="btn primary"><i data-i="plus"></i>Book a trip</button></div>
+            <div class="tabs layer l-details"><span class="tag">URL tabs: /trips/planning · /trips/running · /trips/all</span><div class="on">Planning<span class="count hot">2</span></div><div>Running<span class="count">1</span></div><div>All trips</div></div>
+            <div class="row"><div class="seg" style="width:240px"><div>Day</div><div>Week</div><div class="on">Month</div></div><span class="caption" style="margin:0">Planning remembers the last view per person.</span></div>
+          </div></div>
+      </div>
+      <div class="cols three" style="margin-top:16px">
+        <div class="spec-card"><h4>Tabs</h4><ul><li><b>Planning</b>: calendar of planned trips (Day / Week / Month). Default for Administrators.</li><li><b>Running</b>: trips in progress today, with who is driving.</li><li><b>All trips</b>: the list as today (search, filters, closed trips).</li></ul></div>
+        <div class="spec-card"><h4>How you get there</h4><ul><li>Sidebar → Trips (lands on Planning for dispatchers, on All trips for Finance).</li><li>Home → "Planned this week" card → Planning.</li><li>Customer → Trips tab → "Upcoming" → Planning filtered to that customer.</li><li>Truck → its planned trips next to maintenance in its Overview.</li></ul></div>
+        <div class="spec-card"><h4>Why not a "Planning" sidebar row</h4><ul><li>One place for trips: planned, running and closed are the same record at different steps.</li><li>Keeps the sidebar at its size; module rows only appear when a module is on.</li><li>If the Scheduling module is off, the Planning tab simply isn't there and Trips works as today.</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="home">
+      <div class="kicker">Overview</div>
+      <h3>Planned trips on Home</h3>
+      <p class="rule">Home gets one Scheduling card when the module is on: what's planned this week, what still needs a truck, and today's trips. For Direction, the executive overview adds "planned revenue" and "fleet booked %".</p>
+      <div class="frame desktop" style="min-height:520px">
+        <div data-sidebar="home" data-role="admin"></div>
+        <div class="main"><div class="topbar"><b>Home</b><div class="right"><span class="chip set">Douala</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Good morning, Boris</h1><div class="lead">Douala · Wednesday 8 October</div></div><button class="btn primary"><i data-i="plus"></i>Book a trip</button></div>
+            <div class="cols even" style="gap:16px">
+              <div class="card"><div class="card-h"><div><h2>Needs you <span class="count hot">3</span></h2></div></div><div class="card-b feed">
+                <div><span class="dot warn"></span><b>2 trips need a truck</b>&nbsp;· Thu 9, Sat 11<span class="when"><a>Assign</a></span></div>
+                <div><span class="dot bad"></span><b>Sali booked twice</b>&nbsp;· Fri 10<span class="when"><a>Fix</a></span></div>
+                <div><span class="dot warn"></span><b>2 expenses waiting</b>&nbsp;· 185 000 XAF<span class="when"><a>Review</a></span></div>
+              </div></div>
+              <div class="card layer l-overview"><span class="tag">Scheduling module card</span><div class="card-h"><div><h2>Planned this week</h2><div class="d">7 trips · 3 250 000 XAF planned · 2 of 3 trucks booked</div></div><a class="caption" style="margin:0;font-weight:600;color:var(--foreground)">Planning →</a></div>
+                <div class="card-b">
+                  <div class="weekstrip"><div><span>Mon</span><b>1</b></div><div><span>Tue</span><b>1</b></div><div class="t"><span>Wed</span><b>1</b></div><div><span>Thu</span><b>2</b><i></i></div><div><span>Fri</span><b>2</b><i class="w"></i></div><div><span>Sat</span><b>1</b><i></i></div><div><span>Sun</span><b>0</b></div></div>
+                  <div class="feed" style="margin-top:8px"><div><span class="dot ok"></span>Today · VH001 · Brasserie du Wouri, DLA → YDE<span class="when">en route</span></div><div><span class="dot info"></span>Thu · VH001 · Agro Littoral, DLA → YDE<span class="when">06:00</span></div></div>
+                </div></div>
+            </div>
+          </div></div>
+      </div>
+    </section>
+
+    <section class="section" id="monthfull">
+      <div class="kicker">Calendar</div>
+      <h3>Month view, full page</h3>
+      <p class="rule">Planning → Month. A real month grid: each day lists its trips as small chips (customer · truck) in the status colour, unassigned ones dashed in amber, "+2 more" when a day is full. Clicking a day opens the day in the side panel with every trip and the free trucks; clicking a chip opens that trip.</p>
+      <div class="frame desktop" style="min-height:760px">
+        <div data-sidebar="trips" data-role="admin"></div>
+        <div class="main" style="position:relative"><div class="topbar">Trips <span class="sep">/</span> Planning <span class="sep">/</span> <b>October 2026</b></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Trips</h1></div><button class="btn primary"><i data-i="plus"></i>Book a trip</button></div>
+            <div class="tabs"><div class="on">Planning<span class="count hot">2</span></div><div>Running<span class="count">1</span></div><div>All trips</div></div>
+            <div class="row" style="justify-content:space-between">
+              <div class="row"><button class="btn sm"><i data-i="back"></i></button><b style="font-size:15px;min-width:120px;text-align:center">October 2026</b><button class="btn sm"><i data-i="chev"></i></button><button class="btn sm">Today</button></div>
+              <div class="row"><span class="chip"><i data-i="plus"></i>Truck</span><span class="chip"><i data-i="plus"></i>Driver</span><span class="chip"><i data-i="plus"></i>Customer</span><div class="seg" style="width:210px"><div>Day</div><div>Week</div><div class="on">Month</div></div></div>
+            </div>
+            <div class="mcal">
+              <div class="h">Mon</div><div class="h">Tue</div><div class="h">Wed</div><div class="h">Thu</div><div class="h">Fri</div><div class="h">Sat</div><div class="h">Sun</div>
+              <div class="o"><span class="n">29</span><div class="c d">Agro · VH004</div></div><div class="o"><span class="n">30</span><div class="c d">Wouri · VH001</div></div><div><span class="n">1</span></div><div><span class="n">2</span><div class="c d">Agro · VH001</div></div><div><span class="n">3</span></div><div class="we"><span class="n">4</span></div><div class="we"><span class="n">5</span></div>
+              <div><span class="n">6</span><div class="c d">Fotso · VH001</div></div><div><span class="n">7</span><div class="c d">Agro · VH004</div></div><div class="today"><span class="n">8</span><div class="c l">Wouri · VH001</div></div><div class="sel"><span class="n">9</span><div class="c p">Agro · VH001</div><div class="c u">Fotso · no truck</div></div><div><span class="n">10</span><div class="c p">Mbanga · VH004</div><div class="c p warn">Fotso · VH001 ⚠</div></div><div class="we"><span class="n">11</span><div class="c u">Wouri · no truck</div></div><div class="we"><span class="n">12</span></div>
+              <div><span class="n">13</span><div class="c p">Agro · weekly</div></div><div><span class="n">14</span><div class="c p">Fotso · VH004</div></div><div><span class="n">15</span><div class="c p">Wouri · VH001</div><div class="c p">Agro · VH004</div><div class="more">+2 more</div></div><div><span class="n">16</span></div><div><span class="n">17</span><div class="c b">VH003 service</div></div><div class="we"><span class="n">18</span></div><div class="we"><span class="n">19</span></div>
+              <div><span class="n">20</span><div class="c p">Agro · weekly</div></div><div><span class="n">21</span></div><div><span class="n">22</span><div class="c p">Mbanga · VH004</div></div><div><span class="n">23</span></div><div><span class="n">24</span></div><div class="we"><span class="n">25</span></div><div class="we"><span class="n">26</span></div>
+              <div><span class="n">27</span><div class="c p">Agro · weekly</div></div><div><span class="n">28</span></div><div><span class="n">29</span></div><div><span class="n">30</span><div class="c u">Fotso · no truck</div></div><div><span class="n">31</span></div><div class="o we"><span class="n">1</span></div><div class="o we"><span class="n">2</span></div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      <div class="cols" style="grid-template-columns:400px minmax(0,1fr);margin-top:18px"><div><div class="frame-label">Clicking a day opens it in the side panel</div><div class="pstatic" style="width:400px;position:relative;background:white;border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgb(15 23 42 / .07)">
+            <div class="sheet-h"><div class="back"><i data-i="back"></i>October</div><h3>Thursday 9 October</h3><div class="d">2 trips · 1 needs a truck · 1 truck free</div><span class="x"><i data-i="x"></i></span></div>
+            <div class="sheet-b">
+              <div class="tripcard"><div class="top"><b>Agro Littoral</b><span class="badge b-info">Planned</span></div><div class="line"><i data-i="route"></i>DLA → YDE · 06:00 · cement 30 t</div><div class="line"><i data-i="truck"></i>VH001 + TR001 · Sali Ahmadou</div></div>
+              <div class="tripcard" style="border-style:dashed;border-color:var(--warning)"><div class="top"><b>Ets Fotso &amp; Fils</b><span class="badge b-warn">No truck</span></div><div class="line"><i data-i="route"></i>DLA → BAF · rice 20 t</div><div class="row"><span class="caption" style="margin:0">Free: VH004 (Paul N.)</span><button class="btn sm primary" style="margin-left:auto">Assign VH004</button></div></div>
+              <div class="fs-h">Trucks this day</div>
+              <div class="feed"><div><span class="dot info"></span>VH001 · booked<span class="when">Agro</span></div><div><span class="dot ok"></span>VH004 · free<span class="when"><a>Book</a></span></div><div><span class="dot bad"></span>VH003 · can't drive<span class="when">brakes</span></div></div>
+            </div>
+            <div class="sheet-f"><button class="btn primary" style="margin-left:auto"><i data-i="plus"></i>Book a trip on 9 Oct</button></div>
+          </div></div><div><div class="cols three" style="margin-top:16px">
+        <div class="spec-card"><h4>Reading it</h4><ul><li>Chip colour = status: blue planned, green running, grey done, red striped = vehicle can't drive (maintenance shows here too).</li><li>Dashed amber = no truck yet. ⚠ = conflict.</li><li>Weekends shaded; today outlined.</li></ul></div>
+        <div class="spec-card"><h4>Actions</h4><ul><li>Click a day → day panel (trips, free trucks, Book a trip on that date).</li><li>Click a chip → the trip in the record panel.</li><li>Filters narrow to one truck, driver or customer (a customer's month = what to tell them on the phone).</li></ul></div>
+        <div class="spec-card"><h4>Phone</h4><p>The month grid on phone shows dots per day (count, amber if anything is unassigned); tapping a day lists its trips under the grid. Same for drivers, filtered to their own trips.</p></div>
+      </div>
+    </div></div>
+    </section>
+
+    <section class="section" id="driverapp">
+      <div class="kicker">Phone · Driver</div>
+      <h3>The driver on the phone: schedule, calendar, trip status</h3>
+      <p class="rule">Three screens cover what a driver needs: what's next (schedule), the month at a glance (calendar), and one trip with its status and the few actions they can take.</p>
+      <div class="cols three" style="grid-template-columns:repeat(3,390px);justify-content:start">
+        <div>
+          <div class="frame-label">1 · My schedule (default)</div>
+          <div class="frame phone" style="min-height:800px">
+            <div class="ptop"><b>My schedule</b><span class="chip set" style="margin-left:auto">Week</span></div>
+            <div class="page agenda" style="gap:6px">
+              <div class="weekstrip ph-w"><div><span>M</span><b>6</b></div><div><span>T</span><b>7</b></div><div class="t"><span>W</span><b>8</b><i class="g"></i></div><div><span>T</span><b>9</b><i></i></div><div><span>F</span><b>10</b><i class="w"></i></div><div><span>S</span><b>11</b></div><div><span>S</span><b>12</b></div></div>
+              <div class="day">Today · Wed 8</div>
+              <div class="tripcard"><div class="top"><b>DLA → YDE</b><span class="badge b-ok">In progress</span></div><div class="line"><i data-i="user"></i>Brasserie du Wouri</div><div class="line"><i data-i="clock"></i>Left 06:10 · arrive ~12:30</div></div>
+              <div class="day">Thu 9</div>
+              <div class="tripcard"><div class="top"><b>DLA → YDE</b><span class="badge b-info">Planned</span></div><div class="line"><i data-i="clock"></i>06:00 · Bonabéri</div><div class="line"><i data-i="user"></i>Agro Littoral · <a style="font-weight:600">Call</a></div></div>
+              <div class="day">Fri 10</div>
+              <div class="tripcard" style="border-color:var(--warning)"><div class="top"><b>DLA → BAF</b><span class="badge b-warn">Changed</span></div><div class="line" style="font-size:12px;color:var(--warning-foreground)">Moved from Thu by Boris</div></div>
+            </div>
+            <div data-tabbar="trips" data-role="driver"></div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">2 · My calendar (month)</div>
+          <div class="frame phone" style="min-height:800px">
+            <div class="ptop"><b>My calendar</b><span class="chip set" style="margin-left:auto">Month</span></div>
+            <div class="page" style="gap:10px">
+              <div class="row" style="justify-content:space-between"><button class="btn sm"><i data-i="back"></i></button><b>October 2026</b><button class="btn sm"><i data-i="chev"></i></button></div>
+              <div class="pcal">
+                <div class="h">M</div><div class="h">T</div><div class="h">W</div><div class="h">T</div><div class="h">F</div><div class="h">S</div><div class="h">S</div>
+                <div class="o">29</div><div class="o">30</div><div>1</div><div>2<i class="d"></i></div><div>3</div><div>4</div><div>5</div>
+                <div>6<i class="d"></i></div><div>7</div><div class="t">8<i class="g"></i></div><div class="s">9<i></i></div><div>10<i class="w"></i></div><div>11</div><div>12</div>
+                <div>13<i></i></div><div>14</div><div>15<i></i></div><div>16</div><div>17</div><div>18</div><div>19</div>
+                <div>20<i></i></div><div>21</div><div>22</div><div>23</div><div>24</div><div>25</div><div>26</div>
+                <div>27<i></i></div><div>28</div><div>29</div><div>30</div><div>31</div><div class="o">1</div><div class="o">2</div>
+              </div>
+              <div class="legend2"><span><i style="background:#2a78d6;border-color:#2a78d6;border-radius:50%;width:8px;height:8px"></i>Planned</span><span><i style="background:var(--success);border-color:var(--success);border-radius:50%;width:8px;height:8px"></i>Today</span><span><i style="background:var(--warning);border-color:var(--warning);border-radius:50%;width:8px;height:8px"></i>Changed</span></div>
+              <div class="day" style="font:650 12px var(--font-heading);color:var(--muted-foreground)">Thu 9 October</div>
+              <div class="tripcard"><div class="top"><b>DLA → YDE</b><span class="badge b-info">Planned</span></div><div class="line"><i data-i="clock"></i>06:00 · Agro Littoral · cement 30 t</div><div class="line"><i data-i="truck"></i>VH001 + TR001</div></div>
+            </div>
+            <div data-tabbar="trips" data-role="driver"></div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">3 · One trip: status and actions</div>
+          <div class="frame phone" style="min-height:800px">
+            <div class="ptop"><i data-i="back"></i><span class="crumb">My schedule</span><b>DLA → YDE</b></div>
+            <div class="page" style="gap:10px;padding-bottom:150px">
+              <div><div class="row"><h1 class="pt" style="font-size:19px">Douala → Yaoundé</h1><span class="badge b-ok">In progress</span></div><div class="lead">Brasserie du Wouri · crates · VH001 + TR001</div></div>
+              <div class="steps-v2"><div class="done"><i></i><b>Planned</b><span>by Boris, 6 Oct</span></div><div class="done"><i></i><b>Started</b><span>06:10 · 184 220 km</span></div><div class="now"><i></i><b>On the road</b><span>arrive ~12:30</span></div><div><i></i><b>Delivered</b><span>photo of signed note</span></div><div><i></i><b>Closed</b><span>arrival reading</span></div></div>
+              <div class="pinned"><i data-i="user"></i><div><div class="k">Customer contact</div><b>M. Ekambi · 6 90 11 22 33</b></div><a style="margin-left:auto;font-weight:600">Call</a></div>
+              <div class="quick" style="gap:8px"><span>Fuel</span><span>Expense</span><span>Problem</span><span>Note</span></div>
+            </div>
+            <div class="actionbar" style="grid-template-columns:1fr"><button class="btn primary block"><i data-i="camera"></i>Mark delivered</button></div>
+            <div data-tabbar="trips" data-role="driver"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>What the driver can do</h4><ul>
+          <li><b>Planned</b>: see details, call the customer, start the trip on the day.</li>
+          <li><b>In progress</b>: log fuel or an expense, report a problem, add a note, mark delivered (photo of the signed delivery note).</li>
+          <li><b>Delivered</b>: close the trip with the arrival reading.</li>
+          <li>One primary button at a time: whatever moves the trip to its next status.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>The status line is the same five steps everywhere (board, trip page, driver), so office and driver talk about the same thing.</li>
+          <li>"Delivered" is a new step between On the road and Closed (proof of delivery); it can be skipped when the workspace doesn't use it.</li>
+          <li>Drivers see their own trips only; no prices unless the workspace allows it.</li>
+          <li>Everything here works offline and syncs later (facts, not decisions).</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="flow">
+      <div class="kicker">Workflow</div>
+      <h3>From phone call to trip</h3>
+      <div class="flow" style="display:grid;grid-template-columns:repeat(9,auto);gap:8px;align-items:stretch">
+        <div class="spec-card" style="padding:10px 12px"><b>1 · Customer calls</b><p class="caption" style="margin:4px 0 0">Administrator or dispatcher opens <b>Book a trip</b>, customer and rate prefilled from the customer record.</p></div><div style="align-self:center;color:var(--muted-foreground)">→</div>
+        <div class="spec-card" style="padding:10px 12px"><b>2 · Planned</b><p class="caption" style="margin:4px 0 0">Appears on the board for Thursday, in "To assign" if no truck yet.</p></div><div style="align-self:center;color:var(--muted-foreground)">→</div>
+        <div class="spec-card" style="padding:10px 12px"><b>3 · Assigned</b><p class="caption" style="margin:4px 0 0">Truck and driver chosen; ROUTIQ warns if the truck is grounded or the driver already booked.</p></div><div style="align-self:center;color:var(--muted-foreground)">→</div>
+        <div class="spec-card" style="padding:10px 12px"><b>4 · Driver sees it</b><p class="caption" style="margin:4px 0 0">In "My schedule" on the phone: customer, contact, pickup, cargo, who booked it.</p></div><div style="align-self:center;color:var(--muted-foreground)">→</div>
+        <div class="spec-card" style="padding:10px 12px"><b>5 · Started</b><p class="caption" style="margin:4px 0 0">On the day the driver taps <b>Start trip</b> (odometer); it becomes in progress, then closed as today.</p></div>
+      </div>
+      <p class="caption">Later, with the Notifications module: an SMS to the driver when a trip is assigned or changed, and to the customer when it starts.</p>
+    </section>
+
+    <section class="section" id="book">
+      <div class="kicker">Form · Record layout</div>
+      <h3>Book a trip</h3>
+      <div class="cols" style="grid-template-columns:440px minmax(0,1fr)">
+        <div class="pstatic" style="position:relative;background:white;border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgb(15 23 42 / .07)">
+          <div class="sheet-h"><div class="back"><i data-i="back"></i>Planning</div><h3>Book a trip</h3><div class="d">Puts it on the calendar. Assign the truck now or later.</div><span class="x"><i data-i="x"></i></span></div>
+          <div class="sheet-b">
+            <div class="fs"><div class="fs-h">For whom</div>
+              <div class="field"><label>Customer<span class="req">*</span></label><div class="input filled"><i data-i="search"></i>Société Agro Littoral</div><div class="help">Contact: Mme Ngo Bassa, 6 77 12 34 56</div></div>
+            </div>
+            <div class="fs"><div class="fs-h">When and where</div>
+              <div class="two"><div class="field"><label>Pickup date<span class="req">*</span></label><div class="input filled"><i data-i="cal"></i>Thu 9 Oct</div></div><div class="field"><label>Time</label><div class="input filled"><i data-i="clock"></i>06:00</div></div></div>
+              <div class="two"><div class="field"><label>From<span class="req">*</span></label><div class="input filled">Douala, Bonabéri</div></div><div class="field"><label>To<span class="req">*</span></label><div class="input filled">Yaoundé, Mvan</div></div></div>
+            </div>
+            <div class="fs"><div class="fs-h">What and how much</div>
+              <div class="field"><label>Cargo<span class="req">*</span></label><div class="input filled">Cement, 30 t</div></div>
+              <div class="field"><label>Agreed price</label><div class="input filled num">650 000<span class="suffix">XAF</span></div><div class="help">From the customer's rate for Douala → Yaoundé.</div></div>
+            </div>
+            <div class="fs"><div class="fs-h">Truck and driver <span class="opt">can wait</span></div>
+              <div class="two"><div class="field"><label>Truck</label><div class="input filled">VH001 · free Thu</div></div><div class="field"><label>Driver</label><div class="input filled">Sali Ahmadou</div></div></div>
+            </div>
+          </div>
+          <div class="sheet-f"><span class="hint">Sali sees it in her schedule.</span><button class="btn">Cancel</button><button class="btn primary">Book trip</button></div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Opens from: Planning (button or click on an empty day), a customer record ("New trip for this customer"), and Home.</li>
+          <li>Truck and driver pickers show availability for that date: free, already booked (with which trip), grounded or in maintenance (locked with the reason).</li>
+          <li>Double-booking is a warning, not a block (warn, don't block), but the board marks it in amber until resolved.</li>
+          <li>Changing the date or the driver later is "Modifier" on the planned trip (a plain edit with history). The driver sees "changed" on the card.</li>
+          <li>Cancelling a planned trip is a decision dialog with a reason; it stays in the customer's history as cancelled.</li>
+          <li>Recurring bookings ("every Monday for 6 weeks") create one planned trip per date, each editable.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="board">
+      <div class="kicker">Planning board</div>
+      <h3>Planning board (week, by truck)</h3>
+      <p class="rule">The dispatcher's main screen. Rows are trucks, columns are days. Every planned or running trip is a block. Bookings without a truck wait on the right. Grounded trucks show their blocked days, so nobody books a truck that can't drive.</p>
+      <div class="frame desktop" style="min-height:640px">
+        <div data-sidebar="trips" data-role="admin"></div>
+        <div class="main"><div class="topbar">Trips <span class="sep">/</span> <b>Planning</b><div class="right"><span class="chip set">Douala</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Planning</h1><div class="lead">Week of 6 October · 7 trips planned · 2 to assign</div></div><div class="row"><div class="seg" style="width:240px"><div>Day</div><div class="on">Week</div><div>Month</div></div><button class="btn primary"><i data-i="plus"></i>Book a trip</button></div></div>
+            <div class="metrics">
+              <div><div class="k">Trucks booked this week</div><div class="v">2 / 3</div><div class="s">VH003 grounded</div></div>
+              <div style="background:color-mix(in oklch,var(--warning) 14%,white)"><div class="k">To assign</div><div class="v">2</div><div class="s">next: Thu 9 Oct</div></div>
+              <div><div class="k">Conflicts</div><div class="v bad">1</div><div class="s">Sali booked twice Fri</div></div>
+              <div><div class="k">Planned revenue</div><div class="v">3 250 000</div><div class="s">XAF this week</div></div>
+            </div>
+            <div class="row" style="justify-content:space-between"><div class="row"><button class="btn sm"><i data-i="back"></i></button><b style="font-size:13px">6 – 12 Oct 2026</b><button class="btn sm"><i data-i="chev"></i></button><span class="chip set">By truck</span><span class="chip">By driver</span></div>
+              <div class="legend2"><span><i style="background:color-mix(in oklch,var(--info) 14%,white);border-color:color-mix(in oklch,var(--info) 45%,white)"></i>Planned</span><span><i style="background:color-mix(in oklch,var(--success) 18%,white);border-color:color-mix(in oklch,var(--success) 50%,white)"></i>In progress</span><span><i style="background:var(--muted);border-color:var(--border)"></i>Closed</span><span><i style="background:repeating-linear-gradient(135deg,color-mix(in oklch,var(--destructive) 9%,white) 0 3px,white 3px 6px);border-color:color-mix(in oklch,var(--destructive) 35%,white)"></i>Can't drive</span></div></div>
+            <div class="cols" style="grid-template-columns:minmax(0,1fr) 210px;gap:14px">
+              <div class="board">
+                <div class="board-head"><div>Truck</div><div>Mon 6</div><div>Tue 7</div><div class="today">Wed 8 · today</div><div>Thu 9</div><div>Fri 10</div><div>Sat 11</div><div>Sun 12</div></div>
+                <div class="board-row"><div><b>VH001</b><span>Kerax · Sali A.</span></div><div><div class="blk done" style="left:4px;right:4px"><b>Fotso &amp; Fils</b><span>DLA → BAF</span></div></div><div></div><div class="todaycol"><div class="blk live" style="left:4px;right:4px"><b>Brasserie du Wouri</b><span>DLA → YDE · en route</span></div></div><div><div class="blk planned" style="left:4px;right:-60%"><b>Agro Littoral</b><span>DLA → YDE · 30 t cement</span></div></div><div><div class="blk planned warn" style="left:62%;right:4px"><b>Fotso</b><span>⚠ Sali twice</span></div></div><div></div><div></div></div>
+                <div class="board-row"><div><b>VH003</b><span>Actros · grounded</span></div><div><div class="blk block" style="left:4px;right:-300%"><b>Can't drive: brakes</b><span>WO-0007 · until released</span></div></div><div></div><div class="todaycol"></div><div></div><div></div><div></div><div></div></div>
+                <div class="board-row"><div><b>VH004</b><span>Volvo FH · Paul N.</span></div><div></div><div><div class="blk done" style="left:4px;right:4px"><b>Agro Littoral</b><span>DLA → KRI</span></div></div><div class="todaycol"></div><div></div><div><div class="blk planned" style="left:4px;right:-100%"><b>Cimenterie Mbanga</b><span>DLA → GAR · 2 days</span></div></div><div></div><div></div></div>
+                <div class="board-row"><div><b>TR001</b><span>Trailer</span></div><div></div><div></div><div class="todaycol"><div class="blk live" style="left:4px;right:4px"><b>with VH001</b><span>trailer</span></div></div><div><div class="blk planned" style="left:4px;right:-60%"><b>with VH001</b><span>Agro Littoral</span></div></div><div></div><div></div><div></div></div>
+              </div>
+              <div><div class="fs-h" style="margin-bottom:8px">To assign <span class="count hot">2</span></div>
+                <div class="queue">
+                  <div class="qitem"><b>Ets Fotso &amp; Fils</b><span>Thu 9 · DLA → BAF · 20 t rice</span><br><span>Booked by Boris, today</span></div>
+                  <div class="qitem"><b>Brasserie du Wouri</b><span>Sat 11 · DLA → YDE · crates</span><br><span>Booked by Boris, 6 Oct</span></div>
+                  <p class="caption" style="margin:0">Drag onto a truck's day, or open and pick a truck.</p>
+                </div></div>
+            </div>
+          </div></div>
+      </div>
+      <div class="cols three" style="margin-top:16px">
+        <div class="spec-card"><h4>Overview first</h4><p>The tiles answer "can we take more work this week?": trucks booked, trips to assign, conflicts, planned revenue. Conflicts filter the board to the problem.</p></div>
+        <div class="spec-card"><h4>Actions</h4><ul><li>Click an empty day → Book a trip, date and truck prefilled.</li><li>Click a block → the trip opens in the record panel: customer, route, crew, Start / Edit / Cancel.</li><li>Drag a block to another day or truck → confirm dialog showing what changes (driver gets "changed").</li></ul></div>
+        <div class="spec-card"><h4>Views</h4><ul><li><b>Week by truck</b> (default for dispatch).</li><li><b>Week by driver</b>: same board, rows are drivers; shows days off.</li><li><b>Day</b>: hour timeline for a busy agency.</li><li><b>Month</b>: below. Phone: the board becomes an agenda list per day.</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="month">
+      <div class="kicker">Calendar</div>
+      <h3>Month calendar</h3>
+      <div class="cols" style="grid-template-columns:minmax(0,1fr) 340px">
+        <div class="month">
+          <div class="wk">Mon</div><div class="wk">Tue</div><div class="wk">Wed</div><div class="wk">Thu</div><div class="wk">Fri</div><div class="wk">Sat</div><div class="wk">Sun</div>
+          <div><div class="dn">29</div><div class="ev d">Agro · VH004</div></div><div><div class="dn">30</div><div class="ev d">Wouri · VH001</div></div><div><div class="dn">1</div></div><div><div class="dn">2</div><div class="ev d">Agro · VH001</div></div><div><div class="dn">3</div></div><div><div class="dn">4</div></div><div><div class="dn">5</div></div>
+          <div><div class="dn">6</div><div class="ev d">Fotso · VH001</div></div><div><div class="dn">7</div><div class="ev d">Agro · VH004</div></div><div style="background:color-mix(in oklch,var(--info) 5%,white)"><div class="dn" style="color:var(--foreground)">8 · today</div><div class="ev l">Wouri · VH001</div></div><div><div class="dn">9</div><div class="ev p">Agro · VH001</div><div class="ev p" style="border:1px dashed var(--warning)">Fotso · unassigned</div></div><div><div class="dn">10</div><div class="ev p">Mbanga · VH004</div><div class="ev p">Fotso · VH001 ⚠</div></div><div><div class="dn">11</div><div class="ev p" style="border:1px dashed var(--warning)">Wouri · unassigned</div></div><div><div class="dn">12</div></div>
+          <div><div class="dn">13</div><div class="ev p">Agro · weekly</div></div><div><div class="dn">14</div></div><div><div class="dn">15</div></div><div><div class="dn">16</div></div><div><div class="dn">17</div></div><div><div class="dn">18</div></div><div><div class="dn">19</div></div>
+        </div>
+        <div class="spec-card"><h4>When the month view helps</h4><ul>
+          <li>Customers calling ahead ("end of the month") and recurring contracts (Agro Littoral weekly).</li>
+          <li>Seeing gaps to sell: empty days are free capacity.</li>
+          <li>Each entry: customer · truck, or "unassigned" dashed in amber.</li>
+          <li>The same calendar appears filtered on a customer record (their upcoming trips) and on a truck (its bookings next to maintenance).</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="driver">
+      <div class="kicker">Phone · Driver</div>
+      <h3>The driver's schedule</h3>
+      <div class="cols" style="grid-template-columns:390px minmax(0,1fr)">
+        <div class="frame phone" style="min-height:820px">
+          <div class="ptop"><b>My schedule</b></div>
+          <div class="page agenda" style="gap:6px">
+            <div class="day">Today · Wed 8 Oct</div>
+            <div class="tripcard"><div class="top"><b>Douala → Yaoundé</b><span class="badge b-ok">In progress</span></div><div class="line"><i data-i="user"></i>Brasserie du Wouri · crates</div><div class="line"><i data-i="truck"></i>VH001 + TR001</div><button class="btn primary block">Open trip</button></div>
+            <div class="day">Tomorrow · Thu 9 Oct</div>
+            <div class="tripcard"><div class="top"><b>Douala → Yaoundé</b><span class="badge b-info">Planned</span></div>
+              <div class="line"><i data-i="clock"></i>Pickup 06:00 · Bonabéri</div>
+              <div class="line"><i data-i="user"></i>Société Agro Littoral · Mme Ngo Bassa <a style="margin-left:auto;font-weight:600">Call</a></div>
+              <div class="line"><i data-i="box"></i>Cement, 30 t</div>
+              <div class="line"><i data-i="truck"></i>VH001 + TR001</div>
+              <div class="line" style="color:var(--muted-foreground);font-size:12px"><i data-i="note"></i>Booked by Boris Mbarga, today 09:12</div>
+              <button class="btn block locked"><i data-i="lock"></i>Start trip · available Thu</button></div>
+            <div class="day">Fri 10 Oct</div>
+            <div class="tripcard" style="border-color:var(--warning)"><div class="top"><b>Douala → Bafoussam</b><span class="badge b-warn">Changed</span></div><div class="line"><i data-i="user"></i>Ets Fotso &amp; Fils · rice 20 t</div><div class="line" style="font-size:12px;color:var(--warning-foreground)">Moved from Thu 9 by Boris</div></div>
+          </div>
+          <div data-tabbar="trips" data-role="driver"></div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>The driver's "Trips" tab opens on <b>My schedule</b>: today, tomorrow, then the next days, as an agenda (never a grid on phone).</li>
+          <li>Each card answers what the driver asks: where, when, for whom (with a Call link), what cargo, which truck, who booked it.</li>
+          <li><b>Start trip</b> unlocks on the day; starting asks only the odometer and confirms the crew.</li>
+          <li>Changes show as "Changed" with what moved and who moved it, until the driver opens the card.</li>
+          <li>Works offline: the schedule is cached when the phone was last online; starting a trip offline is a fact, accepted later.</li>
+          <li>Drivers see only their own trips, never other drivers' or prices (price hidden unless the workspace allows it).</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="bus">
+      <div class="kicker">Bus preset</div>
+      <h3>Bus: timetable and charters</h3>
+      <p class="rule">A bus agency schedules differently: most journeys repeat on a <b>timetable</b> (Douala → Yaoundé at 06:00, 10:00, 14:00 every day). The timetable creates each day's planned journeys; the dispatcher only assigns buses and drivers. Charters (a school, a wedding, a company) are booked one by one, exactly like a trucking trip.</p>
+      <div class="frame desktop" style="min-height:430px">
+        <div class="sb" style="display:flex"><div class="ws"><span data-mark></span><span><span class="wordmark">Routi<b>q</b></span><span class="wsname">Voyages Kamer Express</span></span></div><div class="glabel">Daily work</div><div class="item"><i data-i="home"></i><span>Home</span></div><div class="item"><i data-i="truck"></i><span>Buses</span></div><div class="item on"><i data-i="route"></i><span>Journeys</span></div><div class="item"><i data-i="file"></i><span>Parcels</span></div></div>
+        <div class="main"><div class="topbar">Journeys <span class="sep">/</span> <b>Today</b></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Today's departures</h1><div class="lead">Douala agency · Wed 8 Oct · 6 departures from the timetable + 1 charter</div></div><div class="row"><button class="btn">Timetable</button><button class="btn primary"><i data-i="plus"></i>Book a charter</button></div></div>
+            <div class="tt">
+              <div class="tt-head"><div>Bus</div><div class="hours"><div>06</div><div>08</div><div>10</div><div>12</div><div>14</div><div>16</div><div>18</div><div>20</div><div>22</div></div></div>
+              <div class="tt-row"><div><b>BUS-01</b> · Ndzie</div><div><div class="blk done" style="left:0%;width:20%"><b>06:00 → YDE</b><span>arrived</span></div><div class="blk planned" style="left:44%;width:20%"><b>14:00 → YDE</b><span>23 parcels to load</span></div></div></div>
+              <div class="tt-row"><div><b>BUS-02</b> · Fouda</div><div><div class="blk live" style="left:22%;width:20%"><b>10:00 → YDE</b><span>on the road</span></div><div class="blk planned" style="left:66%;width:20%"><b>18:00 → YDE</b><span>driver?</span></div></div></div>
+              <div class="tt-row"><div><b>BUS-03</b> · Eto</div><div><div class="blk planned" style="left:11%;width:44%;background:color-mix(in oklch,var(--warning) 14%,white);border-color:color-mix(in oklch,var(--warning) 50%,white)"><b>Charter · La Colombe school trip</b><span>08:00–15:00 · Kribi</span></div></div></div>
+              <div class="tt-row"><div><b>BUS-04</b> · —</div><div><div class="blk block" style="left:0;right:0"><b>Can't drive: tyres</b><span>WO-0011</span></div></div></div>
+            </div>
+          </div></div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>Timetable (Company setting, Administrator)</h4><ul>
+          <li>Route, departure times, days of the week, default bus type. Saved as data; each night it creates the next days' planned journeys.</li>
+          <li>Changing the timetable only affects journeys not yet planned. Holidays are a list of skip dates.</li>
+          <li>Seats and tickets stay out (ticketing deferred); a journey may record passengers count and cash at close, as today.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Same parts as trucking</h4><ul>
+          <li>Charters use <b>Book a trip</b> with the customer account (school, company) and agreed price.</li>
+          <li>Drivers get the same "My schedule".</li>
+          <li>Parcels to load show on the departure ("23 parcels to load"), linking to the Parcels loading form.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="roles">
+      <div class="kicker">Role scope</div>
+      <h3>Who sees what</h3>
+      <table class="spec-table">
+        <thead><tr><th>Role</th><th>Sees</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td>Direction</td><td>All agencies' planning, utilisation charts</td><td>Read only</td></tr>
+          <tr><td>Administrator</td><td>Planning board for own agencies</td><td>Book, assign, move, cancel; edit timetable (bus)</td></tr>
+          <tr><td>Finance</td><td>Planned revenue, the customer's upcoming trips</td><td>Read only</td></tr>
+          <tr><td>Cashier</td><td>Bus: today's departures (for parcels)</td><td>Load parcels on a departure</td></tr>
+          <tr><td>Technician</td><td>Trucks blocked for maintenance on the board</td><td>Plan a work order on a free day (the board shows it as "Can't drive")</td></tr>
+          <tr><td>Driver</td><td>My schedule only</td><td>Start, record, close own trips; call the customer</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="charts">
+      <div class="kicker">Charts</div>
+      <h3>Charts</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>Tiles (everyone with Planning)</h4><p>Trucks booked this week, to assign, conflicts, planned revenue.</p></div>
+        <div class="spec-card"><h4>Charts (Administrator, Direction)</h4><ul><li><b>Utilisation</b>: % of days each truck was booked or driving, per week (sorted bars), the measure of whether the fleet earns its keep.</li><li><b>Bookings per week</b> (columns) and planned vs done revenue.</li><li>Bus: departures on time vs late, per route (needs actual departure times).</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="build">
+      <div class="kicker">Not only UI</div>
+      <h3>What it takes to build</h3>
+      <table class="spec-table">
+        <thead><tr><th>Piece</th><th>Today</th><th>Needed</th></tr></thead>
+        <tbody>
+          <tr><td>Trip lifecycle</td><td>OPEN → CLOSED, created at start (<code>startedAt</code> required)</td><td>Add <b>PLANNED</b> (and CANCELLED) before OPEN; <code>plan-trip</code> and <code>start-planned-trip</code> commands</td></tr>
+          <tr><td>Customer on the trip</td><td>Free text <code>customerName</code></td><td>Link to a Customer (Party); price from the customer's rate</td></tr>
+          <tr><td>Availability</td><td>Lifecycle and grounded status exist per truck</td><td>A read that returns trucks and drivers with bookings and blocks for a date range</td></tr>
+          <tr><td>Driver schedule</td><td>Drivers see their own records</td><td>A "my planned trips" read; cached for offline</td></tr>
+          <tr><td>Timetable (bus)</td><td>—</td><td>Timetable as tenant data + a nightly job that plans journeys (idempotent, through commands)</td></tr>
+          <tr><td>Notifications</td><td>Not built (#33)</td><td>Later: SMS to driver on assign/change</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Recommended slice order: PLANNED status + Book a trip + driver schedule (useful alone) → planning board → month view → bus timetable.</p>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>

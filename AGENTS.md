@@ -92,6 +92,17 @@ Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/
 - **Deliberately deferred** (§13): no event sourcing, no CRDTs, no microservices, no configuration engine, no payroll/GPS/ticketing. Don't reintroduce them; template variance is data (categories, required-field lists, `custom_values` JSONB), not code.
 - **Project-scoped names:** nothing in this repo names another project or a personal host. Cross-project wiring lives in box env files, not here.
 
+## Product direction (decided 2026-10-04)
+
+The UI consistency system and the product direction live in [`docs/design/consistency/`](docs/design/consistency/README.md): rules in `README.md`, mockups in the HTML pages (open `index.html`). Follow them for any UI or new-feature work; change them in the same PR when a decision changes.
+
+- **Core vs modules.** The application is its core: shell and navigation, sign-in, roles and branch scope, branches, personnel, parties (customers and suppliers), approvals, history, categories and presets, company settings, the design system. Everything else is a module behind a module code (`packages/contracts/src/modules.ts`). A module declares its sidebar rows, the tabs, buttons, fields and Home cards it adds, its commands, reads and roles, and what disappears when it is off. Core never imports a module. Turning a module off hides its UI and keeps its data. When unsure, make it a module.
+- **Presets pick defaults.** Trucking, bus (passenger) and internal fleet presets choose default modules and words. Modules are entitlements the vendor grants (ADR-0005); tenants see a read-only "Your modules".
+- **Planned modules:** Scheduling (a PLANNED trip status, a Planning tab inside Trips, the driver's schedule), Customers, Parcels, Stock and purchasing. Later: Partners, Notifications, Ticketing. Build one module at a time, only when a pilot tenant will use it.
+- **Platform console:** a separate web app on a `console.` subdomain for vendor operators only, built on the existing platform-scope commands (`provision-workspace`, module toggles). It shows tenant setup and health, never tenant business data; support access needs the tenant administrator's time-boxed consent.
+- **Feature map is the truth** about what exists (`docs/design/consistency/featuremap.html`, to become a `features/catalog.ts` with a test). Every feature PR updates its row.
+- **UI decisions:** neutral theme; a company may set its logo and accent colour while "powered by ROUTIQ" stays; navigation and actions are scoped by role (the six team roles); five page archetypes; six form layouts; list rows (not cards) on phone.
+
 ## Definition of done for a feature PR
 
 1. The contract lives in `packages/contracts` with a test, and any shape change to a shipped command is a new version.
