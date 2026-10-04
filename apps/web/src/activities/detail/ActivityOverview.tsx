@@ -21,21 +21,16 @@ export interface ActivityOverviewProps {
 export function ActivityOverview({ activity }: ActivityOverviewProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const running = activity.endedAt === null && activity.status === "OPEN";
 
   const started: MetricTile = {
     label: t("activities.detail.overview.started"),
     value:
       activity.startedAt === null ? null : formatDateTime(activity.startedAt, locale),
   };
+  // The end is a time; whether the trip is still out is the state chip's job (#94).
   const ended: MetricTile = {
     label: t("activities.detail.overview.ended"),
-    value: running
-      ? t("activities.detail.overview.running")
-      : activity.endedAt === null
-        ? null
-        : formatDateTime(activity.endedAt, locale),
-    ...(running ? { tone: "warning" as const } : {}),
+    value: activity.endedAt === null ? null : formatDateTime(activity.endedAt, locale),
   };
   const legs: MetricTile = {
     label: t("activities.detail.overview.legs"),

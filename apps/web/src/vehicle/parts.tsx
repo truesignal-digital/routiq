@@ -299,9 +299,9 @@ export function RecordRow({
         {detail && <div className="mt-0.5 text-xs text-muted-foreground">{detail}</div>}
       </div>
       {(status || aside) && (
-        <div className="col-start-2 row-start-2 flex items-start justify-between gap-3 md:contents">
+        <div className="col-start-2 row-start-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1 md:contents">
           <div className="min-w-0 md:col-start-3 md:row-start-1">{status}</div>
-          <div className="shrink-0 text-right text-sm tabular-nums md:col-start-4 md:row-start-1">
+          <div className="ml-auto shrink-0 text-right text-sm tabular-nums md:col-start-4 md:row-start-1">
             {aside}
           </div>
         </div>

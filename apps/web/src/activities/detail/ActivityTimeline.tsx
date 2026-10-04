@@ -105,7 +105,7 @@ export function ActivityTimeline({ activity }: ActivityTimelineProps) {
     const right =
       to === null
         ? isRunning
-          ? t("activities.detail.stillRunning")
+          ? "—"
           : t("activities.detail.timeline.openEnd")
         : formatDateTime(to, locale);
     return `${left} → ${right}`;

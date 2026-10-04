@@ -54,11 +54,12 @@ describe("activity overview band", () => {
     expect(tile("Legs").textContent).toContain("2");
   });
 
-  it("says an open activity is running, and flags the tile", () => {
+  it("keeps the end a time: an open activity's end is a dash, not a state (#94)", () => {
     render(<ActivityOverview activity={overview({ status: "OPEN", endedAt: null })} />);
 
-    expect(tile("Ended").textContent).toContain("Running");
-    expect(tone("Ended")).toBe("warning");
+    expect(tile("Ended").textContent).toBe("—");
+    expect(screen.queryByText("Running")).toBeNull();
+    expect(tone("Ended")).not.toBe("warning");
   });
 
   it("dashes a closed activity with no end rather than calling it running", () => {
