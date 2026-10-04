@@ -25,6 +25,7 @@ pnpm workspace monorepo (never npm/yarn). Node ≥ 24.
 pnpm typecheck                    # all packages (tsc --noEmit)
 pnpm lint                         # repo guards (tools/guards); see "Guards and the ratchet"
 pnpm lint:tighten                 # lower guard baselines after you remove violations
+pnpm verify --help                # run and drive the real app on an isolated slot, with evidence (skill: verify-routiq)
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
 pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file

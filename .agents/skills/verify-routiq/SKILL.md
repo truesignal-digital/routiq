@@ -1,0 +1,122 @@
+---
+name: verify-routiq
+description: "Run the real ROUTIQ app (Postgres, S3 storage, Fastify API, Vite web) on an isolated slot and drive it like a user with a headless browser, capturing screenshots, console errors, failed requests, API responses and read-only DB rows as evidence. Use to prove a UI, command or read change works in the running app, to reproduce a bug, or before claiming a feature is done. CLI: pnpm verify."
+---
+
+# Verify ROUTIQ
+
+`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa demo workspace, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature.
+
+Never touch the owner's dev stack: Postgres on 5435 with volume `routiq_pgdata`, the API on 3001, web on 5173, the demo box on 8080. The CLI refuses those ports and only ever removes `routiq-verify-N` compose projects.
+
+## Launch
+
+```bash
+pnpm install --frozen-lockfile      # once per checkout
+pnpm verify up                       # slot 1; pick another with --slot N (0-99) or ROUTIQ_VERIFY_SLOT
+```
+
+`up` needs Docker running. It:
+
+1. writes `.verify/slots/N/compose.yml` and starts compose project `routiq-verify-N`: Postgres 17 and RustFS storage (the digest `docker-compose.yml` pins), each with its own volume, published on loopback only;
+2. starts the API from this checkout (`apps/api/src/boot.ts`, which migrates, creates the `artifacts` bucket and serves) with S3 wired in, so uploads work;
+3. runs `apps/api/scripts/seed-demo.ts`;
+4. starts Vite with a generated config that spreads `apps/web/vite.config.ts` and points the dev server and the `/v1` proxy at the slot.
+
+Slot N owns ports 24000+10N: Postgres +0, storage +1, API +2, web +3. Slot 1 is web `http://127.0.0.1:24013`, API `http://127.0.0.1:24012`. Ready means `up` printed `web up, proxying /v1 to the slot API`; it takes about 15 s warm. PIDs, ports and log paths are in `.verify/slots/N/state.json`.
+
+- Already up: `up` says so and does nothing. `pnpm verify up --reseed` resets the demo workspace (`seed-demo --reset`) on a running slot; do this between runs that mutate data.
+- A port in use means another checkout holds that slot. Pick another `--slot`; never kill its processes.
+- Two checkouts can run at once on different slots. Code changes in this checkout reload in the web app (Vite HMR); API changes need `down` then `up`.
+
+Teardown is `pnpm verify down` (see Cleanup).
+
+## Doctor
+
+```bash
+pnpm verify doctor [--slot N]
+```
+
+Read-only. One PASS/FAIL line per check, exit 1 on any failure: containers healthy, database reachable, migrations applied (rows in `drizzle.__drizzle_migrations` = entries in `apps/api/drizzle/meta/_journal.json`), API `/health` with the port held by this slot's own process group, storage live, web serves the app, web proxies `/v1` to this slot (`GET /v1/me` → 401), and every seeded account logs in. Run it before the first drive and again after anything surprising. `pnpm verify status` lists slots that are up; `pnpm verify logs [api|web|seed]` tails their logs.
+
+## Drive
+
+```bash
+pnpm verify login --role manager --lang en                 # log in through the UI, screenshot home
+pnpm verify drive /assets /finance/entries --role admin    # visit routes in-app, one screenshot each (alias: ui)
+pnpm verify drive flow:vehicle-workspace --role manager --lang en --video
+pnpm verify drive path/to/script.ts --role finance         # your own DriveScript
+pnpm verify api GET /v1/me --role finance                  # API as a seeded account, JSON out
+pnpm verify api POST /v1/commands/approve-entry --role finance --json @body.json
+pnpm verify db "select entry_number, status from financial_entries order by 1"
+```
+
+Options for `login` and `drive`: `--role` (default `admin`), `--lang fr|en` (default `fr`), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
+
+Every drive logs in through the real form (Workspace `transports-ngwa`, Username, PIN code, "Se connecter"). Seeded accounts, from `apps/api/scripts/seed-demo.ts`:
+
+| `--role` | User | PIN | Role | Branches |
+|---|---|---|---|---|
+| `admin` | emilienne | 111111 | ADMIN | all |
+| `manager` | boris | 222222 | OPS_MANAGER | all |
+| `field` | sali | 333333 | FIELD_SUBMITTER | all |
+| `field-yde` | patrice | 444444 | FIELD_SUBMITTER | YDE only (sees no trucks) |
+| `maintenance` | herve | 666666 | MAINTENANCE | all |
+| `finance` | nadege | 777777 | FINANCE_APPROVER | all |
+| `viewer` | amadou | 555555 | EXECUTIVE_VIEWER | all |
+
+Role codes and usernames work too (`--role FINANCE_APPROVER`, `--role boris`).
+
+**Language.** The app starts in French and keeps the language in memory only (#127). `--lang en` switches through the UI (Plus → English) after login. After that, never call `page.goto`; navigate by clicking or with `ctx.nav(route)`, which does `history.pushState` plus a `popstate` event. A full load returns to French.
+
+**Flows** are committed DriveScripts in `tools/verify/flows/`, run as `flow:<name>`. Each drives one feature by clicks and ends with a read-only API cross-check:
+
+| Flow | Proves | Mutates |
+|---|---|---|
+| `home` | dashboard cards match `GET /v1/dashboard` | no |
+| `switch-user` | sign out, sign in as the viewer, role from `GET /v1/me` | no |
+| `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
+| `edit-details` | Details → Edit details → make and model saved | yes |
+| `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
+| `finance-entry` | entries list → drawer → Open full screen → detail | no |
+| `approve-entry` | approvals queue → Approve → entry POSTED | yes |
+| `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
+| `trips` | trips list → a closed trip's detail | no |
+| `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
+| `settings` | More → Branches, Users, People against their reads | no |
+
+A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label)`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. Copy a flow as a starting point. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
+
+`api` prints the status and pretty JSON and never prints the token. Commands take `{ "version": 1, "envelope": { "commandId": "<uuid>", "idempotencyKey": "<unique>", "origin": "HUMAN_UI", "expectedVersion": <n> }, "payload": { ... } }`. Quote paths with `?` in zsh: `pnpm verify api GET '/v1/finance/entries?status=POSTED'`.
+
+`db` runs as the database owner, so row-level security does not hide rows. It refuses anything but one SELECT, WITH, TABLE, VALUES, SHOW or EXPLAIN statement (no writes, no `INTO`, no `FOR UPDATE`, no side-effect functions) and runs the session with `default_transaction_read_only=on`.
+
+## Evidence
+
+Each `drive`, `login` and `api` run writes a new directory, printed on stdout: `.verify/<UTC time>-<command>-s<slot>/`.
+
+- `NN-<label>.png`: full-page screenshots, one per route or `shot()`; `failed-<step>.png` when a step fails.
+- `console-errors.txt`: `console.error` and uncaught errors, message plus first app frame.
+- `failed-requests.txt`: responses with status 400 or higher and network failures. Requests the app cancels itself (`net::ERR_ABORTED` on navigation) are counted on stdout, not listed.
+- `summary.json`: slot, commit, account, language, each step with PASS/FAIL and URL, counts.
+- `drive.webm` with `--video`.
+- `request.json` and `response.json` for `api`.
+- `up` writes `api.log`, `web.log`, `seed.log` and `compose.log` to its own run directory.
+
+Proof standards:
+
+- Drive the real user path: log in, click through the UI. Do not inject state, call hidden app methods or write to Postgres to create a result. Arranging a precondition through a real command (`pnpm verify api POST /v1/commands/...`) is fine; say so.
+- Capture the action and the resulting state, not only the final screen.
+- Cross-check side effects with a read: `apiGet` inside the flow, or `pnpm verify api GET ...` and `pnpm verify db "select ..."` after. A toast is not proof.
+- Open the screenshots you cite. Report console errors and failed requests even when the drive passes.
+- For walkthrough videos (English UI, English captions) use the `review-video` kit against a slot's web URL; `--video` here is raw evidence, not a walkthrough.
+
+## Cleanup
+
+```bash
+pnpm verify down [--slot N]
+```
+
+Stops the API and web process groups recorded in the state file (by PID, never by name), runs `docker compose -p routiq-verify-N down -v --remove-orphans`, which removes that slot's containers and its two volumes and nothing else, and deletes `.verify/slots/N/`. It refuses any project name that is not `routiq-verify-N`. Evidence and logs under `.verify/` stay; delete old run directories by hand when you no longer need them. Run `down` after every failed `up` too, so a half-started slot doesn't hold its ports. If `down` warns that a port is still in use, that process was not started by this slot; leave it alone and report it.
+
+Keep the map honest with `/maintain-verification-skill`. The pure parts of the CLI have tests: `pnpm --filter @routiq/tools exec vitest run verify`.
