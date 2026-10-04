@@ -20,6 +20,37 @@ const REGISTRY = file(
   JSON.stringify({ items: [{ files: [{ path: "src/components/page.tsx" }] }] }),
 );
 
+/**
+ * A drizzle journal, its .sql files and chained snapshots, as `drizzle-kit
+ * generate` writes them, numbered from 0000 up to the given tags.
+ */
+function migrations(tags: string[], options: { journal?: string[]; when?: number[]; base?: boolean } = {}): SourceFile[] {
+  const first = Number(tags[0]?.slice(0, 4) ?? 0);
+  const earlier = Array.from({ length: first }, (_, idx) => `${String(idx).padStart(4, "0")}_earlier`);
+  const all = [...earlier, ...tags];
+  const entries = [...earlier, ...(options.journal ?? tags)].map((tag, idx) => ({
+    idx,
+    version: "7",
+    when: options.when?.[idx - first] ?? 1_790_000_000_000 + idx,
+    tag,
+    breakpoints: true,
+  }));
+  const journal = file(
+    `${options.base === true ? "@base/" : ""}apps/api/drizzle/meta/_journal.json`,
+    JSON.stringify({ version: "7", dialect: "postgresql", entries }, null, 2),
+  );
+  if (options.base === true) return [journal];
+  const snapshots = all.map((tag, idx) =>
+    file(
+      `apps/api/drizzle/meta/${tag.slice(0, 4)}_snapshot.json`,
+      JSON.stringify({ id: `s${idx}`, prevId: idx === 0 ? "00000000" : `s${idx - 1}` }),
+    ),
+  );
+  return [journal, ...all.map((tag) => file(`apps/api/drizzle/${tag}.sql`, "")), ...snapshots];
+}
+
+const BEFORE_0032 = ["0030_tenant_fk_gaps", "0031_postings_balance"];
+
 /** One snippet each rule must catch, and the paved-path version it must allow. */
 const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
   { id: "A2", bad: [file("package-lock.json", "{}")], good: [file("pnpm-lock.yaml", "")] },
@@ -133,6 +164,46 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],
   },
   {
+    id: "M1",
+    // #117 and #123 each took 0032 after #111 had; a merge that keeps both, or
+    // a renumber that keeps the older `when`, must fail.
+    bad: [
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"], {
+        journal: [...BEFORE_0032, "0032_work_order_cost_outcome", "0032_edit_pending_entry"],
+      }),
+      file("apps/api/drizzle/0032_edit_pending_entry.sql", ""),
+    ],
+    good: migrations([...BEFORE_0032, "0032_work_order_cost_outcome", "0033_edit_pending_entry"]),
+  },
+  {
+    id: "M2",
+    bad: [
+      ...migrations([...BEFORE_0032, "0032_edit_pending_entry"]),
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"], { base: true }),
+    ],
+    good: [
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome", "0033_edit_pending_entry"]),
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"], { base: true }),
+    ],
+  },
+  {
+    id: "T1",
+    bad: [
+      file(
+        "apps/api/src/commands/member-command-defaults.test.ts",
+        'ctx = await createTestApp();\nconst BACKFILL = new URL("../../drizzle/0020_member_command_defaults.sql", import.meta.url);',
+      ),
+      file("apps/api/src/db/migration-replay.test.ts", "const path = new URL(`../../drizzle/${name}.sql`, import.meta.url);"),
+    ],
+    good: [
+      file(
+        "apps/api/src/commands/member-command-defaults.test.ts",
+        'ctx = await createTestApp({ isolated: true });\nconst BACKFILL = new URL("../../drizzle/0020_member_command_defaults.sql", import.meta.url);',
+      ),
+      file("apps/api/src/db/finance-upgrade.test.ts", 'await adminPool.query(`create database "${name}"`);\nconst sql = "0010_finance.sql";'),
+    ],
+  },
+  {
     id: "P1",
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],
@@ -156,6 +227,51 @@ describe.each(CASES)("rule $id", ({ id, bad, good }) => {
 
   it("allows the paved path", () => {
     expect(rule(id).check(good)).toEqual([]);
+  });
+});
+
+describe("migration numbering", () => {
+  const m1 = rule("M1");
+  const texts = (files: SourceFile[]) => m1.check(files).map((v) => v.text);
+
+  it("names both files that share a number", () => {
+    const files = [
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"]),
+      file("apps/api/drizzle/0032_update_asset_details_command_defaults.sql", ""),
+    ];
+    expect(texts(files)).toEqual([
+      "migration number 0032 is used by 0032_work_order_cost_outcome, 0032_update_asset_details_command_defaults",
+      "migration number 0032 is used by 0032_work_order_cost_outcome, 0032_update_asset_details_command_defaults",
+      "0032_update_asset_details_command_defaults has no entry in meta/_journal.json",
+    ]);
+  });
+
+  it("catches a renumbered migration that kept its older `when`", () => {
+    const files = migrations([...BEFORE_0032, "0032_work_order_cost_outcome", "0033_edit_pending_entry"], {
+      when: [1_790_000_000_030, 1_790_000_000_031, 1_790_000_000_034, 1_790_000_000_033],
+    });
+    expect(texts(files)).toEqual([
+      "0033_edit_pending_entry has when 1790000000033, not later than 0032_work_order_cost_outcome (1790000000034)",
+    ]);
+  });
+
+  it("catches a snapshot left behind by a renumber", () => {
+    const files = [
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"]),
+      file("apps/api/drizzle/meta/0033_snapshot.json", JSON.stringify({ id: "s99", prevId: "s31" })),
+    ];
+    expect(texts(files)).toEqual([
+      "snapshot 0033 has no journal entry",
+      "prevId s31 is not the previous snapshot's id s32",
+    ]);
+  });
+
+  it("lets a branch that is merely behind develop pass M2", () => {
+    const files = [
+      ...migrations(BEFORE_0032),
+      ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"], { base: true }),
+    ];
+    expect(rule("M2").check(files)).toEqual([]);
   });
 });
 

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { evaluate, readBaselines } from "./baseline.js";
 import { RULES } from "./rules.js";
-import { repoFiles } from "./scan.js";
+import { JOURNAL } from "./migrations.js";
+import { fileAtRef, repoFiles } from "./scan.js";
 
-const files = repoFiles();
+const files = [...repoFiles(), ...fileAtRef(process.env["GUARD_BASE_REF"] ?? "origin/develop", JOURNAL)];
 const baselines = readBaselines();
 
 describe.each(RULES)("[$id $name]", (rule) => {
