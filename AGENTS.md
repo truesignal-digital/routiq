@@ -109,6 +109,14 @@ Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/
 - If a guard blocks you, change the code, or stop and ask. Never edit a rule to let your change through, never delete a rule, and never raise a baseline by hand. The only exception is an ADR in `docs/adr/`, cited by a `Trust-Exception: ADR-NNNN` commit trailer.
 - When a bug or review finding shows a new class of mistake, add a rule for it, with a case in `tools/guards/rules.test.ts`.
 
+## Repeated mistakes and what stops them
+
+Each row is a mistake agents made at least twice here, paired with what now fails when it comes back. When you are corrected for a mistake that has a row but nothing failed, fix the enforcement in the same change.
+
+| Rule | Enforced by | Evidence |
+|---|---|---|
+| A migration takes the next free number in `apps/api/drizzle`, with one matching journal entry, a later `when`, and its snapshot chained. If develop took your number, merge it and renumber yours after develop's last. | Guards `M1 migrations-numbered-once` and `M2 migrations-after-develop` (`pnpm lint`, CI job `ci`). M2 compares with `origin/develop` as last fetched, so fetch before you lint. | 0018 (`be5780a`), 0030 (#111), 0032 taken by #111, #117 and #123 |
+
 ## Git and PRs
 
 - Branch off `develop`; open PRs into `develop`. Never push to `develop` or `main` directly, never force-push a shared branch, never merge your own PR.
