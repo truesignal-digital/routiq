@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatMoney } from "@/lib/format.js";
+import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
@@ -81,7 +81,12 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
               >
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-mono">{entry.entryNumber}</span>
-                  <span className="text-muted-foreground">{entry.categoryCode}</span>
+                  <span className="text-muted-foreground">
+                    {localizedLabel(
+                      { labelFr: entry.categoryLabelFr, labelEn: entry.categoryLabelEn },
+                      locale,
+                    )}
+                  </span>
                   {/* A line still awaiting approval is the one thing a reader
                       must not mistake for money already in the books. */}
                   <StatusBadge tone={STATUS_TONES[entry.status]}>
