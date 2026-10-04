@@ -151,7 +151,10 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
   {
     id: "H9",
     bad: [file("apps/web/src/screens/X.tsx", '<Input type="date" {...field} />')],
-    good: [file("apps/web/src/screens/X.tsx", "<DateRangePicker {...field} />")],
+    good: [
+      file("apps/web/src/screens/X.tsx", "<DateRangePicker {...field} />"),
+      file("apps/web/src/screens/Y.tsx", "<DateField {...field} />\n<DateTimeField value={when} onChange={setWhen} />"),
+    ],
   },
   {
     id: "H12",
@@ -272,6 +275,17 @@ describe("migration numbering", () => {
       ...migrations([...BEFORE_0032, "0032_work_order_cost_outcome"], { base: true }),
     ];
     expect(rule("M2").check(files)).toEqual([]);
+  });
+});
+
+describe("native date inputs", () => {
+  it.each([
+    '<Input type={"date"} />',
+    "<Input type={'datetime-local'} />",
+    "<Input type={`datetime-local`} />",
+    '<input type = "date" />',
+  ])("catches %s", (line) => {
+    expect(rule("H9").check([file("apps/web/src/screens/X.tsx", line)])).toHaveLength(1);
   });
 });
 

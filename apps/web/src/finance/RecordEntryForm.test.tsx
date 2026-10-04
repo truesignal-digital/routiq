@@ -383,7 +383,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     expect((within(panel).getByLabelText("Amount (XAF)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
-    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("2026-09-12");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("09/12/2026");
     expect((within(panel).getByLabelText("Counterparty (optional)") as HTMLInputElement).value).toBe(
       "Garage Tchinda",
     );

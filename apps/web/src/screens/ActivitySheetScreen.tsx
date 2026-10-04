@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DateTimeField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { legEndpoint } from "@routiq/contracts";
@@ -643,7 +644,7 @@ function SheetForm({
                   <FormItem>
                     <FormLabel>{t("activities.record.startedAtLabel")}</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" className="min-h-11" {...field} />
+                      <DateTimeField {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -657,7 +658,7 @@ function SheetForm({
                   <FormItem>
                     <FormLabel>{t("activities.record.endedAtLabel")}</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" className="min-h-11" {...field} />
+                      <DateTimeField {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1091,9 +1092,7 @@ function SegmentRow({
                 {t("activities.record.segments.startedAtLabel")}
               </FormLabel>
               <FormControl>
-                <Input
-                  type="datetime-local"
-                  className="min-h-11"
+                <DateTimeField
                   aria-label={t("activities.record.segments.rowStartedAt", { position })}
                   {...field}
                 />
@@ -1112,9 +1111,7 @@ function SegmentRow({
                 {t("activities.record.segments.endedAtLabel")}
               </FormLabel>
               <FormControl>
-                <Input
-                  type="datetime-local"
-                  className="min-h-11"
+                <DateTimeField
                   aria-label={t("activities.record.segments.rowEndedAt", { position })}
                   {...field}
                 />
