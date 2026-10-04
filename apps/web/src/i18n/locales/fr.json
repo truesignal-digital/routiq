@@ -2175,6 +2175,7 @@
       "actualCost": "Coût réel",
       "actualCostLater": "Renseigné à la fin des travaux",
       "invoicePending": "Facture pas encore reçue",
+      "noCost": "Aucun coût",
       "completed": "Terminé",
       "whatWasDone": "Travaux réalisés",
       "reason": "Motif",

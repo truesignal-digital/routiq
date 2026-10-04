@@ -2175,6 +2175,7 @@
       "actualCost": "Actual cost",
       "actualCostLater": "Set when the work is completed",
       "invoicePending": "Invoice not received yet",
+      "noCost": "No cost",
       "completed": "Completed",
       "whatWasDone": "What was done",
       "reason": "Reason",
