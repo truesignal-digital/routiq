@@ -18,6 +18,8 @@ For a PR review, use a different model from the model that authored the changes.
 
 A review request authorizes reading and reporting. Publish the report and change GitHub labels only when the user has authorized those outward actions. When authorized, post the report as a PR comment (GitHub does not allow a same-account approving review), then apply exactly one of `review:approve` or `review:changes`, removing the opposite label. Re-fetch the PR head immediately before publication; if it changed, review the new head first. Labels must be created by an authorized maintainer if missing. Never merge.
 
+If authorized to coordinate GitHub review and CodeRabbit has skipped automatic review, request `@coderabbitai full review` once after the final push and inspect its actual submitted review. A rate-limit/plan/permission blocker ends that attempt; report it and use another eligible reviewer rather than looping or buying access.
+
 Approval is tied to the reviewed head SHA. New commits invalidate it even when the label remains. A summary, green CI, or CodeRabbit success status is not a verdict.
 
 ## Process
