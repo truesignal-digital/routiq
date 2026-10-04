@@ -116,6 +116,7 @@ Each row is a mistake agents made at least twice here, paired with what now fail
 | Rule | Enforced by | Evidence |
 |---|---|---|
 | A migration takes the next free number in `apps/api/drizzle`, with one matching journal entry, a later `when`, and its snapshot chained. If develop took your number, merge it and renumber yours after develop's last. | Guards `M1 migrations-numbered-once` and `M2 migrations-after-develop` (`pnpm lint`, CI job `ci`). M2 compares with `origin/develop` as last fetched, so fetch before you lint. | 0018 (`be5780a`), 0030 (#111), 0032 taken by #111, #117 and #123 |
+| Web tests wait for async UI with `findBy*` or `waitFor` and the shared wait in `apps/web/src/test-setup.ts`. A slow CI runner is not fixed by raising `testTimeout` or adding per-call timeouts. | `configure({ asyncUtilTimeout })` in `test-setup.ts`; `src/test-setup.test.tsx` fails if it goes. | #67, #120, #132 |
 
 ## Git and PRs
 
