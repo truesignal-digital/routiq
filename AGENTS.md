@@ -99,7 +99,8 @@ Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/
 3. The UI follows the paved paths in `apps/web/AGENTS.md`.
 4. `pnpm typecheck`, `pnpm lint` and `pnpm test` pass, and no guard baseline went up.
 5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions.
-6. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
+6. Before requesting merge, a reviewer using a different model from the author runs `.agents/skills/code-review/SKILL.md` against the linked issue and exact current PR head. The report records author/reviewer models, base/head SHAs, one verdict per acceptance line, file:line evidence, and reproduction steps for blockers. Link the report in the PR body. Missing spec or unverified acceptance prevents approval. Runtime reports, including Sentry intake reports, must first be triaged into reproducible behavior and explicit acceptance criteria; telemetry and a review video alone do not approve a fix.
+7. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
 
 ## Guards and the ratchet
 
@@ -123,6 +124,8 @@ Each row is a mistake agents made at least twice here, paired with what now fail
 ## Git and PRs
 
 - Branch off `develop`; open PRs into `develop`. Never push to `develop` or `main` directly, never force-push a shared branch, never merge your own PR.
+- Human merge rule: merge only with green `ci` and evidence/ratchet checks when present, resolved blocking findings, and `review:approve` backed by an independent report for the current head SHA. `review:changes` blocks merge. Any new commit invalidates approval; remove stale approval before requesting another review. CodeRabbit summaries, skipped reviews and a green status alone are not independent acceptance review.
+- `.github/branch-protection.json` records the required GitHub settings for `main` and `develop`: a PR, current green `ci`, one approving review, stale-approval dismissal and resolved conversations, including for administrators. A same-account agent comment cannot satisfy GitHub's approving-review requirement; an eligible separate reviewer or the installed review app must approve. Read back the live API settings before claiming protection. `review:approve` remains a documented independent-model rule, not a GitHub-enforced label gate. See `docs/agents/review-workflow.md`.
 - Commit messages: short imperative subject; body only when the why isn't obvious.
 - Issues live in GitHub (`docs/agents/issue-tracker.md`). `.scratch/` is read-only history; add nothing there.
 

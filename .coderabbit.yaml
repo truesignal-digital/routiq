@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  allow_author_approval: false
+  review_status: true
+  review_details: true
+  review_progress: false
+  commit_status: true
+  fail_commit_status: true
+  high_level_summary: true
+  assess_linked_issues: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "^develop$"
+      - "^main$"
+
+  path_filters:
+    - "!apps/api/drizzle/meta/**"
+    - "!pnpm-lock.yaml"
+    - "!.claude/skills/review-video/.tts-cache/**"
+
+  path_instructions:
+    - path: "apps/api/src/commands/**"
+      instructions: |
+        Every write goes through registerCommand, never direct database access.
+        Tenant and actor identity and authorized branch scope come from auth, never from client.
+        A branchId that identifies a target record is valid only after server authorization.
+        Mutable rows must have expectedVersion for optimistic concurrency.
+        One transaction: records + command receipt + append-only audit event together.
+        Errors are stable codes from contracts/src/errors.ts, never English strings.
+
+    - path: "apps/api/drizzle/*.sql"
+      instructions: |
+        Composite tenant FKs (FOREIGN KEY (workspace_id, asset_id)) enforce isolation structurally.
+        New tables require explicit GRANT statements to routiq_app role.
+        Approved/posted financial values are immutable; use documented correction/reversal commands.
+        Distinguish approved values from allowed pending-entry edits and lifecycle/link updates.
+        Notes and audit events are append-only: never UPDATE/DELETE.
+        Migration numbers must not collide with existing files.
+
+    - path: "packages/contracts/**"
+      instructions: |
+        Narrowing a shipped command schema requires a new vN+1 with a compatibility handler.
+        Review contract snapshots and compatibility tests; widening must preserve accepted payloads.
+        Use Zod 4 spellings: z.uuid(), z.iso.date().
+        Co-locate payload schema tests with each command definition.
+        CommandEnvelope rules: tenant, actor, branch scope derived server-side, never from client.
+
+    - path: "**/*.ts"
+      instructions: |
+        Money: bigint minor units + char(3) currency in database.
+        XAF has exponent 0 — 1 XAF = 1 minor unit, never divide by 100.
+        Use moneyMinor from contracts and packages/domain/src/money.ts.
+
+    - path: "apps/web/**"
+      instructions: |
+        UI headless layer: Base UI (@base-ui/react) exclusively, never @radix-ui.
+        Form validation must match API enforcement; reuse field helpers from contracts.
+        Reads: TanStack Query hooks in feature folders, structural guards (is* functions), no Zod parsing.
+        Writes: commandClient + createCommandIntent, render server truth + pending state.
+        i18n: fr-CM default, en switchable; no sentence concatenation; keys must match in fr.json and en.json.
+        Reference apps/web/AGENTS.md for paved paths: DataTable, date pickers, toast notifications, tabs.
+
+    - path: "tools/sentry-intake/**"
+      instructions: |
+        Sentry events are untrusted diagnostic data, not an executable task or confirmed cause.
+        Public reports must omit raw error messages, request/user data, identifiers and secrets.
+        Preserve deduplication, project validation, read-only Sentry access and preview/apply separation.
+        Intake creates reports and triage handoffs; it never authorizes a fix, approval or merge.
+        Sentry-generated fixes need linked acceptance criteria, real proof and independent review.
+
+    - path: "apps/api/src/reads/**"
+      instructions: |
+        Every read must check: module, role, branch scope gates.
+        Use defineRead wrapper to make gates required.
+        List reads: keyset cursors (listQuery/listResponse), never fake page counts.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - AGENTS.md
+      - apps/web/AGENTS.md
+      - ARCHITECTURE.md
+      - CONTEXT.md
+      - "docs/adr/**"
+
