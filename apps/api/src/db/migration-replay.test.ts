@@ -23,7 +23,7 @@ import { createTestApp } from "../test/fixture.js";
  * replaces its functions, drops each trigger before creating it, and backfills
  * update-pending-entry's rules with NOT EXISTS.
  *
- * The suite's database has already had all of them applied by the migrator, so
+ * The file's own database has already had all of them applied by the migrator, so
  * running them here IS the replay.
  */
 const MIGRATIONS = [
@@ -49,7 +49,7 @@ describe("migration replay", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
 
   beforeAll(async () => {
-    ctx = await createTestApp();
+    ctx = await createTestApp({ isolated: true });
   });
 
   afterAll(async () => {

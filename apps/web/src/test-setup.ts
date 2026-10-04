@@ -1,3 +1,14 @@
+import { configure } from "@testing-library/react";
+
+/**
+ * `findBy*` and `waitFor` give up after testing-library's 1 s default, and a
+ * first render through the router plus its reads takes longer than that on a
+ * loaded CI runner (#120, #132). Raising `testTimeout` (#67) never reached
+ * them. Kept under vitest's 15 s `testTimeout` so a miss still reports the
+ * query that failed. Pass no per-call `timeout` to work around slowness.
+ */
+configure({ asyncUtilTimeout: 10_000 });
+
 /**
  * jsdom ships no `matchMedia`, and the responsive components lean on it —
  * `useIsMobile` calls it on mount, the DataTable picks table-vs-cards with it.

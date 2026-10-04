@@ -36,6 +36,21 @@ export function repoFiles(root: string = REPO_ROOT): SourceFile[] {
   });
 }
 
+/** A file as it is on another ref, or nothing when the ref or file is missing (a shallow CI clone, an unfetched remote). */
+export function fileAtRef(ref: string, path: string, root: string = REPO_ROOT): SourceFile[] {
+  try {
+    const content = execFileSync("git", ["show", `${ref}:${path}`], {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return [{ path: `@base/${path}`, content }];
+  } catch {
+    return [];
+  }
+}
+
 export function isTestFile(path: string): boolean {
   return /\.test\.tsx?$/.test(path) || /(^|\/)test-setup\.ts$/.test(path);
 }

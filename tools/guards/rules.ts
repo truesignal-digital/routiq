@@ -1,3 +1,4 @@
+import { migrationIntegrity, migrationsBehindBase } from "./migrations.js";
 import { isTestFile, matchFile, matchLines, type SourceFile, type Violation } from "./scan.js";
 
 /**
@@ -258,6 +259,32 @@ export const RULES: readonly Rule[] = [
     name: "no-any",
     fix: "Type it: use the contract's types, unknown plus a guard, or a generic.",
     check: linesMatching(/\bas any\b|:\s*any\b(?![\w-])|<any>|\bany\[\]/, isProductionSource),
+  },
+  {
+    id: "M1",
+    name: "migrations-numbered-once",
+    fix: "Each migration in apps/api/drizzle takes the next free number: one NNNN per .sql file, one journal entry per file with idx NNNN and the same tag, `when` later than the entry before it, and snapshots chained by prevId. After a renumber, rename the .sql and its snapshot together and give the entry a `when` later than the last one; drizzle skips a migration whose `when` is older than one the database already ran.",
+    check: migrationIntegrity,
+  },
+  {
+    id: "M2",
+    name: "migrations-after-develop",
+    fix: "develop already took this migration number. Merge origin/develop, then renumber your migrations after develop's last one (see M1). The check reads origin/develop as last fetched; set GUARD_BASE_REF to compare against another ref.",
+    check: migrationsBehindBase,
+  },
+  {
+    id: "T1",
+    name: "migration-sql-in-own-database",
+    fix: "A migration's SQL runs over every workspace, and test files share one database in parallel (#104). Use createTestApp({ isolated: true }) from apps/api/src/test/fixture.ts, or create a database of your own.",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            file.path.startsWith("apps/api/src/") &&
+            isTestFile(file.path) &&
+            !/isolated: true|create database/i.test(file.content),
+        )
+        .flatMap((file) => matchLines(file, /\d{4}_\w+\.sql|drizzle\/\$\{/).slice(0, 1)),
   },
   {
     id: "P1",
