@@ -20,6 +20,7 @@ import {
   exists,
   ilike,
   inArray,
+  isNull,
   or,
   sql,
   type SQL,
@@ -32,6 +33,7 @@ import type { TenantTx } from "../db/tenant.js";
 import {
   activities,
   activityAssetSegments,
+  assetAvailabilityIntervals,
   assets,
   branches,
   categories,
@@ -385,7 +387,7 @@ export function registerAssetReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/assets/summary", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = summaryQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
@@ -400,12 +402,36 @@ export function registerAssetReadRoutes(
         const countWhere = (statuses: readonly AssetLifecycleStatus[]) =>
           sql<number>`count(*) filter (where ${inArray(assets.lifecycleStatus, [...statuses])})::int`;
 
-        const [totals] = await read((tx) =>
-          tx
+        const attentionStatus = inArray(assets.lifecycleStatus, [
+          ...assetAttentionStatuses,
+        ]);
+
+        const [totals] = await read((tx) => {
+          // Grounding is availability, owned by MAINTENANCE: with the module
+          // off its intervals say nothing, so only lifecycle statuses count.
+          const attention = modules.has("MAINTENANCE")
+            ? or(
+                attentionStatus,
+                exists(
+                  tx
+                    .select({ one: sql`1` })
+                    .from(assetAvailabilityIntervals)
+                    .where(
+                      and(
+                        eq(assetAvailabilityIntervals.workspaceId, assets.workspaceId),
+                        eq(assetAvailabilityIntervals.assetId, assets.id),
+                        isNull(assetAvailabilityIntervals.closedAt),
+                      ),
+                    ),
+                ),
+              )
+            : attentionStatus;
+
+          return tx
             .select({
               total: countAll,
               inService: countWhere(["IN_SERVICE"]),
-              attention: countWhere(assetAttentionStatuses),
+              attention: sql<number>`count(*) filter (where ${attention})::int`,
             })
             .from(assets)
             .innerJoin(
@@ -423,8 +449,8 @@ export function registerAssetReadRoutes(
                 eq(categories.code, assets.assetClassCode),
               ),
             )
-            .where(and(...conditions)),
-        );
+            .where(and(...conditions));
+        });
 
         return assetSummary.parse(
           totals ?? { total: 0, inService: 0, attention: 0 },

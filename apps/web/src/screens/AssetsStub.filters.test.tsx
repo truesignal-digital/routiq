@@ -87,7 +87,10 @@ function stubFetch(bodies: unknown[]) {
   return { requested, summaryRequested };
 }
 
-function renderScreen(role: MeContext["role"] = "ADMIN") {
+function renderScreen(
+  role: MeContext["role"] = "ADMIN",
+  enabledModules: MeContext["enabledModules"] = ["CORE", "ASSETS"],
+) {
   const me: MeContext = {
     workspaceId: "ws",
     principalId: "p",
@@ -95,7 +98,7 @@ function renderScreen(role: MeContext["role"] = "ADMIN") {
     membershipId: "m",
     role,
     branchScope: "ALL",
-    enabledModules: ["CORE", "ASSETS"],
+    enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
   return render(
@@ -257,6 +260,21 @@ describe("assets explorer server-side filtering", () => {
       // One row is loaded; the tiles still report the whole fleet.
       expect(values).toEqual(["6", "4", "2"]);
       expect(summaryRequested).toHaveLength(1);
+    });
+
+    it("says the Attention count covers grounded vehicles only while MAINTENANCE is on", async () => {
+      stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
+      const { unmount } = renderScreen("ADMIN", ["CORE", "ASSETS", "MAINTENANCE"]);
+      expect(
+        await screen.findByText("Immobilisés, en maintenance, retirés ou réformés"),
+      ).toBeDefined();
+      unmount();
+
+      renderScreen("ADMIN", ["CORE", "ASSETS"]);
+      expect(await screen.findByText("En maintenance, retirés ou réformés")).toBeDefined();
+      expect(
+        screen.queryByText("Immobilisés, en maintenance, retirés ou réformés"),
+      ).toBeNull();
     });
 
     it("asks the summary to narrow with the table, minus the status bucket", async () => {

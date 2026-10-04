@@ -64,6 +64,9 @@ export function AssetsStub() {
   const canView = canViewAssets(me?.enabledModules);
   const canManage = canManageAssets(me?.role, me?.enabledModules);
   const documentsEnabled = me?.enabledModules.includes("DOCUMENTS") ?? false;
+  // Grounding is a MAINTENANCE fact; the server counts it only while the
+  // module is on, so the hint says which set the number covers.
+  const groundingCounted = me?.enabledModules.includes("MAINTENANCE") ?? false;
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -154,9 +157,14 @@ export function AssetsStub() {
         label: t("assets.metrics.attention"),
         value: counts === undefined ? null : String(counts.attention),
         tone: "warning",
+        hint: t(
+          groundingCounted
+            ? "assets.metrics.attentionHint"
+            : "assets.metrics.attentionHintNoGrounding",
+        ),
       },
     ];
-  }, [summaryQuery.data, t]);
+  }, [summaryQuery.data, t, groundingCounted]);
 
   if (me !== undefined && !canView) {
     return (

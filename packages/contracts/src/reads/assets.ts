@@ -16,9 +16,10 @@ export const assetLifecycleStatuses = [
 export const assetLifecycleStatus = z.enum(assetLifecycleStatuses);
 
 /**
- * The statuses the assets screen groups as needing attention. The ATTENTION
- * filter and the summary bucket read the same set, so a tile's number is what
- * filtering on it returns.
+ * The lifecycle statuses the assets screen groups as needing attention. The
+ * ATTENTION filter selects exactly this set; the summary's `attention` bucket
+ * also counts grounded vehicles (an open availability interval) while
+ * MAINTENANCE is on, because availability is not a lifecycle status.
  */
 export const assetAttentionStatuses = [
   "UNDER_MAINTENANCE",
@@ -54,8 +55,10 @@ export const assetListResponse = listResponse(assetListItem);
 /**
  * Fleet counts aggregated in SQL over the caller's workspace and branch scope,
  * not over the rows a client happens to have paged in. `total` counts every
- * lifecycle status; `inService` and `attention` are the two subsets the list's
- * status filter offers, so each count equals what selecting that filter lists.
+ * lifecycle status and `inService` equals what the IN_SERVICE filter lists.
+ * `attention` counts each vehicle once if its status is in
+ * `assetAttentionStatuses` or, while MAINTENANCE is on, it is grounded; it can
+ * therefore exceed what the ATTENTION status filter lists.
  */
 export const assetSummary = z.object({
   total: z.number().int().nonnegative(),
