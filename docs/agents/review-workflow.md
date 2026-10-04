@@ -32,7 +32,7 @@ GitHub protection remains editable by repository administrators. The settings ab
 
 ## Sentry intake compatibility
 
-The separately developed `sentry-issue-intake` adapter imports sanitized runtime reports and sends them to Pstack triage. It does not authorize a fix or approval. An intake report needs confirmed reproduction, expected behavior and acceptance criteria before an agent fixes it. The resulting PR follows the same proof and review rules as any other fix.
+The separately developed `sentry-issue-intake` adapter imports sanitized runtime reports and sends them to the triage system. It does not authorize a fix or approval. An intake report needs confirmed reproduction, expected behavior and acceptance criteria before an agent fixes it. The resulting PR follows the same proof and review rules as any other fix.
 
 Keep full diagnostics and Sentry credentials in restricted Sentry/local environment files. Public review evidence must not quote raw events, request/user fields or secrets. A completed review video demonstrates evidence; the independent code review judges the diff against the issue.
 
