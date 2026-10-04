@@ -28,7 +28,7 @@ const statusBadgeVariants = cva("", {
   },
 })
 
-type StatusBadgeTone = NonNullable<
+export type StatusBadgeTone = NonNullable<
   VariantProps<typeof statusBadgeVariants>["tone"]
 >
 

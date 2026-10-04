@@ -255,6 +255,16 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
+    id: "H14",
+    name: "one-status-badge",
+    fix: "Render the status through its domain's badge (e.g. finance/EntryStatusBadge.tsx); only that file maps the status to a tone.",
+    check: linesMatching(
+      // A *_TONE(S) constant, a Record from a status type to tones, or an inline tone={status === …}.
+      /\b[A-Z][A-Z0-9_]*_TONES?\b|Record<[^,]*[Ss]tatus[^,]*,[^>]*([Tt]one|"(success|warning|info|danger|neutral)")|\btone=\{[^}]*\b(status|state)\s*[!=]==/,
+      (path) => isWebProduction(path) && !/^apps\/web\/src\/[\w-]+\/[A-Z]\w*StatusBadge\.tsx$/.test(path),
+    ),
+  },
+  {
     id: "J1",
     name: "no-any",
     fix: "Type it: use the contract's types, unknown plus a guard, or a generic.",

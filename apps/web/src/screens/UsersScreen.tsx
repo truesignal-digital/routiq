@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { KeyRound, ShieldCheck, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { MemberListItem, MemberStatus } from "@routiq/contracts";
+import type { MemberListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -14,7 +14,7 @@ import {
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
-import { StatusBadge } from "@/components/status-badge.js";
+import { MemberStatusBadge } from "@/members/MemberStatusBadge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { toSortParam } from "@/lib/sort-param.js";
@@ -30,12 +30,6 @@ import { useMembers } from "@/members/useMembers.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
 const DEACTIVATED_FILTER_ID = "includeDeactivated";
-
-const STATUS_TONES: Record<MemberStatus, "success" | "warning" | "neutral"> = {
-  ACTIVE: "success",
-  LOCKED: "warning",
-  DEACTIVATED: "neutral",
-};
 
 const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
   role: ShieldCheck,
@@ -141,9 +135,7 @@ export function UsersScreen() {
         header: t("users.columns.status"),
         meta: { mobile: "primary", label: t("users.columns.status") },
         cell: ({ row }) => (
-          <StatusBadge tone={STATUS_TONES[row.original.status]}>
-            {t(`users.status.${row.original.status}`)}
-          </StatusBadge>
+          <MemberStatusBadge status={row.original.status} />
         ),
       },
     ],

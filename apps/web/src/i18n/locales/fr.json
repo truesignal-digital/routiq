@@ -460,7 +460,7 @@
       "loadMore": "Charger plus",
       "recordAction": "Saisir une écriture",
       "status": {
-        "SUBMITTED": "En attente",
+        "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
         "REJECTED": "Rejetée",
         "REVERSED": "Extournée"
@@ -1193,12 +1193,7 @@
       "preventive": "Préventif — aucun signalement",
       "linkedIssue": "Signalement lié",
       "unavailableTitle": "Actif immobilisé",
-      "unavailableHint": "Seule la remise en service rouvre la disponibilité.",
-      "entryStatus": {
-        "SUBMITTED": "En attente d'examen",
-        "POSTED": "Comptabilisé",
-        "REVERSED": "Extourné"
-      }
+      "unavailableHint": "Seule la remise en service rouvre la disponibilité."
     },
     "notify": {
       "success": {
