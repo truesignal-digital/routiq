@@ -312,7 +312,7 @@ describe("the author's own pending entry (#85)", () => {
     await user.click(within(panel).getByRole("button", { name: "Edit" }));
 
     const form = await screen.findByRole("dialog", { name: "Edit entry DLA-2026-00006" });
-    const amount = within(form).getByLabelText("Amount (XAF)") as HTMLInputElement;
+    const amount = within(form).getByLabelText("Amount (FCFA)") as HTMLInputElement;
     expect(amount.value).toMatch(/^145\s?000$/);
     await user.clear(amount);
     await user.type(amount, "54000");

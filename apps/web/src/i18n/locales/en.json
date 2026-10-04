@@ -275,7 +275,7 @@
       },
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
-      "acquisitionAmount": "Acquisition amount (XAF)"
+      "acquisitionAmount": "Acquisition amount (FCFA)"
     },
     "actions": {
       "commission": "Commission",
@@ -422,7 +422,7 @@
       "categoryLabel": "Category",
       "chooseCategory": "Choose a category…",
       "categoriesFailed": "We couldn't load categories. Retry this page.",
-      "amountLabel": "Amount (XAF)",
+      "amountLabel": "Amount (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Payment method",
       "paymentMethods": {
@@ -990,7 +990,7 @@
         "expense": "Expense",
         "categoryLabel": "Category",
         "chooseCategory": "Choose a category",
-        "amountLabel": "Amount (XAF)",
+        "amountLabel": "Amount (FCFA)",
         "amountPlaceholder": "e.g. 125 000",
         "amountRequired": "Enter an amount above zero.",
         "paymentMethodLabel": "Payment method",
@@ -1629,7 +1629,7 @@
       "fuel": {
         "title": "Log fuel",
         "description": "Records the fuel expense, then the odometer if you enter it.",
-        "amount": "Amount paid (XAF)",
+        "amount": "Amount paid (FCFA)",
         "when": "Date and time",
         "station": "Station (optional)",
         "odometer": "Odometer in km (optional)",
