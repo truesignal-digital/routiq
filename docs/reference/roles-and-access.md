@@ -87,14 +87,16 @@ says what changes.
 
 ## Migration from the built roles
 
+A plain map that promotes nobody (owner, 2026-10-04). Nobody becomes Direction automatically.
+
 | Built today | Becomes | What changes for that person |
 |---|---|---|
-| ADMIN | ADMIN, or DIRECTOR for the owner | Loses settings and approval of money entries. The workspace's first account becomes DIRECTOR. |
+| ADMIN | ADMIN | Loses settings and approval of money entries. Direction is given by hand afterwards (new workspaces: the first account is DIRECTOR). |
 | OPS_MANAGER | ADMIN | Gains approving work orders, adding people and access for field roles. |
 | FIELD_SUBMITTER | DRIVER | Sees own records only (today: whole ledger). Can no longer renew documents or resolve problems. |
 | MAINTENANCE | TECHNICIAN | Same work. Parts and labour stay limited to work orders. |
 | FINANCE_APPROVER | FINANCE | Gains adding and renewing documents. Stops approving work orders (the Administrateur does). |
-| EXECUTIVE_VIEWER | DIRECTOR, on the owner's confirmation per person | Gains approving, notes, settings and access. |
+| EXECUTIVE_VIEWER | ADMIN | Gains daily operations of their branches. Direction is given by hand if the person needs it. |
 | — | CASHIER | New role. |
 
 ## Open for the pilot team

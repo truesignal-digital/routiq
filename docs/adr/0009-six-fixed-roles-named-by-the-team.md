@@ -76,14 +76,19 @@ Rules that go with the roles:
 
 Consequences:
 
-- A migration maps every membership explicitly. Two pilot workspaces make this
-  a reviewed list, not a formula. EXECUTIVE_VIEWER → DIRECTOR gains write power,
-  so it happens only on the owner's confirmation per person. Each workspace's
-  first account becomes DIRECTOR at provisioning.
+- The migration is a plain map and promotes nobody (owner, 2026-10-04: "Admin
+  is admin"): ADMIN, OPS_MANAGER and EXECUTIVE_VIEWER become ADMIN;
+  FIELD_SUBMITTER becomes DRIVER; MAINTENANCE becomes TECHNICIAN;
+  FINANCE_APPROVER becomes FINANCE. Existing workspaces get their DIRECTOR by
+  hand afterwards, through a vendor-operator path, because no tenant role may
+  grant Direction. New workspaces get theirs at provisioning: the first
+  account is DIRECTOR.
 - Every `allowedRoles` list, the approval defaults (new migration plus backfill
   into existing workspaces), `FINANCE_READER_ROLES`, the read gates, web
-  capabilities, the i18n labels and the demo seed change in one PR, tested per
-  role. `ARCHITECTURE.md` §10 is updated to this list.
+  capabilities, the i18n labels and the demo seed change, tested per role.
+  The work ships as several PRs that each leave `develop` consistent, and
+  `develop` is released to `main` only after all of them land.
+  `ARCHITECTURE.md` §10 is updated to this list.
 - Once shipped, renaming or re-permissioning a role needs a new ADR and new
   training material. Features added later slot into existing roles through the
   reference table; they do not create roles.
