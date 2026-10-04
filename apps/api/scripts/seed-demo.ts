@@ -621,7 +621,8 @@ async function vehicleSummary(assetId: string, today: string) {
       costOutcome: schema.workOrders.costOutcome,
     })
     .from(schema.workOrders)
-    .where(and(eq(schema.workOrders.workspaceId, ws), eq(schema.workOrders.assetId, assetId)));
+    .where(and(eq(schema.workOrders.workspaceId, ws), eq(schema.workOrders.assetId, assetId)))
+    .orderBy(asc(schema.workOrders.description), asc(schema.workOrders.id));
   const costLines =
     orders.length === 0
       ? []
@@ -647,7 +648,8 @@ async function vehicleSummary(assetId: string, today: string) {
                 orders.map((order) => order.id),
               ),
             ),
-          );
+          )
+          .orderBy(asc(schema.financialEntries.entryNumber), asc(schema.financialPostings.id));
   const pending = await authDb
     .select({
       amountMinor: schema.financialPostings.amountMinor,
@@ -667,7 +669,8 @@ async function vehicleSummary(assetId: string, today: string) {
         eq(schema.financialPostings.assetId, assetId),
         eq(schema.financialEntries.status, "SUBMITTED"),
       ),
-    );
+    )
+    .orderBy(asc(schema.financialEntries.entryNumber), asc(schema.financialPostings.id));
   const documents = await authDb
     .select({
       id: schema.documents.id,
@@ -676,7 +679,8 @@ async function vehicleSummary(assetId: string, today: string) {
       supersedesDocumentId: schema.documents.supersedesDocumentId,
     })
     .from(schema.documents)
-    .where(and(eq(schema.documents.workspaceId, ws), eq(schema.documents.assetId, assetId)));
+    .where(and(eq(schema.documents.workspaceId, ws), eq(schema.documents.assetId, assetId)))
+    .orderBy(asc(schema.documents.documentTypeCode), asc(schema.documents.id));
   const superseded = new Set(documents.map((doc) => doc.supersedesDocumentId));
 
   return {
