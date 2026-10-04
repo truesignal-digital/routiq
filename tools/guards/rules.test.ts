@@ -187,6 +187,23 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "T1",
+    bad: [
+      file(
+        "apps/api/src/commands/member-command-defaults.test.ts",
+        'ctx = await createTestApp();\nconst BACKFILL = new URL("../../drizzle/0020_member_command_defaults.sql", import.meta.url);',
+      ),
+      file("apps/api/src/db/migration-replay.test.ts", "const path = new URL(`../../drizzle/${name}.sql`, import.meta.url);"),
+    ],
+    good: [
+      file(
+        "apps/api/src/commands/member-command-defaults.test.ts",
+        'ctx = await createTestApp({ isolated: true });\nconst BACKFILL = new URL("../../drizzle/0020_member_command_defaults.sql", import.meta.url);',
+      ),
+      file("apps/api/src/db/finance-upgrade.test.ts", 'await adminPool.query(`create database "${name}"`);\nconst sql = "0010_finance.sql";'),
+    ],
+  },
+  {
     id: "P1",
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],

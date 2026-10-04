@@ -36,7 +36,7 @@ describe("maintenance command approval defaults", () => {
   let backfillSql: string;
 
   beforeAll(async () => {
-    ctx = await createTestApp();
+    ctx = await createTestApp({ isolated: true });
     backfillSql = await readFile(BACKFILL, "utf8");
   });
 

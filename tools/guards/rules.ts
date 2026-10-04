@@ -273,6 +273,20 @@ export const RULES: readonly Rule[] = [
     check: migrationsBehindBase,
   },
   {
+    id: "T1",
+    name: "migration-sql-in-own-database",
+    fix: "A migration's SQL runs over every workspace, and test files share one database in parallel (#104). Use createTestApp({ isolated: true }) from apps/api/src/test/fixture.ts, or create a database of your own.",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            file.path.startsWith("apps/api/src/") &&
+            isTestFile(file.path) &&
+            !/isolated: true|create database/i.test(file.content),
+        )
+        .flatMap((file) => matchLines(file, /\d{4}_\w+\.sql|drizzle\/\$\{/).slice(0, 1)),
+  },
+  {
     id: "P1",
     name: "no-prototype-routes",
     fix: "Prototypes stay on their own branch; production routes never mount them.",
