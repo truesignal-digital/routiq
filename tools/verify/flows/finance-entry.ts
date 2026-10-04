@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * Finance → Entries → the newest posted entry's drawer → "Open full screen"
@@ -12,7 +12,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (list.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/entries?status=POSTED → ${list.status}, ${entries.length} entries`);
   log(`api: ${entries.length} posted entries; opening ${entry.entryNumber}`);
 
-  const sidebar = page.getByRole("navigation", { name: "Navigation" });
+  const sidebar = await openSidebar(page);
   await sidebar.getByRole("link", { name: t("Finances", "Finance") }).click();
   await page.getByRole("heading", { level: 1, name: t("Écritures comptables", "Entries") }).waitFor();
   await quiet();

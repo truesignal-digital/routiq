@@ -43,7 +43,7 @@ The issue tracker is GitHub Issues through `gh` (`docs/agents/issue-tracker.md`)
 ## 1. Freeze the source
 
 1. Take the issue number from the caller. Store it as `ISSUE`.
-2. Read it: `gh issue view $ISSUE --comments --json number,title,body,labels,author,createdAt,comments,url`.
+2. Read it: `gh issue view $ISSUE --json number,title,body,labels,author,createdAt,comments,url` (`--json` already returns the comments; adding `--comments` makes `gh` refuse).
 3. Store its `url` as the source permalink.
 
 ## 2. Read the whole report

@@ -1,7 +1,7 @@
 import { existsSync, renameSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright-core";
 import { DEMO_WORKSPACE, resolveAccount, type DemoAccount } from "./accounts.js";
 import type { DriveOptions, Lang } from "./args.js";
 import { REPO_ROOT } from "./slot.js";
@@ -14,7 +14,7 @@ export interface DriveContext {
   lang: Lang;
   state: SlotState;
   evidenceDir: string;
-  /** In-app navigation that keeps the in-memory language (#127): pushState + popstate, never page.goto. */
+  /** In-app navigation without a full load: pushState + popstate. */
   nav: (route: string) => Promise<void>;
   /** Full-page screenshot named NN-<label>.png; returns its path. */
   shot: (label: string) => Promise<string>;
@@ -109,16 +109,22 @@ async function loginThroughUi(page: Page, state: SlotState, account: DemoAccount
   await waitQuiet(page, rec);
 }
 
-async function openSidebarIfCollapsed(page: Page): Promise<void> {
+/**
+ * The app's sidebar navigation, opened first when it is collapsed (phone widths
+ * hide it behind the menu button). Flows reach sidebar links through this so
+ * they pass at every viewport.
+ */
+export async function openSidebar(page: Page): Promise<Locator> {
   const nav = page.getByRole("navigation", { name: "Navigation" });
-  if (await nav.isVisible().catch(() => false)) return;
+  if (await nav.isVisible().catch(() => false)) return nav;
   await page.getByRole("button", { name: /Afficher ou masquer le menu|Show or hide the menu/ }).first().click();
+  await nav.waitFor({ state: "visible", timeout: 10_000 });
+  return nav;
 }
 
-/** Language is held in memory only (#127): switch through More, then never reload. */
+/** Switches to English through More, the way a user does; the choice then persists per device (#127). */
 async function switchToEnglish(page: Page, rec: Recorder): Promise<void> {
-  await openSidebarIfCollapsed(page);
-  await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: /^Plus$/ }).click();
+  await (await openSidebar(page)).getByRole("link", { name: /^Plus$/ }).click();
   await waitQuiet(page, rec);
   await page.getByRole("button", { name: "English", exact: true }).click();
   await page.getByRole("heading", { name: "Language" }).waitFor({ timeout: 10_000 });

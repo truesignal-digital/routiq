@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * Trips list → the closed Douala → Garoua trip, cross-checked with GET /v1/activities/:id.
@@ -10,7 +10,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const trip = items.find((item) => item.status === "CLOSED");
   if (list.status !== 200 || trip === undefined) throw new Error(`GET /v1/activities → ${list.status}, no closed trip`);
 
-  await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: t("Trajets", "Trips") }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Trajets", "Trips") }).click();
   await page.getByRole("heading", { level: 1, name: t("Trajets", "Trips") }).waitFor();
   await quiet();
   await shot("trips-list");

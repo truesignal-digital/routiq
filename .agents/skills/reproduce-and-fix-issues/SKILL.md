@@ -45,7 +45,7 @@ Start from one GitHub issue that `triage-issue-reports` marked as a bug. Reprodu
 ## 1. Freeze the source
 
 1. Take the issue number. Store it as `ISSUE`.
-2. `gh issue view $ISSUE --comments --json number,title,body,labels,comments,url`.
+2. `gh issue view $ISSUE --json number,title,body,labels,comments,url` (`--json` already returns the comments; adding `--comments` makes `gh` refuse).
 3. Store the URL.
 
 ## 2. Check the triage contract

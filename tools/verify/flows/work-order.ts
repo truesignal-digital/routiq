@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * VH003 Maintenance tab → create a work order from the open bodywork problem →
@@ -18,7 +18,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const issueRef = issue.id.slice(0, 8).toUpperCase();
   log(`problem ${issueRef}: ${issue.description ?? ""}`);
 
-  await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor();
   await page

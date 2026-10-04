@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * Trucks list → VH003 → every vehicle workspace tab the role can see, with a
@@ -6,7 +6,7 @@ import type { DriveScript } from "../browser.js";
  * Run: pnpm verify drive flow:vehicle-workspace --role manager --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
-  const sidebar = page.getByRole("navigation", { name: "Navigation" });
+  const sidebar = await openSidebar(page);
   await sidebar.getByRole("link", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("heading", { name: t("Vos camions", "Your trucks") }).waitFor();
   await quiet();
