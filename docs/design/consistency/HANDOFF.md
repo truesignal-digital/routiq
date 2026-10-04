@@ -4,7 +4,7 @@ For the next session, which will break this direction down into GitHub issues an
 
 ## State
 
-- Branch `docs/ui-consistency`, made from `develop@6399529`. Everything is **uncommitted**: `docs/design/consistency/` and the "Product direction" section in `AGENTS.md`.
+- Branch `docs/ui-consistency-direction`, made from `develop@6399529`, holds `docs/design/consistency/` and the "Product direction" section in `AGENTS.md` (commit "docs: UI consistency system and product direction"). Issues link to the files on that branch.
 - Open `docs/design/consistency/index.html` in a browser. The rules are in `README.md`.
 - Owner decisions (2026-10-04):
   - **Theme:** neutral. The company logo and accent colour are customisable; "powered by ROUTIQ" stays.
@@ -33,6 +33,14 @@ For the next session, which will break this direction down into GitHub issues an
 - Evidence from the owners' Loom videos (another product's tutorials) is kept **outside the repo**, because of the project-scoped names rule: `~/Developer/routiq-worktrees/_evidence/loom-2026-10-04/`.
 
 ## Verified facts that shape the issues
+
+Re-checked 2026-10-04 on `origin/develop`, which is still `6399529` (no merges since the audit), so every file:line below holds. Changes since the first write-up:
+
+- #127 (language lost on reload) is fixed on develop by #141: language is now a device preference in `localStorage` (`routiq-language`). Storing it on the account (epic 7) is still new work. The issue stays open until develop is released to main.
+- #126 (Details breadcrumb) is fixed on develop by #142; trip routes still have no trail.
+- The roles ADRs on `docs/roles-and-access` are numbered 0008 and 0009, but develop already has ADR-0008 (edit and correct). They land as ADR-0009 (six roles) and ADR-0010 (one person list).
+- Open issues that overlap the epics and get linked, not duplicated: #70 (role-forbidden truck actions), #59, #103, #118, #121 (read gates), #40 (read-only executive; superseded by the roles decision), #91 (custodian → driver), #137 (branch switcher cut off), #136 (Base UI nativeButton errors), #143 (closed wording), #99–#101 (payments, receivables, customers).
+
 
 - Trip statuses are `OPEN` and `CLOSED` only, and `create-activity` requires `startedAt`. Scheduling needs a lifecycle change (needs an ADR).
 - `enable-module` / `disable-module` run as tenant `ADMIN` (`apps/api/src/commands/module-toggle.ts:29`). ADR-0005 says they must be platform scope; this is not implemented.
