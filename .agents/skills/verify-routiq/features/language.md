@@ -1,10 +1,10 @@
 # Language
 
-The app opens in French (fr-CM). A user switches to English on the More page. The choice lives in memory only, so a full page load returns to French (#127).
+The app opens in French (fr-CM). A user switches to English on the More page. The choice is stored per device in `localStorage["routiq-language"]` and survives reloads, deep links and new tabs (#127).
 
 ## Sub-features
 
-- `lang-default-fr` shows French on first load and after every full load.
+- `lang-default-fr` shows French on a first visit with nothing stored.
 - `lang-switch-en` switches every visible label to English from More.
 - `lang-switch-fr` switches back to French.
 - `lang-vocabulary` applies the trucking preset words (Camions/Trucks, Trajets/Trips) in both languages.
@@ -27,6 +27,6 @@ Preconditions:
 
 ## Gotchas
 
-- Never use `page.goto` after switching; it is a full load and the app returns to French.
+- Each drive starts in a fresh browser context, so storage is empty and the app opens in French until `--lang en` switches it.
 - Right after the click, the "Français" button can still look selected for a moment; read the state after the next render, not in the same tick.
 - English UI and English captions are the rule for walkthrough videos; French is the rule for anything else a Cameroonian user sees first.

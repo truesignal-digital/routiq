@@ -21,7 +21,7 @@ If the skill, the feature map, or a required capability is absent or broken, rep
 
 - Prefer roles and accessible names (`getByRole("button", { name: "Approve", exact: true })`) and route paths. Never use generated CSS classes, child indexes or DOM position.
 - Do not set internal state, call hidden app methods, write directly to Postgres, or inject DOM changes to create the symptom. Arranging a precondition through a real command (`pnpm verify api POST /v1/commands/<name> ...`) is allowed; the repro itself must come from UI interaction.
-- The app is French by default and holds the language in memory only (#127). Switch to English through the UI and then navigate by clicks; `drive --lang en` does this for you. A full page load returns to French.
+- The app is French by default and stores a language chosen on More per device (#127). Each drive starts with empty storage; `drive --lang en` switches through the UI for you.
 - Use the same slot inputs (commit, seed, role, language) for the baseline and the patched build.
 - Bound retries. Surface startup failures as failures.
 - Keep tokens out of logs and evidence. `pnpm verify api` prints response bodies, never the bearer token.

@@ -67,7 +67,7 @@ Every drive logs in through the real form (Workspace `transports-ngwa`, Username
 
 Role codes and usernames work too (`--role FINANCE_APPROVER`, `--role boris`).
 
-**Language.** The app starts in French and keeps the language in memory only (#127). `--lang en` switches through the UI (Plus → English) after login. After that, never call `page.goto`; navigate by clicking or with `ctx.nav(route)`, which does `history.pushState` plus a `popstate` event. A full load returns to French.
+**Language.** The app starts in French. A choice made on More is stored per device in `localStorage["routiq-language"]` and survives full loads (#127). `--lang en` switches through the UI (Plus → English) after login, so every run starts from a clean browser and proves the switch. Navigate by clicking or with `ctx.nav(route)`; `page.goto` is fine for deep links now that the choice persists.
 
 **Flows** are committed DriveScripts in `tools/verify/flows/`, run as `flow:<name>`. Each drives one feature by clicks and ends with a read-only API cross-check:
 
