@@ -42,6 +42,7 @@ const LIST_COLUMNS: readonly FinanceEntryColumnId[] = [
   "category",
   "amount",
   "counterpartyName",
+  "linkedTo",
 ];
 
 /** Mirrors the read's own default so the header shows the order in force. */

@@ -56,11 +56,29 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
   useParams: () => ({}),
   useSearch: () => emptySearch,
-  Link: ({ to, children, ...props }: { to: string; children?: ReactNode }) => (
-    <a href={to} {...props}>
-      {children}
-    </a>
-  ),
+  Link: ({
+    to,
+    params,
+    search,
+    children,
+    ...props
+  }: {
+    to: string;
+    params?: Record<string, string>;
+    search?: Record<string, string>;
+    children?: ReactNode;
+  }) => {
+    const path = Object.entries(params ?? {}).reduce(
+      (built, [key, value]) => built.replace(`$${key}`, value),
+      to,
+    );
+    const query = new URLSearchParams(search ?? {}).toString();
+    return (
+      <a href={query === "" ? path : `${path}?${query}`} {...props}>
+        {children}
+      </a>
+    );
+  },
 }));
 
 vi.mock("../auth/me.js", () => ({
@@ -95,6 +113,12 @@ const entry = {
   estimateStatus: "ACTUAL",
   postedAt: "2026-07-01T10:00:00.000Z",
   rowVersion: 1,
+  links: {
+    activityId: null,
+    activityNumber: null,
+    workOrderId: "00000000-0000-4000-8000-0000000000c1",
+    workOrderAssetId: "00000000-0000-4000-8000-0000000000a1",
+  },
 };
 
 const mockUseEntriesValue = {
@@ -348,6 +372,18 @@ describe("FinanceEntriesScreen", () => {
     );
     expect(items).not.toContain("finance.entries.detail.entryNumber");
     expect(items).toContain("finance.entries.detail.category");
+  });
+
+  it("names the work order an entry belongs to and links to it (#87)", () => {
+    render(<FinanceEntriesScreen />);
+
+    expect(
+      screen.getAllByText("finance.entries.detail.linkedTo").length,
+    ).toBeGreaterThan(0);
+    const link = screen.getByRole("link", { name: "finance.entries.detail.workOrderLink" });
+    expect(link.getAttribute("href")).toBe(
+      "/assets/00000000-0000-4000-8000-0000000000a1/maintenance?panel=work_order%3A00000000-0000-4000-8000-0000000000c1",
+    );
   });
 
   it("leaves the row body inert so it can carry controls", async () => {

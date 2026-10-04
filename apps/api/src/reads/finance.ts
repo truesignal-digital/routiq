@@ -24,6 +24,7 @@ import {
   financialPostings,
   postingPeriods,
   principals,
+  workOrders,
 } from "../db/schema.js";
 import { commandActors, toActor } from "./actors.js";
 import {
@@ -191,6 +192,62 @@ function firstAssetLineSql(
 }
 
 /**
+ * The entry's first line, by line number, carrying a value in `column`: what
+ * the entry as a whole belongs to, on any vehicle (#87).
+ */
+function firstLineSql(
+  column: typeof financialPostings.activityId | typeof financialPostings.workOrderId,
+): SQL {
+  return sql`(
+    select ${column} from ${financialPostings}
+    where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+      and ${financialPostings.financialEntryId} = ${financialEntries.id}
+      and ${column} is not null
+    order by ${financialPostings.lineNo}
+    limit 1
+  )`;
+}
+
+/**
+ * The trip and the work order an entry belongs to, for every row of the list,
+ * the approvals queue and the detail. The work order's vehicle comes along
+ * because the order opens in that vehicle's workspace. Reads `financialEntries`
+ * as the outer row.
+ */
+function entryLinkColumns() {
+  return {
+    linkActivityId: sql<string | null>`${firstLineSql(financialPostings.activityId)}`,
+    linkActivityNumber: sql<string | null>`(
+      select ${activities.activityNumber} from ${activities}
+      where ${activities.workspaceId} = ${financialEntries.workspaceId}
+        and ${activities.id} = ${firstLineSql(financialPostings.activityId)}
+    )`,
+    linkWorkOrderId: sql<string | null>`${firstLineSql(financialPostings.workOrderId)}`,
+    linkWorkOrderAssetId: sql<string | null>`(
+      select ${workOrders.assetId} from ${workOrders}
+      where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
+        and ${workOrders.id} = ${firstLineSql(financialPostings.workOrderId)}
+    )`,
+  };
+}
+
+interface EntryLinkRow {
+  linkActivityId: string | null;
+  linkActivityNumber: string | null;
+  linkWorkOrderId: string | null;
+  linkWorkOrderAssetId: string | null;
+}
+
+function toEntryLinks(row: EntryLinkRow): FinancialEntryListItem["links"] {
+  return {
+    activityId: row.linkActivityId,
+    activityNumber: row.linkActivityNumber,
+    workOrderId: row.linkWorkOrderId,
+    workOrderAssetId: row.linkWorkOrderAssetId,
+  };
+}
+
+/**
  * The columns every entry row carries, list and approvals queue alike, so the
  * two can never drift apart. Reads `categories`, `postingPeriods`, `commands`
  * and `principals` as the queries below join them.
@@ -250,6 +307,7 @@ function entryItemColumns(assetId: string | undefined) {
       assetId === undefined
         ? sql<string | null>`null`
         : sql<string | null>`${firstAssetLineSql(assetId, financialPostings.workOrderId)}`,
+    ...entryLinkColumns(),
   };
 }
 
@@ -257,7 +315,7 @@ type EntryRow = typeof financialEntries.$inferSelect;
 type CategoryRow = typeof categories.$inferSelect;
 
 /** A row of `entryItemColumns` as the joins above leave it. */
-interface EntryItemRow {
+interface EntryItemRow extends EntryLinkRow {
   id: string;
   entryNumber: string;
   direction: EntryRow["direction"];
@@ -337,6 +395,7 @@ function toEntryItem(row: EntryItemRow, withAsset: boolean): FinancialEntryListI
           workOrderId: row.assetWorkOrderId,
         }
       : null,
+    links: toEntryLinks(row),
   };
 }
 
@@ -551,6 +610,7 @@ export function registerFinanceReadRoutes(
               postedAt: financialEntries.postedAt,
               rowVersion: financialEntries.rowVersion,
               createdByCommandId: financialEntries.createdByCommandId,
+              ...entryLinkColumns(),
             })
             .from(financialEntries)
             .where(
@@ -722,6 +782,7 @@ export function registerFinanceReadRoutes(
           },
           assetShareMinor: null,
           assetLinks: null,
+          links: toEntryLinks(entry),
           evidenceFiles,
         };
 
