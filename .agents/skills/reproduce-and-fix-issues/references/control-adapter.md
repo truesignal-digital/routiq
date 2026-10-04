@@ -8,10 +8,10 @@ If the skill, the feature map, or a required capability is absent or broken, rep
 
 | Capability | Command | Returns |
 |---|---|---|
-| Bring up | `pnpm verify up --slot N` | Slot ports, compose project `routiq-verify-N`, PIDs and log paths in `.verify/slot-N/state.json` |
+| Bring up | `pnpm verify up --slot N` | Slot ports, compose project `routiq-verify-N`, PIDs and log paths in `.verify/slots/N/state.json` |
 | Confirm the right app | `pnpm verify doctor --slot N` | PASS/FAIL per check: database, migrations, API health, web, seeded logins |
-| Drive the real UI | `pnpm verify drive <route> [--role R] [--lang en] [--script file]` | Screenshots, console errors, failed requests, final URL, in a printed evidence directory |
-| Drive mapped features and states | The feature file's `Driving it with pnpm verify` section, run through `drive --script` | Same as above, one screenshot per step |
+| Drive the real UI | `pnpm verify drive <route | flow:name | script.ts> [--slot N] [--role R] [--lang en] [--video]` | Screenshots, console errors, failed requests, final URL, in a printed evidence directory |
+| Drive mapped features and states | The feature file's `Driving it with pnpm verify` section, run as `pnpm verify drive <script.ts> --slot N` | Same as above, one screenshot per step |
 | Inspect state, read-only | `pnpm verify api GET <path> --role R`, `pnpm verify db "select ..."` | JSON body and status; query rows. `db` refuses anything but a single read statement |
 | Screenshot | Every `drive` step writes `NN-<label>.png` | Path printed on stdout |
 | Recording | `pnpm verify drive ... --video` | A `.webm` of the whole drive in the evidence directory |

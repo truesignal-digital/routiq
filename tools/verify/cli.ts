@@ -24,7 +24,9 @@ Commands
   down [--slot N]              stop this slot's processes; remove only routiq-verify-N
                                containers and volumes. Evidence stays.
 
-Slots: N is 0-99 (default 1, or ROUTIQ_VERIFY_SLOT). Slot N uses ports 24000+10N:
+Every command except status takes --slot N; without it the command uses slot 1
+(or ROUTIQ_VERIFY_SLOT), so pass --slot whenever you brought up another slot.
+Slots: N is 0-99. Slot N uses ports 24000+10N:
 postgres +0, storage +1, api +2, web +3.
 Roles: admin (emilienne), manager (boris), field (sali), field-yde (patrice),
 maintenance (herve), finance (nadege), viewer (amadou); role codes and usernames work too.`;
