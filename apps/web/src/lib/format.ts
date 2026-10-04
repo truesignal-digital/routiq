@@ -1,9 +1,25 @@
-import { formatXAF } from "@routiq/domain";
 import { i18n } from "../i18n/index.js";
+
+export type MoneyDirection = "REVENUE" | "EXPENSE";
+
+/**
+ * Where an amount is read decides its sign, so the same entry never reads "+"
+ * on one screen and "−" on another:
+ * - `ledger`: revenue and expenses side by side (lists, trip and vehicle money,
+ *   history). Revenue reads "+", expense "−", from the direction; a reversal's
+ *   negative amount flips it.
+ * - `net`: a balance already signed as revenue − expenses. "+" or "−", bare at zero.
+ * - `record`: one record's own amount (its page, the approvals row, a total of
+ *   one kind). Unsigned; the screen says the direction in words. The default.
+ */
+export type MoneySign =
+  | { context: "ledger"; direction: MoneyDirection }
+  | { context: "net" }
+  | { context: "record" };
 
 type FormatMoneyOptions = {
   currency?: string | null;
-  signDisplay?: Intl.NumberFormatOptions["signDisplay"] | null;
+  sign?: MoneySign;
   locale?: string | null;
 };
 
@@ -12,8 +28,10 @@ type LocalizedLabels = {
   labelEn?: string | null;
 };
 
+const MINUS = "\u2212";
+
 function normalizeMoneySpacing(value: string): string {
-  return value.replace(/ /g, " ");
+  return value.replace(/\u202f/g, " ");
 }
 
 export function formatMoney(
@@ -22,29 +40,21 @@ export function formatMoney(
 ): string {
   if (minor == null || options == null) return "";
 
-  const {
-    currency = "XAF",
-    signDisplay,
-    locale = i18n.resolvedLanguage,
-  } = options;
+  const { currency = "XAF", sign = { context: "record" }, locale = i18n.resolvedLanguage } = options;
   if (currency == null) return "";
 
-  const formatted =
-    currency === "XAF"
-      ? (() => {
-          const xafOpts: { locale?: string; signDisplay?: Intl.NumberFormatOptions["signDisplay"] } = {};
-          if (locale) xafOpts.locale = locale;
-          if (signDisplay) xafOpts.signDisplay = signDisplay;
-          return formatXAF(minor, xafOpts);
-        })()
-      : new Intl.NumberFormat(locale ?? undefined, {
-          style: "currency",
-          currency,
-          maximumFractionDigits: 0,
-          ...(signDisplay == null ? {} : { signDisplay }),
-        }).format(minor);
+  const value =
+    sign.context === "ledger" ? (sign.direction === "REVENUE" ? minor : -minor) : minor;
+  const formatted = new Intl.NumberFormat(locale ?? undefined, {
+    style: "currency",
+    currency,
+    // XAF has exponent 0; every currency here is shown in whole units.
+    maximumFractionDigits: 0,
+    signDisplay: sign.context === "record" ? "never" : "exceptZero",
+  }).format(value);
 
-  return normalizeMoneySpacing(formatted);
+  // One minus sign in every language: Intl gives a hyphen in English.
+  return normalizeMoneySpacing(formatted).replace("-", MINUS);
 }
 
 const plainSpaces = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
@@ -100,8 +110,16 @@ export function parseWholeAmount(text: string, locale?: string): WholeAmount {
     new Intl.NumberFormat(resolved).formatToParts(1_000_000).find((part) => part.type === "group")?.value ?? ",",
   );
   let digits = trimmed.replace(/ /g, "");
-  if (group.trim() !== "") digits = digits.split(group).join("");
-  else if (/^\d{1,3}(\.\d{3})+$/.test(digits)) digits = digits.replace(/\./g, "");
+  if (group.trim() !== "") {
+    if (digits.includes(group)) {
+      // "4,5" in English is not 45: a separator only counts between groups of three.
+      const groups = digits.split(group);
+      if (!/^\d{1,3}$/.test(groups[0] ?? "") || groups.slice(1).some((g) => !/^\d{3}$/.test(g))) {
+        return { kind: "invalid" };
+      }
+      digits = groups.join("");
+    }
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(digits)) digits = digits.replace(/\./g, "");
   if (!/^\d+$/.test(digits)) return { kind: "invalid" };
   const minor = Number(digits);
   return Number.isSafeInteger(minor) ? { kind: "amount", minor } : { kind: "invalid" };

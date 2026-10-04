@@ -255,6 +255,15 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
+    id: "H16",
+    name: "money-format-in-one-place",
+    fix: "Format through lib/format.ts: formatMoney with a sign context (ledger + direction, net, record), not signDisplay or a hand-built Intl.NumberFormat.",
+    check: linesMatching(
+      /\bnew Intl\.NumberFormat\b|\bsignDisplay\b|\bformatXAF\b/,
+      (path) => isWebProduction(path) && path !== "apps/web/src/lib/format.ts",
+    ),
+  },
+  {
     id: "J1",
     name: "no-any",
     fix: "Type it: use the contract's types, unknown plus a guard, or a generic.",

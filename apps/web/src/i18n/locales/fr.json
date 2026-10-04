@@ -473,6 +473,7 @@
         "status": "Statut",
         "category": "Catégorie",
         "amount": "Montant",
+        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Extourne de recette} EXPENSE_REVERSAL {Extourne de dépense} other {Dépense}}",
         "date": "Date comptable",
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",

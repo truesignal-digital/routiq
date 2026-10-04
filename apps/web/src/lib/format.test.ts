@@ -11,53 +11,51 @@ import { i18n } from "../i18n/index.js";
 
 describe("format", () => {
   describe("formatMoney", () => {
+    const plain = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
+    const en = (minor: number, sign?: Parameters<typeof formatMoney>[1]) =>
+      plain(formatMoney(minor, { locale: "en", ...sign }));
+    const fr = (minor: number, sign?: Parameters<typeof formatMoney>[1]) =>
+      plain(formatMoney(minor, { locale: "fr-CM", ...sign }));
+
     it("formats XAF with exponent 0 (no division)", () => {
-      const result = formatMoney(150000, { currency: "XAF" });
-      expect(result).toMatch(/150\s*000.*FCFA/);
+      expect(fr(150_000)).toBe("150 000 FCFA");
+      expect(en(150_000)).toBe("FCFA 150,000");
     });
 
-    it("includes currency in output", () => {
-      const result = formatMoney(100, { currency: "XAF" });
-      expect(result).toContain("FCFA");
-    });
+    describe("the sign rule", () => {
+      it("signs a ledger line from its direction: revenue +, expense −", () => {
+        const expense = { sign: { context: "ledger", direction: "EXPENSE" } } as const;
+        const revenue = { sign: { context: "ledger", direction: "REVENUE" } } as const;
+        expect(en(86_000, expense)).toBe("−FCFA 86,000");
+        expect(fr(86_000, expense)).toBe("−86 000 FCFA");
+        expect(en(86_000, revenue)).toBe("+FCFA 86,000");
+        expect(fr(86_000, revenue)).toBe("+86 000 FCFA");
+      });
 
-    it("respects signDisplay: always", () => {
-      const positive = formatMoney(100, {
-        currency: "XAF",
-        signDisplay: "always",
+      it("flips a reversal, whose stored amount is negative", () => {
+        expect(en(-86_000, { sign: { context: "ledger", direction: "EXPENSE" } })).toBe("+FCFA 86,000");
+        expect(en(-86_000, { sign: { context: "ledger", direction: "REVENUE" } })).toBe("−FCFA 86,000");
       });
-      const negative = formatMoney(-100, {
-        currency: "XAF",
-        signDisplay: "always",
-      });
-      expect(positive).toMatch(/^[+]/);
-      expect(negative).toMatch(/^[-]/);
-    });
 
-    it("respects signDisplay: exceptZero", () => {
-      const positive = formatMoney(100, {
-        currency: "XAF",
-        signDisplay: "exceptZero",
+      it("signs a net by its own value, and leaves zero bare", () => {
+        expect(en(-171_000, { sign: { context: "net" } })).toBe("−FCFA 171,000");
+        expect(fr(2_850_000, { sign: { context: "net" } })).toBe("+2 850 000 FCFA");
+        expect(en(0, { sign: { context: "net" } })).toBe("FCFA 0");
       });
-      const zero = formatMoney(0, {
-        currency: "XAF",
-        signDisplay: "exceptZero",
-      });
-      expect(positive).toMatch(/^[+]/);
-      expect(zero).not.toMatch(/^[+-]/);
-    });
 
-    it("respects signDisplay: never (no sign)", () => {
-      const result = formatMoney(-100, {
-        currency: "XAF",
-        signDisplay: "never",
+      it("never signs a record's own amount, a reversal's included", () => {
+        expect(en(86_000, { sign: { context: "record" } })).toBe("FCFA 86,000");
+        expect(fr(-86_000, { sign: { context: "record" } })).toBe("86 000 FCFA");
       });
-      expect(result).not.toMatch(/^[-]/);
+
+      it("reads an amount as a record's own when no sign is asked for", () => {
+        expect(en(86_000)).toBe(en(86_000, { sign: { context: "record" } }));
+      });
     });
 
     it("normalizes U+202F to regular space", () => {
-      const result = formatMoney(150000, { currency: "XAF" });
-      expect(result).not.toContain(" ");
+      const result = formatMoney(150000, { currency: "XAF", locale: "fr-CM" });
+      expect(result).not.toContain("\u202f");
       expect(result).toMatch(/\s/);
     });
 
@@ -70,34 +68,15 @@ describe("format", () => {
       expect(formatMoney(100, null)).toBe("");
     });
 
-    it("defaults locale to i18n.resolvedLanguage", () => {
-      const result = formatMoney(100, { currency: "XAF" });
-      expect(result).toBeTruthy();
+    it("defaults locale to the active language", async () => {
+      await i18n.changeLanguage("en");
+      expect(plain(formatMoney(1_234_567))).toBe("FCFA 1,234,567");
+      await i18n.changeLanguage("fr-CM");
+      expect(plain(formatMoney(1_234_567))).toBe("1 234 567 FCFA");
     });
 
-    it("respects explicit locale for fr-CM grouping", () => {
-      const result = formatMoney(1234567, {
-        currency: "XAF",
-        locale: "fr-CM",
-      });
-      expect(result).toMatch(/1\s*234\s*567/);
-    });
-
-    it("respects explicit locale for en grouping", () => {
-      const result = formatMoney(1234567, {
-        currency: "XAF",
-        locale: "en-US",
-      });
-      expect(result).toMatch(/1,234,567/);
-    });
-
-    it("handles other currencies with Intl.NumberFormat", () => {
-      const result = formatMoney(100, {
-        currency: "EUR",
-        locale: "fr-CM",
-      });
-      expect(result).toBeTruthy();
-      expect(result).toContain("€");
+    it("handles other currencies", () => {
+      expect(formatMoney(100, { currency: "EUR", locale: "fr-CM" })).toContain("€");
     });
   });
 

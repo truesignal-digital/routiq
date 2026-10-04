@@ -131,7 +131,9 @@ describe("EntrySummary", () => {
     expect(screen.getByText("Total Douala")).toBeTruthy();
     expect(screen.getByText("Plein du camion")).toBeTruthy();
     // XAF has exponent 0 — 25 000 minor units are 25 000 francs, not 250.
-    expect(container.textContent).toMatch(/\+?25\s?000/);
+    // The record's own amount is unsigned; its direction is said in words (E2.8).
+    expect(screen.getByText(/^25\s000\sFCFA$/)).toBeTruthy();
+    expect(screen.getByText("finance.entries.detail.amountKind")).toBeTruthy();
     expect(container.textContent).not.toContain("250,00");
   });
 

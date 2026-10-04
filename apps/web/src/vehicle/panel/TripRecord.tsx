@@ -146,7 +146,7 @@ function TripMoney({ entries }: { entries: NonNullable<ActivityDetail["financial
                 <span className="shrink-0 text-sm tabular-nums">
                   {formatMoney(entry.amountMinor, {
                     locale: i18n.language,
-                    ...(entry.direction === "REVENUE" ? { signDisplay: "exceptZero" as const } : {}),
+                    sign: { context: "ledger", direction: entry.direction },
                   })}
                 </span>
               </button>

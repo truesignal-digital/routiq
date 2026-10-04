@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCategories } from "@/documents/useCategories.js";
-import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
@@ -115,8 +115,8 @@ function MoneySection() {
   const entriesQuery = useVehicleEntries(asset.id, entriesFilter(chip, period), true);
   const revenueTypes = useCategories("REVENUE_CATEGORY");
   const finance = financeQuery.data;
-  const money = (minor: number, signed = false) =>
-    formatMoney(minor, { currency: asset.currency, locale, ...(signed ? { signDisplay: "exceptZero" as const } : {}) });
+  const money = (minor: number, sign?: MoneySign) =>
+    formatMoney(minor, { currency: asset.currency, locale, ...(sign === undefined ? {} : { sign }) });
 
   const go = (next: Partial<MoneySearch>) =>
     void navigate({
@@ -250,7 +250,7 @@ function MoneySection() {
           {t("vehicle.money.lifetime", {
             revenue: money(lifetime.revenueMinor),
             expenses: money(lifetime.expenseMinor),
-            net: money(lifetime.netMinor, true),
+            net: money(lifetime.netMinor, { context: "net" }),
           })}
         </p>
       )}
@@ -301,7 +301,7 @@ function PeriodStats({
   showRevenue,
 }: {
   finance: AssetFinanceResponse;
-  money: (minor: number, signed?: boolean) => string;
+  money: (minor: number) => string;
   showRevenue: boolean;
 }) {
   const { t } = useTranslation();
@@ -468,8 +468,8 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
   const split = share !== entry.amountMinor;
   const steps = entrySteps(entry, viewer);
   const links = entry.assetLinks;
-  const money = (minor: number, signed = false) =>
-    formatMoney(minor, { currency: entry.currency, locale, ...(signed ? { signDisplay: "exceptZero" as const } : {}) });
+  const money = (minor: number, sign?: MoneySign) =>
+    formatMoney(minor, { currency: entry.currency, locale, ...(sign === undefined ? {} : { sign }) });
 
   return (
     <RecordRow
@@ -526,7 +526,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
       aside={
         <>
           <div className={cn("font-medium", entry.status === "REVERSED" && "text-muted-foreground line-through")}>
-            {money(share, revenue || share < 0)}
+            {money(share, { context: "ledger", direction: entry.direction })}
           </div>
           {split && (
             <div className="text-xs text-muted-foreground">

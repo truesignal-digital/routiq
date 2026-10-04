@@ -473,6 +473,7 @@
         "status": "Status",
         "category": "Category",
         "amount": "Amount",
+        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue reversal} EXPENSE_REVERSAL {Expense reversal} other {Expense}}",
         "date": "Economic date",
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
