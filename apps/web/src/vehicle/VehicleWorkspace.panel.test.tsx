@@ -136,6 +136,32 @@ it("reads a close with the invoice still to come as such, not as a zero cost", a
   expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
+it("says the grounding order still has work to do while it is open (#109)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, scenario);
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(
+    within(panel).getByText(
+      "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
+    ),
+  ).toBeTruthy();
+});
+
+it("says a completed grounding order waits for a manager's release, not its own completion (#109)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [workOrderDetail("COMPLETED", { completedAt: "2026-09-30T10:00:00.000Z" })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(
+    within(panel).getByText(
+      "The work is done, but the vehicle stays grounded until a manager releases it to service.",
+    ),
+  ).toBeTruthy();
+  expect(within(panel).queryByText(/Once it is completed/)).toBeNull();
+});
+
 it("shows a refusal in place and keeps the form", async () => {
   await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
     ...scenario,
