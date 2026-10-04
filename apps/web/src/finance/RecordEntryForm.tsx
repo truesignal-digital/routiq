@@ -385,7 +385,7 @@ export function RecordEntryForm({
                     });
                   }}
                 >
-                  <TabsList className="w-full group-data-horizontal/tabs:h-11">
+                  <TabsList className="w-full">
                     <TabsTrigger value="EXPENSE">
                       {t("finance.record.expenseLabel")}
                     </TabsTrigger>
@@ -431,7 +431,7 @@ export function RecordEntryForm({
                 disabled={reference.isPending || reference.isError}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("finance.record.chooseBranch")} />
                   </SelectTrigger>
                 </FormControl>
@@ -466,7 +466,7 @@ export function RecordEntryForm({
                 disabled={categoriesQuery.isPending || categoriesQuery.isError}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("finance.record.chooseCategory")} />
                   </SelectTrigger>
                 </FormControl>
@@ -519,7 +519,7 @@ export function RecordEntryForm({
                 }}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                 </FormControl>
@@ -560,7 +560,6 @@ export function RecordEntryForm({
                 <Input
                   type="text"
                   placeholder={t("finance.record.counterpartyPlaceholder")}
-                  className="min-h-11"
                   {...field}
                 />
               </FormControl>
@@ -597,7 +596,6 @@ export function RecordEntryForm({
                 <Input
                   type="text"
                   placeholder={t("finance.record.paymentRefPlaceholder")}
-                  className="min-h-11"
                   {...field}
                 />
               </FormControl>
@@ -619,7 +617,7 @@ export function RecordEntryForm({
                   disabled={assetOptions.length === 0}
                 >
                   <FormControl>
-                    <SelectTrigger className="min-h-11 w-full">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder={t("finance.record.assetPlaceholder")} />
                     </SelectTrigger>
                   </FormControl>

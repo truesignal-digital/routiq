@@ -168,7 +168,7 @@ export function UsersScreen() {
       <PageHeader
         title={t("users.title")}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button type="button" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" aria-hidden />
             {t("users.add.open")}
           </Button>

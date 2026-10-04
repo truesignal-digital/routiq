@@ -179,7 +179,7 @@ export function AssetRegisterScreen() {
               <FormItem>
                 <FormLabel>{t("assets.form.assetCode")}</FormLabel>
                 <FormControl>
-                  <Input className="min-h-11" {...field} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -195,7 +195,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.assetClass")}</FormLabel>
                   <FormControl>
                     <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("assets.form.choose")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -220,7 +220,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.branch")}</FormLabel>
                   <FormControl>
                     <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("assets.form.choose")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -249,7 +249,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.template")}</FormLabel>
                   <FormControl>
                     <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("assets.form.choose")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -277,7 +277,6 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.registrationNumber")}</FormLabel>
                   <FormControl>
                     <Input
-                      className="min-h-11"
                       {...textFieldProps(field)}
                     />
                   </FormControl>
@@ -293,7 +292,6 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.modelYear")}</FormLabel>
                   <FormControl>
                     <Input
-                      className="min-h-11"
                       type="number"
                       inputMode="numeric"
                       {...numberFieldProps(field)}
@@ -310,7 +308,7 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.manufacturer")}</FormLabel>
                   <FormControl>
-                    <Input className="min-h-11" {...textFieldProps(field)} />
+                    <Input {...textFieldProps(field)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -323,7 +321,7 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.model")}</FormLabel>
                   <FormControl>
-                    <Input className="min-h-11" {...textFieldProps(field)} />
+                    <Input {...textFieldProps(field)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -336,7 +334,7 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.chassisNumber")}</FormLabel>
                   <FormControl>
-                    <Input className="min-h-11" {...textFieldProps(field)} />
+                    <Input {...textFieldProps(field)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -367,7 +365,6 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.acquisitionAmount")}</FormLabel>
                   <FormControl>
                     <Input
-                      className="min-h-11"
                       type="number"
                       inputMode="numeric"
                       step="1"
@@ -389,7 +386,6 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.capacityValue")}</FormLabel>
                   <FormControl>
                     <Input
-                      className="min-h-11"
                       type="number"
                       inputMode="decimal"
                       {...numberFieldProps(field)}
@@ -407,7 +403,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.capacityUnit")}</FormLabel>
                   <FormControl>
                     <Select value={field.value || null} onValueChange={(value) => field.onChange(value ?? "")}>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("assets.form.choose")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -444,7 +440,6 @@ export function AssetRegisterScreen() {
                         </FormLabel>
                         <FormControl>
                           <Input
-                            className="min-h-11"
                             type={templateField.type === "number" ? "number" : "text"}
                             inputMode={templateField.type === "number" ? "decimal" : undefined}
                             {...(templateField.type === "number"
@@ -471,13 +466,12 @@ export function AssetRegisterScreen() {
           )}
 
           <div className="flex items-center gap-3">
-            <Button type="submit" className="min-h-11 flex-1" disabled={submitting}>
+            <Button type="submit" className="flex-1" disabled={submitting}>
               {submitting ? t("assets.form.submitting") : t("assets.form.submit")}
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="min-h-11"
               onClick={() => void navigate({ to: "/assets" })}
             >
               {t("assets.form.cancel")}

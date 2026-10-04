@@ -15,7 +15,7 @@ Read this with the root [`AGENTS.md`](../../AGENTS.md). Each row names the one w
 | UI primitives | `components/ui/` (shadcn `base-nova` on Base UI), vendored with the shadcn CLI. Register every new file under `src/components/` in `registry.json` in the same change. | Anything from `@radix-ui`. |
 | Colour | Semantic tokens (`success`, `warning`, `info`, `signal`, and the theme tokens in `styles.css`). `palette.test.ts` enforces this. | Raw palette shades like `bg-red-500`. |
 | Tabs | Height on `TabsList` (44 px touch target). | `min-h-*` on `TabsTrigger` (the broken-pill bug, `08b5502`). |
-| Touch targets | Interactive controls at least 44 px (`min-h-11`); users are on low-end Android (#23). | Smaller hit areas in toolbars and switchers. |
+| Touch targets | Primitives are 44 px by default (Button, Input, SelectTrigger, TabsList, Calendar, `FilterChips`); users are on low-end Android (#23). A compact look is desktop-only: `size="desktop-sm"` / `"desktop-icon-sm"`, or a `desktop:` class (wide screen with a mouse). Guard `H13`. | `h-8`, `h-9`, `min-h-9` or `size="sm"` on a control; `min-h-11` workarounds the default already covers. |
 | Text | Every user-visible string through `t()`, ICU syntax (`{name}`), with identical keys in `fr.json` and `en.json` (`i18n/locales.test.ts`). fr-CM is the default. | `{{name}}` interpolation; building sentences by concatenation; raw enum values or UUIDs on screen. |
 | Active navigation item | `isRouteActive` from `lib/route-match.ts`, the single matcher for the sidebar and finance navigation. | A second matcher. |
 | Dashboard numbers | Server aggregates from `/v1/dashboard`. | Counting rows client-side. |

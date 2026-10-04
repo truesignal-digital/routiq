@@ -169,14 +169,13 @@ export function ActivityActions({
     <>
       <div className="flex flex-wrap gap-2">
         {showClose && (
-          <Button className="min-h-9" onClick={() => setPanel("close")}>
+          <Button onClick={() => setPanel("close")}>
             {t("activities.actions.close")}
           </Button>
         )}
         {showCapture && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("leg")}
           >
             {t("activities.actions.addLeg")}
@@ -185,7 +184,6 @@ export function ActivityActions({
         {showCapture && assets.length > 0 && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("reading")}
           >
             {t("activities.actions.addReading")}
@@ -194,7 +192,6 @@ export function ActivityActions({
         {showCapture && assets.length > 0 && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("expense")}
           >
             {t("activities.actions.addExpense")}
@@ -203,7 +200,6 @@ export function ActivityActions({
         {showSubstitute && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("substitute")}
           >
             {t("activities.actions.substitute")}
@@ -212,7 +208,6 @@ export function ActivityActions({
         {showReopen && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("reopen")}
           >
             {t("activities.actions.reopen")}

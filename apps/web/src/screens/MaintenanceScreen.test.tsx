@@ -289,7 +289,7 @@ describe("MaintenanceScreen — work order queue", () => {
     expect(issuedQueries[0]).toEqual({});
 
     await user.click(
-      screen.getByRole("button", { name: "maintenance.workOrders.status.COMPLETED" }),
+      screen.getByRole("radio", { name: "maintenance.workOrders.status.COMPLETED" }),
     );
 
     // Filtering client-side would describe the loaded page, not the workshop.
@@ -908,7 +908,7 @@ describe("MaintenanceScreen — signalements tab", () => {
 
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await user.click(
-      await screen.findByRole("button", { name: "maintenance.issues.status.OPEN" }),
+      await screen.findByRole("radio", { name: "maintenance.issues.status.OPEN" }),
     );
 
     await waitFor(() => {
@@ -925,7 +925,7 @@ describe("MaintenanceScreen — signalements tab", () => {
 
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await user.click(
-      await screen.findByRole("button", { name: "maintenance.issues.status.DISMISSED" }),
+      await screen.findByRole("radio", { name: "maintenance.issues.status.DISMISSED" }),
     );
 
     expect(await screen.findByText("maintenance.issues.filteredEmpty")).toBeTruthy();

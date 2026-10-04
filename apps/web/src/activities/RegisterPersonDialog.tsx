@@ -165,7 +165,6 @@ export function RegisterPersonDialog({
                   <FormControl>
                     <Input
                       type="text"
-                      className="min-h-11"
                       placeholder={t("activities.registerPerson.namePlaceholder")}
                       {...field}
                     />
@@ -186,7 +185,7 @@ export function RegisterPersonDialog({
                     onValueChange={(value) => field.onChange(value ?? "")}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={t("activities.registerPerson.rolePlaceholder")}
                         />
@@ -214,7 +213,6 @@ export function RegisterPersonDialog({
                   <FormControl>
                     <Input
                       type="tel"
-                      className="min-h-11"
                       placeholder={t("activities.registerPerson.phonePlaceholder")}
                       {...field}
                     />
@@ -228,14 +226,12 @@ export function RegisterPersonDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11"
                 onClick={() => onOpenChange(false)}
               >
                 {t("activities.registerPerson.cancel")}
               </Button>
               <Button
                 type="submit"
-                className="min-h-11"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting

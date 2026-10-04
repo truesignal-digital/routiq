@@ -62,6 +62,15 @@ function schemaTables(files: readonly SourceFile[]): string[] {
   );
 }
 
+/**
+ * An interactive element whose own tag sets a size below 44 px that applies on
+ * a phone: a small Button/SelectTrigger size, or an unprefixed h-, min-h- or
+ * size- class under 11. Prefixed classes (desktop:, md:) only apply on wider
+ * screens. The tag ends at its first ">" that is not part of an arrow "=>".
+ */
+const SMALL_CONTROL =
+  /<(?:Button|SelectTrigger|Input|TabsList|AlertDialogAction|AlertDialogCancel|Link|button|a|input|select|summary)\b(?:[^<>]|=>)*?(?:\bsize=["'](?:sm|icon-sm|xs|icon-xs)["']|(?<![\w:/[-])(?:min-h|h|size)-(?:[6-9]|10)(?![\w-]))/;
+
 export const RULES: readonly Rule[] = [
   {
     id: "A2",
@@ -244,6 +253,20 @@ export const RULES: readonly Rule[] = [
     name: "no-native-date-inputs",
     fix: "Use a registry date picker (apps/web/AGENTS.md); add components/date-picker.tsx first if none fits.",
     check: linesMatching(/type=["'](date|datetime-local)["']/, isWebProduction),
+  },
+  {
+    id: "H13",
+    name: "touch-targets-44",
+    fix: "Controls are 44 px on phone (#23): use the primitive's default size, or a desktop-only size (size=\"desktop-sm\", size=\"desktop-icon-sm\", className=\"desktop:h-9\") for a compact look on a wide screen with a mouse.",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            file.path.endsWith(".tsx") &&
+            !file.path.startsWith("apps/web/src/components/ui/"),
+        )
+        .flatMap((file) => matchFile(file, SMALL_CONTROL)),
   },
   {
     id: "H12",

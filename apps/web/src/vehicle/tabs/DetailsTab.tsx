@@ -89,7 +89,7 @@ export function DetailsTab() {
         <div className="flex justify-end">
           <Tooltip>
             <TooltipTrigger
-              render={<Button variant="outline" className="h-11" onClick={() => setBase(asset)} />}
+              render={<Button variant="outline" onClick={() => setBase(asset)} />}
             >
               <Pencil aria-hidden />
               {t("vehicle.details.edit.button")}
@@ -112,7 +112,7 @@ export function DetailsTab() {
           <p className="flex-1">{t("vehicle.details.edit.conflict")}</p>
           <Button
             variant="outline"
-            className="h-11 bg-background"
+            className="bg-background"
             onClick={() => void reload()}
           >
             <RotateCw aria-hidden />
@@ -448,7 +448,7 @@ function DetailsEditCard({
               value={typeof field.value === "string" ? field.value : ""}
               {...(options.maxLength === undefined ? {} : { maxLength: options.maxLength })}
               {...(options.numeric === true ? { inputMode: "decimal" as const } : {})}
-              className={cn("h-11 md:h-9", options.numeric === true && "md:max-w-28")}
+              className={cn("md:h-9", options.numeric === true && "md:max-w-28")}
             />
           </FormControl>
         </EditRow>
@@ -542,10 +542,10 @@ function DetailsEditCard({
               </p>
             )}
             <div className="grid grid-cols-2 gap-2 sm:flex">
-              <Button type="button" variant="outline" className="h-11" disabled={submitting} onClick={onClose}>
+              <Button type="button" variant="outline" disabled={submitting} onClick={onClose}>
                 {t("vehicle.details.edit.cancel")}
               </Button>
-              <Button type="submit" className="h-11" disabled={submitting}>
+              <Button type="submit" disabled={submitting}>
                 {submitting ? t("vehicle.details.edit.saving") : t("vehicle.details.edit.save")}
               </Button>
             </div>

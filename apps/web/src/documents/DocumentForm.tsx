@@ -147,7 +147,7 @@ export function DocumentForm({
           onValueChange={(value) => setTypeCode(value ?? "")}
           disabled={renews !== undefined || documentTypesFailed}
         >
-          <SelectTrigger className="min-h-11" id="doc-type">
+          <SelectTrigger id="doc-type">
             <SelectValue placeholder={t("assets.form.choose")} />
           </SelectTrigger>
           <SelectContent>
@@ -165,7 +165,6 @@ export function DocumentForm({
           <Label htmlFor="doc-title">{t("documents.fields.title")}</Label>
           <Input
             id="doc-title"
-            className="min-h-11"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
@@ -174,7 +173,6 @@ export function DocumentForm({
           <Label htmlFor="doc-number">{t("documents.fields.number")}</Label>
           <Input
             id="doc-number"
-            className="min-h-11"
             value={documentNumber}
             onChange={(event) => setDocumentNumber(event.target.value)}
           />
