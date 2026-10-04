@@ -3,6 +3,7 @@ import { Route as RouteIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActivityActions } from "@/activities/ActivityActions.js";
 import { CompletenessBanner } from "@/activities/CompletenessBanner.js";
+import { TripState } from "@/activities/TripState.js";
 import { ActivityAssetsPanel } from "@/activities/detail/ActivityAssetsPanel.js";
 import { ActivityLegs } from "@/activities/detail/ActivityLegs.js";
 import { ActivityMoney } from "@/activities/detail/ActivityMoney.js";
@@ -16,7 +17,6 @@ import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { ProvenanceStamp } from "@/components/provenance-stamp.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
-import { StatusBadge } from "@/components/status-badge.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 
@@ -82,9 +82,7 @@ export function ActivityDetailScreen() {
       />
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <StatusBadge tone={activity.status === "OPEN" ? "info" : "neutral"}>
-          {t(`activities.status.${activity.status}`)}
-        </StatusBadge>
+        <TripState trip={activity} />
         {/* The record stays open: identity is workspace-scoped, so the ambient
             branch is a list lens and never an access boundary. */}
         <OtherBranchNotice branchId={activity.branchId} />

@@ -7,7 +7,8 @@ import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
-import { TripState, tripRoute } from "../tabs/TripsTab.js";
+import { TripState } from "@/activities/TripState.js";
+import { tripRoute } from "../tabs/TripsTab.js";
 import { EntryStatusBadge, PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
 
 export function TripRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
@@ -71,7 +72,7 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
             [t("vehicle.trips.customer"), trip.customerName ?? t("vehicle.trips.none")],
             [t("vehicle.trips.driver"), driver ?? t("vehicle.details.notRecorded")],
             [t("vehicle.trips.started"), trip.startedAt === null ? t("vehicle.details.notRecorded") : formatDateTime(trip.startedAt, locale)],
-            [t("vehicle.trips.ended"), trip.endedAt === null ? t("vehicle.trips.stillOnRoad") : formatDateTime(trip.endedAt, locale)],
+            [t("vehicle.trips.ended"), trip.endedAt === null ? "—" : formatDateTime(trip.endedAt, locale)],
             [
               t("vehicle.trips.distance"),
               trip.distanceKm === null ? t("vehicle.trips.distanceUnknown") : t("vehicle.trips.km", { value: trip.distanceKm }),

@@ -642,8 +642,13 @@
     "branchEmptyHint": "Aucune activité pour cette agence.",
     "loadMore": "Charger plus",
     "status": {
-      "OPEN": "En cours",
+      "OPEN": "En route",
       "CLOSED": "Clôturée"
+    },
+    "state": {
+      "onTheRoad": "En route",
+      "closed": "Clôturé",
+      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
     },
     "completeness": {
       "COMPLETE": "Complète",
@@ -695,7 +700,6 @@
       "clientReference": "Réf. client",
       "endedAt": "Arrivée",
       "assets": "Engins et équipage",
-      "stillRunning": "en cours",
       "legs": "Étapes",
       "money": "Recettes et dépenses",
       "km": "{count} km",
@@ -703,7 +707,6 @@
       "overview": {
         "started": "Départ",
         "ended": "Arrivée",
-        "running": "En cours",
         "net": "Résultat",
         "postedOnly": "lignes comptabilisées seulement",
         "legs": "Étapes"
@@ -2020,19 +2023,16 @@
       "empty": "Aucune activité pour l'instant. Démarrez-en une quand le véhicule quitte le dépôt.",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les activités.",
-      "onTheRoad": "En route",
-      "closed": "Clôturé",
-      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}",
       "route": "{from} → {to}",
       "tripNumber": "Trajet {number}",
       "km": "{value, number} km",
-      "stillOpen": "toujours ouvert",
+      "startedAt": "Départ {time}",
+      "endedAt": "Arrivée {time}",
       "customer": "Client",
       "none": "Aucun",
       "driver": "Chauffeur",
       "started": "Départ",
       "ended": "Arrivée",
-      "stillOnRoad": "Toujours en route",
       "distance": "Distance",
       "distanceUnknown": "Connue à la clôture",
       "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",

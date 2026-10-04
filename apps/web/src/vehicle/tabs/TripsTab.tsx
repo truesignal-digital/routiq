@@ -1,51 +1,25 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { Route, TriangleAlert } from "lucide-react";
+import { Route } from "lucide-react";
 import type { ActivityListItem } from "@routiq/contracts";
+import { TripState } from "@/activities/TripState.js";
 import { useActivities } from "@/activities/useActivities.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
-import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
+import { formatDateTime, localizedLabel } from "@/lib/format.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { useVehicle } from "../context.js";
 import { RecordRow, RowIcon, RowMenu, Sep, TabHeader } from "../parts.js";
 import { TabAction } from "./MaintenanceTab.js";
 
-type TripFacts = Pick<
-  ActivityListItem,
-  "status" | "completeness" | "completenessCodes" | "originName" | "destinationName"
->;
+type TripFacts = Pick<ActivityListItem, "originName" | "destinationName">;
 
 /** "Douala → Bafoussam", or nothing when no leg says where it went. */
 export function tripRoute(trip: TripFacts, t: TFunction): string | null {
   if (trip.originName === null || trip.destinationName === null) return null;
   return t("vehicle.trips.route", { from: trip.originName, to: trip.destinationName });
-}
-
-export function TripState({ trip }: { trip: TripFacts }) {
-  const { t } = useTranslation();
-  if (trip.status === "OPEN") {
-    return (
-      <StatusBadge tone="info" icon={Route} className="rounded-md">
-        {t("vehicle.trips.onTheRoad")}
-      </StatusBadge>
-    );
-  }
-  if (trip.completeness === "COMPLETE_WITH_EXCEPTIONS") {
-    return (
-      <StatusBadge tone="warning" icon={TriangleAlert} className="rounded-md">
-        {t("vehicle.trips.closedWithGaps", { count: trip.completenessCodes.length })}
-      </StatusBadge>
-    );
-  }
-  return (
-    <StatusBadge tone="success" className="rounded-md">
-      {t("vehicle.trips.closed")}
-    </StatusBadge>
-  );
 }
 
 export function TripsTab() {
@@ -124,16 +98,18 @@ function TripsSection() {
                   }
                   status={<TripState trip={trip} />}
                   aside={
-                    trip.startedAt === null ? null : (
-                      <>
-                        <div>{formatDate(trip.startedAt, locale)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {trip.endedAt === null
-                            ? t("vehicle.trips.stillOpen")
-                            : formatRelativeTime(trip.endedAt, locale)}
-                        </div>
-                      </>
-                    )
+                    <>
+                      <div className="whitespace-nowrap">
+                        {t("vehicle.trips.startedAt", {
+                          time: trip.startedAt === null ? "—" : formatDateTime(trip.startedAt, locale),
+                        })}
+                      </div>
+                      <div className="whitespace-nowrap text-xs text-muted-foreground">
+                        {t("vehicle.trips.endedAt", {
+                          time: trip.endedAt === null ? "—" : formatDateTime(trip.endedAt, locale),
+                        })}
+                      </div>
+                    </>
                   }
                   menu={
                     <RowMenu
