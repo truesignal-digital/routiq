@@ -70,9 +70,9 @@ Consequences:
 - **One people screen.** "Personnel" becomes the only people screen, with an
   "Accès" column and filter. The Utilisateurs screen folds into it, and its
   access actions (role, PIN reset, remove access) move to the person page.
-- **The vehicle workspace changes.** `custodian_membership_id` becomes
-  `assigned_driver_person_id` on `feat/maintenance-on-develop` before its PRs
-  open, since it is unmerged. The `CUSTODIAN_INELIGIBLE` error becomes "not an
+- **The vehicle workspace changes.** `custodian_membership_id` (on `develop`
+  since the vehicle workspace merged) becomes `assigned_driver_person_id`
+  through a migration. The `CUSTODIAN_INELIGIBLE` error becomes "not an
   active person with the Chauffeur Fonction".
 - **Fonction values change.** They grow from DRIVER, CONDUCTOR, ASSISTANT,
   RELIEF, MECHANIC, CLERK, OTHER to include HOSTESS and CASHIER, with French

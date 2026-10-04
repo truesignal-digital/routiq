@@ -66,8 +66,10 @@ Rules that go with the roles:
   branch, money entries go to Finance, and anything above the top amount band
   goes to Direction. Direction may approve anything. The bands remain tenant
   data (Approval Chain); only these defaults change.
-- **Nobody approves a record they submitted.** No such guard was found in the
-  built commands; it is part of the change.
+- **Nobody approves a record they submitted.** Entry and work-order decisions
+  already refuse it (`MAKER_CANNOT_APPROVE`), and so does release to service
+  (`SELF_RELEASE_FORBIDDEN`). The change keeps these and covers every
+  decision command with one test.
 - **Money visibility:** Direction, Administrateur (own branches) and Finance
   read the ledger. Caissier reads the entries of their branches. Technicien
   reads only the cost lines of work orders in their branches. Chauffeur reads
