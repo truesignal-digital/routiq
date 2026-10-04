@@ -5,14 +5,25 @@ import ICU from "i18next-icu";
 import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";
+import { readStoredLanguage } from "./language.js";
 
 export const i18n: I18n = i18next.createInstance();
+
+// Registered before init: with inline resources init switches to the start
+// language synchronously, and the page lang and Zod locale must follow it.
+i18n.on("languageChanged", (lng) => {
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = lng;
+  }
+  // Zod powers client-side form validation — its messages follow the app locale.
+  z.config(lng.startsWith("en") ? z.locales.en() : z.locales.fr());
+});
 
 void i18n
   .use(ICU)
   .use(initReactI18next)
   .init({
-    lng: "fr-CM",
+    lng: readStoredLanguage(),
     fallbackLng: ["fr", "en"],
     resources: {
       // Cloned: the store keeps the object it is handed, and preset overlays
@@ -36,15 +47,6 @@ void i18n
     },
   });
 
-i18n.on("languageChanged", (lng) => {
-  if (typeof document !== "undefined") {
-    document.documentElement.lang = lng;
-  }
-  // Zod powers client-side form validation — its messages follow the app locale.
-  z.config(lng.startsWith("en") ? z.locales.en() : z.locales.fr());
-});
-
-z.config(z.locales.fr());
 // Friendly overrides for the cases users actually hit; i18n.t resolves at
 // validation time so messages follow the active language.
 z.config({ customError: makeZodErrorMap((key, options) => i18n.t(key, options ?? {})) });

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nextProvider } from "react-i18next";
 import {
@@ -13,6 +14,7 @@ import {
 import type { ModuleCode, Role } from "@routiq/contracts";
 import type { MeContext } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
+import { LANGUAGE_STORAGE_KEY } from "../i18n/language.js";
 
 const session = {
   username: "amina",
@@ -108,5 +110,26 @@ describe("MoreStub administration links", () => {
 
     expect(await screen.findByRole("link", { name: /Utilisateurs/ })).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Personnel/ })).toBeNull();
+  });
+});
+
+describe("MoreStub language", () => {
+  afterEach(async () => {
+    localStorage.clear();
+    await i18n.changeLanguage("fr-CM");
+  });
+
+  it("remembers the language picked on More for the next load", async () => {
+    renderMore(membership("OPS_MANAGER", ["CORE"]));
+
+    await userEvent.click(await screen.findByRole("button", { name: "English" }));
+
+    expect(await screen.findByRole("heading", { name: "Language" })).toBeTruthy();
+    expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("en");
+
+    await userEvent.click(screen.getByRole("button", { name: "Français" }));
+
+    expect(await screen.findByRole("heading", { name: "Langue" })).toBeTruthy();
+    expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("fr-CM");
   });
 });
