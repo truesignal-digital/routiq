@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next"
 
 import { ErrorBanner } from "@/components/error-banner.js"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { errorMessage } from "@/lib/error-message.js"
+import { useCommandLabel, type CommandLabelRef } from "@/commands/labels.js"
 import { cn } from "@/lib/utils"
 
 /**
@@ -63,8 +66,14 @@ export type CommandFormProps = CommandFormChrome & {
   approval?: CommandFormCopy | undefined
   /** What "Refresh" does after a conflict. Defaults to dismissing the form. */
   onReload?: (() => void | Promise<void>) | undefined
-  submitLabel: string
-  submittingLabel?: string | undefined
+  /**
+   * The command this form sends. Its submit, pending and dismiss words come
+   * from `commands.<name>` in the catalog, the same words every menu uses.
+   */
+  command: CommandLabelRef
+  /** Refusals and cancellations: the submit takes the destructive variant. */
+  tone?: "default" | "destructive" | undefined
+  /** When dismissing means something other than going back, e.g. "Close" once part of the work is saved. */
   cancelLabel?: string | undefined
   /** A page form with nowhere to go back to has no cancel button. */
   hideCancel?: boolean | undefined
@@ -171,6 +180,7 @@ function CommandFormPanel(props: CommandFormProps) {
 /** The part every surface shares: the form, or the outcome that replaced it. */
 function CommandFormBody(props: CommandFormProps) {
   const { t, i18n } = useTranslation()
+  const label = useCommandLabel()
   const formId = useId()
   const { surface, error, ready, submitting, onSubmit, onDismiss } = props
   const outcome = outcomeOf(error)
@@ -248,13 +258,12 @@ function CommandFormBody(props: CommandFormProps) {
     <Button
       key="submit"
       type="submit"
+      variant={props.tone === "destructive" ? "destructive" : "default"}
       form={formId}
       className={surface === "page" ? "min-h-11 flex-1" : "min-h-11 flex-1 sm:flex-none"}
       disabled={!ready || submitting}
     >
-      {submitting
-        ? (props.submittingLabel ?? t("commandForm.submitting"))
-        : props.submitLabel}
+      {label(props.command, submitting ? "submitting" : "submit")}
     </Button>
   )
   const cancel = props.hideCancel ? null : (
@@ -265,7 +274,7 @@ function CommandFormBody(props: CommandFormProps) {
       className={surface === "page" ? "min-h-11" : "min-h-11 flex-1 sm:flex-none"}
       onClick={onDismiss}
     >
-      {props.cancelLabel ?? t("commandForm.cancel")}
+      {props.cancelLabel ?? label(props.command, "dismiss")}
     </Button>
   )
 
@@ -301,11 +310,8 @@ function CommandFormBody(props: CommandFormProps) {
           ))}
         {props.children}
       </div>
-      {/* Dialogs keep cancel first so it lands under the submit on a phone;
-          panels lead with the step itself, as the record footer does. */}
-      <Footer surface={surface}>
-        {surface === "dialog" ? [cancel, submit] : [submit, cancel]}
-      </Footer>
+      {/* Submit is last on every surface, desktop and phone. */}
+      <Footer surface={surface}>{[cancel, submit]}</Footer>
     </form>
   )
 }
@@ -329,7 +335,9 @@ function Footer({
   surface: CommandSurface
   children: ReactNode
 }) {
-  if (surface === "dialog") return <DialogFooter>{children}</DialogFooter>
+  if (surface === "dialog") {
+    return <DialogFooter className="flex-row justify-end">{children}</DialogFooter>
+  }
   if (surface === "page") return <div className="flex gap-2">{children}</div>
   return (
     <SheetFooter className="sticky bottom-0 z-20 flex-row gap-2 border-t bg-popover">
@@ -355,6 +363,44 @@ export function PinnedField({
       <p className="rounded-md bg-muted px-3 py-2 text-sm whitespace-pre-line">
         {children}
       </p>
+    </div>
+  )
+}
+
+/**
+ * The reason a refusal or a cancellation must give: marked required, and
+ * capped where every such command's contract caps it.
+ */
+export function ReasonField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string | undefined
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>
+        {label}
+        <span aria-hidden className="text-destructive">
+          *
+        </span>
+      </Label>
+      <Textarea
+        id={id}
+        required
+        aria-required
+        maxLength={500}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </div>
   )
 }

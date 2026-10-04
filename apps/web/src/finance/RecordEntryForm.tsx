@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { CommandResult, FinancialEntryDetail } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import {
   CommandForm,
@@ -147,6 +148,7 @@ export function RecordEntryForm({
   editing,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const [entryId] = useState(() => editing?.id ?? crypto.randomUUID());
   // Created on first submit, not on render: cancelling opens no intent.
   const intentExpenseRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
@@ -335,9 +337,7 @@ export function RecordEntryForm({
     ? t("finance.edit.title", { number: editing.entryNumber })
     : !lockDirection
     ? t("finance.record.title")
-    : direction === "EXPENSE"
-      ? t("finance.record.expenseTitle")
-      : t("finance.record.revenueTitle");
+    : label(direction === "EXPENSE" ? "record-expense" : "record-revenue");
   const chrome =
     surface === "page"
       ? { surface, hideCancel: true, className: "mt-6" }
@@ -357,10 +357,13 @@ export function RecordEntryForm({
                 body: t("finance.edit.decidedBody"),
               },
             })}
-        submitLabel={t(editing === undefined ? "finance.record.submit" : "finance.edit.submit")}
-        submittingLabel={t(
-          editing === undefined ? "finance.record.submitting" : "finance.edit.submitting",
-        )}
+        command={
+          editing !== undefined
+            ? "update-pending-entry"
+            : direction === "EXPENSE"
+              ? "record-expense"
+              : "record-revenue"
+        }
         ready={isValid && !attachmentsUploading}
         submitting={form.formState.isSubmitting}
         onSubmit={() => void form.handleSubmit(onValid)()}

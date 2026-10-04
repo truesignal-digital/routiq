@@ -21,12 +21,10 @@
     },
     "title": "Vos camions",
     "subtitle": "Suivez chaque camion, de son enregistrement à sa mise hors service.",
-    "register": "Nouveau camion",
     "searchLabel": "Rechercher dans les camions",
     "filterLabel": "Filtrer les camions",
     "emptyTitle": "Enregistrez votre premier camion",
     "emptyHint": "Ajoutez un camion ou une remorque. Son historique fiable se construira dès le premier jour.",
-    "emptyAction": "Enregistrer un camion",
     "loading": "Chargement des camions…",
     "noResultsTitle": "Aucun camion trouvé",
     "branchEmptyHint": "Aucun camion n'est rattaché à cette agence.",
@@ -41,9 +39,7 @@
       }
     },
     "form": {
-      "title": "Enregistrer un camion",
-      "assetCode": "Code du camion",
-      "submit": "Enregistrer le camion"
+      "assetCode": "Code du camion"
     },
     "actions": {
       "commissionHint": "Met le camion en service. Son historique d'exploitation démarre ici.",
@@ -96,8 +92,6 @@
       }
     },
     "actions": {
-      "closeTitle": "Clôturer le trajet",
-      "reopenTitle": "Rouvrir le trajet",
       "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",
       "addLegHint": "Étape n° {legNo} de ce trajet.",
       "addExpenseTitle": "Dépense du trajet",
@@ -175,6 +169,23 @@
       "filters": {
         "TRIPS": "Trajets"
       }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Enregistrer un camion",
+      "submit": "Enregistrer le camion"
+    },
+    "close-activity": {
+      "label": "Clôturer le trajet",
+      "submit": "Clôturer le trajet"
+    },
+    "reopen-activity": {
+      "label": "Rouvrir le trajet",
+      "submit": "Rouvrir le trajet"
+    },
+    "record-journey-sheet": {
+      "short": "Trajet"
     }
   }
 }

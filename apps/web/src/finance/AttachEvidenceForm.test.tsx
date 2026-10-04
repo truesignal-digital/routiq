@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
@@ -60,7 +60,10 @@ describe("AttachEvidenceForm", () => {
         />
       </QueryClientProvider>,
     );
-    const attach = screen.getByRole("button", { name: "Attach" });
+    expect(screen.getByRole("dialog", { name: "Attach receipt" })).toBeTruthy();
+    const attach = screen.getByRole("button", { name: "Attach the receipt" });
+    expect(within(attach.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Cancel", "Attach the receipt"]);
     expect((attach as HTMLButtonElement).disabled).toBe(true);
     await user.click(screen.getByRole("button", { name: "pick a file" }));
     await user.click(attach);

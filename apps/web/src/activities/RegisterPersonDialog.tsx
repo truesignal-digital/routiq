@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { registerPersonPayload } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,6 +77,7 @@ export function RegisterPersonDialog({
   client = commandClient,
 }: RegisterPersonDialogProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const [personId, setPersonId] = useState(() => crypto.randomUUID());
@@ -143,7 +145,7 @@ export function RegisterPersonDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("activities.registerPerson.title")}</DialogTitle>
+          <DialogTitle>{label("register-person")}</DialogTitle>
           <DialogDescription>
             {t("activities.registerPerson.description")}
           </DialogDescription>
@@ -231,7 +233,7 @@ export function RegisterPersonDialog({
                 className="min-h-11"
                 onClick={() => onOpenChange(false)}
               >
-                {t("activities.registerPerson.cancel")}
+                {t("commandForm.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -239,8 +241,8 @@ export function RegisterPersonDialog({
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("activities.registerPerson.submitting")
-                  : t("activities.registerPerson.submit")}
+                  ? label("register-person", "submitting")
+                  : label("register-person", "submit")}
               </Button>
             </DialogFooter>
           </form>

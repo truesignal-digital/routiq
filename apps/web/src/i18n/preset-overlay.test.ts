@@ -195,7 +195,7 @@ describe("applyPresetVocabulary", () => {
     applyPresetVocabulary(instance, undefined);
 
     expect(instance.t("nav.assets")).toBe("Actifs");
-    expect(instance.t("assets.form.submit")).toBe("Enregistrer l'actif");
+    expect(instance.t("commands.register-asset.submit")).toBe("Enregistrer l'actif");
   });
 
   it("survives a language switch", async () => {

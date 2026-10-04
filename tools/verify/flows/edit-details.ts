@@ -17,12 +17,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await page.waitForURL((url) => url.pathname.endsWith("/details"));
   await quiet();
 
-  await page.getByRole("button", { name: t("Modifier", "Edit details"), exact: true }).click();
+  await page.getByRole("button", { name: t("Modifier les informations", "Edit details"), exact: true }).click();
   await page.getByLabel(t("Marque", "Make"), { exact: true }).fill("Mercedes-Benz");
   await page.getByLabel(t("Modèle", "Model"), { exact: true }).fill("Actros 2640");
   await shot("details-editing");
-  await page.getByRole("button", { name: t("Enregistrer", "Save"), exact: true }).click();
-  await page.getByRole("button", { name: t("Modifier", "Edit details"), exact: true }).waitFor();
+  await page.getByRole("button", { name: t("Enregistrer les informations", "Save details"), exact: true }).click();
+  await page.getByRole("button", { name: t("Modifier les informations", "Edit details"), exact: true }).waitFor();
   await quiet();
   await shot("details-saved");
 

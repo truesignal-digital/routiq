@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { AssetListItem } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import {
   DataTable,
   DataTableViewOptions,
@@ -27,6 +28,7 @@ import { deniedCode, PermissionDenied } from "@/components/permission-denied.js"
 import { useMeContext } from "@/auth/me.js";
 import {
   AssetActionDialog,
+  ASSET_ACTION_COMMANDS,
   assetActions,
   type AssetActionKey,
 } from "@/assets/AssetActions.js";
@@ -59,6 +61,7 @@ const STATUS_OPTIONS = ["IN_SERVICE", "ATTENTION"] as const;
 
 export function AssetsStub() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
   const canView = canViewAssets(me?.enabledModules);
@@ -180,7 +183,7 @@ export function AssetsStub() {
               className="hidden min-h-11 shrink-0 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:inline-flex"
             >
               <Plus className="size-4" aria-hidden />
-              {t("assets.register")}
+              {label("register-asset")}
             </Link>
           ) : undefined
         }
@@ -274,7 +277,7 @@ export function AssetsStub() {
               )) {
                 actions.push({
                   key: action,
-                  label: t(`assets.actions.${action}`),
+                  label: label(ASSET_ACTION_COMMANDS[action]),
                   icon: action === "commission" ? PlayCircle : ArrowLeftRight,
                   onSelect: () => setPending({ asset, action }),
                 });
@@ -334,7 +337,7 @@ export function AssetsStub() {
                       ? {
                           label: (
                             <span className="flex items-center gap-2">
-                              {t("assets.emptyAction")}
+                              {label("register-asset")}
                               <ArrowRight className="size-4" aria-hidden />
                             </span>
                           ),
@@ -360,7 +363,7 @@ export function AssetsStub() {
       {canManage && (
         <Link
           to="/assets/new"
-          aria-label={t("assets.register")}
+          aria-label={label("register-asset")}
           className="fixed right-4 bottom-6 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-lg transition active:scale-95 sm:hidden"
         >
           <Plus className="size-6" aria-hidden />

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import type { CreateBranchPayload } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export function CreateBranchDialog({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const invalidateBranches = useInvalidateBranches();
   const [branchId, setBranchId] = useState(() => crypto.randomUUID());
   const [errorCode, setErrorCode] = useState<string>();
@@ -152,7 +154,7 @@ export function CreateBranchDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("branches.add.title")}</DialogTitle>
+          <DialogTitle>{label("create-branch")}</DialogTitle>
           <DialogDescription>{t("branches.add.description")}</DialogDescription>
         </DialogHeader>
 
@@ -248,8 +250,8 @@ export function CreateBranchDialog({
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("branches.form.submitting")
-                  : t("branches.add.submit")}
+                  ? label("create-branch", "submitting")
+                  : label("create-branch", "submit")}
               </Button>
             </DialogFooter>
           </form>

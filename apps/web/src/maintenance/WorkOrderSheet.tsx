@@ -21,6 +21,7 @@ import type {
   WorkOrderRef,
 } from "./MaintenanceDialogs.js";
 import { useWorkOrder } from "./useMaintenance.js";
+import { useCommandLabel } from "../commands/labels.js";
 
 export interface WorkOrderSheetPermissions {
   manage: boolean;
@@ -164,7 +165,7 @@ function SheetActions({
   assetUnavailable: boolean;
   onAction: (dialog: MaintenanceDialog) => void;
 }) {
-  const { t } = useTranslation();
+  const label = useCommandLabel();
   const workOrder: WorkOrderRef = {
     id: detail.id,
     assetId: detail.asset.id,
@@ -178,7 +179,7 @@ function SheetActions({
     key: string,
     label: string,
     dialog: MaintenanceDialog,
-    variant: "default" | "outline" = "default",
+    variant: "default" | "outline" | "destructive" = "default",
   ) =>
     buttons.push(
       <Button
@@ -194,30 +195,30 @@ function SheetActions({
   const decide = (
     decision: WorkOrderDecision,
     label: string,
-    variant: "default" | "outline" = "default",
+    variant: "default" | "outline" | "destructive" = "default",
   ) => action(decision, label, { kind: "decide-work-order", decision, workOrder }, variant);
 
   switch (detail.status) {
     case "SUBMITTED":
       if (permissions.approve) {
-        decide("approve", t("maintenance.actions.approve"));
-        decide("reject", t("maintenance.actions.reject"), "outline");
+        decide("approve", label("approve-work-order"));
+        decide("reject", label("reject-work-order"), "destructive");
       }
       break;
     case "APPROVED":
       if (permissions.manage) {
-        action("complete", t("maintenance.actions.complete"), { kind: "complete", workOrder });
+        action("complete", label("complete-work-order"), { kind: "complete", workOrder });
       }
       break;
     case "COMPLETION_SUBMITTED":
       if (permissions.approve) {
-        decide("approve-completion", t("maintenance.actions.approveCompletion"));
-        decide("reject-completion", t("maintenance.actions.rejectCompletion"), "outline");
+        decide("approve-completion", label("approve-work-order-closure"));
+        decide("reject-completion", label("reject-work-order-completion"), "destructive");
       }
       break;
     case "COMPLETED":
       if (permissions.release && assetUnavailable) {
-        action("release", t("maintenance.actions.release"), { kind: "release", workOrder });
+        action("release", label("release-asset-to-service"), { kind: "release", workOrder });
       }
       break;
     case "REJECTED":
@@ -233,9 +234,9 @@ function SheetActions({
   ) {
     action(
       "cancel",
-      t("maintenance.actions.cancelWorkOrder"),
+      label("cancel-work-order"),
       { kind: "cancel", workOrder },
-      "outline",
+      "destructive",
     );
   }
 

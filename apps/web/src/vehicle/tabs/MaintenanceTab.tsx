@@ -14,20 +14,20 @@ import { actionDef } from "../actions.js";
 import { useVehicle } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps, workOrderSteps } from "../flow.js";
 import { recordReference, type VehicleActionKey } from "../model.js";
-import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader } from "../parts.js";
+import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader, useStepLabel } from "../parts.js";
 import { IssueStatusBadge, useIssueCategoryLabel } from "../panel/IssueRecord.js";
 import { WorkOrderStatusBadge } from "../panel/shared.js";
 
 /** The one primary button a tab carries; it starts the action the way the catalogue says. */
 export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
-  const { t } = useTranslation();
+  const stepLabel = useStepLabel();
   const { can, availability, runAction } = useVehicle();
   if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
   const Icon = actionDef(actionKey).icon;
   return (
     <Button className="h-10 self-start sm:h-9 sm:self-auto" onClick={() => runAction(actionKey)}>
       <Icon aria-hidden />
-      {t(`vehicle.actions.${actionKey}.label`)}
+      {stepLabel({ key: actionKey })}
     </Button>
   );
 }

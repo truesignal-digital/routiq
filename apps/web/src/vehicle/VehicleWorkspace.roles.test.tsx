@@ -57,7 +57,7 @@ describe("the status sentence and the step beside it, per role", () => {
     { role: "ADMIN", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed first.` } },
     { role: "OPS_MANAGER", locked: { button: "Release to service", reason: `Needs ${WO_REF} completed first.` } },
     { role: "MAINTENANCE", button: "Complete work" },
-    { role: "FINANCE_APPROVER", caption: new RegExp(`Sign off · Needs ${WO_REF} completed first\\.`) },
+    { role: "FINANCE_APPROVER", caption: new RegExp(`Sign off the work · Needs ${WO_REF} completed first\\.`) },
     { role: "FIELD_SUBMITTER", doNotDrive: true },
     { role: "EXECUTIVE_VIEWER" },
   ];

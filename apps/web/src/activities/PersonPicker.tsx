@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ export function PersonPicker({
   client,
 }: PersonPickerProps) {
   const { t } = useTranslation();
+  const commandLabel = useCommandLabel();
   const [open, setOpen] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [search, setSearch] = useState("");
@@ -159,7 +161,7 @@ export function PersonPicker({
             }}
           >
             <Plus className="size-4" aria-hidden />
-            {t("activities.pickers.person.new")}
+            {commandLabel("register-person")}
           </Button>
         </PopoverContent>
       </Popover>

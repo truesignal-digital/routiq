@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { FilePlus2, Maximize2, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/date-range-picker";
 import {
@@ -48,6 +49,7 @@ const DEFAULT_SORTING: SortingState = [{ id: "startedAt", desc: true }];
 
 export function ActivitiesScreen() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
@@ -176,7 +178,7 @@ export function ActivitiesScreen() {
               onClick={() => void navigate({ to: "/activities/record" })}
             >
               <FilePlus2 className="size-4" aria-hidden />
-              {t("activities.record.title")}
+              {label("record-journey-sheet")}
             </Button>
           ) : undefined
         }

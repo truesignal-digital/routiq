@@ -20,11 +20,9 @@
       }
     },
     "title": "Your vehicles",
-    "register": "New vehicle",
     "searchLabel": "Search vehicles",
     "filterLabel": "Filter vehicles",
     "emptyHint": "Add a bus or a minibus. Its trustworthy history starts building from day one.",
-    "emptyAction": "Register a vehicle",
     "loading": "Loading vehicles…",
     "noResultsTitle": "No vehicles found",
     "branchEmptyHint": "No vehicle is attached to this branch.",
@@ -39,9 +37,7 @@
       }
     },
     "form": {
-      "title": "Register a vehicle",
-      "assetCode": "Vehicle code",
-      "submit": "Register vehicle"
+      "assetCode": "Vehicle code"
     },
     "actions": {
       "commissionHint": "Puts the vehicle into service. Its operating history starts counting from here.",
@@ -94,8 +90,6 @@
       }
     },
     "actions": {
-      "closeTitle": "Close the trip",
-      "reopenTitle": "Reopen the trip",
       "reasonPlaceholder": "Why reopen this trip?",
       "addLegHint": "Leg no. {legNo} of this trip.",
       "addExpenseTitle": "Expense on this trip",
@@ -167,6 +161,23 @@
       "filters": {
         "TRIPS": "Trips"
       }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Register a vehicle",
+      "submit": "Register vehicle"
+    },
+    "close-activity": {
+      "label": "Close the trip",
+      "submit": "Close the trip"
+    },
+    "reopen-activity": {
+      "label": "Reopen the trip",
+      "submit": "Reopen the trip"
+    },
+    "record-journey-sheet": {
+      "short": "Trip"
     }
   }
 }

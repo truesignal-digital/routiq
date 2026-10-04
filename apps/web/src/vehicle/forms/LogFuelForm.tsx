@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { z } from "zod";
 import type { CommandResult, recordMeterReadingPayload } from "@routiq/contracts";
 import {
@@ -70,6 +71,7 @@ export function LogFuelForm({
   onDismiss,
 }: LogFuelFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
 
@@ -210,13 +212,11 @@ export function LogFuelForm({
   return (
     <CommandForm
       surface={surface}
-      title={t("vehicle.forms.fuel.title")}
+      title={label({ command: "record-expense", intent: "fuel" })}
       description={t("vehicle.forms.fuel.description")}
       back={back}
       error={expenseError}
-      submitLabel={
-        expenseLocked ? t("vehicle.forms.fuel.retryReading") : t("vehicle.forms.fuel.submit")
-      }
+      command={expenseLocked ? "record-meter-reading" : { command: "record-expense", intent: "fuel" }}
       cancelLabel={expenseLocked ? t("commandForm.close") : undefined}
       ready={ready}
       submitting={submitting}

@@ -161,7 +161,7 @@ function renderForm(client: CommandClient, viewer: MeContext = me("OPS_MANAGER")
   return { panel: screen.getByRole("dialog"), onDismiss };
 }
 
-const submitButton = (panel: HTMLElement) => within(panel).getByRole("button", { name: "Declare complete" });
+const submitButton = (panel: HTMLElement) => within(panel).getByRole("button", { name: "Complete work" });
 
 beforeAll(async () => {
   await i18n.changeLanguage("en");

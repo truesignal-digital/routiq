@@ -6,7 +6,7 @@ import {
   recordMeterReadingPayload,
   recordMovementLegPayload,
 } from "@routiq/contracts";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterAll,
@@ -314,9 +314,9 @@ describe("offset stamping", () => {
 describe("role and status gating", () => {
   it("FIELD_SUBMITTER may close and substitute an open job but never reopen a closed one", () => {
     renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
-    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Close the activity" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Substitute asset" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Reopen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reopen the activity" })).toBeNull();
 
     cleanup();
     renderActions(closedActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
@@ -325,8 +325,8 @@ describe("role and status gating", () => {
 
   it("OPS_MANAGER gets reopen on a closed job, and nothing else", () => {
     renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
-    expect(screen.getByRole("button", { name: "Reopen" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Reopen the activity" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Close the activity" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
   });
 
@@ -346,7 +346,7 @@ describe("role and status gating", () => {
       },
       recordingClient(committed()),
     );
-    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Close the activity" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
   });
 });
@@ -357,15 +357,18 @@ describe("close", () => {
     const client = recordingClient(committed());
     renderActions(openActivity, client);
 
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    const submit = screen.getByRole("button", { name: "Confirm closing" });
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
+    const dialog = screen.getByRole("dialog", { name: "Close the activity" });
+    const submit = within(dialog).getByRole("button", { name: "Close the activity" });
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Cancel", "Close the activity"]);
     expect((submit as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.change(screen.getByLabelText("End date and time"), {
       target: { value: "2026-07-21T18:30" },
     });
     await user.type(screen.getByLabelText("Note (optional)"), "Client signed off");
-    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
 
     await waitFor(() => expect(client.seen.length).toBe(1));
     const submission = client.seen[0]!;
@@ -382,9 +385,9 @@ describe("close", () => {
     const client = recordingClient(committed());
     renderActions({ ...openActivity, endedAt: "2026-07-21T09:00:00.000Z" }, client);
 
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
     expect(screen.getByLabelText("End date and time (optional)")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
 
     await waitFor(() => expect(client.seen.length).toBe(1));
     expect(client.seen[0]!.payload).toEqual({ activityId: ACTIVITY_ID });
@@ -397,8 +400,8 @@ describe("close", () => {
       recordingClient(committed(["ACTIVITY_NO_LEGS", "ACTIVITY_NO_REVENUE"])),
     );
 
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -421,8 +424,8 @@ describe("close", () => {
       queryClient,
     );
 
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
 
     await waitFor(() =>
       expect(queryClient.getQueryState(DETAIL_KEY)?.isInvalidated).toBe(true),
@@ -436,8 +439,8 @@ describe("close", () => {
       recordingClient({ ok: false, code: "ACTIVITY_CLOSE_BLOCKED" }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    await user.click(screen.getByRole("button", { name: "Confirm closing" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
+    await user.click(screen.getByRole("button", { name: "Close the activity" }));
 
     await waitFor(() =>
       expect(
@@ -446,7 +449,7 @@ describe("close", () => {
         ),
       ).toBeTruthy(),
     );
-    expect(screen.getByRole("button", { name: "Confirm closing" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Close the activity" })).toBeTruthy();
     expect(mocks.toastAdd).not.toHaveBeenCalled();
   });
 });
@@ -457,20 +460,20 @@ describe("reopen", () => {
     const client = recordingClient(committed());
     renderActions(closedActivity, client, meWith("OPS_MANAGER"));
 
-    await user.click(screen.getByRole("button", { name: "Reopen" }));
-    const submit = screen.getByRole("button", { name: "Confirm reopening" });
+    await user.click(screen.getByRole("button", { name: "Reopen the activity" }));
+    const submit = screen.getByRole("button", { name: "Reopen the activity" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
 
     const reason = screen.getByLabelText("Reason");
     await user.type(reason, "   ");
     expect(
-      (screen.getByRole("button", { name: "Confirm reopening" }) as HTMLButtonElement)
+      (screen.getByRole("button", { name: "Reopen the activity" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
 
     await user.clear(reason);
     await user.type(reason, "  Waybill arrived late  ");
-    await user.click(screen.getByRole("button", { name: "Confirm reopening" }));
+    await user.click(screen.getByRole("button", { name: "Reopen the activity" }));
 
     await waitFor(() => expect(client.seen.length).toBe(1));
     const submission = client.seen[0]!;
@@ -502,7 +505,7 @@ describe("substitute", () => {
       target: { value: "2026-07-20T14:00" },
     });
     await user.type(screen.getByLabelText("Outgoing meter reading (optional)"), "412880");
-    await user.click(screen.getByRole("button", { name: "Confirm substitution" }));
+    await user.click(screen.getByRole("button", { name: "Substitute asset" }));
 
     await waitFor(() => expect(client.seen.length).toBe(1));
     const submission = client.seen[0]!;
@@ -560,7 +563,7 @@ describe("substitute", () => {
 
     await user.click(screen.getByRole("button", { name: "Substitute asset" }));
     const submit = () =>
-      screen.getByRole("button", { name: "Confirm substitution" }) as HTMLButtonElement;
+      screen.getByRole("button", { name: "Substitute asset" }) as HTMLButtonElement;
     expect(submit().disabled).toBe(true);
 
     await openSelect(user, screen.getByLabelText("Replacement asset"));
@@ -613,14 +616,14 @@ describe("mid-trip capture", () => {
 
   it("offers the three capture actions only while the job is open and writable", () => {
     renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
-    expect(screen.getByRole("button", { name: "Add leg" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Record reading" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add a leg" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Record odometer" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Record expense" })).toBeTruthy();
 
     cleanup();
     renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
-    expect(screen.queryByRole("button", { name: "Add leg" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Record reading" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add a leg" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record odometer" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record expense" })).toBeNull();
   });
 
@@ -629,7 +632,7 @@ describe("mid-trip capture", () => {
     const client = recordingClient(committed());
     renderActions(withLegs, client);
 
-    await user.click(screen.getByRole("button", { name: "Add leg" }));
+    await user.click(screen.getByRole("button", { name: "Add a leg" }));
     const submit = () =>
       screen.getByRole("button", { name: "Record the leg" }) as HTMLButtonElement;
     expect(submit().disabled).toBe(true);
@@ -682,7 +685,7 @@ describe("mid-trip capture", () => {
     const client = recordingClient(committed(["METER_READING_DECREASED"]));
     renderActions(openActivity, client);
 
-    await user.click(screen.getByRole("button", { name: "Record reading" }));
+    await user.click(screen.getByRole("button", { name: "Record odometer" }));
     const submit = () =>
       screen.getByRole("button", { name: "Record the reading" }) as HTMLButtonElement;
     expect(submit().disabled).toBe(true);

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel, type CommandLabelRef } from "@/commands/labels.js";
 import type {
   BranchListItem,
   RenameBranchPayload,
@@ -23,6 +24,13 @@ import { useInvalidateBranches } from "./useBranches.js";
 import { BRANCH_NAME_MAX_LENGTH, branchNameProblem } from "./validation.js";
 
 export type BranchActionKey = "rename" | "deactivate" | "reactivate";
+
+/** The command each action sends, whose words name it on the menu and in the dialog. */
+export const BRANCH_ACTION_COMMANDS: Record<BranchActionKey, CommandLabelRef> = {
+  rename: "rename-branch",
+  deactivate: { command: "set-branch-status", intent: "deactivate" },
+  reactivate: { command: "set-branch-status", intent: "reactivate" },
+};
 
 /**
  * Which actions a branch's row offers. An inactive branch has exactly one way
@@ -56,6 +64,7 @@ export function BranchActionDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const invalidateBranches = useInvalidateBranches();
 
   const [outcome, setOutcome] = useState<Outcome>({ kind: "form" });
@@ -145,7 +154,7 @@ export function BranchActionDialog({
     <Dialog open onOpenChange={(open) => !open && onDismiss()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t(`branches.actions.${action}`)}</DialogTitle>
+          <DialogTitle>{label(BRANCH_ACTION_COMMANDS[action])}</DialogTitle>
           <DialogDescription>
             {t(`branches.actions.${action}Hint`, { name: branch.name })}
           </DialogDescription>
@@ -224,8 +233,8 @@ export function BranchActionDialog({
                 onClick={() => void submit()}
               >
                 {submitting
-                  ? t("branches.form.submitting")
-                  : t(`branches.actions.${action}Confirm`)}
+                  ? label(BRANCH_ACTION_COMMANDS[action], "submitting")
+                  : label(BRANCH_ACTION_COMMANDS[action], "submit")}
               </Button>
             </DialogFooter>
           </>

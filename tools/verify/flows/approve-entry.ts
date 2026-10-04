@@ -19,11 +19,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("approvals-queue");
 
   await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
-  await page.getByRole("menuitem", { name: t("Approuver", "Approve") }).click();
+  await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
   const dialog = page.getByRole("dialog");
   await dialog.waitFor();
   await shot("approve-dialog");
-  await dialog.getByRole("button", { name: t("Approuver", "Approve"), exact: true }).click();
+  await dialog.getByRole("button", { name: t("Approuver l'écriture", "Approve entry"), exact: true }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await quiet();
   await shot("approved");

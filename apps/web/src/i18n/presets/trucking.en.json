@@ -21,12 +21,10 @@
     },
     "title": "Your trucks",
     "subtitle": "Track every truck from registration through retirement.",
-    "register": "New truck",
     "searchLabel": "Search trucks",
     "filterLabel": "Filter trucks",
     "emptyTitle": "Register your first truck",
     "emptyHint": "Add a truck or a trailer. Its trustworthy history starts building from day one.",
-    "emptyAction": "Register a truck",
     "loading": "Loading trucks…",
     "noResultsTitle": "No trucks found",
     "branchEmptyHint": "No truck is attached to this branch.",
@@ -41,9 +39,7 @@
       }
     },
     "form": {
-      "title": "Register a truck",
-      "assetCode": "Truck code",
-      "submit": "Register truck"
+      "assetCode": "Truck code"
     },
     "actions": {
       "commissionHint": "Puts the truck into service. Its operating history starts counting from here.",
@@ -96,8 +92,6 @@
       }
     },
     "actions": {
-      "closeTitle": "Close the trip",
-      "reopenTitle": "Reopen the trip",
       "reasonPlaceholder": "Why reopen this trip?",
       "addLegHint": "Leg no. {legNo} of this trip.",
       "addExpenseTitle": "Expense on this trip",
@@ -175,6 +169,23 @@
       "filters": {
         "TRIPS": "Trips"
       }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Register a truck",
+      "submit": "Register truck"
+    },
+    "close-activity": {
+      "label": "Close the trip",
+      "submit": "Close the trip"
+    },
+    "reopen-activity": {
+      "label": "Reopen the trip",
+      "submit": "Reopen the trip"
+    },
+    "record-journey-sheet": {
+      "short": "Trip"
     }
   }
 }

@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { ROLES, type AddMemberPayload, type MemberBranchScope } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export function AddMemberDialog({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const [principalId, setPrincipalId] = useState(() => crypto.randomUUID());
@@ -153,7 +155,7 @@ export function AddMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("users.add.title")}</DialogTitle>
+          <DialogTitle>{label("add-member")}</DialogTitle>
           <DialogDescription>{t("users.add.description")}</DialogDescription>
         </DialogHeader>
 
@@ -287,8 +289,8 @@ export function AddMemberDialog({
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("users.form.submitting")
-                  : t("users.add.submit")}
+                  ? label("add-member", "submitting")
+                  : label("add-member", "submit")}
               </Button>
             </DialogFooter>
           </form>
