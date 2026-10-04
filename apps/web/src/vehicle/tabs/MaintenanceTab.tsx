@@ -176,6 +176,15 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
   const over =
     wo.actualCostMinor !== null && wo.expectedCostMinor !== null && wo.expectedCostMinor > 0 &&
     wo.actualCostMinor > wo.expectedCostMinor;
+  // A close that recorded nothing says why, the way the order's panel does; never a derived 0.
+  const closedWithoutCost =
+    wo.actualCostMinor === 0
+      ? wo.costOutcome === "INVOICE_PENDING"
+        ? t("vehicle.panel.invoicePending")
+        : wo.costOutcome === "NO_COST"
+          ? t("vehicle.panel.noCost")
+          : null
+      : null;
   const offered = [
     ...steps.offered.filter((s) => s.lock === undefined),
     ...(steps.primary.kind === "locked" ? [{ step: steps.primary.step, lock: steps.primary.lock }] : []),
@@ -214,11 +223,13 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       aside={
         <>
           <div className={cn(!active && "text-muted-foreground")}>
-            {wo.actualCostMinor !== null
-              ? money(wo.actualCostMinor)
-              : wo.expectedCostMinor !== null
-                ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
-                : t("vehicle.maintenance.noEstimate")}
+            {closedWithoutCost !== null
+              ? closedWithoutCost
+              : wo.actualCostMinor !== null
+                ? money(wo.actualCostMinor)
+                : wo.expectedCostMinor !== null
+                  ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
+                  : t("vehicle.maintenance.noEstimate")}
             {over && wo.expectedCostMinor !== null && wo.actualCostMinor !== null && (
               <span className="ml-1 text-xs font-medium text-warning-foreground">
                 {t("vehicle.maintenance.overBudget", {

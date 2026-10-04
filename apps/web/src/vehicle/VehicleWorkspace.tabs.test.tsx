@@ -259,6 +259,45 @@ describe("Maintenance and Trips", () => {
     expect(await screen.findByText("Bodywork")).toBeTruthy();
   });
 
+  it("says what a closed order's cost is instead of inventing a zero (#131)", async () => {
+    const done = (id: string, description: string, overrides: Parameters<typeof workOrderRow>[1]) =>
+      workOrderRow("COMPLETED", {
+        id,
+        description,
+        issue: null,
+        completedAt: "2026-09-30T10:00:00.000Z",
+        ...overrides,
+      });
+    await openVehicle(`/assets/${ASSET_ID}/maintenance`, {
+      role: "MAINTENANCE",
+      workOrders: [
+        done("00000000-0000-4000-8000-00000000d101", "Weld the rear mudguard bracket", {
+          costOutcome: "INVOICE_PENDING",
+          actualCostMinor: 0,
+        }),
+        done("00000000-0000-4000-8000-00000000d102", "Replace the right rear tyre valve", {
+          costOutcome: "NO_COST",
+          actualCostMinor: 0,
+        }),
+        done("00000000-0000-4000-8000-00000000d103", "Recharge the A/C", {
+          costOutcome: "LINES",
+          actualCostMinor: 55_000,
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /^Done/ }));
+    const row = (description: string) => {
+      const item = screen.getByText(description).closest("li");
+      if (item === null) throw new Error(`no row for ${description}`);
+      return within(item);
+    };
+    expect(row("Weld the rear mudguard bracket").getByText("Invoice not received yet")).toBeTruthy();
+    expect(row("Replace the right rear tyre valve").getByText("No cost")).toBeTruthy();
+    expect(row("Recharge the A/C").getByText(/55,000/)).toBeTruthy();
+    expect(screen.queryByText(/FCFA\s0$/)).toBeNull();
+  });
+
   it("gives each trip one state and shows its start and end as times (#94)", async () => {
     await openVehicle(`/assets/${ASSET_ID}/trips`, {
       role: "OPS_MANAGER",
