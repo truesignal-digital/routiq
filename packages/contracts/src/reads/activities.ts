@@ -120,6 +120,8 @@ export const activityFinancialEntryRead = z.object({
   entryNumber: z.string(),
   direction: z.enum(["REVENUE", "EXPENSE"]),
   categoryCode: z.string(),
+  categoryLabelFr: z.string(),
+  categoryLabelEn: z.string(),
   amountMinor: z.number().int(),
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]),
 });

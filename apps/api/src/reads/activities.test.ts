@@ -410,6 +410,9 @@ describe("activity, person and place reads", () => {
       expect.objectContaining({
         direction: "REVENUE",
         categoryCode: "FREIGHT_REVENUE",
+        // #129: the detail names the category in both languages, as the finance reads do.
+        categoryLabelFr: "Recettes de fret",
+        categoryLabelEn: "Freight revenue",
         amountMinor: 1_850_000,
         status: "POSTED",
       }),
