@@ -11,6 +11,7 @@ import { useActiveSession } from "@/auth/store.js";
 import { canViewActivities } from "@/activities/permissions.js";
 import { canAdministerBranches } from "@/branches/permissions.js";
 import { canAdministerMembers } from "@/members/permissions.js";
+import { chooseLanguage } from "@/i18n/language.js";
 
 const languages = [
   { code: "fr-CM", base: "fr", label: "Français" },
@@ -84,7 +85,7 @@ export function MoreStub() {
               key={code}
               variant={i18n.resolvedLanguage === base ? "default" : "outline"}
               className="min-h-11"
-              onClick={() => void i18n.changeLanguage(code)}
+              onClick={() => void chooseLanguage(i18n, code)}
             >
               {label}
             </Button>
