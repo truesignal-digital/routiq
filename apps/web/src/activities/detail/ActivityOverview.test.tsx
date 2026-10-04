@@ -54,11 +54,12 @@ describe("activity overview band", () => {
     expect(tile("Legs").textContent).toContain("2");
   });
 
-  it("says an open activity is running, and flags the tile", () => {
+  it("keeps the end a time: an open activity's end is a dash, not a state (#94)", () => {
     render(<ActivityOverview activity={overview({ status: "OPEN", endedAt: null })} />);
 
-    expect(tile("Ended").textContent).toContain("Running");
-    expect(tone("Ended")).toBe("warning");
+    expect(tile("Ended").textContent).toBe("—");
+    expect(screen.queryByText("Running")).toBeNull();
+    expect(tone("Ended")).not.toBe("warning");
   });
 
   it("dashes a closed activity with no end rather than calling it running", () => {
@@ -78,6 +79,8 @@ describe("activity overview band", () => {
               entryNumber: "E-1",
               direction: "REVENUE",
               categoryCode: "FREIGHT",
+              categoryLabelFr: "Fret",
+              categoryLabelEn: "Freight",
               // XAF has exponent 0 — 900 000 francs is 900 000 minor units.
               amountMinor: 900_000,
               status: "POSTED",
@@ -87,6 +90,8 @@ describe("activity overview band", () => {
               entryNumber: "E-2",
               direction: "EXPENSE",
               categoryCode: "FUEL",
+              categoryLabelFr: "Carburant",
+              categoryLabelEn: "Fuel",
               amountMinor: 400_000,
               status: "POSTED",
             },
@@ -95,6 +100,8 @@ describe("activity overview band", () => {
               entryNumber: "E-3",
               direction: "EXPENSE",
               categoryCode: "TOLLS",
+              categoryLabelFr: "Péages",
+              categoryLabelEn: "Tolls",
               amountMinor: 250_000,
               status: "SUBMITTED",
             },
@@ -119,6 +126,8 @@ describe("activity overview band", () => {
               entryNumber: "E-4",
               direction: "EXPENSE",
               categoryCode: "REPAIRS",
+              categoryLabelFr: "Réparations",
+              categoryLabelEn: "Repairs",
               amountMinor: 120_000,
               status: "POSTED",
             },

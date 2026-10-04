@@ -42,6 +42,8 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     entryNumber: "FIN-2026-0001",
     direction: "REVENUE",
     categoryCode: "FREIGHT",
+    categoryLabelFr: "Fret",
+    categoryLabelEn: "Freight",
     // XAF has exponent 0 — 900 000 francs is 900 000 minor units.
     amountMinor: 900_000,
     status: "POSTED",
@@ -151,5 +153,31 @@ describe("activity money card", () => {
 
     const link = screen.getByRole("link", { name: /FIN-2026-0001/ });
     expect(digits(link)).toContain("-400000");
+  });
+
+  it("names each line's category in the reader's language, never its code (#129)", async () => {
+    const fuel = entry({
+      direction: "EXPENSE",
+      categoryCode: "FUEL",
+      categoryLabelFr: "Carburant",
+      categoryLabelEn: "Fuel",
+      amountMinor: 86_000,
+    });
+    const { unmount } = render(<ActivityMoney entries={[fuel]} />);
+
+    const english = screen.getByRole("link", { name: /FIN-2026-0001/ });
+    expect(english.textContent).toContain("Fuel");
+    expect(english.textContent).not.toContain("FUEL");
+    unmount();
+
+    await i18n.changeLanguage("fr-CM");
+    try {
+      render(<ActivityMoney entries={[fuel]} />);
+      const french = screen.getByRole("link", { name: /FIN-2026-0001/ });
+      expect(french.textContent).toContain("Carburant");
+      expect(french.textContent).not.toContain("FUEL");
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 });

@@ -39,7 +39,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 ## Features
 
 - [Sign in and switch roles](./sign-in-and-roles.md): PIN sign-in, the seven seeded roles, sign out and sign in as someone else.
-- [Language](./language.md): French by default, English through More, held in memory.
+- [Language](./language.md): French by default, English through More, stored per device.
 - [Home dashboard](./home-dashboard.md): KPI cards per role, chart, recent entries.
 - [Vehicle workspace](./vehicle-workspace.md): trucks list, VH003's Now, Maintenance, Money, Trips, Documents, History and Details tabs, editing details.
 - [Maintenance and work orders](./maintenance-work-orders.md): problems, opening a work order, completing it with a cost.

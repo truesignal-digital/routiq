@@ -83,9 +83,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
             <span className="text-muted-foreground">
               {formatDateTime(segment.startedAt, locale)}
               {" → "}
-              {segment.endedAt === null
-                ? t("activities.detail.stillRunning")
-                : formatDateTime(segment.endedAt, locale)}
+              {segment.endedAt === null ? "—" : formatDateTime(segment.endedAt, locale)}
             </span>
           </div>
         ))}

@@ -642,8 +642,13 @@
     "branchEmptyHint": "No activity for this branch.",
     "loadMore": "Load more",
     "status": {
-      "OPEN": "Open",
+      "OPEN": "On the road",
       "CLOSED": "Closed"
+    },
+    "state": {
+      "onTheRoad": "On the road",
+      "closed": "Closed",
+      "closedWithGaps": "{count, plural, one {Closed, # gap} other {Closed, # gaps}}"
     },
     "completeness": {
       "COMPLETE": "Complete",
@@ -695,7 +700,6 @@
       "clientReference": "Client ref.",
       "endedAt": "Ended",
       "assets": "Assets and crew",
-      "stillRunning": "still running",
       "legs": "Legs",
       "money": "Revenue and costs",
       "km": "{count} km",
@@ -703,7 +707,6 @@
       "overview": {
         "started": "Started",
         "ended": "Ended",
-        "running": "Running",
         "net": "Net",
         "postedOnly": "posted lines only",
         "legs": "Legs"
@@ -2020,19 +2023,16 @@
       "empty": "No activities yet. Start one when the vehicle leaves the depot.",
       "loading": "Loading…",
       "loadFailed": "We couldn't load the activities.",
-      "onTheRoad": "On the road",
-      "closed": "Closed",
-      "closedWithGaps": "{count, plural, one {Closed, # gap} other {Closed, # gaps}}",
       "route": "{from} → {to}",
       "tripNumber": "Trip {number}",
       "km": "{value, number} km",
-      "stillOpen": "still open",
+      "startedAt": "Started {time}",
+      "endedAt": "Ended {time}",
       "customer": "Customer",
       "none": "None",
       "driver": "Driver",
       "started": "Started",
       "ended": "Ended",
-      "stillOnRoad": "Still on the road",
       "distance": "Distance",
       "distanceUnknown": "Known when closed",
       "gapsNote": "Closed with {count, plural, one {# gap} other {# gaps}}. Reports show the gaps; they never fill them in.",
@@ -2168,6 +2168,7 @@
       "noteAppendOnly": "Notes are never edited. A correction is another note.",
       "fromProblem": "From problem {ref}",
       "keepsGrounded": "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
+      "keepsGroundedUntilRelease": "The work is done, but the vehicle stays grounded until a manager releases it to service.",
       "completionSentBack": "Completion sent back: {reason}",
       "opened": "Opened",
       "atBy": "{date} by {name}",

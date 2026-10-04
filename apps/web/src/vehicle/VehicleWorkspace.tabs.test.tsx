@@ -298,6 +298,34 @@ describe("Maintenance and Trips", () => {
     expect(screen.queryByText(/FCFA\s0$/)).toBeNull();
   });
 
+  it("gives each trip one state and shows its start and end as times (#94)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/trips`, {
+      role: "OPS_MANAGER",
+      trips: [
+        tripRow(),
+        tripRow({
+          id: "00000000-0000-4000-8000-0000000000b8",
+          activityNumber: "DLA-2026-00001",
+          status: "CLOSED",
+          completeness: "COMPLETE",
+          endedAt: "2026-07-15T17:20:00.000Z",
+          destinationName: "Garoua",
+        }),
+      ],
+    });
+    const open = (await screen.findByText("Douala → Yaoundé")).closest("li");
+    const closed = screen.getByText("Douala → Garoua").closest("li");
+    if (!(open instanceof HTMLElement) || !(closed instanceof HTMLElement)) throw new Error("no trip rows");
+
+    expect(within(open).getByText("On the road")).toBeTruthy();
+    expect(within(open).getByText("Ended —")).toBeTruthy();
+    expect(within(open).queryByText(/still open/i)).toBeNull();
+
+    expect(within(closed).getByText("Closed")).toBeTruthy();
+    expect(within(closed).getByText(/^Ended \d/)).toBeTruthy();
+    expect(within(closed).queryByText("On the road")).toBeNull();
+  });
+
   it("starts a trip on the sheet with this vehicle", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/trips`, { role: "FIELD_SUBMITTER", trips: [tripRow()] });
     const user = userEvent.setup();

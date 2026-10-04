@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * Settings under More: branches, users (members and roles) and people, each
@@ -7,7 +7,7 @@ import type { DriveScript } from "../browser.js";
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const openFromMore = async (fr: string, en: string) => {
-    await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: t("Plus", "More") }).click();
+    await (await openSidebar(page)).getByRole("link", { name: t("Plus", "More") }).click();
     await page.getByRole("link", { name: new RegExp(`^${t(fr, en)}`) }).click();
     await page.getByRole("heading", { level: 1, name: t(fr, en) }).waitFor();
     await quiet();

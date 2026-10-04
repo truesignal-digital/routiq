@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { breadcrumbTrail } from "./breadcrumbs.js";
 import { visibleSections } from "./sections.js";
+import { VEHICLE_TABS } from "../vehicle/VehicleTabsNav.js";
 
 const ALL = visibleSections(["CORE", "ASSETS", "FINANCE"]);
 
@@ -40,8 +41,17 @@ describe("breadcrumbTrail", () => {
     expect(trailAt("/assets/new").at(-1)).toEqual(["assets.register", undefined]);
   });
 
+  it("names the truck record on the Details tab (#126)", () => {
+    expect(trailAt("/assets/00000000-0000-4000-8000-000000000001/details")).toEqual([
+      ["nav.home", "/"],
+      ["nav.assets", "/assets"],
+      ["assets.detail.breadcrumb", undefined],
+    ]);
+  });
+
   it("keeps the vehicle's crumb on every workspace section", () => {
-    for (const section of ["maintenance", "money", "trips", "documents", "history"]) {
+    // Driven by the tab list, so a new vehicle tab without a crumb fails here.
+    for (const section of VEHICLE_TABS.filter((tab) => tab !== "now")) {
       expect(trailAt(`/assets/00000000-0000-4000-8000-000000000001/${section}`), section).toEqual([
         ["nav.home", "/"],
         ["nav.assets", "/assets"],

@@ -186,6 +186,8 @@ function fullHaulage(): ActivityDetail {
         entryNumber: "FIN-2026-0001",
         direction: "REVENUE",
         categoryCode: "FREIGHT",
+        categoryLabelFr: "Fret",
+        categoryLabelEn: "Freight",
         amountMinor: 900_000,
         status: "POSTED",
       },
@@ -194,6 +196,8 @@ function fullHaulage(): ActivityDetail {
         entryNumber: "FIN-2026-0002",
         direction: "EXPENSE",
         categoryCode: "FUEL",
+        categoryLabelFr: "Carburant",
+        categoryLabelEn: "Fuel",
         amountMinor: 400_000,
         status: "POSTED",
       },
@@ -346,9 +350,11 @@ describe("activity detail — a sparse open journey", () => {
     renderScreen();
 
     expect(screen.getByRole("heading", { name: "YDE-2026-00007" })).toBeTruthy();
-    expect(screen.getByText("Open")).toBeTruthy();
-    // An open activity has no end, and the band says so instead of showing a dash.
-    expect(screen.getByText("Running")).toBeTruthy();
+    // One state, worded as on the vehicle's Trips tab; the end stays a time (#94).
+    expect(screen.getByText("On the road")).toBeTruthy();
+    expect(screen.queryByText("Open")).toBeNull();
+    expect(screen.queryByText("Running")).toBeNull();
+    expect(screen.getByText("Ended").nextElementSibling?.textContent).toBe("—");
     expect(screen.getByText(/PASSENGER_TRANSPORT v1/)).toBeTruthy();
   });
 
