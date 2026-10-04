@@ -1,0 +1,5 @@
+interface:
+  display_name: "Reproduce and fix issues"
+  short_description: "Repro a triaged bug in the UI, then a proven PR"
+policy:
+  allow_implicit_invocation: false

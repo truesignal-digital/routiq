@@ -1,0 +1,5 @@
+interface:
+  display_name: "Triage issue reports"
+  short_description: "Classify one GitHub issue and post one verdict"
+policy:
+  allow_implicit_invocation: false
