@@ -155,7 +155,7 @@ describe("assets explorer server-side filtering", () => {
     await waitFor(() => expect(lastQuery(requested).get("search")).toBe("scania"));
   });
 
-  it("maps the ATTENTION choice onto its three lifecycle statuses", async () => {
+  it("asks the server for the Attention tile's set, not three lifecycle statuses", async () => {
     const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
     ]);
@@ -165,13 +165,8 @@ describe("assets explorer server-side filtering", () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Statut" }));
     await userEvent.click(await screen.findByRole("option", { name: "À surveiller" }));
 
-    await waitFor(() =>
-      expect(lastQuery(requested).getAll("status")).toEqual([
-        "UNDER_MAINTENANCE",
-        "RETIRED",
-        "WRITTEN_OFF",
-      ]),
-    );
+    await waitFor(() => expect(lastQuery(requested).get("attention")).toBe("true"));
+    expect(lastQuery(requested).getAll("status")).toEqual([]);
   });
 
   it("narrows by class on the server", async () => {

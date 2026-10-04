@@ -31,7 +31,7 @@ import {
   type AssetActionKey,
 } from "@/assets/AssetActions.js";
 import { useAssetColumns, type AssetColumnId } from "@/assets/assetColumns.js";
-import { assetFilterStatuses, isAssetFilter } from "@/assets/display.js";
+import { assetFilterQuery, isAssetFilter } from "@/assets/display.js";
 import { canManageAssets, canViewAssets } from "@/assets/permissions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useAssets } from "@/assets/useAssets.js";
@@ -83,7 +83,7 @@ export function AssetsStub() {
   const search = filterValues["search"] ?? "";
   const category = filterValues["category"] ?? "";
   const statusChoice = filterValues["status"] ?? "";
-  const statuses = assetFilterStatuses(
+  const statusQuery = assetFilterQuery(
     isAssetFilter(statusChoice) ? statusChoice : "ALL",
   );
 
@@ -101,7 +101,7 @@ export function AssetsStub() {
 
   const assetsQuery = useAssets({
     ...scope,
-    ...(statuses === undefined ? {} : { status: statuses }),
+    ...statusQuery,
     ...(sort === undefined ? {} : { sort }),
   });
   const summaryQuery = useAssetSummary(scope);

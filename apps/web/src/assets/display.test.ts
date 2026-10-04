@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ASSET_STATUS_TONES,
   assetDisplayName,
-  assetFilterStatuses,
+  assetFilterQuery,
   isAssetFilter,
 } from "./display.js";
 
@@ -33,14 +33,11 @@ const assets: AssetListItem[] = [
 ];
 
 describe("asset display helpers", () => {
-  it("translates a filter choice into the statuses the server is asked for", () => {
-    expect(assetFilterStatuses("ALL")).toBeUndefined();
-    expect(assetFilterStatuses("IN_SERVICE")).toEqual(["IN_SERVICE"]);
-    expect(assetFilterStatuses("ATTENTION")).toEqual([
-      "UNDER_MAINTENANCE",
-      "RETIRED",
-      "WRITTEN_OFF",
-    ]);
+  it("translates a filter choice into what the server is asked for", () => {
+    expect(assetFilterQuery("ALL")).toEqual({});
+    expect(assetFilterQuery("IN_SERVICE")).toEqual({ status: ["IN_SERVICE"] });
+    // The tile's own set, grounding included, resolved on the server.
+    expect(assetFilterQuery("ATTENTION")).toEqual({ attention: true });
   });
 
   it("uses make and model when present, then falls back to asset code", () => {

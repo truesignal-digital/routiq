@@ -577,12 +577,9 @@ describe("GET /v1/assets", () => {
       expect(await codes(adminToken, "status=IN_SERVICE")).toHaveLength(
         counts.inService,
       );
-      expect(
-        await codes(
-          adminToken,
-          "status=UNDER_MAINTENANCE&status=RETIRED&status=WRITTEN_OFF",
-        ),
-      ).toHaveLength(counts.attention);
+      expect(await codes(adminToken, "attention=true")).toHaveLength(
+        counts.attention,
+      );
     });
 
     it("counts only the branches a scoped member may see", async () => {
@@ -738,18 +735,38 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
     return assetSummary.parse(response.body);
   }
 
+  async function attentionCodes(token: string) {
+    const response = await api.get(token, "/v1/assets?attention=true");
+    expect(response.status).toBe(200);
+    return assetListResponse.parse(response.body).items.map((item) => item.assetCode);
+  }
+
+  /** The tile is a number that filters the list: both read one predicate. */
+  async function expectTileMatchesFilter(token: string, codes: string[]) {
+    expect(await attentionCodes(token)).toEqual(codes);
+    expect((await summary(token)).attention).toBe(codes.length);
+  }
+
   it("counts an IN_SERVICE vehicle with an open availability interval, once", async () => {
     expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 3 });
+    await expectTileMatchesFilter(admin.token, ["VH002", "VH003", "VH004"]);
+  });
+
+  it("rejects an attention filter other than true", async () => {
+    const response = await api.get(admin.token, "/v1/assets?attention=false");
+    expect(response.status).toBe(400);
   });
 
   it("never counts a grounded vehicle outside the caller's branch scope", async () => {
     expect(await summary(doualaOnly.token)).toEqual({ total: 3, inService: 2, attention: 2 });
+    await expectTileMatchesFilter(doualaOnly.token, ["VH002", "VH003"]);
   });
 
   it("counts lifecycle statuses only while MAINTENANCE is off", async () => {
     await api.ok(admin.token, "disable-module", { moduleCode: "MAINTENANCE" });
     try {
       expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 1 });
+      await expectTileMatchesFilter(admin.token, ["VH003"]);
     } finally {
       await api.ok(admin.token, "enable-module", { moduleCode: "MAINTENANCE" });
     }
@@ -761,5 +778,6 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
       workOrderId,
     });
     expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 2 });
+    await expectTileMatchesFilter(admin.token, ["VH003", "VH004"]);
   });
 });
