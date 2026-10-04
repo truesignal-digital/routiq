@@ -733,6 +733,8 @@ function activityFinancialRows(tx: ReadTx, workspaceId: string, activityId: stri
       entryNumber: financialEntries.entryNumber,
       direction: financialEntries.direction,
       categoryCode: categories.code,
+      categoryLabelFr: categories.labelFr,
+      categoryLabelEn: categories.labelEn,
       amountMinor: financialEntries.amountMinor,
       status: financialEntries.status,
     })
