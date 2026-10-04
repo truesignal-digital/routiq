@@ -20,6 +20,8 @@
 - Report URL:
 - Verdict: `review:approve` / `review:changes`
 
+<!-- No separate GitHub approval is required. Agents may merge only after the user explicitly requests this PR's merge, and after checking current CI, report revisions and resolved findings. -->
+
 ## Checks
 
 - [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass
