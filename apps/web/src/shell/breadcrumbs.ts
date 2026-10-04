@@ -24,7 +24,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/assets/new", trail: [{ labelKey: "assets.register" }] },
   // The vehicle workspace: its sections are tabs on one record, so every
   // section shares the record's crumb and the tabs say where you are.
-  ...["", "/maintenance", "/money", "/trips", "/documents", "/history"].map((section) => ({
+  ...["", "/maintenance", "/money", "/trips", "/documents", "/history", "/details"].map((section) => ({
     pattern: `/assets/$assetId${section}`,
     trail: [{ labelKey: "assets.detail.breadcrumb" }],
   })),
