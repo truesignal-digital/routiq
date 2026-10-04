@@ -13,12 +13,13 @@ import {
   type CommandFormBack,
   type CommandSurface,
 } from "@/components/command-form.js";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { notifyCommandSuccess } from "../lib/notify.js";
+import { notifyCommandError, notifyCommandSuccess } from "../lib/notify.js";
 import { validateRejectionReason, validateReversalReason } from "./model.js";
 
 type ApprovePayload = z.infer<typeof approveEntryPayload>;
@@ -123,6 +124,84 @@ export function ApproveEntryForm(host: EntryDecisionHost) {
         />
       </div>
     </CommandForm>
+  );
+}
+
+/**
+ * Approve is one tap: no dialog, the outcome is a toast. One intent per entry,
+ * so tapping again after a dropped connection replays the same envelope.
+ */
+function useApproveEntry(client: CommandClient | undefined) {
+  const refresh = useFinanceRefresh("approvals", "entries");
+  const [submitting, setSubmitting] = useState(false);
+  const intents = useRef(new Map<string, CommandIntent<ApprovePayload>>());
+
+  async function approve(entry: EntryRef): Promise<boolean> {
+    let intent = intents.current.get(entry.id);
+    if (intent === undefined) {
+      intent = createCommandIntent<ApprovePayload>(client ?? commandClient, "approve-entry", 1);
+      intents.current.set(entry.id, intent);
+    }
+    setSubmitting(true);
+    const result = await intent.submit(
+      { entryId: entry.id },
+      { expectedVersion: entry.rowVersion },
+    );
+    setSubmitting(false);
+    if (!result.ok) {
+      notifyCommandError("finance", result.code);
+      return false;
+    }
+    notifyCommandSuccess("finance", "approved", result.outcome.warnings);
+    await refresh();
+    return true;
+  }
+
+  return { approve, submitting };
+}
+
+/**
+ * The decision pair for a record surface's footer: Reject hands off to the
+ * reason dialog, Approve commits on the spot and comes last.
+ */
+export function EntryDecisionButtons({
+  entry,
+  client,
+  onApproved,
+  onReject,
+}: {
+  entry: EntryRef;
+  client?: CommandClient | undefined;
+  onApproved: () => void;
+  onReject: () => void;
+}) {
+  const { t } = useTranslation();
+  const { approve, submitting } = useApproveEntry(client);
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Button
+        type="button"
+        variant="destructive"
+        className="min-h-11"
+        disabled={submitting}
+        onClick={onReject}
+      >
+        {t("finance.approvals.reject")}
+      </Button>
+      <Button
+        type="button"
+        className="min-h-11"
+        disabled={submitting}
+        onClick={() =>
+          void approve(entry).then((approved) => {
+            if (approved) onApproved();
+          })
+        }
+      >
+        {submitting ? t("finance.approvals.submitting") : t("finance.approvals.approve")}
+      </Button>
+    </div>
   );
 }
 

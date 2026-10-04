@@ -132,6 +132,11 @@ export interface DataTableRowViewer<TData> {
     label: string;
     onOpen: (row: TData) => void;
   };
+  /**
+   * Decisions on the row, rendered last in the footer. When present they own
+   * the page's one filled button, so `fullScreen` steps down to an outline.
+   */
+  actions?: (row: TData, drawer: { close: () => void }) => ReactNode;
 }
 
 /**
@@ -756,7 +761,7 @@ function DataTableRowDrawer<TData>({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { description, fullScreen } = viewer;
+  const { description, fullScreen, actions } = viewer;
 
   return (
     <Drawer
@@ -784,6 +789,7 @@ function DataTableRowDrawer<TData>({
               {fullScreen && (
                 <Button
                   type="button"
+                  variant={actions ? "outline" : "default"}
                   className="min-h-11"
                   onClick={() => fullScreen.onOpen(state.row)}
                 >
@@ -795,6 +801,7 @@ function DataTableRowDrawer<TData>({
               >
                 {t("dataTable.viewer.close")}
               </DrawerClose>
+              {actions?.(state.row, { close: onClose })}
             </DrawerFooter>
           </>
         )}

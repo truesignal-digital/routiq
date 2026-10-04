@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
@@ -17,7 +17,12 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
-import { ApproveEntryForm, RejectEntryForm } from "@/finance/EntryDecisionForms.js";
+import {
+  ApproveEntryForm,
+  EntryDecisionButtons,
+  RejectEntryForm,
+} from "@/finance/EntryDecisionForms.js";
+import { EntrySummary } from "@/finance/EntrySummary.js";
 import { isOwnSubmission } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import {
@@ -43,6 +48,7 @@ const APPROVALS_PAGE_SIZE = 100;
 
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
@@ -192,11 +198,21 @@ export function FinanceApprovalsScreen() {
     [branchOptions, i18n.resolvedLanguage, me?.principalId, t],
   );
 
+  // role-config: deciding is an approver's call, and never on your own
+  // submission — the maker guard the server also enforces.
+  const canDecide = (entry: PendingApprovalItem) =>
+    canApprove && !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId);
+
+  const openReject = (entry: PendingApprovalItem) =>
+    setActionDialog({
+      open: true,
+      entryId: entry.id,
+      action: "reject",
+      rowVersion: entry.rowVersion,
+    });
+
   const rowActions = (entry: PendingApprovalItem) => {
-    // role-config: deciding is an approver's call, and never on your own
-    // submission — the maker guard the server also enforces.
-    if (!canApprove) return [];
-    if (isOwnSubmission(entry.submittedByPrincipalId, me?.principalId)) return [];
+    if (!canDecide(entry)) return [];
 
     return [
       {
@@ -216,13 +232,7 @@ export function FinanceApprovalsScreen() {
         label: t("finance.approvals.reject"),
         icon: X,
         destructive: true,
-        onSelect: () =>
-          setActionDialog({
-            open: true,
-            entryId: entry.id,
-            action: "reject" as const,
-            rowVersion: entry.rowVersion,
-          }),
+        onSelect: () => openReject(entry),
       },
     ];
   };
@@ -297,6 +307,33 @@ export function FinanceApprovalsScreen() {
             onSortingChange={setSorting}
             primaryColumn={{ columnId: "entryNumber" }}
             rowActions={rowActions}
+            rowViewer={{
+              title: (entry) => entry.entryNumber,
+              description: (entry) =>
+                t("finance.entries.viewer.description", {
+                  date: formatDate(entry.economicDate),
+                }),
+              render: (entry) => <EntrySummary entryId={entry.id} />,
+              fullScreen: {
+                label: t("finance.entries.viewer.fullScreen"),
+                onOpen: (entry) =>
+                  void navigate({
+                    to: "/finance/entries/$entryId",
+                    params: { entryId: entry.id },
+                  }),
+              },
+              actions: (entry, drawer) =>
+                canDecide(entry) ? (
+                  <EntryDecisionButtons
+                    entry={{ id: entry.id, rowVersion: entry.rowVersion }}
+                    onApproved={drawer.close}
+                    onReject={() => {
+                      drawer.close();
+                      openReject(entry);
+                    }}
+                  />
+                ) : null,
+            }}
             loadMore={{
               hasNextPage: approvalsQuery.hasNextPage,
               isFetching: approvalsQuery.isFetchingNextPage,
