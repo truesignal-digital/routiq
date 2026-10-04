@@ -1,0 +1,3 @@
+interface:
+  display_name: "Show me your work"
+  short_description: "Keep a TSV decision trail with evidence"

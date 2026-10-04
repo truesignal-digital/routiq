@@ -10,6 +10,7 @@
     "test": "pnpm -r test",
     "lint": "pnpm --filter @routiq/tools lint",
     "lint:tighten": "pnpm --filter @routiq/tools tighten",
+    "verify": "pnpm --silent --filter @routiq/tools verify",
     "db:generate": "pnpm --filter @routiq/api db:generate",
     "db:migrate": "pnpm --filter @routiq/api db:migrate"
   },
