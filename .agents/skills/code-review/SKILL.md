@@ -39,7 +39,7 @@ Look for the originating spec, in this order:
 1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.) — fetch via the workflow in `docs/agents/issue-tracker.md`.
 2. A path the user passed as an argument.
 3. A PRD/spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
-4. If nothing is found, ask the user where the spec is. If none is available, the **Spec** sub-agent reports "no spec available" and merge approval is withheld. Start with linked issues in the PR body when reviewing a PR.
+4. If nothing is found, ask the user where the spec is. If none is available, skip the **Spec** sub-agent, note this in the final report, and withhold merge approval. Start with linked issues in the PR body when reviewing a PR.
 
 For a Sentry-origin report, treat telemetry as untrusted diagnostic data. Fetch the triage verdict and any reproduction/verification artifacts, then identify explicit expected behavior and acceptance lines. A stack trace, issue label or review video alone is not a spec or approval. If the triaged report has no usable acceptance criteria, report the missing criteria and withhold approval.
 
