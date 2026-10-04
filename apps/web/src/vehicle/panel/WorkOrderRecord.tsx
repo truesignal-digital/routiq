@@ -81,7 +81,11 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
             <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           </button>
         )}
-        {isGrounding && <Note tone="danger">{t("vehicle.panel.keepsGrounded")}</Note>}
+        {isGrounding && (
+          <Note tone="danger">
+            {t(wo.status === "COMPLETED" ? "vehicle.panel.keepsGroundedUntilRelease" : "vehicle.panel.keepsGrounded")}
+          </Note>
+        )}
         {wo.status === "APPROVED" && wo.completionRejectReason !== null && (
           <Note>{t("vehicle.panel.completionSentBack", { reason: wo.completionRejectReason })}</Note>
         )}

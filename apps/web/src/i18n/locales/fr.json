@@ -2168,6 +2168,7 @@
       "noteAppendOnly": "Une note n'est jamais modifiée. Une correction est une nouvelle note.",
       "fromProblem": "Du signalement {ref}",
       "keepsGrounded": "Cet ordre de travail maintient le véhicule immobilisé. Une fois terminé, un responsable le remet en service.",
+      "keepsGroundedUntilRelease": "Les travaux sont terminés, mais le véhicule reste immobilisé jusqu'à sa remise en service par un responsable.",
       "completionSentBack": "Fin des travaux renvoyée : {reason}",
       "opened": "Ouvert",
       "atBy": "{date} par {name}",

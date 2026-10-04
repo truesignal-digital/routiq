@@ -2168,6 +2168,7 @@
       "noteAppendOnly": "Notes are never edited. A correction is another note.",
       "fromProblem": "From problem {ref}",
       "keepsGrounded": "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
+      "keepsGroundedUntilRelease": "The work is done, but the vehicle stays grounded until a manager releases it to service.",
       "completionSentBack": "Completion sent back: {reason}",
       "opened": "Opened",
       "atBy": "{date} by {name}",
