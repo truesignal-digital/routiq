@@ -696,6 +696,7 @@
       "OTHER": "Other"
     },
     "detail": {
+      "breadcrumb": "Activity",
       "loading": "Loading activity…",
       "loadFailed": "We couldn't load this activity.",
       "summary": "Summary",

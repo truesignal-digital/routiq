@@ -3,7 +3,8 @@ import { breadcrumbTrail } from "./breadcrumbs.js";
 import { visibleSections } from "./sections.js";
 import { VEHICLE_TABS } from "../vehicle/VehicleTabsNav.js";
 
-const ALL = visibleSections(["CORE", "ASSETS", "FINANCE"]);
+const ALL = visibleSections(["CORE", "ASSETS", "ACTIVITIES", "FINANCE"]);
+const TRIP = "/activities/00000000-0000-4000-8000-000000000020";
 
 function trailAt(pathname: string) {
   return breadcrumbTrail(ALL, pathname).map(({ labelKey, to }) => [labelKey, to]);
@@ -58,6 +59,36 @@ describe("breadcrumbTrail", () => {
         ["assets.detail.breadcrumb", undefined],
       ]);
     }
+  });
+
+  it("puts a trip under Trips, so a phone can step back to the list", () => {
+    expect(trailAt(TRIP)).toEqual([
+      ["nav.home", "/"],
+      ["nav.activities", "/activities"],
+      ["activities.detail.breadcrumb", undefined],
+    ]);
+  });
+
+  it("names the trip by its number once the screen has it", () => {
+    expect(breadcrumbTrail(ALL, TRIP, "TR-0042").at(-1)).toEqual({
+      labelKey: "activities.detail.breadcrumb",
+      label: "TR-0042",
+      record: true,
+    });
+  });
+
+  it("never puts a record's name on a page that is not a record", () => {
+    expect(breadcrumbTrail(ALL, "/activities/record", "TR-0042").at(-1)).toEqual({
+      labelKey: "activities.record.title",
+    });
+  });
+
+  it("names Record a trip under Trips, ahead of the trip id pattern", () => {
+    expect(trailAt("/activities/record")).toEqual([
+      ["nav.home", "/"],
+      ["nav.activities", "/activities"],
+      ["activities.record.title", undefined],
+    ]);
   });
 
   it("labels a finance list under Finance", () => {
