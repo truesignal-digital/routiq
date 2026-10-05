@@ -90,7 +90,7 @@ describe("CreateBranchDialog", () => {
     const { onCreated, onOpenChange } = renderDialog(client);
 
     await fillForm("yde", "Yaoundé");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
@@ -114,7 +114,7 @@ describe("CreateBranchDialog", () => {
     renderDialog(client);
 
     await fillForm("y", "Yaoundé");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(
       await screen.findByText("2 à 8 caractères, en majuscules ou chiffres (ex. DLA)."),
@@ -127,7 +127,7 @@ describe("CreateBranchDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm("DLA", "Douala Nord");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(
       await screen.findByText("Ce code d'agence existe déjà dans votre espace."),
@@ -140,7 +140,7 @@ describe("CreateBranchDialog", () => {
     renderDialog(client);
 
     await fillForm("YDE", "   ");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(await screen.findByText("Ce champ est obligatoire.")).toBeTruthy();
     expect(client.seen).toHaveLength(0);
@@ -158,7 +158,7 @@ describe("CreateBranchDialog", () => {
     await userEvent.type(screen.getByLabelText("Code"), "YDE");
     await userEvent.click(screen.getByLabelText("Nom"));
     await userEvent.paste("a".repeat(121));
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(messageDescribing("Nom")).toContain(
       "Le nom ne doit pas dépasser 120 caractères.",
@@ -171,7 +171,7 @@ describe("CreateBranchDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm("CTR", "Centre");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     await screen.findByText("Ce nom d'agence existe déjà dans votre espace.");
     expect(messageDescribing("Nom")).toContain(

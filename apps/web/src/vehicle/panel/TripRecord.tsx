@@ -7,9 +7,10 @@ import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
-import { TripState } from "@/activities/TripState.js";
+import { TripStatusBadge } from "@/activities/TripStatusBadge.js";
 import { tripRoute } from "../tabs/TripsTab.js";
-import { EntryStatusBadge, PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
+import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
 
 export function TripRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { gates } = useVehicle();
@@ -64,7 +65,7 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
           type: localizedLabel(trip.activityType, locale),
         })}
         title={tripRoute(trip, t) ?? localizedLabel(trip.activityType, locale)}
-        meta={<TripState trip={trip} />}
+        meta={<TripStatusBadge trip={trip} />}
       />
       <div className="space-y-6 p-4">
         <FactList

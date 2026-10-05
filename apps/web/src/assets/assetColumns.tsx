@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AssetListItem } from "@routiq/contracts";
-import { StatusBadge } from "@/components/status-badge.js";
+import { AssetStatusBadge } from "./AssetStatusBadge.js";
 import { localizedLabel } from "@/lib/format.js";
-import { ASSET_STATUS_TONES, assetDisplayName } from "./display.js";
+import { assetDisplayName } from "./display.js";
 
 export type AssetColumnId =
   | "asset"
@@ -51,9 +51,7 @@ function buildColumns(
       header: t("assets.columns.status"),
       meta: { mobile: "primary", label: t("assets.columns.status") },
       cell: ({ row }) => (
-        <StatusBadge tone={ASSET_STATUS_TONES[row.original.lifecycleStatus]}>
-          {t(`assets.status.${row.original.lifecycleStatus}`)}
-        </StatusBadge>
+        <AssetStatusBadge status={row.original.lifecycleStatus} />
       ),
     },
     category: {

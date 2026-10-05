@@ -10,8 +10,8 @@ import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/f
 import { useVehicle, type PanelForm } from "../context.js";
 import { entrySteps, missingReceipt } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note } from "../parts.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import {
-  EntryStatusBadge,
   EvidenceMark,
   PanelFooter,
   PanelLoading,

@@ -12,15 +12,18 @@ import type {
 import { ErrorState, LoadingState } from "@/components/page";
 import { historyEventLabelKey } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format.js";
-import { ISSUE_TONES, WORK_ORDER_TONES } from "./columns.js";
 import type {
   MaintenanceDialog,
   WorkOrderDecision,
   WorkOrderRef,
 } from "./MaintenanceDialogs.js";
+import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { useWorkOrder } from "./useMaintenance.js";
+import { WorkOrderStatusBadge } from "./WorkOrderStatusBadge.js";
+import { useCommandLabel } from "../commands/labels.js";
 
 export interface WorkOrderSheetPermissions {
   manage: boolean;
@@ -102,12 +105,6 @@ export function Chronologie({
   );
 }
 
-const ENTRY_STATUS_TONES = {
-  POSTED: "success",
-  REVERSED: "neutral",
-  SUBMITTED: "warning",
-} as const;
-
 /**
  * Labour and parts booked against this repair, one list per set: the posted
  * lines are money spent, the pending ones are awaiting finance review and are
@@ -120,8 +117,6 @@ export function CostLines({
   lines: readonly (WorkOrderCostLine | WorkOrderPendingCostLine)[];
   locale: string;
 }) {
-  const { t } = useTranslation();
-
   return (
     <ul className="flex flex-col gap-2">
       {lines.map((line) => (
@@ -132,9 +127,7 @@ export function CostLines({
           <span className="flex min-w-0 flex-col">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs">{line.entryNumber}</span>
-              <StatusBadge tone={ENTRY_STATUS_TONES[line.entryStatus]} icon={null}>
-                {t(`maintenance.detail.entryStatus.${line.entryStatus}`)}
-              </StatusBadge>
+              <EntryStatusBadge status={line.entryStatus} />
             </span>
             <span className="text-xs text-muted-foreground">
               {line.description ?? formatDate(line.economicDate, locale)}
@@ -164,7 +157,7 @@ function SheetActions({
   assetUnavailable: boolean;
   onAction: (dialog: MaintenanceDialog) => void;
 }) {
-  const { t } = useTranslation();
+  const label = useCommandLabel();
   const workOrder: WorkOrderRef = {
     id: detail.id,
     assetId: detail.asset.id,
@@ -178,14 +171,13 @@ function SheetActions({
     key: string,
     label: string,
     dialog: MaintenanceDialog,
-    variant: "default" | "outline" = "default",
+    variant: "default" | "outline" | "destructive" = "default",
   ) =>
     buttons.push(
       <Button
         key={key}
         type="button"
         variant={variant}
-        className="min-h-9"
         onClick={() => onAction(dialog)}
       >
         {label}
@@ -194,30 +186,30 @@ function SheetActions({
   const decide = (
     decision: WorkOrderDecision,
     label: string,
-    variant: "default" | "outline" = "default",
+    variant: "default" | "outline" | "destructive" = "default",
   ) => action(decision, label, { kind: "decide-work-order", decision, workOrder }, variant);
 
   switch (detail.status) {
     case "SUBMITTED":
       if (permissions.approve) {
-        decide("approve", t("maintenance.actions.approve"));
-        decide("reject", t("maintenance.actions.reject"), "outline");
+        decide("approve", label("approve-work-order"));
+        decide("reject", label("reject-work-order"), "destructive");
       }
       break;
     case "APPROVED":
       if (permissions.manage) {
-        action("complete", t("maintenance.actions.complete"), { kind: "complete", workOrder });
+        action("complete", label("complete-work-order"), { kind: "complete", workOrder });
       }
       break;
     case "COMPLETION_SUBMITTED":
       if (permissions.approve) {
-        decide("approve-completion", t("maintenance.actions.approveCompletion"));
-        decide("reject-completion", t("maintenance.actions.rejectCompletion"), "outline");
+        decide("approve-completion", label("approve-work-order-closure"));
+        decide("reject-completion", label("reject-work-order-completion"), "destructive");
       }
       break;
     case "COMPLETED":
       if (permissions.release && assetUnavailable) {
-        action("release", t("maintenance.actions.release"), { kind: "release", workOrder });
+        action("release", label("release-asset-to-service"), { kind: "release", workOrder });
       }
       break;
     case "REJECTED":
@@ -233,9 +225,9 @@ function SheetActions({
   ) {
     action(
       "cancel",
-      t("maintenance.actions.cancelWorkOrder"),
+      label("cancel-work-order"),
       { kind: "cancel", workOrder },
-      "outline",
+      "destructive",
     );
   }
 
@@ -317,9 +309,7 @@ export function WorkOrderSheet({
         facts={[
           [
             t("maintenance.workOrders.columns.status"),
-            <StatusBadge key="status" tone={WORK_ORDER_TONES[header.status]}>
-              {t(`maintenance.workOrders.status.${header.status}`)}
-            </StatusBadge>,
+            <WorkOrderStatusBadge key="status" status={header.status} />,
           ],
           [
             t("maintenance.workOrders.columns.asset"),
@@ -354,9 +344,7 @@ export function WorkOrderSheet({
               <span key="issue" className="flex flex-wrap items-center gap-1.5">
                 <span>{linkedIssue?.description ?? t("maintenance.detail.linkedIssue")}</span>
                 {linkedIssue !== undefined && (
-                  <StatusBadge tone={ISSUE_TONES[linkedIssue.status]}>
-                    {t(`maintenance.issues.status.${linkedIssue.status}`)}
-                  </StatusBadge>
+                  <IssueStatusBadge issue={linkedIssue} />
                 )}
                 {safetyCritical && (
                   <StatusBadge tone="danger" icon={ShieldAlert}>

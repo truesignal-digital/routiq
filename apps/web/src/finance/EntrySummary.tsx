@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { EntryLinks } from "@/finance/EntryLinks.js";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { useEntry } from "@/finance/useEntry.js";
 import {
   formatDate,
@@ -59,9 +59,7 @@ export function EntrySummary({ entryId }: { entryId: string }) {
           {t("finance.entries.detail.status")}
         </dt>
         <dd className="mt-1">
-          <FinanceStatusBadge status={entry.status}>
-            {t(`finance.entries.status.${entry.status}`)}
-          </FinanceStatusBadge>
+          <EntryStatusBadge status={entry.status} />
         </dd>
       </div>
       <div>

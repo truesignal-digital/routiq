@@ -121,7 +121,7 @@ function Calendar(calendarProps: CalendarProps) {
   const shiftMonths = (delta: number) =>
     setMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1))
   const navClass =
-    "inline-flex size-8 items-center justify-center rounded-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+    "inline-flex size-11 items-center justify-center rounded-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 desktop:size-8"
 
   return (
     <div
@@ -181,7 +181,7 @@ function Calendar(calendarProps: CalendarProps) {
           <div
             key={`${weekday}-${index}`}
             role="columnheader"
-            className="flex size-8 items-center justify-center text-xs font-normal text-muted-foreground"
+            className="flex h-8 items-center justify-center text-xs font-normal text-muted-foreground"
           >
             {weekday}
           </div>
@@ -200,7 +200,7 @@ function Calendar(calendarProps: CalendarProps) {
               role="gridcell"
               data-selected={rangeStart || rangeEnd || rangeMiddle}
               className={cn(
-                "relative flex size-8 items-center justify-center",
+                "relative flex size-11 items-center justify-center desktop:size-8",
                 rangeMiddle && "bg-muted",
                 rangeStart && "rounded-s-lg bg-primary",
                 rangeEnd && "rounded-e-lg bg-primary",
@@ -215,7 +215,7 @@ function Calendar(calendarProps: CalendarProps) {
                 data-range-end={rangeEnd || undefined}
                 data-range-middle={rangeMiddle || undefined}
                 className={cn(
-                  "relative z-10 inline-flex size-8 items-center justify-center rounded-lg text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "relative z-10 inline-flex size-11 items-center justify-center rounded-lg text-sm desktop:size-8 outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
                   outside && "text-muted-foreground opacity-50",
                   unavailable && "pointer-events-none text-muted-foreground opacity-40",
                   rangeMiddle && "rounded-none",

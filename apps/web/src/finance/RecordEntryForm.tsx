@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CommandResult, FinancialEntryDetail } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import {
   CommandForm,
@@ -147,6 +149,7 @@ export function RecordEntryForm({
   editing,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const [entryId] = useState(() => editing?.id ?? crypto.randomUUID());
   // Created on first submit, not on render: cancelling opens no intent.
   const intentExpenseRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
@@ -335,9 +338,7 @@ export function RecordEntryForm({
     ? t("finance.edit.title", { number: editing.entryNumber })
     : !lockDirection
     ? t("finance.record.title")
-    : direction === "EXPENSE"
-      ? t("finance.record.expenseTitle")
-      : t("finance.record.revenueTitle");
+    : label(direction === "EXPENSE" ? "record-expense" : "record-revenue");
   const chrome =
     surface === "page"
       ? { surface, hideCancel: true, className: "mt-6" }
@@ -357,10 +358,13 @@ export function RecordEntryForm({
                 body: t("finance.edit.decidedBody"),
               },
             })}
-        submitLabel={t(editing === undefined ? "finance.record.submit" : "finance.edit.submit")}
-        submittingLabel={t(
-          editing === undefined ? "finance.record.submitting" : "finance.edit.submitting",
-        )}
+        command={
+          editing !== undefined
+            ? "update-pending-entry"
+            : direction === "EXPENSE"
+              ? "record-expense"
+              : "record-revenue"
+        }
         ready={isValid && !attachmentsUploading}
         submitting={form.formState.isSubmitting}
         onSubmit={() => void form.handleSubmit(onValid)()}
@@ -385,7 +389,7 @@ export function RecordEntryForm({
                     });
                   }}
                 >
-                  <TabsList className="w-full group-data-horizontal/tabs:h-11">
+                  <TabsList className="w-full">
                     <TabsTrigger value="EXPENSE">
                       {t("finance.record.expenseLabel")}
                     </TabsTrigger>
@@ -431,7 +435,7 @@ export function RecordEntryForm({
                 disabled={reference.isPending || reference.isError}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("finance.record.chooseBranch")} />
                   </SelectTrigger>
                 </FormControl>
@@ -466,7 +470,7 @@ export function RecordEntryForm({
                 disabled={categoriesQuery.isPending || categoriesQuery.isError}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("finance.record.chooseCategory")} />
                   </SelectTrigger>
                 </FormControl>
@@ -519,7 +523,7 @@ export function RecordEntryForm({
                 }}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                 </FormControl>
@@ -543,7 +547,7 @@ export function RecordEntryForm({
             <FormItem>
               <FormLabel>{t("finance.record.economicDateLabel")}</FormLabel>
               <FormControl>
-                <Input type="date" className="min-h-11" {...field} />
+                <DateField {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -560,7 +564,6 @@ export function RecordEntryForm({
                 <Input
                   type="text"
                   placeholder={t("finance.record.counterpartyPlaceholder")}
-                  className="min-h-11"
                   {...field}
                 />
               </FormControl>
@@ -597,7 +600,6 @@ export function RecordEntryForm({
                 <Input
                   type="text"
                   placeholder={t("finance.record.paymentRefPlaceholder")}
-                  className="min-h-11"
                   {...field}
                 />
               </FormControl>
@@ -619,7 +621,7 @@ export function RecordEntryForm({
                   disabled={assetOptions.length === 0}
                 >
                   <FormControl>
-                    <SelectTrigger className="min-h-11 w-full">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder={t("finance.record.assetPlaceholder")} />
                     </SelectTrigger>
                   </FormControl>

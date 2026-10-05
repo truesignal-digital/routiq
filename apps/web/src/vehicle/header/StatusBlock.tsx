@@ -198,7 +198,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
     const StepIcon = STEP_ICONS[step.step.key];
     return (
       <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:items-end md:pl-0">
-        <Button className="h-10 md:h-9" onClick={() => panel.openStep(step.step)}>
+        <Button className="desktop:h-9" onClick={() => panel.openStep(step.step)}>
           <StepIcon aria-hidden />
           {stepLabel(step.step)}
         </Button>
@@ -212,7 +212,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
     const StepIcon = STEP_ICONS.release;
     return (
       <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:max-w-64 md:items-end md:pl-0">
-        <Button className="h-10 md:h-9" disabled aria-describedby={reasonId}>
+        <Button className="desktop:h-9" disabled aria-describedby={reasonId}>
           <StepIcon aria-hidden />
           {stepLabel(step.step)}
         </Button>
@@ -226,7 +226,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
 
   return (
     <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:max-w-64 md:items-end md:pl-0">
-      <Button variant="outline" className="h-10 bg-background md:h-9" onClick={() => panel.openRecord(record)}>
+      <Button variant="outline" className="bg-background desktop:h-9" onClick={() => panel.openRecord(record)}>
         {t("vehicle.status.openRecord", {
           kind: record.kind,
           ref: record.kind === "readings" ? "" : recordReference(record.id),

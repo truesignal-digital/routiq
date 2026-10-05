@@ -59,7 +59,7 @@ export function MoneyInput({
           }
           onBlur?.();
         }}
-        className={cn("min-h-11 tabular-nums", symbolFirst ? "pl-14" : "pr-14", className)}
+        className={cn("tabular-nums", symbolFirst ? "pl-14" : "pr-14", className)}
         {...rest}
       />
       {!symbolFirst && (

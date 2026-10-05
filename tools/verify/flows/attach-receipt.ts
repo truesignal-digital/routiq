@@ -14,7 +14,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   const missing = await apiGet("/v1/finance/entries?evidence=MISSING");
   const before = (missing.body as { entries?: Array<{ id: string; entryNumber: string }> }).entries ?? [];
-  const attachLabel = t("Joindre le reçu", "Attach receipt");
+  const attachLabel = t("Joindre un reçu", "Attach receipt");
   let entry: { id: string; entryNumber: string } | undefined;
   let attach = page.getByRole("button", { name: attachLabel }).first();
   for (const candidate of before) {
@@ -31,7 +31,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   const receipt = await page.screenshot({ type: "png" });
   await attach.click();
-  const dialog = page.getByRole("dialog", { name: t("Joindre un reçu", "Attach a receipt") });
+  const dialog = page.getByRole("dialog", { name: t("Joindre un reçu", "Attach receipt") });
   await dialog.waitFor();
   await dialog.getByLabel(t("Déposez les fichiers ici ou cliquez pour choisir", "Drop files here or click to choose")).setInputFiles({
     name: "receipt.png",
@@ -39,7 +39,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     buffer: receipt,
   });
   await shot("receipt-chosen");
-  await dialog.getByRole("button", { name: t("Joindre", "Attach"), exact: true }).click();
+  await dialog.getByRole("button", { name: t("Joindre le reçu", "Attach the receipt"), exact: true }).click();
   await dialog.waitFor({ state: "hidden", timeout: 20_000 });
   await quiet();
   await shot("receipt-attached");
