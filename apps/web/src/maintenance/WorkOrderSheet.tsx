@@ -404,7 +404,8 @@ export function WorkOrderSheet({
         )}
       </div>
 
-      {detail !== undefined && (
+      {/* Null when the reader may not see work-order costs (#390). */}
+      {detail !== undefined && detail.costLines !== null && (
         <div>
           <h3 className="mb-3 text-sm font-semibold">
             {t("maintenance.detail.costLines")}
@@ -419,7 +420,7 @@ export function WorkOrderSheet({
         </div>
       )}
 
-      {detail !== undefined && detail.pendingCostLines.length > 0 && (
+      {detail !== undefined && detail.pendingCostLines !== null && detail.pendingCostLines.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold">
             {t("maintenance.detail.pendingCostLines")}

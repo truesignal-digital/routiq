@@ -552,7 +552,7 @@ describe("work order and signalement reads", () => {
       const body = workOrderDetail.parse((await detail(lifecycleWorkOrderId)).json());
 
       expect(body.costLines).toHaveLength(1);
-      expect(body.costLines[0]).toMatchObject({
+      expect(body.costLines![0]).toMatchObject({
         description: "Pièces et main-d'œuvre freinage",
         amountMinor: 900_000,
         currency: "XAF",
@@ -561,7 +561,7 @@ describe("work order and signalement reads", () => {
       });
 
       const decoy = workOrderDetail.parse((await detail(decoyWorkOrderId)).json());
-      expect(decoy.costLines.map((line) => line.amountMinor)).toEqual([45_000]);
+      expect(decoy.costLines!.map((line) => line.amountMinor)).toEqual([45_000]);
     });
 
     it("shows a cancellation as a reason plus a two-step timeline", async () => {
@@ -748,7 +748,7 @@ describe("work order and signalement reads", () => {
       const body = workOrderDetail.parse((await detail(costOrderId)).json());
 
       expect(
-        body.costLines.map((line) => [line.description, line.amountMinor, line.entryStatus]),
+        body.costLines!.map((line) => [line.description, line.amountMinor, line.entryStatus]),
       ).toEqual(
         expect.arrayContaining([
           ["Disque d'embrayage", 30_000, "POSTED"],
@@ -759,19 +759,19 @@ describe("work order and signalement reads", () => {
       );
       expect(body.costLines).toHaveLength(4);
       // Signed lines sum to what the repair cost: the reversal pair nets out.
-      expect(body.costLines.reduce((sum, line) => sum + line.amountMinor, 0)).toBe(42_000);
+      expect(body.costLines!.reduce((sum, line) => sum + line.amountMinor, 0)).toBe(42_000);
 
       expect(
-        body.pendingCostLines.map((line) => [line.description, line.amountMinor]),
+        body.pendingCostLines!.map((line) => [line.description, line.amountMinor]),
       ).toEqual([["Main-d'œuvre garage", 150_000]]);
       expect(
-        [...body.costLines, ...body.pendingCostLines].map((line) => line.description),
+        [...body.costLines!, ...body.pendingCostLines!].map((line) => line.description),
       ).not.toContain("Facture refusée");
     });
 
     it("drops the lines booked in a branch the reader cannot see", async () => {
       const scoped = workOrderDetail.parse((await detail(costOrderId, doualaToken)).json());
-      expect(scoped.costLines.map((line) => line.description)).not.toContain(
+      expect(scoped.costLines!.map((line) => line.description)).not.toContain(
         "Kit payé à Yaoundé",
       );
       expect(scoped.costLines).toHaveLength(3);

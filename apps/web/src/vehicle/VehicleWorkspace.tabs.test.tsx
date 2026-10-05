@@ -339,6 +339,17 @@ describe("Maintenance and Trips", () => {
     expect(await screen.findByText("Bodywork")).toBeTruthy();
   });
 
+  it("lists a driver's work orders without an amount or a missing estimate (#390)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/maintenance`, {
+      role: "DRIVER",
+      workOrders: [workOrderRow("APPROVED", { expectedCostMinor: null })],
+    });
+    const title = await screen.findByText("Brake repair: replace pads and air valve");
+    const item = within(title.closest("li")!);
+    expect(item.queryByText("No estimate")).toBeNull();
+    expect(item.queryByText(/planned/)).toBeNull();
+  });
+
   it("says what a closed order's cost is instead of inventing a zero (#131)", async () => {
     const done = (id: string, description: string, overrides: Parameters<typeof workOrderRow>[1]) =>
       workOrderRow("COMPLETED", {

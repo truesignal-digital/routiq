@@ -82,6 +82,15 @@ export function moneyReadScope(role: Role): MoneyReadScope {
   return MONEY_READ_SCOPE[role];
 }
 
+/**
+ * Whether a role reads a work order's money: its estimate, its actual cost and
+ * its cost lines. Every scope but OWN_ENTRIES: a work order's figures sum over
+ * other people's entries, and a driver reads only the entries they recorded.
+ */
+export function canReadWorkOrderCosts(role: Role): boolean {
+  return MONEY_READ_SCOPE[role] !== "OWN_ENTRIES";
+}
+
 /** The roles whose scope is LEDGER. The web's `canReadFinance` mirrors it. */
 export const LEDGER_READER_ROLES = [
   "DIRECTOR",

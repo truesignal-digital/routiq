@@ -38,7 +38,7 @@ Each section is a route under `/assets/$assetId`, so the selected section, perio
 | Section | Shown when | Backed by |
 | --- | --- | --- |
 | Now (fr: “En ce moment”) | Always | Attention items, the selected month's money (ledger readers only) and the five latest history items. |
-| Maintenance | MAINTENANCE is on | `GET /v1/work-orders` and `GET /v1/issues` filtered to the vehicle; `GET /v1/issues/:issueId` for a direct link to one issue. |
+| Maintenance | MAINTENANCE is on | `GET /v1/work-orders` and `GET /v1/issues` filtered to the vehicle; `GET /v1/issues/:issueId` for a direct link to one issue. A work order's estimate, actual cost and cost lines follow `canReadWorkOrderCosts` (every role but DRIVER, #390): null for a driver, in the list, the detail and the record history's MONEY changes. |
 | Money | FINANCE is on and the role reads the ledger | `GET /v1/assets/:assetId/finance` and `GET /v1/finance/entries` filtered to the vehicle. |
 | Trips | ACTIVITIES is on | `GET /v1/activities` filtered to the vehicle; each row now carries origin, destination, total distance and the first driver. |
 | Documents | DOCUMENTS is on | `GET /v1/assets/:assetId/documents`. |
@@ -112,7 +112,7 @@ None of the four says a person checked the paper. A reversal never counts as mis
 | ENTRY_AWAITING_REVIEW | A SUBMITTED entry with a posting on this vehicle | INFO |
 | ENTRY_EVIDENCE_MISSING | A NOT_SUPPLIED entry that is SUBMITTED, or POSTED in an open period | WARNING |
 
-Maintenance items need MAINTENANCE, document items need DOCUMENTS, and entry items need FINANCE and a ledger-reader role (LEDGER_READER_ROLES: Direction, Administrateur, Finance). Say “{type} expired on {date}”; never say the vehicle cannot legally run.
+Maintenance items need MAINTENANCE, document items need DOCUMENTS, and entry items need FINANCE and a ledger-reader role (LEDGER_READER_ROLES: Direction, Administrateur, Finance). A work order's amounts follow `canReadWorkOrderCosts` (every role but DRIVER, #390); without it the item carries no amount. Say “{type} expired on {date}”; never say the vehicle cannot legally run.
 
 ## History
 

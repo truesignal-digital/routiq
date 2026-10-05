@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import {
   canReadDocuments,
   canReadLedger,
+  canReadWorkOrderCosts,
   moneyReadScope,
   HISTORY_ENTITY_MODULE,
   HISTORY_MONEY_STATE_KEYS,
@@ -576,9 +577,11 @@ export function registerHistoryReadRoutes(
 
         const { beforeState, afterState, workspaceCurrency } = result.row;
         // A vehicle's purchase price is a ledger figure (#121): the same rule
-        // as the vehicle's own detail and its History tab.
+        // as the vehicle's own detail and its History tab. A work order's
+        // amounts follow the work-order reads (#390).
         const hidesMoney =
-          entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"));
+          (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
+          (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
         return historyEventDiff.parse({
           eventId: result.row.eventId,
           currency: diffCurrency(beforeState, afterState, workspaceCurrency),
