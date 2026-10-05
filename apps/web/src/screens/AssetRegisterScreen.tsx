@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
   type ChangeEvent,
 } from "react";
+import { DateField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -347,10 +348,12 @@ export function AssetRegisterScreen() {
                 <FormItem>
                   <FormLabel>{t("assets.form.acquisitionDate")}</FormLabel>
                   <FormControl>
-                    <Input
-                      className="min-h-11"
-                      type="date"
-                      {...textFieldProps(field)}
+                    <DateField
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={String(toControlValue(field.value))}
+                      onChange={(next) => field.onChange(emptyToUndefined(next))}
                     />
                   </FormControl>
                   <FormMessage />

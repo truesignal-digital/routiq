@@ -116,7 +116,7 @@ export interface SheetFormState {
   clientReference?: string;
   description?: string;
   primaryAssetId: string;
-  /** `<input type="datetime-local">` values — no offset, see toLocalOffsetIso. */
+  /** `DateTimeField` values (`YYYY-MM-DDTHH:mm`) — no offset, see toLocalOffsetIso. */
   startedAt: string;
   endedAt: string;
   startReading?: SheetReadingState;

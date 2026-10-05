@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CommandResult, FinancialEntryDetail } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
@@ -543,7 +544,7 @@ export function RecordEntryForm({
             <FormItem>
               <FormLabel>{t("finance.record.economicDateLabel")}</FormLabel>
               <FormControl>
-                <Input type="date" className="min-h-11" {...field} />
+                <DateField {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

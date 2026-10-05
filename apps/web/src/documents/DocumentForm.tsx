@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
@@ -179,23 +180,11 @@ export function DocumentForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="doc-issued">{t("documents.fields.issuedAt")}</Label>
-          <Input
-            id="doc-issued"
-            className="min-h-11"
-            type="date"
-            value={issuedAt}
-            onChange={(event) => setIssuedAt(event.target.value)}
-          />
+          <DateField id="doc-issued" value={issuedAt} onChange={setIssuedAt} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="doc-expires">{t("documents.fields.expiresAt")}</Label>
-          <Input
-            id="doc-expires"
-            className="min-h-11"
-            type="date"
-            value={expiresAt}
-            onChange={(event) => setExpiresAt(event.target.value)}
-          />
+          <DateField id="doc-expires" value={expiresAt} onChange={setExpiresAt} />
         </div>
       </div>
 
