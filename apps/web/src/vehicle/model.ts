@@ -91,6 +91,7 @@ export type LockKey =
   | "makerCannotApprove"
   | "completerCannotSignOff"
   | "youRecordedIt"
+  | "directionDecides"
   | "selfReleaseForbidden"
   | "humanOnly"
   | "notGrounded"

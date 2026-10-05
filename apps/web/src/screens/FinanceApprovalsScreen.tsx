@@ -209,16 +209,23 @@ export function FinanceApprovalsScreen() {
             <StatusBadge tone="warning">
               {t("finance.approvals.makerGuard")}
             </StatusBadge>
+          ) : row.original.directionDecides ? (
+            <StatusBadge tone="neutral">
+              {t("finance.approvals.directionDecides")}
+            </StatusBadge>
           ) : null,
       },
     ],
     [branchOptions, i18n.resolvedLanguage, me?.principalId, t],
   );
 
-  // role-config: deciding is an approver's call, and never on your own
-  // submission — the maker guard the server also enforces.
+  // role-config: deciding is an approver's call, never on your own submission
+  // (the maker guard the server also enforces), and never above the viewer's
+  // approval band, where the server would answer APPROVAL_REQUIRED.
   const canDecide = (entry: PendingApprovalItem) =>
-    canApprove && !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId);
+    canApprove &&
+    !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId) &&
+    !entry.directionDecides;
 
   const openReject = (entry: PendingApprovalItem) =>
     setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });

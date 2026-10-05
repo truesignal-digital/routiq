@@ -2,6 +2,7 @@ import { and, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import type { AuthContext } from "../auth/types.js";
 import { financialEntries } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
+import { loadApprovalRules, matchApproval } from "../commands/approvals.js";
 
 /**
  * What "waiting for approval" means, in one place: SUBMITTED entries inside the
@@ -60,4 +61,29 @@ export async function countPendingOutsideBranch(
     );
 
   return row?.count ?? 0;
+}
+
+/**
+ * Per entry: whether the approval chain keeps the viewer's role from deciding
+ * it, so Direction decides (ADR-0009). The same rules and matching
+ * approve-entry runs, so the screen never offers a decision the command
+ * refuses. Only SUBMITTED entries can be true, and only for a role the entry
+ * chain names at all.
+ */
+export async function directionDecidesEntries(
+  tx: TenantTx,
+  auth: AuthContext,
+  entries: ReadonlyArray<{ status: string; branchId: string; amountMinor: bigint }>,
+): Promise<boolean[]> {
+  if (!entries.some((entry) => entry.status === "SUBMITTED")) return entries.map(() => false);
+  const rules = await loadApprovalRules(tx, auth.workspaceId, "approve-entry");
+  if (!rules.some((rule) => rule.requiredRole === auth.role)) return entries.map(() => false);
+  return entries.map(
+    (entry) =>
+      entry.status === "SUBMITTED" &&
+      matchApproval(rules, auth.role, {
+        branchId: entry.branchId,
+        amountMinor: entry.amountMinor < 0n ? -entry.amountMinor : entry.amountMinor,
+      }).outcome === "APPROVAL_REQUIRED",
+  );
 }

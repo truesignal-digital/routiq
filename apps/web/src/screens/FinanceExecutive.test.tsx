@@ -23,7 +23,7 @@ const entry: FinancialEntryDetail = {
   description: "Vehicle fuel", paymentReference: null, sourceReference: null,
   rejectedReason: null, reversesEntryId: null, reversedByEntryId: null,
   ...entryVehicleFields,
-  evidenceFiles: [], postings: [],
+  evidenceFiles: [], postings: [], directionDecides: false,
 };
 let client: QueryClient;
 

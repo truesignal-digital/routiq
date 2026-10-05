@@ -34,6 +34,7 @@ import {
 } from "./entry-evidence.js";
 import {
   countPendingOutsideBranch,
+  directionDecidesEntries,
   pendingApprovalConditions,
 } from "./approvals-queue.js";
 import {
@@ -690,9 +691,11 @@ export function registerFinanceReadRoutes(
 
           const evidenceFiles = await entryEvidenceFiles(tx, auth.workspaceId, entry);
           const recorders = await commandActors(tx, auth.workspaceId, [entry.createdByCommandId]);
+          const [directionDecides = false] = await directionDecidesEntries(tx, auth, [entry]);
 
           return {
             entry,
+            directionDecides,
             category,
             periodCode,
             postings: postingsRows,
@@ -714,6 +717,7 @@ export function registerFinanceReadRoutes(
           reversedByEntryId,
           evidenceFiles,
           recordedBy,
+          directionDecides,
         } = result;
 
         const mappedPostings = postings.map((p) => ({
@@ -774,6 +778,7 @@ export function registerFinanceReadRoutes(
           assetLinks: null,
           links: toEntryLinks(entry),
           evidenceFiles,
+          directionDecides,
         };
 
         return financialEntryDetail.parse(response);
@@ -873,25 +878,29 @@ export function registerFinanceReadRoutes(
             // One extra row is the has-next probe, never returned.
             .limit(limit + 1);
 
-          return { rows, total, outsideBranchCount };
+          const directionDecides = await directionDecidesEntries(tx, auth, rows);
+
+          return { rows, total, outsideBranchCount, directionDecides };
         });
 
         if (result && "error" in result) {
           return reply.status(400).send({ error: { code: result.error } });
         }
 
-        const { rows, total, outsideBranchCount } = result || {
+        const { rows, total, outsideBranchCount, directionDecides } = result || {
           rows: [],
           total: 0,
           outsideBranchCount: 0,
+          directionDecides: [],
         };
         const hasNextPage = rows.length > limit;
         const pageRows = rows.slice(0, limit);
 
-        const entries = pageRows.map((row) => ({
+        const entries = pageRows.map((row, index) => ({
           ...toEntryItem(row, false),
           submittedByPrincipalId: row.submittedByPrincipalId,
           submittedAt: row.submittedAt.toISOString(),
+          directionDecides: directionDecides[index] ?? false,
         }));
 
         let nextCursor: string | null = null;

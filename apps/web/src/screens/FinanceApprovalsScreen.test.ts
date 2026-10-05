@@ -245,6 +245,28 @@ describe("finance approval command routing", () => {
     ).toBeTruthy();
   });
 
+  it("withholds decisions on an entry above the approver's band and says the Director decides", () => {
+    // ADR-0009: Finance decides up to its band; the read flags the rest.
+    const above = [
+      { ...approvalEntries[0]!, directionDecides: true },
+      approvalEntries[1]!,
+    ];
+    mocks.useApprovals.mockReturnValue({
+      data: { pages: [{ entries: above, nextCursor: null, total: above.length }] },
+      isPending: false,
+      isError: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    renderScreen(createElement(FinanceApprovalsScreen));
+
+    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
+    expect(screen.getByText("The Director decides")).toBeTruthy();
+  });
+
   it("sends the chosen order to the queue read", async () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen));

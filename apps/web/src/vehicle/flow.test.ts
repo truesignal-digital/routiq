@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Role, WorkOrderStatus } from "@routiq/contracts";
 import {
+  attentionStep,
   buildTodos,
   completionSignedOff,
   daysSince,
@@ -405,6 +406,17 @@ describe("to-dos from the attention read", () => {
     expect(approver[0]?.record).toEqual({ kind: "entry", id: ENTRY_ID });
   });
 
+  it("locks the review, and leaves it out of the to-do count, above Finance's band (#393)", () => {
+    const above = attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true } });
+    const within = attention("ENTRY_AWAITING_REVIEW");
+    expect(token(attentionStep(above, viewer("FINANCE"), vehicle))).toBe(
+      "locked:review-entry:directionDecides",
+    );
+    expect(token(attentionStep(within, viewer("FINANCE"), vehicle))).toBe("go:review-entry");
+    expect(tabMarkers([above], vehicle, viewer("FINANCE")).todoCount).toBe(0);
+    expect(tabMarkers([within], vehicle, viewer("FINANCE")).todoCount).toBe(1);
+  });
+
   it("offers a driver the missing receipt only on an entry they recorded", () => {
     const mine = attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(ME_ID, "Sali") } });
     const theirs = attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(OTHER_ID, "Boris") } });
@@ -471,6 +483,19 @@ describe("an entry's steps", () => {
       expect(keys(entry({ status: "POSTED" }), role)).toEqual([]);
     }
     expect(keys(entry({ status: "POSTED" }), "CASHIER")).toEqual(["attach-evidence"]);
+  });
+
+  it("locks Finance's review of an entry above its band, which Direction decides", () => {
+    expect(keys(entry({ directionDecides: true }), "FINANCE")).toEqual([
+      "attach-evidence",
+      "approve-entry:directionDecides",
+      "reject-entry:directionDecides",
+    ]);
+    const steps = entrySteps(
+      entry({ directionDecides: true, evidence: { state: "SUPPLIED" } }),
+      viewer("FINANCE"),
+    );
+    expect(steps.primary).toMatchObject({ kind: "locked", lock: { key: "directionDecides" } });
   });
 
   it("keeps approval and reversal off the Administrateur", () => {
