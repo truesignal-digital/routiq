@@ -20,6 +20,7 @@ import {
 } from "./test/fixtures.js";
 import { closeVehicle, openVehicle, requested } from "./test/harness.js";
 import { openSelect } from "../test-select.js";
+import { formatDateTime } from "../lib/format.js";
 
 vi.mock("../commands/instance.js", async () => {
   const { createCommandClient } = await import("../commands/client.js");
@@ -294,6 +295,37 @@ it("opens an issue's photo through the issue's own route", async () => {
   const path = `/v1/issues/${ISSUE_ID}/artifacts/00000000-0000-4000-8000-0000000000e1/download-url`;
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
+});
+
+describe("a problem reported before it was recorded (#396)", () => {
+  const backdated = issueDetail({
+    reportedAt: "2026-09-21T08:20:00.000Z",
+    chronologie: [
+      {
+        eventId: "00000000-0000-4000-8000-0000000000c3",
+        kind: "operational_issue.reported",
+        occurredAt: "2026-09-22T09:24:00.000Z",
+        actor: actor(OTHER_ID, "Sali"),
+      },
+    ],
+  });
+
+  it.each([
+    ["en", "Reported", "Recorded "],
+    ["fr-CM", "Signalé", "Enregistré le "],
+  ] as const)("labels the chronology time as when it was recorded (%s)", async (locale, reported, recorded) => {
+    await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=issue:${ISSUE_ID}`, {
+      ...scenario,
+      issueDetails: [backdated],
+      locale,
+    });
+    const panel = await screen.findByRole("dialog", { name: /Kekem/ });
+    const reportedAt = formatDateTime("2026-09-21T08:20:00.000Z", locale);
+    const recordedAt = formatDateTime("2026-09-22T09:24:00.000Z", locale);
+    expect(within(panel).getByText(reported).nextElementSibling?.textContent).toContain(reportedAt);
+    const time = panel.querySelector('time[datetime="2026-09-22T09:24:00.000Z"]');
+    expect(time?.textContent).toBe(`${recorded}${recordedAt}`);
+  });
 });
 
 describe("the author's own pending entry (#85)", () => {

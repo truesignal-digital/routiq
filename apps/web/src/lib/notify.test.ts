@@ -137,4 +137,11 @@ describe("command notifications", () => {
       title: "Action completed",
     });
   });
+
+  it("gives an info toast with an unknown key a sentence, not the raw key", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    notifyInfo("assets", "missingKey");
+
+    expect(mocks.add).toHaveBeenCalledWith({ type: "info", title: "Noted" });
+  });
 });

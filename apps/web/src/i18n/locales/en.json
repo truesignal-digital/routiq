@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action completed"
     },
+    "info": {
+      "generic": "Noted"
+    },
     "warnings": {
       "generic": "The action completed with a warning ({code})."
     },
@@ -772,7 +775,6 @@
       "readingType": "Unit",
       "readingValue": "Value",
       "readingObservedAt": "Reading date and time",
-      "addExpenseTitle": "Expense on this activity",
       "addExpenseHint": "The expense is attributed to this activity and to the chosen asset.",
       "expenseCategory": "Category",
       "expenseAmount": "Amount",
@@ -1118,14 +1120,15 @@
       "addLine": "Add a line"
     },
     "detail": {
-      "chronologie": "Timeline",
+      "chronologie": "Chronology",
       "chronologieEmpty": "No events recorded.",
+      "recordedAt": "Recorded {date}",
       "costLines": "Posted costs",
       "costLinesEmpty": "No costs posted against this work order.",
       "pendingCostLines": "Costs awaiting review",
       "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
-      "loading": "Loading the timeline…",
-      "loadFailed": "Could not load the timeline. Please try again.",
+      "loading": "Loading the chronology…",
+      "loadFailed": "Could not load the chronology. Please try again.",
       "preventive": "Preventive — no problem",
       "linkedIssue": "Linked problem",
       "unavailableTitle": "Asset grounded",
@@ -2388,7 +2391,6 @@
       "whatWasDone": "What was done",
       "reason": "Reason",
       "costs": "Costs",
-      "chronology": "Chronology",
       "category": "Category",
       "reported": "Reported",
       "photos": "Photos",

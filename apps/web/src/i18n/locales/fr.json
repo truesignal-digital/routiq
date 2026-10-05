@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action terminée"
     },
+    "info": {
+      "generic": "C'est noté"
+    },
     "warnings": {
       "generic": "L'action est terminée avec un avertissement ({code})."
     },
@@ -772,7 +775,6 @@
       "readingType": "Unité",
       "readingValue": "Valeur",
       "readingObservedAt": "Date et heure du relevé",
-      "addExpenseTitle": "Dépense de l'activité",
       "addExpenseHint": "La dépense est rattachée à cette activité et à l'engin choisi.",
       "expenseCategory": "Catégorie",
       "expenseAmount": "Montant",
@@ -1120,6 +1122,7 @@
     "detail": {
       "chronologie": "Chronologie",
       "chronologieEmpty": "Aucun évènement enregistré.",
+      "recordedAt": "Enregistré le {date}",
       "costLines": "Coûts comptabilisés",
       "costLinesEmpty": "Aucun coût comptabilisé sur cet ordre de travail.",
       "pendingCostLines": "Coûts en attente d'examen",
@@ -2388,7 +2391,6 @@
       "whatWasDone": "Travaux réalisés",
       "reason": "Motif",
       "costs": "Coûts",
-      "chronology": "Chronologie",
       "category": "Catégorie",
       "reported": "Signalé",
       "photos": "Photos",
