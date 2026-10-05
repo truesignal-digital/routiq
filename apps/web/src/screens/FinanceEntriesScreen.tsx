@@ -11,7 +11,7 @@ import {
   type DataTableFilterOption,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -193,10 +193,15 @@ function FinanceEntriesContent() {
           primaryColumn={{ columnId: "entryNumber" }}
         />
         {canRecord && (
-          <Button size="desktop-sm" render={<Link to="/finance/record" />}>
+          // A link styled as a button: Base UI's Button would announce it as
+          // a button (#136).
+          <Link
+            to="/finance/record"
+            className={buttonVariants({ size: "desktop-sm" })}
+          >
             <Plus aria-hidden />
             {t("finance.entries.recordAction")}
-          </Button>
+          </Link>
         )}
       </FinanceToolbar>
 

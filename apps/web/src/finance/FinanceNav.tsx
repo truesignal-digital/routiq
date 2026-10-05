@@ -43,7 +43,12 @@ export function FinanceNav({ className }: { className?: string }) {
             out past the muted background. */}
         <TabsList>
           {sections.map(({ key, to }) => (
-            <TabsTrigger key={key} value={to} render={<Link to={to} />}>
+            <TabsTrigger
+              key={key}
+              value={to}
+              nativeButton={false}
+              render={<Link to={to} />}
+            >
               {t(`finance.navigation.${key}`)}
               {key === "approvals" && pendingTotal > 0 && (
                 <Badge

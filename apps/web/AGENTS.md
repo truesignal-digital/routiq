@@ -21,6 +21,7 @@ Read this with the root [`AGENTS.md`](../../AGENTS.md). Each row names the one w
 | Dashboard numbers | Server aggregates from `/v1/dashboard`. | Counting rows client-side. |
 | Access in the UI | Role gating in each screen's `// role-config` seam, as a render hint only; the server enforces every write. A server-computed capabilities read with a typed `useCan(commandName)` is the chosen replacement. | CASL, or new role-string comparisons outside the `// role-config` seams. |
 | Tests that open a select | `openSelect` from `src/test-select.ts` (`test-select.test.ts` guards the idiom). | `user.click` followed by arrow keys on the next line. |
+| A link that looks like a button | `<Link className={buttonVariants(...)}>`. A Base UI part that must render a non-`<button>` (a `TabsTrigger` as a `Link`, a `PopoverTrigger` as a `div`) gets `nativeButton={false}`. `src/test-setup.ts` fails any test during which Base UI logs an error (#136). | `<Button render={<Link />}>`: it logs a Base UI error and announces the link as a button. |
 
 ## Walkthrough videos
 
