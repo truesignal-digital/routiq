@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { COMMAND_QUEUEABILITY } from "@routiq/contracts";
 import { describe, expect, it } from "vitest";
 import { commandLabelKeys, COMMAND_INTENTS, type CommandLabelRef } from "../commands/labels.js";
+import { NOTIFY_KINDS } from "../lib/notify.js";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";
 import passengerEn from "./presets/passenger-transport.en.json";
@@ -64,6 +65,14 @@ const CATALOGS = [
 describe("locale catalogs", () => {
   it("fr and en expose exactly the same keys", () => {
     expect(flattenKeys(en).sort()).toEqual(flattenKeys(fr).sort());
+  });
+
+  it("every notify kind has a root generic line to fall back on", () => {
+    for (const [, catalog] of CATALOGS) {
+      for (const kind of NOTIFY_KINDS) {
+        expect(lookup(catalog, `notify.${kind}.generic`), kind).toEqual(expect.any(String));
+      }
+    }
   });
 
   it("no message is an empty string", () => {
