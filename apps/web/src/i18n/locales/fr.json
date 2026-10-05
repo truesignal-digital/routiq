@@ -1609,6 +1609,19 @@
       "postings": "lignes d'imputation"
     }
   },
+  "dateField": {
+    "placeholderDate": "jj/mm/aaaa",
+    "placeholderDateTime": "jj/mm/aaaa hh:mm",
+    "openCalendar": "Ouvrir le calendrier",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "time": "Heure",
+    "done": "OK",
+    "invalidDate": "Date non reconnue. Écrivez-la ainsi : {example}",
+    "invalidDateTime": "Date et heure non reconnues. Écrivez-les ainsi : {example}",
+    "tooEarly": "Au plus tôt le {min}.",
+    "tooLate": "Au plus tard le {max}."
+  },
   "datePicker": {
     "placeholder": "Choisir une date",
     "clear": "Effacer"

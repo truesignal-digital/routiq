@@ -873,6 +873,28 @@
       ]
     },
     {
+      "name": "date-field",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/date-field.tsx",
+          "type": "registry:file",
+          "target": "components/date-field.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "calendar",
+        "input",
+        "label",
+        "popover"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "date-range-picker",
       "type": "registry:component",
       "files": [

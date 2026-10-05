@@ -1609,6 +1609,19 @@
       "postings": "posting lines"
     }
   },
+  "dateField": {
+    "placeholderDate": "mm/dd/yyyy",
+    "placeholderDateTime": "mm/dd/yyyy hh:mm",
+    "openCalendar": "Open calendar",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "time": "Time",
+    "done": "Done",
+    "invalidDate": "Date not recognised. Write it like this: {example}",
+    "invalidDateTime": "Date and time not recognised. Write them like this: {example}",
+    "tooEarly": "No earlier than {min}.",
+    "tooLate": "No later than {max}."
+  },
   "datePicker": {
     "placeholder": "Pick a date",
     "clear": "Clear"

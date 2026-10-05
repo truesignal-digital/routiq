@@ -242,8 +242,8 @@ export const RULES: readonly Rule[] = [
   {
     id: "H9",
     name: "no-native-date-inputs",
-    fix: "Use a registry date picker (apps/web/AGENTS.md); add components/date-picker.tsx first if none fits.",
-    check: linesMatching(/type=["'](date|datetime-local)["']/, isWebProduction),
+    fix: "Use DateField or DateTimeField from components/date-field.tsx (apps/web/AGENTS.md).",
+    check: linesMatching(/\btype\s*=\s*\{?\s*["'`](date|datetime-local)["'`]/, isWebProduction),
   },
   {
     id: "H12",
