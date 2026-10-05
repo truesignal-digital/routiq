@@ -406,12 +406,12 @@ describe("finance record form", () => {
     expect(screen.getByRole("tab", { name: "Revenue" })).toBeTruthy();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
     expect(mocks.navigate).not.toHaveBeenCalled();
-    await waitFor(() => expect((screen.getByLabelText("Amount (XAF)") as HTMLInputElement).value).toBe(""));
+    await waitFor(() => expect((screen.getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toBe(""));
   });
 
   it("turns the workshop away: its costs go on work orders", () => {

@@ -246,7 +246,7 @@ describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
     ["fr-CM", "−86 000 FCFA", "86 000 FCFA"],
   ] as const)("%s: minus on Money and History, unsigned on the entry's own panel", async (locale, signed, unsigned) => {
     await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       locale,
       entries: [entryRow({ ...fuel, assetShareMinor: 86_000 })],
     });
@@ -255,13 +255,13 @@ describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
     cleanup();
     await closeVehicle();
 
-    await openVehicle(`/assets/${ASSET_ID}/history`, { role: "FINANCE_APPROVER", locale, history: [posted] });
+    await openVehicle(`/assets/${ASSET_ID}/history`, { role: "FINANCE", locale, history: [posted] });
     expect(await screen.findByText((_, element) => flat(element?.textContent) === signed && element?.children.length === 0)).toBeTruthy();
     cleanup();
     await closeVehicle();
 
     await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08&panel=entry:${ENTRY_ID}`, {
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       locale,
       entryDetails: [
         entryDetail({
@@ -277,7 +277,7 @@ describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
 
   it("signs a reversal's split share on the ledger and keeps the whole entry unsigned", async () => {
     await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       locale: "en",
       entries: [entryRow({ ...fuel, entryNumber: "DLA-2026-00009", amountMinor: -86_000, assetShareMinor: -43_000 })],
     });

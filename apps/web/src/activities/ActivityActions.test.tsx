@@ -389,9 +389,9 @@ describe("trip header on a phone (#395)", () => {
   }
 
   it.each([
-    ["an open trip, OPS_MANAGER", openActivity, "OPS_MANAGER"],
-    ["an open trip, FIELD_SUBMITTER", openActivity, "FIELD_SUBMITTER"],
-    ["a closed trip, OPS_MANAGER", closedActivity, "OPS_MANAGER"],
+    ["an open trip, ADMIN", openActivity, "ADMIN"],
+    ["an open trip, DRIVER", openActivity, "DRIVER"],
+    ["a closed trip, ADMIN", closedActivity, "ADMIN"],
   ] as const)("stacks under the trip number and wraps every action for %s", (_, activity, role) => {
     render(
       <QueryClientProvider client={new QueryClient()}>
