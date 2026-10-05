@@ -1,8 +1,8 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Finance → Approvals → approve the oldest pending entry someone else recorded,
- * then read it back as POSTED. Mutates the slot; reset with `pnpm verify up --reseed`.
+ * Finance → Approvals → approve the oldest pending entry someone else recorded
+ * from its ⋯ menu (one tap), then read it back as POSTED. Mutates the slot; reset with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:approve-entry --role finance --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
@@ -19,11 +19,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("approvals-queue");
 
   await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
+  // Approve is one tap: the menu item sends the command, no dialog first.
   await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.waitFor();
-  await shot("approve-dialog");
-  await dialog.getByRole("button", { name: t("Approuver l'écriture", "Approve entry"), exact: true }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await quiet();
   await shot("approved");

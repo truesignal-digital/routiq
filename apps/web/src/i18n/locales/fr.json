@@ -478,7 +478,19 @@
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
-        "editAction": "Modifier"
+        "editAction": "Modifier",
+        "receipt": "Justificatif",
+        "noReceiptFile": "Aucun fichier sur cette écriture.",
+        "evidence": {
+          "SUPPLIED": "Reçu joint",
+          "PAYMENT_REFERENCE": "Référence de paiement",
+          "NOT_EXPECTED": "Reçu non requis",
+          "NOT_SUPPLIED": "Sans reçu"
+        },
+        "evidenceVia": {
+          "RECORDED": "Joint à la saisie · {date} · {name}",
+          "ATTACHED": "Joint après coup · {date} · {name}"
+        }
       },
       "viewer": {
         "description": "Date comptable {date}",

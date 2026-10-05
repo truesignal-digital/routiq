@@ -79,7 +79,8 @@ Role codes and usernames work too (`--role FINANCE_APPROVER`, `--role boris`).
 | `edit-details` | Details → Edit details → make and model saved | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
-| `approve-entry` | approvals queue → Approve → entry POSTED | yes |
+| `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
+| `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
 | `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
 | `trips` | trips list → a closed trip's detail | no |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
