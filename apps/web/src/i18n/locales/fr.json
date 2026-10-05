@@ -767,7 +767,6 @@
       "readingType": "Unité",
       "readingValue": "Valeur",
       "readingObservedAt": "Date et heure du relevé",
-      "addExpenseTitle": "Dépense de l'activité",
       "addExpenseHint": "La dépense est rattachée à cette activité et à l'engin choisi.",
       "expenseCategory": "Catégorie",
       "expenseAmount": "Montant",
