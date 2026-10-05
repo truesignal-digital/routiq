@@ -227,7 +227,7 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
       {
         id: "category",
         header: t("maintenance.issues.columns.category"),
-        meta: { mobile: "hidden", label: t("maintenance.issues.columns.category") },
+        meta: { mobile: "secondary", label: t("maintenance.issues.columns.category") },
         cell: ({ row }) => categoryLabel(row.original.category) ?? "—",
       },
       {
