@@ -284,6 +284,19 @@ describe("approvals queue: the entry opens in the record panel", () => {
     expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
   });
+
+  it("offers no decision in the footer above the approver's band, where the Director decides (#262)", async () => {
+    stubServer([{ ...entry(FIN_001.id, "FIN-001"), directionDecides: true }]);
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(await screen.findByRole("button", { name: "FIN-001" }));
+    const panel = await screen.findByRole("dialog");
+    expect(await within(panel).findByText("Plaquettes de frein")).toBeTruthy();
+
+    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
+  });
 });
 
 describe("approvals queue: economic date and submission date (#55)", () => {

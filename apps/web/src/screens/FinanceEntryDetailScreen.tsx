@@ -62,11 +62,13 @@ function FinanceEntryDetailContent() {
 
   const canReverse = canReverseEntry(me?.role, entryQuery.data?.status);
   // role-config: an approver decides while the entry waits, never on their own
-  // entry — the maker guard the server also enforces.
+  // entry (the maker guard the server also enforces), and never above their
+  // approval band, where the Director decides.
   const canDecide =
     entryQuery.data?.status === "SUBMITTED" &&
     canApproveEntries(me?.role, me?.enabledModules) &&
-    !isOwnSubmission(entryQuery.data.recordedBy.principalId ?? "", me?.principalId);
+    !isOwnSubmission(entryQuery.data.recordedBy.principalId ?? "", me?.principalId) &&
+    !entryQuery.data.directionDecides;
   // role-config: the author alone, while it waits, and only an entry this
   // single-line form can write back whole.
   const canEdit =

@@ -52,7 +52,7 @@ const approver: MeContext = {
 const MAKER_ID = "00000000-0000-4000-8000-000000000031";
 
 /** The default fixture, waiting for a decision and recorded by `recordedBy`. */
-function waiting(recordedBy: string) {
+function waiting(recordedBy: string, directionDecides = false) {
   const current = mocks.useEntry.getMockImplementation()?.() ?? mocks.useEntry();
   mocks.useEntry.mockReturnValue({
     ...current,
@@ -63,6 +63,7 @@ function waiting(recordedBy: string) {
       postingPeriodCode: null,
       rowVersion: 4,
       recordedBy: { principalId: recordedBy, displayName: null, scope: "WORKSPACE" },
+      directionDecides,
     },
   });
 }
@@ -265,6 +266,14 @@ describe("decision on the entry page", () => {
 
   it("offers no decision on the approver's own entry", () => {
     waiting(approver.principalId);
+    renderScreen();
+
+    expect(screen.queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject entry" })).toBeNull();
+  });
+
+  it("offers no decision above the viewer's approval band, where the Director decides (#262)", () => {
+    waiting(MAKER_ID, true);
     renderScreen();
 
     expect(screen.queryByRole("button", { name: "Approve entry" })).toBeNull();
