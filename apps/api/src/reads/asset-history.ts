@@ -1,4 +1,6 @@
 import {
+  canReadDocuments,
+  canReadEntries,
   canReadLedger,
   HISTORY_ENTITY_MODULE,
   vehicleHistoryQuery,
@@ -8,6 +10,7 @@ import {
   type HistoryFieldChange,
   type ListSort,
   type ModuleCode,
+  type Role,
   type VehicleHistoryItem,
   type VehicleHistoryKind,
 } from "@routiq/contracts";
@@ -49,6 +52,7 @@ import { noteSql } from "./history.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
+import { readableEntrySql } from "./money-scope.js";
 
 /**
  * The vehicle timeline as ONE statement (PLAN §1.5): a CTE lists every record
@@ -87,15 +91,19 @@ interface HistorySource {
   kind: VehicleHistoryKind | null;
   /** Kinds this source can produce, for skipping it under a kind filter. */
   kinds: readonly VehicleHistoryKind[];
-  /** Ledger figures: only for the roles that read the books (DECISIONS 1). */
-  ledger?: true;
+  /**
+   * Roles that read this source at all, when not every role does: entries for
+   * the roles that read them (row by row by their money scope, #264),
+   * documents for everyone but the counter.
+   */
+  visibleTo?: (role: Role) => boolean;
   /** One CTE branch: (entity_type, entity_id, kind, ref_number, amount_minor, currency). */
   subjects(context: SourceContext): SQL;
 }
 
 const scopeClause = (
   auth: AuthContext,
-  column: typeof activities.branchId | typeof financialEntries.branchId,
+  column: typeof activities.branchId,
 ): SQL =>
   auth.branchScope === "ALL" ? sql`` : sql`and ${inArray(column, auth.branchScope)}`;
 
@@ -178,6 +186,7 @@ const SOURCES: readonly HistorySource[] = [
     entityType: "document",
     kind: "DOCUMENTS",
     kinds: ["DOCUMENTS"],
+    visibleTo: canReadDocuments,
     subjects: ({ workspaceId, assetId }) => sql`
       select 'document'::text, ${documents.id}, 'DOCUMENTS'::text, ${documents.documentNumber}, null::bigint, null::text
       from ${documents}
@@ -188,7 +197,7 @@ const SOURCES: readonly HistorySource[] = [
     entityType: "financial_entry",
     kind: "MONEY",
     kinds: ["MONEY"],
-    ledger: true,
+    visibleTo: canReadEntries,
     subjects: ({ workspaceId, assetId, auth }) => sql`
       select 'financial_entry'::text, ${financialEntries.id}, 'MONEY'::text, ${financialEntries.entryNumber},
         (
@@ -206,7 +215,7 @@ const SOURCES: readonly HistorySource[] = [
             and ${financialPostings.financialEntryId} = ${financialEntries.id}
             and ${financialPostings.assetId} = ${assetId}
         )
-        ${scopeClause(auth, financialEntries.branchId)}`,
+        and ${readableEntrySql(auth)}`,
   },
   {
     entityType: "operational_issue",
@@ -260,7 +269,7 @@ export function activeSources(
   return SOURCES.filter(
     (source) =>
       modules.has(HISTORY_ENTITY_MODULE[source.entityType]) &&
-      (!source.ledger || canReadLedger(auth.role)) &&
+      (source.visibleTo === undefined || source.visibleTo(auth.role)) &&
       (kinds === undefined || source.kinds.some((kind) => kinds.includes(kind))),
   );
 }
@@ -695,8 +704,9 @@ export function registerAssetHistoryReadRoutes(
 ) {
   /**
    * Everything that happened to the vehicle and the records it owns, newest
-   * first, filterable by kind. Gated by ASSETS; each source by its own module,
-   * and MONEY by the ledger-reading roles.
+   * first, filterable by kind. Gated by ASSETS; each source by its own module
+   * and `visibleTo`, MONEY entries by the caller's money scope and a detail
+   * edit's purchase price by the ledger.
    */
   defineRead(
     app,

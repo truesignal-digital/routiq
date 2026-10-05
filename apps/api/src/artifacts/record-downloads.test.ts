@@ -89,10 +89,10 @@ describe("record-scoped downloads", () => {
     admin = await seedActor(db, { workspaceId, role: "ADMIN" });
     dlaOnly = await seedActor(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    ydeOnly = await seedActor(db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
     dlaTruck = await seedAsset(app, admin.token, { branchCode: "DLA" });
   });
 
@@ -235,7 +235,7 @@ describe("record-scoped downloads", () => {
 
     it("answers MODULE_DISABLED when DOCUMENTS is off", async () => {
       const gated = await seedWorkspace(db);
-      const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+      const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
       await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "DOCUMENTS" });
       const response = await api.get(
         gatedAdmin.token,
@@ -295,7 +295,7 @@ describe("record-scoped downloads", () => {
 
     it("answers MODULE_DISABLED when MAINTENANCE is off", async () => {
       const gated = await seedWorkspace(db);
-      const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+      const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
       await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
       const response = await api.get(gatedAdmin.token, route(randomUUID(), randomUUID()));
       expect(response.status).toBe(403);

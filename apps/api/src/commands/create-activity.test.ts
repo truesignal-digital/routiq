@@ -33,7 +33,7 @@ describe("create-activity.v1", () => {
 
     const clerk = await seedMember(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     clerkToken = (
@@ -42,7 +42,7 @@ describe("create-activity.v1", () => {
 
     const manager = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     managerToken = (

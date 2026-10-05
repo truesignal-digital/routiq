@@ -42,30 +42,31 @@ Read-only. One PASS/FAIL line per check, exit 1 on any failure: containers healt
 ## Drive
 
 ```bash
-pnpm verify login --role manager --lang en                 # log in through the UI, screenshot home
-pnpm verify drive /assets /finance/entries --role admin    # visit routes in-app, one screenshot each (alias: ui)
-pnpm verify drive flow:vehicle-workspace --role manager --lang en --video
+pnpm verify login --role admin --lang en                 # log in through the UI, screenshot home
+pnpm verify drive /assets /finance/entries --role director # visit routes in-app, one screenshot each (alias: ui)
+pnpm verify drive flow:vehicle-workspace --role admin --lang en --video
 pnpm verify drive path/to/script.ts --role finance         # your own DriveScript
 pnpm verify api GET /v1/me --role finance                  # API as a seeded account, JSON out
 pnpm verify api POST /v1/commands/approve-entry --role finance --json @body.json
 pnpm verify db "select entry_number, status from financial_entries order by 1"
 ```
 
-Options for `login` and `drive`: `--role` (default `admin`), `--lang fr|en` (default `fr`), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
+Options for `login` and `drive`: `--role` (default `director`), `--lang fr|en` (default `fr`), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
 
 Every drive logs in through the real form (Workspace `transports-ngwa`, Username, PIN code, "Se connecter"). Seeded accounts, from `apps/api/scripts/seed-demo.ts`:
 
 | `--role` | User | PIN | Role | Branches |
 |---|---|---|---|---|
-| `admin` | emilienne | 111111 | ADMIN | all |
-| `manager` | boris | 222222 | OPS_MANAGER | all |
-| `field` | sali | 333333 | FIELD_SUBMITTER | all |
-| `field-yde` | patrice | 444444 | FIELD_SUBMITTER | YDE only (sees no trucks) |
-| `maintenance` | herve | 666666 | MAINTENANCE | all |
-| `finance` | nadege | 777777 | FINANCE_APPROVER | all |
-| `viewer` | amadou | 555555 | EXECUTIVE_VIEWER | all |
+| `director` | emilienne | 111111 | DIRECTOR (Direction) | all |
+| `admin` (`manager`) | boris | 222222 | ADMIN (Administrateur) | all |
+| `admin-yde` | amadou | 555555 | ADMIN | YDE only |
+| `finance` | nadege | 777777 | FINANCE | all |
+| `cashier` | clarisse | 888888 | CASHIER (Caissier / Caissière) | DLA only |
+| `technician` | herve | 666666 | TECHNICIAN (Technicien) | all |
+| `driver` (`field`) | sali | 333333 | DRIVER (Chauffeur) | all |
+| `driver-yde` | patrice | 444444 | DRIVER | YDE only (sees no trucks) |
 
-Role codes and usernames work too (`--role FINANCE_APPROVER`, `--role boris`).
+Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do what: `docs/reference/roles-and-access.md`.
 
 **Language.** The app starts in French. A choice made on More is stored per device in `localStorage["routiq-language"]` and survives full loads (#127). `--lang en` switches through the UI (Plus → English) after login, so every run starts from a clean browser and proves the switch. Navigate by clicking or with `ctx.nav(route)`; `page.goto` is fine for deep links now that the choice persists.
 
@@ -74,7 +75,7 @@ Role codes and usernames work too (`--role FINANCE_APPROVER`, `--role boris`).
 | Flow | Proves | Mutates |
 |---|---|---|
 | `home` | dashboard cards match `GET /v1/dashboard` | no |
-| `switch-user` | sign out, sign in as the viewer, role from `GET /v1/me` | no |
+| `switch-user` | sign out, sign in as the cashier, role from `GET /v1/me` | no |
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |

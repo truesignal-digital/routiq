@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   activityDetail,
   activityListResponse,
-  FINANCE_READER_ROLES,
+  LEDGER_READER_ROLES,
   personListResponse,
   placeListResponse,
 } from "@routiq/contracts";
@@ -16,6 +16,7 @@ import { apiClient, seedActor } from "../test/client.js";
 describe("activity, person and place reads", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let adminToken: string;
+  let adminPrincipalId: string;
   let doualaToken: string;
   let doualaBranchId: string;
   let yaoundeBranchId: string;
@@ -49,6 +50,7 @@ describe("activity, person and place reads", () => {
       role: "ADMIN",
       allBranches: true,
     });
+    adminPrincipalId = admin.principal.id;
     adminToken = (
       await createSession(ctx.db, {
         workspaceId: seeded.workspace.id,
@@ -58,7 +60,7 @@ describe("activity, person and place reads", () => {
 
     const doualaMember = await seedMember(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [doualaBranchId],
     });
     doualaToken = (
@@ -372,6 +374,9 @@ describe("activity, person and place reads", () => {
     // §3.4 provenance: the detail read is where a record says which command
     // wrote it, so the stamp on the screen has something to name.
     expect(detail.createdByCommandId).not.toBeNull();
+    // Who recorded it: a DRIVER closes only their own trips, and the screen
+    // offers the close only where it will pass.
+    expect(detail.recordedByPrincipalId).toBe(adminPrincipalId);
     expect(Date.parse(detail.createdAt)).not.toBeNaN();
     expect(detail.branchId).toBe(doualaBranchId);
     expect(
@@ -691,7 +696,7 @@ describe("activity detail ledger gate", () => {
     api = apiClient(ctx.app);
     const seeded = await seedWorkspace(ctx.db);
     workspaceId = seeded.workspace.id;
-    adminToken = (await seedActor(ctx.db, { workspaceId, role: "ADMIN" })).token;
+    adminToken = (await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" })).token;
     const truck = await seedAsset(ctx.app, adminToken);
 
     tripId = randomUUID();
@@ -727,7 +732,7 @@ describe("activity detail ledger gate", () => {
   }
 
   it("shows the trip's entries to every role that reads the books", async () => {
-    for (const role of FINANCE_READER_ROLES) {
+    for (const role of LEDGER_READER_ROLES) {
       const { token } = await seedActor(ctx.db, { workspaceId, role });
       const detail = await detailAs(token);
       expect({ role, entries: detail.financialEntries }).toEqual({
@@ -738,7 +743,7 @@ describe("activity detail ledger gate", () => {
   });
 
   it("gives the workshop the trip without its money", async () => {
-    const { token } = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
+    const { token } = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     const detail = await detailAs(token);
     expect(detail.id).toBe(tripId);
     expect(detail.financialEntries).toBeNull();
@@ -747,7 +752,7 @@ describe("activity detail ledger gate", () => {
   it("gives nobody the money with FINANCE off", async () => {
     await api.ok(adminToken, "disable-module", { moduleCode: "FINANCE" });
     try {
-      for (const role of ["ADMIN", "FINANCE_APPROVER", "MAINTENANCE"] as const) {
+      for (const role of ["ADMIN", "FINANCE", "TECHNICIAN"] as const) {
         const { token } = await seedActor(ctx.db, { workspaceId, role });
         const detail = await detailAs(token);
         expect({ role, entries: detail.financialEntries }).toEqual({ role, entries: null });

@@ -43,10 +43,10 @@ describe("complete-work-order.v2", () => {
     workspaceId = seeded.workspace.id;
     branchId = seeded.branch.id;
     admin = await seedActor(db, { workspaceId, role: "ADMIN" });
-    boris = await seedActor(db, { workspaceId, role: "OPS_MANAGER" });
-    mechanic = await seedActor(db, { workspaceId, role: "MAINTENANCE" });
-    approver = await seedActor(db, { workspaceId, role: "FINANCE_APPROVER" });
-    driver = await seedActor(db, { workspaceId, role: "FIELD_SUBMITTER" });
+    boris = await seedActor(db, { workspaceId, role: "TECHNICIAN" });
+    mechanic = await seedActor(db, { workspaceId, role: "TECHNICIAN" });
+    approver = await seedActor(db, { workspaceId, role: "FINANCE" });
+    driver = await seedActor(db, { workspaceId, role: "DRIVER" });
     truck = await seedAsset(ctx.app, admin.token);
   });
 
@@ -485,8 +485,8 @@ describe("complete-work-order.v2", () => {
     });
 
     it.each([
-      ["FINANCE_APPROVER", () => approver],
-      ["FIELD_SUBMITTER", () => driver],
+      ["FINANCE", () => approver],
+      ["DRIVER", () => driver],
     ] as const)("refuses a close from %s", async (_role, actor) => {
       const workOrderId = await openWorkOrder();
       const response = await close(actor(), workOrderId, { costOutcome: "NO_COST" });
@@ -555,7 +555,7 @@ describe("complete-work-order.v2 with the books switched off", () => {
   it("refuses cost lines but still closes with an explicit no-cost", async () => {
     const api = apiClient(ctx.app);
     const { workspace } = await seedWorkspace(ctx.db);
-    const admin = await seedActor(ctx.db, { workspaceId: workspace.id, role: "ADMIN" });
+    const admin = await seedActor(ctx.db, { workspaceId: workspace.id, role: "DIRECTOR" });
     const truck = await seedAsset(ctx.app, admin.token);
     await api.ok(admin.token, "disable-module", { moduleCode: "FINANCE" });
 

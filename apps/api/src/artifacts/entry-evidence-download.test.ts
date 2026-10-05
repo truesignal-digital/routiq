@@ -24,6 +24,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
   let workspaceId: string;
   let admin: Actor;
   let dlaOnly: Actor;
+  let driver: Actor;
   let ydeOnly: Actor;
   let mechanic: Actor;
   let assetId: string;
@@ -39,7 +40,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
     putObject: vi.fn(async () => undefined),
   } satisfies ObjectStorage;
 
-  async function artifact(): Promise<string> {
+  async function artifact(uploader: Actor = admin): Promise<string> {
     const id = randomUUID();
     const sha = id.replaceAll("-", "");
     await db.insert(sourceArtifacts).values({
@@ -49,7 +50,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
       sha256: sha,
       mimeType: "image/jpeg",
       sizeBytes: 100n,
-      uploadedByPrincipalId: admin.principalId,
+      uploadedByPrincipalId: uploader.principalId,
     });
     return id;
   }
@@ -80,11 +81,16 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
     admin = await seedActor(db, { workspaceId, role: "ADMIN" });
     dlaOnly = await seedActor(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "CASHIER",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
-    mechanic = await seedActor(db, { workspaceId, role: "MAINTENANCE" });
+    driver = await seedActor(db, {
+      workspaceId,
+      role: "DRIVER",
+      branchIds: [seeded.branch.id],
+    });
+    ydeOnly = await seedActor(db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
+    mechanic = await seedActor(db, { workspaceId, role: "TECHNICIAN" });
     assetId = await seedAsset(app, admin.token);
 
     recordedFile = await artifact();
@@ -146,6 +152,32 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
     expect(storage.presignGet).not.toHaveBeenCalled();
   });
 
+  it("hands a driver the receipts of their own entries only (#264)", async () => {
+    const refused = await api.get(driver.token, url(entryId, recordedFile));
+    expect(refused.status).toBe(404);
+    expect(refused.body).toEqual({ error: { code: "REFERENCE_NOT_FOUND" } });
+
+    const receipt = await artifact(driver);
+    const ownEntryId = randomUUID();
+    await api.ok(
+      driver.token,
+      "record-expense",
+      {
+        entryId: ownEntryId,
+        branchCode: "DLA",
+        categoryCode: "FUEL",
+        economicDate: "2026-08-13",
+        amountMinor: 12_000,
+        paymentMethod: "CASH",
+        postings: [{ assetId, amountMinor: 12_000 }],
+      },
+      { sourceArtifactIds: [receipt] },
+    );
+    const own = await api.get(driver.token, url(ownEntryId, receipt));
+    expect(own.status).toBe(200);
+    expect(storage.presignGet).toHaveBeenCalledTimes(1);
+  });
+
   it("answers 404 for a file that is not the entry's", async () => {
     const response = await api.get(admin.token, url(entryId, strangerFile));
     expect(response.status).toBe(404);
@@ -200,7 +232,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
 
   it("answers MODULE_DISABLED when FINANCE is off", async () => {
     const gated = await seedWorkspace(db);
-    const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
     const response = await api.get(gatedAdmin.token, url(randomUUID(), randomUUID()));
     expect(response.status).toBe(403);

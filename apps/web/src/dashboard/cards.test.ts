@@ -6,7 +6,7 @@ const ALL_MODULES: ModuleCode[] = ["CORE", "ASSETS", "FINANCE"];
 
 describe("visibleDashboardCards (module gate)", () => {
   it("an approver with every module sees all four cards", () => {
-    expect(visibleDashboardCards("FINANCE_APPROVER", ALL_MODULES)).toEqual([
+    expect(visibleDashboardCards("FINANCE", ALL_MODULES)).toEqual([
       "pendingApprovals",
       "assets",
       "openPeriodExpense",
@@ -19,7 +19,7 @@ describe("visibleDashboardCards (module gate)", () => {
   });
 
   it("a disabled assets module removes the assets card", () => {
-    expect(visibleDashboardCards("ADMIN", ["CORE", "FINANCE"])).toEqual([
+    expect(visibleDashboardCards("DIRECTOR", ["CORE", "FINANCE"])).toEqual([
       "pendingApprovals",
       "openPeriodExpense",
       "openPeriodRevenue",
@@ -33,24 +33,22 @@ describe("visibleDashboardCards (module gate)", () => {
 
 describe("visibleDashboardCards (role gate)", () => {
   it("only approver roles get the approvals card", () => {
-    for (const role of ["FINANCE_APPROVER", "ADMIN"] as const) {
+    for (const role of ["DIRECTOR", "FINANCE"] as const) {
       expect(visibleDashboardCards(role, ALL_MODULES)).toContain("pendingApprovals");
     }
-    for (const role of ["FIELD_SUBMITTER", "OPS_MANAGER", "EXECUTIVE_VIEWER"] as const) {
+    for (const role of ["ADMIN", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
       expect(visibleDashboardCards(role, ALL_MODULES)).not.toContain("pendingApprovals");
     }
   });
 
-  it("a non-approver still sees the period totals", () => {
-    expect(visibleDashboardCards("FIELD_SUBMITTER", ALL_MODULES)).toEqual([
-      "assets",
-      "openPeriodExpense",
-      "openPeriodRevenue",
-    ]);
+  it("keeps the period totals from the roles outside the ledger (#264)", () => {
+    for (const role of ["CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+      expect(visibleDashboardCards(role, ALL_MODULES)).toEqual(["assets"]);
+    }
   });
 
-  it("a read-only executive keeps the numbers the role exists to read", () => {
-    expect(visibleDashboardCards("EXECUTIVE_VIEWER", ALL_MODULES)).toEqual([
+  it("the Administrateur keeps the period totals without the approvals queue", () => {
+    expect(visibleDashboardCards("ADMIN", ALL_MODULES)).toEqual([
       "assets",
       "openPeriodExpense",
       "openPeriodRevenue",
@@ -60,17 +58,18 @@ describe("visibleDashboardCards (role gate)", () => {
 
 describe("visibleDashboardCards (finance read gate, #59)", () => {
   it("a role the API refuses finance to sees no finance card, only its assets", () => {
-    expect(visibleDashboardCards("MAINTENANCE", ALL_MODULES)).toEqual(["assets"]);
+    expect(visibleDashboardCards("TECHNICIAN", ALL_MODULES)).toEqual(["assets"]);
+    expect(visibleDashboardCards("CASHIER", ALL_MODULES)).toEqual(["assets"]);
   });
 });
 
 describe("canOpenEntriesList", () => {
   it("matches the gate the entries screen itself applies", () => {
-    const admitted: Role[] = ["ADMIN", "OPS_MANAGER", "FINANCE_APPROVER", "FIELD_SUBMITTER"];
+    const admitted: Role[] = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "DRIVER"];
     for (const role of admitted) {
       expect(canOpenEntriesList(role, ALL_MODULES)).toBe(true);
     }
-    expect(canOpenEntriesList("EXECUTIVE_VIEWER", ALL_MODULES)).toBe(true);
+    expect(canOpenEntriesList("TECHNICIAN", ALL_MODULES)).toBe(false);
     expect(canOpenEntriesList("ADMIN", ["CORE", "ASSETS"])).toBe(false);
     expect(canOpenEntriesList(undefined, undefined)).toBe(false);
   });

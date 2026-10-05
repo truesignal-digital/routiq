@@ -28,14 +28,7 @@ import {
   viewer,
 } from "./test/fixtures.js";
 
-const ROLES: Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "FIELD_SUBMITTER",
-  "MAINTENANCE",
-  "FINANCE_APPROVER",
-  "EXECUTIVE_VIEWER",
-];
+const ROLES: Role[] = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"];
 
 /** "go:key", "locked:key:reason" or "none" — one comparable token per role step. */
 function token(step: RoleStep): string {
@@ -61,52 +54,52 @@ function primaryFor(
 describe("a work order's next step, per role", () => {
   const expected: Record<WorkOrderStatus, Record<Role, string>> = {
     SUBMITTED: {
+      DIRECTOR: "go:approve-work-order",
       ADMIN: "go:approve-work-order",
-      OPS_MANAGER: "locked:complete-work-order:needsAuthorization",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "locked:complete-work-order:needsAuthorization",
-      FINANCE_APPROVER: "go:approve-work-order",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "locked:complete-work-order:needsAuthorization",
+      DRIVER: "none",
     },
     APPROVED: {
+      DIRECTOR: "go:complete-work-order",
       ADMIN: "go:complete-work-order",
-      OPS_MANAGER: "go:complete-work-order",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "go:complete-work-order",
-      FINANCE_APPROVER: "locked:approve-completion:needsCompletion",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "go:complete-work-order",
+      DRIVER: "none",
     },
     COMPLETION_SUBMITTED: {
+      DIRECTOR: "go:approve-completion",
       ADMIN: "go:approve-completion",
-      OPS_MANAGER: "locked:release:needsSignOff",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "none",
-      FINANCE_APPROVER: "go:approve-completion",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "none",
+      DRIVER: "none",
     },
     COMPLETED: {
+      DIRECTOR: "go:release",
       ADMIN: "go:release",
-      OPS_MANAGER: "go:release",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "none",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "none",
+      DRIVER: "none",
     },
     REJECTED: {
+      DIRECTOR: "none",
       ADMIN: "none",
-      OPS_MANAGER: "none",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "none",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "none",
+      DRIVER: "none",
     },
     CANCELLED: {
+      DIRECTOR: "none",
       ADMIN: "none",
-      OPS_MANAGER: "none",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "none",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "none",
+      DRIVER: "none",
     },
   };
 
@@ -117,7 +110,7 @@ describe("a work order's next step, per role", () => {
   }
 
   it("locks the maker out of authorizing and the completer out of signing off", () => {
-    expect(primaryFor("FINANCE_APPROVER", "SUBMITTED", { maker: true })).toBe(
+    expect(primaryFor("ADMIN", "SUBMITTED", { maker: true })).toBe(
       "locked:approve-work-order:makerCannotApprove",
     );
     expect(primaryFor("ADMIN", "COMPLETION_SUBMITTED", { maker: true })).toBe(
@@ -126,20 +119,21 @@ describe("a work order's next step, per role", () => {
   });
 
   it("forbids the completer to release after a safety-critical problem", () => {
-    expect(primaryFor("OPS_MANAGER", "COMPLETED", { maker: true })).toBe(
+    expect(primaryFor("ADMIN", "COMPLETED", { maker: true })).toBe(
       "locked:release:selfReleaseForbidden",
     );
   });
 
   it("offers no release on a work order that is not the grounding one", () => {
-    expect(primaryFor("OPS_MANAGER", "COMPLETED", { grounding: false })).toBe("none");
-    expect(primaryFor("OPS_MANAGER", "COMPLETION_SUBMITTED", { grounding: false })).toBe("none");
+    expect(primaryFor("ADMIN", "COMPLETED", { grounding: false })).toBe("none");
+    // The sign-off is still theirs; only the release is absent.
+    expect(primaryFor("ADMIN", "COMPLETION_SUBMITTED", { grounding: false })).toBe("go:approve-completion");
   });
 
   it("lets only a human release", () => {
     const wo = groundingWorkOrder("COMPLETED");
     const facts = groundingFacts(asset({ availability: grounded([wo]) }));
-    const robot = { ...viewer("OPS_MANAGER"), principalType: "AI_AGENT" as const };
+    const robot = { ...viewer("ADMIN"), principalType: "AI_AGENT" as const };
     expect(token(workOrderSteps(wo, robot, facts).primary)).toBe("locked:release:humanOnly");
   });
 
@@ -147,14 +141,17 @@ describe("a work order's next step, per role", () => {
     const approved = groundingWorkOrder("APPROVED");
     const keys = (role: Role) =>
       workOrderSteps(approved, viewer(role)).offered.map((offered) => offered.step.key);
-    expect(keys("MAINTENANCE")).toEqual(["complete-work-order", "add-cost", "cancel-work-order"]);
-    expect(keys("FIELD_SUBMITTER")).toEqual(["add-cost"]);
-    expect(keys("EXECUTIVE_VIEWER")).toEqual([]);
+    expect(keys("TECHNICIAN")).toEqual(["complete-work-order", "add-cost", "cancel-work-order"]);
+    expect(keys("DRIVER")).toEqual(["add-cost"]);
+    expect(keys("CASHIER")).toEqual(["add-cost"]);
     const submitted = groundingWorkOrder("SUBMITTED");
-    expect(workOrderSteps(submitted, viewer("FINANCE_APPROVER")).offered.map((o) => o.step.key)).toEqual([
+    expect(workOrderSteps(submitted, viewer("ADMIN")).offered.map((o) => o.step.key)).toContain(
       "approve-work-order",
+    );
+    expect(workOrderSteps(submitted, viewer("DIRECTOR")).offered.map((o) => o.step.key)).toContain(
       "reject-work-order",
-    ]);
+    );
+    expect(workOrderSteps(submitted, viewer("FINANCE")).offered).toEqual([]);
   });
 });
 
@@ -167,60 +164,60 @@ describe("the step beside the status sentence", () => {
 
   const expected: Record<WorkOrderStatus | "none", Record<Role, string>> = {
     none: {
+      DIRECTOR: "locked:release:needsWorkOrder",
       ADMIN: "locked:release:needsWorkOrder",
-      OPS_MANAGER: "locked:release:needsWorkOrder",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "go:create-work-order",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "go:create-work-order",
+      DRIVER: "none",
     },
     SUBMITTED: {
+      DIRECTOR: "locked:release:needsAll",
       ADMIN: "locked:release:needsAll",
-      OPS_MANAGER: "locked:release:needsAll",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "locked:complete-work-order:needsAuthorization",
-      FINANCE_APPROVER: "go:approve-work-order",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "locked:complete-work-order:needsAuthorization",
+      DRIVER: "none",
     },
     APPROVED: {
+      DIRECTOR: "locked:release:needsCompletion",
       ADMIN: "locked:release:needsCompletion",
-      OPS_MANAGER: "locked:release:needsCompletion",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "go:complete-work-order",
-      FINANCE_APPROVER: "locked:approve-completion:needsCompletion",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "go:complete-work-order",
+      DRIVER: "none",
     },
     COMPLETION_SUBMITTED: {
+      DIRECTOR: "locked:release:needsSignOff",
       ADMIN: "locked:release:needsSignOff",
-      OPS_MANAGER: "locked:release:needsSignOff",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "none",
-      FINANCE_APPROVER: "go:approve-completion",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "none",
+      DRIVER: "none",
     },
     COMPLETED: {
+      DIRECTOR: "go:release",
       ADMIN: "go:release",
-      OPS_MANAGER: "go:release",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "none",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "none",
+      DRIVER: "none",
     },
     REJECTED: {
+      DIRECTOR: "locked:release:needsWorkOrder",
       ADMIN: "locked:release:needsWorkOrder",
-      OPS_MANAGER: "locked:release:needsWorkOrder",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "go:create-work-order",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "go:create-work-order",
+      DRIVER: "none",
     },
     CANCELLED: {
+      DIRECTOR: "locked:release:needsWorkOrder",
       ADMIN: "locked:release:needsWorkOrder",
-      OPS_MANAGER: "locked:release:needsWorkOrder",
-      FIELD_SUBMITTER: "none",
-      MAINTENANCE: "go:create-work-order",
-      FINANCE_APPROVER: "none",
-      EXECUTIVE_VIEWER: "none",
+      FINANCE: "none",
+      CASHIER: "none",
+      TECHNICIAN: "go:create-work-order",
+      DRIVER: "none",
     },
   };
 
@@ -233,7 +230,7 @@ describe("the step beside the status sentence", () => {
   it("keeps Complete work for the managers on the work order itself", () => {
     const wo = groundingWorkOrder("APPROVED");
     const facts = groundingFacts(asset({ availability: grounded([wo]) }));
-    for (const role of ["ADMIN", "OPS_MANAGER"] as const) {
+    for (const role of ["DIRECTOR", "ADMIN"] as const) {
       const steps = workOrderSteps(wo, viewer(role), facts);
       expect(token(steps.primary)).toBe("go:complete-work-order");
       expect(steps.offered.map((offered) => offered.step.key)).toContain("complete-work-order");
@@ -242,28 +239,29 @@ describe("the step beside the status sentence", () => {
 
   it("points the manager's locked release at the work order, or at the problem without one", () => {
     const withOrder = asset({ availability: grounded([groundingWorkOrder("APPROVED")]) });
-    expect(groundingStep(withOrder, viewer("OPS_MANAGER")).record).toEqual({ kind: "work_order", id: WORK_ORDER_ID });
+    expect(groundingStep(withOrder, viewer("ADMIN")).record).toEqual({ kind: "work_order", id: WORK_ORDER_ID });
     const without = asset({ availability: grounded([]) });
-    expect(groundingStep(without, viewer("OPS_MANAGER")).record).toEqual({ kind: "issue", id: ISSUE_ID });
+    expect(groundingStep(without, viewer("ADMIN")).record).toEqual({ kind: "issue", id: ISSUE_ID });
   });
 
   it("plans the repair when the grounding has no work order", () => {
     const vehicle = asset({ availability: grounded([]) });
-    expect(token(groundingStep(vehicle, viewer("MAINTENANCE")).step)).toBe("go:create-work-order");
-    expect(groundingStep(vehicle, viewer("MAINTENANCE")).record).toEqual({ kind: "issue", id: vehicle.availability.state === "GROUNDED" ? vehicle.availability.issue.id : "" });
-    expect(token(groundingStep(vehicle, viewer("FINANCE_APPROVER")).step)).toBe("none");
+    expect(token(groundingStep(vehicle, viewer("TECHNICIAN")).step)).toBe("go:create-work-order");
+    expect(groundingStep(vehicle, viewer("TECHNICIAN")).record).toEqual({ kind: "issue", id: vehicle.availability.state === "GROUNDED" ? vehicle.availability.issue.id : "" });
+    expect(token(groundingStep(vehicle, viewer("FINANCE")).step)).toBe("none");
   });
 
   it("releases on the override path once the problem was closed without a repair", () => {
     const vehicle = asset({ availability: grounded([], { status: "RESOLVED", closedBy: actor(OTHER_ID) }) });
-    expect(token(groundingStep(vehicle, viewer("OPS_MANAGER")).step)).toBe("go:release");
+    expect(token(groundingStep(vehicle, viewer("ADMIN")).step)).toBe("go:release");
     const own = asset({ availability: grounded([], { status: "RESOLVED", closedBy: actor(ME_ID) }) });
-    expect(token(groundingStep(own, viewer("OPS_MANAGER")).step)).toBe("locked:release:selfReleaseForbidden");
+    expect(token(groundingStep(own, viewer("ADMIN")).step)).toBe("locked:release:selfReleaseForbidden");
   });
 
-  it("offers nothing to the executive", () => {
+  it("offers the money roles nothing beside the grounding", () => {
     const vehicle = asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) });
-    expect(token(groundingStep(vehicle, viewer("EXECUTIVE_VIEWER")).step)).toBe("none");
+    expect(token(groundingStep(vehicle, viewer("FINANCE")).step)).toBe("none");
+    expect(token(groundingStep(vehicle, viewer("CASHIER")).step)).toBe("none");
   });
 
   it("names what a release still needs", () => {
@@ -386,7 +384,7 @@ describe("to-dos from the attention read", () => {
       attention("WORK_ORDER_IN_PROGRESS", { partOfGrounding: true }),
       attention("DOCUMENT_EXPIRED"),
     ];
-    expect(buildTodos(items, vehicle, viewer("OPS_MANAGER")).map((todo) => todo.item.code)).toEqual([
+    expect(buildTodos(items, vehicle, viewer("ADMIN")).map((todo) => todo.item.code)).toEqual([
       "DOCUMENT_EXPIRED",
     ]);
   });
@@ -397,7 +395,7 @@ describe("to-dos from the attention read", () => {
       attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(ME_ID, "Sali") } }),
       attention("ISSUE_UNPLANNED"),
     ];
-    const approver = buildTodos(items, vehicle, viewer("FINANCE_APPROVER"));
+    const approver = buildTodos(items, vehicle, viewer("FINANCE"));
     expect(approver.map((todo) => token(todo.step))).toEqual([
       "locked:review-entry:youRecordedIt",
       "go:attach-evidence",
@@ -407,11 +405,24 @@ describe("to-dos from the attention read", () => {
     expect(approver[0]?.record).toEqual({ kind: "entry", id: ENTRY_ID });
   });
 
+  it("offers a driver the missing receipt only on an entry they recorded", () => {
+    const mine = attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(ME_ID, "Sali") } });
+    const theirs = attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(OTHER_ID, "Boris") } });
+    expect(buildTodos([mine], vehicle, viewer("DRIVER")).map((todo) => token(todo.step))).toEqual([
+      "go:attach-evidence",
+    ]);
+    expect(buildTodos([theirs], vehicle, viewer("DRIVER")).map((todo) => token(todo.step))).toEqual([
+      "none",
+    ]);
+  });
+
   it("counts only the viewer's own steps on the tab, and flags maintenance work", () => {
     const items = [attention("ISSUE_UNPLANNED"), attention("DOCUMENT_EXPIRING")];
-    expect(tabMarkers(items, vehicle, viewer("MAINTENANCE"))).toEqual({ todoCount: 1, maintenanceNeedsYou: true });
-    expect(tabMarkers(items, vehicle, viewer("FIELD_SUBMITTER"))).toEqual({ todoCount: 1, maintenanceNeedsYou: false });
-    expect(tabMarkers(items, vehicle, viewer("EXECUTIVE_VIEWER"))).toEqual({ todoCount: 0, maintenanceNeedsYou: false });
+    expect(tabMarkers(items, vehicle, viewer("TECHNICIAN"))).toEqual({ todoCount: 1, maintenanceNeedsYou: true });
+    // Renewing a document is Finance's and the managers', no longer the driver's.
+    expect(tabMarkers(items, vehicle, viewer("FINANCE"))).toEqual({ todoCount: 1, maintenanceNeedsYou: false });
+    expect(tabMarkers(items, vehicle, viewer("DRIVER"))).toEqual({ todoCount: 0, maintenanceNeedsYou: false });
+    expect(tabMarkers(items, vehicle, viewer("CASHIER"))).toEqual({ todoCount: 0, maintenanceNeedsYou: false });
   });
 });
 
@@ -428,7 +439,7 @@ describe("an entry's steps", () => {
     entrySteps(facts, viewer(role)).offered.map((o) => `${o.step.key}${o.lock ? `:${o.lock.key}` : ""}`);
 
   it("keeps the recorder from reviewing their own entry, and lets them edit it", () => {
-    expect(keys(entry({ recordedBy: actor(ME_ID) }), "FINANCE_APPROVER")).toEqual([
+    expect(keys(entry({ recordedBy: actor(ME_ID) }), "FINANCE")).toEqual([
       "attach-evidence",
       "edit-entry",
       "approve-entry:youRecordedIt",
@@ -437,24 +448,34 @@ describe("an entry's steps", () => {
   });
 
   it("offers the edit to the author only, and only while the entry waits", () => {
-    expect(keys(entry({ recordedBy: actor(ME_ID) }), "FIELD_SUBMITTER")).toEqual([
+    expect(keys(entry({ recordedBy: actor(ME_ID) }), "DRIVER")).toEqual([
       "attach-evidence",
       "edit-entry",
     ]);
-    expect(keys(entry(), "FIELD_SUBMITTER")).toEqual(["attach-evidence"]);
+    expect(keys(entry(), "DRIVER")).toEqual([]);
     expect(keys(entry(), "ADMIN")).not.toContain("edit-entry");
     for (const status of ["POSTED", "REJECTED", "REVERSED"] as const) {
-      expect(keys(entry({ status, recordedBy: actor(ME_ID) }), "FIELD_SUBMITTER")).not.toContain("edit-entry");
+      expect(keys(entry({ status, recordedBy: actor(ME_ID) }), "DRIVER")).not.toContain("edit-entry");
     }
   });
 
   it("asks no receipt of a reversal and offers reverse on posted entries only", () => {
-    expect(keys(entry({ status: "POSTED", reversesEntryId: "00000000-0000-4000-8000-0000000000ef" }), "ADMIN")).toEqual([]);
-    expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "ADMIN")).toEqual(["reverse-entry"]);
-    expect(keys(entry({ status: "POSTED" }), "FIELD_SUBMITTER")).toEqual(["attach-evidence"]);
+    expect(keys(entry({ status: "POSTED", reversesEntryId: "00000000-0000-4000-8000-0000000000ef" }), "FINANCE")).toEqual([]);
+    expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "FINANCE")).toEqual(["reverse-entry"]);
+    expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "DIRECTOR")).toEqual(["reverse-entry"]);
+    expect(keys(entry({ status: "POSTED", recordedBy: actor(ME_ID) }), "DRIVER")).toEqual(["attach-evidence"]);
   });
 
-  it("offers the executive nothing", () => {
-    expect(keys(entry(), "EXECUTIVE_VIEWER")).toEqual([]);
+  it("offers the driver and the workshop a receipt on their own entries only (OWN_RECORDS_ONLY)", () => {
+    for (const role of ["DRIVER", "TECHNICIAN"] as const) {
+      expect(keys(entry({ status: "POSTED" }), role)).toEqual([]);
+    }
+    expect(keys(entry({ status: "POSTED" }), "CASHIER")).toEqual(["attach-evidence"]);
+  });
+
+  it("keeps approval and reversal off the Administrateur", () => {
+    expect(keys(entry(), "ADMIN")).toEqual(["attach-evidence"]);
+    expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "ADMIN")).toEqual([]);
+    expect(keys(entry(), "DIRECTOR")).toEqual(["attach-evidence", "approve-entry", "reject-entry"]);
   });
 });

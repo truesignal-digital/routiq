@@ -17,7 +17,7 @@ import { isOwnSubmission } from "@/finance/model.js";
 import {
   canApproveEntries,
   canEditPendingEntry,
-  canReadFinance,
+  canReadFinanceEntries,
   canReverseEntry,
 } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
@@ -33,7 +33,7 @@ export function FinanceEntryDetailScreen() {
   const { t } = useTranslation();
   const me = useMeContext();
   if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
-  if (!canReadFinance(me.role, me.enabledModules)) {
+  if (!canReadFinanceEntries(me.role, me.enabledModules)) {
     return <PermissionDenied title={t("finance.entries.detail.title")}
       icon={<FileText className="size-7" aria-hidden />}
       code={deniedCode(me.enabledModules.includes("FINANCE"))} />;

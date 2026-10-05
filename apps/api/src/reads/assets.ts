@@ -180,7 +180,7 @@ function assetScopeConditions(
 }
 
 /**
- * The vehicle's money, for the roles that read the books (FINANCE_READER_ROLES).
+ * The vehicle's money, for the roles that read the books (LEDGER_READER_ROLES).
  * The workshop sees the cost lines of its own work orders, never the ledger.
  */
 async function loadFinanceSummary(
@@ -478,6 +478,10 @@ export function registerAssetReadRoutes(
         }
         const { assetId } = parsedParams.data;
 
+        // The vehicle's money and its purchase price are ledger figures:
+        // ledger readers only, with FINANCE on (#118, #121, #264).
+        const moneyVisible = canReadLedger(auth.role) && modules.has("FINANCE");
+
         const result = await read(async (tx) => {
           const headerConditions: SQL[] = [
             eq(assets.workspaceId, auth.workspaceId),
@@ -541,7 +545,7 @@ export function registerAssetReadRoutes(
             .from(workspaces)
             .where(eq(workspaces.id, auth.workspaceId));
           const currency = workspace?.defaultCurrency ?? "XAF";
-          const finance = canReadLedger(auth.role)
+          const finance = moneyVisible
             ? await loadFinanceSummary(tx, auth, assetId, currency)
             : undefined;
 
@@ -656,7 +660,7 @@ export function registerAssetReadRoutes(
           templateVersion: header.templateVersion,
           acquisitionDate: header.acquisitionDate,
           acquisitionAmountMinor:
-            header.acquisitionAmountMinor === null
+            header.acquisitionAmountMinor === null || !moneyVisible
               ? null
               : serializeMinor(header.acquisitionAmountMinor),
           currency: header.currency,

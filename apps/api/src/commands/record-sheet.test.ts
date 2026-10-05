@@ -34,7 +34,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     workspaceId = seeded.workspace.id;
     const member = await seedMember(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     token = (await createSession(ctx.db, { workspaceId, principalId: member.principal.id }))
@@ -42,7 +42,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
 
     const manager = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     const managerToken = (
@@ -145,7 +145,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
           paymentReference: "VIR-88213",
         },
         {
-          // Above the 100 000 XAF pilot threshold for a FIELD_SUBMITTER.
+          // Above the 100 000 XAF pilot threshold for a DRIVER.
           entryId: randomUUID(),
           direction: "EXPENSE" as const,
           categoryCode: "FUEL",
@@ -497,7 +497,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     // throws PERIOD_LOCKED when that escape is closed too.
     const finance = await seedMember(ctx.db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     const financeToken = (
@@ -540,9 +540,12 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
       ],
       entries: [
         {
+          // An expense inside the driver's band: it would auto-post, so only
+          // the lock holds it back. (Revenue is no longer the driver's to
+          // record, ADR-0009.)
           entryId: randomUUID(),
-          direction: "REVENUE",
-          categoryCode: "FREIGHT_REVENUE",
+          direction: "EXPENSE",
+          categoryCode: "TOLLS",
           amountMinor: 50_000,
           economicDate: "2026-03-02",
           paymentMethod: "CASH",

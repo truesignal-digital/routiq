@@ -11,7 +11,7 @@ A user opens a truck from the trucks list and works from one page: what needs do
 - `ws-trips` lists the truck's trips.
 - `ws-documents` lists current documents with their expiry state.
 - `ws-history` shows the event history with filter chips ("Afficher les événements").
-- `ws-details` shows the details and lets ADMIN or OPS_MANAGER edit make, model, acquisition date and amount.
+- `ws-details` shows the details and lets DIRECTOR or ADMIN edit make, model, acquisition date and amount.
 - `ws-record-panel` opens any record in a side panel through `?panel=<kind>:<uuid>`.
 
 ## How to get to it (user POV)
@@ -26,9 +26,9 @@ Preconditions:
 
 - Fresh seed. VH003 (plate LT 482 AB) is grounded by "Brake pressure warning on the Kekem descent" with an approved brake work order, has an open bodywork problem, an expired technical inspection and insurance expiring in 12 days.
 
-- **List and every tab.** Run `pnpm verify drive flow:vehicle-workspace --role manager --lang en`. It clicks "Trucks", the "VH003" button, then each tab by `getByRole("tab", { name: /^Maintenance/ })` and so on, waits for the URL to end in `/maintenance`, `/money`, `/trips`, `/documents`, `/history`, `/details`, and screenshots each. The cross-check reads `GET /v1/assets/<id>` → `VH003`, plate `LT 482 AB`, `IN_SERVICE`.
-- **Role differences.** Run the same flow with `--role viewer` (the header shows "Consultation seule" / "View only" instead of action buttons, and To do becomes "À surveiller") and `--role maintenance` (the flow logs `tab Argent is not offered to this role`).
-- **Edit details.** Run `pnpm verify drive flow:edit-details --role manager --lang en`. It clicks "Edit details" (French "Modifier"), fills "Make" = `Mercedes-Benz` and "Model" = `Actros 2640`, clicks "Save", and reads `GET /v1/assets/<id>` back with those values. Mutates; reseed after.
+- **List and every tab.** Run `pnpm verify drive flow:vehicle-workspace --role admin --lang en`. It clicks "Trucks", the "VH003" button, then each tab by `getByRole("tab", { name: /^Maintenance/ })` and so on, waits for the URL to end in `/maintenance`, `/money`, `/trips`, `/documents`, `/history`, `/details`, and screenshots each. The cross-check reads `GET /v1/assets/<id>` → `VH003`, plate `LT 482 AB`, `IN_SERVICE`.
+- **Role differences.** Run the same flow with `--role cashier` (the header shows "Consultation seule" / "View only" instead of action buttons, and To do becomes "À surveiller") and `--role technician` (the flow logs `tab Argent is not offered to this role`).
+- **Edit details.** Run `pnpm verify drive flow:edit-details --role admin --lang en`. It clicks "Edit details" (French "Modifier"), fills "Make" = `Mercedes-Benz` and "Model" = `Actros 2640`, clicks "Save", and reads `GET /v1/assets/<id>` back with those values. Mutates; reseed after.
 - **Money for a past month.** In a DriveScript, `ctx.nav("/assets/<id>/money?period=2026-07")`. The Garoua trip's fuel, tolls and allowance are in July 2026. Not yet a committed flow.
 - **Proof.** `02-vh003-now.png` through `08-vh003-details.png` in the run directory.
 

@@ -1,4 +1,11 @@
-import { FINANCE_READER_ROLES, ROLES, type ModuleCode, type Role } from "@routiq/contracts";
+import {
+  ENTRY_READER_ROLES,
+  LEDGER_READER_ROLES,
+  MEMBER_ADMIN_ROLES,
+  ROLES,
+  type ModuleCode,
+  type Role,
+} from "@routiq/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
@@ -11,13 +18,26 @@ export type ReadTx = TenantTx;
 
 export const ANY_ROLE: readonly Role[] = ROLES;
 
-/** Administrative reads: members and branch settings are facts for admins, not directory data. */
-export const ADMIN_ONLY: readonly Role[] = ["ADMIN"];
+/**
+ * Administrative reads: members and branch settings are facts for the people
+ * who manage access (DIRECTOR, and ADMIN for their branches' field roles), not
+ * directory data. Interim: the read-gates slice narrows what an ADMIN sees.
+ */
+export const ADMINISTRATORS: readonly Role[] = MEMBER_ADMIN_ROLES;
 
-/** The books: the ledger-reading roles, and FINANCE on. */
+/** The books (totals, periods, the approvals queue): the ledger readers, and FINANCE on. */
 export const LEDGER_GATE = {
   module: "FINANCE",
-  roles: FINANCE_READER_ROLES,
+  roles: LEDGER_READER_ROLES,
+} as const satisfies Pick<ReadGate, "module" | "roles">;
+
+/**
+ * Entries one by one: the ledger readers, the counter and the drivers. The
+ * handler narrows the rows with `readableEntrySql` (money-scope.ts).
+ */
+export const ENTRIES_GATE = {
+  module: "FINANCE",
+  roles: ENTRY_READER_ROLES,
 } as const satisfies Pick<ReadGate, "module" | "roles">;
 
 declare module "fastify" {

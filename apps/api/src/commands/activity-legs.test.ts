@@ -24,7 +24,7 @@ describe("record-movement-leg.v1 / record-meter-reading.v1", () => {
     workspaceId = seeded.workspace.id;
     const member = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     token = (await createSession(ctx.db, { workspaceId, principalId: member.principal.id }))
@@ -337,7 +337,7 @@ describe("record-movement-leg.v1 / record-meter-reading.v1", () => {
   it("accepts a standalone reading from the maintenance role", async () => {
     const mechanic = await seedMember(ctx.db, {
       workspaceId,
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
       allBranches: true,
     });
     const mechanicToken = (
@@ -387,7 +387,7 @@ describe("record-movement-leg.v1 / record-meter-reading.v1", () => {
       admin = await seedActor(ctx.db, { workspaceId: ws, role: "ADMIN" });
       dlaMechanic = await seedActor(ctx.db, {
         workspaceId: ws,
-        role: "MAINTENANCE",
+        role: "TECHNICIAN",
         branchIds: [seeded.branch.id],
       });
       dlaTruck = await seedAsset(ctx.app, admin.token, { branchCode: "DLA" });

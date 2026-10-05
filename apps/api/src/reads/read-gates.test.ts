@@ -40,8 +40,8 @@ describe("read gates (#59)", () => {
     const seeded = await seedMember(ctx.db, {
       workspaceId: wsId,
       role,
-      allBranches: role === "ADMIN",
-      branchIds: role === "ADMIN" ? [] : [branchId],
+      allBranches: role === "ADMIN" || role === "DIRECTOR",
+      branchIds: role === "ADMIN" || role === "DIRECTOR" ? [] : [branchId],
     });
     const session = await createSession(ctx.db, { principalId: seeded.principal.id, workspaceId: wsId });
     tokens.set(key, session.token);
@@ -58,11 +58,11 @@ describe("read gates (#59)", () => {
     const open = await seedWorkspace(ctx.db);
     workspaceId = open.workspace.id;
     await member(open.workspace.id, open.branch.id, "ADMIN", "admin");
-    await member(open.workspace.id, open.branch.id, "MAINTENANCE", "maintenance");
-    await member(open.workspace.id, open.branch.id, "EXECUTIVE_VIEWER", "executive");
+    await member(open.workspace.id, open.branch.id, "TECHNICIAN", "technician");
+    await member(open.workspace.id, open.branch.id, "FINANCE", "finance");
 
     const closed = await seedWorkspace(ctx.db);
-    await member(closed.workspace.id, closed.branch.id, "ADMIN", "closedAdmin");
+    await member(closed.workspace.id, closed.branch.id, "DIRECTOR", "closedAdmin");
     for (const moduleCode of ["FINANCE", "DOCUMENTS", "ASSETS", "ACTIVITIES"]) {
       const response = await command(token("closedAdmin"), "disable-module", { moduleCode });
       expect(response.statusCode, response.body).toBe(200);
@@ -73,17 +73,17 @@ describe("read gates (#59)", () => {
     await ctx?.close();
   });
 
-  it("refuses finance reads to a role outside FINANCE_READER_ROLES", async () => {
+  it("refuses finance reads to a role outside LEDGER_READER_ROLES", async () => {
     for (const url of FINANCE_READS) {
-      const response = await read(token("maintenance"), url);
+      const response = await read(token("technician"), url);
       expect(response.statusCode, url).toBe(403);
       expect(response.json(), url).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
     }
   });
 
-  it("serves finance reads to a role inside FINANCE_READER_ROLES", async () => {
+  it("serves finance reads to a role inside LEDGER_READER_ROLES", async () => {
     for (const url of ["/v1/finance/entries", "/v1/finance/approvals", "/v1/finance/periods"]) {
-      expect((await read(token("executive"), url)).statusCode, url).toBe(200);
+      expect((await read(token("finance"), url)).statusCode, url).toBe(200);
     }
   });
 
@@ -122,20 +122,20 @@ describe("read gates (#59)", () => {
 
   it("keeps member and branch administration to admins", async () => {
     for (const url of ["/v1/members", "/v1/branches"]) {
-      expect((await read(token("maintenance"), url)).json(), url).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+      expect((await read(token("technician"), url)).json(), url).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
       expect((await read(token("admin"), url)).statusCode, url).toBe(200);
     }
   });
 
   it("serves identity and reference reads to every role, whatever modules are off", async () => {
     for (const url of ["/v1/me", "/v1/commands", "/v1/categories?kind=EXPENSE_CATEGORY", "/v1/reference/asset-registration"]) {
-      expect((await read(token("maintenance"), url)).statusCode, url).toBe(200);
+      expect((await read(token("technician"), url)).statusCode, url).toBe(200);
       expect((await read(token("closedAdmin"), url)).statusCode, url).toBe(200);
     }
   });
 
   it("gives a non-finance role the home screen without finance figures", async () => {
-    const response = await read(token("maintenance"), "/v1/dashboard");
+    const response = await read(token("technician"), "/v1/dashboard");
     expect(response.statusCode).toBe(200);
     const body = dashboardResponse.parse(response.json());
     expect(body.assets.total).toBeGreaterThanOrEqual(0);

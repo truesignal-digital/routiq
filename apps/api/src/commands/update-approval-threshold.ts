@@ -25,12 +25,15 @@ const UNBANDED_BY_DEFAULT = new Set(["create-work-order", "complete-work-order"]
 /**
  * The first threshold on a work-order command turns its unbounded defaults into
  * a band of the same shape record-expense ships with: every maker role
- * auto-approves up to the threshold, and ADMIN keeps its unbounded rule beside
- * a new band so an admin's order never waits on an approver. Bounding ADMIN's
- * only rule instead would invert it — the band is the more specific rule, so it
- * wins wherever it matches, and an admin would auto-approve large orders while
- * queueing small ones.
+ * auto-approves up to the threshold, and the roles that approve work orders
+ * (DIRECTOR, ADMIN) keep their unbounded rule beside a new band so their own
+ * orders never wait on an approver. Bounding their only rule instead would
+ * invert it — the band is the more specific rule, so it wins wherever it
+ * matches, and an approver would auto-approve large orders while queueing
+ * small ones.
  */
+const KEEPS_UNBOUNDED: ReadonlySet<string> = new Set(["DIRECTOR", "ADMIN"]);
+
 async function bandUnboundedDefaults(
   tx: Tx,
   ctx: CommandContext,
@@ -42,7 +45,7 @@ async function bandUnboundedDefaults(
   const banded: ApprovalRuleRow[] = [];
   for (const rule of unbounded) {
     const [row] =
-      rule.requiredRole === "ADMIN"
+      KEEPS_UNBOUNDED.has(rule.requiredRole)
         ? await tx
             .insert(approvalRules)
             .values({
@@ -52,7 +55,7 @@ async function bandUnboundedDefaults(
               branchId: null,
               amountMinMinor: null,
               amountMaxMinor,
-              requiredRole: "ADMIN",
+              requiredRole: rule.requiredRole,
               createdByCommandId: commandId,
             })
             .returning()
@@ -73,7 +76,7 @@ const updateApprovalThresholdCommand: CommandDefinition<
   name: "update-approval-threshold",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: updateApprovalThresholdPayload,
   branchAuthorization: { kind: "workspace" },
   async execute(tx, ctx, envelope, payload) {

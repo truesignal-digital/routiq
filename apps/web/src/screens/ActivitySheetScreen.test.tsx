@@ -80,7 +80,7 @@ const clerk: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "FIELD_SUBMITTER",
+  role: "DRIVER",
   branchScope: "ALL",
   enabledModules: ["CORE", "ACTIVITIES", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
@@ -375,7 +375,7 @@ describe("activity sheet capture", () => {
   });
 
   it("offers no capture surface to a viewer", () => {
-    renderScreen({ ...clerk, role: "EXECUTIVE_VIEWER" });
+    renderScreen({ ...clerk, role: "CASHIER" });
 
     expect(screen.queryByRole("button", { name: "Record sheet" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record and close" })).toBeNull();

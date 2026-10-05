@@ -21,13 +21,19 @@ describe("DEMO_ACCOUNTS", () => {
 
 describe("resolveAccount", () => {
   it("finds an account by username, role code or alias", () => {
-    expect(resolveAccount("boris").role).toBe("OPS_MANAGER");
+    expect(resolveAccount("boris").role).toBe("ADMIN");
     expect(resolveAccount("manager").username).toBe("boris");
-    expect(resolveAccount("FINANCE_APPROVER").username).toBe("nadege");
-    expect(resolveAccount("field_submitter").username).toBe("sali");
+    expect(resolveAccount("FINANCE").username).toBe("nadege");
+    expect(resolveAccount("driver").username).toBe("sali");
+  });
+
+  it("signs in as each of the six roles by its code", () => {
+    expect(
+      ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"].map((role) => resolveAccount(role).username),
+    ).toEqual(["emilienne", "boris", "nadege", "clarisse", "herve", "sali"]);
   });
 
   it("lists the known accounts when it cannot resolve one", () => {
-    expect(() => resolveAccount("owner")).toThrow(/emilienne/);
+    expect(() => resolveAccount("superboss")).toThrow(/emilienne/);
   });
 });

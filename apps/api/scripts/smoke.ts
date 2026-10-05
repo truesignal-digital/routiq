@@ -29,21 +29,21 @@ try {
   const { workspace, branch } = await seedWorkspace(authDb, slug);
   const admin = await seedMember(authDb, {
     workspaceId: workspace.id,
-    role: "ADMIN",
+    role: "DIRECTOR",
     allBranches: true,
     username: "smoke-admin",
     pin: "4821",
   });
   const approver = await seedMember(authDb, {
     workspaceId: workspace.id,
-    role: "FINANCE_APPROVER",
+    role: "FINANCE",
     allBranches: true,
     username: "smoke-approver",
     pin: "5732",
   });
   const submitter = await seedMember(authDb, {
     workspaceId: workspace.id,
-    role: "FIELD_SUBMITTER",
+    role: "DRIVER",
     allBranches: true,
     username: "smoke-submitter",
     pin: "1948",
@@ -99,7 +99,7 @@ try {
   check(
     "/v1/me resolves server-side context",
     (me as { workspaceId: string; role: string }).workspaceId === workspace.id &&
-      (me as { role: string }).role === "ADMIN",
+      (me as { role: string }).role === "DIRECTOR",
     me,
   );
 
@@ -300,7 +300,7 @@ try {
     throw new Error("lock-period response did not include rowVersion");
   }
   const reopenRes = await sendAs(
-    approverToken,
+    adminToken,
     command(
       "reopen-period",
       { periodCode: lastPeriod, reason: "smoke reopen" },
@@ -361,7 +361,7 @@ try {
 
   const revenueEntryId = randomUUID();
   const revenueRes = await sendAs(
-    submitterToken,
+    approverToken,
     command(
       "record-revenue",
       {

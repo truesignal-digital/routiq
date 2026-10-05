@@ -75,7 +75,7 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
           issue: refLink("issue", situation.issueId),
         },
       );
-      if (viewer.role === "FIELD_SUBMITTER" && !viewer.readOnly) {
+      if (viewer.role === "DRIVER") {
         notes.push({
           key: "doNotDrive",
           icon: Ban,

@@ -41,7 +41,7 @@ import { parseMoneyXaf } from "../finance/model.js";
 import { localizedLabel } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
-import { canRecordActivities, canReopenActivity } from "./permissions.js";
+import { canCloseActivity, canRecordActivities, canReopenActivity } from "./permissions.js";
 import { localToIso, todayLocal, wholeNumber } from "./local-time.js";
 import { PlaceEndpointField } from "./PlaceEndpointField.js";
 import { ReadingForm, type ReadingAssetChoice } from "./ReadingForm.js";
@@ -154,14 +154,15 @@ export function ActivityActions({
     (segment) => segment.endedAt === null,
   );
 
-  const showClose = activity.status === "OPEN" && canRecord;
+  const showClose =
+    activity.status === "OPEN" && canCloseActivity(me, me?.enabledModules, activity);
   const showSubstitute = showClose && openSegments.length > 0;
   const showReopen = activity.status === "CLOSED" && canReopen;
   // Capture as the trip runs, not only at close-out: §6 accepts the fact when
   // and where it happens rather than making the clerk hoard it until the sheet.
-  const showCapture = showClose;
+  const showCapture = activity.status === "OPEN" && canRecord;
   const assets = assetChoices(activity);
-  if (!showClose && !showReopen && !showSubstitute) return null;
+  if (!showClose && !showReopen && !showSubstitute && !showCapture) return null;
 
   const dismiss = () => setPanel("none");
 
@@ -892,6 +893,7 @@ function ExpenseDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, invalidate } = useActivityCommit();
   const submission = useCommandSubmission();
   const categoriesQuery = useCategories("EXPENSE_CATEGORY");
@@ -966,7 +968,7 @@ function ExpenseDialog({
 
   return (
     <ActivityDialog
-      title={t("activities.actions.addExpenseTitle")}
+      title={label("record-expense")}
       description={t("activities.actions.addExpenseHint")}
       error={submission.error}
       command="record-expense"

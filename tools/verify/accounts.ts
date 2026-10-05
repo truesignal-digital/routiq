@@ -14,13 +14,14 @@ export interface DemoAccount {
 }
 
 export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
-  { username: "emilienne", pin: "111111", role: "ADMIN", displayName: "Émilienne", aliases: ["admin"], branches: "ALL" },
-  { username: "boris", pin: "222222", role: "OPS_MANAGER", displayName: "Boris", aliases: ["manager", "ops"], branches: "ALL" },
-  { username: "sali", pin: "333333", role: "FIELD_SUBMITTER", displayName: "Sali", aliases: ["field", "submitter"], branches: "ALL" },
-  { username: "patrice", pin: "444444", role: "FIELD_SUBMITTER", displayName: "Patrice", aliases: ["field-yde"], branches: ["YDE"] },
-  { username: "amadou", pin: "555555", role: "EXECUTIVE_VIEWER", displayName: "Amadou Bello", aliases: ["viewer", "executive"], branches: "ALL" },
-  { username: "herve", pin: "666666", role: "MAINTENANCE", displayName: "Hervé Mbarga", aliases: ["maintenance", "mechanic"], branches: "ALL" },
-  { username: "nadege", pin: "777777", role: "FINANCE_APPROVER", displayName: "Nadège Fotso", aliases: ["finance", "approver"], branches: "ALL" },
+  { username: "emilienne", pin: "111111", role: "DIRECTOR", displayName: "Émilienne", aliases: ["director", "direction"], branches: "ALL" },
+  { username: "boris", pin: "222222", role: "ADMIN", displayName: "Boris", aliases: ["admin", "manager", "ops"], branches: "ALL" },
+  { username: "sali", pin: "333333", role: "DRIVER", displayName: "Sali", aliases: ["driver", "chauffeur", "field"], branches: "ALL" },
+  { username: "patrice", pin: "444444", role: "DRIVER", displayName: "Patrice", aliases: ["driver-yde", "field-yde"], branches: ["YDE"] },
+  { username: "amadou", pin: "555555", role: "ADMIN", displayName: "Amadou Bello", aliases: ["admin-yde"], branches: ["YDE"] },
+  { username: "herve", pin: "666666", role: "TECHNICIAN", displayName: "Hervé Mbarga", aliases: ["technician", "technicien", "mechanic"], branches: "ALL" },
+  { username: "nadege", pin: "777777", role: "FINANCE", displayName: "Nadège Fotso", aliases: ["finance", "approver"], branches: "ALL" },
+  { username: "clarisse", pin: "888888", role: "CASHIER", displayName: "Clarisse Ewane", aliases: ["cashier", "caissier"], branches: ["DLA"] },
 ];
 
 /** Accepts a username, a role code (first account with it), or an alias, case-insensitively. */

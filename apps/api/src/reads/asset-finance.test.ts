@@ -19,7 +19,7 @@ describe("GET /v1/assets/:assetId/finance", () => {
   let approver: Actor;
   let driver: Actor;
   let mechanic: Actor;
-  let viewer: Actor;
+  let director: Actor;
   let dlaReader: Actor;
   let ydeOnly: Actor;
   let outsider: Actor;
@@ -37,17 +37,17 @@ describe("GET /v1/assets/:assetId/finance", () => {
       .insert(branches)
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
       .returning();
-    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE_APPROVER" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
-    viewer = await seedActor(ctx.db, { workspaceId, role: "EXECUTIVE_VIEWER" });
+    admin = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
+    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
+    director = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
     dlaReader = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "ADMIN",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
     const other = await seedWorkspace(ctx.db);
     outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
 
@@ -251,12 +251,14 @@ describe("GET /v1/assets/:assetId/finance", () => {
   });
 
   it("serves the roles that read the books, and no other", async () => {
-    for (const actor of [admin, approver, driver, viewer]) {
+    for (const actor of [admin, approver, dlaReader, director]) {
       expect((await api.get(actor.token, `/v1/assets/${truck}/finance`)).status).toBe(200);
     }
-    const workshop = await api.get(mechanic.token, `/v1/assets/${truck}/finance`);
-    expect(workshop.status).toBe(403);
-    expect(workshop.body).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+    for (const actor of [mechanic, driver]) {
+      const refused = await api.get(actor.token, `/v1/assets/${truck}/finance`);
+      expect(refused.status).toBe(403);
+      expect(refused.body).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+    }
   });
 
   it("refuses a malformed month", async () => {
@@ -277,7 +279,7 @@ describe("GET /v1/assets/:assetId/finance", () => {
 
   it("answers MODULE_DISABLED when FINANCE is off", async () => {
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const gatedTruck = await seedAsset(ctx.app, gatedAdmin.token);
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
     const response = await api.get(gatedAdmin.token, `/v1/assets/${gatedTruck}/finance`);

@@ -12,8 +12,7 @@ import { requireAsset } from "./work-order-lookup.js";
  * A remark on a vehicle (§3.1 Note). Append-only: the row is never edited and
  * the runtime role cannot delete it, so a correction is another note.
  *
- * Every role that records anything may write one; EXECUTIVE_VIEWER records
- * nothing, notes included. A disposed vehicle takes no new operational record
+ * Every role may write one: a note is a remark, not a decision. A disposed vehicle takes no new operational record
  * (§3.4), and a note is one — `operationalAssetId` makes the dispatcher refuse
  * it with ASSET_NOT_OPERATIONAL.
  */
@@ -21,7 +20,7 @@ export const addNote: CommandDefinition<AddNotePayload> = {
   name: "add-note",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE", "FINANCE_APPROVER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
   payloadSchema: addNotePayload,
   operationalAssetId: (payload) => (payload.entityType === "asset" ? payload.entityId : undefined),
   branchAuthorization: {

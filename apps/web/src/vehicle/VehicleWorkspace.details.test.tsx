@@ -28,7 +28,7 @@ afterEach(async () => {
 
 const DETAILS = `/assets/${ASSET_ID}/details`;
 
-async function startEditing(options: Parameters<typeof openVehicle>[1] = { role: "OPS_MANAGER" }) {
+async function startEditing(options: Parameters<typeof openVehicle>[1] = { role: "ADMIN" }) {
   const recorded = await openVehicle(DETAILS, options);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Edit details" }));
@@ -66,7 +66,7 @@ describe("the Details card's edit mode", () => {
 
   it("saves only what changed, against the version on screen, and returns to the card", async () => {
     const { recorded, user } = await startEditing({
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       assetReads: [asset(), asset({ registrationNumber: "LT 132 AB", rowVersion: 5 })],
     });
     await user.clear(field("Plate"));
@@ -121,7 +121,7 @@ describe("the Details card's edit mode", () => {
 
   it("keeps what is being typed when the vehicle is read again in the background", async () => {
     const { recorded, user } = await startEditing({
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       assetReads: [asset(), asset({ registrationNumber: "LT 999 ZZ", rowVersion: 5 })],
     });
     await user.clear(field("Model"));
@@ -160,7 +160,7 @@ describe("the Details card's edit mode", () => {
 
   it("asks for the date before an amount", async () => {
     const { recorded, user } = await startEditing({
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       asset: asset({ acquisitionDate: null, acquisitionAmountMinor: null }),
     });
     await user.type(field("Acquisition amount"), "12000000");
@@ -171,7 +171,7 @@ describe("the Details card's edit mode", () => {
 
   it("picks the acquisition date from the calendar, never a future day", async () => {
     const { recorded, user } = await startEditing({
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       asset: asset({ acquisitionDate: "2024-03-01" }),
     });
     expect(document.querySelector('input[type="date"]')).toBeNull();
@@ -205,7 +205,7 @@ describe("the Details card's edit mode", () => {
 
   it("puts the server's refusal on the field it is about", async () => {
     const { user } = await startEditing({
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       command: () => ({ status: 409, body: { error: { code: "DUPLICATE_REGISTRATION_NUMBER" } } }),
     });
     await user.clear(field("Plate"));
@@ -216,7 +216,7 @@ describe("the Details card's edit mode", () => {
   });
 
   it("shows the amount the same way in the card and in the field", async () => {
-    await openVehicle(DETAILS, { role: "OPS_MANAGER" });
+    await openVehicle(DETAILS, { role: "ADMIN" });
     const user = userEvent.setup();
     expect(await screen.findByText("3/1/24 · FCFA 45,000,000")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Edit details" }));
@@ -229,7 +229,7 @@ describe("the Details card's edit mode", () => {
 });
 
 describe("who may edit", () => {
-  it.each(["MAINTENANCE", "FINANCE_APPROVER", "FIELD_SUBMITTER", "EXECUTIVE_VIEWER"] as Role[])(
+  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as Role[])(
     "%s reads the card without the button",
     async (role) => {
       await openVehicle(DETAILS, { role });
@@ -238,8 +238,8 @@ describe("who may edit", () => {
     },
   );
 
-  it("offers the administrator the button, with its tooltip", async () => {
-    await openVehicle(DETAILS, { role: "ADMIN" });
+  it.each(["DIRECTOR", "ADMIN"] as Role[])("offers %s the button, with its tooltip", async (role) => {
+    await openVehicle(DETAILS, { role });
     const user = userEvent.setup();
     const button = await screen.findByRole("button", { name: "Edit details" });
     await user.hover(button);
@@ -257,13 +257,13 @@ describe("who may edit", () => {
     ["en", "WRITTEN_OFF", "This vehicle is written off; its details can't be changed."],
     ["fr-CM", "RETIRED", "Ce véhicule est retiré du service ; ses informations ne peuvent plus être modifiées."],
   ] as const)("%s: a %s vehicle has no button, and says why", async (locale, status, message) => {
-    await openVehicle(DETAILS, { role: "OPS_MANAGER", locale, asset: asset({ lifecycleStatus: status }) });
+    await openVehicle(DETAILS, { role: "ADMIN", locale, asset: asset({ lifecycleStatus: status }) });
     expect(await screen.findByText(message)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Edit details|Modifier/ })).toBeNull();
   });
 
   it("fr-CM: Modifier, Enregistrer les informations and Annuler", async () => {
-    await openVehicle(DETAILS, { role: "OPS_MANAGER", locale: "fr-CM" });
+    await openVehicle(DETAILS, { role: "ADMIN", locale: "fr-CM" });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Modifier les informations" }));
     expect(await screen.findByRole("button", { name: "Enregistrer les informations" })).toBeTruthy();
@@ -273,7 +273,7 @@ describe("who may edit", () => {
   });
 
   it("keeps Save and Cancel on the phone", async () => {
-    await startEditing({ role: "OPS_MANAGER", width: 390 });
+    await startEditing({ role: "ADMIN", width: 390 });
     expect(screen.getByRole("button", { name: "Save details" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
   });
@@ -282,7 +282,7 @@ describe("who may edit", () => {
 describe("History", () => {
   it("shows a details edit as before and after, with the editor's name", async () => {
     await openVehicle(`/assets/${ASSET_ID}/history`, {
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       history: [
         historyItem({
           eventType: "asset.details_updated",

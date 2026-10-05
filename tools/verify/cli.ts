@@ -28,8 +28,9 @@ Every command except status takes --slot N; without it the command uses slot 1
 (or ROUTIQ_VERIFY_SLOT), so pass --slot whenever you brought up another slot.
 Slots: N is 0-99. Slot N uses ports 24000+10N:
 postgres +0, storage +1, api +2, web +3.
-Roles: admin (emilienne), manager (boris), field (sali), field-yde (patrice),
-maintenance (herve), finance (nadege), viewer (amadou); role codes and usernames work too.`;
+Roles: director (emilienne, the default), admin (boris), admin-yde (amadou), finance (nadege),
+cashier (clarisse), technician (herve), driver (sali), driver-yde (patrice); role codes and
+usernames work too.`;
 
 async function main(command: Command): Promise<boolean> {
   switch (command.name) {

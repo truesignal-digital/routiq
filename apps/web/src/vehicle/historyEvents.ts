@@ -79,7 +79,7 @@ export function describeEvent(
         detail: [text(p["entryNumber"]), label(p["categoryLabelFr"], p["categoryLabelEn"]) || null]
           .filter((part): part is string => part !== null)
           .join(" · ") || null,
-        record: gates.money ? { kind: "entry", id: subject.id } : null,
+        record: gates.entries ? { kind: "entry", id: subject.id } : null,
       };
     }
     case "document":

@@ -26,7 +26,7 @@ describe("parseArgs", () => {
 
   it("parses api calls", () => {
     expect(parseArgs(["api", "get", "/v1/me", "--role", "finance"])).toEqual({ name: "api", slot: 1, method: "GET", path: "/v1/me", role: "finance", body: undefined });
-    expect(parseArgs(["api", "POST", "/v1/commands/x", "--json", '{"a":1}'])).toMatchObject({ method: "POST", body: '{"a":1}', role: "admin" });
+    expect(parseArgs(["api", "POST", "/v1/commands/x", "--json", '{"a":1}'])).toMatchObject({ method: "POST", body: '{"a":1}', role: "director" });
   });
 
   it("takes exactly one query for db", () => {

@@ -147,8 +147,12 @@
     "PRESET_ALREADY_SET": "This activity type is already in that state. Refresh the page.",
     "LAST_PRESET": "At least one activity type must stay enabled.",
     "USERNAME_TAKEN": "This username is already taken in your workspace.",
-    "LAST_ADMIN": "Your workspace must keep at least one active administrator.",
+    "LAST_DIRECTOR": "Your workspace must keep at least one active Director.",
     "SELF_DEACTIVATION": "You cannot deactivate your own account. Ask another administrator.",
+    "SELF_ROLE_CHANGE": "You cannot change your own role or branches. Ask a Director.",
+    "MEMBER_ROLE_NOT_GRANTABLE": "You cannot give or remove this role. Ask a Director.",
+    "MEMBER_BRANCH_OUT_OF_SCOPE": "This member or these branches are outside your branches. Ask a Director.",
+    "DIRECTOR_REQUIRES_ALL_BRANCHES": "A Director always covers every branch.",
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
@@ -165,7 +169,8 @@
     "SAFETY_ISSUE_OPEN": "Another safety-critical problem is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
-    "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it."
+    "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
   },
   "assets": {
     "notify": {
@@ -445,6 +450,8 @@
       "retry": "Try again",
       "empty": "No entries recorded yet.",
       "branchEmpty": "No entry recorded for this branch.",
+      "ownScope": "Only the entries you recorded appear here.",
+      "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
@@ -733,7 +740,8 @@
         "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
-        "pendingHint": "Lines awaiting approval are listed but stay out of the net."
+        "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
+        "ownOnly": "Only the entries you recorded on this trip."
       }
     },
     "actions": {
@@ -767,7 +775,6 @@
       "readingType": "Unit",
       "readingValue": "Value",
       "readingObservedAt": "Reading date and time",
-      "addExpenseTitle": "Expense on this activity",
       "addExpenseHint": "The expense is attributed to this activity and to the chosen asset.",
       "expenseCategory": "Category",
       "expenseAmount": "Amount",
@@ -1113,14 +1120,15 @@
       "addLine": "Add a line"
     },
     "detail": {
-      "chronologie": "Timeline",
+      "chronologie": "Chronology",
       "chronologieEmpty": "No events recorded.",
+      "recordedAt": "Recorded {date}",
       "costLines": "Posted costs",
       "costLinesEmpty": "No costs posted against this work order.",
       "pendingCostLines": "Costs awaiting review",
       "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
-      "loading": "Loading the timeline…",
-      "loadFailed": "Could not load the timeline. Please try again.",
+      "loading": "Loading the chronology…",
+      "loadFailed": "Could not load the chronology. Please try again.",
       "preventive": "Preventive — no problem",
       "linkedIssue": "Linked problem",
       "unavailableTitle": "Asset grounded",
@@ -1135,7 +1143,7 @@
         "workOrderApproved": "Work order approved",
         "workOrderRejected": "Work order rejected",
         "workOrderClosed": "Work completed",
-        "workOrderClosedSentOn": "Work completed. Sent to finance.",
+        "workOrderClosedSentOn": "Work completed. Sent for review.",
         "completionApproved": "Completion approved",
         "completionRejected": "Completion rejected",
         "workOrderCancelled": "Work order cancelled",
@@ -1190,12 +1198,12 @@
       "DEACTIVATED": "Deactivated"
     },
     "roles": {
+      "DIRECTOR": "Director",
       "ADMIN": "Administrator",
-      "OPS_MANAGER": "Operations manager",
-      "FIELD_SUBMITTER": "Field submitter",
-      "MAINTENANCE": "Maintenance",
-      "FINANCE_APPROVER": "Finance approver",
-      "EXECUTIVE_VIEWER": "Executive (read-only)"
+      "FINANCE": "Finance",
+      "CASHIER": "Cashier",
+      "TECHNICIAN": "Technician",
+      "DRIVER": "Driver"
     },
     "filters": {
       "status": "Status",
@@ -1924,7 +1932,6 @@
     "header": {
       "home": "Home: {branch}",
       "noPlate": "No plate",
-      "viewOnly": "View only",
       "moreActions": "More actions"
     },
     "facts": {
@@ -1994,10 +2001,10 @@
         "lead": "{days, plural, =0 {Grounded since today} one {Grounded since yesterday} other {Grounded for # days}} — reported: “{report}”.",
         "noWorkOrder": "Nobody has planned the repair yet: problem {issue} has no work order.",
         "repairRefused": "The repair was refused ({workOrder}); nobody has planned another yet.",
-        "awaitingAuthorization": "The repair ({workOrder}) is waiting for finance to authorize it.",
+        "awaitingAuthorization": "The repair ({workOrder}) is waiting for a manager to authorize it.",
         "inProgress": "Waiting on the workshop to finish the repair ({workOrder}).",
         "completionSentBack": "The completion of {workOrder} was sent back; waiting on the workshop to finish it.",
-        "awaitingSignOff": "The repair is done; waiting on finance to sign off {workOrder}.",
+        "awaitingSignOff": "The repair is done; waiting on a manager to sign off {workOrder}.",
         "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
         "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
         "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
@@ -2030,7 +2037,7 @@
       "review-entry": "Review"
     },
     "locked": {
-      "needsAuthorization": "Needs finance to authorize {ref} first.",
+      "needsAuthorization": "Needs a manager to authorize {ref} first.",
       "needsCompletion": "Needs {ref} completed first.",
       "needsSignOff": "Needs {ref} signed off.",
       "needsAll": "Needs {ref} authorized and completed.",
@@ -2069,11 +2076,6 @@
         "emptyTitle": "Nothing needs you right now.",
         "emptyTitleBesides": "Nothing else needs you on this vehicle.",
         "emptyHint": "When something does, it shows up here with one button to handle it."
-      },
-      "attention": {
-        "title": "Needs attention",
-        "description": "Open items on this vehicle and who is handling each one.",
-        "empty": "Nothing needs attention on this vehicle."
       },
       "month": {
         "description": "This vehicle's share",
@@ -2246,6 +2248,7 @@
       "linkedMoney": "Linked money",
       "wholeTrip": "Whole-trip amounts",
       "noMoney": "No entries linked to this trip yet.",
+      "noOwnMoney": "You have not recorded any entry on this trip.",
       "odometer": "Odometer",
       "noReadings": "No start or end reading for this vehicle.",
       "readingLine": "{source} · {date}",
@@ -2388,7 +2391,6 @@
       "whatWasDone": "What was done",
       "reason": "Reason",
       "costs": "Costs",
-      "chronology": "Chronology",
       "category": "Category",
       "reported": "Reported",
       "photos": "Photos",
@@ -2422,9 +2424,9 @@
       "openFile": "Open the file",
       "openFullEntry": "Open the full entry",
       "waitingOn": {
-        "authorization": "Waiting on finance to authorize the spending.",
+        "authorization": "Waiting on a manager to authorize the spending.",
         "completion": "Waiting on the workshop to complete the work.",
-        "signOff": "Waiting on finance to sign off the work and its cost.",
+        "signOff": "Waiting on a manager to sign off the work and its cost.",
         "release": "Waiting on a manager to release the vehicle to service.",
         "planning": "Waiting on the workshop to plan a work order.",
         "entryReview": "Waiting on finance to review it. Until then it is not counted in posted totals.",

@@ -17,7 +17,7 @@ const registerAsset: CommandDefinition<RegisterAssetPayload> = {
   name: "register-asset",
   version: 1,
   module: "ASSETS",
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: registerAssetPayload,
   presetCode: (payload) => payload.templateCode,
   branchAuthorization: {

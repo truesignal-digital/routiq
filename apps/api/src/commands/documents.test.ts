@@ -42,7 +42,7 @@ describe("Documents Command", () => {
 
     const fieldSubmitterMember = await seedMember(db, {
       workspaceId: workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     fieldSubmitterPrincipal = fieldSubmitterMember.principal;
@@ -489,7 +489,7 @@ describe("Documents Command", () => {
       expect(commands.some((c: string) => c.includes("edit-document"))).toBe(false);
     });
 
-    it("test 8: FIELD_SUBMITTER member can add document", async () => {
+    it("test 8: DRIVER member cannot add a document (ADR-0009)", async () => {
       const assetId = await registerAsset(adminToken);
       const documentId = randomUUID();
       const commandId = randomUUID();
@@ -514,19 +514,14 @@ describe("Documents Command", () => {
         fieldSubmitterToken
       );
 
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body.recordId).toBe(documentId);
+      expect(response.statusCode).toBe(403);
+      expect(JSON.parse(response.body).error.code).toBe("ROLE_FORBIDDEN");
 
-      // Verify row exists
       const rows = await db
         .select()
         .from(documents)
         .where(eq(documents.id, documentId));
-
-      expect(rows.length).toBe(1);
-      const row = rows[0]!;
-      expect(row.createdByCommandId).toBe(commandId);
+      expect(rows).toHaveLength(0);
     });
   });
 });

@@ -30,7 +30,7 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
   name: "report-issue",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"],
   payloadSchema: reportIssuePayload,
   operationalAssetId: (payload) => payload.assetId,
   branchAuthorization: {

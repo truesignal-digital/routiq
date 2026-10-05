@@ -44,7 +44,7 @@ const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
   name: "set-template-preset",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: setTemplatePresetPayload,
   branchAuthorization: { kind: "workspace" },
 

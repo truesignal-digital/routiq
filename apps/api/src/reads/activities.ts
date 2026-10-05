@@ -2,7 +2,7 @@ import {
   activityDetail,
   activityListQuery,
   activityListResponse,
-  canReadLedger,
+  canReadEntries,
   personListQuery,
   personListResponse,
   placeListResponse,
@@ -24,6 +24,7 @@ import { alias } from "drizzle-orm/pg-core";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
+import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import {
   activities,
@@ -32,6 +33,7 @@ import {
   assets,
   branches,
   categories,
+  commands,
   financialEntries,
   financialPostings,
   meterReadings,
@@ -52,6 +54,7 @@ import {
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
+import { readableEntrySql } from "./money-scope.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -365,7 +368,10 @@ export function registerActivityReadRoutes(
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { activityId } = parsedParams.data;
-        const ledgerVisible = canReadLedger(auth.role) && modules.has("FINANCE");
+        // The trip's entries, as many as the caller's money scope reads (#264):
+        // all of them for the ledger and the counter, a driver's own, none for
+        // the workshop.
+        const entriesVisible = canReadEntries(auth.role) && modules.has("FINANCE");
 
         const result = await read(async (tx) => {
           const conditions: SQL[] = [
@@ -399,6 +405,7 @@ export function registerActivityReadRoutes(
               closedAt: activities.closedAt,
               createdAt: activities.createdAt,
               createdByCommandId: activities.createdByCommandId,
+              recordedByPrincipalId: commands.initiatedByPrincipalId,
               branchId: activities.branchId,
               branchCode: branches.code,
               rowVersion: activities.rowVersion,
@@ -423,6 +430,13 @@ export function registerActivityReadRoutes(
               and(
                 eq(branches.workspaceId, activities.workspaceId),
                 eq(branches.id, activities.branchId),
+              ),
+            )
+            .leftJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, activities.workspaceId),
+                eq(commands.id, activities.createdByCommandId),
               ),
             )
             .where(and(...conditions))
@@ -558,8 +572,8 @@ export function registerActivityReadRoutes(
 
           // Every role reads the trip, not its money (#103). Null, never an
           // empty list, so a hidden ledger cannot pass for a trip with no money.
-          const financialRows = ledgerVisible
-            ? await activityFinancialRows(tx, auth.workspaceId, activityId)
+          const financialRows = entriesVisible
+            ? await activityFinancialRows(tx, auth, activityId)
             : null;
 
           return {
@@ -614,6 +628,7 @@ export function registerActivityReadRoutes(
           closedAt: header.closedAt?.toISOString() ?? null,
           createdAt: header.createdAt.toISOString(),
           createdByCommandId: header.createdByCommandId,
+          recordedByPrincipalId: header.recordedByPrincipalId,
           branchId: header.branchId,
           branchCode: header.branchCode,
           primaryAssetCode,
@@ -726,7 +741,7 @@ export function registerActivityReadRoutes(
  * The trip's entries with their amounts: ledger figures, so the detail read
  * loads them only for the roles that read the books, with FINANCE on (#103).
  */
-function activityFinancialRows(tx: ReadTx, workspaceId: string, activityId: string) {
+function activityFinancialRows(tx: ReadTx, auth: AuthContext, activityId: string) {
   return tx
     .selectDistinct({
       entryId: financialEntries.id,
@@ -758,8 +773,9 @@ function activityFinancialRows(tx: ReadTx, workspaceId: string, activityId: stri
     )
     .where(
       and(
-        eq(financialPostings.workspaceId, workspaceId),
+        eq(financialPostings.workspaceId, auth.workspaceId),
         eq(financialPostings.activityId, activityId),
+        readableEntrySql(auth),
       ),
     )
     .orderBy(

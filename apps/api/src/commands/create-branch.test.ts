@@ -19,7 +19,7 @@ describe("create-branch.v1", () => {
     workspaceId = seeded.workspace.id;
     const member = await seedMember(ctx.db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     token = (
@@ -30,7 +30,7 @@ describe("create-branch.v1", () => {
     ).token;
     const ops = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     opsToken = (
@@ -160,7 +160,7 @@ describe("create-branch.v1", () => {
     expect(rows).toHaveLength(1);
   });
 
-  it("is ADMIN-only", async () => {
+  it("is DIRECTOR-only", async () => {
     const response = await post(
       {
         branchId: randomUUID(),

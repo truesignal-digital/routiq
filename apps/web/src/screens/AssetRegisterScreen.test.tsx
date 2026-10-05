@@ -81,7 +81,7 @@ const clerk: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "OPS_MANAGER",
+  role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],

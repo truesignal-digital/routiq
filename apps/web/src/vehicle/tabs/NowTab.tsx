@@ -25,11 +25,7 @@ export function NowTab() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-      {viewer.readOnly ? (
-        <AttentionReadOnly todos={todos} />
-      ) : (
-        <TodoCard todos={todos} besidesHeader={groundingStep(asset, viewer).step.kind === "go"} />
-      )}
+      <TodoCard todos={todos} besidesHeader={groundingStep(asset, viewer).step.kind === "go"} />
       <div className="space-y-6">
         {gates.money && <MonthCard />}
         <RecentCard />
@@ -191,31 +187,6 @@ function WaitingRow({ todo }: { todo: Todo }) {
         <div className="flex items-start gap-3 px-4 py-2.5">{body}</div>
       )}
     </li>
-  );
-}
-
-function AttentionReadOnly({ todos }: { todos: Todo[] }) {
-  const { t } = useTranslation();
-  return (
-    <Card className="gap-0 py-0">
-      <CardHead
-        title={
-          <>
-            {t("vehicle.now.attention.title")} {todos.length > 0 && <Count>{todos.length}</Count>}
-          </>
-        }
-        description={t("vehicle.now.attention.description")}
-      />
-      {todos.length === 0 ? (
-        <p className="px-4 py-5 text-sm text-muted-foreground">{t("vehicle.now.attention.empty")}</p>
-      ) : (
-        <ul className="divide-y">
-          {todos.map((todo) => (
-            <WaitingRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
-          ))}
-        </ul>
-      )}
-    </Card>
   );
 }
 

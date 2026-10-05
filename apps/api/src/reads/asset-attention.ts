@@ -1,6 +1,7 @@
 import {
   assetAttentionResponse,
   ATTENTION_ITEM_LIMIT,
+  canReadDocuments,
   canReadLedger,
   DOCUMENT_EXPIRING_WINDOW_DAYS,
   type AssetAttentionItem,
@@ -529,7 +530,7 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
   if (modules.has("MAINTENANCE")) {
     items.push(...(await maintenanceItems(tx, auth, assetId)).items);
   }
-  if (modules.has("DOCUMENTS")) {
+  if (modules.has("DOCUMENTS") && canReadDocuments(auth.role)) {
     items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate)));
   }
   // Ledger facts only for the roles that read the books (DECISIONS 1).

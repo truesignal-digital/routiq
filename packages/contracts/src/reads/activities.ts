@@ -139,15 +139,22 @@ export const activityDetail = activityListItem.extend({
   createdAt: z.iso.datetime(),
   /** §3.4 provenance: the command that first wrote the row, shown on the record. */
   createdByCommandId: z.uuid().nullable(),
+  /**
+   * Who initiated that command. A DRIVER closes, and swaps the vehicle on,
+   * only the trips they recorded (OWN_RECORDS_ONLY); the screen reads this to
+   * offer those actions only where they will pass.
+   */
+  recordedByPrincipalId: z.uuid().nullable(),
   rowVersion: z.number().int().positive(),
   segments: z.array(activitySegmentRead),
   crew: z.array(activityCrewRead),
   legs: z.array(activityLegRead),
   readings: z.array(activityReadingRead),
   /**
-   * The trip's entries with their amounts. Null when the caller may not read
-   * the ledger (`canReadLedger`) or FINANCE is off (#103): hidden, never an
-   * empty list that would claim the trip had no money.
+   * The trip's entries with their amounts, as many as the caller's money
+   * scope reads (a driver's own, #264). Null when the caller reads no entries
+   * (`canReadEntries`) or FINANCE is off (#103): hidden, never an empty list
+   * that would claim the trip had no money.
    */
   financialEntries: z.array(activityFinancialEntryRead).nullable(),
 });

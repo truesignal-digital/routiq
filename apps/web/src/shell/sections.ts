@@ -7,7 +7,8 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import type { ModuleCode } from "@routiq/contracts";
+import type { ModuleCode, Role } from "@routiq/contracts";
+import { canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 
 export interface ShellSection {
@@ -50,14 +51,49 @@ const ALL_SECTIONS: ShellSection[] = [
   { key: "more", to: "/more", icon: Menu },
 ];
 
-/** Disabled modules remove their sections entirely — absent, not greyed (§3.3a). */
-export function visibleSections(enabledModules: ModuleCode[] | undefined): ShellSection[] {
+/**
+ * role-config: sections a role has no work in. The counter (CASHIER) records
+ * money and sees vehicles; trips and the workshop are not theirs (ADR-0009).
+ */
+const HIDDEN_FOR: Partial<Record<Role, ReadonlyArray<ShellSection["key"]>>> = {
+  CASHIER: ["activities", "maintenance"],
+};
+
+/**
+ * Money: the entries for every role that reads some (the ledger, the counter's
+ * branch entries, a driver's own); every role that records money is one of
+ * them. Nothing for the workshop, which books its costs on work orders.
+ */
+function financeSection(
+  section: ShellSection,
+  role: Role,
+  enabledModules: readonly ModuleCode[],
+): ShellSection | undefined {
+  return canReadFinanceEntries(role, enabledModules) ? section : undefined;
+}
+
+/**
+ * Disabled modules remove their sections entirely — absent, not greyed (§3.3a).
+ * With a role, sections that role has no work in go the same way.
+ */
+export function visibleSections(
+  enabledModules: ModuleCode[] | undefined,
+  role?: Role,
+): ShellSection[] {
   if (enabledModules === undefined) {
     return ALL_SECTIONS.filter((s) => s.module === undefined);
   }
-  return ALL_SECTIONS.filter(
+  const byModule = ALL_SECTIONS.filter(
     (s) => s.module === undefined || enabledModules.includes(s.module),
   );
+  if (role === undefined) return byModule;
+  const hidden = HIDDEN_FOR[role] ?? [];
+  return byModule.flatMap((section) => {
+    if (hidden.includes(section.key)) return [];
+    if (section.key !== "finances") return [section];
+    const finance = financeSection(section, role, enabledModules);
+    return finance === undefined ? [] : [finance];
+  });
 }
 
 /** Whole-segment exact-or-child match over the subtree the section owns. */

@@ -88,7 +88,7 @@ function entry(overrides: Partial<FinancialEntryDetail> = {}): FinancialEntryDet
   };
 }
 
-function signedIn(principalId: string, role: "FIELD_SUBMITTER" | "ADMIN" = "FIELD_SUBMITTER") {
+function signedIn(principalId: string, role: "DRIVER" | "ADMIN" = "DRIVER") {
   mocks.me.mockReturnValue({ principalId, role, enabledModules: ["CORE", "FINANCE"] });
 }
 

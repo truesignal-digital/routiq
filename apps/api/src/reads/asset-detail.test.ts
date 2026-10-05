@@ -39,7 +39,7 @@ describe("GET /v1/assets/:assetId", () => {
 
     const admin = await seedMember(ctx.db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminToken = (
@@ -51,7 +51,7 @@ describe("GET /v1/assets/:assetId", () => {
 
     const yaoundeOnly = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [yaounde.id],
     });
     yaoundeScopedToken = (
@@ -63,7 +63,7 @@ describe("GET /v1/assets/:assetId", () => {
 
     const submitter = await seedMember(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     submitterToken = (
@@ -119,7 +119,7 @@ describe("GET /v1/assets/:assetId", () => {
       expectStatus: "POSTED",
     });
 
-    // Above the auto-post threshold for a FIELD_SUBMITTER: stays SUBMITTED and
+    // Above the auto-post threshold for a DRIVER: stays SUBMITTED and
     // must stay out of the totals until somebody approves it.
     await recordEntry(submitterToken, "record-expense", {
       amountMinor: 400_000,
@@ -458,22 +458,22 @@ describe("GET /v1/assets/:assetId header facts", () => {
     yaoundeId = yaounde.id;
 
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
-    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", displayName: "Boris" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Boris" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN", displayName: "Hervé" });
     driver = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       displayName: "Sali",
     });
     ydeOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [yaoundeId],
     });
 
     // Modules are per workspace, so the switched-off cases get their own.
     const gated = await seedWorkspace(ctx.db);
-    gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     gatedAssetId = await seedAsset(ctx.app, gatedAdmin.token, { assetCode: "GATED-01" });
     await api.ok(gatedAdmin.token, "report-issue", {
       issueId: randomUUID(),
@@ -552,7 +552,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
 
   it("keeps naming a deactivated custodian, flagged inactive", async () => {
     const assetId = await seedAsset(ctx.app, admin.token);
-    const leaver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER" });
+    const leaver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
     expect((await assign(assetId, leaver.membershipId)).status).toBe(200);
     await api.ok(admin.token, "deactivate-member", { principalId: leaver.principalId });
 

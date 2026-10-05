@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Eye, LayoutGrid, Truck } from "lucide-react";
+import { LayoutGrid, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { actionDef, headerActions } from "../actions.js";
 import { useVehicle } from "../context.js";
@@ -67,15 +67,6 @@ function HeaderActions() {
   const { t } = useTranslation();
   const stepLabel = useStepLabel();
   const { viewer, runAction, openAllActions, availability } = useVehicle();
-
-  if (viewer.readOnly) {
-    return (
-      <span className="hidden shrink-0 items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground md:inline-flex">
-        <Eye className="size-3.5" aria-hidden />
-        {t("vehicle.header.viewOnly")}
-      </span>
-    );
-  }
 
   const keys = headerActions(viewer).filter((key) => availability(key).state === "enabled");
   return (

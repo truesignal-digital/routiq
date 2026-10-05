@@ -20,7 +20,7 @@ describe("place resolution", () => {
     workspaceId = seeded.workspace.id;
     const member = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
 
@@ -41,7 +41,7 @@ describe("place resolution", () => {
       principalId: member.principal.id,
       principalType: "HUMAN",
       membershipId: member.membership.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchScope: "ALL",
     } as CommandContext;
   });

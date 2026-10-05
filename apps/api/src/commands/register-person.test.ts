@@ -20,7 +20,7 @@ describe("register-person.v1", () => {
     branchId = seeded.branch.id;
     const member = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     token = (

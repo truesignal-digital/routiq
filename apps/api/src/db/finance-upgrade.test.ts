@@ -14,6 +14,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 import { expect, inject, it } from "vitest";
+import { corePack } from "../provisioning/packs/core.js";
 
 interface MigrationJournal {
   version: string;
@@ -92,9 +93,13 @@ it(
          where workspace_id = $1 and command_type = 'record-expense'`,
         [workspaceId],
       );
-      // Four bands and two unbounded approver rules from 0012, plus the
-      // MAINTENANCE band 0027 adds for work-order expenses.
-      expect(rules.rows).toHaveLength(7);
+      // 0012's bands and unbounded approver rules and 0027's workshop band,
+      // put through 0036's role map: what a new workspace gets, six roles
+      // banded and FINANCE, ADMIN and DIRECTOR unbounded.
+      expect(rules.rows).toHaveLength(
+        corePack.approvalRules.filter((rule) => rule.commandType === "record-expense").length,
+      );
+      expect(rules.rows).toHaveLength(9);
 
       const [constraint] = (
         await upgradePool.query<{ convalidated: boolean }>(

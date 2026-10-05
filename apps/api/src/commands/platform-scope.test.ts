@@ -26,7 +26,7 @@ registerPlatformCommand({
     assetId: z.uuid(),
     slug: z.string().min(1),
   }),
-  createWorkspace: async (tx, _ctx, _envelope, payload) => {
+  resolveWorkspace: async (tx, _ctx, _envelope, payload) => {
     await tx
       .insert(workspaces)
       .values({ id: payload.workspaceId, slug: payload.slug, name: payload.slug });

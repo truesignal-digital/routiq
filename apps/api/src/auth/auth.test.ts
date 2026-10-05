@@ -34,7 +34,7 @@ describe("username/PIN login", () => {
   it("issues a token for a provisioned field user and /v1/me resolves the full context", async () => {
     const member = await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "clerk1",
       pin: "4821",
@@ -56,7 +56,7 @@ describe("username/PIN login", () => {
       principalId: member.principal.id,
       principalType: "HUMAN",
       membershipId: member.membership.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchScope: [ws.branch.id],
       enabledModules: [
         "CORE",
@@ -124,7 +124,7 @@ describe("username/PIN login", () => {
   it("rejects a wrong PIN with a stable code and no message text", async () => {
     await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "clerk2",
       pin: "1111",
@@ -144,7 +144,7 @@ describe("username/PIN login", () => {
   it("locks the credential after 5 wrong PINs and unlocks after the window", async () => {
     await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "clerk3",
       pin: "2468",
@@ -181,7 +181,7 @@ describe("username/PIN login", () => {
   it("a correct login resets the failed-attempt counter", async () => {
     await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "clerk4",
       pin: "1357",
@@ -203,7 +203,7 @@ describe("username/PIN login", () => {
   it("locks login after five simultaneous incorrect PIN attempts", async () => {
     await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "concurrent-pin",
       pin: "246810",
@@ -224,7 +224,7 @@ describe("username/PIN login", () => {
   it("keeps a concurrent lock for fifteen minutes without extending it on more attempts", async () => {
     await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "concurrent-pin-expiry",
       pin: "246810",
@@ -258,7 +258,7 @@ describe("username/PIN login", () => {
   it("does not let an in-flight correct PIN clear a lock established by the fifth failure", async () => {
     await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [ws.branch.id],
       username: "in-flight-pin",
       pin: "246810",
@@ -333,7 +333,7 @@ describe("protected surfaces", () => {
   it("rejects an expired session", async () => {
     const member = await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     const { token } = await createSession(ctx.db, {
@@ -385,7 +385,7 @@ describe("server-derived identity", () => {
   it("resolves an AI_AGENT principal the same as a human (nothing assumes HUMAN)", async () => {
     const agent = await seedMember(ctx.db, {
       workspaceId: ws.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       principalType: "AI_AGENT",
       branchIds: [ws.branch.id],
     });
@@ -400,6 +400,6 @@ describe("server-derived identity", () => {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ principalType: "AI_AGENT", role: "FIELD_SUBMITTER" });
+    expect(res.json()).toMatchObject({ principalType: "AI_AGENT", role: "DRIVER" });
   });
 });

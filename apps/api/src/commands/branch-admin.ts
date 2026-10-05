@@ -171,7 +171,7 @@ const renameBranch: CommandDefinition<RenameBranchPayload> = {
   name: "rename-branch",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: renameBranchPayload,
   branchAuthorization: { kind: "workspace" },
 
@@ -201,7 +201,7 @@ const setBranchStatus: CommandDefinition<SetBranchStatusPayload> = {
   name: "set-branch-status",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: setBranchStatusPayload,
   branchAuthorization: { kind: "workspace" },
 

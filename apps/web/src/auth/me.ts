@@ -72,11 +72,6 @@ export function useMeContext(): MeContext | undefined {
   return useContext(MeCtx);
 }
 
-/** EXECUTIVE_VIEWER is the read-only role: zero mutating affordances. */
-export function isReadOnlyRole(role: Role | undefined): boolean {
-  return role === undefined || role === "EXECUTIVE_VIEWER";
-}
-
 /** Client-side branch gate — defense in depth over the server-side filter.
  * `scope` holds branch ids (as in MeContext.branchScope); `idOf` extracts the
  * comparable id from each item. */

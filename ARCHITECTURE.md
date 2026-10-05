@@ -243,7 +243,7 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | Command | Approval default |
 |---|---|
 | RegisterAsset / CommissionAsset | Auto (asset manager permission) |
-| UpdateAssetDetails | Auto (ADMIN, OPS_MANAGER). ADR-0008 level 1: a plain edit of plate, make, model, year, chassis, acquisition and template specifications, with before/after on the audit event. `expectedVersion` required; the acquisition amount only from ledger readers with FINANCE on; refused on SOLD/RETIRED/WRITTEN_OFF; never queued. Fleet code and class stay fixed |
+| UpdateAssetDetails | Auto (DIRECTOR, ADMIN). ADR-0008 level 1: a plain edit of plate, make, model, year, chassis, acquisition and template specifications, with before/after on the audit event. `expectedVersion` required; the acquisition amount only from ledger readers with FINANCE on; refused on SOLD/RETIRED/WRITTEN_OFF; never queued. Fleet code and class stay fixed |
 | AssignAsset (branch/custodian) | Auto; cross-branch transfer → 1 approval. A custodian must be an active member whose branch scope covers the vehicle's branch (`CUSTODIAN_INELIGIBLE`) |
 | **RecordJourneySheet** / **RecordHaulageJobSheet** | Auto — composite: one form emits activity + segments + crew + legs + readings atomically |
 | CreateActivity / RecordMovementLeg / SubstituteAsset | Auto (granular fallbacks for corrections) |
@@ -251,25 +251,26 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | ReopenActivity | 1 approval |
 | RecordRevenue / RecordExpense | **Auto-post below threshold; approval above** (thresholds per category/branch, tenant-editable) |
 | UpdatePendingEntry | The entry's **author only**, while it is SUBMITTED, at `expectedVersion` (#85, ADR-0008 level 2). Replaces its facts and lines in place; branch and direction stay as recorded. RecordExpense's or RecordRevenue's rules run again on the new amount, so an edit into the band posts it. Anyone else rejects instead. Never queued |
-| ReportIssue | Auto (ADMIN, OPS_MANAGER, FIELD_SUBMITTER, MAINTENANCE); a fact, queueable offline. Safety-critical → asset grounded immediately (opens an availability interval; a second report on a grounded asset opens none) |
-| ResolveIssue / DismissIssue | Auto. Resolve: the reporting roles; dismiss: ADMIN, OPS_MANAGER, MAINTENANCE. Neither ends a grounding |
-| CreateWorkOrder | Rule read against the **expected** cost (required, 0 or more) and the asset's branch: APPROVED (open, costs may attach) when a rule authorizes the actor, else SUBMITTED for ApproveWorkOrder / RejectWorkOrder. No DRAFT. The defaults (ADMIN, OPS_MANAGER, MAINTENANCE) carry no amount bounds, so orders land APPROVED until a tenant sets a threshold |
+| ReportIssue | Auto (DIRECTOR, ADMIN, TECHNICIAN, DRIVER); a fact, queueable offline. Safety-critical → asset grounded immediately (opens an availability interval; a second report on a grounded asset opens none) |
+| ResolveIssue / DismissIssue | Auto (DIRECTOR, ADMIN, TECHNICIAN). A driver reports; the workshop resolves or dismisses. Neither ends a grounding |
+| CreateWorkOrder | Rule read against the **expected** cost (required, 0 or more) and the asset's branch: APPROVED (open, costs may attach) when a rule authorizes the actor, else SUBMITTED for ApproveWorkOrder / RejectWorkOrder. No DRAFT. The defaults (DIRECTOR, ADMIN, TECHNICIAN) carry no amount bounds, so orders land APPROVED until a tenant sets a threshold |
 | CompleteWorkOrder | Rule read against the **actual** total (the larger of the declared cost and the ledger postings on the order): COMPLETED, or COMPLETION_SUBMITTED for ApproveWorkOrderClosure / RejectWorkOrderCompletion. Same unbounded defaults, so completions land COMPLETED. Resolves the linked issue unless the completer unchecks it |
-| CancelWorkOrder | Auto (ADMIN, OPS_MANAGER, MAINTENANCE) from SUBMITTED, APPROVED or COMPLETION_SUBMITTED; posted costs stand |
-| ApproveWorkOrder / RejectWorkOrder / ApproveWorkOrderClosure / RejectWorkOrderCompletion | FINANCE_APPROVER or ADMIN; the maker (creator, or completer) may not decide their own |
-| ReleaseAssetToService | **The release is the human decision:** ADMIN or OPS_MANAGER, human principals only, never queued, never AI. Needs a COMPLETED work order answering the grounding issue, or an override reason once that issue is resolved or dismissed, and every other safety-critical issue on the asset closed (SAFETY_ISSUE_OPEN); a release that leaves the grounding issue OPEN warns GROUNDING_ISSUE_STILL_OPEN. After a safety-critical report the releaser may not be anyone who completed the work (or, on the override path, closed the issue) |
+| CancelWorkOrder | Auto (DIRECTOR, ADMIN, TECHNICIAN) from SUBMITTED, APPROVED or COMPLETION_SUBMITTED; posted costs stand |
+| ApproveWorkOrder / RejectWorkOrder / ApproveWorkOrderClosure / RejectWorkOrderCompletion | ADMIN (the branch's Administrateur) or DIRECTOR; the maker (creator, or completer) may not decide their own |
+| ReleaseAssetToService | **The release is the human decision:** DIRECTOR or ADMIN, human principals only, never queued, never AI. Needs a COMPLETED work order answering the grounding issue, or an override reason once that issue is resolved or dismissed, and every other safety-critical issue on the asset closed (SAFETY_ISSUE_OPEN); a release that leaves the grounding issue OPEN warns GROUNDING_ISSUE_STILL_OPEN. After a safety-critical report the releaser may not be anyone who completed the work (or, on the override path, closed the issue) |
 | ReceiveStock / IssueStock | Auto (issue requires authorized destination: work order/asset) |
 | AdjustStock | **Always 1 approval, approver ≠ counter** |
-| AddOrRenewDocument | Auto |
-| AddNote | Auto; every role except EXECUTIVE_VIEWER, which records nothing. Append-only; v1 annotates assets only, refused on SOLD/RETIRED/WRITTEN_OFF |
-| AttachEvidence | Auto; RecordExpense's roles without its amount band (a file changes no amount). Links uploaded files to an existing entry without editing it; refused on rejected entries and reversals; MAINTENANCE only on entries whose every posting names a work order |
-| DisposeAsset | **Always approval (executive/finance role)** |
-| LockPeriod / ReopenPeriod | Lock: finance role. Reopen: finance approval + mandatory reason |
+| AddOrRenewDocument | Auto (DIRECTOR, ADMIN, FINANCE) |
+| AddNote | Auto; every role. Append-only; v1 annotates assets only, refused on SOLD/RETIRED/WRITTEN_OFF |
+| AttachEvidence | Auto; RecordExpense's roles without its amount band (a file changes no amount). Links uploaded files to an existing entry without editing it; refused on rejected entries and reversals; TECHNICIAN only on entries whose every posting names a work order |
+| DisposeAsset | **Always approval (DIRECTOR or FINANCE)** |
+| LockPeriod / ReopenPeriod | Lock: FINANCE or DIRECTOR. Reopen: DIRECTOR + mandatory reason |
 | CorrectOrVoidRecord | Same or stricter than the original record |
 
 Notes:
 
-- The maintenance rows (ReportIssue to ReleaseAssetToService), AddNote, AttachEvidence and the custodian rule on AssignAsset describe the implementation on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. MAINTENANCE records expenses only against a work order (every posting names one), inside the same default band as the field submitter, and may record meter readings at workshop intake.
+- The maintenance rows (ReportIssue to ReleaseAssetToService), AddNote, AttachEvidence and the custodian rule on AssignAsset describe the implementation on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. TECHNICIAN records expenses only against a work order (every posting names one), inside the same default band as the driver, and may record meter readings at workshop intake.
+- Who may run each command is the feature map in [the roles and access reference](docs/reference/roles-and-access.md); `apps/api/src/commands/role-matrix.test.ts` holds every handler to it. Approval defaults give each allowed role a rule; DIRECTOR has one on every rule shape (it may approve anything). Settings commands (branches, categories, approval bands, presets, and module toggles until they move to platform scope) are DIRECTOR's; RecordExpense / RecordRevenue post at any amount for DIRECTOR, ADMIN and FINANCE and within the band for CASHIER, TECHNICIAN and DRIVER; ApproveEntry / RejectEntry / ReverseEntry are FINANCE's and DIRECTOR's. A workspace's first DIRECTOR comes from provisioning (the first account) or, for workspaces migrated from the old roles, from the vendor's `appoint-director` platform command.
 - Dual-verb commands are split (Close ≠ Reopen, Lock ≠ Reopen) because they carry different risk.
 - **The composite sheet commands are the pilot's make-or-break.** The command grain matches the paper trip sheet, not the entity graph — one form, pre-filled from route standards and the previous trip, targeting the <10-minute close criterion.
 - CSV import = the same commands per row (staged, validated, previewed, confirmed), never direct inserts. A **backfill mode** (`IMPORTED_HISTORY` provenance class) lets finance approve a historical import batch by summary + sampling instead of row-by-row, and bypasses soft invariants (readings, legs, evidence) wholesale — records stay flagged incomplete in reports. Live data keeps per-record rules.
@@ -421,7 +422,7 @@ Every profitability figure discloses: layers included, approval statuses include
 ## 10. Security summary
 
 - Three-layer tenant isolation (§4.4); command layer is the only write path; runtime DB role can't touch audit or posted rows.
-- RBAC: 6 fixed roles (Direction, Administrateur, Finance, Caissier, Technicien, Chauffeur — [ADR-0009](docs/adr/0009-six-fixed-roles-named-by-the-team.md), decided 2026-09-27, replacing the built admin/ops manager/field submitter/maintenance/finance approver/executive viewer) + branch scope. App access always belongs to a person ([ADR-0010](docs/adr/0010-one-person-list-with-optional-app-access.md)). `principal_type` distinguishes humans/AI/integrations.
+- RBAC: 6 fixed roles (Direction, Administrateur, Finance, Caissier, Technicien, Chauffeur — [ADR-0009](docs/adr/0009-six-fixed-roles-named-by-the-team.md), decided 2026-09-27, built in place of the earlier admin/ops manager/field submitter/maintenance/finance approver/executive viewer) + branch scope. Direction always covers every branch. App access always belongs to a person ([ADR-0010](docs/adr/0010-one-person-list-with-optional-app-access.md)). `principal_type` distinguishes humans/AI/integrations.
 - Evidence artifacts immutable + hashed; corrections attach, never replace.
 - For release and legacy-data handling, follow the [finalized receipt rollout guide](docs/howto/artifact-integrity-rollout.md).
 - Offline caches are branch-scoped and per-user; PINs re-auth on device; revoked users' unsynced drafts are recoverable by an admin (never silently destroyed — they may contain real business facts).

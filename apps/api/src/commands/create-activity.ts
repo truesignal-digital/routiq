@@ -29,7 +29,7 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
   name: "create-activity",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "DRIVER"],
   payloadSchema: createActivityPayload,
 
   /** The dispatcher rejects SOLD/RETIRED/WRITTEN_OFF before the handler runs. */

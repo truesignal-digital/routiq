@@ -91,7 +91,7 @@ describe("GET /v1/dashboard", () => {
 
       const admin = await seedMember(db, {
         workspaceId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       adminToken = (
@@ -100,7 +100,7 @@ describe("GET /v1/dashboard", () => {
 
       const scoped = await seedMember(db, {
         workspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: false,
         branchIds: [dlaBranchId],
       });
@@ -110,7 +110,7 @@ describe("GET /v1/dashboard", () => {
 
       const submitter = await seedMember(db, {
         workspaceId,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       submitterToken = (
@@ -156,7 +156,7 @@ describe("GET /v1/dashboard", () => {
         expectStatus: "POSTED",
       });
 
-      // Above the 100_000 threshold a FIELD_SUBMITTER cannot auto-post: these
+      // Above the 100_000 threshold a DRIVER cannot auto-post: these
       // stay SUBMITTED, so they feed pendingApprovals and never the totals.
       await recordEntry(submitterToken, "record-expense", {
         amountMinor: 150_000,
@@ -341,7 +341,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("counts pending approvals with the same predicate as the approvals queue", async () => {
-      for (const token of [adminToken, scopedToken, submitterToken]) {
+      for (const token of [adminToken, scopedToken]) {
         const [dashboard, queue] = await Promise.all([
           fetchDashboard(token),
           fetchApprovals(token),
@@ -352,7 +352,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("agrees with the queue on the overflow a branch narrowing hides", async () => {
-      for (const token of [adminToken, scopedToken, submitterToken]) {
+      for (const token of [adminToken, scopedToken]) {
         const [dashboard, queue] = await Promise.all([
           fetchDashboard(token, undefined, dlaBranchId),
           fetchApprovals(token, dlaBranchId),
@@ -361,6 +361,13 @@ describe("GET /v1/dashboard", () => {
           queue.outsideBranchCount,
         );
       }
+    });
+
+    it("gives the submitting driver no queue and no figures (#264)", async () => {
+      const dashboard = await fetchDashboard(submitterToken);
+      expect(dashboard.pendingApprovals).toBeNull();
+      expect(dashboard.openPeriod).toBeNull();
+      expect(dashboard.series).toBeNull();
     });
 
     it("rejects an unauthenticated request", async () => {
@@ -393,7 +400,7 @@ describe("GET /v1/dashboard", () => {
 
       const admin = await seedMember(db, {
         workspaceId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       adminToken = (
@@ -402,7 +409,7 @@ describe("GET /v1/dashboard", () => {
 
       const scoped = await seedMember(db, {
         workspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: false,
         branchIds: [dlaBranchId],
       });
