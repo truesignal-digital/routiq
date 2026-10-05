@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action terminée"
     },
+    "info": {
+      "generic": "C'est noté"
+    },
     "warnings": {
       "generic": "L'action est terminée avec un avertissement ({code})."
     },
@@ -1118,6 +1121,7 @@
     "detail": {
       "chronologie": "Chronologie",
       "chronologieEmpty": "Aucun évènement enregistré.",
+      "recordedAt": "Enregistré le {date}",
       "costLines": "Coûts comptabilisés",
       "costLinesEmpty": "Aucun coût comptabilisé sur cet ordre de travail.",
       "pendingCostLines": "Coûts en attente d'examen",

@@ -96,7 +96,7 @@ export function Chronologie({
               dateTime={event.occurredAt}
               className="text-xs tabular-nums text-muted-foreground"
             >
-              {formatDateTime(event.occurredAt, locale)}
+              {t("maintenance.detail.recordedAt", { date: formatDateTime(event.occurredAt, locale) })}
             </time>
           </li>
         );
