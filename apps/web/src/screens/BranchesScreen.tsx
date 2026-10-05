@@ -120,7 +120,7 @@ export function BranchesScreen() {
       <PageHeader
         title={t("branches.title")}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button type="button" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden />
             {t("branches.add.open")}
           </Button>

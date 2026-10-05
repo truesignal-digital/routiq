@@ -215,7 +215,7 @@ function CommandFormBody(props: CommandFormProps) {
           {outcome === "conflict" ? (
             <Button
               type="button"
-              className="min-h-11 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
               onClick={() => void reload()}
             >
               {t("commandForm.reload")}
@@ -223,7 +223,7 @@ function CommandFormBody(props: CommandFormProps) {
           ) : (
             <Button
               type="button"
-              className="min-h-11 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
               onClick={onDismiss}
             >
               {t("commandForm.close")}
@@ -249,7 +249,7 @@ function CommandFormBody(props: CommandFormProps) {
       key="submit"
       type="submit"
       form={formId}
-      className={surface === "page" ? "min-h-11 flex-1" : "min-h-11 flex-1 sm:flex-none"}
+      className={surface === "page" ? "flex-1" : "flex-1 sm:flex-none"}
       disabled={!ready || submitting}
     >
       {submitting
@@ -262,7 +262,7 @@ function CommandFormBody(props: CommandFormProps) {
       key="cancel"
       type="button"
       variant="outline"
-      className={surface === "page" ? "min-h-11" : "min-h-11 flex-1 sm:flex-none"}
+      className={surface === "page" ? undefined : "flex-1 sm:flex-none"}
       onClick={onDismiss}
     >
       {props.cancelLabel ?? t("commandForm.cancel")}

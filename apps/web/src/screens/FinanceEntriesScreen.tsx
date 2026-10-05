@@ -193,7 +193,7 @@ function FinanceEntriesContent() {
           primaryColumn={{ columnId: "entryNumber" }}
         />
         {canRecord && (
-          <Button size="sm" render={<Link to="/finance/record" />}>
+          <Button size="desktop-sm" render={<Link to="/finance/record" />}>
             <Plus aria-hidden />
             {t("finance.entries.recordAction")}
           </Button>

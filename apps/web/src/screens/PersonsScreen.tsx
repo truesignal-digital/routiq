@@ -147,7 +147,7 @@ export function PersonsScreen() {
                 >
                   <SelectTrigger
                     aria-label={t("persons.branchLabel")}
-                    className="h-9 w-40"
+                    className="w-40"
                   >
                     <SelectValue placeholder={t("persons.branchPlaceholder")} />
                   </SelectTrigger>
@@ -162,7 +162,6 @@ export function PersonsScreen() {
               )}
               <Button
                 type="button"
-                className="min-h-11"
                 disabled={branchCode === ""}
                 onClick={() => setRegistering(true)}
               >

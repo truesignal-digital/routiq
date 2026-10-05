@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { DateTimeField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
@@ -227,11 +228,10 @@ export function ReadingForm(props: ReadingFormProps) {
         <Label htmlFor="activity-reading-observed">
           {t("activities.actions.readingObservedAt")}
         </Label>
-        <Input
+        <DateTimeField
           id="activity-reading-observed"
-          type="datetime-local"
           value={observedAt}
-          onChange={(event) => setObservedAt(event.target.value)}
+          onChange={setObservedAt}
         />
       </div>
     </CommandForm>

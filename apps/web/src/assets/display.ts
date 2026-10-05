@@ -1,8 +1,5 @@
-import {
-  assetAttentionStatuses,
-  type AssetLifecycleStatus,
-  type AssetListItem,
-} from "@routiq/contracts";
+import type { AssetLifecycleStatus, AssetListItem } from "@routiq/contracts";
+import type { AssetListParams } from "./api.js";
 
 /** The status filter's three choices; `ALL` narrows nothing. */
 export type AssetFilter = "ALL" | "IN_SERVICE" | "ATTENTION";
@@ -15,16 +12,17 @@ export function assetDisplayName(
 }
 
 /**
- * The statuses a filter choice asks the server for. ATTENTION resolves through
- * the contract's own set, the same one `/v1/assets/summary` counts, so the tile
- * and the filtered list can never disagree about what needs attention.
+ * What a filter choice asks the server for. ATTENTION is the Attention tile's
+ * own set (grounded vehicles while MAINTENANCE is on, plus the attention
+ * lifecycle statuses), resolved by the server, so the tile and the filtered
+ * list can never disagree.
  */
-export function assetFilterStatuses(
+export function assetFilterQuery(
   filter: AssetFilter,
-): readonly AssetLifecycleStatus[] | undefined {
-  if (filter === "IN_SERVICE") return ["IN_SERVICE"];
-  if (filter === "ATTENTION") return assetAttentionStatuses;
-  return undefined;
+): Pick<AssetListParams, "status" | "attention"> {
+  if (filter === "IN_SERVICE") return { status: ["IN_SERVICE"] };
+  if (filter === "ATTENTION") return { attention: true };
+  return {};
 }
 
 export function isAssetFilter(value: string): value is AssetFilter {

@@ -90,6 +90,7 @@
       "open": "Open trip"
     },
     "detail": {
+      "breadcrumb": "Trip",
       "loading": "Loading trip…",
       "readings": {
         "allSuperseded": "Every reading on this trip has been corrected."

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { DateField, DateTimeField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
@@ -169,14 +170,13 @@ export function ActivityActions({
     <>
       <div className="flex flex-wrap gap-2">
         {showClose && (
-          <Button className="min-h-9" onClick={() => setPanel("close")}>
+          <Button onClick={() => setPanel("close")}>
             {t("activities.actions.close")}
           </Button>
         )}
         {showCapture && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("leg")}
           >
             {t("activities.actions.addLeg")}
@@ -185,7 +185,6 @@ export function ActivityActions({
         {showCapture && assets.length > 0 && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("reading")}
           >
             {t("activities.actions.addReading")}
@@ -194,7 +193,6 @@ export function ActivityActions({
         {showCapture && assets.length > 0 && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("expense")}
           >
             {t("activities.actions.addExpense")}
@@ -203,7 +201,6 @@ export function ActivityActions({
         {showSubstitute && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("substitute")}
           >
             {t("activities.actions.substitute")}
@@ -212,7 +209,6 @@ export function ActivityActions({
         {showReopen && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("reopen")}
           >
             {t("activities.actions.reopen")}
@@ -328,11 +324,10 @@ function CloseDialog({
             ? t("activities.actions.endedAt")
             : t("activities.actions.endedAtOptional")}
         </Label>
-        <Input
+        <DateTimeField
           id="activity-close-ended-at"
-          type="datetime-local"
           value={endedAt}
-          onChange={(event) => setEndedAt(event.target.value)}
+          onChange={setEndedAt}
         />
       </div>
 
@@ -626,11 +621,10 @@ function SubstituteDialog({
         <Label htmlFor="activity-substitute-handover">
           {t("activities.actions.handoverAt")}
         </Label>
-        <Input
+        <DateTimeField
           id="activity-substitute-handover"
-          type="datetime-local"
           value={handoverAt}
-          onChange={(event) => setHandoverAt(event.target.value)}
+          onChange={setHandoverAt}
         />
       </div>
 
@@ -794,22 +788,20 @@ function LegDialog({
           <Label htmlFor="activity-leg-departed">
             {t("activities.actions.legDepartedAt")}
           </Label>
-          <Input
+          <DateTimeField
             id="activity-leg-departed"
-            type="datetime-local"
             value={departedAt}
-            onChange={(event) => setDepartedAt(event.target.value)}
+            onChange={setDepartedAt}
           />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="activity-leg-arrived">
             {t("activities.actions.legArrivedAt")}
           </Label>
-          <Input
+          <DateTimeField
             id="activity-leg-arrived"
-            type="datetime-local"
             value={arrivedAt}
-            onChange={(event) => setArrivedAt(event.target.value)}
+            onChange={setArrivedAt}
           />
         </div>
       </div>
@@ -1020,11 +1012,10 @@ function ExpenseDialog({
           <Label htmlFor="activity-expense-date">
             {t("activities.actions.expenseEconomicDate")}
           </Label>
-          <Input
+          <DateField
             id="activity-expense-date"
-            type="date"
             value={economicDate}
-            onChange={(event) => setEconomicDate(event.target.value)}
+            onChange={setEconomicDate}
           />
         </div>
       </div>

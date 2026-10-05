@@ -172,7 +172,6 @@ export function ActivitiesScreen() {
           canRecord ? (
             <Button
               type="button"
-              className="min-h-11"
               onClick={() => void navigate({ to: "/activities/record" })}
             >
               <FilePlus2 className="size-4" aria-hidden />

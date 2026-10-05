@@ -19,6 +19,7 @@ import { ProvenanceStamp } from "@/components/provenance-stamp.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
+import { useRecordCrumb } from "@/shell/record-crumb.js";
 
 export function ActivityDetailScreen() {
   const { t, i18n } = useTranslation();
@@ -26,6 +27,7 @@ export function ActivityDetailScreen() {
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
   const activityQuery = useActivity(activityId);
+  useRecordCrumb(activityQuery.data?.activityNumber);
 
   if (me !== undefined && !canView) {
     return (

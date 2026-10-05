@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, CircleDollarSign, Info, Receipt, TriangleAlert } from "lucide-react";
 import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contracts";
+import { FilterChips } from "@/components/filter-chips";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
 import { recordReference } from "../model.js";
-import { CardHead, FilterChips, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
+import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
@@ -143,7 +144,7 @@ function MoneySection() {
             <div className="flex items-center" role="group" aria-label={t("vehicle.money.periodLabel")}>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="desktop-icon-sm"
                 aria-label={t("vehicle.money.periodPrev")}
                 onClick={() => go({ ...searchOf(chip), period: shiftMonth(period, -1) })}
               >
@@ -151,7 +152,7 @@ function MoneySection() {
               </Button>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="desktop-icon-sm"
                 aria-label={t("vehicle.money.periodNext")}
                 disabled={period >= currentMonth()}
                 onClick={() => go({ ...searchOf(chip), period: shiftMonth(period, 1) })}
@@ -234,7 +235,7 @@ function MoneySection() {
             {entriesQuery.hasNextPage && (
               <Button
                 variant="outline"
-                className="mt-3 h-9"
+                className="mt-3 desktop:h-9"
                 disabled={entriesQuery.isFetchingNextPage}
                 onClick={() => void entriesQuery.fetchNextPage()}
               >

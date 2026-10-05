@@ -81,7 +81,7 @@ export function AllActionsSheet({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("vehicle.actions.all.searchPlaceholder")}
-              className="h-9 pl-8"
+              className="pl-8 desktop:h-9"
               aria-label={t("vehicle.actions.all.search")}
             />
           </div>

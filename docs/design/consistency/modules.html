@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: core and modules</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .manifest { border: 1px solid var(--border); border-radius: 14px; background: white; overflow: hidden; }
+  .manifest .mh { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: oklch(0.985 0 0); }
+  .manifest .mh b { font: 650 15px var(--font-heading); }
+  .manifest .mh code { margin-left: auto; font-size: 12px; color: var(--muted-foreground); }
+  .manifest dl { display: grid; grid-template-columns: 150px minmax(0, 1fr); margin: 0; font-size: 13px; }
+  .manifest dt { padding: 8px 16px; color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
+  .manifest dd { margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .manifest dl > *:nth-last-child(-n+2) { border-bottom: 0; }
+  .ring { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 14px; align-items: center; }
+  .ring .core { border: 2px solid var(--foreground); border-radius: 18px; padding: 16px; background: white; text-align: center; }
+  .ring .core h4 { margin: 0 0 8px; font: 700 16px var(--font-heading); }
+  .ring .core .mod { margin: 3px; }
+  .ring .side { display: flex; flex-direction: column; gap: 8px; }
+  .mod { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; background: white; }
+  .mod.core { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+  .mod.new { border-style: dashed; border-color: var(--info); background: color-mix(in oklch, var(--info) 8%, white); }
+  .mod.later { border-style: dashed; color: var(--muted-foreground); }
+  .mod small { font-weight: 500; color: var(--muted-foreground); }
+  .plug { font-size: 12px; color: var(--muted-foreground); text-align: center; }
+  .onoff { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 1200px) { .onoff, .ring { grid-template-columns: 1fr; } }
+  .onoff .frame.desktop { grid-template-columns: 190px minmax(0, 1fr); min-height: 380px; }
+  .pstatic { position: relative; background: white; border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgb(15 23 42 / .07); }
+</style>
+</head>
+<body data-future>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#rule">Core vs module</a>
+    <a href="#contract">The module contract</a>
+    <a href="#entry">How you get to each module</a>
+    <a href="#onoff">On and off</a>
+    <a href="#partners">Partners</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Core and modules</h2>
+      <p class="lede">The direction for everything new: the application is its core; every feature beyond it is a module that can be plugged in or out per company without breaking anything. This page fixes what counts as core, the contract every module follows, and how a user reaches each module's pages.</p>
+    </header>
+
+    <section class="section" id="rule">
+      <div class="kicker">The rule</div>
+      <h3>Core vs module</h3>
+      <div class="ring">
+        <div class="side">
+          <span class="mod">Vehicles <small>ASSETS</small></span>
+          <span class="mod">Trips / Journeys <small>ACTIVITIES</small></span>
+          <span class="mod">Maintenance <small>MAINTENANCE</small></span>
+          <span class="mod">Money <small>FINANCE</small></span>
+          <span class="mod">Documents <small>DOCUMENTS</small></span>
+          <div class="plug">Modules that exist today</div>
+        </div>
+        <div class="core">
+          <h4>Core (always on: the application)</h4>
+          <span class="mod core">App shell and navigation</span><span class="mod core">Sign-in, roles, branch scope</span><span class="mod core">Branches / agencies</span><span class="mod core">Personnel</span><span class="mod core">Parties (customers, suppliers)</span><span class="mod core">Approvals</span><span class="mod core">History and audit</span><span class="mod core">Categories and presets</span><span class="mod core">Design system (pages, forms, fields)</span>
+          <p class="caption" style="margin:10px 0 0">Core never imports a module. A module may use core and the modules it declares as dependencies.</p>
+        </div>
+        <div class="side">
+          <span class="mod new">Scheduling <small>needs Trips</small></span>
+          <span class="mod new">Customers <small>CRM</small></span>
+          <span class="mod new">Parcels <small>needs Customers, Trips</small></span>
+          <span class="mod new">Stock &amp; purchasing <small>INVENTORY</small></span>
+          <span class="mod later">Partners <small>later</small></span>
+          <span class="mod later">Notifications, Ticketing <small>later</small></span>
+          <div class="plug">New modules (proposed)</div>
+        </div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>Is it core or a module?</h4><ul>
+          <li><b>Core</b> if every company needs it to use ROUTIQ at all, or other parts depend on it (who you are, where you work, who approves, what happened).</li>
+          <li><b>Module</b> if a company could reasonably live without it, or it only fits one kind of operator.</li>
+          <li>When unsure, it's a module. Moving a module into core later is easy; pulling something out of core is not.</li>
+        </ul></div>
+        <div class="spec-card"><h4>What "plug in / plug out" guarantees</h4><ul>
+          <li>Turning a module <b>on</b>: its sidebar rows, tabs, buttons, Home cards and fields appear for the roles allowed.</li>
+          <li>Turning it <b>off</b>: all of that disappears; the data stays, untouched, and comes back if it's turned on again.</li>
+          <li>A module another one needs can't be turned off first (Customers while Parcels is on).</li>
+          <li>Every module's "off" state is tested, not just its "on" state.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="contract">
+      <div class="kicker">Contract</div>
+      <h3>The module contract</h3>
+      <p class="rule">Every module, existing or new, is described by one manifest. The app reads it to build navigation and screens, the feature map reads it to say what exists, and tests read it to check on and off. Two examples:</p>
+      <div class="cols even">
+        <div class="manifest"><div class="mh"><i data-i="cal"></i><b>Scheduling</b><code>SCHEDULING</code></div><dl>
+          <dt>Needs</dt><dd>ACTIVITIES (Trips)</dd>
+          <dt>Presets</dt><dd>Trucking: default on · Bus: on (timetable) · Internal fleet: optional</dd>
+          <dt>Sidebar rows</dt><dd>None (adds a count to Trips: trips to assign)</dd>
+          <dt>Tabs it adds</dt><dd>Trips → <b>Planning</b> (Day / Week / Month)</dd>
+          <dt>Buttons it adds</dt><dd><b>Book a trip</b> on Trips, Home (dispatchers), Customer record</dd>
+          <dt>Home cards</dt><dd>"Planned this week"; Direction: planned revenue, fleet booked %</dd>
+          <dt>Record parts</dt><dd>Trip: Planned status, assigned truck/driver; Truck Overview: next bookings</dd>
+          <dt>Driver app</dt><dd>My schedule, My calendar, trip status line</dd>
+          <dt>Commands</dt><dd>plan-trip, assign-trip, reschedule-trip, cancel-planned-trip, start-planned-trip</dd>
+          <dt>Reads</dt><dd>planning (range × trucks/drivers), my-schedule</dd>
+          <dt>Roles</dt><dd>Administrator books and assigns; Driver sees own; Direction / Finance read</dd>
+          <dt>When off</dt><dd>No Planning tab, no Book a trip; trips start as today</dd>
+        </dl></div>
+        <div class="manifest"><div class="mh"><i data-i="user"></i><b>Customers</b><code>CUSTOMERS</code></div><dl>
+          <dt>Needs</dt><dd>Core (Parties); works better with ACTIVITIES and FINANCE</dd>
+          <dt>Presets</dt><dd>Trucking: on · Bus: on (parcel + contract) · Internal fleet: off</dd>
+          <dt>Sidebar rows</dt><dd><b>Customers</b> (Customers and money group), count = follow-ups due</dd>
+          <dt>Tabs it adds</dt><dd>Customer record: Overview, Trips, Money, Rates, Contacts, Notes, Documents, History</dd>
+          <dt>Fields it adds</dt><dd>Trip: Customer (replaces free text) + rate prefill; Revenue entry: Customer</dd>
+          <dt>Home cards</dt><dd>Follow-ups due; Finance: owed to you; Direction: revenue by customer</dd>
+          <dt>Commands</dt><dd>add-customer, update-customer, set-rate, add-contact, log-interaction, resolve-complaint, record-payment-received</dd>
+          <dt>Reads</dt><dd>customers list, customer record, balances by age</dd>
+          <dt>Roles</dt><dd>Administrator manages; Finance balances and payments; Cashier finds by phone; Driver sees the name only</dd>
+          <dt>When off</dt><dd>Trip keeps a free-text customer name, as today</dd>
+        </dl></div>
+      </div>
+      <p class="caption">In code this becomes one manifest file per module (code, dependencies, nav rows, tab and card slots, commands, reads, roles), read by the shell, the sidebar, Home and the feature map. Today the module registry is a list of codes in <code>packages/contracts/src/modules.ts</code> and each screen checks its own flag; the manifest replaces those scattered checks.</p>
+    </section>
+
+    <section class="section" id="entry">
+      <div class="kicker">Navigation</div>
+      <h3>How you get to each module</h3>
+      <p class="rule">Every module has exactly one home (a sidebar row or a tab), plus entry points where people already are. No module is reachable only through a hidden link.</p>
+      <table class="spec-table">
+        <thead><tr><th>Module</th><th>Home</th><th>Also reached from</th><th>Primary button</th></tr></thead>
+        <tbody>
+          <tr><td>Scheduling</td><td>Trips → Planning tab</td><td>Home "Planned this week" card · Customer → Trips (upcoming) · Truck Overview (next bookings) · Driver: Trips tab</td><td>Book a trip</td></tr>
+          <tr><td>Customers</td><td>Sidebar → Customers</td><td>Trip (customer name links) · Money entry · Home follow-ups · Parcel form (by phone)</td><td>Add a customer</td></tr>
+          <tr><td>Parcels</td><td>Sidebar → Parcels</td><td>Journey ("23 parcels to load") · Customer → Parcels · Cashier Home</td><td>Receive a parcel</td></tr>
+          <tr><td>Stock &amp; purchasing</td><td>Sidebar → Stock</td><td>Work order ("Use parts") · Home low-stock card · Supplier record</td><td>New purchase order</td></tr>
+          <tr><td>Partners (later)</td><td>Company → Partners</td><td>Planning (Send to a partner) · To-assign queue (incoming requests) · Home "Needs you"</td><td>Invite a partner</td></tr>
+          <tr><td>Your modules</td><td>Company → Your modules</td><td>A module's "not included" hint where it would appear</td><td>Ask about it</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="onoff">
+      <div class="kicker">Proof</div>
+      <h3>On and off: the same Trips page</h3>
+      <div class="onoff">
+        <div><div class="frame-label">Scheduling on</div><div class="frame desktop"><div data-sidebar="trips" data-role="admin"></div><div class="main"><div class="topbar"><b>Trips</b></div><div class="page"><div class="ph"><h1 class="pt">Trips</h1><button class="btn primary"><i data-i="plus"></i>Book a trip</button></div><div class="tabs"><div class="on">Planning<span class="count hot">2</span></div><div>Running</div><div>All trips</div></div><div class="board-mini" style="border:1px solid var(--border);border-radius:12px;height:150px;display:grid;place-items:center;color:var(--muted-foreground);font-size:13px">calendar (Day / Week / Month)</div></div></div></div></div>
+        <div><div class="frame-label">Scheduling off (data kept)</div><div class="frame desktop"><div data-sidebar="trips" data-role="admin"></div><div class="main"><div class="topbar"><b>Trips</b></div><div class="page"><div class="ph"><h1 class="pt">Trips</h1><button class="btn primary"><i data-i="plus"></i>Record a trip</button></div><div class="toolbar"><div class="input" style="width:220px"><i data-i="search"></i>Search trips</div></div><div style="border:1px solid var(--border);border-radius:12px;height:150px;display:grid;place-items:center;color:var(--muted-foreground);font-size:13px">trip list, as today</div></div></div></div></div>
+      </div>
+    </section>
+
+    <section class="section" id="partners">
+      <div class="kicker">Module · later</div>
+      <h3>Partners: what it looks like and what you do with it</h3>
+      <p class="rule">Partners is a module, not a tab. It has one home under <b>Company → Partners</b> (connections are a company-level agreement, set by an Administrator), and it shows up in the two places where trips are handed over: sending a booking out from Planning, and receiving requests into the To-assign queue.</p>
+      <div class="cols even">
+        <div>
+          <div class="frame-label">Company → Partners (list)</div>
+          <div class="frame desktop" style="grid-template-columns:190px minmax(0,1fr);min-height:420px">
+            <div data-sidebar="partners" data-role="admin"></div>
+            <div class="main"><div class="topbar">Company <span class="sep">/</span> <b>Partners</b></div>
+              <div class="page">
+                <div class="ph"><div><h1 class="pt">Partners</h1><div class="lead">Companies on ROUTIQ you exchange trips with. They see only what you send.</div></div><button class="btn primary"><i data-i="plus"></i>Invite a partner</button></div>
+                <div class="metrics" style="grid-template-columns:repeat(3,1fr)"><div><div class="k">Connected</div><div class="v">2</div></div><div style="background:color-mix(in oklch,var(--warning) 14%,white)"><div class="k">Requests waiting</div><div class="v">1</div></div><div><div class="k">Trips exchanged (30 d)</div><div class="v">6</div></div></div>
+                <div class="list-card"><i data-i="building" data-c="lg"></i><div><div class="main-t">Transports Mbouda SARL</div><div class="sub-t">Connected 12 Sep · 4 sent · 1 received</div></div><div class="end"><span class="badge b-ok">Connected</span></div></div>
+                <div class="list-card"><i data-i="building" data-c="lg"></i><div><div class="main-t">Garoua Logistique</div><div class="sub-t">Invited 2 Oct · waiting for them</div></div><div class="end"><span class="badge b-mute">Invited</span></div></div>
+              </div></div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Planning → a booking → Send to a partner (Decision layout)</div>
+          <div class="pstatic" style="width:440px;padding:20px;gap:14px">
+            <div><h3 style="margin:0;font:650 17px/1.3 var(--font-heading)">Send this trip to a partner?</h3><div class="caption" style="margin:4px 0 0">Ets Fotso &amp; Fils · Thu 9 Oct · DLA → BAF · rice 20 t. You keep the customer; the partner does the transport.</div></div>
+            <div class="field"><label>Partner<span class="req">*</span></label><div class="input filled">Transports Mbouda SARL</div></div>
+            <div class="field"><label>Price you offer them<span class="req">*</span></label><div class="input filled num">380 000<span class="suffix">XAF</span></div><div class="help">Your customer price (450 000) is never shared.</div></div>
+            <div class="banner-info">They will see: date, route, cargo, weight, pickup contact, your offer. Not your customer's price, your drivers or your money.</div>
+            <div class="row" style="justify-content:flex-end"><button class="btn">Keep it</button><button class="btn primary">Send request</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="cols even" style="margin-top:18px">
+        <div>
+          <div class="frame-label">Partner record (Record workspace)</div>
+          <div class="frame" style="min-height:300px"><div class="page">
+            <div><div class="row"><h1 class="pt" style="font-size:20px">Transports Mbouda SARL</h1><span class="badge b-ok">Connected</span></div><div class="lead">Partner since 12 Sep · contact M. Tchoupo · 6 99 00 11 22</div></div>
+            <div class="facts"><div><div class="k">Trips sent</div><div class="v">4</div></div><div><div class="k">Trips received</div><div class="v">1</div></div><div><div class="k">On time</div><div class="v">4 of 5</div></div><div><div class="k">Open requests</div><div class="v">1</div></div></div>
+            <div class="tabs"><div class="on">Trips exchanged</div><div>Requests</div><div>What we share</div><div>History</div></div>
+            <div class="mrow"><div><b>Fotso · DLA → BAF</b><span>Sent 8 Oct · Thu 9</span></div><div class="end"><b class="num">380 000</b><span class="badge b-info">Accepted</span></div></div>
+          </div></div>
+        </div>
+        <div class="spec-card"><h4>Every action with a partner</h4>
+          <table class="spec-table" style="border:0"><thead><tr><th>Action</th><th>Who</th><th>Where</th></tr></thead><tbody>
+            <tr><td>Invite a partner (by their ROUTIQ company code)</td><td>Administrator</td><td>Company → Partners</td></tr>
+            <tr><td>Accept / decline an invitation</td><td>Their Administrator</td><td>Their Partners page + Home</td></tr>
+            <tr><td>Send a trip request (offer price)</td><td>Administrator</td><td>Planning → booking → Send to a partner</td></tr>
+            <tr><td>Withdraw a request</td><td>Sender</td><td>Partner record → Requests</td></tr>
+            <tr><td>Accept / decline a request</td><td>Receiver's Administrator</td><td>Their To-assign queue ("From partner") + Home</td></tr>
+            <tr><td>Follow status (planned → started → delivered)</td><td>Sender, automatic</td><td>The booking shows the partner's status</td></tr>
+            <tr><td>Choose what we share</td><td>Administrator</td><td>Partner record → What we share</td></tr>
+            <tr><td>Disconnect</td><td>Either side</td><td>Partner record → More (decision dialog)</td></tr>
+          </tbody></table>
+          <p class="caption">Accepting creates the receiver's own planned trip (a copy). Money between the two companies is each side's own entry in Money. Not for the pilot; needs its own ADR.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>
