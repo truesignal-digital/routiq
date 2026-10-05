@@ -153,7 +153,7 @@ describe("status-gated visibility", () => {
   it("REGISTERED shows commission + assign", () => {
     renderActions(baseAsset, fakeClient({ ok: false, code: "COMMAND_FAILED" }));
     expect(screen.getByRole("button", { name: "Mettre en service" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Affecter" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Changer d'agence" })).toBeTruthy();
   });
 
   it("IN_SERVICE hides commission, keeps assign", () => {
@@ -162,7 +162,7 @@ describe("status-gated visibility", () => {
       fakeClient({ ok: false, code: "COMMAND_FAILED" }),
     );
     expect(screen.queryByRole("button", { name: "Mettre en service" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Affecter" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Changer d'agence" })).toBeTruthy();
   });
 
   it("RETIRED renders nothing; EXECUTIVE_VIEWER renders nothing", () => {
@@ -185,7 +185,7 @@ describe("committed actions", () => {
     renderActions(baseAsset, fakeClient(committed));
 
     await openDialog("Mettre en service");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -207,7 +207,7 @@ describe("committed actions", () => {
 
     renderActions(baseAsset, fakeClient(committed), admin, queryClient);
     await openDialog("Mettre en service");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
 
     await waitFor(() => expect(keys.length).toBe(1));
     expect(keys[0]).toEqual(["ws", "sotrafret", "assets"]);
@@ -218,9 +218,9 @@ describe("committed actions", () => {
     const client = fakeClient(committed);
     renderActions({ ...baseAsset, lifecycleStatus: "IN_SERVICE" }, client);
 
-    await openDialog("Affecter");
+    await openDialog("Changer d'agence");
 
-    expect(screen.getByRole("button", { name: "Confirmer" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "Changer d'agence" })).toHaveProperty(
       "disabled",
       true,
     );
@@ -234,7 +234,7 @@ describe("designed failure states", () => {
     renderActions(baseAsset, client);
 
     await openDialog("Mettre en service");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
 
     await waitFor(() => expect(screen.getByText("Modifié ailleurs")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Actualiser" })).toBeTruthy();
@@ -248,7 +248,7 @@ describe("designed failure states", () => {
     renderActions(baseAsset, fakeClient({ ok: false, code: "APPROVAL_REQUIRED" }));
 
     await openDialog("Mettre en service");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
 
     await waitFor(() => expect(screen.getByText("Approbation requise")).toBeTruthy());
     expect(screen.getByRole("status")).toBeTruthy();
@@ -260,7 +260,7 @@ describe("designed failure states", () => {
     renderActions(baseAsset, fakeClient({ ok: false, code: "COMMAND_FAILED" }));
 
     await openDialog("Mettre en service");
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mettre en service" }));
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByRole("dialog")).toBeTruthy();

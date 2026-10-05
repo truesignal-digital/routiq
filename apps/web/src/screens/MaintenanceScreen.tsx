@@ -11,6 +11,7 @@ import { deniedCode, PermissionDenied } from "@/components/permission-denied.js"
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMeContext } from "@/auth/me.js";
+import { useCommandLabel } from "@/commands/labels.js";
 import { useIssueColumns, useWorkOrderColumns, workOrderReference } from "@/maintenance/columns.js";
 import {
   CancelWorkOrderDialog,
@@ -79,6 +80,7 @@ function StatusChips<S extends string>({
 
 export function MaintenanceScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
 
   const canView = canViewMaintenance(me?.enabledModules);
@@ -120,7 +122,7 @@ export function MaintenanceScreen() {
     if (permissions.manage) {
       actions.push({
         key: "create-work-order",
-        label: t("maintenance.issues.createWorkOrder"),
+        label: label("create-work-order"),
         icon: ClipboardList,
         onSelect: () => setDialog({ kind: "create-work-order", issue }),
       });
@@ -128,7 +130,7 @@ export function MaintenanceScreen() {
     if (canResolve) {
       actions.push({
         key: "resolve",
-        label: t("maintenance.actions.resolveIssue"),
+        label: label("resolve-issue"),
         icon: CircleCheck,
         onSelect: () => setDialog({ kind: "decide-issue", decision: "resolve", issue }),
       });
@@ -136,8 +138,9 @@ export function MaintenanceScreen() {
     if (canDismiss) {
       actions.push({
         key: "dismiss",
-        label: t("maintenance.actions.dismissIssue"),
+        label: label("dismiss-issue"),
         icon: CircleSlash,
+        destructive: true,
         onSelect: () => setDialog({ kind: "decide-issue", decision: "dismiss", issue }),
       });
     }
@@ -168,7 +171,7 @@ export function MaintenanceScreen() {
                 onClick={() => setDialog({ kind: "report-issue" })}
               >
                 <FileWarning className="size-4" aria-hidden />
-                {t("maintenance.issues.new")}
+                {label("report-issue")}
               </Button>
             )}
             {permissions.manage && (
@@ -177,7 +180,7 @@ export function MaintenanceScreen() {
                 onClick={() => setDialog({ kind: "create-work-order" })}
               >
                 <ClipboardList className="size-4" aria-hidden />
-                {t("maintenance.workOrders.new")}
+                {label("create-work-order")}
               </Button>
             )}
           </div>

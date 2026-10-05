@@ -6,6 +6,7 @@ import { legEndpoint } from "@routiq/contracts";
 import { Gauge, Plus, Route as RouteIcon, Trash2, Truck } from "lucide-react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -79,6 +80,7 @@ function isTemplate(value: unknown): value is SheetTemplate {
 
 export function ActivitySheetScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
   const search = useSearch({ strict: false }) as { template?: unknown; assetId?: unknown };
@@ -95,7 +97,7 @@ export function ActivitySheetScreen() {
   if (me !== undefined && !canRecord) {
     return (
       <PermissionDenied
-        title={t("activities.record.title")}
+        title={label("record-journey-sheet")}
         icon={<RouteIcon className="size-7" aria-hidden />}
         code={deniedCode(me.enabledModules.includes("ACTIVITIES"))}
       />
@@ -104,7 +106,7 @@ export function ActivitySheetScreen() {
 
   return (
     <PageContainer width="wide">
-      <PageHeader title={t("activities.record.title")} />
+      <PageHeader title={label("record-journey-sheet")} />
       <p className="mt-1 text-sm text-muted-foreground">
         {t("activities.record.subtitle")}
       </p>
@@ -129,6 +131,7 @@ function SheetForm({
   initialAssetId?: string | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
 
   /**
@@ -889,7 +892,7 @@ function SheetForm({
           </CardContent>
         </Card>
 
-        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col-reverse items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
+        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -897,9 +900,10 @@ function SheetForm({
             disabled={form.formState.isSubmitting}
             onClick={() => void submitSheet(true)()}
           >
-            {form.formState.isSubmitting && closing
-              ? t("activities.record.closingSubmitting")
-              : t("activities.record.submitAndClose")}
+            {label(
+              { command: "record-journey-sheet", intent: "close" },
+              form.formState.isSubmitting && closing ? "submitting" : "submit",
+            )}
           </Button>
           <Button
             type="submit"
@@ -907,8 +911,8 @@ function SheetForm({
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting && !closing
-              ? t("activities.record.submitting")
-              : t("activities.record.submit")}
+              ? label("record-journey-sheet", "submitting")
+              : label("record-journey-sheet", "submit")}
           </Button>
         </div>
       </form>

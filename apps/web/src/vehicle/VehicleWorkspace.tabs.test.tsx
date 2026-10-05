@@ -330,7 +330,7 @@ describe("Maintenance and Trips", () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/trips`, { role: "FIELD_SUBMITTER", trips: [tripRow()] });
     const user = userEvent.setup();
     expect(await screen.findByText("Douala → Yaoundé")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Start a trip" }));
+    await user.click(screen.getByRole("button", { name: "Record a sheet" }));
     await waitFor(() => expect(recorded.history.location.pathname).toBe("/activities/record"));
     expect(recorded.history.location.search).toContain(`assetId=${ASSET_ID}`);
     await act(async () => {});

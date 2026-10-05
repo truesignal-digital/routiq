@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { DateTimeField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { z } from "zod";
 import type { recordMeterReadingPayload } from "@routiq/contracts";
 import {
@@ -72,6 +73,7 @@ export function ReadingForm(props: ReadingFormProps) {
   const choices = "assets" in props ? props.assets : [];
 
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const submission = useCommandSubmission();
@@ -132,13 +134,11 @@ export function ReadingForm(props: ReadingFormProps) {
   return (
     <CommandForm
       surface={surface}
-      title={t("activities.actions.addReadingTitle")}
+      title={label("record-meter-reading")}
       description={t("activities.actions.addReadingHint")}
       back={back}
       error={submission.error}
-      submitLabel={t("activities.actions.addReadingSubmit")}
-      submittingLabel={t("activities.actions.submitting")}
-      cancelLabel={t("activities.actions.cancel")}
+      command="record-meter-reading"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}

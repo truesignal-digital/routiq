@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
-import { notifyCommandError, notifyCommandSuccess } from "./notify.js";
+import { notifyCommandError, notifyCommandSuccess, notifyInfo } from "./notify.js";
 
 const mocks = vi.hoisted(() => ({
   add: vi.fn(),
@@ -75,7 +75,7 @@ describe("command notifications", () => {
     expect(mocks.add).toHaveBeenCalledWith({
       type: "success",
       title: "Asset returned to service",
-      description: "Vehicle released, but the issue that grounded it is still open.",
+      description: "Vehicle released, but the problem that grounded it is still open.",
     });
   });
 
@@ -104,6 +104,20 @@ describe("command notifications", () => {
         "This transaction was posted to a previous accounting period.\n" +
         "Saved in Yaoundé",
       actionProps: { children: "View", onClick },
+    });
+  });
+
+  it("names the record in the title when the caller passes its values", () => {
+    notifyCommandSuccess("branches", "created", [], { values: { name: "Kribi" } });
+    notifyInfo("branches", "switched", { branch: "Kribi" });
+
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "success",
+      title: "Branch created: Kribi",
+    });
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "info",
+      title: "You are viewing: Kribi",
     });
   });
 

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel, type CommandName } from "@/commands/labels.js";
 import {
   ROLES,
   type DeactivateMemberPayload,
@@ -29,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -36,6 +38,14 @@ import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
 import { MIN_PIN_LENGTH } from "./pin.js";
 
 export type MemberActionKey = "role" | "pin" | "deactivate" | "reactivate";
+
+/** The command each action sends, whose words name it on the menu and in the dialog. */
+export const MEMBER_ACTION_COMMANDS: Record<MemberActionKey, CommandName> = {
+  role: "update-member-role",
+  pin: "reset-member-pin",
+  deactivate: "deactivate-member",
+  reactivate: "reactivate-member",
+};
 
 /**
  * Which actions a member's row offers. A deactivated member has exactly one
@@ -50,6 +60,13 @@ export function memberActions(member: MemberListItem): MemberActionKey[] {
   actions.push("deactivate");
   return actions;
 }
+
+const MEMBER_ACTION_SUCCESS: Record<MemberActionKey, string> = {
+  role: "roleChanged",
+  pin: "pinReset",
+  deactivate: "deactivated",
+  reactivate: "reactivated",
+};
 
 type Outcome =
   | { kind: "form" }
@@ -76,6 +93,7 @@ export function MemberActionDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
 
@@ -85,7 +103,6 @@ export function MemberActionDialog({
   const [branchScope, setBranchScope] = useState<MemberBranchScope>(member.branchScope);
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const [pinReset, setPinReset] = useState(false);
 
   // One intent per dialog, minted on first submit: a retry of the same edit
   // replays the same envelope instead of writing a second audit event.
@@ -164,16 +181,17 @@ export function MemberActionDialog({
       return;
     }
 
+    // The PIN is dropped before the acknowledgement: the admin reads it off
+    // their own hand, never off this screen or the toast.
+    setPin("");
+    setConfirmPin("");
+    notifyCommandSuccess("users", MEMBER_ACTION_SUCCESS[action], result.outcome.warnings, {
+      values: { name: member.displayName },
+      ...(action === "pin"
+        ? { extraLines: [t("users.notify.pinResetBody", { name: member.displayName })] }
+        : {}),
+    });
     await invalidateMembers();
-
-    if (action === "pin") {
-      // The value is dropped before the acknowledgement renders: the admin
-      // reads the PIN off their own hand, never off this screen again.
-      setPin("");
-      setConfirmPin("");
-      setPinReset(true);
-      return;
-    }
     onDismiss();
   }
 
@@ -186,7 +204,7 @@ export function MemberActionDialog({
     <Dialog open onOpenChange={(open) => !open && onDismiss()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t(`users.actions.${action}`)}</DialogTitle>
+          <DialogTitle>{label(MEMBER_ACTION_COMMANDS[action])}</DialogTitle>
           <DialogDescription>
             {t(`users.actions.${action}Hint`, { name: member.displayName })}
           </DialogDescription>
@@ -204,23 +222,6 @@ export function MemberActionDialog({
             <DialogFooter>
               <Button onClick={() => void reload()}>
                 {t("users.actions.reload")}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : pinReset ? (
-          <>
-            <div
-              role="status"
-              className="rounded-lg bg-info/10 px-3 py-2 text-sm text-info-foreground"
-            >
-              <p className="font-semibold">{t("users.actions.pinResetTitle")}</p>
-              <p className="mt-1">
-                {t("users.actions.pinResetBody", { name: member.displayName })}
-              </p>
-            </div>
-            <DialogFooter>
-              <Button onClick={onDismiss}>
-                {t("common.close")}
               </Button>
             </DialogFooter>
           </>
@@ -301,7 +302,7 @@ export function MemberActionDialog({
                 disabled={!ready}
                 onClick={() => void submit()}
               >
-                {submitting ? t("users.form.submitting") : t(`users.actions.${action}Confirm`)}
+                {label(MEMBER_ACTION_COMMANDS[action], submitting ? "submitting" : "submit")}
               </Button>
             </DialogFooter>
           </>

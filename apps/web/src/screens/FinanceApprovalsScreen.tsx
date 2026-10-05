@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useSearch } from "@tanstack/react-router";
 import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { useMeContext } from "@/auth/me.js";
 import {
@@ -43,6 +44,7 @@ const APPROVALS_PAGE_SIZE = 100;
 
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
@@ -199,7 +201,7 @@ export function FinanceApprovalsScreen() {
     return [
       {
         key: "approve",
-        label: t("finance.approvals.approve"),
+        label: label("approve-entry"),
         icon: Check,
         onSelect: () =>
           setActionDialog({
@@ -211,7 +213,7 @@ export function FinanceApprovalsScreen() {
       },
       {
         key: "reject",
-        label: t("finance.approvals.reject"),
+        label: label("reject-entry"),
         icon: X,
         destructive: true,
         onSelect: () =>

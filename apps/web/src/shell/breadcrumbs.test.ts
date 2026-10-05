@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import en from "../i18n/locales/en.json";
+import fr from "../i18n/locales/fr.json";
 import { breadcrumbTrail } from "./breadcrumbs.js";
 import { visibleSections } from "./sections.js";
 import { VEHICLE_TABS } from "../vehicle/VehicleTabsNav.js";
@@ -10,7 +14,24 @@ function trailAt(pathname: string) {
   return breadcrumbTrail(ALL, pathname).map(({ labelKey, to }) => [labelKey, to]);
 }
 
+function hasKey(catalog: unknown, key: string): boolean {
+  let node = catalog;
+  for (const part of key.split(".")) {
+    if (typeof node !== "object" || node === null || !(part in node)) return false;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return typeof node === "string";
+}
+
 describe("breadcrumbTrail", () => {
+  // Trails are data, so the literal t("…") scan in locales.test.ts never sees them.
+  it("names every crumb with a key both catalogs have", () => {
+    const source = readFileSync(join(import.meta.dirname, "breadcrumbs.ts"), "utf8");
+    const keys = [...source.matchAll(/labelKey: "([^"]+)"/g)].map((m) => m[1] ?? "");
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.filter((key) => !hasKey(en, key) || !hasKey(fr, key))).toEqual([]);
+  });
+
   it("stops at Home on the dashboard", () => {
     expect(trailAt("/")).toEqual([["nav.home", undefined]]);
   });
@@ -26,7 +47,7 @@ describe("breadcrumbTrail", () => {
     expect(trailAt("/assets/new")).toEqual([
       ["nav.home", "/"],
       ["nav.assets", "/assets"],
-      ["assets.register", undefined],
+      ["commands.register-asset.label", undefined],
     ]);
   });
 
@@ -39,7 +60,7 @@ describe("breadcrumbTrail", () => {
   });
 
   it("keeps the literal /assets/new ahead of the asset id pattern", () => {
-    expect(trailAt("/assets/new").at(-1)).toEqual(["assets.register", undefined]);
+    expect(trailAt("/assets/new").at(-1)).toEqual(["commands.register-asset.label", undefined]);
   });
 
   it("names the truck record on the Details tab (#126)", () => {
@@ -79,7 +100,7 @@ describe("breadcrumbTrail", () => {
 
   it("never puts a record's name on a page that is not a record", () => {
     expect(breadcrumbTrail(ALL, "/activities/record", "TR-0042").at(-1)).toEqual({
-      labelKey: "activities.record.title",
+      labelKey: "commands.record-journey-sheet.label",
     });
   });
 
@@ -87,7 +108,7 @@ describe("breadcrumbTrail", () => {
     expect(trailAt("/activities/record")).toEqual([
       ["nav.home", "/"],
       ["nav.activities", "/activities"],
-      ["activities.record.title", undefined],
+      ["commands.record-journey-sheet.label", undefined],
     ]);
   });
 

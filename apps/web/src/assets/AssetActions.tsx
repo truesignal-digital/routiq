@@ -27,6 +27,7 @@ import { useMeContext } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
+import { useCommandLabel, type CommandLabelRef } from "../commands/labels.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { canCommissionAsset, canTransferAsset } from "./permissions.js";
 import { useAssetRegistrationReference } from "./reference.js";
@@ -37,6 +38,13 @@ import { useAssetRegistrationReference } from "./reference.js";
  * change never shows a branch picker.
  */
 export type AssetActionKey = "commission" | "assign" | "custodian";
+
+/** The command each action sends, whose words name it on every surface. */
+export const ASSET_ACTION_COMMANDS: Record<AssetActionKey, CommandLabelRef> = {
+  commission: "commission-asset",
+  assign: "assign-asset",
+  custodian: { command: "assign-asset", intent: "custodian" },
+};
 
 /** The fields an action needs, so a list row and a detail page both qualify. */
 export interface AssetActionTarget {
@@ -111,6 +119,7 @@ export function AssetActionForm({
   onDismiss,
 }: AssetActionFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const reference = useAssetRegistrationReference();
@@ -186,7 +195,7 @@ export function AssetActionForm({
   return (
     <CommandForm
       surface={surface}
-      title={t(`assets.actions.${action}`)}
+      title={label(ASSET_ACTION_COMMANDS[action])}
       description={t(`assets.actions.${action}Hint`)}
       back={back}
       error={submission.error}
@@ -199,9 +208,7 @@ export function AssetActionForm({
         body: t("assets.actions.approvalBody"),
       }}
       onReload={reload}
-      submitLabel={t("assets.actions.confirm")}
-      submittingLabel={t("assets.actions.working")}
-      cancelLabel={t("assets.form.cancel")}
+      command={ASSET_ACTION_COMMANDS[action]}
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -270,6 +277,7 @@ export function AssetActions({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const [open, setOpen] = useState<AssetActionKey>();
 
@@ -287,7 +295,7 @@ export function AssetActions({
             variant={action === "commission" ? "default" : "outline"}
             onClick={() => setOpen(action)}
           >
-            {t(`assets.actions.${action}`)}
+            {label(ASSET_ACTION_COMMANDS[action])}
           </Button>
         ))}
       </div>

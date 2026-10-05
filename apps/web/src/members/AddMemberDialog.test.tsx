@@ -9,6 +9,20 @@ import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { AddMemberDialog } from "./AddMemberDialog.js";
 
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("@/components/ui/toast.js", () => ({ toast }));
+
+/** Success is one toast, and nothing in the dialog repeats it. */
+function expectOneSuccessToast(title: string, description?: string) {
+  expect(toast.add).toHaveBeenCalledTimes(1);
+  expect(toast.add).toHaveBeenCalledWith({
+    type: "success",
+    title,
+    ...(description === undefined ? {} : { description }),
+  });
+  expect(screen.queryByRole("status")).toBeNull();
+}
+
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const branches = [
@@ -95,7 +109,7 @@ describe("AddMemberDialog", () => {
     const { onAdded, onOpenChange } = renderDialog(client);
 
     await fillForm();
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
@@ -110,6 +124,7 @@ describe("AddMemberDialog", () => {
     expect(submission.payload.principalId).toMatch(/^[0-9a-f-]{36}$/);
     expect(onAdded).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expectOneSuccessToast("Utilisateur ajouté : Estelle Ngo");
   });
 
   it("narrows the new member to the branches picked, by id", async () => {
@@ -119,7 +134,7 @@ describe("AddMemberDialog", () => {
     await fillForm();
     await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Yaoundé" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload.branchScope).toEqual(["branch-dla", "branch-yde"]);
@@ -130,13 +145,14 @@ describe("AddMemberDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm();
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     expect(
       await screen.findByText("Ce nom d'utilisateur est déjà pris dans votre espace."),
     ).toBeTruthy();
     // The form stays open on the field that has to change.
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(toast.add).not.toHaveBeenCalled();
   });
 
   it("refuses two PINs that disagree before anything is sent", async () => {
@@ -144,7 +160,7 @@ describe("AddMemberDialog", () => {
     renderDialog(client);
 
     await fillForm({ pin: "4821", confirmPin: "4822" });
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     expect(await screen.findByText("Les deux codes ne correspondent pas.")).toBeTruthy();
     expect(client.seen).toHaveLength(0);
@@ -157,11 +173,12 @@ describe("AddMemberDialog", () => {
     await fillForm();
     expect(screen.getByLabelText("Code PIN").getAttribute("type")).toBe("password");
 
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
     await waitFor(() => expect(client.seen).toHaveLength(1));
 
     // Not in a field, not in a confirmation, not anywhere: the PIN leaves this
     // dialog only inside the command.
     expect(document.body.innerHTML).not.toContain("4821");
+    expect(JSON.stringify(toast.add.mock.calls)).not.toContain("4821");
   });
 });
