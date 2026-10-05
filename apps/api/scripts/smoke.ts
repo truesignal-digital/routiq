@@ -300,7 +300,7 @@ try {
     throw new Error("lock-period response did not include rowVersion");
   }
   const reopenRes = await sendAs(
-    approverToken,
+    adminToken,
     command(
       "reopen-period",
       { periodCode: lastPeriod, reason: "smoke reopen" },
@@ -361,7 +361,7 @@ try {
 
   const revenueEntryId = randomUUID();
   const revenueRes = await sendAs(
-    submitterToken,
+    approverToken,
     command(
       "record-revenue",
       {
