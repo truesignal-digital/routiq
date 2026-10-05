@@ -10,6 +10,7 @@ import type {
 import { ShieldAlert, TriangleAlert } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
+import { useIssueCategoryLabel } from "./issue-category.js";
 
 type Tone = "neutral" | "success" | "warning" | "info" | "danger";
 
@@ -162,6 +163,7 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
 export function useIssueColumns(): ColumnDef<IssueListItem>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+  const categoryLabel = useIssueCategoryLabel();
 
   return useMemo(
     () => [
@@ -226,7 +228,7 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
         id: "category",
         header: t("maintenance.issues.columns.category"),
         meta: { mobile: "hidden", label: t("maintenance.issues.columns.category") },
-        cell: ({ row }) => row.original.category ?? "—",
+        cell: ({ row }) => categoryLabel(row.original.category) ?? "—",
       },
       {
         id: "reportedAt",
@@ -258,6 +260,6 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
           ),
       },
     ],
-    [locale, t],
+    [categoryLabel, locale, t],
   );
 }

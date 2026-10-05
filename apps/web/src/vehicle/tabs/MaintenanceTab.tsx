@@ -15,7 +15,8 @@ import { useVehicle } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps, workOrderSteps } from "../flow.js";
 import { recordReference, type VehicleActionKey } from "../model.js";
 import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader } from "../parts.js";
-import { IssueStatusBadge, useIssueCategoryLabel } from "../panel/IssueRecord.js";
+import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
+import { IssueStatusBadge } from "../panel/IssueRecord.js";
 import { WorkOrderStatusBadge } from "../panel/shared.js";
 
 /** The one primary button a tab carries; it starts the action the way the catalogue says. */

@@ -199,7 +199,7 @@ it("reports a problem with the category's code and its safety default", async ()
   const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "FIELD_SUBMITTER" });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Report a problem" }));
-  const form = await screen.findByRole("dialog", { name: "New issue" });
+  const form = await screen.findByRole("dialog", { name: "Report a problem" });
   await user.type(within(form).getByLabelText("Description"), "Brakes pull to the left");
   await openSelect(user, within(form).getByLabelText("Category"));
   await user.keyboard("{ArrowDown}{Enter}");
@@ -207,7 +207,7 @@ it("reports a problem with the category's code and its safety default", async ()
   await waitFor(() =>
     expect(form.querySelector('[role="checkbox"][aria-label="Safety-critical"]')?.getAttribute("aria-checked")).toBe("true"),
   );
-  await user.click(within(form).getByRole("button", { name: "Report issue" }));
+  await user.click(within(form).getByRole("button", { name: "Report the problem" }));
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   expect(recorded.commands[0]?.body.payload).toMatchObject({
     assetId: ASSET_ID,

@@ -111,12 +111,12 @@ describe("maintenance forms pinned to one vehicle", () => {
       />,
     );
 
-    const panel = screen.getByRole("dialog", { name: "New issue" });
+    const panel = screen.getByRole("dialog", { name: "Report a problem" });
     expect(within(panel).getByText("DLA-T-001 · Mercedes Actros")).toBeTruthy();
     expect(within(panel).queryByRole("combobox", { name: "Asset" })).toBeNull();
 
     await userEvent.type(within(panel).getByLabelText("Description"), "Left mirror cracked");
-    await userEvent.click(within(panel).getByRole("button", { name: "Report issue" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Report the problem" }));
 
     await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
     expect(client.seen[0]!.name).toBe("report-issue");
@@ -145,7 +145,7 @@ describe("maintenance forms pinned to one vehicle", () => {
       status: "OPEN",
       branchId: "ALL",
     });
-    await openSelect(user(), screen.getByRole("combobox", { name: "Issue" }));
+    await openSelect(user(), screen.getByRole("combobox", { name: "Problem" }));
     await userEvent.click(await screen.findByRole("option", { name: "Brakes squeal on the descent" }));
     await userEvent.type(screen.getByLabelText("Description"), "Replace pads");
     // Required since the threshold is read against it.

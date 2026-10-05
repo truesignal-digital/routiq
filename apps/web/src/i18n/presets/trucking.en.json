@@ -122,13 +122,13 @@
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Open a work order on a truck, with or without an originating issue.",
+      "newHint": "Open a work order on a truck, with or without a problem behind it.",
       "columns": {
         "asset": "Truck"
       }
     },
     "issues": {
-      "newHint": "Describe the fault found on the truck. A safety-critical issue grounds the truck immediately.",
+      "newHint": "Describe the fault found on the truck. A safety-critical problem grounds the truck immediately.",
       "columns": {
         "asset": "Truck"
       }
@@ -138,7 +138,7 @@
       "safetyCriticalHint": "The truck is grounded from the moment this is filed until it is returned to service."
     },
     "actions": {
-      "releaseHint": "The truck becomes available again. This decision needs someone other than whoever declared the work complete or closed the issue."
+      "releaseHint": "The truck becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem."
     },
     "detail": {
       "unavailableTitle": "Truck grounded"

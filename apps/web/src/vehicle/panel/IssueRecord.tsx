@@ -2,8 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Clock } from "lucide-react";
 import type { IssueDetail } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
-import { useCategories } from "@/documents/useCategories.js";
-import { formatDateTime, localizedLabel } from "@/lib/format.js";
+import { formatDateTime } from "@/lib/format.js";
+import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 import {
   CreateWorkOrderForm,
   IssueDecisionForm,
@@ -18,17 +18,6 @@ import { useIssue } from "../useVehicle.js";
 import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
 
 const TITLE_MAX = 120;
-
-/** An issue's category is a code; its label comes from the ISSUE_TYPE list, else the code itself. */
-export function useIssueCategoryLabel() {
-  const { i18n } = useTranslation();
-  const types = useCategories("ISSUE_TYPE");
-  return (code: string | null) => {
-    if (code === null) return null;
-    const type = types.data?.find((candidate) => candidate.code === code);
-    return type === undefined ? code : localizedLabel(type, i18n.language);
-  };
-}
 
 export function IssueStatusBadge({ issue }: { issue: Pick<IssueDetail, "status" | "workOrders"> }) {
   const { t } = useTranslation();

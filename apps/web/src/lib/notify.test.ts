@@ -75,7 +75,7 @@ describe("command notifications", () => {
     expect(mocks.add).toHaveBeenCalledWith({
       type: "success",
       title: "Asset returned to service",
-      description: "Vehicle released, but the issue that grounded it is still open.",
+      description: "Vehicle released, but the problem that grounded it is still open.",
     });
   });
 
