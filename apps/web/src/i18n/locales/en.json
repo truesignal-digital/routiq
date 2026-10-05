@@ -191,7 +191,9 @@
     "metrics": {
       "total": "Total",
       "inService": "In service",
-      "attention": "Attention"
+      "attention": "Attention",
+      "attentionHint": "Grounded, in maintenance, retired or written off",
+      "attentionHintNoGrounding": "In maintenance, retired or written off"
     },
     "status": {
       "REGISTERED": "Registered",
@@ -694,6 +696,7 @@
       "OTHER": "Other"
     },
     "detail": {
+      "breadcrumb": "Activity",
       "loading": "Loading activity…",
       "loadFailed": "We couldn't load this activity.",
       "summary": "Summary",
