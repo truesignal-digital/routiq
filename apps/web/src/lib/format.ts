@@ -9,8 +9,10 @@ export type MoneyDirection = "REVENUE" | "EXPENSE";
  *   history). Revenue reads "+", expense "−", from the direction; a reversal's
  *   negative amount flips it.
  * - `net`: a balance already signed as revenue − expenses. "+" or "−", bare at zero.
- * - `record`: one record's own amount (its page, the approvals row, a total of
- *   one kind). Unsigned; the screen says the direction in words. The default.
+ * - `record`: one record's own amount (its page, the approvals row). Unsigned;
+ *   the screen says the direction in words.
+ * With no sign asked for, only a negative amount is signed: a total of one
+ * kind can go below zero once a reversal posts into a later period.
  */
 export type MoneySign =
   | { context: "ledger"; direction: MoneyDirection }
@@ -40,17 +42,17 @@ export function formatMoney(
 ): string {
   if (minor == null || options == null) return "";
 
-  const { currency = "XAF", sign = { context: "record" }, locale = i18n.resolvedLanguage } = options;
+  const { currency = "XAF", sign, locale = i18n.resolvedLanguage } = options;
   if (currency == null) return "";
 
   const value =
-    sign.context === "ledger" ? (sign.direction === "REVENUE" ? minor : -minor) : minor;
+    sign?.context === "ledger" ? (sign.direction === "REVENUE" ? minor : -minor) : minor;
   const formatted = new Intl.NumberFormat(locale ?? undefined, {
     style: "currency",
     currency,
     // XAF has exponent 0; every currency here is shown in whole units.
     maximumFractionDigits: 0,
-    signDisplay: sign.context === "record" ? "never" : "exceptZero",
+    signDisplay: sign === undefined ? "negative" : sign.context === "record" ? "never" : "exceptZero",
   }).format(value);
 
   // One minus sign in every language: Intl gives a hyphen in English.

@@ -103,7 +103,8 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   }
 
   const share = vehicleShare(entry, asset.id);
-  const money = (minor: number) => formatMoney(minor, { currency: entry.currency, locale });
+  const money = (minor: number) =>
+    formatMoney(minor, { currency: entry.currency, locale, sign: { context: "record" } });
   const recorder = entry.recordedBy.displayName ?? t("history.actor.unknown");
   const waiting =
     entry.status === "SUBMITTED"

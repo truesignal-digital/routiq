@@ -158,7 +158,10 @@ export function FinanceApprovalsScreen() {
         cell: ({ row }) => (
           <span className="flex flex-col">
             <span className="whitespace-nowrap font-mono font-semibold">
-              {formatMoney(row.original.amountMinor, { currency: row.original.currency })}
+              {formatMoney(row.original.amountMinor, {
+                currency: row.original.currency,
+                sign: { context: "record" },
+              })}
             </span>
             <span className="text-xs text-muted-foreground">
               {t("finance.entries.detail.amountKind", { kind: amountKind(row.original) })}

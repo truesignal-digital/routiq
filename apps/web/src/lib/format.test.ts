@@ -48,8 +48,11 @@ describe("format", () => {
         expect(fr(-86_000, { sign: { context: "record" } })).toBe("86 000 FCFA");
       });
 
-      it("reads an amount as a record's own when no sign is asked for", () => {
-        expect(en(86_000)).toBe(en(86_000, { sign: { context: "record" } }));
+      it("signs only a negative amount when no sign is asked for", () => {
+        expect(en(86_000)).toBe("FCFA 86,000");
+        expect(en(-86_000)).toBe("−FCFA 86,000");
+        expect(fr(-86_000)).toBe("−86 000 FCFA");
+        expect(en(0)).toBe("FCFA 0");
       });
     });
 

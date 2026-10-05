@@ -76,7 +76,7 @@ export function EntrySummary({ entryId }: { entryId: string }) {
         </dt>
         <dd className="mt-1 flex flex-wrap items-baseline gap-x-2">
           <span className="font-mono text-lg font-semibold">
-            {formatMoney(entry.amountMinor, { currency: entry.currency })}
+            {formatMoney(entry.amountMinor, { currency: entry.currency, sign: { context: "record" } })}
           </span>
           <span className="text-sm text-muted-foreground">
             {t("finance.entries.detail.amountKind", { kind: amountKind(entry) })}
