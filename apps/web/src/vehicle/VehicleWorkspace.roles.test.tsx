@@ -97,7 +97,7 @@ describe("the status sentence and the step beside it, per role", () => {
       workOrderDetails: [workOrderDetail("SUBMITTED", { createdBy: actor(ME_ID, "Awa") })],
     });
     const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-    const authorize = (await within(panel).findByRole("button", { name: "Authorize" })) as HTMLButtonElement;
+    const authorize = (await within(panel).findByRole("button", { name: "Authorize work order" })) as HTMLButtonElement;
     expect(authorize.disabled).toBe(true);
     expect(within(panel).getByText(new RegExp(`You created ${WO_REF}; someone else authorizes it\\.`))).toBeTruthy();
   });
@@ -107,12 +107,12 @@ describe("the status sentence and the step beside it, per role", () => {
     const path = `/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`;
     await openVehicle(path, { role: "ADMIN", ...submitted, workOrderDetails: [workOrderDetail("SUBMITTED")] });
     let panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-    expect(((await within(panel).findByRole("button", { name: "Authorize" })) as HTMLButtonElement).disabled).toBe(false);
+    expect(((await within(panel).findByRole("button", { name: "Authorize work order" })) as HTMLButtonElement).disabled).toBe(false);
     cleanup();
     await openVehicle(path, { role: "FINANCE", ...submitted, workOrderDetails: [workOrderDetail("SUBMITTED")] });
     panel = await screen.findByRole("dialog", { name: /Brake repair/ });
     await within(panel).findByText(/Brake repair/);
-    expect(within(panel).queryByRole("button", { name: "Authorize" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Authorize work order" })).toBeNull();
   });
 
   it("keeps Complete work for the managers in the work order's footer and the actions sheet", async () => {

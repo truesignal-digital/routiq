@@ -182,8 +182,8 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "0");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "0");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     expect(mocks.submit).not.toHaveBeenCalled();
   });
@@ -193,16 +193,17 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    const amount = screen.getByLabelText("Amount (XAF)");
+    const amount = screen.getByLabelText("Amount (FCFA)");
     await user.type(amount, "125000");
     await user.tab();
-    expect((amount as HTMLInputElement).value).toBe("125 000");
+    // Grouped the way English reads money, as the rest of the screen shows it.
+    expect((amount as HTMLInputElement).value).toBe("125,000");
     await user.type(screen.getByLabelText("Counterparty (optional)"), "Fuel Station");
     await user.type(screen.getByLabelText("Description (optional)"), "Diesel");
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");
     await openSelect(user, screen.getByLabelText("Asset (optional)"));
     await user.keyboard("{ArrowDown}{Enter}");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
     const submission = mocks.submit.mock.calls[0]?.[0];
@@ -239,8 +240,8 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -268,8 +269,8 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -293,8 +294,8 @@ describe("finance record form", () => {
       new File(["receipt"], "receipt.jpg", { type: "image/jpeg" }),
     );
     await waitFor(() => expect(screen.queryByRole("progressbar")).toBeNull());
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
     expect(mocks.submit.mock.calls[0]?.[0].envelope.sourceArtifactIds).toEqual([
@@ -405,16 +406,16 @@ describe("finance record form", () => {
     expect(screen.getByRole("tab", { name: "Revenue" })).toBeTruthy();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
     expect(mocks.navigate).not.toHaveBeenCalled();
-    await waitFor(() => expect((screen.getByLabelText("Amount (XAF)") as HTMLInputElement).value).toBe(""));
+    await waitFor(() => expect((screen.getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toBe(""));
   });
 
   it("turns the workshop away: its costs go on work orders", () => {
     renderScreen({ ...recorder, role: "TECHNICIAN" });
-    expect(screen.queryByRole("button", { name: "Record" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record the expense" })).toBeNull();
   });
 });

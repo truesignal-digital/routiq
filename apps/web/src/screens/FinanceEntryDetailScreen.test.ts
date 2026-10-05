@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,6 +48,39 @@ const approver: MeContext = {
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
+
+const MAKER_ID = "00000000-0000-4000-8000-000000000031";
+
+/** The default fixture, waiting for a decision and recorded by `recordedBy`. */
+function waiting(recordedBy: string) {
+  const current = mocks.useEntry.getMockImplementation()?.() ?? mocks.useEntry();
+  mocks.useEntry.mockReturnValue({
+    ...current,
+    data: {
+      ...current.data,
+      status: "SUBMITTED",
+      postedAt: null,
+      postingPeriodCode: null,
+      rowVersion: 4,
+      recordedBy: { principalId: recordedBy, displayName: null, scope: "WORKSPACE" },
+    },
+  });
+}
+
+function succeedingIntent() {
+  const submit = vi.fn(async () => ({
+    ok: true,
+    outcome: {
+      commandId: crypto.randomUUID(),
+      recordId: crypto.randomUUID(),
+      rowVersion: 5,
+      warnings: [],
+      idempotentReplay: false,
+    },
+  }));
+  mocks.createCommandIntent.mockReturnValue({ current: vi.fn(), submit });
+  return submit;
+}
 
 function renderScreen() {
   return render(
@@ -99,6 +132,9 @@ beforeEach(() => {
       reversedByEntryId: null,
       postings: [],
       links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+      recordedBy: { principalId: MAKER_ID, displayName: "Sali", scope: "WORKSPACE" },
+      evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
+      evidenceFiles: [],
     },
     isPending: false,
     isError: false,
@@ -113,8 +149,8 @@ describe("finance entry reversal dialog", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reverse" }));
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Reverse entry" }));
+    await user.click(screen.getByRole("button", { name: "Keep entry" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.createCommandIntent).not.toHaveBeenCalled();
@@ -138,11 +174,14 @@ describe("finance entry reversal dialog", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reverse" }));
-    const submitButton = screen.getAllByRole("button", { name: "Reverse" }).at(-1)!;
+    await user.click(screen.getByRole("button", { name: "Reverse entry" }));
+    const dialog = screen.getByRole("dialog", { name: "Reverse entry" });
+    const submitButton = within(dialog).getByRole("button", { name: "Reverse entry" });
+    expect(within(submitButton.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Keep entry", "Reverse entry"]);
     expect((submitButton as HTMLButtonElement).disabled).toBe(true);
 
-    await user.type(screen.getByLabelText("Reason for reversal"), "Duplicate posting");
+    await user.type(screen.getByRole("textbox", { name: "Reason for reversal" }), "Duplicate posting");
     await user.click(submitButton);
 
     await waitFor(() => expect(submit).toHaveBeenCalledOnce());
@@ -181,5 +220,61 @@ describe("finance entry detail enums", () => {
     expect(screen.getByText("Carburant")).toBeDefined();
 
     await i18n.changeLanguage("en");
+  });
+});
+
+describe("decision on the entry page", () => {
+  it("offers Approve and Reject while the entry waits, and approves in one tap", async () => {
+    waiting(MAKER_ID);
+    const submit = succeedingIntent();
+    const user = userEvent.setup();
+    renderScreen();
+
+    expect(screen.getByRole("button", { name: "Reject entry" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Approve entry" }));
+
+    await waitFor(() => expect(submit).toHaveBeenCalledOnce());
+    expect(mocks.createCommandIntent).toHaveBeenCalledWith(expect.anything(), "approve-entry", 1);
+    expect(submit).toHaveBeenCalledWith(
+      { entryId: "00000000-0000-4000-8000-000000000010" },
+      { expectedVersion: 4 },
+    );
+    // Approve is one tap: no dialog stands between the button and the command.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(mocks.toastAdd).toHaveBeenCalledWith({ type: "success", title: "Entry approved" });
+  });
+
+  it("asks for a reason before rejecting", async () => {
+    waiting(MAKER_ID);
+    const submit = succeedingIntent();
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Reject entry" }));
+    await user.type(screen.getByRole("textbox", { name: "Rejection reason" }), "No receipt");
+    await user.click(screen.getAllByRole("button", { name: "Reject entry" }).at(-1)!);
+
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith(
+        { entryId: "00000000-0000-4000-8000-000000000010", reason: "No receipt" },
+        { expectedVersion: 4 },
+      ),
+    );
+    expect(mocks.createCommandIntent).toHaveBeenCalledWith(expect.anything(), "reject-entry", 1);
+  });
+
+  it("offers no decision on the approver's own entry", () => {
+    waiting(approver.principalId);
+    renderScreen();
+
+    expect(screen.queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject entry" })).toBeNull();
+  });
+
+  it("offers no decision once the entry is posted", () => {
+    renderScreen();
+
+    expect(screen.queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject entry" })).toBeNull();
   });
 });

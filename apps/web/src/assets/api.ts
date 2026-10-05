@@ -8,6 +8,8 @@ import {
 
 export interface AssetListParams {
   status?: readonly AssetLifecycleStatus[];
+  /** The Attention tile's set; the server decides what it covers. */
+  attention?: true;
   category?: string;
   branchId?: string;
   search?: string;
@@ -20,7 +22,7 @@ export interface AssetListParams {
 /** The list filters the summary shares. A status would count inside one bucket. */
 export type AssetSummaryParams = Omit<
   AssetListParams,
-  "status" | "sort" | "cursor" | "limit"
+  "status" | "attention" | "sort" | "cursor" | "limit"
 >;
 
 export type { AssetListResponse, AssetSummary };
@@ -28,6 +30,7 @@ export type { AssetListResponse, AssetSummary };
 function assetQuery(params: AssetListParams): string {
   const query = new URLSearchParams();
   for (const status of params.status ?? []) query.append("status", status);
+  if (params.attention) query.append("attention", "true");
   if (params.category) query.append("category", params.category);
   if (params.branchId) query.append("branchId", params.branchId);
   if (params.search) query.append("search", params.search);

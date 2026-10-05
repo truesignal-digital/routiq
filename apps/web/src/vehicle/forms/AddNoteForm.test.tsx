@@ -41,7 +41,7 @@ describe("AddNoteForm", () => {
     });
     const onDismiss = renderForm(commands);
     const user = userEvent.setup();
-    const submit = screen.getByRole("button", { name: "Add note" });
+    const submit = screen.getByRole("button", { name: "Add the note" });
     await user.type(screen.getByLabelText("Note"), "   ");
     expect((submit as HTMLButtonElement).disabled).toBe(true);
     await user.type(screen.getByLabelText("Note"), "Spare wheel missing  ");
@@ -58,7 +58,7 @@ describe("AddNoteForm", () => {
     renderForm(client({ ok: false, code: "ASSET_NOT_OPERATIONAL" }));
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("Note"), "Late remark");
-    await user.click(screen.getByRole("button", { name: "Add note" }));
+    await user.click(screen.getByRole("button", { name: "Add the note" }));
     expect(await screen.findByText("This asset has left the fleet: no new operations are possible.")).toBeTruthy();
   });
 });

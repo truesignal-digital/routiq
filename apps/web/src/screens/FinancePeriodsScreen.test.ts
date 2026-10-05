@@ -159,18 +159,20 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await chooseRowAction(user, 0, "Lock");
-    expect(screen.getByRole("alertdialog")).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await chooseRowAction(user, 0, "Lock period");
+    const dialog = screen.getByRole("alertdialog", { name: "Lock period" });
+    expect(within(dialog).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Cancel", "Lock period"]);
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
     await waitFor(() => expect(submissionOrder).toEqual(["lock-period"]));
     expect(mocks.toastAdd).toHaveBeenCalledWith({
       type: "success",
       title: "Period locked",
     });
 
-    await chooseRowAction(user, 1, "Reopen");
+    await chooseRowAction(user, 1, "Reopen period");
     await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");
-    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    await user.click(screen.getByRole("button", { name: "Reopen period" }));
 
     await waitFor(() =>
       expect(submissionOrder).toEqual(["lock-period", "reopen-period"]),
@@ -185,8 +187,8 @@ describe("finance period command routing", () => {
     // Only the open period's row has a menu: the locked one offers Finance nothing.
     expect(menus).toHaveLength(1);
     await user.click(menus[0]!);
-    expect(await screen.findByRole("menuitem", { name: "Lock" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Reopen" })).toBeNull();
+    expect(await screen.findByRole("menuitem", { name: "Lock period" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Reopen period" })).toBeNull();
   });
 
   it.each(["ADMIN", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
@@ -201,7 +203,7 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await chooseRowAction(user, 1, "Reopen");
+    await chooseRowAction(user, 1, "Reopen period");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(() =>
@@ -237,7 +239,7 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await chooseRowAction(user, 0, "Lock");
+    await chooseRowAction(user, 0, "Lock period");
     const overlay = document.querySelector<HTMLElement>(
       '[data-slot="alert-dialog-overlay"]',
     );

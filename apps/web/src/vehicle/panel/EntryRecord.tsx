@@ -10,8 +10,8 @@ import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/f
 import { useVehicle, type PanelForm } from "../context.js";
 import { entrySteps, missingReceipt } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note } from "../parts.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import {
-  EntryStatusBadge,
   EvidenceMark,
   PanelFooter,
   PanelLoading,
@@ -103,8 +103,8 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   }
 
   const share = vehicleShare(entry, asset.id);
-  const money = (minor: number) => formatMoney(minor, { currency: entry.currency, locale });
-  const revenue = entry.direction === "REVENUE";
+  const money = (minor: number) =>
+    formatMoney(minor, { currency: entry.currency, locale, sign: { context: "record" } });
   const recorder = entry.recordedBy.displayName ?? t("history.actor.unknown");
   const waiting =
     entry.status === "SUBMITTED"
@@ -121,7 +121,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
           <span className="flex items-baseline justify-between gap-3">
             <span>{localizedLabel(entry.category, locale)}</span>
             <span className="tabular-nums">
-              {formatMoney(share, { currency: entry.currency, locale, ...(revenue ? { signDisplay: "exceptZero" } : {}) })}
+              {money(share)}
             </span>
           </span>
         }

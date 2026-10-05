@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: overviews and charts</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  /* Chart roles. Hues from the validated reference palette (slots 1-3 pass all-pairs CVD in light mode; slot 3 needs direct labels). */
+  .viz-root {
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-muted: #c9ced6;
+    --grid: oklch(0.93 0 0);
+    --axis-text: oklch(0.52 0 0);
+    --ref: oklch(0.55 0 0);
+  }
+  .tile { padding: 12px 16px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tile:last-child { border-right: 0; }
+  .tile .k { font-size: 12px; color: var(--muted-foreground); }
+  .tile .v { font: 650 22px/1.2 var(--font-heading); font-variant-numeric: tabular-nums; }
+  .tile .v small { font-size: 12px; font-weight: 600; color: var(--muted-foreground); margin-left: 3px; }
+  .tile .d { font-size: 12px; font-weight: 600; display: flex; gap: 4px; align-items: center; }
+  .tile .d.up-bad { color: var(--destructive); } .tile .d.down-bad { color: var(--destructive); } .tile .d.good { color: var(--success-foreground); } .tile .d.flat { color: var(--muted-foreground); }
+  .tile .d span { color: var(--muted-foreground); font-weight: 500; }
+  .tile svg.spark { width: 100%; height: 28px; margin-top: 4px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 14px; background: white; }
+  .phone .kpis { grid-template-columns: 1fr 1fr; }
+  .phone .kpis .tile:nth-child(2n) { border-right: 0; }
+  .phone .kpis .tile:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .chart-card { border: 1px solid var(--border); border-radius: 14px; background: white; padding: 14px 16px 10px; position: relative; }
+  .chart-card h2 { margin: 0; font: 650 14.5px/1.3 var(--font-heading); }
+  .chart-card .q { font-size: 12.5px; color: var(--muted-foreground); margin: 2px 0 8px; }
+  .chart-card .foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+  .chart-card .foot a { font-weight: 600; color: var(--foreground); }
+  .chart-card svg.chart { width: 100%; display: block; overflow: visible; }
+  .legend-row { display: flex; gap: 14px; font-size: 12px; color: oklch(0.35 0 0); margin-bottom: 4px; }
+  .legend-row span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-row i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .vtip { position: fixed; z-index: 100; pointer-events: none; background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); padding: 8px 10px; font-size: 12px; display: none; min-width: 130px; }
+  .vtip b { display: block; margin-bottom: 4px; font-size: 12px; }
+  .vtip .r { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+  .vtip .r i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  .seg.small div { padding: 6px 10px; font-size: 12px; }
+  .spot td:nth-child(3) { font-weight: 600; }
+  .yes { color: var(--success-foreground); font-weight: 650; } .no { color: var(--muted-foreground); }
+</style>
+</head>
+<body class="viz-root">
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#rule">When a chart, when a number</a>
+    <a href="#map">Every page's overview</a>
+    <a href="#exec">Executive overview</a>
+    <a href="#exec-phone">Executive overview on phone</a>
+    <a href="#module">Charts inside modules</a>
+    <a href="#rules">Chart rules</a>
+    <a href="#data">Data we have, data we need</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Overviews and charts</h2>
+      <p class="lede">Every page opens with an overview. Most overviews are numbers that filter the list below. Charts are added only where the question is "how is this changing?", and that question belongs mostly to executives and administrators. This page marks every spot where a chart goes, what question it answers, and who sees it.</p>
+    </header>
+
+    <section class="section" id="rule">
+      <div class="kicker">The rule</div>
+      <h3>When a chart, when a number</h3>
+      <div class="cols three">
+        <div class="spec-card"><h4>Number (stat tile)</h4><p>"How much right now?" Grounded trucks, waiting approvals, cost this month. Every role sees these at the top of every list. Each tile filters the list under it.</p></div>
+        <div class="spec-card"><h4>Number + sparkline + change</h4><p>"Is it going up or down?" The same tile with last month's change ("▲ 18% vs September") and a small trend line. Shown to managers, finance and executives.</p></div>
+        <div class="spec-card"><h4>Chart</h4><p>"Why, where, and since when?" Cost by month, by branch, by truck; availability over time. Only on the executive overview, the module overviews for managers, and a truck's Money tab. Each chart answers one question named in its subtitle and links to the list behind it.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="map">
+      <div class="kicker">Map</div>
+      <h3>Every page's overview, and where charts go</h3>
+      <p class="rule">"Everyone" means every role that can open the page. The executive and administrator rows are the "super administrator" view the owners asked for.</p>
+      <table class="spec-table spot">
+        <thead><tr><th>Page</th><th>Overview for everyone (tiles)</th><th>Chart spot</th><th>Who sees the chart</th><th>Data</th></tr></thead>
+        <tbody>
+          <tr><td><b>Home: executive</b><br><span class="caption" style="margin:0">Executive, administrator</span></td><td>Available %, cost this month, cost per km, revenue, open safety problems (each with change + sparkline)</td><td>Cost per month (12 months) · Money in vs out · Cost by branch · Top trucks by cost · Availability trend</td><td>Executive, administrator</td><td>Partly today (<code>/v1/dashboard</code> series); new summary reads</td></tr>
+          <tr><td><b>Home: others</b></td><td>"Needs you" list first, then 3–4 tiles for the role</td><td class="no">None; tiles may carry a sparkline for managers</td><td>—</td><td>Today</td></tr>
+          <tr><td><b>Trucks</b></td><td>In service, grounded, documents expiring, cost this month</td><td>Availability over 12 weeks (line with target)</td><td>Fleet manager, admin, executive</td><td>New: daily availability snapshot</td></tr>
+          <tr><td><b>Truck → Overview tab</b></td><td>Status block, facts line, To do</td><td class="no">None (the Money tab has the charts)</td><td>—</td><td>Today</td></tr>
+          <tr><td><b>Truck → Money tab</b></td><td>Out this month, waiting, missing receipt</td><td>Cost per month (12) · Cost by category (this month)</td><td>Everyone who can read money</td><td>Today (<code>asset-finance</code>: byCategory + series)</td></tr>
+          <tr><td><b>Truck → Trips tab</b></td><td>Trips this month, km, revenue</td><td>Km per week (column)</td><td>Fleet manager, admin, executive</td><td>New: per-asset trip aggregates</td></tr>
+          <tr><td><b>Trips</b></td><td>Trips this week, open, incomplete data, km</td><td>Trips and km per week (12 weeks)</td><td>Fleet manager, admin, executive</td><td>New: trips summary read</td></tr>
+          <tr><td><b>Maintenance</b></td><td>New problems, grounded, work orders in progress, average days to repair</td><td>Days off the road per month · Repair cost by category</td><td>Workshop lead, fleet manager, admin, executive</td><td>New: maintenance summary read</td></tr>
+          <tr><td><b>Money</b></td><td>Out, in, waiting your approval, missing receipt</td><td>Money in vs out by month</td><td>Finance, admin, executive</td><td>Today (<code>/v1/dashboard</code> series)</td></tr>
+          <tr><td><b>Money → waiting view</b></td><td>Waiting, amount, oldest</td><td class="no">None: a queue is for acting, not analysing</td><td>—</td><td>Today</td></tr>
+          <tr><td><b>Company pages</b></td><td>A sentence explaining what the list controls</td><td class="no">None</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="exec">
+      <div class="kicker">Executive</div>
+      <h3>Executive overview (desktop)</h3>
+      <p class="rule">What an executive or super administrator sees on Home. It's read-only: no action buttons, no to-do list. The range control and branch selector change every tile and chart together. Hover any chart for exact values.</p>
+      <div class="frame desktop" style="min-height:900px">
+        <div data-sidebar="home" data-role="exec"></div>
+        <div class="main">
+          <div class="topbar"><b>Overview</b><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Overview</h1><div class="lead">All branches · October 2026 so far · compared with September</div></div>
+              <div class="seg small" style="width:300px"><div>This month</div><div class="on">3 months</div><div>12 months</div></div></div>
+            <div class="kpis">
+              <div class="tile"><div class="k">Trucks available</div><div class="v">67<small>%</small></div><div class="d down-bad">▼ 33 pts <span>vs Sep</span></div><svg class="spark" data-spark="100,100,100,100,100,100,100,100,100,100,67,67"></svg></div>
+              <div class="tile"><div class="k">Cost this month</div><div class="v">412 500<small>XAF</small></div><div class="d up-bad">▲ 18% <span>vs Sep</span></div><svg class="spark" data-spark="210,240,260,230,300,280,320,310,290,330,350,412"></svg></div>
+              <div class="tile"><div class="k">Cost per km</div><div class="v">112<small>XAF/km</small></div><div class="d up-bad">▲ 6% <span>vs Sep</span></div><svg class="spark" data-spark="95,98,97,101,99,104,102,103,105,106,106,112"></svg></div>
+              <div class="tile"><div class="k">Revenue this month</div><div class="v">450 000<small>XAF</small></div><div class="d good">▲ 12% <span>vs Sep</span></div><svg class="spark" data-spark="300,320,310,340,360,330,380,390,370,400,402,450"></svg></div>
+              <div class="tile"><div class="k">Open safety problems</div><div class="v">1</div><div class="d flat">VH003 brakes · 2 days</div><svg class="spark" data-spark="0,0,1,0,0,0,1,0,0,0,0,1"></svg></div>
+            </div>
+            <div class="grid2">
+              <div class="chart-card"><h2>Cost per month</h2><div class="q">Is the fleet getting more expensive? Posted expenses, all branches, XAF.</div><svg class="chart" id="c-cost" viewBox="0 0 620 230"></svg><div class="foot"><span>October is partial (4 days).</span><a>Open in Money →</a></div></div>
+              <div class="chart-card"><h2>Money in and out</h2><div class="q">Is revenue keeping up with cost? Per month, XAF.</div><div class="legend-row"><span><i style="background:var(--series-2)"></i>Revenue</span><span><i style="background:var(--series-1)"></i>Expenses</span></div><svg class="chart" id="c-inout" viewBox="0 0 420 210"></svg><div class="foot"><span>Last 12 months</span><a>Table</a></div></div>
+            </div>
+            <div class="grid3">
+              <div class="chart-card"><h2>Cost by branch</h2><div class="q">Where is the money going? This month.</div><svg class="chart" id="c-branch" viewBox="0 0 360 150"></svg><div class="foot"><span>XAF</span><a>Compare →</a></div></div>
+              <div class="chart-card"><h2>Top trucks by cost</h2><div class="q">Which trucks cost the most? This month.</div><svg class="chart" id="c-trucks" viewBox="0 0 360 150"></svg><div class="foot"><span>XAF</span><a>Open Trucks →</a></div></div>
+              <div class="chart-card"><h2>Availability</h2><div class="q">How much of the fleet can drive? Weekly, target 90%.</div><svg class="chart" id="c-avail" viewBox="0 0 360 150"></svg><div class="foot"><span>Last 12 weeks</span><a>Open Trucks →</a></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">Numbers are illustrative, shaped like the demo workspace (3 trucks, 3 branches). Charts use the validated palette: blue for the main series, orange for the second; status colours (red, amber) stay reserved for status.</p>
+    </section>
+
+    <section class="section" id="exec-phone">
+      <div class="kicker">Phone</div>
+      <h3>Executive overview on phone</h3>
+      <div class="cols" style="grid-template-columns:390px minmax(0,1fr)">
+        <div class="frame phone" style="min-height:820px">
+          <div class="ptop"><b>Overview</b><span class="chip set" style="margin-left:auto">All branches</span></div>
+          <div class="page">
+            <div><h1 class="pt">Overview</h1><div class="lead">October so far · vs September</div></div>
+            <div class="kpis">
+              <div class="tile"><div class="k">Available</div><div class="v">67<small>%</small></div><div class="d down-bad">▼ 33 pts</div><svg class="spark" data-spark="100,100,100,100,100,100,100,100,100,100,67,67"></svg></div>
+              <div class="tile"><div class="k">Cost</div><div class="v">412 500</div><div class="d up-bad">▲ 18%</div><svg class="spark" data-spark="210,240,260,230,300,280,320,310,290,330,350,412"></svg></div>
+              <div class="tile"><div class="k">Cost per km</div><div class="v">112</div><div class="d up-bad">▲ 6%</div><svg class="spark" data-spark="95,98,97,101,99,104,102,103,105,106,106,112"></svg></div>
+              <div class="tile"><div class="k">Revenue</div><div class="v">450 000</div><div class="d good">▲ 12%</div><svg class="spark" data-spark="300,320,310,340,360,330,380,390,370,400,402,450"></svg></div>
+            </div>
+            <div class="chart-card"><h2>Cost per month</h2><div class="q">Posted expenses, XAF</div><svg class="chart" id="c-cost-phone" viewBox="0 0 340 190"></svg></div>
+            <div class="card"><div class="card-h"><h2>Top trucks by cost</h2></div><div class="card-b feed"><div>VH003<span class="when num">316 500</span></div><div>VH001<span class="when num">96 000</span></div><div>TR001<span class="when num">0</span></div></div></div>
+          </div>
+          <div data-tabbar="home" data-role="exec"></div>
+        </div>
+        <div class="spec-card"><h4>Phone rules</h4><ul>
+          <li>Four tiles in a 2 × 2 grid, each with change and sparkline. The fifth tile drops off on phone.</li>
+          <li>One chart (cost per month), full width. The other charts become short ranked lists, which read better than tiny bars at 390 px.</li>
+          <li>Tapping a tile opens its list, filtered.</li>
+          <li>No hover on phone: tapping a bar shows its value under the chart.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="module">
+      <div class="kicker">Modules</div>
+      <h3>Charts inside modules (managers)</h3>
+      <p class="rule">Module overviews get one chart, under the tiles and above the list, for the roles that manage that module. Everyone else sees only the tiles. Example: Maintenance for the workshop lead.</p>
+      <div class="frame desktop" style="min-height:560px">
+        <div data-sidebar="maintenance" data-role="admin"></div>
+        <div class="main"><div class="topbar"><b>Maintenance</b></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Maintenance</h1><div class="lead">Problems reported and work orders, Douala.</div></div><button class="btn primary"><i data-i="plus"></i>Report a problem</button></div>
+            <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+              <div class="tile"><div class="k">New problems</div><div class="v">2</div><div class="d flat">1 safety critical</div></div>
+              <div class="tile"><div class="k">Grounded</div><div class="v" style="color:var(--destructive)">1</div><div class="d flat">VH003 · 2 days</div></div>
+              <div class="tile"><div class="k">Work orders in progress</div><div class="v">1</div><div class="d flat">WO-0007</div></div>
+              <div class="tile"><div class="k">Average days to repair</div><div class="v">3.5</div><div class="d good">▼ 1.2 <span>vs Sep</span></div><svg class="spark" data-spark="6,5,5.5,4.8,5,4.2,4.6,4.4,4.1,4.7,4.7,3.5"></svg></div>
+            </div>
+            <div class="chart-card"><h2>Days off the road per month</h2><div class="q">Are repairs keeping trucks off the road longer? All trucks in Douala.</div><svg class="chart" id="c-down" viewBox="0 0 900 170"></svg><div class="foot"><span>Shown to workshop lead, fleet manager, admin, executive</span><a>Open work orders →</a></div></div>
+            <div class="toolbar"><div class="input" style="width:240px"><i data-i="search"></i>Search problems</div><span class="chip"><i data-i="plus"></i>Status</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="rules">
+      <div class="kicker">Rules</div>
+      <h3>Chart rules</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>What a chart may be</h4><ul>
+          <li>Trend over time: line (single series as area or line), months or weeks on the x-axis.</li>
+          <li>Comparing amounts: horizontal bars, sorted largest first, one colour.</li>
+          <li>Two measures with different units (cost and km): two charts, never two y-axes.</li>
+          <li>No pies, no donuts, no gauges, no 3D. A single number is a tile, not a chart.</li>
+          <li>Up to 3 coloured series per chart; past that, "Other" or separate small charts.</li>
+        </ul></div>
+        <div class="spec-card"><h4>How it looks and behaves</h4><ul>
+          <li>Thin marks: 2 px lines, bars with 4 px rounded ends and 2 px gaps; light grid, muted axis text.</li>
+          <li>Series colours: blue, then orange, then aqua (checked for colour blindness). Red, amber and green stay reserved for status.</li>
+          <li>Two or more series: a legend plus a label at the end of each line. Text stays in text colours, never the series colour.</li>
+          <li>Hover (desktop) or tap (phone) shows exact values. Every chart has a "Table" view.</li>
+          <li>The subtitle states the question and the unit. The footer links to the list behind the chart.</li>
+          <li>Money in XAF, integers, space as thousands separator, tabular figures. Partial periods labelled ("October, 4 days").</li>
+          <li>Numbers come from server summaries for the chosen branch and range, never counted in the browser.</li>
+          <li>Neutral theme note: develop's chart tokens are five greys. Charts need these three hues added as chart tokens; the rest of the UI stays neutral.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="data">
+      <div class="kicker">Data</div>
+      <h3>Data we have, data we need</h3>
+      <table class="spec-table">
+        <thead><tr><th>Chart or tile</th><th>Available today</th><th>Needs</th></tr></thead>
+        <tbody>
+          <tr><td>Money in vs out, cost per month</td><td class="yes">Yes: <code>/v1/dashboard</code> daily series (7–365 days, branch filter)</td><td>Monthly bucketing on the server</td></tr>
+          <tr><td>Truck cost per month, by category</td><td class="yes">Yes: <code>asset-finance</code> (byCategory + series)</td><td>—</td></tr>
+          <tr><td>Trucks by status, open-month money, waiting approvals</td><td class="yes">Yes: <code>/v1/dashboard</code></td><td>—</td></tr>
+          <tr><td>Change vs last month on tiles</td><td class="no">No</td><td>Previous-period values in the same summary read</td></tr>
+          <tr><td>Cost by branch, top trucks by cost</td><td class="no">No</td><td>Grouped summary read (branch, asset) for a range</td></tr>
+          <tr><td>Cost per km</td><td class="no">No</td><td>Posted cost ÷ km from readings or trip legs, per period; rules for gaps (no invented km)</td></tr>
+          <tr><td>Availability over time, days off the road</td><td class="no">No</td><td>A daily availability snapshot (or derived from grounding/release events)</td></tr>
+          <tr><td>Trips and km per week, average days to repair</td><td class="no">No</td><td>Trips and maintenance summary reads</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Suggested order: build the executive overview first on data that exists (cost per month, money in vs out, status counts), then add the summary reads one chart at a time.</p>
+    </section>
+  </main>
+</div>
+<div class="vtip" id="vtip"></div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const fmt = (n) => Math.round(n).toLocaleString("fr-FR").replace(/ | /g, " ");
+const tip = document.getElementById("vtip");
+function showTip(ev, title, rows) {
+  tip.innerHTML = `<b>${title}</b>` + rows.map(([c, l, v]) => `<div class="r"><span>${c ? `<i style="background:${c}"></i>` : ""}${l}</span><span>${v}</span></div>`).join("");
+  tip.style.display = "block";
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px";
+}
+const hideTip = () => (tip.style.display = "none");
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+function css(v) { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p) * p; }
+function roundTopRect(x, y, w, h, r) { r = Math.min(r, h, w / 2); return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
+function roundRightRect(x, y, w, h, r) { r = Math.min(r, w, h / 2); return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`; }
+
+function columns(svg, labels, values, { unit = "XAF", partialLast = false, color = css("--series-1"), fmtY = (v) => fmt(v / 1000) + "k" } = {}) {
+  const [W, H] = svg.getAttribute("viewBox").split(" ").slice(2).map(Number);
+  const m = { l: 40, r: 6, t: 8, b: 22 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  let max = niceMax(Math.max(...values));
+  if (max < 20) max = Math.ceil(Math.max(...values) / 4) * 4;
+  for (let i = 0; i <= 4; i++) { const y = m.t + ih - (ih * i) / 4; el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: css("--grid"), "stroke-width": 1 }, svg); el("text", { x: m.l - 6, y: y + 4, "text-anchor": "end", "font-size": 10, fill: css("--axis-text") }, svg).textContent = fmtY((max * i) / 4); }
+  const bw = iw / values.length;
+  values.forEach((v, i) => {
+    const h = (v / max) * ih, x = m.l + i * bw + 1, w = bw - 2, y = m.t + ih - h;
+    const last = partialLast && i === values.length - 1;
+    const p = el("path", { d: roundTopRect(x, y, w, h, 4), fill: color, "fill-opacity": last ? 0.45 : 1 }, svg);
+    if (last) el("path", { d: roundTopRect(x, y, w, h, 4), fill: "none", stroke: color, "stroke-width": 1.5, "stroke-dasharray": "3 2" }, svg);
+    if (i % Math.ceil(values.length / 12) === 0 || values.length <= 12) el("text", { x: x + w / 2, y: H - 6, "text-anchor": "middle", "font-size": 10, fill: css("--axis-text") }, svg).textContent = labels[i];
+    const hit = el("rect", { x: m.l + i * bw, y: m.t, width: bw, height: ih, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", (ev) => { p.setAttribute("fill-opacity", last ? 0.6 : 0.8); showTip(ev, labels[i] + (last ? " (so far)" : ""), [[color, "Total", fmt(v) + " " + unit]]); });
+    hit.addEventListener("mouseleave", () => { p.setAttribute("fill-opacity", last ? 0.45 : 1); hideTip(); });
+  });
+}
+
+function lines(svg, labels, series, { unit = "XAF" } = {}) {
+  const [W, H] = svg.getAttribute("viewBox").split(" ").slice(2).map(Number);
+  const m = { l: 40, r: 64, t: 8, b: 22 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const max = niceMax(Math.max(...series.flatMap((s) => s.values)));
+  for (let i = 0; i <= 4; i++) { const y = m.t + ih - (ih * i) / 4; el("line", { x1: m.l, x2: m.l + iw, y1: y, y2: y, stroke: css("--grid") }, svg); el("text", { x: m.l - 6, y: y + 4, "text-anchor": "end", "font-size": 10, fill: css("--axis-text") }, svg).textContent = fmt((max * i) / 4 / 1000) + "k"; }
+  const xs = (i) => m.l + (iw * i) / (labels.length - 1), ys = (v) => m.t + ih - (v / max) * ih;
+  labels.forEach((l, i) => { if (i % 2 === 0) el("text", { x: xs(i), y: H - 6, "text-anchor": "middle", "font-size": 10, fill: css("--axis-text") }, svg).textContent = l; });
+  const ends = series.map((s) => ({ s, y: ys(s.values[s.values.length - 1]) + 4 })).sort((a, b) => a.y - b.y);
+  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 13) ends[k].y = ends[k - 1].y + 13;
+  series.forEach((s) => {
+    el("path", { d: s.values.map((v, i) => `${i ? "L" : "M"}${xs(i)},${ys(v)}`).join(""), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+  });
+  ends.forEach(({ s, y }) => { el("text", { x: xs(labels.length - 1) + 6, y, "font-size": 10.5, fill: css("--foreground") || "#222" }, svg).textContent = s.name; });
+  const cross = el("line", { y1: m.t, y2: m.t + ih, stroke: css("--ref"), "stroke-width": 1, "stroke-dasharray": "2 2", opacity: 0 }, svg);
+  const dots = series.map((s) => el("circle", { r: 4.5, fill: s.color, stroke: "white", "stroke-width": 2, opacity: 0 }, svg));
+  const hit = el("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" }, svg);
+  hit.addEventListener("mousemove", (ev) => {
+    const r = svg.getBoundingClientRect(); const px = ((ev.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(labels.length - 1, Math.round(((px - m.l) / iw) * (labels.length - 1))));
+    cross.setAttribute("x1", xs(i)); cross.setAttribute("x2", xs(i)); cross.setAttribute("opacity", 1);
+    dots.forEach((d, k) => { d.setAttribute("cx", xs(i)); d.setAttribute("cy", ys(series[k].values[i])); d.setAttribute("opacity", 1); });
+    showTip(ev, labels[i], series.map((s) => [s.color, s.name, fmt(s.values[i]) + " " + unit]));
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("opacity", 0); dots.forEach((d) => d.setAttribute("opacity", 0)); hideTip(); });
+}
+
+function hbars(svg, rows, { unit = "XAF", color = css("--series-1") } = {}) {
+  const [W, H] = svg.getAttribute("viewBox").split(" ").slice(2).map(Number);
+  const m = { l: 64, r: 70, t: 4, b: 4 }, iw = W - m.l - m.r;
+  const max = Math.max(...rows.map((r) => r[1])) || 1, bh = (H - m.t - m.b) / rows.length;
+  rows.forEach(([label, v], i) => {
+    const y = m.t + i * bh + 5, h = bh - 10, w = Math.max(2, (v / max) * iw);
+    el("text", { x: m.l - 8, y: y + h / 2 + 4, "text-anchor": "end", "font-size": 11.5, fill: css("--foreground") || "#222" }, svg).textContent = label;
+    const p = el("path", { d: roundRightRect(m.l, y, w, h, 4), fill: v ? color : css("--series-muted") }, svg);
+    el("text", { x: m.l + w + 6, y: y + h / 2 + 4, "font-size": 11, fill: css("--axis-text") }, svg).textContent = fmt(v);
+    const hit = el("rect", { x: 0, y: y - 4, width: W, height: h + 8, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", (ev) => { p.setAttribute("fill-opacity", 0.8); showTip(ev, label, [[color, "Cost", fmt(v) + " " + unit]]); });
+    hit.addEventListener("mouseleave", () => { p.setAttribute("fill-opacity", 1); hideTip(); });
+  });
+}
+
+function availability(svg, labels, values, target) {
+  const [W, H] = svg.getAttribute("viewBox").split(" ").slice(2).map(Number);
+  const m = { l: 34, r: 30, t: 8, b: 20 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const xs = (i) => m.l + (iw * i) / (labels.length - 1), ys = (v) => m.t + ih - (v / 100) * ih;
+  [0, 50, 100].forEach((v) => { el("line", { x1: m.l, x2: m.l + iw, y1: ys(v), y2: ys(v), stroke: css("--grid") }, svg); el("text", { x: m.l - 6, y: ys(v) + 4, "text-anchor": "end", "font-size": 10, fill: css("--axis-text") }, svg).textContent = v + "%"; });
+  el("line", { x1: m.l, x2: m.l + iw, y1: ys(target), y2: ys(target), stroke: css("--ref"), "stroke-dasharray": "4 3" }, svg);
+  el("text", { x: m.l + iw + 4, y: ys(target) + 4, "font-size": 10, fill: css("--axis-text") }, svg).textContent = "Target";
+  el("path", { d: values.map((v, i) => `${i ? "L" : "M"}${xs(i)},${ys(v)}`).join(""), fill: "none", stroke: css("--series-1"), "stroke-width": 2 }, svg);
+  [0, 5, 11].forEach((i) => el("text", { x: xs(i), y: H - 4, "text-anchor": "middle", "font-size": 10, fill: css("--axis-text") }, svg).textContent = labels[i]);
+  const dot = el("circle", { r: 4.5, fill: css("--series-1"), stroke: "white", "stroke-width": 2, opacity: 0 }, svg);
+  const hit = el("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" }, svg);
+  hit.addEventListener("mousemove", (ev) => { const r = svg.getBoundingClientRect(); const px = ((ev.clientX - r.left) / r.width) * W; const i = Math.max(0, Math.min(labels.length - 1, Math.round(((px - m.l) / iw) * (labels.length - 1)))); dot.setAttribute("cx", xs(i)); dot.setAttribute("cy", ys(values[i])); dot.setAttribute("opacity", 1); showTip(ev, labels[i], [[css("--series-1"), "Available", values[i] + "%"], [null, "Target", target + "%"]]); });
+  hit.addEventListener("mouseleave", () => { dot.setAttribute("opacity", 0); hideTip(); });
+}
+
+function sparks() {
+  document.querySelectorAll("svg.spark").forEach((svg) => {
+    const v = svg.dataset.spark.split(",").map(Number); const W = 120, H = 28; svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none");
+    const min = Math.min(...v), max = Math.max(...v), span = max - min || 1;
+    const pts = v.map((y, i) => [(W * i) / (v.length - 1), H - 3 - ((y - min) / span) * (H - 6)]);
+    el("path", { d: pts.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(""), fill: "none", stroke: css("--series-1"), "stroke-width": 1.6, "vector-effect": "non-scaling-stroke" }, svg);
+    const lp = pts[pts.length - 1]; el("circle", { cx: lp[0], cy: lp[1], r: 2.5, fill: css("--series-1") }, svg);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const months = ["Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
+  const cost = [210000, 240000, 262000, 231000, 298000, 281000, 320500, 309000, 288000, 331000, 349500, 412500];
+  const rev = [300000, 318000, 310000, 342000, 361000, 329000, 380000, 392000, 371000, 398000, 402000, 450000];
+  columns(document.getElementById("c-cost"), months, cost, { partialLast: true });
+  columns(document.getElementById("c-cost-phone"), months, cost, { partialLast: true });
+  lines(document.getElementById("c-inout"), months, [{ name: "Revenue", values: rev, color: css("--series-2") }, { name: "Expenses", values: cost, color: css("--series-1") }]);
+  hbars(document.getElementById("c-branch"), [["Douala", 412500], ["Yaoundé", 0], ["Bafoussam", 0]]);
+  hbars(document.getElementById("c-trucks"), [["VH003", 316500], ["VH001", 96000], ["TR001", 0]]);
+  availability(document.getElementById("c-avail"), ["W29", "W30", "W31", "W32", "W33", "W34", "W35", "W36", "W37", "W38", "W39", "W40"], [100, 100, 100, 67, 100, 100, 100, 100, 100, 100, 100, 67], 90);
+  columns(document.getElementById("c-down"), months, [4, 2, 6, 3, 1, 5, 2, 7, 3, 2, 4, 2], { unit: "days", fmtY: (v) => fmt(v) });
+  sparks();
+});
+</script>
+</body>
+</html>

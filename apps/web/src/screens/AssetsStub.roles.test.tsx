@@ -61,13 +61,13 @@ describe("register affordances by role", () => {
   it("ADMIN sees the register affordance", () => {
     renderWith("ADMIN");
     expect(
-      screen.getAllByRole("link", { name: /nouvel actif/i }).length,
+      screen.getAllByRole("link", { name: /enregistrer un actif/i }).length,
     ).toBeGreaterThan(0);
   });
 
   it("CASHIER sees zero mutating affordances", () => {
     renderWith("CASHIER");
-    expect(screen.queryByRole("link", { name: /nouvel actif/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /enregistrer un actif/i })).toBeNull();
     expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
   });
 });

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { DateField, DateTimeField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { z } from "zod";
 import type {
   ActivityDetail,
@@ -82,19 +84,16 @@ function ActivityDialog({
   ...props
 }: Omit<
   CommandFormProps,
-  "surface" | "submittingLabel" | "cancelLabel" | "title" | "onReload"
+  "surface" | "title" | "onReload"
 > & {
   title: string;
   onReload: () => Promise<unknown>;
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
   return (
     <CommandForm
       {...props}
       surface="dialog"
-      submittingLabel={t("activities.actions.submitting")}
-      cancelLabel={t("activities.actions.cancel")}
       onReload={async () => {
         await onReload();
         onDismiss();
@@ -145,6 +144,7 @@ export function ActivityActions({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const [panel, setPanel] = useState<Panel>("none");
 
@@ -170,53 +170,48 @@ export function ActivityActions({
     <>
       <div className="flex flex-wrap gap-2">
         {showClose && (
-          <Button className="min-h-9" onClick={() => setPanel("close")}>
-            {t("activities.actions.close")}
+          <Button onClick={() => setPanel("close")}>
+            {label("close-activity")}
           </Button>
         )}
         {showCapture && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("leg")}
           >
-            {t("activities.actions.addLeg")}
+            {label("record-movement-leg")}
           </Button>
         )}
         {showCapture && assets.length > 0 && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("reading")}
           >
-            {t("activities.actions.addReading")}
+            {label("record-meter-reading")}
           </Button>
         )}
         {showCapture && assets.length > 0 && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("expense")}
           >
-            {t("activities.actions.addExpense")}
+            {label("record-expense")}
           </Button>
         )}
         {showSubstitute && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("substitute")}
           >
-            {t("activities.actions.substitute")}
+            {label("substitute-asset")}
           </Button>
         )}
         {showReopen && (
           <Button
             variant="outline"
-            className="min-h-9"
             onClick={() => setPanel("reopen")}
           >
-            {t("activities.actions.reopen")}
+            {label("reopen-activity")}
           </Button>
         )}
       </div>
@@ -274,6 +269,7 @@ function CloseDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, invalidate } = useActivityCommit();
   const submission = useCommandSubmission();
   const [endedAt, setEndedAt] = useState("");
@@ -313,10 +309,10 @@ function CloseDialog({
 
   return (
     <ActivityDialog
-      title={t("activities.actions.closeTitle")}
+      title={label("close-activity")}
       description={t("activities.actions.closeHint")}
       error={submission.error}
-      submitLabel={t("activities.actions.closeSubmit")}
+      command="close-activity"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -329,11 +325,10 @@ function CloseDialog({
             ? t("activities.actions.endedAt")
             : t("activities.actions.endedAtOptional")}
         </Label>
-        <Input
+        <DateTimeField
           id="activity-close-ended-at"
-          type="datetime-local"
           value={endedAt}
-          onChange={(event) => setEndedAt(event.target.value)}
+          onChange={setEndedAt}
         />
       </div>
 
@@ -363,6 +358,7 @@ function ReopenDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, invalidate } = useActivityCommit();
   const submission = useCommandSubmission();
   const [reason, setReason] = useState("");
@@ -396,10 +392,10 @@ function ReopenDialog({
 
   return (
     <ActivityDialog
-      title={t("activities.actions.reopenTitle")}
+      title={label("reopen-activity")}
       description={t("activities.actions.reopenHint")}
       error={submission.error}
-      submitLabel={t("activities.actions.reopenSubmit")}
+      command="reopen-activity"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -475,6 +471,7 @@ function SubstituteDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, invalidate } = useActivityCommit();
   const submission = useCommandSubmission();
 
@@ -563,10 +560,10 @@ function SubstituteDialog({
 
   return (
     <ActivityDialog
-      title={t("activities.actions.substituteTitle")}
+      title={label("substitute-asset")}
       description={t("activities.actions.substituteHint")}
       error={submission.error}
-      submitLabel={t("activities.actions.substituteSubmit")}
+      command="substitute-asset"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -627,11 +624,10 @@ function SubstituteDialog({
         <Label htmlFor="activity-substitute-handover">
           {t("activities.actions.handoverAt")}
         </Label>
-        <Input
+        <DateTimeField
           id="activity-substitute-handover"
-          type="datetime-local"
           value={handoverAt}
-          onChange={(event) => setHandoverAt(event.target.value)}
+          onChange={setHandoverAt}
         />
       </div>
 
@@ -694,6 +690,7 @@ function LegDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, invalidate } = useActivityCommit();
   const submission = useCommandSubmission();
 
@@ -755,10 +752,10 @@ function LegDialog({
 
   return (
     <ActivityDialog
-      title={t("activities.actions.addLegTitle")}
+      title={label("record-movement-leg")}
       description={t("activities.actions.addLegHint", { legNo: nextLegNo })}
       error={submission.error}
-      submitLabel={t("activities.actions.addLegSubmit")}
+      command="record-movement-leg"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -795,22 +792,20 @@ function LegDialog({
           <Label htmlFor="activity-leg-departed">
             {t("activities.actions.legDepartedAt")}
           </Label>
-          <Input
+          <DateTimeField
             id="activity-leg-departed"
-            type="datetime-local"
             value={departedAt}
-            onChange={(event) => setDepartedAt(event.target.value)}
+            onChange={setDepartedAt}
           />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="activity-leg-arrived">
             {t("activities.actions.legArrivedAt")}
           </Label>
-          <Input
+          <DateTimeField
             id="activity-leg-arrived"
-            type="datetime-local"
             value={arrivedAt}
-            onChange={(event) => setArrivedAt(event.target.value)}
+            onChange={setArrivedAt}
           />
         </div>
       </div>
@@ -975,7 +970,7 @@ function ExpenseDialog({
       title={t("activities.actions.addExpenseTitle")}
       description={t("activities.actions.addExpenseHint")}
       error={submission.error}
-      submitLabel={t("activities.actions.addExpenseSubmit")}
+      command="record-expense"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -1021,11 +1016,10 @@ function ExpenseDialog({
           <Label htmlFor="activity-expense-date">
             {t("activities.actions.expenseEconomicDate")}
           </Label>
-          <Input
+          <DateField
             id="activity-expense-date"
-            type="date"
             value={economicDate}
-            onChange={(event) => setEconomicDate(event.target.value)}
+            onChange={setEconomicDate}
           />
         </div>
       </div>

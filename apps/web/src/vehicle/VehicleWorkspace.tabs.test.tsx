@@ -9,6 +9,7 @@ import {
   WORK_ORDER_ID,
   asset,
   documentRow,
+  entryDetail,
   entryRow,
   historyItem,
   issueRow,
@@ -222,6 +223,72 @@ describe("Money", () => {
   });
 });
 
+describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
+  const fuel = {
+    entryNumber: "DLA-2026-00008",
+    status: "POSTED",
+    category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: null },
+    amountMinor: 86_000,
+    postingPeriodCode: "2026-08",
+  } as const;
+  const posted = historyItem({
+    eventType: "financial_entry.posted",
+    kind: "MONEY",
+    subject: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00008" },
+    amountMinor: 86_000,
+    currency: "XAF",
+    params: { direction: "EXPENSE", entryNumber: "DLA-2026-00008", categoryLabelFr: "Carburant", categoryLabelEn: "Fuel", status: "POSTED" },
+  });
+  const flat = (text: string | null | undefined) => (text ?? "").replace(/\s/g, " ");
+
+  it.each([
+    ["en", "−FCFA 86,000", "FCFA 86,000"],
+    ["fr-CM", "−86 000 FCFA", "86 000 FCFA"],
+  ] as const)("%s: minus on Money and History, unsigned on the entry's own panel", async (locale, signed, unsigned) => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
+      role: "FINANCE",
+      locale,
+      entries: [entryRow({ ...fuel, assetShareMinor: 86_000 })],
+    });
+    await screen.findByText("DLA-2026-00008");
+    expect(screen.getAllByText((_, element) => flat(element?.textContent) === signed && element?.children.length === 0)).toHaveLength(1);
+    cleanup();
+    await closeVehicle();
+
+    await openVehicle(`/assets/${ASSET_ID}/history`, { role: "FINANCE", locale, history: [posted] });
+    expect(await screen.findByText((_, element) => flat(element?.textContent) === signed && element?.children.length === 0)).toBeTruthy();
+    cleanup();
+    await closeVehicle();
+
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08&panel=entry:${ENTRY_ID}`, {
+      role: "FINANCE",
+      locale,
+      entryDetails: [
+        entryDetail({
+          ...fuel,
+          postings: entryDetail().postings.map((line) => ({ ...line, amountMinor: 86_000 })),
+        }),
+      ],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel|Carburant/ });
+    expect(within(panel).getAllByText((_, element) => flat(element?.textContent) === unsigned && element?.children.length === 0).length).toBeGreaterThan(0);
+    expect(within(panel).queryByText((_, element) => flat(element?.textContent) === signed)).toBeNull();
+  });
+
+  it("signs a reversal's split share on the ledger and keeps the whole entry unsigned", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
+      role: "FINANCE",
+      locale: "en",
+      entries: [entryRow({ ...fuel, entryNumber: "DLA-2026-00009", amountMinor: -86_000, assetShareMinor: -43_000 })],
+    });
+    await screen.findByText("DLA-2026-00009");
+    const exact = (text: string) => (_: string, element: Element | null) =>
+      flat(element?.textContent) === text && element?.children.length === 0;
+    expect(screen.getByText(exact("+FCFA 43,000"))).toBeTruthy();
+    expect(screen.getByText(exact("of a FCFA 86,000 entry"))).toBeTruthy();
+  });
+});
+
 describe("History", () => {
   it("filters by kind through the URL and loads more with the cursor", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/history?kind=MAINTENANCE`, {
@@ -330,7 +397,7 @@ describe("Maintenance and Trips", () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/trips`, { role: "DRIVER", trips: [tripRow()] });
     const user = userEvent.setup();
     expect(await screen.findByText("Douala → Yaoundé")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Start a trip" }));
+    await user.click(screen.getByRole("button", { name: "Record a sheet" }));
     await waitFor(() => expect(recorded.history.location.pathname).toBe("/activities/record"));
     expect(recorded.history.location.search).toContain(`assetId=${ASSET_ID}`);
     await act(async () => {});

@@ -91,7 +91,7 @@ const CrewRow = memo(function CrewRow({
             >
               <FormControl>
                 <SelectTrigger
-                  className="min-h-11 w-full"
+                  className="w-full"
                   aria-label={t("activities.record.crew.rowRole", { position })}
                 >
                   <SelectValue />
@@ -114,7 +114,7 @@ const CrewRow = memo(function CrewRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="size-11 shrink-0 self-end text-muted-foreground sm:mt-6"
+        className="shrink-0 self-end text-muted-foreground sm:mt-6"
         aria-label={t("activities.record.crew.remove", { position })}
         onClick={() => onRemove(index)}
       >
@@ -151,7 +151,7 @@ export function CrewRows({ control, branchCode, branchId }: CrewRowsProps) {
       <Button
         type="button"
         variant="outline"
-        className="min-h-11 self-start"
+        className="self-start"
         onClick={() => append(newCrewRow(fields.length === 0 ? "DRIVER" : "CONDUCTOR"))}
       >
         <UserPlus className="size-4" aria-hidden />

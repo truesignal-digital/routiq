@@ -156,7 +156,7 @@ describe("RecordEntryForm opened from a vehicle", () => {
       />,
     );
 
-    const panel = screen.getByRole("dialog", { name: "Record an expense" });
+    const panel = screen.getByRole("dialog", { name: "Record expense" });
     // Pinned: shown read-only, with no picker to move the cost elsewhere.
     expect(within(panel).getByText("Vehicle")).toBeTruthy();
     await waitFor(() => expect(within(panel).getByText(/^DLA-T-001/)).toBeTruthy());
@@ -167,8 +167,11 @@ describe("RecordEntryForm opened from a vehicle", () => {
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Branch").textContent).toContain("Douala");
 
-    await userEvent.type(within(panel).getByLabelText("Amount (XAF)"), "85000");
-    await userEvent.click(within(panel).getByRole("button", { name: "Record" }));
+    await userEvent.type(within(panel).getByLabelText("Amount (FCFA)"), "85000");
+    const submit = within(panel).getByRole("button", { name: "Record the expense" });
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Cancel", "Record the expense"]);
+    await userEvent.click(submit);
 
     await waitFor(() => expect(onRecorded).toHaveBeenCalledOnce());
     expect(client.seen[0]!.name).toBe("record-expense");
@@ -205,8 +208,8 @@ describe("RecordEntryForm opened from a vehicle", () => {
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Amount (XAF)"), "20000");
-    await userEvent.click(screen.getByRole("button", { name: "Record" }));
+    await userEvent.type(screen.getByLabelText("Amount (FCFA)"), "20000");
+    await userEvent.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const payload = recordExpensePayload.parse(client.seen[0]!.payload);
@@ -244,7 +247,7 @@ describe("entry decisions on a record panel", () => {
       <ApproveEntryForm surface="panel" entry={entry} client={client} onDismiss={onDismiss} />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+    await userEvent.click(screen.getByRole("button", { name: "Approve entry" }));
 
     await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
     expect(client.seen[0]!.name).toBe("approve-entry");
@@ -258,9 +261,14 @@ describe("entry decisions on a record panel", () => {
       <RejectEntryForm surface="panel" entry={entry} client={client} onDismiss={vi.fn()} />,
     );
 
-    const submit = screen.getByRole("button", { name: "Reject" }) as HTMLButtonElement;
+    const submit = screen.getByRole("button", { name: "Reject entry" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
-    await userEvent.type(screen.getByLabelText("Rejection reason"), "Duplicate");
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Keep entry", "Reject entry"]);
+    const reason = screen.getByRole("textbox", { name: "Rejection reason" });
+    expect(reason.hasAttribute("required")).toBe(true);
+    expect(reason.getAttribute("aria-required")).toBe("true");
+    await userEvent.type(reason, "Duplicate");
     expect(submit.disabled).toBe(false);
   });
 
@@ -277,8 +285,8 @@ describe("entry decisions on a record panel", () => {
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Reason for reversal"), "Wrong truck");
-    await userEvent.click(screen.getByRole("button", { name: "Reverse" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Reason for reversal" }), "Wrong truck");
+    await userEvent.click(screen.getByRole("button", { name: "Reverse entry" }));
 
     await waitFor(() => expect(onReversed).toHaveBeenCalledOnce());
     const payload = client.seen[0]!.payload as { reversalEntryId: string; originalEntryId: string };
@@ -381,10 +389,10 @@ describe("RecordEntryForm editing the author's pending entry", () => {
   it("opens pre-filled with what the author recorded", () => {
     const panel = openEdit(recordingClient(submitted));
 
-    expect((within(panel).getByLabelText("Amount (XAF)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
+    expect((within(panel).getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
-    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("2026-09-12");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
     expect((within(panel).getByLabelText("Counterparty (optional)") as HTMLInputElement).value).toBe(
       "Garage Tchinda",
     );
@@ -406,7 +414,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     const onRecorded = vi.fn();
     const panel = openEdit(client, onRecorded);
 
-    const amount = within(panel).getByLabelText("Amount (XAF)");
+    const amount = within(panel).getByLabelText("Amount (FCFA)");
     await userEvent.clear(amount);
     await userEvent.type(amount, "54000");
     await userEvent.click(within(panel).getByRole("button", { name: "Save changes" }));

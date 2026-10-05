@@ -1,10 +1,11 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Finance → Approvals → approve the oldest pending entry the viewer may decide
- * (someone else recorded it, and it is inside the viewer's approval band), then
- * read it back as POSTED. Mutates the slot; reset with `pnpm verify up --reseed`.
- * Finance decides up to 1 000 000 XAF; above that only Direction can (ADR-0009).
+ * Finance → Approvals → approve, from its ⋯ menu (one tap), the oldest pending
+ * entry the viewer may decide (someone else recorded it, and it is inside the
+ * viewer's approval band), then read it back as POSTED. Mutates the slot; reset
+ * with `pnpm verify up --reseed`. Finance decides up to 1 000 000 XAF; above
+ * that only Direction can (ADR-0009).
  * Run: pnpm verify drive flow:approve-entry --role finance --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
@@ -26,11 +27,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("approvals-queue");
 
   await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
-  await page.getByRole("menuitem", { name: t("Approuver", "Approve") }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.waitFor();
-  await shot("approve-dialog");
-  await dialog.getByRole("button", { name: t("Approuver", "Approve"), exact: true }).click();
+  // Approve is one tap: the menu item sends the command, no dialog first.
+  await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await quiet();
   await shot("approved");

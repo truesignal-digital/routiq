@@ -19,6 +19,32 @@ describe("page scaffolds", () => {
     expect(screen.getByRole("button", { name: "Add document" })).toBeTruthy();
   });
 
+  // jsdom has no layout, so this pins the classes; the 390 px width itself is
+  // measured in the running app by `pnpm verify drive flow:phone-overflow`.
+  it("PageHeader stacks actions under the title on phone and lets them wrap (#183)", () => {
+    render(
+      <PageHeader
+        title="Maintenance"
+        actions={
+          <>
+            <button type="button">Report a problem</button>
+            <button type="button">New work order</button>
+          </>
+        }
+      />,
+    );
+
+    const actions = screen.getByRole("button", { name: "New work order" }).parentElement;
+    const row = actions?.parentElement;
+    const classes = (el: Element | null | undefined) => (el?.className ?? "").split(/\s+/);
+
+    expect(classes(actions)).toContain("flex-wrap");
+    expect(classes(actions)).not.toContain("shrink-0");
+    expect(classes(row)).toContain("flex-col");
+    expect(classes(row)).toContain("sm:flex-row");
+    expect(classes(row).filter((c) => c.startsWith("sm:") && c.includes("shrink-0"))).toEqual([]);
+  });
+
   it("carries no back affordance — the SiteHeader breadcrumb is the way back", () => {
     render(<PageHeader title="Asset documents" />);
 

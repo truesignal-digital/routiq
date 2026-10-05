@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { AssetListItem } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import {
   DataTable,
   DataTableViewOptions,
@@ -27,11 +28,12 @@ import { deniedCode, PermissionDenied } from "@/components/permission-denied.js"
 import { useMeContext } from "@/auth/me.js";
 import {
   AssetActionDialog,
+  ASSET_ACTION_COMMANDS,
   assetActions,
   type AssetActionKey,
 } from "@/assets/AssetActions.js";
 import { useAssetColumns, type AssetColumnId } from "@/assets/assetColumns.js";
-import { assetFilterStatuses, isAssetFilter } from "@/assets/display.js";
+import { assetFilterQuery, isAssetFilter } from "@/assets/display.js";
 import { canManageAssets, canViewAssets } from "@/assets/permissions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useAssets } from "@/assets/useAssets.js";
@@ -59,11 +61,15 @@ const STATUS_OPTIONS = ["IN_SERVICE", "ATTENTION"] as const;
 
 export function AssetsStub() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
   const canView = canViewAssets(me?.enabledModules);
   const canManage = canManageAssets(me?.role, me?.enabledModules);
   const documentsEnabled = me?.enabledModules.includes("DOCUMENTS") ?? false;
+  // Grounding is a MAINTENANCE fact; the server counts it only while the
+  // module is on, so the hint says which set the number covers.
+  const groundingCounted = me?.enabledModules.includes("MAINTENANCE") ?? false;
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -80,7 +86,7 @@ export function AssetsStub() {
   const search = filterValues["search"] ?? "";
   const category = filterValues["category"] ?? "";
   const statusChoice = filterValues["status"] ?? "";
-  const statuses = assetFilterStatuses(
+  const statusQuery = assetFilterQuery(
     isAssetFilter(statusChoice) ? statusChoice : "ALL",
   );
 
@@ -98,7 +104,7 @@ export function AssetsStub() {
 
   const assetsQuery = useAssets({
     ...scope,
-    ...(statuses === undefined ? {} : { status: statuses }),
+    ...statusQuery,
     ...(sort === undefined ? {} : { sort }),
   });
   const summaryQuery = useAssetSummary(scope);
@@ -154,9 +160,14 @@ export function AssetsStub() {
         label: t("assets.metrics.attention"),
         value: counts === undefined ? null : String(counts.attention),
         tone: "warning",
+        hint: t(
+          groundingCounted
+            ? "assets.metrics.attentionHint"
+            : "assets.metrics.attentionHintNoGrounding",
+        ),
       },
     ];
-  }, [summaryQuery.data, t]);
+  }, [summaryQuery.data, t, groundingCounted]);
 
   if (me !== undefined && !canView) {
     return (
@@ -180,7 +191,7 @@ export function AssetsStub() {
               className="hidden min-h-11 shrink-0 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:inline-flex"
             >
               <Plus className="size-4" aria-hidden />
-              {t("assets.register")}
+              {label("register-asset")}
             </Link>
           ) : undefined
         }
@@ -274,7 +285,7 @@ export function AssetsStub() {
               )) {
                 actions.push({
                   key: action,
-                  label: t(`assets.actions.${action}`),
+                  label: label(ASSET_ACTION_COMMANDS[action]),
                   icon: action === "commission" ? PlayCircle : ArrowLeftRight,
                   onSelect: () => setPending({ asset, action }),
                 });
@@ -334,7 +345,7 @@ export function AssetsStub() {
                       ? {
                           label: (
                             <span className="flex items-center gap-2">
-                              {t("assets.emptyAction")}
+                              {label("register-asset")}
                               <ArrowRight className="size-4" aria-hidden />
                             </span>
                           ),
@@ -360,7 +371,7 @@ export function AssetsStub() {
       {canManage && (
         <Link
           to="/assets/new"
-          aria-label={t("assets.register")}
+          aria-label={label("register-asset")}
           className="fixed right-4 bottom-6 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-lg transition active:scale-95 sm:hidden"
         >
           <Plus className="size-6" aria-hidden />
