@@ -191,7 +191,9 @@
     "metrics": {
       "total": "Total",
       "inService": "En service",
-      "attention": "À surveiller"
+      "attention": "À surveiller",
+      "attentionHint": "Immobilisés, en maintenance, retirés ou réformés",
+      "attentionHintNoGrounding": "En maintenance, retirés ou réformés"
     },
     "status": {
       "REGISTERED": "Enregistré",
@@ -694,6 +696,7 @@
       "OTHER": "Autre"
     },
     "detail": {
+      "breadcrumb": "Activité",
       "loading": "Chargement de l'activité…",
       "loadFailed": "Impossible de charger cette activité.",
       "summary": "Résumé",

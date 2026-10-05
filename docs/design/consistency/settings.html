@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: company settings</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .setgrid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 0; }
+  .setnav { border-right: 1px solid var(--border); padding: 4px 10px 0 0; display: flex; flex-direction: column; gap: 2px; }
+  .setnav div { padding: 8px 10px; border-radius: 8px; font-size: 13px; color: oklch(0.35 0 0); }
+  .setnav .on { background: var(--muted); font-weight: 650; color: var(--foreground); }
+  .setnav .grp { font-size: 11px; font-weight: 650; color: var(--muted-foreground); padding: 12px 10px 4px; }
+  .setbody { padding: 0 0 0 22px; display: flex; flex-direction: column; gap: 18px; }
+  .setrow { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .setrow:last-child { border-bottom: 0; }
+  .setrow .lbl b { display: block; font-size: 13.5px; }
+  .setrow .lbl span { font-size: 12.5px; color: var(--muted-foreground); }
+  .logo-up { display: flex; gap: 14px; align-items: center; }
+  .logo-box { width: 64px; height: 64px; border-radius: 14px; border: 1px solid var(--border); display: grid; place-items: center; background: white; font: 800 18px var(--font-heading); color: #0f5b3a; }
+  .swatches2 { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sw { width: 36px; height: 36px; border-radius: 10px; border: 2px solid white; box-shadow: 0 0 0 1px var(--border); position: relative; }
+  .sw.sel { box-shadow: 0 0 0 2px var(--foreground); }
+  .sw.sel::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: white; font-weight: 800; font-size: 14px; }
+  .preview { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: grid; grid-template-columns: 150px 1fr; min-height: 190px; background: white; }
+  .preview .psb { background: oklch(0.985 0 0); border-right: 1px solid var(--border); padding: 10px 8px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .preview .psb .brand { display: flex; align-items: center; gap: 8px; padding: 4px 4px 10px; font-weight: 700; font-size: 12.5px; }
+  .preview .psb .brand span.lg { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; color: white; font-size: 10px; font-weight: 800; background: var(--acc); }
+  .preview .psb .it { padding: 6px 8px; border-radius: 7px; }
+  .preview .psb .it.on { background: color-mix(in oklch, var(--acc) 12%, white); color: var(--acc); font-weight: 650; box-shadow: inset 3px 0 0 var(--acc); }
+  .preview .psb .pw { margin-top: auto; font-size: 10.5px; color: var(--muted-foreground); display: flex; align-items: center; gap: 5px; padding: 6px 4px 2px; border-top: 1px solid var(--border); }
+  .preview .pm { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .preview .pb { background: var(--acc); color: white; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 650; align-self: flex-start; }
+  .preview .ptab { display: flex; gap: 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+  .preview .ptab span { padding: 6px 0; } .preview .ptab .on { border-bottom: 2px solid var(--acc); font-weight: 650; }
+  .lockline { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted-foreground); }
+  .pstatic { position: relative; background: white; border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; }
+  .powered { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted-foreground); }
+  .powered .mark { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#where">Where settings live</a>
+    <a href="#brand">Logo and colour</a>
+    <a href="#all">All company settings</a>
+    <a href="#mine">My settings</a>
+    <a href="#rules">Rules</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Company settings</h2>
+      <p class="lede">Each company can make ROUTIQ feel like its own: its logo, its colour, its defaults and working rules. The Administrator sets them once and they apply to everyone in the company. ROUTIQ stays the product: the "powered by ROUTIQ" mark, the app icon and the login footer never change. Each person also keeps their own small set of preferences.</p>
+    </header>
+
+    <section class="section" id="where">
+      <div class="kicker">Placement</div>
+      <h3>Where settings live</h3>
+      <div class="cols three">
+        <div class="spec-card"><h4>Company settings</h4><p>Sidebar → Company → <b>Company settings</b>. Administrator and Direction only. Changes apply to every user of the company, on every device, at their next page load.</p></div>
+        <div class="spec-card"><h4>My settings</h4><p>The name menu at the bottom of the sidebar → <b>My settings</b>. Every user: language, light / dark, PIN, signed-in devices. Only affects that person.</p></div>
+        <div class="spec-card"><h4>Not here</h4><p>Modules and the plan are set by ROUTIQ in the console; the company sees them read-only under Company → Your modules.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="brand">
+      <div class="kicker">Brand</div>
+      <h3>Logo and colour</h3>
+      <div class="frame desktop" style="min-height:720px">
+        <div data-sidebar="companysettings" data-role="admin"></div>
+        <div class="main"><div class="topbar">Company <span class="sep">/</span> <b>Company settings</b></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Company settings</h1><div class="lead">Apply to everyone at Transports Ngwa.</div></div></div>
+            <div class="setgrid">
+              <div class="setnav"><div class="on">Logo and colour</div><div>Company details</div><div>Regional</div><div class="grp">Working rules</div><div>Approvals</div><div>Categories</div><div>Numbering</div><div class="grp">Read-only</div><div>Your modules</div></div>
+              <div class="setbody">
+                <div class="setrow"><div class="lbl"><b>Company logo</b><span>Shown in the sidebar, on the sign-in page and on printed receipts. PNG or SVG, square works best.</span></div>
+                  <div class="logo-up"><div class="logo-box">TN</div><div><div class="row"><button class="btn sm"><i data-i="camera"></i>Replace</button><button class="btn sm ghost">Remove</button></div><div class="caption" style="margin:6px 0 0">transports-ngwa-logo.svg · 18 KB</div></div></div></div>
+                <div class="setrow"><div class="lbl"><b>Accent colour</b><span>Buttons, the active place in the sidebar, tabs and focus rings. Status colours (red, amber, green) never change.</span></div>
+                  <div><div class="swatches2"><span class="sw" style="background:#171717" title="Neutral (default)"></span><span class="sw sel" style="background:#0f7a4a" title="Green"></span><span class="sw" style="background:#2563c9"></span><span class="sw" style="background:#5b3fb5"></span><span class="sw" style="background:#b4532a"></span><span class="sw" style="background:#0e6f7e"></span><span class="sw" style="background:#9a1b4b"></span><span class="sw" style="border:1px dashed var(--border);background:white;display:grid;place-items:center;color:var(--muted-foreground);font-size:16px">+</span></div>
+                  <div class="caption" style="margin:8px 0 0">Custom colour: any hex, checked for contrast with white text (at least 4.5 : 1). Colours too close to red or amber are refused, so they're never mistaken for a warning.</div></div></div>
+                <div class="setrow"><div class="lbl"><b>Sidebar</b><span>Light (default) or dark.</span></div><div class="seg" style="width:220px"><div class="on">Light</div><div>Dark</div></div></div>
+                <div class="setrow"><div class="lbl"><b>Preview</b><span>What every user will see.</span></div>
+                  <div class="preview" style="--acc:#0f7a4a"><div class="psb"><div class="brand"><span class="lg">TN</span>Transports Ngwa</div><div class="it">Home</div><div class="it on">Trucks</div><div class="it">Trips</div><div class="it">Money</div><div class="pw"><span data-mark></span>powered by ROUTIQ</div></div>
+                    <div class="pm"><b style="font-size:15px">VH003 · Mercedes Actros</b><div class="ptab"><span class="on">Overview</span><span>Maintenance</span><span>Money</span></div><span class="pb">Add a note</span><span class="badge b-bad" style="align-self:flex-start">Grounded</span></div></div></div>
+                <div class="row" style="justify-content:flex-end"><button class="btn">Reset to ROUTIQ default</button><button class="btn primary">Save for everyone</button></div>
+              </div>
+            </div>
+          </div></div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>What the company can change</h4><ul>
+          <li>Logo (sidebar header, sign-in page, printed receipts and statements).</li>
+          <li>Accent colour (from a checked set, or a custom colour that passes contrast).</li>
+          <li>Sidebar light or dark.</li>
+          <li>Company name as displayed.</li>
+        </ul></div>
+        <div class="spec-card"><h4>What always stays ROUTIQ</h4><ul>
+          <li>"powered by ROUTIQ" with the mark, at the bottom of the sidebar and on the sign-in page.</li>
+          <li>The app icon and the browser tab icon.</li>
+          <li>Status colours, typography, layout, the design system. Personalising never changes how the app works, only how it's dressed.</li>
+          <li>The console (console.routiq.app) is always ROUTIQ-branded.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="all">
+      <div class="kicker">Settings</div>
+      <h3>All company settings</h3>
+      <table class="spec-table">
+        <thead><tr><th>Section</th><th>Settings</th><th>Who</th><th>Status today</th></tr></thead>
+        <tbody>
+          <tr><td><b>Logo and colour</b></td><td>Logo, accent colour, sidebar light / dark</td><td>Administrator, Direction</td><td>New</td></tr>
+          <tr><td><b>Company details</b></td><td>Display name, legal name, tax number (NIU), address, phone, email; shown on receipts and statements</td><td>Administrator, Direction</td><td>New</td></tr>
+          <tr><td><b>Regional</b></td><td>Default language for new users (fr / en), date format, week start; currency XAF (fixed); time zone per agency</td><td>Administrator</td><td>Time zone per branch exists; the rest new</td></tr>
+          <tr><td><b>Approvals</b></td><td>Amount bands: below → automatic, above → who approves (Finance, Administrator, Direction)</td><td>Direction</td><td>Backend exists (<code>update-approval-threshold</code>), no screen</td></tr>
+          <tr><td><b>Categories</b></td><td>Expense, revenue, problem and document categories: add, rename, deactivate</td><td>Administrator, Finance</td><td>Backend exists (<code>create-category</code>, <code>relabel-category</code>, …), no screen</td></tr>
+          <tr><td><b>Numbering</b></td><td>Prefix for trips, entries, work orders (e.g. DLA-2026-00012)</td><td>Administrator</td><td>Numbering exists, fixed format</td></tr>
+          <tr><td><b>Module settings</b></td><td>Appear only when the module is on: Scheduling (show price to drivers?), Parcels (fees by route, days before "not collected" warning), Customers (default payment terms)</td><td>Administrator</td><td>New, per module</td></tr>
+          <tr><td><b>Your modules</b></td><td>Read-only list with "Ask about it"</td><td>Administrator, Direction</td><td>New</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="mine">
+      <div class="kicker">Per person</div>
+      <h3>My settings</h3>
+      <div class="cols" style="grid-template-columns:390px minmax(0,1fr)">
+        <div class="frame phone" style="min-height:700px">
+          <div class="ptop"><i data-i="back"></i><b>My settings</b></div>
+          <div class="page" style="gap:12px">
+            <div class="row"><span class="av" style="width:44px;height:44px;border-radius:50%;background:var(--primary);color:white;display:grid;place-items:center;font-weight:700">S</span><div><b>Sali Ahmadou</b><div class="caption" style="margin:0">Driver · Douala · Transports Ngwa</div></div></div>
+            <div class="field"><label>Language</label><div class="seg"><div class="on">Français</div><div>English</div></div></div>
+            <div class="field"><label>Appearance</label><div class="seg"><div>Light</div><div>Dark</div><div class="on">Same as phone</div></div></div>
+            <div class="list-card"><i data-i="lock"></i><div><div class="main-t">Change my PIN</div></div><div class="end"><i data-i="chev"></i></div></div>
+            <div class="list-card"><i data-i="sliders"></i><div><div class="main-t">Signed-in devices</div><div class="sub-t">This phone · 1 other</div></div><div class="end"><i data-i="chev"></i></div></div>
+            <button class="btn block" style="color:var(--destructive)">Sign out</button>
+            <div class="powered" style="justify-content:center;margin-top:6px"><span data-mark></span>powered by ROUTIQ · version 0.9</div>
+          </div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Personal settings follow the person, not the device (today language is stored per device, #127; move it to the account).</li>
+          <li>A person can't override the company's logo or accent; they can choose light or dark.</li>
+          <li>Sign out lives here only (it appears twice today).</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="rules">
+      <div class="kicker">Build</div>
+      <h3>Rules and what it takes</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Company settings are a core feature (every company has them); module settings appear inside them only when the module is on.</li>
+          <li>Every change is a command, audited, visible in History ("Esther changed the accent colour").</li>
+          <li>Theme is limited to accent colour and sidebar shade on purpose: a fully free theme would break contrast, status colours and the consistency this proposal is about.</li>
+          <li>The logo is stored through the existing S3 storage (uploads), never in the database.</li>
+        </ul></div>
+        <div class="spec-card"><h4>What it takes</h4><ul>
+          <li>A <code>workspace_settings</code> record + <code>update-company-settings</code> and <code>upload-company-logo</code> commands.</li>
+          <li>The shell reads the settings at sign-in and sets the accent as CSS variables; tokens already drive every colour (palette guard), so no screen changes.</li>
+          <li>Screens for the two backend-only features: Approvals and Categories.</li>
+          <li>Move language to the account (#127).</li>
+        </ul></div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
