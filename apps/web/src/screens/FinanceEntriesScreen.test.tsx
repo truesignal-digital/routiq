@@ -418,7 +418,7 @@ describe("FinanceEntriesScreen", () => {
       (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
     ).toEqual([
       "finance.entries.viewer.fullScreen",
-      "finance.entries.detail.reverseAction",
+      "commands.reverse-entry.label",
     ]);
   });
 
@@ -430,7 +430,7 @@ describe("FinanceEntriesScreen", () => {
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
     await user.click(
       await screen.findByRole("menuitem", {
-        name: "finance.entries.detail.reverseAction",
+        name: "commands.reverse-entry.label",
       }),
     );
 

@@ -3,7 +3,7 @@ import { Eye, LayoutGrid, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { actionDef, headerActions } from "../actions.js";
 import { useVehicle } from "../context.js";
-import { Sep } from "../parts.js";
+import { Sep, useStepLabel } from "../parts.js";
 
 /** "Mercedes-Benz Actros" — make and model, or nothing to repeat after the code. */
 export function makeAndModel(asset: { manufacturer: string | null; model: string | null }): string {
@@ -65,6 +65,7 @@ export function IdentityStrip() {
 
 function HeaderActions() {
   const { t } = useTranslation();
+  const stepLabel = useStepLabel();
   const { viewer, runAction, openAllActions, availability } = useVehicle();
 
   if (viewer.readOnly) {
@@ -82,13 +83,13 @@ function HeaderActions() {
       {keys.map((key) => {
         const Icon = actionDef(key).icon;
         return (
-          <Button key={key} variant="outline" className="h-9" onClick={() => runAction(key)}>
+          <Button key={key} variant="outline" className="desktop:h-9" onClick={() => runAction(key)}>
             <Icon aria-hidden />
-            {t(`vehicle.actions.${key}.label`)}
+            {stepLabel({ key })}
           </Button>
         );
       })}
-      <Button variant="outline" className="h-9" onClick={openAllActions}>
+      <Button variant="outline" className="desktop:h-9" onClick={openAllActions}>
         <LayoutGrid aria-hidden />
         {t("vehicle.header.moreActions")}
       </Button>

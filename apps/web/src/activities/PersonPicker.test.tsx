@@ -129,9 +129,9 @@ describe("PersonPicker", () => {
     await userEvent.click(screen.getByLabelText("Chauffeur"));
     await waitFor(() => expect(screen.getByText("Aucune personne trouvée.")).toBeTruthy());
 
-    await userEvent.click(screen.getByRole("button", { name: /Nouvelle personne/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter une personne" }));
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Nouvelle personne" })).toBeTruthy(),
+      expect(screen.getByRole("heading", { name: "Ajouter une personne" })).toBeTruthy(),
     );
   });
 });

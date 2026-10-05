@@ -157,7 +157,7 @@ describe("BranchesScreen", () => {
     expect(await screen.findByText("branches.title")).toBeTruthy();
     expect(screen.getByText("errors.ROLE_FORBIDDEN")).toBeTruthy();
     expect(screen.queryByText("Douala")).toBeNull();
-    expect(screen.queryByRole("button", { name: "branches.add.open" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "commands.create-branch.label" })).toBeNull();
   });
 
   it("offers an inactive branch reactivation, and nothing that assumes it is open", async () => {
@@ -168,12 +168,12 @@ describe("BranchesScreen", () => {
     await userEvent.click(menus[1]!);
 
     expect(
-      await screen.findByRole("menuitem", { name: "branches.actions.reactivate" }),
+      await screen.findByRole("menuitem", { name: "commands.set-branch-status.reactivate.label" }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("menuitem", { name: "branches.actions.deactivate" }),
+      screen.queryByRole("menuitem", { name: "commands.set-branch-status.deactivate.label" }),
     ).toBeNull();
-    expect(screen.queryByRole("menuitem", { name: "branches.actions.rename" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "commands.rename-branch.label" })).toBeNull();
   });
 
   it("opens the deactivation dialog on the row the admin chose", async () => {
@@ -182,7 +182,7 @@ describe("BranchesScreen", () => {
 
     await userEvent.click(screen.getAllByRole("button", { name: "dataTable.actions" })[0]!);
     await userEvent.click(
-      await screen.findByRole("menuitem", { name: "branches.actions.deactivate" }),
+      await screen.findByRole("menuitem", { name: "commands.set-branch-status.deactivate.label" }),
     );
 
     const dialog = await screen.findByRole("dialog", { name: "branch-action" });
@@ -195,7 +195,7 @@ describe("BranchesScreen", () => {
     await screen.findByText("Douala");
 
     expect(screen.queryByRole("dialog", { name: "create-branch" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "branches.add.open" }));
+    await userEvent.click(screen.getByRole("button", { name: "commands.create-branch.label" }));
     expect(await screen.findByRole("dialog", { name: "create-branch" })).toBeTruthy();
   });
 });

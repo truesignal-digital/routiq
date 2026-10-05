@@ -40,7 +40,8 @@ vi.mock("react-i18next", async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string) => key,
+      // Command labels pass fallback keys; every key "exists" here, so the first wins.
+      t: (key: string | string[]) => (Array.isArray(key) ? key[0] : key),
       i18n: {
         language: "en",
         resolvedLanguage: "en",
@@ -289,7 +290,7 @@ describe("MaintenanceScreen — work order queue", () => {
     expect(issuedQueries[0]).toEqual({});
 
     await user.click(
-      screen.getByRole("button", { name: "maintenance.workOrders.status.COMPLETED" }),
+      screen.getByRole("radio", { name: "maintenance.workOrders.status.COMPLETED" }),
     );
 
     // Filtering client-side would describe the loaded page, not the workshop.
@@ -318,7 +319,7 @@ describe("MaintenanceScreen — row sheet", () => {
     ).toBeTruthy();
     expect(within(sheet).getByText("DLA-2026-00007")).toBeTruthy();
     expect(
-      within(sheet).getByText("maintenance.detail.entryStatus.POSTED"),
+      within(sheet).getByText("finance.entries.status.POSTED"),
     ).toBeTruthy();
   });
 
@@ -346,8 +347,8 @@ describe("MaintenanceScreen — row sheet", () => {
 });
 
 describe("MaintenanceScreen — state-driven actions", () => {
-  function actionButton(sheet: HTMLElement, key: string) {
-    return within(sheet).queryByRole("button", { name: `maintenance.actions.${key}` });
+  function actionButton(sheet: HTMLElement, command: string) {
+    return within(sheet).queryByRole("button", { name: `commands.${command}.label` });
   }
 
   it("offers completion and cancellation on an approved work order and nothing else", async () => {
@@ -355,9 +356,14 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "complete")).toBeTruthy();
-    expect(actionButton(sheet, "cancelWorkOrder")).toBeTruthy();
-    for (const absent of ["approve", "reject", "approveCompletion", "release"]) {
+    expect(actionButton(sheet, "complete-work-order")).toBeTruthy();
+    expect(actionButton(sheet, "cancel-work-order")).toBeTruthy();
+    for (const absent of [
+      "approve-work-order",
+      "reject-work-order",
+      "approve-work-order-closure",
+      "release-asset-to-service",
+    ]) {
       expect(actionButton(sheet, absent), absent).toBeNull();
     }
   });
@@ -370,11 +376,11 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "approve")).toBeTruthy();
-    expect(actionButton(sheet, "reject")).toBeTruthy();
-    expect(actionButton(sheet, "complete")).toBeNull();
+    expect(actionButton(sheet, "approve-work-order")).toBeTruthy();
+    expect(actionButton(sheet, "reject-work-order")).toBeTruthy();
+    expect(actionButton(sheet, "complete-work-order")).toBeNull();
     // Cancelling is the workshop's call, not the approver's.
-    expect(actionButton(sheet, "cancelWorkOrder")).toBeNull();
+    expect(actionButton(sheet, "cancel-work-order")).toBeNull();
   });
 
   it("lets the workshop cancel a submitted work order but not decide it", async () => {
@@ -384,9 +390,9 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "cancelWorkOrder")).toBeTruthy();
-    expect(actionButton(sheet, "approve")).toBeNull();
-    expect(actionButton(sheet, "reject")).toBeNull();
+    expect(actionButton(sheet, "cancel-work-order")).toBeTruthy();
+    expect(actionButton(sheet, "approve-work-order")).toBeNull();
+    expect(actionButton(sheet, "reject-work-order")).toBeNull();
   });
 
   it("offers approve and reject completion only while the completion is submitted", async () => {
@@ -397,10 +403,10 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "approveCompletion")).toBeTruthy();
-    expect(actionButton(sheet, "rejectCompletion")).toBeTruthy();
-    expect(actionButton(sheet, "cancelWorkOrder")).toBeTruthy();
-    expect(actionButton(sheet, "complete")).toBeNull();
+    expect(actionButton(sheet, "approve-work-order-closure")).toBeTruthy();
+    expect(actionButton(sheet, "reject-work-order-completion")).toBeTruthy();
+    expect(actionButton(sheet, "cancel-work-order")).toBeTruthy();
+    expect(actionButton(sheet, "complete-work-order")).toBeNull();
   });
 
   it("offers the return to service once the work order is completed", async () => {
@@ -410,8 +416,8 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "release")).toBeTruthy();
-    expect(actionButton(sheet, "cancelWorkOrder")).toBeNull();
+    expect(actionButton(sheet, "release-asset-to-service")).toBeTruthy();
+    expect(actionButton(sheet, "cancel-work-order")).toBeNull();
   });
 
   it("offers no return to service when the asset is not grounded", async () => {
@@ -422,7 +428,7 @@ describe("MaintenanceScreen — state-driven actions", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "release")).toBeNull();
+    expect(actionButton(sheet, "release-asset-to-service")).toBeNull();
   });
 
   it("closes the terminal states to every action, even for an admin", async () => {
@@ -436,13 +442,13 @@ describe("MaintenanceScreen — state-driven actions", () => {
     expect(within(sheet).getByText("Devis trop élevé")).toBeTruthy();
     expect(within(sheet).getByText("maintenance.fields.rejectReason")).toBeTruthy();
     for (const key of [
-      "approve",
-      "reject",
-      "complete",
-      "approveCompletion",
-      "rejectCompletion",
-      "release",
-      "cancelWorkOrder",
+      "approve-work-order",
+      "reject-work-order",
+      "complete-work-order",
+      "approve-work-order-closure",
+      "reject-work-order-completion",
+      "release-asset-to-service",
+      "cancel-work-order",
     ]) {
       expect(actionButton(sheet, key), key).toBeNull();
     }
@@ -477,7 +483,7 @@ describe("MaintenanceScreen — state-driven actions", () => {
       renderScreen();
 
       const sheet = await openSheet(user);
-      expect(within(sheet).queryAllByRole("button", { name: /^maintenance\.actions\./ }))
+      expect(within(sheet).queryAllByRole("button", { name: /^commands\./ }))
         .toEqual([]);
       cleanup();
     }
@@ -485,8 +491,8 @@ describe("MaintenanceScreen — state-driven actions", () => {
     const user = userEvent.setup();
     renderScreen();
     // …no way to open a record either…
-    expect(screen.queryByRole("button", { name: /maintenance.workOrders.new/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /maintenance.issues.new/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "commands.create-work-order.label" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "commands.report-issue.label" })).toBeNull();
     // …and no menu on an open signalement.
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await screen.findByText("Freins qui sifflent en descente");
@@ -524,7 +530,7 @@ describe("MaintenanceScreen — row sheet costs", () => {
     expect(within(posted).queryByText("DLA-2026-00009")).toBeNull();
     expect(within(pending).getByText("DLA-2026-00009")).toBeTruthy();
     expect(
-      within(pending).getByText("maintenance.detail.entryStatus.SUBMITTED"),
+      within(pending).getByText("finance.entries.status.SUBMITTED"),
     ).toBeTruthy();
     expect(
       within(pending).getByText("maintenance.detail.pendingCostLinesHint"),
@@ -547,7 +553,7 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+      within(sheet).getByRole("button", { name: "commands.complete-work-order.label" }),
     );
 
     // The 45 000 already booked against the order is shown first, and
@@ -559,7 +565,7 @@ describe("MaintenanceScreen — commands", () => {
         .getAttribute("aria-pressed"),
     ).toBe("true");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+      screen.getByRole("button", { name: "commands.complete-work-order.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -584,11 +590,11 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+      within(sheet).getByRole("button", { name: "commands.complete-work-order.label" }),
     );
     await screen.findByLabelText("maintenance.fields.resolveLinkedIssue");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+      screen.getByRole("button", { name: "commands.complete-work-order.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -601,11 +607,11 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+      within(sheet).getByRole("button", { name: "commands.complete-work-order.label" }),
     );
     await user.click(await screen.findByLabelText("maintenance.fields.resolveLinkedIssue"));
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+      screen.getByRole("button", { name: "commands.complete-work-order.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -620,12 +626,12 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+      within(sheet).getByRole("button", { name: "commands.complete-work-order.label" }),
     );
     await screen.findByText("maintenance.close.recorded");
     expect(screen.queryByLabelText("maintenance.fields.resolveLinkedIssue")).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+      screen.getByRole("button", { name: "commands.complete-work-order.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -641,16 +647,16 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.reject" }),
+      within(sheet).getByRole("button", { name: "commands.reject-work-order.label" }),
     );
 
     // A refusal must say why: the button stays shut on an empty reason.
-    const submit = await screen.findByRole("button", { name: "maintenance.actions.reject" });
+    const submit = await screen.findByRole("button", { name: "commands.reject-work-order.submit" });
     expect(submit.hasAttribute("disabled")).toBe(true);
 
-    await user.type(screen.getByLabelText("maintenance.fields.reason"), "Devis trop élevé");
+    await user.type(screen.getByRole("textbox", { name: "maintenance.fields.reason" }), "Devis trop élevé");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.reject" }),
+      screen.getByRole("button", { name: "commands.reject-work-order.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -671,14 +677,14 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.rejectCompletion" }),
+      within(sheet).getByRole("button", { name: "commands.reject-work-order-completion.label" }),
     );
     await user.type(
-      await screen.findByLabelText("maintenance.fields.reason"),
+      await screen.findByRole("textbox", { name: "maintenance.fields.reason" }),
       "Facture manquante",
     );
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.rejectCompletion" }),
+      screen.getByRole("button", { name: "commands.reject-work-order-completion.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -699,11 +705,11 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.approveCompletion" }),
+      within(sheet).getByRole("button", { name: "commands.approve-work-order-closure.label" }),
     );
     await screen.findByLabelText("maintenance.fields.note");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.approveCompletion" }),
+      screen.getByRole("button", { name: "commands.approve-work-order-closure.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -720,11 +726,11 @@ describe("MaintenanceScreen — commands", () => {
 
     const sheet = await openSheet(user);
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.release" }),
+      within(sheet).getByRole("button", { name: "commands.release-asset-to-service.label" }),
     );
     await screen.findByLabelText("maintenance.fields.note");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.release" }),
+      screen.getByRole("button", { name: "commands.release-asset-to-service.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -763,11 +769,11 @@ describe("MaintenanceScreen — commands", () => {
     ).toBeTruthy();
 
     await user.click(
-      within(sheet).getByRole("button", { name: "maintenance.actions.complete" }),
+      within(sheet).getByRole("button", { name: "commands.complete-work-order.label" }),
     );
     await screen.findByText("maintenance.close.recorded");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.complete" }),
+      screen.getByRole("button", { name: "commands.complete-work-order.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -797,7 +803,7 @@ describe("MaintenanceScreen — commands", () => {
     renderScreen();
 
     await user.click(
-      await screen.findByRole("button", { name: /maintenance.issues.new/ }),
+      await screen.findByRole("button", { name: "commands.report-issue.label" }),
     );
 
     await openSelect(
@@ -811,7 +817,7 @@ describe("MaintenanceScreen — commands", () => {
     );
     await user.click(screen.getByLabelText("maintenance.fields.safetyCritical"));
     await user.click(
-      screen.getByRole("button", { name: "maintenance.issues.newSubmit" }),
+      screen.getByRole("button", { name: "commands.report-issue.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -851,7 +857,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
     await user.click(
       await screen.findByRole("menuitem", {
-        name: "maintenance.issues.createWorkOrder",
+        name: "commands.create-work-order.label",
       }),
     );
 
@@ -866,7 +872,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     );
     // The expected cost is required: the approval threshold is read against it.
     const submitButton = screen.getByRole("button", {
-      name: "maintenance.workOrders.newSubmit",
+      name: "commands.create-work-order.submit",
     });
     expect(submitButton.hasAttribute("disabled")).toBe(true);
     await user.type(screen.getByLabelText("maintenance.fields.expectedCost"), "45000");
@@ -908,7 +914,7 @@ describe("MaintenanceScreen — signalements tab", () => {
 
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await user.click(
-      await screen.findByRole("button", { name: "maintenance.issues.status.OPEN" }),
+      await screen.findByRole("radio", { name: "maintenance.issues.status.OPEN" }),
     );
 
     await waitFor(() => {
@@ -925,7 +931,7 @@ describe("MaintenanceScreen — signalements tab", () => {
 
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await user.click(
-      await screen.findByRole("button", { name: "maintenance.issues.status.DISMISSED" }),
+      await screen.findByRole("radio", { name: "maintenance.issues.status.DISMISSED" }),
     );
 
     expect(await screen.findByText("maintenance.issues.filteredEmpty")).toBeTruthy();
@@ -946,13 +952,13 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await openIssueAction(user, "maintenance.actions.resolveIssue");
+    await openIssueAction(user, "commands.resolve-issue.label");
     await user.type(
       await screen.findByLabelText("maintenance.fields.note"),
       "Collier resserré sur place",
     );
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.resolveIssue" }),
+      screen.getByRole("button", { name: "commands.resolve-issue.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -968,10 +974,10 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await openIssueAction(user, "maintenance.actions.resolveIssue");
+    await openIssueAction(user, "commands.resolve-issue.label");
     await screen.findByLabelText("maintenance.fields.note");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.resolveIssue" }),
+      screen.getByRole("button", { name: "commands.resolve-issue.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -982,15 +988,15 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await openIssueAction(user, "maintenance.actions.dismissIssue");
+    await openIssueAction(user, "commands.dismiss-issue.label");
     const submit = await screen.findByRole("button", {
-      name: "maintenance.actions.dismissIssue",
+      name: "commands.dismiss-issue.submit",
     });
     expect(submit.hasAttribute("disabled")).toBe(true);
 
-    await user.type(screen.getByLabelText("maintenance.fields.reason"), "Rien constaté");
+    await user.type(screen.getByRole("textbox", { name: "maintenance.fields.reason" }), "Rien constaté");
     await user.click(
-      screen.getByRole("button", { name: "maintenance.actions.dismissIssue" }),
+      screen.getByRole("button", { name: "commands.dismiss-issue.submit" }),
     );
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalled());
@@ -1009,13 +1015,13 @@ describe("MaintenanceScreen — signalements tab", () => {
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
 
     expect(
-      await screen.findByRole("menuitem", { name: "maintenance.actions.resolveIssue" }),
+      await screen.findByRole("menuitem", { name: "commands.resolve-issue.label" }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("menuitem", { name: "maintenance.actions.dismissIssue" }),
+      screen.queryByRole("menuitem", { name: "commands.dismiss-issue.label" }),
     ).toBeNull();
     expect(
-      screen.queryByRole("menuitem", { name: "maintenance.issues.createWorkOrder" }),
+      screen.queryByRole("menuitem", { name: "commands.create-work-order.label" }),
     ).toBeNull();
   });
 });

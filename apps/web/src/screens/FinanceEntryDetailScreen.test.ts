@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -149,8 +149,8 @@ describe("finance entry reversal dialog", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reverse" }));
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Reverse entry" }));
+    await user.click(screen.getByRole("button", { name: "Keep entry" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.createCommandIntent).not.toHaveBeenCalled();
@@ -174,11 +174,14 @@ describe("finance entry reversal dialog", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reverse" }));
-    const submitButton = screen.getAllByRole("button", { name: "Reverse" }).at(-1)!;
+    await user.click(screen.getByRole("button", { name: "Reverse entry" }));
+    const dialog = screen.getByRole("dialog", { name: "Reverse entry" });
+    const submitButton = within(dialog).getByRole("button", { name: "Reverse entry" });
+    expect(within(submitButton.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Keep entry", "Reverse entry"]);
     expect((submitButton as HTMLButtonElement).disabled).toBe(true);
 
-    await user.type(screen.getByLabelText("Reason for reversal"), "Duplicate posting");
+    await user.type(screen.getByRole("textbox", { name: "Reason for reversal" }), "Duplicate posting");
     await user.click(submitButton);
 
     await waitFor(() => expect(submit).toHaveBeenCalledOnce());

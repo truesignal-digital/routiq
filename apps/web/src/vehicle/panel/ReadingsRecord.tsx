@@ -121,7 +121,7 @@ function ReadingsBody({ form }: { form: PanelForm | undefined }) {
         {query.hasNextPage && (
           <Button
             variant="outline"
-            className="h-9"
+            className="desktop:h-9"
             disabled={query.isFetchingNextPage}
             onClick={() => void query.fetchNextPage()}
           >

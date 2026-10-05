@@ -4,6 +4,7 @@ import { CalendarRange, Lock, Unlock } from "lucide-react";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { formatDate } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { DataTable, DataTableViewOptions } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -58,6 +59,7 @@ type ActionDialogState =
 
 export function FinancePeriodsScreen() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const me = useMeContext();
@@ -126,7 +128,7 @@ export function FinancePeriodsScreen() {
       ? [
           {
             key: "lock",
-            label: t("finance.periods.lock"),
+            label: label("lock-period"),
             icon: Lock,
             onSelect: () =>
               setActionDialog({
@@ -139,7 +141,7 @@ export function FinancePeriodsScreen() {
       : [
           {
             key: "reopen",
-            label: t("finance.periods.reopen"),
+            label: label("reopen-period"),
             icon: Unlock,
             onSelect: () =>
               setActionDialog({
@@ -280,6 +282,7 @@ function ActionDialog({
   error: string | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -301,7 +304,7 @@ function ActionDialog({
       <AlertDialog open onOpenChange={(open) => !open && onCancel()}>
         <AlertDialogContent onBackdropClick={onCancel}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("finance.periods.lockTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>{label("lock-period")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("finance.periods.lockExplanation")}
             </AlertDialogDescription>
@@ -312,18 +315,18 @@ function ActionDialog({
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="min-h-11 flex-1 sm:flex-none">
+            <AlertDialogCancel className="flex-1 sm:flex-none">
               {t("finance.periods.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              className="min-h-11 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
               disabled={submitting}
               onClick={() => void handleSubmit()}
             >
               {submitting
-                ? t("finance.periods.submitting")
-                : t("finance.periods.lock")}
+                ? label("lock-period", "submitting")
+                : label("lock-period")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -335,7 +338,7 @@ function ActionDialog({
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("finance.periods.reopenTitle")}</DialogTitle>
+          <DialogTitle>{label("reopen-period")}</DialogTitle>
         </DialogHeader>
 
         {error && (
@@ -356,20 +359,20 @@ function ActionDialog({
             render={
               <Button
                 variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
               />
             }
           >
             {t("finance.periods.cancel")}
           </DialogClose>
           <Button
-            className="min-h-11 flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none"
             disabled={!validateReopenReason(reason) || submitting}
             onClick={() => void handleSubmit()}
           >
             {submitting
-              ? t("finance.periods.submitting")
-              : t("finance.periods.reopen")}
+              ? label("reopen-period", "submitting")
+              : label("reopen-period")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -84,7 +84,6 @@ export function MoreStub() {
             <Button
               key={code}
               variant={i18n.resolvedLanguage === base ? "default" : "outline"}
-              className="min-h-11"
               onClick={() => void chooseLanguage(i18n, code)}
             >
               {label}
@@ -99,7 +98,7 @@ export function MoreStub() {
       </div>
 
       <div className="mt-8">
-        <Button variant="outline" className="min-h-11" onClick={onLogout}>
+        <Button variant="outline" onClick={onLogout}>
           {t("more.logout")}
         </Button>
       </div>

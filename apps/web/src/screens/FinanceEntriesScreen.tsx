@@ -4,6 +4,7 @@ import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { financialEntryFilters, LIST_LIMIT_DEFAULT } from "@routiq/contracts";
 import { FileText, Maximize2, Plus, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import {
   DataTable,
   DataTableViewOptions,
@@ -62,6 +63,7 @@ export function FinanceEntriesScreen() {
 
 function FinanceEntriesContent() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
@@ -193,7 +195,7 @@ function FinanceEntriesContent() {
           primaryColumn={{ columnId: "entryNumber" }}
         />
         {canRecord && (
-          <Button size="sm" render={<Link to="/finance/record" />}>
+          <Button size="desktop-sm" render={<Link to="/finance/record" />}>
             <Plus aria-hidden />
             {t("finance.entries.recordAction")}
           </Button>
@@ -247,7 +249,7 @@ function FinanceEntriesContent() {
                 ? [
                     {
                       key: "reverse",
-                      label: t("finance.entries.detail.reverseAction"),
+                      label: label("reverse-entry"),
                       icon: Undo2,
                       destructive: true,
                       onSelect: () =>
