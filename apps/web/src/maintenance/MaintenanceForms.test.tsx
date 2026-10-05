@@ -145,7 +145,7 @@ describe("maintenance forms pinned to one vehicle", () => {
       status: "OPEN",
       branchId: "ALL",
     });
-    await openSelect(user(), screen.getByRole("combobox", { name: "Issue" }));
+    await openSelect(user(), screen.getByRole("combobox", { name: "Problem" }));
     await userEvent.click(await screen.findByRole("option", { name: "Brakes squeal on the descent" }));
     await userEvent.type(screen.getByLabelText("Description"), "Replace pads");
     // Required since the threshold is read against it.

@@ -207,6 +207,20 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H16",
+    // One fuel expense read "+FCFA 86,000" in Finance and "−FCFA 86,000" on its trip.
+    bad: [
+      file("apps/web/src/finance/entryColumns.tsx", 'formatMoney(minor, { signDisplay: "always" })'),
+      file("apps/web/src/components/money-input.tsx", 'new Intl.NumberFormat("fr-CM", { style: "decimal" })'),
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", "<FormDescription>{formatXAF(amount)}</FormDescription>"),
+    ],
+    good: [
+      file("apps/web/src/lib/format.ts", 'new Intl.NumberFormat(locale, { signDisplay: "exceptZero" })'),
+      file("apps/web/src/finance/entryColumns.tsx", 'formatMoney(minor, { sign: { context: "ledger", direction } })'),
+      file("packages/domain/src/money.ts", "export function formatXAF(minor: MoneyMinor) {}"),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],

@@ -9,6 +9,20 @@ import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { CreateBranchDialog } from "./CreateBranchDialog.js";
 
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("@/components/ui/toast.js", () => ({ toast }));
+
+/** Success is one toast, and nothing in the dialog repeats it. */
+function expectOneSuccessToast(title: string, description?: string) {
+  expect(toast.add).toHaveBeenCalledTimes(1);
+  expect(toast.add).toHaveBeenCalledWith({
+    type: "success",
+    title,
+    ...(description === undefined ? {} : { description }),
+  });
+  expect(screen.queryByRole("status")).toBeNull();
+}
+
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const committed: SubmitResult = {
@@ -107,6 +121,7 @@ describe("CreateBranchDialog", () => {
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expectOneSuccessToast("Agence créée : Yaoundé");
   });
 
   it("refuses a code the numbering scheme could not carry", async () => {

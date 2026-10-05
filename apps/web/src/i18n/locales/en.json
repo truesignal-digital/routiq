@@ -65,7 +65,6 @@
       "all": "All my branches",
       "loading": "Branches…",
       "loadFailed": "Branches unavailable",
-      "switched": "You are viewing: {branch}",
       "scopeLine": "Filtered: {branch} — {count, plural, one {# result} other {# results}}",
       "scopeLineAtLeast": "Filtered: {branch} — at least {count, plural, one {# result} other {# results}}",
       "scopeLineLoading": "Filtered: {branch}",
@@ -150,17 +149,17 @@
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
-    "ISSUE_ASSET_MISMATCH": "That issue was reported against a different asset. Pick an issue for the same asset.",
+    "ISSUE_ASSET_MISMATCH": "That problem was reported against a different asset. Pick a problem for the same asset.",
     "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
-    "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the issue that grounded this asset. Complete the work before returning it to service.",
-    "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the issue that grounded the asset.",
+    "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the problem that grounded this asset. Complete the work before returning it to service.",
+    "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the problem that grounded the asset.",
     "WORK_ORDER_NOT_OPEN": "This work order is not open: costs can only be booked against it after approval and before it is completed, rejected or cancelled.",
     "WORK_ORDER_COST_MISSING": "Enter the repair cost, or choose “No cost” or “Invoice not received yet”.",
     "WORK_ORDER_HAS_COSTS": "Costs are already recorded on this work order. Reopen the form to see them.",
     "HUMAN_PRINCIPAL_REQUIRED": "This action must be taken by a person, not by an integration or an automated agent.",
     "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
-    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the issue.",
-    "SAFETY_ISSUE_OPEN": "Another safety-critical issue is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
+    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the problem.",
+    "SAFETY_ISSUE_OPEN": "Another safety-critical problem is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it."
@@ -272,7 +271,7 @@
       },
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
-      "acquisitionAmount": "Acquisition amount (XAF)"
+      "acquisitionAmount": "Acquisition amount (FCFA)"
     },
     "actions": {
       "assignTo": "Assign to branch",
@@ -412,7 +411,7 @@
       "categoryLabel": "Category",
       "chooseCategory": "Choose a category…",
       "categoriesFailed": "We couldn't load categories. Retry this page.",
-      "amountLabel": "Amount (XAF)",
+      "amountLabel": "Amount (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Payment method",
       "paymentMethods": {
@@ -459,6 +458,7 @@
         "status": "Status",
         "category": "Category",
         "amount": "Amount",
+        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue reversal} EXPENSE_REVERSAL {Expense reversal} other {Expense}}",
         "date": "Economic date",
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
@@ -599,7 +599,7 @@
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
     "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the issue that grounded it is still open."
+    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open."
   },
   "activities": {
     "title": "Activities",
@@ -933,7 +933,7 @@
         "expense": "Expense",
         "categoryLabel": "Category",
         "chooseCategory": "Choose a category",
-        "amountLabel": "Amount (XAF)",
+        "amountLabel": "Amount (FCFA)",
         "amountPlaceholder": "e.g. 125 000",
         "amountRequired": "Enter an amount above zero.",
         "paymentMethodLabel": "Payment method",
@@ -966,9 +966,7 @@
           "BANK": "Bank",
           "OTHER": "Other"
         }
-      },
-      "submitAndClose": "Record and close",
-      "closingSubmitting": "Closing…"
+      }
     }
   },
   "maintenance": {
@@ -979,7 +977,7 @@
     },
     "workOrders": {
       "tab": "Work orders",
-      "newHint": "Open a work order on an asset, with or without an originating issue.",
+      "newHint": "Open a work order on an asset, with or without a problem behind it.",
       "loading": "Loading work orders…",
       "loadFailed": "Could not load the work orders. Please try again.",
       "emptyHint": "No work orders yet. Repairs opened here will show up in this list.",
@@ -1007,13 +1005,13 @@
       }
     },
     "issues": {
-      "tab": "Issues",
-      "newHint": "Describe the fault found on the asset. A safety-critical issue grounds the asset immediately.",
-      "loading": "Loading issues…",
-      "loadFailed": "Could not load the issues. Please try again.",
-      "emptyHint": "No issues yet. Faults reported here will show up in this list.",
-      "branchEmptyHint": "No issues for this branch.",
-      "filteredEmpty": "No issues with this status.",
+      "tab": "Problems",
+      "newHint": "Describe the fault found on the asset. A safety-critical problem grounds the asset immediately.",
+      "loading": "Loading problems…",
+      "loadFailed": "Could not load the problems. Please try again.",
+      "emptyHint": "No problems yet. Faults reported here will show up in this list.",
+      "branchEmptyHint": "No problems for this branch.",
+      "filteredEmpty": "No problems with this status.",
       "safetyCritical": "Safety",
       "unavailable": "Grounded",
       "noWorkOrder": "None",
@@ -1043,12 +1041,12 @@
       "categoryPlaceholder": "Brakes, tyres, engine…",
       "safetyCritical": "Safety-critical",
       "safetyCriticalHint": "The asset is grounded from the moment this is filed until it is returned to service.",
-      "issue": "Issue",
-      "issueHint": "With no issue linked, the work order is preventive.",
+      "issue": "Problem",
+      "issueHint": "With no problem linked, the work order is preventive.",
       "preventive": "Preventive",
       "expectedCost": "Expected cost",
       "summary": "Work summary",
-      "resolveLinkedIssue": "Resolve the linked issue",
+      "resolveLinkedIssue": "Resolve the linked problem",
       "resolveLinkedIssueHint": "Untick it if the work is done but the problem remains.",
       "reason": "Reason",
       "cancelReason": "Cancellation reason",
@@ -1057,7 +1055,7 @@
       "note": "Note",
       "photos": "Photos (optional)",
       "overrideReason": "Why no work order was needed",
-      "overrideReasonHint": "The issue was closed without a completed work order. This reason stays on the audit trail."
+      "overrideReasonHint": "The problem was closed without a completed work order. This reason stays on the audit trail."
     },
     "actions": {
       "approveHint": "You authorize the expected spend. The work order moves into repair.",
@@ -1065,10 +1063,10 @@
       "approveCompletionHint": "You accept the declared actual costs. The work order is completed.",
       "rejectCompletionHint": "The work stays open. The workshop sees the reason and can declare completion again.",
       "cancelWorkOrderHint": "The work order is abandoned. The reason stays on the audit trail.",
-      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the issue.",
+      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem.",
       "releaseSubject": "Work order {reference}",
       "resolveIssueHint": "The problem has been dealt with, for example fixed on the spot. Resolving does not lift a grounding: only a return to service does.",
-      "dismissIssueHint": "The issue should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
+      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
     },
     "close": {
       "hint": "Say what was done and what the repair cost.",
@@ -1107,16 +1105,16 @@
       "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
       "loading": "Loading the timeline…",
       "loadFailed": "Could not load the timeline. Please try again.",
-      "preventive": "Preventive — no issue",
-      "linkedIssue": "Linked issue",
+      "preventive": "Preventive — no problem",
+      "linkedIssue": "Linked problem",
       "unavailableTitle": "Asset grounded",
       "unavailableHint": "Only a return to service reopens availability."
     },
     "notify": {
       "success": {
-        "issueReported": "Issue reported",
-        "issueResolved": "Issue resolved",
-        "issueDismissed": "Issue dismissed",
+        "issueReported": "Problem reported",
+        "issueResolved": "Problem resolved",
+        "issueDismissed": "Problem dismissed",
         "workOrderCreated": "Work order opened",
         "workOrderApproved": "Work order approved",
         "workOrderRejected": "Work order rejected",
@@ -1211,8 +1209,16 @@
       "reactivateHint": "{name} will be able to sign in again with their current PIN.",
       "conflictTitle": "This record changed",
       "conflictBody": "Someone edited this user while you were working. Reload the list and start again.",
-      "reload": "Reload",
-      "pinResetTitle": "PIN reset",
+      "reload": "Reload"
+    },
+    "notify": {
+      "success": {
+        "added": "User added: {name}",
+        "roleChanged": "Role updated: {name}",
+        "pinReset": "PIN reset: {name}",
+        "deactivated": "User deactivated: {name}",
+        "reactivated": "User reactivated: {name}"
+      },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
     }
   },
@@ -1251,6 +1257,17 @@
       "conflictTitle": "This branch changed",
       "conflictBody": "Someone edited this branch while you were working. Reload the list and start again.",
       "reload": "Reload"
+    },
+    "notify": {
+      "success": {
+        "created": "Branch created: {name}",
+        "renamed": "Branch renamed: {name}",
+        "deactivated": "Branch deactivated: {name}",
+        "reactivated": "Branch reactivated: {name}"
+      },
+      "info": {
+        "switched": "You are viewing: {branch}"
+      }
     }
   },
   "provenance": {
@@ -1324,9 +1341,9 @@
       "template_preset-materialized": "Business preset enabled",
       "template_preset-disabled": "Business preset disabled",
       "workspace-provisioned": "Workspace provisioned",
-      "operational_issue-reported": "Issue reported",
-      "operational_issue-resolved": "Issue resolved",
-      "operational_issue-dismissed": "Issue dismissed",
+      "operational_issue-reported": "Problem reported",
+      "operational_issue-resolved": "Problem resolved",
+      "operational_issue-dismissed": "Problem dismissed",
       "work_order-created": "Work order created",
       "work_order-submitted": "Work order submitted",
       "work_order-approved": "Work order approved",
@@ -1472,13 +1489,13 @@
       "cancelReason": "cancellation reason",
       "cancelledAt": "cancelled",
       "closedByCommandId": "closing command",
-      "issueId": "issue",
-      "openedByIssueId": "originating issue",
+      "issueId": "problem",
+      "openedByIssueId": "originating problem",
       "openedAt": "opened",
       "reportedAt": "reported",
       "safetyCritical": "safety-critical",
       "category": "category",
-      "resolveLinkedIssue": "resolve linked issue",
+      "resolveLinkedIssue": "resolve linked problem",
       "rejectReason": "rejection reason",
       "rejectedAt": "rejected",
       "completionRejectReason": "completion rejection reason",
@@ -1581,7 +1598,12 @@
       "label": "Record a sheet",
       "submit": "Record sheet",
       "submitting": "Recording…",
-      "short": "Sheet"
+      "short": "Sheet",
+      "close": {
+        "label": "Record and close",
+        "submit": "Record and close",
+        "submitting": "Closing…"
+      }
     },
     "record-haulage-job-sheet": {
       "label": "Record a sheet",
@@ -1834,7 +1856,7 @@
       "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
       "fuel": {
         "description": "Records the fuel expense, then the odometer if you enter it.",
-        "amount": "Amount paid (XAF)",
+        "amount": "Amount paid (FCFA)",
         "when": "Date and time",
         "station": "Station (optional)",
         "odometer": "Odometer in km (optional)",

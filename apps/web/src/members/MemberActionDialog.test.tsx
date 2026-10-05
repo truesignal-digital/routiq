@@ -13,6 +13,20 @@ import {
   type MemberActionKey,
 } from "./MemberActionDialog.js";
 
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("@/components/ui/toast.js", () => ({ toast }));
+
+/** Success is one toast, and nothing in the dialog repeats it. */
+function expectOneSuccessToast(title: string, description?: string) {
+  expect(toast.add).toHaveBeenCalledTimes(1);
+  expect(toast.add).toHaveBeenCalledWith({
+    type: "success",
+    title,
+    ...(description === undefined ? {} : { description }),
+  });
+  expect(screen.queryByRole("status")).toBeNull();
+}
+
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const branches = [
@@ -106,7 +120,7 @@ describe("memberActions", () => {
 describe("MemberActionDialog", () => {
   it("sends only what changed, at the version the row was rendered", async () => {
     const client = fakeClient(committed);
-    renderDialog("role", client);
+    const { onDismiss } = renderDialog("role", client);
 
     await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
     await userEvent.click(await screen.findByRole("option", { name: "Maintenance" }));
@@ -120,6 +134,8 @@ describe("MemberActionDialog", () => {
       role: "MAINTENANCE",
     });
     expect(submission.envelope.expectedVersion).toBe(7);
+    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    expectOneSuccessToast("Rôle mis à jour : Estelle Ngo");
   });
 
   it("names the person before revoking them, then commits on confirm", async () => {
@@ -135,6 +151,21 @@ describe("MemberActionDialog", () => {
     expect(client.seen[0]!.name).toBe("deactivate-member");
     expect(client.seen[0]!.payload).toEqual({ principalId: member.principalId });
     await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    expectOneSuccessToast("Utilisateur désactivé : Estelle Ngo");
+  });
+
+  it("brings a deactivated member back with one toast", async () => {
+    const client = fakeClient(committed);
+    const { onDismiss } = renderDialog("reactivate", client, {
+      ...member,
+      status: "DEACTIVATED",
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Réactiver l'utilisateur" }));
+
+    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    expect(client.seen[0]!.name).toBe("reactivate-member");
+    expectOneSuccessToast("Utilisateur réactivé : Estelle Ngo");
   });
 
   it("explains the last-admin refusal in place, and keeps the dialog open", async () => {
@@ -150,6 +181,7 @@ describe("MemberActionDialog", () => {
       await screen.findByText("Votre espace doit garder au moins un administrateur actif."),
     ).toBeTruthy();
     expect(onDismiss).not.toHaveBeenCalled();
+    expect(toast.add).not.toHaveBeenCalled();
   });
 
   it("explains a self-deactivation the same way", async () => {
@@ -165,9 +197,9 @@ describe("MemberActionDialog", () => {
     ).toBeTruthy();
   });
 
-  it("acknowledges a PIN reset without printing the PIN back", async () => {
+  it("acknowledges a PIN reset in one toast, without printing the PIN back", async () => {
     const client = fakeClient(committed);
-    renderDialog("pin", client);
+    const { onDismiss } = renderDialog("pin", client);
 
     await userEvent.type(screen.getByLabelText("Code PIN"), "9134");
     await userEvent.type(screen.getByLabelText("Confirmer le code PIN"), "9134");
@@ -180,8 +212,14 @@ describe("MemberActionDialog", () => {
       pin: "9134",
     });
 
-    expect(await screen.findByText("Code réinitialisé")).toBeTruthy();
+    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    expectOneSuccessToast(
+      "Code réinitialisé : Estelle Ngo",
+      "Remettez le nouveau code à Estelle Ngo : il n'apparaît plus nulle part.",
+    );
+    expect(screen.queryByText(/Code réinitialisé/)).toBeNull();
     expect(document.body.innerHTML).not.toContain("9134");
+    expect(JSON.stringify(toast.add.mock.calls)).not.toContain("9134");
   });
 
   it("will not send a PIN the two fields disagree on", async () => {
