@@ -532,7 +532,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
           </div>
           {split && (
             <div className="text-xs text-muted-foreground">
-              {t("vehicle.money.ofEntry", { amount: money(entry.amountMinor) })}
+              {t("vehicle.money.ofEntry", { amount: money(entry.amountMinor, { context: "record" }) })}
             </div>
           )}
         </>

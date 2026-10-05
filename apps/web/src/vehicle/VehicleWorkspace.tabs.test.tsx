@@ -274,6 +274,19 @@ describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
     expect(within(panel).getAllByText((_, element) => flat(element?.textContent) === unsigned && element?.children.length === 0).length).toBeGreaterThan(0);
     expect(within(panel).queryByText((_, element) => flat(element?.textContent) === signed)).toBeNull();
   });
+
+  it("signs a reversal's split share on the ledger and keeps the whole entry unsigned", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
+      role: "FINANCE_APPROVER",
+      locale: "en",
+      entries: [entryRow({ ...fuel, entryNumber: "DLA-2026-00009", amountMinor: -86_000, assetShareMinor: -43_000 })],
+    });
+    await screen.findByText("DLA-2026-00009");
+    const exact = (text: string) => (_: string, element: Element | null) =>
+      flat(element?.textContent) === text && element?.children.length === 0;
+    expect(screen.getByText(exact("+FCFA 43,000"))).toBeTruthy();
+    expect(screen.getByText(exact("of a FCFA 86,000 entry"))).toBeTruthy();
+  });
 });
 
 describe("History", () => {

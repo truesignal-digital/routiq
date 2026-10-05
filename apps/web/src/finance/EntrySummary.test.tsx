@@ -137,6 +137,20 @@ describe("EntrySummary", () => {
     expect(container.textContent).not.toContain("250,00");
   });
 
+  it("shows a reversal's negative amount unsigned, like any record", () => {
+    entryQuery = {
+      isPending: false,
+      isError: false,
+      data: { ...entry, entryNumber: "FIN-002", amountMinor: -25000, reversesEntryId: entry.id },
+      refetch: vi.fn(),
+    };
+
+    const { container } = render(<EntrySummary entryId={entry.id} />);
+
+    expect(screen.getByText(/^25\s000\sFCFA$/)).toBeTruthy();
+    expect(container.textContent).not.toMatch(/[−-]25/);
+  });
+
   it("names the work order and trip the entry belongs to (#87)", () => {
     entryQuery = {
       isPending: false,
