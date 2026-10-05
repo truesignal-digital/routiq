@@ -181,7 +181,7 @@ export function CreateBranchDialog({
                       autoComplete="off"
                       autoCapitalize="characters"
                       maxLength={8}
-                      className="min-h-11 font-mono uppercase"
+                      className="font-mono uppercase"
                       {...field}
                       onChange={(event) =>
                         field.onChange(event.target.value.toUpperCase())
@@ -201,7 +201,7 @@ export function CreateBranchDialog({
                 <FormItem>
                   <FormLabel>{t("branches.form.name")}</FormLabel>
                   <FormControl>
-                    <Input type="text" className="min-h-11" {...field} />
+                    <Input type="text" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -220,7 +220,7 @@ export function CreateBranchDialog({
                   >
                     <FormControl>
                       <SelectTrigger
-                        className="min-h-11 w-full"
+                        className="w-full"
                         aria-label={t("branches.form.timezone")}
                       >
                         <SelectValue />
@@ -243,14 +243,12 @@ export function CreateBranchDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11"
                 onClick={() => onOpenChange(false)}
               >
                 {t("branches.form.cancel")}
               </Button>
               <Button
                 type="submit"
-                className="min-h-11"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting

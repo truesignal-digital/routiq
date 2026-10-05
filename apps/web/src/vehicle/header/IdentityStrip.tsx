@@ -83,13 +83,13 @@ function HeaderActions() {
       {keys.map((key) => {
         const Icon = actionDef(key).icon;
         return (
-          <Button key={key} variant="outline" className="h-9" onClick={() => runAction(key)}>
+          <Button key={key} variant="outline" className="desktop:h-9" onClick={() => runAction(key)}>
             <Icon aria-hidden />
             {stepLabel({ key })}
           </Button>
         );
       })}
-      <Button variant="outline" className="h-9" onClick={openAllActions}>
+      <Button variant="outline" className="desktop:h-9" onClick={openAllActions}>
         <LayoutGrid aria-hidden />
         {t("vehicle.header.moreActions")}
       </Button>

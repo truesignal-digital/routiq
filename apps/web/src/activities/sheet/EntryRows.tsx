@@ -91,7 +91,7 @@ const EntryRow = memo(function EntryRow({
                 }}
               >
                 <TabsList
-                  className="w-full max-w-64 group-data-horizontal/tabs:h-11"
+                  className="w-full max-w-64"
                   aria-label={t("activities.record.entries.rowDirection", { position })}
                 >
                   <TabsTrigger value="REVENUE">
@@ -110,7 +110,7 @@ const EntryRow = memo(function EntryRow({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-9 shrink-0 text-muted-foreground"
+          className="shrink-0 text-muted-foreground"
           aria-label={t("activities.record.entries.remove", { position })}
           onClick={() => onRemove(index)}
         >
@@ -134,7 +134,7 @@ const EntryRow = memo(function EntryRow({
               >
                 <FormControl>
                   <SelectTrigger
-                    className="min-h-11 w-full"
+                    className="w-full"
                     aria-label={t("activities.record.entries.rowCategory", { position })}
                   >
                     <SelectValue
@@ -197,7 +197,7 @@ const EntryRow = memo(function EntryRow({
               >
                 <FormControl>
                   <SelectTrigger
-                    className="min-h-11 w-full"
+                    className="w-full"
                     aria-label={t("activities.record.entries.rowPaymentMethod", {
                       position,
                     })}
@@ -229,7 +229,6 @@ const EntryRow = memo(function EntryRow({
               <FormControl>
                 <Input
                   type="text"
-                  className="min-h-11"
                   placeholder={t("activities.record.entries.counterpartyPlaceholder")}
                   aria-label={t("activities.record.entries.rowCounterparty", { position })}
                   {...field}
@@ -253,7 +252,6 @@ const EntryRow = memo(function EntryRow({
               <FormControl>
                 <Input
                   type="text"
-                  className="min-h-11"
                   placeholder={t("activities.record.entries.descriptionPlaceholder")}
                   aria-label={t("activities.record.entries.rowDescription", { position })}
                   {...field}
@@ -275,7 +273,6 @@ const EntryRow = memo(function EntryRow({
               <FormControl>
                 <Input
                   type="text"
-                  className="min-h-11"
                   placeholder={t("activities.record.entries.referencePlaceholder")}
                   aria-label={t("activities.record.entries.rowReference", { position })}
                   {...field}
@@ -303,7 +300,7 @@ const EntryRow = memo(function EntryRow({
               >
                 <FormControl>
                   <SelectTrigger
-                    className="min-h-11 w-full"
+                    className="w-full"
                     aria-label={t("activities.record.entries.rowAsset", { position })}
                   >
                     <SelectValue placeholder={t("activities.record.entries.chooseAsset")} />
@@ -337,7 +334,7 @@ const EntryRow = memo(function EntryRow({
               >
                 <FormControl>
                   <SelectTrigger
-                    className="min-h-11 w-full"
+                    className="w-full"
                     aria-label={t("activities.record.entries.rowPerson", { position })}
                   >
                     <SelectValue
@@ -416,7 +413,6 @@ export function EntryRows({ control, assetOptions, personOptions }: EntryRowsPro
         <Button
           type="button"
           variant="outline"
-          className="min-h-11"
           onClick={() => append(newEntryRow("REVENUE"))}
         >
           <Plus className="size-4" aria-hidden />
@@ -425,7 +421,6 @@ export function EntryRows({ control, assetOptions, personOptions }: EntryRowsPro
         <Button
           type="button"
           variant="outline"
-          className="min-h-11"
           onClick={() => append(newEntryRow("EXPENSE"))}
         >
           <Plus className="size-4" aria-hidden />

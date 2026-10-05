@@ -5,16 +5,6 @@
   "E1": {
     "apps/web/src/components/money-input.tsx": 1
   },
-  "H9": {
-    "apps/web/src/activities/ActivityActions.tsx": 5,
-    "apps/web/src/activities/ReadingForm.tsx": 1,
-    "apps/web/src/activities/sheet/LegRows.tsx": 2,
-    "apps/web/src/documents/DocumentForm.tsx": 2,
-    "apps/web/src/finance/RecordEntryForm.tsx": 1,
-    "apps/web/src/screens/ActivitySheetScreen.tsx": 4,
-    "apps/web/src/screens/AssetRegisterScreen.tsx": 1,
-    "apps/web/src/vehicle/forms/LogFuelForm.tsx": 1
-  },
   "A18": {
     "apps/api/src/artifacts/artifacts.test.ts": 2,
     "apps/api/src/auth/auth.test.ts": 1,

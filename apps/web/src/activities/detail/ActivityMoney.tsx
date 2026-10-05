@@ -1,21 +1,13 @@
 import { ledgerEntryStatuses, type ActivityDetail } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { StatusBadge } from "@/components/status-badge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
-
-const STATUS_TONES: Record<Entry["status"], "success" | "warning" | "danger" | "neutral"> =
-  {
-    POSTED: "success",
-    SUBMITTED: "warning",
-    REJECTED: "danger",
-    REVERSED: "neutral",
-  };
 
 /** Direction carries the sign: the read stores magnitudes, the reader needs a balance. */
 function signedMinor(entry: Entry): number {
@@ -89,9 +81,7 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                   </span>
                   {/* A line still awaiting approval is the one thing a reader
                       must not mistake for money already in the books. */}
-                  <StatusBadge tone={STATUS_TONES[entry.status]}>
-                    {t(`finance.entries.status.${entry.status}`)}
-                  </StatusBadge>
+                  <EntryStatusBadge status={entry.status} />
                 </span>
                 <span className="tabular-nums">
                   {formatMoney(signedMinor(entry), { locale, signDisplay: "exceptZero" })}

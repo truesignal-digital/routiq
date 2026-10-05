@@ -15,8 +15,9 @@ import { useVehicle } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps, workOrderSteps } from "../flow.js";
 import { recordReference, type VehicleActionKey } from "../model.js";
 import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader, useStepLabel } from "../parts.js";
-import { IssueStatusBadge, useIssueCategoryLabel } from "../panel/IssueRecord.js";
-import { WorkOrderStatusBadge } from "../panel/shared.js";
+import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
+import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
+import { useIssueCategoryLabel } from "../panel/IssueRecord.js";
 
 /** The one primary button a tab carries; it starts the action the way the catalogue says. */
 export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
@@ -25,7 +26,7 @@ export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
   if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
   const Icon = actionDef(actionKey).icon;
   return (
-    <Button className="h-10 self-start sm:h-9 sm:self-auto" onClick={() => runAction(actionKey)}>
+    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
       <Icon aria-hidden />
       {stepLabel({ key: actionKey })}
     </Button>

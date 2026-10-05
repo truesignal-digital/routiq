@@ -1,6 +1,6 @@
 import type { ActivityDetail } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
-import { StatusBadge } from "@/components/status-badge.js";
+import { LegLoadBadge } from "@/activities/TripStatusBadge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -11,14 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format.js";
-
-type Leg = ActivityDetail["legs"][number];
-
-const LOAD_TONES: Record<NonNullable<Leg["loadState"]>, "success" | "neutral" | "info"> = {
-  LADEN: "success",
-  EMPTY: "neutral",
-  PARTIAL: "info",
-};
 
 export interface ActivityLegsProps {
   legs: ActivityDetail["legs"];
@@ -101,9 +93,7 @@ export function ActivityLegs({ legs }: ActivityLegsProps) {
                     {leg.loadState === null ? (
                       "—"
                     ) : (
-                      <StatusBadge tone={LOAD_TONES[leg.loadState]} icon={null}>
-                        {t(`activities.record.legs.loadStates.${leg.loadState}`)}
-                      </StatusBadge>
+                      <LegLoadBadge state={leg.loadState} />
                     )}
                   </TableCell>
                 )}

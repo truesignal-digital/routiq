@@ -70,7 +70,7 @@ function DateRangePicker({
             role="button"
             tabIndex={0}
             aria-label={`${fromLabel} – ${toLabel}`}
-            className="flex h-8 min-w-56 cursor-pointer items-center gap-1 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex h-11 min-w-56 cursor-pointer items-center gap-1 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50 desktop:h-8"
           />
         }
       >
@@ -80,7 +80,7 @@ function DateRangePicker({
           value={displayValue(fromValue)}
           placeholder={fromLabel}
           aria-label={fromLabel}
-          className="pointer-events-none min-w-0"
+          className="pointer-events-none min-w-0 desktop:h-8"
         />
         <Input
           readOnly
@@ -88,7 +88,7 @@ function DateRangePicker({
           value={displayValue(toValue)}
           placeholder={toLabel}
           aria-label={toLabel}
-          className="pointer-events-none min-w-0"
+          className="pointer-events-none min-w-0 desktop:h-8"
         />
       </PopoverTrigger>
 

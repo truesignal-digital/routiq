@@ -189,7 +189,9 @@
     "metrics": {
       "total": "Total",
       "inService": "En service",
-      "attention": "À surveiller"
+      "attention": "À surveiller",
+      "attentionHint": "Immobilisés, en maintenance, retirés ou réformés",
+      "attentionHintNoGrounding": "En maintenance, retirés ou réformés"
     },
     "status": {
       "REGISTERED": "Enregistré",
@@ -443,7 +445,7 @@
       "loadMore": "Charger plus",
       "recordAction": "Saisir une écriture",
       "status": {
-        "SUBMITTED": "En attente",
+        "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
         "REJECTED": "Rejetée",
         "REVERSED": "Extournée"
@@ -659,6 +661,7 @@
       "OTHER": "Autre"
     },
     "detail": {
+      "breadcrumb": "Activité",
       "loading": "Chargement de l'activité…",
       "loadFailed": "Impossible de charger cette activité.",
       "summary": "Résumé",
@@ -1104,12 +1107,7 @@
       "preventive": "Préventif — aucun signalement",
       "linkedIssue": "Signalement lié",
       "unavailableTitle": "Actif immobilisé",
-      "unavailableHint": "Seule la remise en service rouvre la disponibilité.",
-      "entryStatus": {
-        "SUBMITTED": "En attente d'examen",
-        "POSTED": "Comptabilisé",
-        "REVERSED": "Extourné"
-      }
+      "unavailableHint": "Seule la remise en service rouvre la disponibilité."
     },
     "notify": {
       "success": {
@@ -1512,6 +1510,19 @@
       "defaultSafetyCritical": "critique pour la sécurité par défaut",
       "postings": "lignes d'imputation"
     }
+  },
+  "dateField": {
+    "placeholderDate": "jj/mm/aaaa",
+    "placeholderDateTime": "jj/mm/aaaa hh:mm",
+    "openCalendar": "Ouvrir le calendrier",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "time": "Heure",
+    "done": "OK",
+    "invalidDate": "Date non reconnue. Écrivez-la ainsi : {example}",
+    "invalidDateTime": "Date et heure non reconnues. Écrivez-les ainsi : {example}",
+    "tooEarly": "Au plus tôt le {min}.",
+    "tooLate": "Au plus tard le {max}."
   },
   "datePicker": {
     "placeholder": "Choisir une date",

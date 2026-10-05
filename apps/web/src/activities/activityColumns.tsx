@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ActivityListItem } from "@routiq/contracts";
-import { StatusBadge } from "@/components/status-badge.js";
+import { TripStatusBadge } from "@/activities/TripStatusBadge.js";
 import { formatDate, localizedLabel } from "@/lib/format.js";
 
 export type ActivityColumnId =
@@ -26,8 +26,6 @@ export type ActivityColumnId =
 function buildColumns(
   t: (key: string) => string,
   locale: string,
-  /** ICU pluralisation needs the real t; the rest of the table only needs keys. */
-  completenessCount: (count: number) => string,
 ): Record<ActivityColumnId, ColumnDef<ActivityListItem>> {
   return {
     activityNumber: {
@@ -43,22 +41,7 @@ function buildColumns(
       accessorKey: "status",
       header: t("activities.columns.status"),
       meta: { mobile: "primary", label: t("activities.columns.status") },
-      cell: ({ row }) => {
-        const { status, completeness, completenessCodes } = row.original;
-        return (
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={status === "OPEN" ? "info" : "neutral"}>
-              {t(`activities.status.${status}`)}
-            </StatusBadge>
-            {completeness === "COMPLETE_WITH_EXCEPTIONS" && (
-              // Never a bare count: the exceptions are the reason to look.
-              <StatusBadge tone="warning">
-                {completenessCount(completenessCodes.length)}
-              </StatusBadge>
-            )}
-          </div>
-        );
-      },
+      cell: ({ row }) => <TripStatusBadge trip={row.original} />,
     },
     activityType: {
       id: "activityType",
@@ -123,9 +106,7 @@ export function useActivityColumns(
 ): ColumnDef<ActivityListItem>[] {
   const { t, i18n } = useTranslation();
   return useMemo(() => {
-    const columns = buildColumns(t, i18n.language, (count) =>
-      t("activities.completeness.short", { count }),
-    );
+    const columns = buildColumns(t, i18n.language);
     return ids.map((id) => columns[id]);
   }, [t, i18n.language, ids]);
 }

@@ -293,7 +293,6 @@ export function AssetActions({
           <Button
             key={action}
             variant={action === "commission" ? "default" : "outline"}
-            className="min-h-9"
             onClick={() => setOpen(action)}
           >
             {label(ASSET_ACTION_COMMANDS[action])}

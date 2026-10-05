@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { IssueListItem, IssueStatus, WorkOrderStatus } from "@routiq/contracts";
 import { issueStatuses, workOrderStatuses } from "@routiq/contracts";
 import { DataTable, type DataTableRowAction } from "@/components/data-table";
+import { FilterChips } from "@/components/filter-chips";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -33,7 +34,6 @@ import {
 } from "@/maintenance/permissions.js";
 import { useIssues, useWorkOrders } from "@/maintenance/useMaintenance.js";
 import { WorkOrderSheet } from "@/maintenance/WorkOrderSheet.js";
-import { cn } from "@/lib/utils.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 
 type WorkOrderFilter = WorkOrderStatus | "ALL";
@@ -65,24 +65,16 @@ function StatusChips<S extends string>({
   const { t } = useTranslation();
 
   return (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
-      {filters.map((status) => (
-        <button
-          key={status}
-          type="button"
-          aria-pressed={value === status}
-          onClick={() => onChange(status)}
-          className={cn(
-            "min-h-9 rounded-full border px-3 py-1.5 text-sm transition-colors",
-            value === status
-              ? "border-foreground bg-foreground text-background"
-              : "border-border text-muted-foreground hover:bg-muted",
-          )}
-        >
-          {status === "ALL" ? t("maintenance.filters.all") : labelFor(status)}
-        </button>
-      ))}
-    </div>
+    <FilterChips
+      layout="wrap"
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={filters.map((status) => ({
+        key: status,
+        label: status === "ALL" ? t("maintenance.filters.all") : labelFor(status),
+      }))}
+    />
   );
 }
 
@@ -176,7 +168,6 @@ export function MaintenanceScreen() {
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11"
                 onClick={() => setDialog({ kind: "report-issue" })}
               >
                 <FileWarning className="size-4" aria-hidden />
@@ -186,7 +177,6 @@ export function MaintenanceScreen() {
             {permissions.manage && (
               <Button
                 type="button"
-                className="min-h-11"
                 onClick={() => setDialog({ kind: "create-work-order" })}
               >
                 <ClipboardList className="size-4" aria-hidden />

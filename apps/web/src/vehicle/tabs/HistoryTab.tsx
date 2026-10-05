@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Clock } from "lucide-react";
 import type { VehicleHistoryItem, VehicleHistoryKind } from "@routiq/contracts";
+import { FilterChips } from "@/components/filter-chips";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { formatDayLong, formatMoney, localDayKey } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useVehicle, type VehicleGates } from "../context.js";
 import { describeEvent, type EventTone } from "../historyEvents.js";
-import { FilterChips, LinkButton, Sep, TabHeader } from "../parts.js";
+import { LinkButton, Sep, TabHeader } from "../parts.js";
 import { useAssetHistory } from "../useVehicle.js";
 
 const HISTORY_PAGE = 30;
@@ -110,7 +111,7 @@ export function HistoryTab() {
           {query.hasNextPage && (
             <Button
               variant="outline"
-              className="h-9"
+              className="desktop:h-9"
               disabled={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
             >

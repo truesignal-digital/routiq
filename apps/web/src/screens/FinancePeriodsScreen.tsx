@@ -315,12 +315,12 @@ function ActionDialog({
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="min-h-11 flex-1 sm:flex-none">
+            <AlertDialogCancel className="flex-1 sm:flex-none">
               {t("finance.periods.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              className="min-h-11 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
               disabled={submitting}
               onClick={() => void handleSubmit()}
             >
@@ -359,14 +359,14 @@ function ActionDialog({
             render={
               <Button
                 variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
               />
             }
           >
             {t("finance.periods.cancel")}
           </DialogClose>
           <Button
-            className="min-h-11 flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none"
             disabled={!validateReopenReason(reason) || submitting}
             onClick={() => void handleSubmit()}
           >

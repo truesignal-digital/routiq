@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { Circle, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
-import { StatusBadge } from "@/components/status-badge.js";
 import { Card } from "@/components/ui/card";
-import { expiryState, type AssetDocument } from "@/documents/model.js";
+import { DocumentStatusBadge, documentIconTone } from "@/documents/DocumentStatusBadge.js";
+import { expiryState } from "@/documents/model.js";
 import { useAssetDocuments } from "@/documents/useDocuments.js";
 import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
@@ -13,54 +13,6 @@ import { may } from "../flow.js";
 import { RecordRow, RowIcon, RowMenu, Sep, TabHeader } from "../parts.js";
 import { earlierVersions } from "../panel/DocumentRecord.js";
 import { TabAction } from "./MaintenanceTab.js";
-
-const DAY_MS = 86_400_000;
-
-/** Whole days until expiry on the reader's calendar; negative once expired. */
-export function daysLeft(expiresAt: string, now: Date): number {
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.round((Date.parse(`${expiresAt}T00:00:00Z`) - today) / DAY_MS);
-}
-
-/** Expired, expiring in N days, valid, or no expiry date — never "valid" by default. */
-export function DocumentState({ doc }: { doc: AssetDocument }) {
-  const { t } = useTranslation();
-  const now = new Date();
-  if (doc.supersededByDocumentId !== null) {
-    return (
-      <StatusBadge tone="neutral" className="rounded-md">
-        {t("vehicle.documents.superseded")}
-      </StatusBadge>
-    );
-  }
-  const state = expiryState(doc.expiresAt, now);
-  switch (state) {
-    case "expired":
-      return (
-        <StatusBadge tone="danger" className="rounded-md">
-          {t("vehicle.documents.expired")}
-        </StatusBadge>
-      );
-    case "expiringSoon":
-      return (
-        <StatusBadge tone="warning" className="rounded-md">
-          {t("vehicle.documents.expiresIn", { count: daysLeft(doc.expiresAt ?? "", now) })}
-        </StatusBadge>
-      );
-    case "ok":
-      return (
-        <StatusBadge tone="success" className="rounded-md">
-          {t("vehicle.documents.valid")}
-        </StatusBadge>
-      );
-    case "none":
-      return (
-        <StatusBadge tone="neutral" icon={Circle} className="rounded-md">
-          {t("vehicle.documents.noExpiry")}
-        </StatusBadge>
-      );
-  }
-}
 
 export function DocumentsTab() {
   const { t } = useTranslation();
@@ -115,12 +67,7 @@ function DocumentsSection() {
               return (
                 <RecordRow
                   key={doc.id}
-                  icon={
-                    <RowIcon
-                      icon={FileText}
-                      tone={state === "expired" ? "danger" : state === "expiringSoon" ? "warning" : "neutral"}
-                    />
-                  }
+                  icon={<RowIcon icon={FileText} tone={documentIconTone(state)} />}
                   title={doc.title === null ? typeLabel : `${typeLabel} · ${doc.title}`}
                   detail={
                     <span className="flex flex-wrap items-center gap-x-1.5">
@@ -141,7 +88,7 @@ function DocumentsSection() {
                       )}
                     </span>
                   }
-                  status={<DocumentState doc={doc} />}
+                  status={<DocumentStatusBadge doc={doc} />}
                   aside={
                     doc.expiresAt === null ? (
                       <div className="text-muted-foreground">{t("vehicle.documents.noExpiry")}</div>

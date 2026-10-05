@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { DocumentForm } from "@/documents/DocumentForm.js";
+import { DocumentStatusBadge } from "@/documents/DocumentStatusBadge.js";
 import { expiryState, type AssetDocument } from "@/documents/model.js";
 import { useAssetDocuments } from "@/documents/useDocuments.js";
 import { formatDate, localizedLabel } from "@/lib/format.js";
@@ -7,7 +8,6 @@ import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import { may } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
-import { DocumentState } from "../tabs/DocumentsTab.js";
 import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
 
 /** The versions a document replaced, newest first, by following `supersedes`. */
@@ -72,7 +72,7 @@ function DocumentRecordBody({ id, form }: { id: string; form: PanelForm | undefi
       <DetailHeader
         eyebrow={t("vehicle.panel.documentEyebrow")}
         title={doc.title === null ? typeLabel : `${typeLabel} · ${doc.title}`}
-        meta={<DocumentState doc={doc} />}
+        meta={<DocumentStatusBadge doc={doc} />}
       />
       <div className="space-y-6 p-4">
         {current && state === "expired" && doc.expiresAt !== null && (

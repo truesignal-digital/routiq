@@ -189,7 +189,9 @@
     "metrics": {
       "total": "Total",
       "inService": "In service",
-      "attention": "Attention"
+      "attention": "Attention",
+      "attentionHint": "Grounded, in maintenance, retired or written off",
+      "attentionHintNoGrounding": "In maintenance, retired or written off"
     },
     "status": {
       "REGISTERED": "Registered",
@@ -443,7 +445,7 @@
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
-        "SUBMITTED": "Pending",
+        "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
         "REJECTED": "Rejected",
         "REVERSED": "Reversed"
@@ -659,6 +661,7 @@
       "OTHER": "Other"
     },
     "detail": {
+      "breadcrumb": "Activity",
       "loading": "Loading activity…",
       "loadFailed": "We couldn't load this activity.",
       "summary": "Summary",
@@ -1104,12 +1107,7 @@
       "preventive": "Preventive — no issue",
       "linkedIssue": "Linked issue",
       "unavailableTitle": "Asset grounded",
-      "unavailableHint": "Only a return to service reopens availability.",
-      "entryStatus": {
-        "SUBMITTED": "Awaiting review",
-        "POSTED": "Posted",
-        "REVERSED": "Reversed"
-      }
+      "unavailableHint": "Only a return to service reopens availability."
     },
     "notify": {
       "success": {
@@ -1512,6 +1510,19 @@
       "defaultSafetyCritical": "safety-critical by default",
       "postings": "posting lines"
     }
+  },
+  "dateField": {
+    "placeholderDate": "mm/dd/yyyy",
+    "placeholderDateTime": "mm/dd/yyyy hh:mm",
+    "openCalendar": "Open calendar",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "time": "Time",
+    "done": "Done",
+    "invalidDate": "Date not recognised. Write it like this: {example}",
+    "invalidDateTime": "Date and time not recognised. Write them like this: {example}",
+    "tooEarly": "No earlier than {min}.",
+    "tooLate": "No later than {max}."
   },
   "datePicker": {
     "placeholder": "Pick a date",

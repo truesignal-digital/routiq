@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CommandResult, FinancialEntryDetail } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
@@ -388,7 +389,7 @@ export function RecordEntryForm({
                     });
                   }}
                 >
-                  <TabsList className="w-full group-data-horizontal/tabs:h-11">
+                  <TabsList className="w-full">
                     <TabsTrigger value="EXPENSE">
                       {t("finance.record.expenseLabel")}
                     </TabsTrigger>
@@ -434,7 +435,7 @@ export function RecordEntryForm({
                 disabled={reference.isPending || reference.isError}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("finance.record.chooseBranch")} />
                   </SelectTrigger>
                 </FormControl>
@@ -469,7 +470,7 @@ export function RecordEntryForm({
                 disabled={categoriesQuery.isPending || categoriesQuery.isError}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("finance.record.chooseCategory")} />
                   </SelectTrigger>
                 </FormControl>
@@ -522,7 +523,7 @@ export function RecordEntryForm({
                 }}
               >
                 <FormControl>
-                  <SelectTrigger className="min-h-11 w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                 </FormControl>
@@ -546,7 +547,7 @@ export function RecordEntryForm({
             <FormItem>
               <FormLabel>{t("finance.record.economicDateLabel")}</FormLabel>
               <FormControl>
-                <Input type="date" className="min-h-11" {...field} />
+                <DateField {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -563,7 +564,6 @@ export function RecordEntryForm({
                 <Input
                   type="text"
                   placeholder={t("finance.record.counterpartyPlaceholder")}
-                  className="min-h-11"
                   {...field}
                 />
               </FormControl>
@@ -600,7 +600,6 @@ export function RecordEntryForm({
                 <Input
                   type="text"
                   placeholder={t("finance.record.paymentRefPlaceholder")}
-                  className="min-h-11"
                   {...field}
                 />
               </FormControl>
@@ -622,7 +621,7 @@ export function RecordEntryForm({
                   disabled={assetOptions.length === 0}
                 >
                   <FormControl>
-                    <SelectTrigger className="min-h-11 w-full">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder={t("finance.record.assetPlaceholder")} />
                     </SelectTrigger>
                   </FormControl>

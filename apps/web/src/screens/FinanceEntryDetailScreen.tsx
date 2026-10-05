@@ -139,7 +139,7 @@ function FinanceEntryDetailContent() {
             <Button
               variant="outline"
               onClick={() => setEditOpen(true)}
-              className="min-h-11 w-full"
+              className="w-full"
             >
               {t("finance.entries.detail.editAction")}
             </Button>
@@ -164,7 +164,7 @@ function FinanceEntryDetailContent() {
             <Button
               variant="destructive"
               onClick={() => setReverseOpen(true)}
-              className="min-h-11 w-full"
+              className="w-full"
             >
               {label("reverse-entry")}
             </Button>

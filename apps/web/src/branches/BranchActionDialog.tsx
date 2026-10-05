@@ -180,7 +180,7 @@ export function BranchActionDialog({
               <p className="mt-1">{t("branches.actions.conflictBody")}</p>
             </div>
             <DialogFooter>
-              <Button className="min-h-11" onClick={() => void reload()}>
+              <Button onClick={() => void reload()}>
                 {t("branches.actions.reload")}
               </Button>
             </DialogFooter>
@@ -198,7 +198,7 @@ export function BranchActionDialog({
                     type="text"
                     readOnly
                     disabled
-                    className="min-h-11 font-mono"
+                    className="font-mono"
                     value={branch.code}
                   />
                   <p className="text-sm text-muted-foreground">
@@ -210,7 +210,6 @@ export function BranchActionDialog({
                   <Input
                     id="branch-name"
                     type="text"
-                    className="min-h-11"
                     aria-invalid={nameError !== undefined}
                     aria-describedby={nameError === undefined ? undefined : "branch-name-error"}
                     value={name}
@@ -231,13 +230,13 @@ export function BranchActionDialog({
             <DialogFooter>
               <Button
                 variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
                 onClick={onDismiss}
               >
                 {t("branches.form.cancel")}
               </Button>
               <Button
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
                 variant={action === "deactivate" ? "destructive" : "default"}
                 disabled={!ready}
                 onClick={() => void submit()}

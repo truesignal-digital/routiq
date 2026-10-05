@@ -86,6 +86,7 @@
       "open": "Ouvrir le trajet"
     },
     "detail": {
+      "breadcrumb": "Trajet",
       "loading": "Chargement du trajet…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce trajet ont été corrigés."

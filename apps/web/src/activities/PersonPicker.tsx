@@ -94,7 +94,7 @@ export function PersonPicker({
               variant="outline"
               disabled={disabled}
               className={cn(
-                "min-h-11 w-full justify-between font-normal",
+                "w-full justify-between font-normal",
                 selected === undefined && "text-muted-foreground",
                 className,
               )}
@@ -113,7 +113,6 @@ export function PersonPicker({
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t("activities.pickers.person.searchPlaceholder")}
             aria-label={t("activities.pickers.person.search")}
-            className="min-h-10"
           />
 
           {personsQuery.isPending ? (
@@ -154,7 +153,7 @@ export function PersonPicker({
           <Button
             type="button"
             variant="ghost"
-            className="min-h-10 justify-start"
+            className="justify-start"
             onClick={() => {
               setOpen(false);
               setRegistering(true);

@@ -33,7 +33,7 @@ import {
   type AssetActionKey,
 } from "@/assets/AssetActions.js";
 import { useAssetColumns, type AssetColumnId } from "@/assets/assetColumns.js";
-import { assetFilterStatuses, isAssetFilter } from "@/assets/display.js";
+import { assetFilterQuery, isAssetFilter } from "@/assets/display.js";
 import { canManageAssets, canViewAssets } from "@/assets/permissions.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { useAssets } from "@/assets/useAssets.js";
@@ -67,6 +67,9 @@ export function AssetsStub() {
   const canView = canViewAssets(me?.enabledModules);
   const canManage = canManageAssets(me?.role, me?.enabledModules);
   const documentsEnabled = me?.enabledModules.includes("DOCUMENTS") ?? false;
+  // Grounding is a MAINTENANCE fact; the server counts it only while the
+  // module is on, so the hint says which set the number covers.
+  const groundingCounted = me?.enabledModules.includes("MAINTENANCE") ?? false;
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -83,7 +86,7 @@ export function AssetsStub() {
   const search = filterValues["search"] ?? "";
   const category = filterValues["category"] ?? "";
   const statusChoice = filterValues["status"] ?? "";
-  const statuses = assetFilterStatuses(
+  const statusQuery = assetFilterQuery(
     isAssetFilter(statusChoice) ? statusChoice : "ALL",
   );
 
@@ -101,7 +104,7 @@ export function AssetsStub() {
 
   const assetsQuery = useAssets({
     ...scope,
-    ...(statuses === undefined ? {} : { status: statuses }),
+    ...statusQuery,
     ...(sort === undefined ? {} : { sort }),
   });
   const summaryQuery = useAssetSummary(scope);
@@ -157,9 +160,14 @@ export function AssetsStub() {
         label: t("assets.metrics.attention"),
         value: counts === undefined ? null : String(counts.attention),
         tone: "warning",
+        hint: t(
+          groundingCounted
+            ? "assets.metrics.attentionHint"
+            : "assets.metrics.attentionHintNoGrounding",
+        ),
       },
     ];
-  }, [summaryQuery.data, t]);
+  }, [summaryQuery.data, t, groundingCounted]);
 
   if (me !== undefined && !canView) {
     return (

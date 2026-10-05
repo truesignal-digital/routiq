@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: one platform, two operators</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .layers { display: grid; gap: 10px; }
+  .layer-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; align-items: stretch; }
+  .layer-row .lbl { font: 650 13px/1.3 var(--font-heading); padding: 12px 14px; border-radius: 12px; background: var(--muted); display: flex; flex-direction: column; justify-content: center; }
+  .layer-row .lbl span { font: 500 12px var(--font-sans); color: var(--muted-foreground); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: white; }
+  .mod { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--border); font-size: 13px; font-weight: 600; background: white; }
+  .mod.core { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+  .mod.new { border-style: dashed; border-color: var(--info); background: color-mix(in oklch, var(--info) 8%, white); }
+  .mod.future { border-style: dashed; color: var(--muted-foreground); }
+  .mod small { font-weight: 500; color: var(--muted-foreground); }
+  .mod.core small { color: oklch(1 0 0 / .7); }
+  .matrix td, .matrix th { text-align: center; }
+  .matrix td:first-child, .matrix th:first-child { text-align: left; }
+  .on { color: var(--success-foreground); font-weight: 700; } .opt { color: var(--info-foreground); font-weight: 600; } .off { color: var(--muted-foreground); } .fut { color: var(--muted-foreground); font-style: normal; }
+  .navpair { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+  @media (max-width: 1200px) { .navpair { grid-template-columns: 1fr 1fr; } }
+  .navpair .frame { display: flex; min-height: 560px; }
+  .navpair .frame .sb { width: 100%; }
+  .persona { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 1200px) { .persona { grid-template-columns: 1fr; } }
+  .persona .spec-card h4 { display: flex; align-items: center; gap: 8px; }
+  .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: white; }
+  .pipeline > div { padding: 12px 14px; border-right: 1px solid var(--border); position: relative; }
+  .pipeline > div:last-child { border-right: 0; }
+  .pipeline .k { font-size: 12px; color: var(--muted-foreground); }
+  .pipeline .v { font: 650 20px/1.2 var(--font-heading); font-variant-numeric: tabular-nums; }
+  .pipeline .s { font-size: 11.5px; color: var(--muted-foreground); }
+  .pipeline > div.hl { background: color-mix(in oklch, var(--warning) 14%, white); }
+  .pstatic { position: relative; background: white; border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgb(15 23 42 / .07); }
+  .pstatic.w390 { width: 390px; border-radius: 26px; border: 8px solid oklch(0.2 0.01 256); min-height: 800px; }
+  .pstatic.w390 .sheet-f .btn { flex: 1; min-height: 46px; }
+  .note-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .note-item:last-child { border-bottom: 0; }
+  .note-item .ico { width: 30px; height: 30px; border-radius: 50%; background: var(--muted); display: grid; place-items: center; flex: none; }
+  .note-item .when { margin-left: auto; color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+  .aging { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .aging > div { border-radius: 10px; padding: 10px 12px; background: var(--muted); }
+  .aging .k { font-size: 12px; color: var(--muted-foreground); } .aging .v { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .aging .late { background: color-mix(in oklch, var(--destructive) 9%, white); }
+  .wiz { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 520px; }
+  .wiz .steps-v { background: var(--muted); padding: 18px 14px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--border); }
+  .wiz .steps-v div { padding: 9px 10px; border-radius: 8px; font-size: 13px; color: var(--muted-foreground); }
+  .wiz .steps-v .done { color: var(--foreground); }
+  .wiz .steps-v .on { background: white; color: var(--foreground); font-weight: 650; box-shadow: 0 1px 2px rgb(0 0 0 / .05); }
+  .presetcard { border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .presetcard.sel { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent); }
+  .presetcard b { font-size: 14px; }
+  .presetcard span { font-size: 12.5px; color: var(--muted-foreground); }
+  .toggle { width: 36px; height: 20px; border-radius: 10px; background: var(--border); position: relative; flex: none; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: white; box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+  .toggle.y { background: var(--primary); } .toggle.y::after { left: 18px; }
+  .modrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .modrow > div { flex: 1; } .modrow b { display: block; } .modrow span { color: var(--muted-foreground); font-size: 12px; }
+  .role-matrix td, .role-matrix th { font-size: 12.5px; vertical-align: top; }
+  .role-matrix td.no { color: var(--muted-foreground); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#shape">The shape</a>
+    <a href="#setup">Setup by preset</a>
+    <a href="#words">Words per preset</a>
+    <a href="#nav">Navigation per operator</a>
+    <a href="#who">Who is a customer?</a>
+    <a href="#customers">Customers list</a>
+    <a href="#account">Customer record (trucking)</a>
+    <a href="#bus">Customer record (bus)</a>
+    <a href="#relations">Follow-ups and complaints</a>
+    <a href="#parcels">Parcels (colis)</a>
+    <a href="#roles">Scoped by role</a>
+    <a href="#forms">Forms and actions</a>
+    <a href="#charts">Charts</a>
+    <a href="#decide">Decisions needed</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>One platform, two operators</h2>
+      <p class="lede">The owners want ROUTIQ to take the useful parts of the reference app (customers, stock and purchasing) without becoming the reference app. The direction: one core every workspace gets, a few modules switched on per workspace, and a preset (trucking or bus) that picks the defaults and the words. A trucking company moving goods and a bus company moving people keep their own core work, and share the same customer, stock and money screens.</p>
+    </header>
+
+    <section class="section" id="shape">
+      <div class="kicker">Direction</div>
+      <h3>The shape: core, modules, presets</h3>
+      <div class="layers">
+        <div class="layer-row"><div class="lbl">Preset<span>chooses defaults and words</span></div><div class="chips"><span class="mod"><i data-i="truck"></i>Trucking <small>goods, haulage jobs</small></span><span class="mod"><i data-i="route"></i>Bus / passenger <small>journeys, parcels</small></span><span class="mod"><i data-i="building"></i>Internal fleet <small>no revenue per trip</small></span><span class="caption" style="margin:0">A workspace can enable more than one (mixed fleets are real).</span></div></div>
+        <div class="layer-row"><div class="lbl">Modules<span>switched on by the vendor</span></div><div class="chips"><span class="mod">Vehicles</span><span class="mod">Trips / Journeys</span><span class="mod">Maintenance</span><span class="mod">Money</span><span class="mod">Documents</span><span class="mod new"><i data-i="user"></i>Customers <small>new</small></span><span class="mod new"><i data-i="box"></i>Stock &amp; purchasing <small>new</small></span><span class="mod new"><i data-i="file"></i>Parcels <small>new, bus first</small></span><span class="mod future">Ticketing <small>later</small></span><span class="mod future">Notifications / SMS <small>later</small></span></div></div>
+        <div class="layer-row"><div class="lbl">Core<span>every workspace</span></div><div class="chips"><span class="mod core">Branches</span><span class="mod core">Personnel and roles</span><span class="mod core">One command path</span><span class="mod core">Approvals</span><span class="mod core">History and audit</span><span class="mod core">Parties <small>customers + suppliers</small></span></div></div>
+      </div>
+      <p class="caption">Nothing here is new architecture. Module flags (ADR-0005), presets with word overlays (ADR-0004) and the Party concept (ARCHITECTURE.md: customer, vendor, supplier, buyer, never the same as a Person) already exist or are planned. The new parts are three modules and their screens.</p>
+    </section>
+
+    <section class="section" id="setup">
+      <div class="kicker">Setup</div>
+      <h3>Setup by preset</h3>
+      <p class="rule">At setup, the vendor picks the preset and the matrix below fills in the modules. Anything marked "optional" is a sales conversation, not a default. Modules can be added or removed later, and removing one hides it without deleting data.</p>
+      <table class="spec-table matrix">
+        <thead><tr><th>Module</th><th>Trucking</th><th>Bus / passenger</th><th>Internal fleet</th><th>What it adds</th></tr></thead>
+        <tbody>
+          <tr><td><b>Core</b> (branches, personnel, approvals, history)</td><td class="on">Always</td><td class="on">Always</td><td class="on">Always</td><td style="text-align:left">The shell everything plugs into</td></tr>
+          <tr><td>Vehicles</td><td class="on">On</td><td class="on">On</td><td class="on">On</td><td style="text-align:left">Vehicle workspace</td></tr>
+          <tr><td>Trips / Journeys</td><td class="on">On · haulage jobs</td><td class="on">On · scheduled journeys</td><td class="opt">Optional · missions</td><td style="text-align:left">The unit of work</td></tr>
+          <tr><td>Maintenance</td><td class="on">On</td><td class="on">On</td><td class="on">On</td><td style="text-align:left">Problems, work orders</td></tr>
+          <tr><td>Money</td><td class="on">On</td><td class="on">On</td><td class="on">On</td><td style="text-align:left">Expenses, revenue, approvals</td></tr>
+          <tr><td>Documents</td><td class="on">On</td><td class="on">On</td><td class="on">On</td><td style="text-align:left">Papers and expiry</td></tr>
+          <tr><td><b>Customers</b></td><td class="on">On · shippers</td><td class="on">On · parcel and contract customers (Parcels needs it)</td><td class="off">Off</td><td style="text-align:left">Customer records, rates, follow-ups, what they owe</td></tr>
+          <tr><td><b>Stock &amp; purchasing</b></td><td class="opt">Optional</td><td class="opt">Optional</td><td class="opt">Optional</td><td style="text-align:left">Parts, purchase orders, magasins</td></tr>
+          <tr><td><b>Parcels</b></td><td class="off">Off (optional for groupage)</td><td class="on">On</td><td class="off">Off</td><td style="text-align:left">Parcel counter, loading, collection</td></tr>
+          <tr><td>Ticketing</td><td class="fut">—</td><td class="fut">Later</td><td class="fut">—</td><td style="text-align:left">Seats and passenger tickets (deferred, §13)</td></tr>
+        </tbody>
+      </table>
+      <div class="cols even" style="margin-top:20px">
+        <div>
+          <div class="frame-label">Vendor setup tool · step 2 of 4 (vendor only, not in the tenant app)</div>
+          <div class="frame"><div class="wiz">
+            <div class="steps-v"><div class="done">1 · Company and branches</div><div class="on">2 · Preset and modules</div><div>3 · First administrator</div><div>4 · Review and create</div></div>
+            <div class="page" style="gap:14px">
+              <div><h1 class="pt" style="font-size:20px">Preset and modules</h1><div class="lead">The preset picks the defaults. Change any module before creating.</div></div>
+              <div class="two"><div class="presetcard"><b><i data-i="truck"></i> Trucking</b><span>Haulage jobs, shippers, trailers</span></div><div class="presetcard sel"><b><i data-i="route"></i> Bus / passenger</b><span>Journeys, parcels, contract customers</span></div></div>
+              <div>
+                <div class="modrow"><div><b>Journeys</b><span>Scheduled journeys between agencies</span></div><span class="badge b-mute">Default</span><span class="toggle y"></span></div>
+                <div class="modrow"><div><b>Parcels</b><span>Parcel counter, loading, collection</span></div><span class="badge b-mute">Default</span><span class="toggle y"></span></div>
+                <div class="modrow"><div><b>Customers</b><span>Parcel and contract customers · required by Parcels</span></div><span class="badge b-mute">Default</span><span class="toggle y"></span></div>
+                <div class="modrow"><div><b>Stock &amp; purchasing</b><span>Parts and purchase orders</span></div><span class="badge b-info">Optional</span><span class="toggle"></span></div>
+              </div>
+              <div class="row" style="justify-content:flex-end"><button class="btn">Back</button><button class="btn primary">Continue</button></div>
+            </div>
+          </div></div>
+        </div>
+        <div>
+          <div class="frame-label">Tenant admin · Company → Your modules (read-only)</div>
+          <div class="frame"><div class="page" style="gap:12px">
+            <div><h1 class="pt" style="font-size:20px">Your modules</h1><div class="lead">What your workspace includes. To add or remove a module, contact ROUTIQ.</div></div>
+            <div class="modrow"><div><b>Vehicles, Journeys, Maintenance, Money, Documents</b><span>Included with the bus preset</span></div><span class="badge b-ok">Active</span></div>
+            <div class="modrow"><div><b>Parcels</b><span>Since 4 Oct 2026</span></div><span class="badge b-ok">Active</span></div>
+            <div class="modrow"><div><b>Customers</b><span>Since 4 Oct 2026</span></div><span class="badge b-ok">Active</span></div>
+            <div class="modrow"><div><b>Stock &amp; purchasing</b><span>Parts, purchase orders, magasins</span></div><span class="badge b-mute">Not included</span><a class="caption" style="margin:0;font-weight:600;color:var(--foreground)">Ask about it</a></div>
+            <div class="modrow"><div><b>Ticketing</b><span>Seats and passenger tickets</span></div><span class="badge b-mute">Coming later</span></div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="words">
+      <div class="kicker">Vocabulary</div>
+      <h3>Words per preset</h3>
+      <p class="rule">Same screens, the preset's words (preset overlays, already built for Camion / Véhicule). New modules add their own keys.</p>
+      <table class="spec-table">
+        <thead><tr><th>Concept</th><th>Trucking (fr · en)</th><th>Bus / passenger (fr · en)</th></tr></thead>
+        <tbody>
+          <tr><td>Vehicle</td><td>Camion · Truck</td><td>Car / Véhicule · Bus</td></tr>
+          <tr><td>Activity</td><td>Trajet (job de transport) · Trip / haulage job</td><td>Voyage · Journey</td></tr>
+          <tr><td>Customer</td><td>Client (chargeur) · Customer (shipper)</td><td>Client · Customer (contract or parcel customer)</td></tr>
+          <tr><td>Receiver</td><td>Destinataire · Consignee</td><td>Destinataire · Receiver</td></tr>
+          <tr><td>Rate</td><td>Tarif par trajet · Rate per route</td><td>Tarif contrat / tarif colis · Contract or parcel rate</td></tr>
+          <tr><td>Proof of delivery</td><td>Bon de livraison signé · Signed delivery note</td><td>Code de retrait · Collection code</td></tr>
+          <tr><td>Branch</td><td>Agence · Branch</td><td>Agence · Agency</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="nav">
+      <div class="kicker">Navigation</div>
+      <h3>Navigation per operator</h3>
+      <p class="rule">Same rules as the <a href="sidebar.html">navigation page</a>: places only, filtered by role and module, counts where someone waits. With more modules, the sidebar gets four groups named after the work.</p>
+      <div class="navpair">
+        <div><div class="frame-label">Trucking · administrator</div><div class="frame"><div class="sb-slot" data-preset="trucking"></div></div></div>
+        <div><div class="frame-label">Bus · administrator</div><div class="frame"><div class="sb-slot" data-preset="bus"></div></div></div>
+        <div class="spec-card"><h4>Groups</h4><ul>
+          <li><b>Daily work</b>: Home, vehicles, trips or journeys, parcels.</li>
+          <li><b>Customers and money</b>: Customers, Money.</li>
+          <li><b>Workshop</b>: Maintenance, Stock.</li>
+          <li><b>Company</b>: Personnel, Branches, Suppliers, Accounting months, Your modules.</li>
+          <li>Each role sees only its rows: a parcel clerk sees Home, Parcels, Customers; a workshop lead sees Home, Vehicles, Maintenance, Stock.</li>
+          <li>Phone bottom bar per role: parcel clerk = Home / Parcels / Customers + Menu.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="who">
+      <div class="kicker">Customers</div>
+      <h3>Who is a customer?</h3>
+      <p class="rule">The biggest design question. A trucking customer is a company that books jobs. A bus company has three kinds of customer, and only two of them fit ROUTIQ today.</p>
+      <div class="persona">
+        <div class="spec-card"><h4><i data-i="building"></i>Account (company)</h4><p><b>Trucking:</b> shippers who book haulage (a cement plant, a brewery, an importer). <b>Bus:</b> companies, schools and NGOs with charter or staff-transport contracts.</p><p class="caption" style="margin:0">Record with contacts, agreed rates, trips, what they owe, follow-ups. Same screen for both presets.</p></div>
+        <div class="spec-card"><h4><i data-i="user"></i>Individual (phone number)</h4><p><b>Bus:</b> people who send or collect parcels, and regular travellers. <b>Trucking:</b> small one-off customers paying cash.</p><p class="caption" style="margin:0">Found by phone number at the counter, created in two fields. Light record: parcels, payments, notes.</p></div>
+        <div class="spec-card"><h4><i data-i="route"></i>Passenger (ticket)</h4><p><b>Bus only:</b> everyone who buys a seat. Thousands per week, seat maps, departures, cash per counter.</p><p class="caption" style="margin:0">This is <b>ticketing</b>, deferred on purpose (ARCHITECTURE §13, decided 22 Jul): revenue keeps coming in through daily cash sessions. If ticketing is built later, a passenger's phone number links to an Individual.</p></div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>Recommendation</h4><p>One <b>Customers</b> module with two types, Account and Individual, built on the existing Party concept, so a supplier and a customer can even be the same company. Same list, same record layout and same actions in both presets, with the preset deciding the default type and the words. Passengers stay out until ticketing is decided.</p></div>
+        <div class="spec-card"><h4>The other side</h4><ul>
+          <li>Bus owners may expect "customers" to mean passengers. Showing a customer list without passengers could disappoint; say it clearly at sale time.</li>
+          <li>Individuals at parcel volume (hundreds a week) make a big list; the list defaults to Accounts, and Individuals are reached by phone search.</li>
+          <li>"What they owe" needs revenue entries with a due date and a "paid" link, which ROUTIQ doesn't have yet (decision below).</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="customers">
+      <div class="kicker">Archetype 1 · Module list</div>
+      <h3>Customers list</h3>
+      <div class="frame desktop" style="min-height:640px">
+        <aside class="sb-slot" data-preset="trucking" data-active="customers"></aside>
+        <div class="main"><div class="topbar"><b>Customers</b><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Customers</h1><div class="lead">Who you transport for, what they're worth, and what they still owe.</div></div><button class="btn primary"><i data-i="plus"></i>Add a customer</button></div>
+            <div class="metrics">
+              <div><div class="k">Active customers</div><div class="v">18</div><div class="s">a trip in the last 90 days</div></div>
+              <div style="background:color-mix(in oklch,var(--destructive) 7%,white)"><div class="k">Owed to you</div><div class="v">3 450 000</div><div class="s">XAF · 1 200 000 over 60 days</div></div>
+              <div><div class="k">Revenue this month</div><div class="v">2 900 000</div><div class="s">XAF · 11 customers</div></div>
+              <div style="background:color-mix(in oklch,var(--warning) 14%,white)"><div class="k">Follow-ups due</div><div class="v">4</div><div class="s">2 today</div></div>
+            </div>
+            <div class="toolbar"><div class="input" style="width:260px"><i data-i="search"></i>Name, phone or contact</div><span class="chip set">Accounts ×</span><span class="chip"><i data-i="plus"></i>Owes money</span><span class="chip"><i data-i="plus"></i>Branch</span></div>
+            <div class="dt-wrap"><table class="dt">
+              <thead><tr><th>Customer</th><th>Type</th><th>Last trip</th><th class="r">Revenue this year</th><th class="r">Owes</th><th>Next follow-up</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="pri">Société Agro Littoral</td><td>Account</td><td>2 Oct · DLA → YDE</td><td class="r">6 400 000</td><td class="r" style="color:var(--destructive);font-weight:600">1 200 000</td><td>Call accounts · today</td><td class="dots"><i data-i="dots"></i></td></tr>
+                <tr><td class="pri">Ets Fotso &amp; Fils</td><td>Account</td><td>29 Sep · DLA → BAF</td><td class="r">3 150 000</td><td class="r">450 000</td><td>Visit · 8 Oct</td><td class="dots"><i data-i="dots"></i></td></tr>
+                <tr><td class="pri">Brasserie du Wouri</td><td>Account</td><td>30 Sep · DLA → YDE</td><td class="r">2 700 000</td><td class="r">0</td><td style="color:var(--muted-foreground)">None</td><td class="dots"><i data-i="dots"></i></td></tr>
+              </tbody></table><div class="pager"><span>18 accounts</span><span>Page 1</span></div></div>
+          </div></div>
+      </div>
+      <p class="caption">Managers and executives also see one chart above the list: revenue by customer, top 5, with the rest folded into "Others" (customer concentration risk).</p>
+    </section>
+
+    <section class="section" id="account">
+      <div class="kicker">Archetype 2 · Record workspace</div>
+      <h3>Customer record (trucking account)</h3>
+      <div class="frame desktop" style="min-height:720px">
+        <aside class="sb-slot" data-preset="trucking" data-active="customers"></aside>
+        <div class="main" style="position:relative"><div class="topbar">Customers <span class="sep">/</span> <b>Société Agro Littoral</b></div>
+          <div class="page" style="padding-bottom:84px">
+            <div><div class="row"><h1 class="pt">Société Agro Littoral</h1><span class="badge b-warn">Payment late</span></div><div class="lead">Account · palm oil and fertiliser · Douala · account manager Boris Mbarga · contact Mme Ngo Bassa, 6 77 12 34 56</div></div>
+            <div class="attn bad"><i data-i="money" data-c="lg"></i><div><div class="t">Owes 1 200 000 XAF, oldest 64 days</div><div class="s">3 trips not paid. Follow-up "call accounts" is due today.</div></div><button class="btn sm">Record a payment</button></div>
+            <div class="facts"><div><div class="k">Trips this month</div><div class="v">4</div></div><div><div class="k">Revenue this year</div><div class="v num">6 400 000 XAF</div></div><div><div class="k">Average time to pay</div><div class="v">38 days</div></div><div><div class="k">Last contact</div><div class="v">Call, 27 Sep</div></div></div>
+            <div class="tabs"><div class="on">Overview</div><div>Trips<span class="count">4</span></div><div>Money<span class="count hot">3</span></div><div>Rates</div><div>Contacts</div><div>Notes<span class="count">2</span></div><div>Documents</div><div>History</div></div>
+            <div class="cols even" style="gap:16px">
+              <div class="card"><div class="card-h"><div><h2>What they owe</h2><div class="d">By age of the unpaid trip</div></div></div><div class="card-b aging"><div><div class="k">0–30 days</div><div class="v">0</div></div><div><div class="k">31–60 days</div><div class="v">0</div></div><div class="late"><div class="k">61–90 days</div><div class="v">1 200 000</div></div><div><div class="k">90+ days</div><div class="v">0</div></div></div></div>
+              <div class="card"><div class="card-h"><h2>Latest</h2></div><div class="card-b feed"><div><span class="dot ok"></span>Trip DLA-0012 Douala → Yaoundé, 650 000<span class="when">2 Oct</span></div><div><span class="dot info"></span>Call: promised payment "end of month"<span class="when">27 Sep</span></div><div><span class="dot warn"></span>Complaint: 2 bags torn on delivery<span class="when">20 Sep</span></div></div></div>
+            </div>
+          </div>
+          <div class="actionbar"><button class="btn primary"><i data-i="route"></i>New trip for this customer</button><button class="btn"><i data-i="money"></i>Record a payment</button><button class="btn"><i data-i="note"></i>Log a call or visit</button><button class="btn ghost" style="margin-left:auto"><i data-i="dots"></i>More</button></div>
+        </div>
+      </div>
+      <div class="cols three" style="margin-top:16px">
+        <div class="spec-card"><h4>Tabs</h4><ul><li><b>Overview</b>: what they owe by age, latest events, next follow-up.</li><li><b>Trips</b>: their trips (list rows), revenue per trip.</li><li><b>Money</b>: revenue entries and payments received, unpaid first.</li><li><b>Rates</b>: agreed price per route, used to prefill new trips.</li><li><b>Contacts</b>, <b>Notes</b>, <b>Documents</b> (contract, delivery notes), <b>History</b>.</li></ul></div>
+        <div class="spec-card"><h4>Actions</h4><ul><li>New trip for this customer (customer and rate prefilled).</li><li>Record a payment received (Quick entry; settles the oldest unpaid first, editable).</li><li>Log a call, visit or complaint (Quick entry; can set a follow-up date).</li><li>Set or change a rate, add a contact (Record panel).</li><li>More: send a statement (needs SMS/WhatsApp later), mark inactive.</li></ul></div>
+        <div class="spec-card"><h4>Chart spot</h4><ul><li>Money tab: revenue per month (12 months) and days-to-pay trend, for managers, finance and executives.</li><li>No chart on Overview: the aging boxes are numbers, not a chart.</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="bus">
+      <div class="kicker">Same screen, bus preset</div>
+      <h3>Customer record (bus contract account)</h3>
+      <div class="cols" style="grid-template-columns:minmax(0,1fr) 390px">
+        <div class="frame desktop" style="min-height:560px">
+          <aside class="sb-slot" data-preset="bus" data-active="customers"></aside>
+          <div class="main"><div class="topbar">Customers <span class="sep">/</span> <b>Groupe Scolaire La Colombe</b></div>
+            <div class="page">
+              <div><div class="row"><h1 class="pt">Groupe Scolaire La Colombe</h1><span class="badge b-ok">Contract active</span></div><div class="lead">Account · school transport, 2 buses daily · Yaoundé · until 30 Jun 2027</div></div>
+              <div class="attn info"><i data-i="cal" data-c="lg"></i><div><div class="t">Next invoice period ends 31 Oct</div><div class="s">22 school days done this month · contract rate 1 800 000 XAF per month.</div></div></div>
+              <div class="facts"><div><div class="k">Journeys this month</div><div class="v">44</div></div><div><div class="k">Revenue this year</div><div class="v num">16 200 000 XAF</div></div><div><div class="k">Owes</div><div class="v num">0</div></div><div><div class="k">Contract ends</div><div class="v">30 Jun 2027</div></div></div>
+              <div class="tabs"><div class="on">Overview</div><div>Journeys<span class="count">44</span></div><div>Money</div><div>Contract</div><div>Contacts</div><div>Notes</div><div>History</div></div>
+            </div></div>
+        </div>
+        <div class="spec-card"><h4>What changes with the bus preset</h4><ul>
+          <li>Words: Journeys instead of Trips; Contract tab instead of Rates (a monthly or per-journey contract price).</li>
+          <li>For an <b>Individual</b> (parcel customer), the record is lighter: phone number, parcels sent and received, payments, notes. No contract, no account manager.</li>
+          <li>Layout, actions, status block and tabs follow the same shell, so staff who use both presets learn it once.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="relations">
+      <div class="kicker">Customer relations</div>
+      <h3>Follow-ups and complaints (the "CRM" part)</h3>
+      <p class="rule">Kept small on purpose: no sales pipeline, no campaigns. Staff log what happened with a customer, set a next step, and complaints get an owner until resolved. Due follow-ups land in "Needs you" on Home.</p>
+      <div class="cols" style="grid-template-columns:minmax(0,1fr) 390px">
+        <div class="card"><div class="card-h"><div><h2>Notes and follow-ups</h2><div class="d">Société Agro Littoral · newest first</div></div><button class="btn sm"><i data-i="plus"></i>Log a call or visit</button></div>
+          <div class="card-b">
+            <div class="note-item"><span class="ico"><i data-i="clock"></i></span><div><b>Follow-up due today: call accounts about 1 200 000 XAF</b><div class="caption" style="margin:2px 0 0">Set by Boris on 27 Sep · assigned to Boris</div></div><span class="when"><button class="btn sm">Done</button></span></div>
+            <div class="note-item"><span class="ico"><i data-i="note"></i></span><div><b>Call</b> · Mme Ngo Bassa promised payment "end of month".<div class="caption" style="margin:2px 0 0">Boris · 27 Sep 10:14</div></div><span class="when">27 Sep</span></div>
+            <div class="note-item"><span class="ico" style="background:color-mix(in oklch,var(--warning) 25%,white)"><i data-i="alert"></i></span><div><b>Complaint</b> · 2 bags of fertiliser torn on delivery, trip DLA-0009. <span class="badge b-ok">Resolved</span><div class="caption" style="margin:2px 0 0">Logged by Sali · resolved by Boris: 30 000 XAF credit agreed, 22 Sep</div></div><span class="when">20 Sep</span></div>
+          </div></div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Three kinds of note: call, visit, complaint. Each can set a follow-up date and an assignee.</li>
+          <li>Complaints have an owner and a status (open → resolved, with what was agreed). A money outcome (credit, refund) is a normal entry in Money, linked.</li>
+          <li>Notes are append-only, like vehicle notes.</li>
+          <li>Due follow-ups and open complaints count on the Customers row and show in "Needs you".</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="parcels">
+      <div class="kicker">Bus first</div>
+      <h3>Parcels (colis)</h3>
+      <p class="rule">Cameroonian intercity bus agencies earn a large share from parcels, and the architecture already counts "tickets + parcels" in the daily cash session. A parcel goes through five steps: received at the counter, loaded on a journey, arrived at the destination agency, collected with a code, paid with it. Trucking companies doing groupage can switch it on too.</p>
+      <div class="pipeline">
+        <div><div class="k">Received, not loaded</div><div class="v">23</div><div class="s">at Douala agency</div></div>
+        <div><div class="k">On the road</div><div class="v">41</div><div class="s">3 journeys</div></div>
+        <div class="hl"><div class="k">Arrived, not collected</div><div class="v">17</div><div class="s">5 over 7 days</div></div>
+        <div><div class="k">Collected today</div><div class="v">32</div><div class="s">186 000 XAF</div></div>
+        <div><div class="k">Problems</div><div class="v" style="color:var(--destructive)">1</div><div class="s">reported damaged</div></div>
+      </div>
+      <div class="cols" style="grid-template-columns:390px minmax(0,1fr);margin-top:18px">
+        <div class="pstatic w390">
+          <div class="grab"></div>
+          <div class="sheet-h"><h3>Receive a parcel</h3><div class="d">Douala agency · counter 2</div><span class="x"><i data-i="x"></i></span></div>
+          <div class="sheet-b">
+            <div class="fs"><div class="fs-h">Sender</div>
+              <div class="field"><label>Phone<span class="req">*</span></label><div class="input filled num">6 99 45 12 30</div><div class="help" style="color:var(--success-foreground);font-weight:600">Known customer: Mbia Paul · 12 parcels sent</div></div>
+            </div>
+            <div class="fs"><div class="fs-h">Receiver</div>
+              <div class="two"><div class="field"><label>Name<span class="req">*</span></label><div class="input filled">Atangana Rose</div></div><div class="field"><label>Phone<span class="req">*</span></label><div class="input filled num">6 55 08 77 21</div></div></div>
+              <div class="field"><label>Destination agency<span class="req">*</span></label><div class="seg"><div class="on">Yaoundé</div><div>Bafoussam</div><div>Other…</div></div></div>
+            </div>
+            <div class="fs"><div class="fs-h">Parcel</div>
+              <div class="two"><div class="field"><label>What<span class="req">*</span></label><div class="input filled">Carton, clothes</div></div><div class="field"><label>Fee<span class="req">*</span></label><div class="input filled num">3 500<span class="suffix">XAF</span></div></div></div>
+              <div class="upload"><i data-i="camera" data-c="lg"></i><b style="color:var(--foreground)">Photo of the parcel</b></div>
+            </div>
+          </div>
+          <div class="sheet-f"><span class="hint">Gives code CO-4821 to tell the receiver.</span><button class="btn">Cancel</button><button class="btn primary">Receive parcel</button></div>
+        </div>
+        <div class="spec-card"><h4>Parcel rules and screens</h4><ul>
+          <li><b>Parcels page</b> (Module list): the five-step strip above as tiles that filter; list rows with code, receiver, destination, status, fee.</li>
+          <li><b>Receive a parcel</b> (Record layout, phone first): the sender's phone number finds or creates the Individual customer; fee from the route's parcel rate.</li>
+          <li><b>Load on a journey</b> (Line items): pick the departing journey, scan or tick parcels; the journey shows "41 parcels on board".</li>
+          <li><b>Hand over</b> (Decision): receiver gives the code; mark collected, payment if pay-on-collection.</li>
+          <li>Damaged or lost: a complaint on the customer, linked to the parcel and the journey.</li>
+          <li>Each parcel fee is revenue that reaches the agency's daily cash session; ROUTIQ doesn't invoice.</li>
+          <li>Later, with the Notifications module: SMS to the receiver on arrival.</li>
+        </ul>
+        <h4 style="margin-top:12px">Chart spot</h4><ul><li>Parcels per day and parcel revenue per route (managers, executives).</li><li>Average days from arrival to collection.</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="roles">
+      <div class="kicker">Scope</div>
+      <h3>Scoped by role: what each person sees and does</h3>
+      <p class="rule">Every screen is filtered three ways before anyone sees it: by <b>module</b> (what the workspace has), by <b>role</b> (what this person may see and do), and by <b>branch scope</b> (which agencies). A role never sees a page or button it can never use. When something is blocked by the record's state, the button stays visible, locked, with the reason. Roles are the team's six (decided 27 Sep, not built yet).</p>
+      <div class="dt-wrap" style="overflow:auto;background:white"><table class="dt role-matrix">
+        <thead><tr><th style="min-width:120px">Page</th><th>Direction<br><span class="caption" style="margin:0">all agencies</span></th><th>Administrator<br><span class="caption" style="margin:0">own agencies</span></th><th>Finance</th><th>Cashier<br><span class="caption" style="margin:0">counter</span></th><th>Technician</th><th>Driver<br><span class="caption" style="margin:0">own records</span></th></tr></thead>
+        <tbody>
+          <tr><td class="pri">Home</td><td>Executive overview: tiles + charts, read-only</td><td>Needs you + agency tiles</td><td>Approvals waiting, money owed</td><td>Today's counter: parcels to hand over, cash today</td><td>Work orders, problems, low stock</td><td>My vehicle, my trip, what to do</td></tr>
+          <tr><td class="pri">Vehicles</td><td>See all</td><td>See all · register, assign, release</td><td>See money tab</td><td class="no">—</td><td>See all · report problem, reading</td><td>My vehicle · fuel, note, problem</td></tr>
+          <tr><td class="pri">Trips / Journeys</td><td>See all</td><td>See all · create, close, correct</td><td>See revenue</td><td>Bus: today's departures (to load parcels)</td><td class="no">—</td><td>My trips · start, close, expenses, delivery photo</td></tr>
+          <tr><td class="pri">Parcels <span class="caption" style="margin:0">bus</span></td><td>See + charts</td><td>See all · resolve problems</td><td>See revenue</td><td><b>Receive, load, hand over, collect payment</b></td><td class="no">—</td><td>Confirm parcels on board</td></tr>
+          <tr><td class="pri">Customers</td><td>See + charts</td><td>Create, rates, follow-ups, complaints</td><td>Balances, record payment, statements</td><td>Find by phone, add individual, record payment</td><td class="no">—</td><td class="no">Name on the trip only</td></tr>
+          <tr><td class="pri">Money</td><td>See all · approve above top band</td><td>Record · see agency</td><td><b>Approve, reverse, accounting months</b></td><td>Record cash in / out (own)</td><td>Expense on a work order</td><td>Own expenses</td></tr>
+          <tr><td class="pri">Maintenance</td><td>See</td><td><b>Approve work orders, release vehicle</b></td><td>See costs</td><td class="no">—</td><td><b>Problems, work orders, complete</b></td><td>Report a problem</td></tr>
+          <tr><td class="pri">Stock</td><td>See + charts</td><td>Approve purchase orders, adjustments</td><td>Invoices to Money, stock value</td><td class="no">—</td><td><b>Request PO, receive, use on WO, count</b></td><td class="no">—</td></tr>
+          <tr><td class="pri">Company</td><td>Everything, "Your modules"</td><td>Personnel, agencies (own)</td><td>Accounting months</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+          <tr><td class="pri">Phone bar</td><td>Overview · Vehicles · Money</td><td>Home · Vehicles · Money</td><td>Home · Money · Customers</td><td>Home · Parcels · Customers</td><td>Home · Maintenance · Stock</td><td>Home · My vehicle · Trips</td></tr>
+        </tbody></table></div>
+      <p class="caption"><b>Bold</b> = the role's main job on that page, which becomes its primary button. "—" = the page is not in that role's sidebar at all. Approvals never go to the person who submitted (no self-approval).</p>
+
+      <div class="cols three" style="margin-top:18px">
+        <div class="card"><div class="card-h"><div><h2>Cashier · Home (bus)</h2><div class="d">Douala agency, counter 2</div></div></div><div class="card-b">
+          <div class="metrics" style="grid-template-columns:1fr 1fr"><div><div class="k">To hand over</div><div class="v">17</div></div><div><div class="k">Cash today</div><div class="v">186 000</div></div></div>
+          <div class="feed" style="margin-top:8px"><div><span class="dot warn"></span>5 parcels waiting over 7 days<span class="when"><a>Open</a></span></div><div><span class="dot info"></span>Journey DLA → YDE 14:00: load 23 parcels<span class="when"><a>Load</a></span></div></div>
+          <div class="row" style="margin-top:10px"><button class="btn primary block"><i data-i="plus"></i>Receive a parcel</button></div></div></div>
+        <div class="card"><div class="card-h"><div><h2>Technician · Home</h2><div class="d">Workshop, Douala</div></div></div><div class="card-b">
+          <div class="metrics" style="grid-template-columns:1fr 1fr"><div><div class="k">My work orders</div><div class="v">2</div></div><div><div class="k">Below minimum</div><div class="v">3</div></div></div>
+          <div class="feed" style="margin-top:8px"><div><span class="dot bad"></span>Start WO-0007 (VH003 brakes)<span class="when"><a>Open</a></span></div><div><span class="dot info"></span>PO-0012 arriving today: receive<span class="when"><a>Receive</a></span></div></div>
+          <div class="row" style="margin-top:10px"><button class="btn primary block"><i data-i="wrench"></i>Report a problem</button></div></div></div>
+        <div class="card"><div class="card-h"><div><h2>Finance · Home</h2><div class="d">All agencies</div></div></div><div class="card-b">
+          <div class="metrics" style="grid-template-columns:1fr 1fr"><div><div class="k">Waiting approval</div><div class="v">2</div></div><div><div class="k">Owed to you</div><div class="v">3 450 000</div></div></div>
+          <div class="feed" style="margin-top:8px"><div><span class="dot warn"></span>Approve 2 expenses · 185 000 XAF<span class="when"><a>Review</a></span></div><div><span class="dot bad"></span>Société Agro Littoral · 64 days late<span class="when"><a>Open</a></span></div></div>
+          <div class="row" style="margin-top:10px"><button class="btn primary block"><i data-i="check"></i>Review approvals</button></div></div></div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>Rules for role scope</h4><ul>
+          <li>The sidebar, the phone bar, Home's "Needs you", tile sets, chart visibility and each page's primary button all come from one role definition (data, tested per role).</li>
+          <li>A role-forbidden action is absent. A state-blocked action is shown locked with the reason ("Receive: approve the PO first").</li>
+          <li>Branch scope narrows every list and count to the person's agencies; Direction sees all and gets the branch comparison charts.</li>
+          <li>Drivers see only their own vehicle, trips, expenses and problems; they never see other people's money.</li>
+          <li>Counts only include work this role can act on (a Technician's Stock count is deliveries to receive, not approvals).</li>
+        </ul></div>
+        <div class="spec-card"><h4>Same role, two presets</h4><ul>
+          <li><b>Cashier, bus:</b> the parcel counter is the main job; cash in and out of the agency.</li>
+          <li><b>Cashier, trucking:</b> payments received from customers and cash expenses; no parcels unless groupage is on.</li>
+          <li><b>Driver, bus:</b> journeys and confirming parcels on board. <b>Driver, trucking:</b> trips, delivery note photo as proof of delivery.</li>
+          <li>Direction, Administrator, Finance and Technician work the same way in both presets; only the words change.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="forms">
+      <div class="kicker">Form layouts</div>
+      <h3>Forms and actions for the new modules</h3>
+      <table class="spec-table">
+        <thead><tr><th>Action</th><th>Where it starts</th><th>Layout</th><th>Approval</th><th>Presets</th></tr></thead>
+        <tbody>
+          <tr><td>Add a customer (Account)</td><td>Customers header</td><td>Record</td><td>No</td><td>Both</td></tr>
+          <tr><td>Add an individual</td><td>Inline in the parcel form (by phone) or Customers</td><td>Quick entry</td><td>No</td><td>Both</td></tr>
+          <tr><td>Set or change a rate / contract</td><td>Customer → Rates or Contract</td><td>Record</td><td>Above a discount threshold</td><td>Both</td></tr>
+          <tr><td>Record a payment received</td><td>Customer action bar, Money</td><td>Quick entry</td><td>Same rules as revenue</td><td>Both</td></tr>
+          <tr><td>Log a call, visit or complaint</td><td>Customer action bar, trip, parcel</td><td>Quick entry</td><td>No</td><td>Both</td></tr>
+          <tr><td>Resolve a complaint</td><td>Note item</td><td>Decision (what was agreed)</td><td>No; a credit goes through Money</td><td>Both</td></tr>
+          <tr><td>New trip for a customer</td><td>Customer action bar</td><td>Long capture (existing trip sheet, customer and rate prefilled)</td><td>Existing</td><td>Trucking</td></tr>
+          <tr><td>Receive a parcel</td><td>Parcels header, phone bottom bar</td><td>Record (phone first)</td><td>No</td><td>Bus (+ groupage)</td></tr>
+          <tr><td>Load parcels on a journey</td><td>Journey record, Parcels</td><td>Line items</td><td>No</td><td>Bus</td></tr>
+          <tr><td>Hand over a parcel</td><td>Parcel record, Parcels search by code</td><td>Decision</td><td>No</td><td>Bus</td></tr>
+          <tr><td>Purchase order, receive, transfer, adjust</td><td>Stock</td><td>See <a href="stock.html#create">Stock</a></td><td>See Stock</td><td>Both</td></tr>
+          <tr><td>Supplier</td><td>Company → Suppliers</td><td>Record</td><td>No</td><td>Both</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Still six layouts. Nothing new needed.</p>
+    </section>
+
+    <section class="section" id="charts">
+      <div class="kicker">Overviews</div>
+      <h3>Charts for the new modules</h3>
+      <table class="spec-table">
+        <thead><tr><th>Where</th><th>Tiles (everyone)</th><th>Chart (managers, finance, executives)</th></tr></thead>
+        <tbody>
+          <tr><td>Customers list</td><td>Active customers, owed to you, revenue this month, follow-ups due</td><td>Revenue by customer, top 5 + others; owed by age (bars)</td></tr>
+          <tr><td>Customer → Money</td><td>Owes, average days to pay</td><td>Revenue per month; days-to-pay trend</td></tr>
+          <tr><td>Parcels</td><td>The five steps as tiles</td><td>Parcels per day; parcel revenue per route</td></tr>
+          <tr><td>Stock</td><td>Stock value, below minimum, to receive, negative</td><td>Purchasing per month; top articles by spend</td></tr>
+          <tr><td>Executive overview (added)</td><td>Owed to you, parcel revenue</td><td>Revenue by customer; money owed by age; parcel revenue trend (bus)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="decide">
+      <div class="kicker">Ask back</div>
+      <h3>Decisions needed before building</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>Product</h4><ol>
+          <li><b>Customers = Accounts + Individuals, passengers out until ticketing?</b> Recommended: yes.</li>
+          <li><b>Parcels as a module, on by default for bus?</b> Recommended: yes; it's the bus agencies' second income and already part of their daily cash.</li>
+          <li><b>Lightweight CRM only</b> (notes, follow-ups, complaints), no sales pipeline? Recommended: yes.</li>
+          <li><b>Which comes first:</b> Customers, Parcels or Stock? Recommended: Customers (both presets use it, and Parcels needs it), then Parcels for bus pilots, then Stock with the workshop.</li>
+        </ol></div>
+        <div class="spec-card"><h4>Architecture (needs an ADR each)</h4><ol start="5">
+          <li><b>"What they owe"</b>: revenue entries need a due date and a link to payments received. Today ROUTIQ records revenue as earned, with no "unpaid" state. Smallest version: a receivable flag + payment-received entries that settle it.</li>
+          <li><b>Party model</b>: one table for customers and suppliers with roles (as ARCHITECTURE.md lists), or separate tables? Recommended: one, as planned.</li>
+          <li><b>New module codes</b>: CUSTOMERS, PARCELS, INVENTORY (already listed), each owning its commands, reads and sidebar rows.</li>
+          <li><b>Starter packs per preset</b>: default customer types, parcel rates, note kinds, seeded at setup like categories.</li>
+        </ol></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+<script>
+// Preset-specific sidebars for this page (the shared kit sidebar is preset-neutral).
+const PRESET_NAV = {
+  trucking: [
+    ["Daily work", [["home", "home", "Home"], ["truck", "vehicles", "Trucks"], ["route", "trips", "Trips"]]],
+    ["Customers and money", [["user", "customers", "Customers", 4], ["money", "money", "Money", 2]]],
+    ["Workshop", [["wrench", "maintenance", "Maintenance", 2], ["box", "stock", "Stock", 3]]],
+    ["Company", [["user", "personnel", "Personnel"], ["building", "branches", "Branches"], ["cart", "suppliers", "Suppliers"], ["sliders", "modules", "Your modules"]]],
+  ],
+  bus: [
+    ["Daily work", [["home", "home", "Home"], ["truck", "vehicles", "Buses"], ["route", "trips", "Journeys"], ["file", "parcels", "Parcels", 17]]],
+    ["Customers and money", [["user", "customers", "Customers", 2], ["money", "money", "Money", 1]]],
+    ["Workshop", [["wrench", "maintenance", "Maintenance", 1]]],
+    ["Company", [["user", "personnel", "Personnel"], ["building", "branches", "Agencies"], ["sliders", "modules", "Your modules"]]],
+  ],
+};
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".sb-slot").forEach((slot) => {
+    const preset = slot.dataset.preset; const active = slot.dataset.active ?? "home";
+    const groups = PRESET_NAV[preset].map(([g, items]) => `<div class="glabel">${g}</div>` + items.map(([i, k, l, n]) => `<div class="item ${k === active ? "on" : ""}">${icon(i)}<span>${l}</span>${n ? `<span class="nb">${n}</span>` : ""}</div>`).join("")).join("");
+    const ws = preset === "bus" ? "Voyages Kamer Express" : "Transports Ngwa";
+    slot.outerHTML = `<aside class="sb"><div class="ws">${routiqMark()}<span><span class="wordmark">Routi<b>q</b></span><span class="wsname">${ws}</span></span></div>${groups}<div class="soon">${icon("clock")}<span>What's coming</span><span class="nb q">8</span></div><div class="who"><span class="av">${preset === "bus" ? "E" : "B"}</span><span><b>${preset === "bus" ? "Esther Ndzie" : "Boris Mbarga"}</b>Administrator</span>${icon("chev")}</div></aside>`;
+  });
+});
+</script>
+</body>
+</html>
