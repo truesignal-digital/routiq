@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
-import { ROLES, type AddMemberPayload, type MemberBranchScope } from "@routiq/contracts";
+import type { AddMemberPayload, MemberBranchScope } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,11 +32,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { scopedByBranch } from "../auth/me.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
+import {
+  pickableRoles,
+  type MemberActor,
+} from "./permissions.js";
 import { MIN_PIN_LENGTH } from "./pin.js";
 
 interface AddMemberValues {
@@ -64,12 +69,15 @@ export function AddMemberDialog({
   open,
   onOpenChange,
   branches,
+  actor,
   onAdded,
   client = commandClient,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branches: readonly BranchOption[];
+  /** Who is hiring: decides the roles offered and the branches they may give. */
+  actor: MemberActor | undefined;
   onAdded: () => void;
   client?: CommandClient;
 }) {
@@ -78,7 +86,14 @@ export function AddMemberDialog({
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const [principalId, setPrincipalId] = useState(() => crypto.randomUUID());
-  const [branchScope, setBranchScope] = useState<MemberBranchScope>("ALL");
+  // role-config: an actor gives only the roles and branches they hold (ADR-0009).
+  const actorScope: MemberBranchScope = actor?.branchScope ?? "ALL";
+  const roleOptions = pickableRoles(actor);
+  const pickerBranches = useMemo(
+    () => scopedByBranch(actorScope, [...branches], (branch) => branch.id),
+    [actorScope, branches],
+  );
+  const [branchScope, setBranchScope] = useState<MemberBranchScope>(actorScope);
   const [errorCode, setErrorCode] = useState<string>();
   const intent = useRef<CommandIntent<AddMemberPayload> | undefined>(undefined);
 
@@ -113,14 +128,16 @@ export function AddMemberDialog({
   useEffect(() => {
     if (!open) return;
     setPrincipalId(crypto.randomUUID());
-    setBranchScope("ALL");
+    setBranchScope(actorScope);
     setErrorCode(undefined);
     form.reset(EMPTY);
+    // Per opening only: actorScope is a fresh array on every /v1/me read.
   }, [open, form]);
+
 
   async function onSubmit(values: AddMemberValues) {
     setErrorCode(undefined);
-    intent.current ??= createCommandIntent<AddMemberPayload>(client, "add-member", 1);
+    intent.current ??= createCommandIntent<AddMemberPayload>(client, "add-member", 2);
 
     const result = await intent.current.submit({
       principalId,
@@ -219,7 +236,7 @@ export function AddMemberDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ROLES.map((role) => (
+                      {roleOptions.map((role) => (
                         <SelectItem key={role} value={role}>
                           {t(`users.roles.${role}`)}
                         </SelectItem>
@@ -232,9 +249,10 @@ export function AddMemberDialog({
             />
 
             <BranchScopeField
-              branches={branches}
+              branches={pickerBranches}
               value={branchScope}
               onChange={setBranchScope}
+              allowAll={actorScope === "ALL"}
             />
 
             <FormField

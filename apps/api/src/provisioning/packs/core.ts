@@ -1,402 +1,140 @@
+import type { Role } from "@routiq/contracts";
 import type { approvalRules, categories } from "../../db/schema.js";
 
-function defaultApprovalRules(): Array<
-  Omit<typeof approvalRules.$inferInsert, "workspaceId">
-> {
-  const rules: Array<Omit<typeof approvalRules.$inferInsert, "workspaceId">> = [
-    {
-      commandType: "register-asset",
+type ApprovalRuleDefault = Omit<typeof approvalRules.$inferInsert, "workspaceId">;
+
+/** Rules with no filter: each role runs the command at any amount, in any branch. */
+function wildcard(commandTypes: readonly string[], roles: readonly Role[]): ApprovalRuleDefault[] {
+  return commandTypes.flatMap((commandType) =>
+    roles.map((requiredRole) => ({
+      commandType,
       categoryCode: null,
       branchId: null,
       amountMinMinor: null,
       amountMaxMinor: null,
-      requiredRole: "ADMIN",
+      requiredRole,
       createdByCommandId: null,
-    },
+    })),
+  );
+}
+
+/** Rules bounded at `amountMaxMinor`: above it, the role's record waits for review. */
+function banded(
+  commandTypes: readonly string[],
+  roles: readonly Role[],
+  amountMaxMinor: bigint,
+): ApprovalRuleDefault[] {
+  return wildcard(commandTypes, roles).map((rule) => ({ ...rule, amountMaxMinor }));
+}
+
+/**
+ * Catalog approval defaults (§5.1). A role in a command's `allowedRoles` with
+ * no matching rule is answered APPROVAL_REQUIRED, so every allowed role has a
+ * row here and no other role does (`role-matrix.test.ts`).
+ *
+ * These are the pre-ADR-0009 defaults put through the role map (migration
+ * 0036 does the same to existing workspaces), plus: DIRECTOR on every rule
+ * shape, since Direction may approve anything; CASHIER on the money it records,
+ * inside the same band as a driver; FINANCE on documents. Moving the default
+ * approval chain to the one ADR-0009 describes is a later change.
+ */
+function defaultApprovalRules(): ApprovalRuleDefault[] {
+  const DIRECTOR_ADMIN = ["DIRECTOR", "ADMIN"] as const;
+  return [
+    ...wildcard(
+      [
+        "register-asset",
+        "commission-asset",
+        "update-asset-details",
+        "release-asset-to-service",
+        "register-person",
+        "reopen-activity",
+        "assign-asset",
+      ],
+      DIRECTOR_ADMIN,
+    ),
+    // A transfer between branches is the decision of finance or Direction:
+    // the more specific rule outranks the wildcard ones above.
     {
-      commandType: "register-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "commission-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "commission-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "assign-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "assign-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "assign-asset",
+      ...wildcard(["assign-asset"], ["FINANCE"])[0]!,
       categoryCode: "CROSS_BRANCH",
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "FINANCE_APPROVER",
-      createdByCommandId: null,
     },
     {
-      commandType: "enable-module",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
+      ...wildcard(["assign-asset"], ["DIRECTOR"])[0]!,
+      categoryCode: "CROSS_BRANCH",
     },
-    {
-      commandType: "disable-module",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "update-approval-threshold",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "add-or-renew-document",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "add-or-renew-document",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "add-or-renew-document",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "FIELD_SUBMITTER",
-      createdByCommandId: null,
-    },
+
+    // Settings belong to Direction (ADR-0009). Modules are vendor-only
+    // (ADR-0005); DIRECTOR holds the toggles until they move to platform scope.
+    ...wildcard(
+      [
+        "enable-module",
+        "disable-module",
+        "update-approval-threshold",
+        "set-template-preset",
+        "create-category",
+        "relabel-category",
+        "deactivate-category",
+        "reactivate-category",
+        "create-branch",
+        "rename-branch",
+        "set-branch-status",
+      ],
+      ["DIRECTOR"],
+    ),
+
+    ...wildcard(["add-or-renew-document"], ["DIRECTOR", "ADMIN", "FINANCE"]),
+
+    // App access. The handlers narrow ADMIN to the field roles in its branches.
+    ...wildcard(
+      ["add-member", "update-member-role", "deactivate-member", "reactivate-member", "reset-member-pin"],
+      DIRECTOR_ADMIN,
+    ),
+
+    // Money in: the field and counter roles record inside the band, the roles
+    // that keep the books at any amount.
+    ...banded(["record-expense"], ["DRIVER", "ADMIN", "FINANCE", "DIRECTOR", "TECHNICIAN", "CASHIER"], 100_000n),
+    ...banded(["record-revenue"], ["ADMIN", "FINANCE", "DIRECTOR", "CASHIER"], 100_000n),
+    ...wildcard(["record-expense", "record-revenue"], ["FINANCE", "ADMIN", "DIRECTOR"]),
+
+    ...wildcard(["approve-entry", "reject-entry", "reverse-entry", "lock-period"], ["FINANCE", "DIRECTOR"]),
+    ...wildcard(["reopen-period"], ["DIRECTOR"]),
+
+    ...wildcard(
+      [
+        "create-activity",
+        "record-movement-leg",
+        "record-meter-reading",
+        "substitute-asset",
+        "close-activity",
+        "record-journey-sheet",
+        "record-haulage-job-sheet",
+      ],
+      ["DIRECTOR", "ADMIN", "DRIVER"],
+    ),
+    // The workshop reads the odometer when a truck comes in.
+    ...wildcard(["record-meter-reading"], ["TECHNICIAN"]),
+
+    ...wildcard(["report-issue"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
+    ...wildcard(
+      ["resolve-issue", "dismiss-issue", "create-work-order", "complete-work-order", "cancel-work-order"],
+      ["DIRECTOR", "ADMIN", "TECHNICIAN"],
+    ),
+    // Work orders are approved by the branch's Administrateur (ADR-0009). No
+    // amount bounds, so a workspace that never sets a threshold never meets a
+    // pending work order.
+    ...wildcard(
+      ["approve-work-order", "reject-work-order", "approve-work-order-closure", "reject-work-order-completion"],
+      DIRECTOR_ADMIN,
+    ),
+
+    // A receipt, the author's edit of a pending entry, and a note change no
+    // posted amount, so there is no band: whoever could record may do them.
+    ...wildcard(
+      ["attach-evidence", "update-pending-entry", "add-note"],
+      ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
+    ),
   ];
-
-  // Workspace configuration, ADMIN only — matching each command's allowedRoles
-  // and the enable-module/disable-module rows above. An OPS_MANAGER default
-  // would be the surprising choice: these edit the vocabulary and the preset set
-  // every other role then records against.
-  for (const commandType of [
-    "create-category",
-    "relabel-category",
-    "deactivate-category",
-    "reactivate-category",
-    "set-template-preset",
-    "create-branch",
-    "rename-branch",
-    "set-branch-status",
-  ]) {
-    rules.push({
-      commandType,
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    });
-  }
-
-  // Member administration, ADMIN only — same reasoning one step further: these
-  // decide who holds a role at all, so anyone who could grant themselves one
-  // could grant themselves every rule above.
-  for (const commandType of [
-    "add-member",
-    "update-member-role",
-    "deactivate-member",
-    "reactivate-member",
-    "reset-member-pin",
-  ]) {
-    rules.push({
-      commandType,
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    });
-  }
-
-  for (const commandType of ["record-expense", "record-revenue"]) {
-    // MAINTENANCE records expenses only, and only against a work order (the
-    // handler enforces that), inside the same band as the field submitter.
-    const bandedRoles =
-      commandType === "record-expense"
-        ? (["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const)
-        : (["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const);
-    rules.push(
-      ...bandedRoles.map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: 100_000n,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-    rules.push(
-      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  for (const commandType of [
-    "approve-entry",
-    "reject-entry",
-    "reverse-entry",
-    "lock-period",
-    "reopen-period",
-  ]) {
-    rules.push(
-      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  for (const commandType of ["register-person", "reopen-activity"]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  for (const commandType of [
-    "create-activity",
-    "record-movement-leg",
-    "record-meter-reading",
-    "substitute-asset",
-    "close-activity",
-    "record-journey-sheet",
-    "record-haulage-job-sheet",
-  ]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  // The workshop reads the odometer when a truck comes in; the handler has
-  // always accepted the role, and without this rule every such reading 403'd.
-  rules.push({
-    commandType: "record-meter-reading",
-    categoryCode: null,
-    branchId: null,
-    amountMinMinor: null,
-    amountMaxMinor: null,
-    requiredRole: "MAINTENANCE",
-    createdByCommandId: null,
-  });
-
-  // Maintenance commands: issue reporting, work order management, and asset release.
-  // resolve-issue matches report-issue: whoever could report the fault can say
-  // it was fixed on the spot.
-  for (const commandType of ["report-issue", "resolve-issue"]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"] as const).map(
-        (requiredRole) => ({
-          commandType,
-          categoryCode: null,
-          branchId: null,
-          amountMinMinor: null,
-          amountMaxMinor: null,
-          requiredRole,
-          createdByCommandId: null,
-        }),
-      ),
-    );
-  }
-
-  for (const commandType of [
-    "create-work-order",
-    "complete-work-order",
-    "cancel-work-order",
-    "dismiss-issue",
-  ]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER", "MAINTENANCE"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  // Editing what a vehicle is (update-asset-details) follows register-asset:
-  // the fleet managers.
-  for (const commandType of ["release-asset-to-service", "update-asset-details"]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  // Attaching a receipt to an existing entry is open to whoever could have
-  // attached it at capture — record-expense's roles, without its amount band:
-  // a file changes no amount, so there is nothing for a threshold to weigh.
-  rules.push(
-    ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const).map(
-      (requiredRole) => ({
-        commandType: "attach-evidence",
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      }),
-    ),
-  );
-
-  // The author's edit of their own pending entry (#85): record-expense's roles,
-  // with no band of its own. The band that decides the edited entry is
-  // record-expense's or record-revenue's, which the handler re-reads for the
-  // new amount, so a tenant's threshold is set in one place.
-  rules.push(
-    ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"] as const).map(
-      (requiredRole) => ({
-        commandType: "update-pending-entry",
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      }),
-    ),
-  );
-
-  // A note is a remark, not a decision: every role that records anything may
-  // write one. EXECUTIVE_VIEWER records nothing, notes included.
-  rules.push(
-    ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE", "FINANCE_APPROVER"] as const).map(
-      (requiredRole) => ({
-        commandType: "add-note",
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      }),
-    ),
-  );
-
-  // The two work-order decisions, on the same footing as approve-entry: what
-  // they resolve is money — the expected spend on creation, the declared actual
-  // cost on closure — so the finance approver is the role that holds them.
-  // No amount bounds, so a workspace that never configures a threshold never
-  // meets a pending work order in the first place.
-  for (const commandType of [
-    "approve-work-order",
-    "reject-work-order",
-    "approve-work-order-closure",
-    "reject-work-order-completion",
-  ]) {
-    rules.push(
-      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-  return rules;
 }
 
 export const corePack: {

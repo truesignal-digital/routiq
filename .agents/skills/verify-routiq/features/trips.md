@@ -20,9 +20,9 @@ Trips (activities) record a truck's journeys: start, legs, meter readings, costs
 
 Preconditions:
 
-- Fresh seed: Douala → Garoua (VH003 + TR001, closed), Douala → Bafoussam (VH001, closed with exceptions), Douala → Yaoundé (VH003, open). Recording and closing: ADMIN, OPS_MANAGER, FIELD_SUBMITTER.
+- Fresh seed: Douala → Garoua (VH003 + TR001, closed), Douala → Bafoussam (VH001, closed with exceptions), Douala → Yaoundé (VH003, open). Recording and closing: DIRECTOR, ADMIN, DRIVER.
 
-- **List and detail.** Run `pnpm verify drive flow:trips --role manager --lang en`. It reads `GET /v1/activities`, picks a CLOSED trip, clicks "Trips", waits for the "Trips" heading, clicks the button named with the trip number, and waits for `/activities/<id>` with that number as the heading. The cross-check reads `GET /v1/activities/<id>` (for example `CLOSED COMPLETE_WITH_EXCEPTIONS`).
+- **List and detail.** Run `pnpm verify drive flow:trips --role admin --lang en`. It reads `GET /v1/activities`, picks a CLOSED trip, clicks "Trips", waits for the "Trips" heading, clicks the button named with the trip number, and waits for `/activities/<id>` with that number as the heading. The cross-check reads `GET /v1/activities/<id>` (for example `CLOSED COMPLETE_WITH_EXCEPTIONS`).
 - **Close the open trip.** In a DriveScript, open the Yaoundé trip (status `OPEN` in `GET /v1/activities`), click "Clôturer" / "Close", then "Confirmer la clôture" in the dialog "Clôturer l'activité". Read the trip back as `CLOSED`. Mutates; reseed after. Not yet a committed flow; labels come from `apps/web/src/activities/ActivityActions.tsx`.
 - **Proof.** `01-trips-list.png`, `02-trip-detail.png`.
 

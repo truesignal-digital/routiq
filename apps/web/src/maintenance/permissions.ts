@@ -13,37 +13,23 @@ export function canViewMaintenance(
  * way; hiding a control a member cannot use keeps the sheet from offering
  * decisions that can only come back 403.
  */
-const ISSUE_REPORTERS: readonly Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "FIELD_SUBMITTER",
-  "MAINTENANCE",
-];
+const ISSUE_REPORTERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"];
 
-/**
- * Closing a signalement as dealt with is a field fact — the fault fixed on the
- * spot — so the reporter who fixed it may record it.
- */
-const ISSUE_RESOLVERS: readonly Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "MAINTENANCE",
-  "FIELD_SUBMITTER",
-];
+/** Closing a signalement as dealt with, or overruling it, is the workshop's and the managers' call. */
+const ISSUE_RESOLVERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"];
 
-/** Overruling someone's report is a judgement, kept off the field role. */
-const ISSUE_DISMISSERS: readonly Role[] = ["ADMIN", "OPS_MANAGER", "MAINTENANCE"];
+const ISSUE_DISMISSERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"];
 
-const WORK_ORDER_WRITERS: readonly Role[] = ["ADMIN", "OPS_MANAGER", "MAINTENANCE"];
+const WORK_ORDER_WRITERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"];
 
 /**
  * The work-order decisions — both approvals and both refusals — sit with the
- * finance approver, as approve-entry does.
+ * Administrateur (ADR-0009: work orders → Administrateur, money → Finance).
  */
-const WORK_ORDER_APPROVERS: readonly Role[] = ["FINANCE_APPROVER", "ADMIN"];
+const WORK_ORDER_APPROVERS: readonly Role[] = ["DIRECTOR", "ADMIN"];
 
 /** Putting a truck back on the road is a manager's call, never the workshop's. */
-const ASSET_RELEASERS: readonly Role[] = ["ADMIN", "OPS_MANAGER"];
+const ASSET_RELEASERS: readonly Role[] = ["DIRECTOR", "ADMIN"];
 
 function allowed(
   roles: readonly Role[],

@@ -16,6 +16,7 @@ describe("update-asset-details.v1", () => {
   let driver: Actor;
   let approver: Actor;
   let director: Actor;
+  let cashier: Actor;
   let ydeOnly: Actor;
 
   beforeAll(async () => {
@@ -30,12 +31,13 @@ describe("update-asset-details.v1", () => {
     if (!yaounde) throw new Error("branch insert returned no row");
 
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    boris = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", displayName: "Boris" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER" });
-    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE_APPROVER" });
-    director = await seedActor(ctx.db, { workspaceId, role: "EXECUTIVE_VIEWER", displayName: "Amadou" });
-    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde.id] });
+    boris = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Boris" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN", displayName: "Hervé" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
+    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
+    director = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR", displayName: "Amadou" });
+    cashier = await seedActor(ctx.db, { workspaceId, role: "CASHIER" });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde.id] });
   });
 
   afterAll(async () => {
@@ -126,10 +128,11 @@ describe("update-asset-details.v1", () => {
     ]);
   });
 
-  it("is ADMIN's and OPS_MANAGER's only", async () => {
+  it("is DIRECTOR's and ADMIN's only", async () => {
     const id = await truck();
+    expect((await edit(director, id, { manufacturer: "MAN" })).status).toBe(200);
     expect((await edit(admin, id, { manufacturer: "DAF" })).status).toBe(200);
-    for (const actor of [mechanic, driver, approver, director]) {
+    for (const actor of [mechanic, driver, approver, cashier]) {
       const reply = await edit(actor, id, { manufacturer: "Renault" });
       expect(reply.status).toBe(403);
       expect(reply.body.error?.code).toBe("ROLE_FORBIDDEN");
@@ -241,7 +244,7 @@ describe("update-asset-details.v1", () => {
 
   it("takes the acquisition amount only where the books are kept", async () => {
     const other = await seedWorkspace(ctx.db);
-    const otherAdmin = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
+    const otherAdmin = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "DIRECTOR" });
     const id = await seedAsset(ctx.app, otherAdmin.token);
     await ctx.db.update(assets).set({ acquisitionDate: "2024-03-01" }).where(eq(assets.id, id));
     expect(

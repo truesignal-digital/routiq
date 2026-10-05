@@ -47,7 +47,7 @@ describe("work-order commands", () => {
 
     const manager = await seedMember(db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "TECHNICIAN",
       allBranches: true,
     });
     managerToken = (

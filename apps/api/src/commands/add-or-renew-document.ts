@@ -16,7 +16,7 @@ const addOrRenewDocument: CommandDefinition<AddOrRenewDocumentPayload> = {
   name: "add-or-renew-document",
   version: 1,
   module: "DOCUMENTS",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE"],
   payloadSchema: addOrRenewDocumentPayload,
   operationalAssetId: (payload) => payload.assetId,
   branchAuthorization: {

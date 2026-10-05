@@ -14,7 +14,7 @@ describe("add-note.v1", () => {
   let driver: Actor;
   let mechanic: Actor;
   let approver: Actor;
-  let viewer: Actor;
+  let cashier: Actor;
   let ydeOnly: Actor;
   let assetId: string;
   let otherWorkspaceAssetId: string;
@@ -31,13 +31,13 @@ describe("add-note.v1", () => {
     if (!yaounde) throw new Error("branch insert returned no row");
 
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
-    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE_APPROVER" });
-    viewer = await seedActor(ctx.db, { workspaceId, role: "EXECUTIVE_VIEWER" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
+    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
+    cashier = await seedActor(ctx.db, { workspaceId, role: "CASHIER" });
     ydeOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [yaounde.id],
     });
     assetId = await seedAsset(ctx.app, admin.token, { assetCode: "NOTE-01" });
@@ -106,10 +106,9 @@ describe("add-note.v1", () => {
     expect(await ctx.db.select().from(notes).where(eq(notes.id, payload.noteId))).toHaveLength(1);
   });
 
-  it("refuses the executive viewer, who records nothing", async () => {
-    const reply = await api.send(viewer.token, "add-note", note("Lecture seule"));
-    expect(reply.status).toBe(403);
-    expect(reply.body.error?.code).toBe("ROLE_FORBIDDEN");
+  it("lets every role write a note, the cashier included", async () => {
+    const reply = await api.send(cashier.token, "add-note", note("Vu au guichet"));
+    expect(reply.status).toBe(200);
   });
 
   it("refuses a vehicle outside the author's branches", async () => {

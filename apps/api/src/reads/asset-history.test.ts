@@ -36,16 +36,16 @@ describe("GET /v1/assets/:assetId/history", () => {
       .insert(branches)
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
       .returning();
-    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
-    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", displayName: "Boris" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
+    admin = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR", displayName: "Émilienne" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Boris" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN", displayName: "Hervé" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
     dlaOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
     const other = await seedWorkspace(ctx.db);
     outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
   });
@@ -220,7 +220,7 @@ describe("GET /v1/assets/:assetId/history", () => {
       uploadedByPrincipalId: admin.principalId,
     });
     await api.ok(
-      driver.token,
+      admin.token,
       "attach-evidence",
       { entryId, artifactIds: [file] },
       { sourceArtifactIds: [file] },
@@ -543,7 +543,7 @@ describe("GET /v1/assets/:assetId/history", () => {
 
   it("drops the sources of disabled modules", async () => {
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const truck = await seedAsset(ctx.app, gatedAdmin.token);
     await api.ok(gatedAdmin.token, "report-issue", {
       issueId: randomUUID(),

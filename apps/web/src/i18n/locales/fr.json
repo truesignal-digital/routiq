@@ -147,8 +147,12 @@
     "PRESET_ALREADY_SET": "Ce type d'activité est déjà dans cet état. Actualisez la page.",
     "LAST_PRESET": "Au moins un type d'activité doit rester activé.",
     "USERNAME_TAKEN": "Ce nom d'utilisateur est déjà pris dans votre espace.",
-    "LAST_ADMIN": "Votre espace doit garder au moins un administrateur actif.",
+    "LAST_DIRECTOR": "Votre espace doit garder au moins un membre actif de la Direction.",
     "SELF_DEACTIVATION": "Vous ne pouvez pas désactiver votre propre compte. Demandez à un autre administrateur.",
+    "SELF_ROLE_CHANGE": "Vous ne pouvez pas changer votre propre rôle ni vos agences. Demandez à la Direction.",
+    "MEMBER_ROLE_NOT_GRANTABLE": "Vous ne pouvez pas donner ni retirer ce rôle. Demandez à la Direction.",
+    "MEMBER_BRANCH_OUT_OF_SCOPE": "Ce membre ou ces agences sont hors de vos agences. Demandez à la Direction.",
+    "DIRECTOR_REQUIRES_ALL_BRANCHES": "La Direction couvre toujours toutes les agences.",
     "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
     "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
     "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
@@ -165,7 +169,8 @@
     "SAFETY_ISSUE_OPEN": "Un autre problème critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
-    "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter."
+    "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
+    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
   },
   "assets": {
     "notify": {
@@ -1135,7 +1140,7 @@
         "workOrderApproved": "Ordre de travail approuvé",
         "workOrderRejected": "Ordre de travail rejeté",
         "workOrderClosed": "Travaux terminés",
-        "workOrderClosedSentOn": "Travaux terminés. Envoyé à la finance.",
+        "workOrderClosedSentOn": "Travaux terminés. Envoyé pour validation.",
         "completionApproved": "Fin des travaux validée",
         "completionRejected": "Fin des travaux refusée",
         "workOrderCancelled": "Ordre de travail annulé",
@@ -1190,12 +1195,12 @@
       "DEACTIVATED": "Désactivé"
     },
     "roles": {
+      "DIRECTOR": "Direction",
       "ADMIN": "Administrateur",
-      "OPS_MANAGER": "Responsable d'exploitation",
-      "FIELD_SUBMITTER": "Agent de terrain",
-      "MAINTENANCE": "Maintenance",
-      "FINANCE_APPROVER": "Validateur financier",
-      "EXECUTIVE_VIEWER": "Direction (lecture seule)"
+      "FINANCE": "Finance",
+      "CASHIER": "Caissier / Caissière",
+      "TECHNICIAN": "Technicien",
+      "DRIVER": "Chauffeur"
     },
     "filters": {
       "status": "Statut",
@@ -1924,7 +1929,6 @@
     "header": {
       "home": "Agence : {branch}",
       "noPlate": "Sans immatriculation",
-      "viewOnly": "Consultation seule",
       "moreActions": "Plus d'actions"
     },
     "facts": {
@@ -1994,10 +1998,10 @@
         "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — problème signalé : « {report} ».",
         "noWorkOrder": "Personne n'a encore planifié la réparation : le problème {issue} n'a pas d'ordre de travail.",
         "repairRefused": "La réparation a été refusée ({workOrder}) ; aucune autre n'est encore planifiée.",
-        "awaitingAuthorization": "La réparation ({workOrder}) attend l'autorisation de la finance.",
+        "awaitingAuthorization": "La réparation ({workOrder}) attend l'autorisation d'un responsable.",
         "inProgress": "En attente de l'atelier pour terminer la réparation ({workOrder}).",
         "completionSentBack": "La fin des travaux de {workOrder} a été renvoyée ; en attente de l'atelier.",
-        "awaitingSignOff": "La réparation est terminée ; en attente de la validation de {workOrder} par la finance.",
+        "awaitingSignOff": "La réparation est terminée ; en attente de la validation de {workOrder} par un responsable.",
         "awaitingRelease": "La réparation ({workOrder}) est terminée ; en attente d'un responsable pour la remise en service.",
         "awaitingReleaseSignedOff": "La réparation ({workOrder}) est validée ; en attente d'un responsable pour la remise en service.",
         "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
@@ -2030,7 +2034,7 @@
       "review-entry": "Examiner"
     },
     "locked": {
-      "needsAuthorization": "Il faut d'abord que la finance autorise {ref}.",
+      "needsAuthorization": "Il faut d'abord qu'un responsable autorise {ref}.",
       "needsCompletion": "Il faut d'abord que {ref} soit terminé.",
       "needsSignOff": "Il faut que {ref} soit validé.",
       "needsAll": "Il faut que {ref} soit autorisé et terminé.",
@@ -2069,11 +2073,6 @@
         "emptyTitle": "Rien ne vous attend pour l'instant.",
         "emptyTitleBesides": "Rien d'autre ne vous attend sur ce véhicule.",
         "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter."
-      },
-      "attention": {
-        "title": "À surveiller",
-        "description": "Les points ouverts sur ce véhicule et qui s'en occupe.",
-        "empty": "Rien à signaler sur ce véhicule."
       },
       "month": {
         "description": "Part de ce véhicule",
@@ -2422,9 +2421,9 @@
       "openFile": "Ouvrir le fichier",
       "openFullEntry": "Ouvrir l'écriture complète",
       "waitingOn": {
-        "authorization": "En attente de l'autorisation de la dépense par la finance.",
+        "authorization": "En attente de l'autorisation de la dépense par un responsable.",
         "completion": "En attente de la fin des travaux par l'atelier.",
-        "signOff": "En attente de la validation des travaux et de leur coût par la finance.",
+        "signOff": "En attente de la validation des travaux et de leur coût par un responsable.",
         "release": "En attente de la remise en service par un responsable.",
         "planning": "En attente d'un ordre de travail de l'atelier.",
         "entryReview": "En attente d'examen par la finance. D'ici là, elle n'est pas comptée dans le comptabilisé.",

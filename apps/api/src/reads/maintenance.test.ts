@@ -59,7 +59,7 @@ describe("work order and signalement reads", () => {
 
     const admin = await seedMember(db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminPrincipalId = admin.principal.id;
@@ -69,7 +69,7 @@ describe("work order and signalement reads", () => {
 
     const manager = await seedMember(db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "TECHNICIAN",
       allBranches: true,
     });
     managerPrincipalId = manager.principal.id;
@@ -80,7 +80,7 @@ describe("work order and signalement reads", () => {
     // Branch-scoped reader: the lens, not a filter — she must never see YDE.
     const doualaMember = await seedMember(db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [doualaBranchId],
     });
     doualaToken = (
@@ -336,7 +336,7 @@ describe("work order and signalement reads", () => {
           branchId: null,
           amountMinMinor: 100_000n,
           amountMaxMinor: null,
-          requiredRole: "ADMIN" as const,
+          requiredRole: "DIRECTOR" as const,
           createdByCommandId: null,
         })),
       )
@@ -784,7 +784,7 @@ describe("work order and signalement reads", () => {
       const seeded = await seedWorkspace(db);
       const admin = await seedMember(db, {
         workspaceId: seeded.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const gatedToken = (
@@ -845,9 +845,9 @@ describe("work order makers and the issue detail read", () => {
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
       .returning();
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
-    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN", displayName: "Hervé" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
     const other = await seedWorkspace(ctx.db);
     outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
     truck = await seedAsset(ctx.app, admin.token);
@@ -982,7 +982,7 @@ describe("work order makers and the issue detail read", () => {
     expect((await api.get(admin.token, "/v1/issues/not-a-uuid")).status).toBe(400);
 
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
     const refused = await api.get(gatedAdmin.token, `/v1/issues/${randomUUID()}`);
     expect(refused.status).toBe(403);

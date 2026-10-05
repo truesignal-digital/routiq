@@ -91,7 +91,7 @@ describe("GET /v1/dashboard", () => {
 
       const admin = await seedMember(db, {
         workspaceId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       adminToken = (
@@ -100,7 +100,7 @@ describe("GET /v1/dashboard", () => {
 
       const scoped = await seedMember(db, {
         workspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: false,
         branchIds: [dlaBranchId],
       });
@@ -110,7 +110,7 @@ describe("GET /v1/dashboard", () => {
 
       const submitter = await seedMember(db, {
         workspaceId,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       submitterToken = (
@@ -156,7 +156,7 @@ describe("GET /v1/dashboard", () => {
         expectStatus: "POSTED",
       });
 
-      // Above the 100_000 threshold a FIELD_SUBMITTER cannot auto-post: these
+      // Above the 100_000 threshold a DRIVER cannot auto-post: these
       // stay SUBMITTED, so they feed pendingApprovals and never the totals.
       await recordEntry(submitterToken, "record-expense", {
         amountMinor: 150_000,
@@ -393,7 +393,7 @@ describe("GET /v1/dashboard", () => {
 
       const admin = await seedMember(db, {
         workspaceId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       adminToken = (
@@ -402,7 +402,7 @@ describe("GET /v1/dashboard", () => {
 
       const scoped = await seedMember(db, {
         workspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: false,
         branchIds: [dlaBranchId],
       });

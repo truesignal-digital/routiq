@@ -94,6 +94,8 @@ const openActivity: ActivityDetail = {
   closedAt: null,
   createdAt: "2026-07-20T05:45:00.000Z",
   createdByCommandId: "00000000-0000-4000-8000-0000000000d1",
+  // The signed-in member of `meWith`, so a DRIVER may close it.
+  recordedByPrincipalId: "00000000-0000-4000-8000-0000000000f2",
   rowVersion: 7,
   segments: [
     {
@@ -313,26 +315,42 @@ describe("offset stamping", () => {
 });
 
 describe("role and status gating", () => {
-  it("FIELD_SUBMITTER may close and substitute an open job but never reopen a closed one", () => {
-    renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+  it("DRIVER may close and substitute an open job but never reopen a closed one", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.getByRole("button", { name: "Close the activity" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Substitute asset" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Reopen the activity" })).toBeNull();
 
     cleanup();
-    renderActions(closedActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    renderActions(closedActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("OPS_MANAGER gets reopen on a closed job, and nothing else", () => {
-    renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
+  it("DRIVER may not close or substitute a trip someone else recorded, but still captures on it", () => {
+    const othersTrip = {
+      ...openActivity,
+      recordedByPrincipalId: "00000000-0000-4000-8000-0000000000e9",
+    };
+    renderActions(othersTrip, recordingClient(committed()), meWith("DRIVER"));
+    expect(screen.queryByRole("button", { name: "Close the activity" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add a leg" })).toBeTruthy();
+
+    cleanup();
+    renderActions(othersTrip, recordingClient(committed()), meWith("ADMIN"));
+    expect(screen.getByRole("button", { name: "Close the activity" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Substitute asset" })).toBeTruthy();
+  });
+
+  it("ADMIN gets reopen on a closed job, and nothing else", () => {
+    renderActions(closedActivity, recordingClient(committed()), meWith("ADMIN"));
     expect(screen.getByRole("button", { name: "Reopen the activity" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close the activity" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
   });
 
-  it("EXECUTIVE_VIEWER sees no write affordance at all", () => {
-    renderActions(openActivity, recordingClient(committed()), meWith("EXECUTIVE_VIEWER"));
+  it("CASHIER sees no write affordance at all", () => {
+    renderActions(openActivity, recordingClient(committed()), meWith("CASHIER"));
     expect(screen.queryByRole("button")).toBeNull();
   });
 
@@ -371,9 +389,9 @@ describe("trip header on a phone (#395)", () => {
   }
 
   it.each([
-    ["an open trip, OPS_MANAGER", openActivity, "OPS_MANAGER"],
-    ["an open trip, FIELD_SUBMITTER", openActivity, "FIELD_SUBMITTER"],
-    ["a closed trip, OPS_MANAGER", closedActivity, "OPS_MANAGER"],
+    ["an open trip, ADMIN", openActivity, "ADMIN"],
+    ["an open trip, DRIVER", openActivity, "DRIVER"],
+    ["a closed trip, ADMIN", closedActivity, "ADMIN"],
   ] as const)("stacks under the trip number and wraps every action for %s", (_, activity, role) => {
     render(
       <QueryClientProvider client={new QueryClient()}>
@@ -512,7 +530,7 @@ describe("reopen", () => {
   it("refuses to submit without a reason and sends the activity's rowVersion once given one", async () => {
     const user = userEvent.setup();
     const client = recordingClient(committed());
-    renderActions(closedActivity, client, meWith("OPS_MANAGER"));
+    renderActions(closedActivity, client, meWith("ADMIN"));
 
     await user.click(screen.getByRole("button", { name: "Reopen the activity" }));
     const submit = screen.getByRole("button", { name: "Reopen the activity" });
@@ -669,13 +687,13 @@ describe("mid-trip capture", () => {
   };
 
   it("offers the three capture actions only while the job is open and writable", () => {
-    renderActions(openActivity, recordingClient(committed()), meWith("FIELD_SUBMITTER"));
+    renderActions(openActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.getByRole("button", { name: "Add a leg" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Record odometer" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Record expense" })).toBeTruthy();
 
     cleanup();
-    renderActions(closedActivity, recordingClient(committed()), meWith("OPS_MANAGER"));
+    renderActions(closedActivity, recordingClient(committed()), meWith("ADMIN"));
     expect(screen.queryByRole("button", { name: "Add a leg" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record odometer" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record expense" })).toBeNull();

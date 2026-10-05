@@ -41,7 +41,7 @@ import {
   mergeImplicitCurrentPeriod,
   validateReopenReason,
 } from "@/finance/model.js";
-import { canManagePeriods } from "@/finance/permissions.js";
+import { canManagePeriods, canReopenPeriod } from "@/finance/permissions.js";
 import {
   lockPeriodPayload,
   reopenPeriodPayload,
@@ -64,6 +64,7 @@ export function FinancePeriodsScreen() {
   const session = useActiveSession();
   const me = useMeContext();
   const canManage = canManagePeriods(me?.role, me?.enabledModules);
+  const canReopen = canReopenPeriod(me?.role, me?.enabledModules);
 
   const periodsQuery = usePeriods();
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
@@ -120,9 +121,10 @@ export function FinancePeriodsScreen() {
   );
 
   const rowActions = (period: PeriodRead) => {
-    // role-config: locking and reopening are the period manager's calls; a role
-    // without them sees a read-only ledger.
+    // role-config: locking is the period manager's call, reopening the
+    // Director's alone; a role without them sees a read-only ledger.
     if (!canManage) return [];
+    if (period.status !== "OPEN" && !canReopen) return [];
 
     return period.status === "OPEN"
       ? [

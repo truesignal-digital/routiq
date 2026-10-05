@@ -1,6 +1,5 @@
 import type { ModuleCode, PrincipalType, Role } from "@routiq/contracts";
 import type { MeContext } from "../auth/me.js";
-import { isReadOnlyRole } from "../auth/me.js";
 
 /** The records the panel can show, each addressed by `kind:id` in the URL. */
 export const PANEL_RECORD_KINDS = [
@@ -129,7 +128,6 @@ export interface Viewer {
   principalId: string;
   principalType: PrincipalType;
   enabledModules: readonly ModuleCode[];
-  readOnly: boolean;
 }
 
 export function viewerOf(me: MeContext): Viewer {
@@ -138,7 +136,6 @@ export function viewerOf(me: MeContext): Viewer {
     principalId: me.principalId,
     principalType: me.principalType,
     enabledModules: me.enabledModules,
-    readOnly: isReadOnlyRole(me.role),
   };
 }
 

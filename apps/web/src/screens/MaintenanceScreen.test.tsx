@@ -220,22 +220,22 @@ const issue: IssueListItem = {
   rowVersion: 2,
 };
 
-const opsManager: MeContext = {
+const admin: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "OPS_MANAGER",
+  role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS", "MAINTENANCE"],
   enabledPresets: ["TRUCKING"],
 };
 
 function as(role: MeContext["role"]): MeContext {
-  return { ...opsManager, role };
+  return { ...admin, role };
 }
 
-let me: MeContext = opsManager;
+let me: MeContext = admin;
 
 function renderScreen(): void {
   const queryClient = new QueryClient({
@@ -270,7 +270,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   issuedQueries.length = 0;
   issuedIssueQueries.length = 0;
-  me = opsManager;
+  me = admin;
   mocks.language = "en";
   workOrderRow = makeWorkOrder("APPROVED");
   detail = makeDetail(workOrderRow);
@@ -392,18 +392,32 @@ describe("MaintenanceScreen — state-driven actions", () => {
     }
   });
 
-  it("offers approve and reject on a submitted work order, only to an approver", async () => {
+  it.each(["DIRECTOR", "ADMIN"] as const)(
+    "offers approve and reject on a submitted work order to %s",
+    async (role) => {
+      const user = userEvent.setup();
+      workOrderRow = makeWorkOrder("SUBMITTED");
+      detail = makeDetail(workOrderRow);
+      me = as(role);
+      renderScreen();
+
+      const sheet = await openSheet(user);
+      expect(actionButton(sheet, "approve-work-order")).toBeTruthy();
+      expect(actionButton(sheet, "reject-work-order")).toBeTruthy();
+      expect(actionButton(sheet, "complete-work-order")).toBeNull();
+    },
+  );
+
+  it("offers Finance no work-order decision", async () => {
     const user = userEvent.setup();
     workOrderRow = makeWorkOrder("SUBMITTED");
     detail = makeDetail(workOrderRow);
-    me = as("FINANCE_APPROVER");
+    me = as("FINANCE");
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(actionButton(sheet, "approve-work-order")).toBeTruthy();
-    expect(actionButton(sheet, "reject-work-order")).toBeTruthy();
-    expect(actionButton(sheet, "complete-work-order")).toBeNull();
-    // Cancelling is the workshop's call, not the approver's.
+    expect(actionButton(sheet, "approve-work-order")).toBeNull();
+    expect(actionButton(sheet, "reject-work-order")).toBeNull();
     expect(actionButton(sheet, "cancel-work-order")).toBeNull();
   });
 
@@ -411,6 +425,7 @@ describe("MaintenanceScreen — state-driven actions", () => {
     const user = userEvent.setup();
     workOrderRow = makeWorkOrder("SUBMITTED");
     detail = makeDetail(workOrderRow);
+    me = as("TECHNICIAN");
     renderScreen();
 
     const sheet = await openSheet(user);
@@ -493,8 +508,8 @@ describe("MaintenanceScreen — state-driven actions", () => {
     ).toBeTruthy();
   });
 
-  it("shows an executive viewer no action anywhere, whatever the status", async () => {
-    me = as("EXECUTIVE_VIEWER");
+  it("shows the counter no action anywhere, whatever the status", async () => {
+    me = as("CASHIER");
     for (const status of [
       "SUBMITTED",
       "APPROVED",
@@ -666,7 +681,7 @@ describe("MaintenanceScreen — commands", () => {
     const user = userEvent.setup();
     workOrderRow = makeWorkOrder("SUBMITTED");
     detail = makeDetail(workOrderRow);
-    me = as("FINANCE_APPROVER");
+    me = as("ADMIN");
     renderScreen();
 
     const sheet = await openSheet(user);
@@ -696,7 +711,7 @@ describe("MaintenanceScreen — commands", () => {
     const user = userEvent.setup();
     workOrderRow = makeWorkOrder("COMPLETION_SUBMITTED");
     detail = makeDetail(workOrderRow);
-    me = as("FINANCE_APPROVER");
+    me = as("ADMIN");
     renderScreen();
 
     const sheet = await openSheet(user);
@@ -724,7 +739,7 @@ describe("MaintenanceScreen — commands", () => {
     const user = userEvent.setup();
     workOrderRow = makeWorkOrder("COMPLETION_SUBMITTED");
     detail = makeDetail(workOrderRow);
-    me = as("FINANCE_APPROVER");
+    me = as("ADMIN");
     renderScreen();
 
     const sheet = await openSheet(user);
@@ -1044,30 +1059,19 @@ describe("MaintenanceScreen — signalements tab", () => {
     expect(submittedEnvelope()["expectedVersion"]).toBe(2);
   });
 
-  it("lets a field submitter resolve a signalement but not dismiss it", async () => {
-    const user = userEvent.setup();
-    me = as("FIELD_SUBMITTER");
+  it("leaves a driver's report to the workshop: no resolve, dismiss or plan", async () => {
+    me = as("DRIVER");
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await userEvent.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await screen.findByText("Freins qui sifflent en descente");
-    await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
-
-    expect(
-      await screen.findByRole("menuitem", { name: "commands.resolve-issue.label" }),
-    ).toBeTruthy();
-    expect(
-      screen.queryByRole("menuitem", { name: "commands.dismiss-issue.label" }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole("menuitem", { name: "commands.create-work-order.label" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
   });
 });
 
 describe("MaintenanceScreen — module gate", () => {
   it("shows a denied surface when the module is off", async () => {
-    me = { ...opsManager, enabledModules: ["CORE", "ASSETS"] };
+    me = { ...admin, enabledModules: ["CORE", "ASSETS"] };
     renderScreen();
 
     expect(await screen.findByText("maintenance.title")).toBeTruthy();

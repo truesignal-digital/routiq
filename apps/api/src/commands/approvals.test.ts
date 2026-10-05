@@ -110,7 +110,7 @@ describe("approval evaluation", () => {
       workspaceId: seeded.workspace.id,
       commandType: "register-asset",
       categoryCode: "TRUCK",
-      requiredRole: "FINANCE_APPROVER",
+      requiredRole: "FINANCE",
     });
 
     const { response } = await registerAsset(seeded.token);

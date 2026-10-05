@@ -1,9 +1,10 @@
-import type {
-  AssetAttentionItem,
-  AssetDetail,
-  AttentionCode,
-  ModuleCode,
-  Role,
+import {
+  FINANCE_READER_ROLES,
+  type AssetAttentionItem,
+  type AssetDetail,
+  type AttentionCode,
+  type ModuleCode,
+  type Role,
 } from "@routiq/contracts";
 import {
   ArrowLeftRight,
@@ -72,24 +73,28 @@ export interface VehicleActionDef {
   open: ActionOpen;
 }
 
-const FINANCE_WRITERS = ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "FINANCE_APPROVER"] as const;
-const WORKSHOP = ["ADMIN", "OPS_MANAGER", "MAINTENANCE"] as const;
-const WORK_ORDER_DECIDERS = ["ADMIN", "FINANCE_APPROVER"] as const;
-const MANAGERS = ["ADMIN", "OPS_MANAGER"] as const;
-const FIELD = ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const;
+const EXPENSE_WRITERS = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "DRIVER"] as const;
+const REVENUE_WRITERS = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER"] as const;
+const WORKSHOP = ["DIRECTOR", "ADMIN", "TECHNICIAN"] as const;
+const WORK_ORDER_DECIDERS = ["DIRECTOR", "ADMIN"] as const;
+const ENTRY_DECIDERS = ["DIRECTOR", "FINANCE"] as const;
+const MANAGERS = ["DIRECTOR", "ADMIN"] as const;
+const TRIP_RUNNERS = ["DIRECTOR", "ADMIN", "DRIVER"] as const;
+const DOCUMENT_KEEPERS = ["DIRECTOR", "ADMIN", "FINANCE"] as const;
+const FIELD_REPORTERS = ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"] as const;
 
 export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
-  { key: "log-fuel", group: "capture", icon: Fuel, module: "FINANCE", roles: FINANCE_WRITERS, open: "form" },
-  { key: "record-expense", group: "capture", icon: Receipt, module: "FINANCE", roles: FINANCE_WRITERS, open: "form" },
-  // The workshop may attach too, but only reaches entries through its work
-  // orders' cost lines; on the vehicle it reads no entries to attach to.
-  { key: "attach-evidence", group: "capture", icon: Paperclip, module: "FINANCE", roles: FINANCE_WRITERS, open: "record-form" },
+  { key: "log-fuel", group: "capture", icon: Fuel, module: "FINANCE", roles: EXPENSE_WRITERS, open: "form" },
+  { key: "record-expense", group: "capture", icon: Receipt, module: "FINANCE", roles: EXPENSE_WRITERS, open: "form" },
+  // Every role may attach, but on the vehicle only the ledger readers see
+  // entries to attach to; the workshop reaches its own through work orders.
+  { key: "attach-evidence", group: "capture", icon: Paperclip, module: "FINANCE", roles: FINANCE_READER_ROLES, open: "record-form" },
   {
     key: "record-reading",
     group: "capture",
     icon: Gauge,
     module: "ACTIVITIES",
-    roles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"],
+    roles: FIELD_REPORTERS,
     open: "form",
   },
   {
@@ -97,7 +102,7 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
     group: "capture",
     icon: StickyNote,
     module: "CORE",
-    roles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE", "FINANCE_APPROVER"],
+    roles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     open: "form",
   },
   {
@@ -105,7 +110,7 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
     group: "maintenance",
     icon: TriangleAlert,
     module: "MAINTENANCE",
-    roles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"],
+    roles: FIELD_REPORTERS,
     open: "form",
   },
   { key: "create-work-order", group: "maintenance", icon: ClipboardPlus, module: "MAINTENANCE", roles: WORKSHOP, open: "form" },
@@ -114,21 +119,21 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
   { key: "approve-completion", group: "maintenance", icon: ClipboardCheck, module: "MAINTENANCE", roles: WORK_ORDER_DECIDERS, open: "record-form" },
   { key: "cancel-work-order", group: "maintenance", icon: Ban, module: "MAINTENANCE", roles: WORKSHOP, open: "record-form" },
   { key: "release", group: "maintenance", icon: ShieldCheck, module: "MAINTENANCE", roles: MANAGERS, open: "record-form" },
-  { key: "start-trip", group: "operations", icon: Route, module: "ACTIVITIES", roles: FIELD, open: "navigate" },
+  { key: "start-trip", group: "operations", icon: Route, module: "ACTIVITIES", roles: TRIP_RUNNERS, open: "navigate" },
   { key: "change-custodian", group: "operations", icon: UserRound, module: "ASSETS", roles: MANAGERS, open: "form" },
   {
     key: "transfer-branch",
     group: "operations",
     icon: ArrowLeftRight,
     module: "ASSETS",
-    roles: ["ADMIN", "OPS_MANAGER", "FINANCE_APPROVER"],
+    roles: ["DIRECTOR", "ADMIN", "FINANCE"],
     open: "form",
   },
-  { key: "add-document", group: "documents", icon: FilePlus2, module: "DOCUMENTS", roles: FIELD, open: "form" },
-  { key: "renew-document", group: "documents", icon: FileCheck2, module: "DOCUMENTS", roles: FIELD, open: "record-form" },
-  { key: "record-revenue", group: "money", icon: CircleDollarSign, module: "FINANCE", roles: FINANCE_WRITERS, open: "form" },
-  { key: "review-entry", group: "money", icon: BadgeCheck, module: "FINANCE", roles: WORK_ORDER_DECIDERS, open: "record" },
-  { key: "reverse-entry", group: "money", icon: Undo2, module: "FINANCE", roles: WORK_ORDER_DECIDERS, open: "navigate" },
+  { key: "add-document", group: "documents", icon: FilePlus2, module: "DOCUMENTS", roles: DOCUMENT_KEEPERS, open: "form" },
+  { key: "renew-document", group: "documents", icon: FileCheck2, module: "DOCUMENTS", roles: DOCUMENT_KEEPERS, open: "record-form" },
+  { key: "record-revenue", group: "money", icon: CircleDollarSign, module: "FINANCE", roles: REVENUE_WRITERS, open: "form" },
+  { key: "review-entry", group: "money", icon: BadgeCheck, module: "FINANCE", roles: ENTRY_DECIDERS, open: "record" },
+  { key: "reverse-entry", group: "money", icon: Undo2, module: "FINANCE", roles: ENTRY_DECIDERS, open: "navigate" },
   { key: "commission", group: "lifecycle", icon: PlayCircle, module: "ASSETS", roles: MANAGERS, open: "form" },
 ];
 
@@ -138,9 +143,8 @@ export function actionDef(key: VehicleActionKey): VehicleActionDef {
   return def;
 }
 
-/** Role and module: whether the action exists for this viewer at all. Executives get none. */
+/** Role and module: whether the action exists for this viewer at all. */
 export function actionPermitted(def: VehicleActionDef, viewer: Viewer): boolean {
-  if (viewer.readOnly) return false;
   if (def.module !== "CORE" && !viewer.enabledModules.includes(def.module)) return false;
   return def.roles.includes(viewer.role);
 }
@@ -305,32 +309,32 @@ export function actionAvailability(
 
 /** The identity strip's buttons: what this role does most, nothing else. */
 export const HEADER_ACTIONS: Record<Role, readonly VehicleActionKey[]> = {
-  FIELD_SUBMITTER: ["log-fuel", "report-issue"],
-  MAINTENANCE: ["report-issue"],
+  DIRECTOR: ["record-expense"],
   ADMIN: ["record-expense"],
-  OPS_MANAGER: ["record-expense"],
-  FINANCE_APPROVER: ["record-expense"],
-  EXECUTIVE_VIEWER: [],
+  FINANCE: ["record-expense"],
+  CASHIER: ["record-expense"],
+  TECHNICIAN: ["report-issue"],
+  DRIVER: ["log-fuel", "report-issue"],
 };
 
 /** The phone bar: the first three of these this role can take right now, then More. */
 export const QUICK_ACTIONS: Record<Role, readonly VehicleActionKey[]> = {
-  FIELD_SUBMITTER: ["log-fuel", "report-issue", "record-reading", "start-trip"],
-  MAINTENANCE: ["complete-work-order", "create-work-order", "report-issue", "add-note"],
-  OPS_MANAGER: ["record-expense", "report-issue", "start-trip", "renew-document"],
+  DIRECTOR: ["review-entry", "record-expense", "report-issue", "start-trip"],
   ADMIN: ["record-expense", "report-issue", "start-trip", "renew-document"],
-  FINANCE_APPROVER: ["review-entry", "record-expense", "attach-evidence", "reverse-entry"],
-  EXECUTIVE_VIEWER: [],
+  FINANCE: ["review-entry", "record-expense", "attach-evidence", "reverse-entry"],
+  CASHIER: ["record-expense", "record-revenue", "add-note"],
+  TECHNICIAN: ["complete-work-order", "create-work-order", "report-issue", "add-note"],
+  DRIVER: ["log-fuel", "report-issue", "record-reading", "start-trip"],
 };
 
 /** The all-actions sheet lists the role's own area first. */
 export const GROUP_FIRST: Record<Role, ActionGroup | null> = {
+  DIRECTOR: null,
   ADMIN: null,
-  OPS_MANAGER: "operations",
-  FINANCE_APPROVER: "money",
-  MAINTENANCE: "maintenance",
-  FIELD_SUBMITTER: "capture",
-  EXECUTIVE_VIEWER: null,
+  FINANCE: "money",
+  CASHIER: "money",
+  TECHNICIAN: "maintenance",
+  DRIVER: "capture",
 };
 
 export function headerActions(viewer: Viewer): VehicleActionKey[] {

@@ -11,7 +11,7 @@ import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { defineRead } from "./define-read.js";
 
 /** The roles `assign-asset` lets change a custodian without an approval step. */
-const CUSTODY_ROLES = ["ADMIN", "OPS_MANAGER"] as const;
+const CUSTODY_ROLES = ["DIRECTOR", "ADMIN"] as const;
 
 export function registerAssetCustodianReadRoutes(
   app: FastifyInstance,

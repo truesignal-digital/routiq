@@ -29,7 +29,7 @@ export function AppSidebar() {
   const signOut = useSignOut();
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const sections = visibleSections(me?.enabledModules);
+  const sections = visibleSections(me?.enabledModules, me?.role);
 
   // The sheet has no route awareness of its own: navigating from inside it
   // would otherwise leave the overlay covering the screen it just opened.

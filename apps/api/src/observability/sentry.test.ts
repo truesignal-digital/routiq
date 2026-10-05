@@ -253,7 +253,7 @@ describe("Sentry Observability", () => {
       // 403: insufficient role
       const member = await seedMember(db, {
         workspaceId: workspace.id,
-        role: "EXECUTIVE_VIEWER",
+        role: "CASHIER",
         allBranches: true,
       });
       const limitedSession = await createSession(db, {

@@ -79,9 +79,9 @@ describe("Approvals - Payload mapping", () => {
 });
 
 describe("Approvals - Role gating", () => {
-  it("allows approve access only to FINANCE_APPROVER and ADMIN with FINANCE module", () => {
-    const approverRoles = ["FINANCE_APPROVER", "ADMIN"] as const;
-    const deniedRoles = ["OPS_MANAGER", "FIELD_SUBMITTER", "MAINTENANCE"] as const;
+  it("allows approve access only to DIRECTOR and FINANCE with FINANCE module", () => {
+    const approverRoles = ["DIRECTOR", "FINANCE"] as const;
+    const deniedRoles = ["ADMIN", "CASHIER", "TECHNICIAN", "DRIVER"] as const;
     const enabledModules = ["CORE", "FINANCE"] as const;
 
     for (const role of approverRoles) {
@@ -96,8 +96,8 @@ describe("Approvals - Role gating", () => {
   it("denies approve access when FINANCE module is disabled", () => {
     const disabledModules = ["CORE", "DOCUMENTS"] as const;
 
-    expect(canApproveEntries("FINANCE_APPROVER", disabledModules)).toBe(false);
-    expect(canApproveEntries("ADMIN", disabledModules)).toBe(false);
+    expect(canApproveEntries("FINANCE", disabledModules)).toBe(false);
+    expect(canApproveEntries("DIRECTOR", disabledModules)).toBe(false);
   });
 
   it("denies approve access when role is undefined", () => {

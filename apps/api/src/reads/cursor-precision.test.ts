@@ -28,7 +28,7 @@ describe("timestamp keyset cursors", () => {
     admin = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN" });
     submitter = await seedActor(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
     });
     truck = await seedAsset(ctx.app, admin.token);
   });

@@ -32,6 +32,7 @@ describe("migration 0027 on a database that predates it", () => {
   let adminPool: pg.Pool;
   let pool: pg.Pool;
   let truncatedFolder: string;
+  let secondRun: { before: unknown; after: unknown };
 
   const ws = randomUUID();
   const bareWs = randomUUID();
@@ -71,7 +72,8 @@ describe("migration 0027 on a database that predates it", () => {
     const journal = JSON.parse(await readFile(journalPath, "utf8")) as {
       entries: Array<{ idx: number }>;
     };
-    journal.entries = journal.entries.filter((entry) => entry.idx <= 26);
+    const fullJournal = journal.entries;
+    journal.entries = fullJournal.filter((entry) => entry.idx <= 26);
     await writeFile(journalPath, JSON.stringify(journal));
     await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
 
@@ -103,6 +105,21 @@ describe("migration 0027 on a database that predates it", () => {
       INSERT INTO categories (workspace_id, kind, code, label_fr, label_en)
         VALUES ('${ws}', 'ISSUE_TYPE', 'BRAKES', 'Freinage (maison)', 'Brakes (own)');
     `);
+
+    // A second run is judged right after 0027, before 0036 renames the roles
+    // its guards look for: rerun later, it would write legacy-coded rules again.
+    journal.entries = fullJournal.filter((entry) => entry.idx <= 27);
+    await writeFile(journalPath, JSON.stringify(journal));
+    await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
+    const before = await snapshot();
+    const statements = (await readFile(MIGRATION_0027, "utf8"))
+      .split("--> statement-breakpoint")
+      .map((statement) => statement.trim())
+      .filter((statement) => statement.length > 0);
+    for (const statement of statements) {
+      await pool.query(statement);
+    }
+    secondRun = { before, after: await snapshot() };
 
     await migrate(drizzle(pool), { migrationsFolder: MIGRATIONS });
   });
@@ -175,24 +192,27 @@ describe("migration 0027 on a database that predates it", () => {
         .map((rule) => `${rule.commandType}:${rule.requiredRole}`)
         .sort();
       expect(backfilled).toEqual(provisioned);
-      expect(backfilled).toContain("resolve-issue:FIELD_SUBMITTER");
-      expect(backfilled).not.toContain("dismiss-issue:FIELD_SUBMITTER");
+      // Migrated through 0036: the six team roles, and the driver no longer
+      // closes a signalement on their own (ADR-0009).
+      expect(backfilled).toContain("resolve-issue:TECHNICIAN");
+      expect(backfilled).not.toContain("resolve-issue:DRIVER");
+      expect(backfilled).not.toContain("dismiss-issue:DRIVER");
 
       expect(
         await query(
           `SELECT 1 FROM approval_rules WHERE workspace_id = $1
-             AND command_type = 'record-meter-reading' AND required_role = 'MAINTENANCE'`,
+             AND command_type = 'record-meter-reading' AND required_role = 'TECHNICIAN'`,
           [workspaceId],
         ),
       ).toHaveLength(1);
     }
   });
 
-  it("gives MAINTENANCE the workspace's own expense band, or the catalog's where none exists", async () => {
+  it("gives the workshop (TECHNICIAN since 0036) the workspace's own expense band, or the catalog's where none exists", async () => {
     const band = (workspaceId: string) =>
       query<{ amount_max_minor: string }>(
         `SELECT amount_max_minor::text FROM approval_rules
-         WHERE workspace_id = $1 AND command_type = 'record-expense' AND required_role = 'MAINTENANCE'`,
+         WHERE workspace_id = $1 AND command_type = 'record-expense' AND required_role = 'TECHNICIAN'`,
         [workspaceId],
       );
     expect(await band(ws)).toEqual([{ amount_max_minor: "250000" }]);
@@ -227,15 +247,7 @@ describe("migration 0027 on a database that predates it", () => {
   });
 
   it("finds nothing to do on a second run", async () => {
-    const before = await snapshot();
-    const statements = (await readFile(MIGRATION_0027, "utf8"))
-      .split("--> statement-breakpoint")
-      .map((statement) => statement.trim())
-      .filter((statement) => statement.length > 0);
-    for (const statement of statements) {
-      await pool.query(statement);
-    }
-    expect(await snapshot()).toEqual(before);
+    expect(secondRun.after).toEqual(secondRun.before);
     expect(await query(`SELECT 1 FROM work_orders WHERE status IN ('OPEN','PENDING_CLOSE','CLOSED')`))
       .toHaveLength(0);
   });

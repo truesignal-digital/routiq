@@ -22,7 +22,7 @@ describe("record-revenue.v1", () => {
     workspaceId = seeded.workspace.id;
     const submitter = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "CASHIER",
       allBranches: true,
     });
     token = (
@@ -80,7 +80,7 @@ describe("record-revenue.v1", () => {
     });
   });
 
-  it("above-threshold revenue submitted by FIELD_SUBMITTER", async () => {
+  it("above-threshold revenue submitted by CASHIER", async () => {
     const entryId = randomUUID();
     const response = await postCommand({
       entryId,

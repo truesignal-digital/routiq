@@ -2,6 +2,7 @@ import {
   provisionWorkspacePayload,
   provisionWorkspaceV1Payload,
   provisionWorkspaceV1ToV2,
+  provisionWorkspaceV2Payload,
   type CommandEnvelope,
   type ProvisionWorkspacePayload,
   type ProvisionWorkspaceV1Payload,
@@ -120,7 +121,9 @@ async function executeProvision(
   const branchIdByCode = new Map(payload.branches.map((branch) => [branch.code, branch.id]));
 
   // Order is load-bearing: credentials carry a composite FK to memberships, so
-  // the admin must be a member before it can hold a PIN.
+  // the admin must be a member before it can hold a PIN. The first account is
+  // the workspace's DIRECTOR (ADR-0009): no tenant role may grant Direction, so
+  // it has to exist from the start.
   await tx.insert(principals).values({
     id: payload.admin.id,
     principalType: "HUMAN",
@@ -129,7 +132,7 @@ async function executeProvision(
   await tx.insert(memberships).values({
     workspaceId,
     principalId: payload.admin.id,
-    role: "ADMIN",
+    role: "DIRECTOR",
     allBranches: true,
   });
   await tx.insert(credentials).values({
@@ -140,6 +143,9 @@ async function executeProvision(
   });
 
   for (const user of payload.users ?? []) {
+    if (user.role === "DIRECTOR" && user.branchScope !== "ALL") {
+      throw new CommandError(422, "DIRECTOR_REQUIRES_ALL_BRANCHES", { username: user.username });
+    }
     const scopedBranchIds =
       user.branchScope === "ALL" ? [] : resolveBranchIds(user.branchScope, branchIdByCode);
 
@@ -208,7 +214,7 @@ async function executeProvision(
         principalId: payload.admin.id,
         displayName: payload.admin.displayName,
         username: payload.admin.username,
-        role: "ADMIN",
+        role: "DIRECTOR",
       },
       users: (payload.users ?? []).map((user) => ({
         principalId: user.id,
@@ -229,10 +235,24 @@ async function executeProvision(
 registerPlatformCommand<ProvisionWorkspacePayload>({
   scope: "platform",
   name: "provision-workspace",
-  version: 2,
+  version: 3,
   payloadSchema: provisionWorkspacePayload,
   redactPayload: redactPins,
-  createWorkspace,
+  resolveWorkspace: createWorkspace,
+  execute: executeProvision,
+});
+
+/**
+ * v2 is v3's shape with the pre-ADR-0009 role codes, which its schema maps to
+ * the roles they became on parse — so it runs v3's execution path unchanged.
+ */
+registerPlatformCommand<ProvisionWorkspacePayload>({
+  scope: "platform",
+  name: "provision-workspace",
+  version: 2,
+  payloadSchema: provisionWorkspaceV2Payload,
+  redactPayload: redactPins,
+  resolveWorkspace: createWorkspace,
   execute: executeProvision,
 });
 
@@ -255,7 +275,7 @@ registerPlatformCommand<ProvisionWorkspaceV1Payload>({
   version: 1,
   payloadSchema: provisionWorkspaceV1Payload,
   redactPayload: redactPins,
-  createWorkspace,
+  resolveWorkspace: createWorkspace,
   execute: (tx, ctx, envelope, payload, workspaceId) =>
     executeProvision(tx, ctx, envelope, provisionWorkspaceV1ToV2(payload), workspaceId),
 });

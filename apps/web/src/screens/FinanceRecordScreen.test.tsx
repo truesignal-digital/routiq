@@ -70,22 +70,22 @@ vi.mock("../finance/FinanceNav.js", () => ({
   FinanceNav: () => null,
 }));
 
-const submitter: MeContext = {
+const recorder: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "FIELD_SUBMITTER",
+  role: "FINANCE",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
-function renderScreen() {
+function renderScreen(me: MeContext = recorder) {
   return render(
     createElement(
       MeCtx.Provider,
-      { value: submitter },
+      { value: me },
       createElement(FinanceRecordScreen),
     ),
   );
@@ -392,5 +392,30 @@ describe("finance record form", () => {
         "Choose a category",
       ),
     );
+  });
+
+  it("gives a driver expenses only: no revenue tab", () => {
+    renderScreen({ ...recorder, role: "DRIVER" });
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Revenue" })).toBeNull();
+  });
+
+  it("keeps the cashier on a fresh form, since the entries list is not theirs", async () => {
+    const user = userEvent.setup();
+    renderScreen({ ...recorder, role: "CASHIER" });
+    expect(screen.getByRole("tab", { name: "Revenue" })).toBeTruthy();
+    await chooseFuelCategory(user);
+
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    await waitFor(() => expect((screen.getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toBe(""));
+  });
+
+  it("turns the workshop away: its costs go on work orders", () => {
+    renderScreen({ ...recorder, role: "TECHNICIAN" });
+    expect(screen.queryByRole("button", { name: "Record the expense" })).toBeNull();
   });
 });

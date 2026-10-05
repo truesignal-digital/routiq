@@ -174,7 +174,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     // back on the road. Three entity types, three timelines, one story.
     const mechanic = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     const mechanicToken = (
@@ -541,7 +541,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       scopedAdminToken = (await createSession(ctx.db, { workspaceId: wsId, principalId: admin.principal.id })).token;
       const doualaOnly = await seedMember(ctx.db, {
         workspaceId: wsId,
-        role: "OPS_MANAGER",
+        role: "ADMIN",
         branchIds: [seeded.branch.id],
       });
       scopedToken = (await createSession(ctx.db, { workspaceId: wsId, principalId: doualaOnly.principal.id })).token;
@@ -672,7 +672,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     let mechanicToken: string;
     let approverToken: string;
 
-    async function sessionFor(role: "MAINTENANCE" | "FINANCE_APPROVER") {
+    async function sessionFor(role: "TECHNICIAN" | "FINANCE") {
       const member = await seedMember(ctx.db, { workspaceId, role, allBranches: true });
       return (await createSession(ctx.db, { workspaceId, principalId: member.principal.id })).token;
     }
@@ -689,8 +689,8 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     }
 
     beforeAll(async () => {
-      mechanicToken = await sessionFor("MAINTENANCE");
-      approverToken = await sessionFor("FINANCE_APPROVER");
+      mechanicToken = await sessionFor("TECHNICIAN");
+      approverToken = await sessionFor("FINANCE");
       const assetId = await seedAsset(ctx.app, token, { assetCode: "HIST-LEDGER-TRUCK" });
       const expense = {
         branchCode: "DLA",
@@ -1015,7 +1015,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       const seeded = await seedWorkspace(ctx.db);
       const admin = await seedMember(ctx.db, {
         workspaceId: seeded.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const gatedToken = (
@@ -1048,7 +1048,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     const seeded = await seedWorkspace(ctx.db);
     const admin = await seedMember(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     const gatedToken = (

@@ -253,6 +253,13 @@
       "when": 1790777080332,
       "tag": "0035_update_asset_details_command_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791125516813,
+      "tag": "0036_six_roles",
+      "breakpoints": true
     }
   ]
 }

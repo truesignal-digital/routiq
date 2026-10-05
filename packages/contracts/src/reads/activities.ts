@@ -139,6 +139,12 @@ export const activityDetail = activityListItem.extend({
   createdAt: z.iso.datetime(),
   /** §3.4 provenance: the command that first wrote the row, shown on the record. */
   createdByCommandId: z.uuid().nullable(),
+  /**
+   * Who initiated that command. A DRIVER closes, and swaps the vehicle on,
+   * only the trips they recorded (OWN_RECORDS_ONLY); the screen reads this to
+   * offer those actions only where they will pass.
+   */
+  recordedByPrincipalId: z.uuid().nullable(),
   rowVersion: z.number().int().positive(),
   segments: z.array(activitySegmentRead),
   crew: z.array(activityCrewRead),

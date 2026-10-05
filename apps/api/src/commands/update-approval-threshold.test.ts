@@ -59,7 +59,7 @@ describe("update-approval-threshold.v1", () => {
 
     const admin = await seedMember(db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminToken = (
@@ -71,7 +71,7 @@ describe("update-approval-threshold.v1", () => {
 
     const opsManager = await seedMember(db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "DRIVER",
       allBranches: true,
     });
     opsManagerToken = (
@@ -86,7 +86,7 @@ describe("update-approval-threshold.v1", () => {
     await ctx.close();
   });
 
-  it("returns 403 when a non-ADMIN tries to update a threshold", async () => {
+  it("returns 403 when a non-DIRECTOR tries to update a threshold", async () => {
     const response = await postCommand(
       opsManagerToken,
       "update-approval-threshold",
@@ -105,7 +105,7 @@ describe("update-approval-threshold.v1", () => {
     });
   });
 
-  it("allows ADMIN to update threshold with status 200", async () => {
+  it("allows DIRECTOR to update threshold with status 200", async () => {
     const response = await postCommand(
       adminToken,
       "update-approval-threshold",
@@ -230,8 +230,9 @@ describe("update-approval-threshold.v1", () => {
 /**
  * #47 spec finding: work-order thresholds must be reachable through the tenant
  * configuration path, not only by inserting rules. Their catalog defaults are
- * unbounded, so the first threshold turns them into a band — ADMIN keeps an
- * unbounded rule beside its band, the way record-expense ships.
+ * unbounded, so the first threshold turns them into a band — DIRECTOR and ADMIN,
+ * who approve work orders, keep an unbounded rule beside their band, the way
+ * record-expense ships.
  */
 describe("update-approval-threshold.v1 for the work-order pair", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -247,14 +248,14 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
     db = ctx.db;
     const seeded = await seedWorkspace(db);
     workspaceId = seeded.workspace.id;
-    const token = async (role: "ADMIN" | "OPS_MANAGER" | "MAINTENANCE") => {
+    const token = async (role: "DIRECTOR" | "ADMIN" | "TECHNICIAN") => {
       const member = await seedMember(db, { workspaceId, role, allBranches: true });
       return (await createSession(db, { workspaceId, principalId: member.principal.id }))
         .token;
     };
-    adminToken = await token("ADMIN");
-    managerToken = await token("OPS_MANAGER");
-    mechanicToken = await token("MAINTENANCE");
+    adminToken = await token("DIRECTOR");
+    managerToken = await token("ADMIN");
+    mechanicToken = await token("TECHNICIAN");
     assetId = await seedAsset(ctx.app, adminToken);
   });
 
@@ -306,7 +307,7 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
   }
 
   it("never holds a work order until a threshold is configured", async () => {
-    expect(await createStatus(managerToken, 5_000_000)).toBe("APPROVED");
+    expect(await createStatus(mechanicToken, 5_000_000)).toBe("APPROVED");
   });
 
   it("turns the unbounded defaults into a band on first configuration", async () => {
@@ -322,14 +323,17 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
     expect(rules).toEqual([
       "ADMIN:200000",
       "ADMIN:∞",
-      "MAINTENANCE:200000",
-      "OPS_MANAGER:200000",
+      "DIRECTOR:200000",
+      "DIRECTOR:∞",
+      "TECHNICIAN:200000",
     ]);
 
-    expect(await createStatus(managerToken, 150_000)).toBe("APPROVED");
-    expect(await createStatus(managerToken, 500_000)).toBe("SUBMITTED");
+    expect(await createStatus(mechanicToken, 150_000)).toBe("APPROVED");
     expect(await createStatus(mechanicToken, 500_000)).toBe("SUBMITTED");
-    // An admin is not queued behind an approver at either end of the band.
+    // The roles that approve work orders are not queued behind one another at
+    // either end of the band.
+    expect(await createStatus(managerToken, 150_000)).toBe("APPROVED");
+    expect(await createStatus(managerToken, 500_000)).toBe("APPROVED");
     expect(await createStatus(adminToken, 150_000)).toBe("APPROVED");
     expect(await createStatus(adminToken, 500_000)).toBe("APPROVED");
   });
@@ -340,9 +344,9 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
       amountMaxMinor: 600_000,
     });
     expect(response.statusCode).toBe(200);
-    expect(await rulesFor("create-work-order")).toHaveLength(4);
-    expect(await createStatus(managerToken, 500_000)).toBe("APPROVED");
-    expect(await createStatus(managerToken, 700_000)).toBe("SUBMITTED");
+    expect(await rulesFor("create-work-order")).toHaveLength(5);
+    expect(await createStatus(mechanicToken, 500_000)).toBe("APPROVED");
+    expect(await createStatus(mechanicToken, 700_000)).toBe("SUBMITTED");
   });
 
   it("holds a completion above the configured band", async () => {
@@ -356,14 +360,14 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
     ).toBe(200);
 
     const workOrderId = randomUUID();
-    await post(managerToken, "create-work-order", {
+    await post(mechanicToken, "create-work-order", {
       workOrderId,
       assetId,
       description: "Achèvement au-dessus du seuil",
       expectedCostMinor: 10_000,
     });
     const completed = await post(
-      managerToken,
+      mechanicToken,
       "complete-work-order",
       { workOrderId, actualCostMinor: 80_000 },
       { expectedVersion: 1 },

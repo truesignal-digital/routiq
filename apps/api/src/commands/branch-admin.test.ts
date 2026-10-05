@@ -33,7 +33,7 @@ describe("branch administration", () => {
 
     const ops = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     opsToken = (
@@ -217,7 +217,7 @@ describe("branch administration", () => {
       expect(row?.active).toBe(true);
     });
 
-    it("is ADMIN-only", async () => {
+    it("is DIRECTOR-only", async () => {
       const branchId = await createBranch("ST3", "Ebolowa");
 
       const response = await post(
@@ -273,8 +273,10 @@ describe("branch administration", () => {
       const assetId = await seedAsset(ctx.app, token, { branchCode: "OUT1" });
       expect((await post("set-branch-status", { branchId, active: false })).statusCode).toBe(200);
 
+      // An ADMIN, not the DIRECTOR who set things up: Direction holds a
+      // CROSS_BRANCH rule of its own and would move the truck outright.
       const asAdmin = await postCommand(
-        token,
+        opsToken,
         "assign-asset",
         { assetId, branchCode: "DLA" },
         { expectedVersion: 1 },
@@ -283,7 +285,7 @@ describe("branch administration", () => {
       /*
        * The move reaches approval evaluation rather than being refused by the
        * branch resolver: a cross-branch transfer is the CROSS_BRANCH rule's
-       * business (FINANCE_APPROVER by default), not the inactive-branch guard's.
+       * business (FINANCE by default), not the inactive-branch guard's.
        * BRANCH_INACTIVE here would mean assets were stranded by deactivation.
        */
       expect(asAdmin.statusCode).toBe(403);
@@ -292,7 +294,7 @@ describe("branch administration", () => {
       });
 
       /*
-       * And the approver the rule names can complete it. Until FINANCE_APPROVER
+       * And the approver the rule names can complete it. Until FINANCE
        * was added to assign-asset's allowedRoles they were rejected
        * ROLE_FORBIDDEN before approval ran, which left the transfer a dead end
        * for every role — an asset in a deactivated branch could never leave it.
@@ -319,7 +321,7 @@ describe("branch administration", () => {
         { expectedVersion: 1 },
       );
 
-      // No CROSS_BRANCH context, so only the ADMIN and OPS_MANAGER rules match.
+      // No CROSS_BRANCH context, so only the DIRECTOR and ADMIN rules match.
       expect(response.statusCode).toBe(403);
       expect(response.json()).toMatchObject({
         error: { code: "APPROVAL_REQUIRED", metadata: { commandType: "assign-asset" } },
@@ -511,7 +513,7 @@ describe("branch administration", () => {
   async function adminToken(workspace: string): Promise<string> {
     const admin = await seedMember(ctx.db, {
       workspaceId: workspace,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     return (
@@ -522,7 +524,7 @@ describe("branch administration", () => {
   async function financeApproverToken(workspace: string): Promise<string> {
     const approver = await seedMember(ctx.db, {
       workspaceId: workspace,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     return (

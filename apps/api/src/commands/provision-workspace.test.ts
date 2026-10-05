@@ -29,7 +29,7 @@ import { dispatchCommand } from "./dispatcher.js";
 import { REDACTED_PIN } from "./provision-workspace.js";
 import "../server.js";
 
-describe("provision-workspace.v2", () => {
+describe("provision-workspace.v3", () => {
   let testApp: Awaited<ReturnType<typeof createTestApp>>;
   let db: Db;
   let platform: PlatformDb;
@@ -66,7 +66,7 @@ describe("provision-workspace.v2", () => {
         displayName: string;
         username: string;
         pin: string;
-        role: "ADMIN" | "OPS_MANAGER" | "FIELD_SUBMITTER";
+        role: "ADMIN" | "DRIVER";
         branchScope: "ALL" | string[];
       }>;
     } = {},
@@ -74,7 +74,7 @@ describe("provision-workspace.v2", () => {
     const slug = overrides.slug ?? `tenant-${randomUUID().slice(0, 8)}`;
     return {
       name: "provision-workspace",
-      version: 2,
+      version: 3,
       envelope: {
         commandId: randomUUID(),
         idempotencyKey: overrides.idempotencyKey ?? `idem-${randomUUID()}`,
@@ -140,7 +140,8 @@ describe("provision-workspace.v2", () => {
       .where(eq(memberships.workspaceId, workspaceId));
     expect(membership).toMatchObject({
       principalId: body.payload.admin.id,
-      role: "ADMIN",
+      // The first account is the tenant's DIRECTOR (ADR-0009).
+      role: "DIRECTOR",
       allBranches: true,
     });
 
@@ -309,7 +310,7 @@ describe("provision-workspace.v2", () => {
       displayName: "Boris Nguema",
       username: `boris-${randomUUID()}`,
       pin: "ops-pin-222222",
-      role: "OPS_MANAGER" as const,
+      role: "ADMIN" as const,
       branchScope: "ALL" as const,
     };
     const scopedUser = {
@@ -317,7 +318,7 @@ describe("provision-workspace.v2", () => {
       displayName: "Sali Mbarga",
       username: `sali-${randomUUID()}`,
       pin: "field-pin-333333",
-      role: "FIELD_SUBMITTER" as const,
+      role: "DRIVER" as const,
       branchScope: ["DLA"],
     };
     const body = provisionBody({ users: [allBranchesUser, scopedUser] });
@@ -349,13 +350,13 @@ describe("provision-workspace.v2", () => {
       expect.arrayContaining([
         expect.objectContaining({
           principalId: allBranchesUser.id,
-          role: "OPS_MANAGER",
+          role: "ADMIN",
           allBranches: true,
           branchIds: [],
         }),
         expect.objectContaining({
           principalId: scopedUser.id,
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           allBranches: false,
           branchIds: [body.payload.branches[0]!.id],
         }),
@@ -462,7 +463,7 @@ describe("provision-workspace.v2", () => {
       displayName: "Sali Mbarga",
       username: `sali-${randomUUID()}`,
       pin: "field-pin-333333",
-      role: "FIELD_SUBMITTER" as const,
+      role: "DRIVER" as const,
       branchScope: ["DLA", "BAF"],
     };
     const body = provisionBody({ branches: branchList, users: [scopedUser] });
@@ -479,7 +480,7 @@ describe("provision-workspace.v2", () => {
         ),
       );
     expect(membership).toMatchObject({
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: false,
       branchIds: [branchList[0]!.id, branchList[2]!.id],
     });
@@ -491,7 +492,7 @@ describe("provision-workspace.v2", () => {
       displayName: "Sali Mbarga",
       username: `sali-${randomUUID()}`,
       pin: "field-pin-333333",
-      role: "FIELD_SUBMITTER" as const,
+      role: "DRIVER" as const,
       branchScope: ["DLA", "KRB"],
     };
     const body = provisionBody({
@@ -611,6 +612,39 @@ describe("provision-workspace.v2", () => {
     ).toHaveLength(1);
   });
 
+  /** v2 shipped the legacy role codes: a tenant file written against it still provisions. */
+  it("v2 still provisions, reading a legacy user role as the role it became", async () => {
+    const v3 = provisionBody();
+    const user = {
+      id: randomUUID(),
+      displayName: "Sali Mbarga",
+      username: `sali-${randomUUID()}`,
+      pin: "field-pin-333333",
+      branchScope: ["DLA"],
+    };
+    const legacy = {
+      ...v3,
+      version: 2,
+      payload: { ...v3.payload, users: [{ ...user, role: "FIELD_SUBMITTER" }] },
+    };
+
+    expect((await dispatchCommand(platform, operator, legacy)).status).toBe(200);
+    const [membership] = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.principalId, user.id));
+    expect(membership?.role).toBe("DRIVER");
+
+    // v2 knows only the codes it shipped with.
+    const refused = provisionBody();
+    const sixRoles = {
+      ...refused,
+      version: 2,
+      payload: { ...refused.payload, users: [{ ...user, id: randomUUID(), username: `x-${randomUUID()}`, role: "CASHIER" }] },
+    };
+    expect((await dispatchCommand(platform, operator, sixRoles)).status).toBe(400);
+  });
+
   /**
    * The compatibility path (issue #20). v1 is what already-authored tenant files
    * say, so it must still provision — through the same execution path, with its
@@ -693,7 +727,7 @@ describe("provision-workspace.v2", () => {
      * reusing theirs: the fingerprint is over the raw payload, so no version
      * choice can make a v2 payload replay a v1 receipt.
      */
-    it("conflicts when a v2 payload reuses a v1 receipt's idempotency key", async () => {
+    it("conflicts when a v3 payload reuses a v1 receipt's idempotency key", async () => {
       const key = `idem-${randomUUID()}`;
       expect((await dispatchCommand(platform, operator, legacyBody({ idempotencyKey: key }))).status)
         .toBe(200);

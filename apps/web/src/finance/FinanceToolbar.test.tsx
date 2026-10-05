@@ -40,7 +40,7 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("../auth/me.js", () => ({
   useMeContext: () => ({
     principalId: "test-user",
-    role: "FINANCE_APPROVER",
+    role: "FINANCE",
     enabledModules: ["CORE", "FINANCE"],
   }),
 }));

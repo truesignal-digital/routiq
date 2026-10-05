@@ -25,7 +25,7 @@ describe("ledger reads are for the ledger readers", () => {
     const seeded = await seedWorkspace(ctx.db);
     const workspaceId = seeded.workspace.id;
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     assetId = await seedAsset(ctx.app, admin.token);
     entryId = randomUUID();
     await api.ok(admin.token, "record-expense", {
@@ -70,7 +70,7 @@ describe("ledger reads are for the ledger readers", () => {
 
   it("answers MODULE_DISABLED once FINANCE is off", async () => {
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
     for (const route of ["/v1/finance/entries", `/v1/finance/entries/${randomUUID()}`, "/v1/finance/approvals"]) {
       const response = await api.get(gatedAdmin.token, route);

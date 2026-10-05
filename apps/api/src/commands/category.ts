@@ -84,7 +84,7 @@ const createCategory: CommandDefinition<CreateCategoryPayload> = {
   name: "create-category",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: createCategoryPayload,
   branchAuthorization: { kind: "workspace" },
 
@@ -166,7 +166,7 @@ const relabelCategory: CommandDefinition<RelabelCategoryPayload> = {
   name: "relabel-category",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: relabelCategoryPayload,
   branchAuthorization: { kind: "workspace" },
 
@@ -224,7 +224,7 @@ function categoryStateFlip(opts: {
     name: opts.name,
     version: 1,
     module: "CORE",
-    allowedRoles: ["ADMIN"],
+    allowedRoles: ["DIRECTOR"],
     payloadSchema: opts.payloadSchema,
     branchAuthorization: { kind: "workspace" },
 

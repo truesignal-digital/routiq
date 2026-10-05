@@ -27,11 +27,11 @@ describe("category commands", () => {
     const seeded = await seedWorkspace(db);
     workspaceId = seeded.workspace.id;
 
-    const admin = await seedMember(db, { workspaceId, role: "ADMIN", allBranches: true });
+    const admin = await seedMember(db, { workspaceId, role: "DIRECTOR", allBranches: true });
     adminToken = (await createSession(db, { principalId: admin.principal.id, workspaceId }))
       .token;
 
-    const ops = await seedMember(db, { workspaceId, role: "OPS_MANAGER", allBranches: true });
+    const ops = await seedMember(db, { workspaceId, role: "ADMIN", allBranches: true });
     opsToken = (await createSession(db, { principalId: ops.principal.id, workspaceId })).token;
   });
 
@@ -179,7 +179,7 @@ describe("category commands", () => {
       expect(strayLayer.json().error.code).toBe("CATEGORY_LAYER_INVALID");
     });
 
-    it("is ADMIN-only", async () => {
+    it("is DIRECTOR-only", async () => {
       const response = await post(
         "create-category",
         {

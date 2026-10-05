@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import {
   provisionWorkspacePayload,
+  provisionWorkspaceV2Payload,
   TOGGLEABLE_MODULE_CODES,
   type ProvisionWorkspacePayload,
 } from "@routiq/contracts";
@@ -84,16 +85,16 @@ export async function provisionTenant(
   const commandId = options.commandId ?? randomUUID();
   const response = await dispatchCommand(platformDb(authDb), operator, {
     name: "provision-workspace",
-    version: 2,
+    version: 3,
     envelope: {
       commandId,
       /**
-       * `:v2` and not the bare slug: a workspace provisioned before the array
-       * shape holds a receipt under the old key, and the fingerprint is taken
-       * over the raw payload — so reusing the key would answer 409
-       * IDEMPOTENCY_KEY_REUSED rather than replaying (issue #20).
+       * Versioned and not the bare slug: a workspace provisioned under an
+       * earlier version holds a receipt under that version's key, and the
+       * fingerprint is taken over the raw payload — so reusing the key would
+       * answer 409 IDEMPOTENCY_KEY_REUSED rather than replaying (issue #20).
        */
-      idempotencyKey: options.idempotencyKey ?? `provision-${payload.workspace.slug}:v2`,
+      idempotencyKey: options.idempotencyKey ?? `provision-${payload.workspace.slug}:v3`,
       origin: "API",
     },
     payload,
@@ -202,6 +203,10 @@ function rejectUnknownModuleCodes(input: unknown): void {
 function parseTenantPayload(input: unknown): ProvisionWorkspacePayload {
   const parsed = provisionWorkspacePayload.safeParse(input);
   if (parsed.success) return parsed.data;
+  // A tenant file written before ADR-0009 names the old roles; v2's schema
+  // reads each as the role it became, and the result is a valid v3 payload.
+  const legacy = provisionWorkspaceV2Payload.safeParse(input);
+  if (legacy.success) return legacy.data;
 
   const issues = parsed.error.issues.map((issue) => {
     const path = issue.path.length === 0 ? "<root>" : issue.path.join(".");
@@ -210,7 +215,7 @@ function parseTenantPayload(input: unknown): ProvisionWorkspacePayload {
   throw new CliError(`Invalid tenant file:\n${issues.join("\n")}`);
 }
 
-async function getOrCreateVendorOperator() {
+export async function getOrCreateVendorOperator() {
   const [existing] = await authDb
     .select({ id: principals.id })
     .from(principals)
@@ -254,7 +259,7 @@ function presentResult(
   }
   const branchCodes = payload.branches.map((branch) => branch.code);
   log(`Branches: ${branchCodes.join(", ")}`);
-  log(`Admin: username=${payload.admin.username}`);
+  log(`Director (first account): username=${payload.admin.username}`);
   log(`Command: id=${outcome.commandId}`);
 
   return {

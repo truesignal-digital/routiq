@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 import { canRecordActivities, canRecordReadings } from "../activities/permissions.js";
 import { canAssignCustodian, canCommissionAsset, canTransferAsset } from "../assets/permissions.js";
-import { isReadOnlyRole } from "../auth/me.js";
 import { canManageDocuments } from "../documents/permissions.js";
 import {
   canApproveEntries,
   canAttachEvidence,
   canReadFinance,
   canRecordFinance,
+  canRecordRevenue,
   canReverseEntry,
 } from "../finance/permissions.js";
 import {
@@ -47,11 +47,11 @@ type Helper = (role: Role, modules: readonly ModuleCode[]) => boolean;
 const HELPERS: Record<VehicleActionKey, Helper> = {
   "log-fuel": canRecordFinance,
   "record-expense": canRecordFinance,
-  "record-revenue": canRecordFinance,
-  // The workshop may attach, but reads no entries on the vehicle.
+  "record-revenue": canRecordRevenue,
+  // Every role may attach, but only the ledger readers see entries on the vehicle.
   "attach-evidence": (role, modules) => canAttachEvidence(role, modules) && canReadFinance(role, modules),
   "record-reading": canRecordReadings,
-  "add-note": (role) => !isReadOnlyRole(role),
+  "add-note": () => true,
   "report-issue": canReportIssues,
   "create-work-order": canManageWorkOrders,
   "complete-work-order": canManageWorkOrders,
@@ -88,24 +88,44 @@ describe("the action catalogue", () => {
     expect(keys).toContain("add-note");
   });
 
-  it("gives the executive no action anywhere", () => {
-    const executive = viewer("EXECUTIVE_VIEWER");
-    const facts: VehicleFacts = { asset: asset(), attention: [] };
-    expect(permittedActions(executive)).toEqual([]);
-    expect(headerActions(executive)).toEqual([]);
-    expect(quickActions(facts, executive)).toEqual([]);
-    expect(groupedActions(executive)).toEqual([]);
+  it("gives the counter money capture and notes, nothing else", () => {
+    expect(permittedActions(viewer("CASHIER")).map((action) => action.key)).toEqual([
+      "log-fuel",
+      "record-expense",
+      "add-note",
+      "record-revenue",
+    ]);
   });
 
   it("puts each role's own buttons in the header", () => {
-    expect(headerActions(viewer("FIELD_SUBMITTER"))).toEqual(["log-fuel", "report-issue"]);
-    expect(headerActions(viewer("MAINTENANCE"))).toEqual(["report-issue"]);
-    expect(headerActions(viewer("FINANCE_APPROVER"))).toEqual(["record-expense"]);
+    expect(headerActions(viewer("DIRECTOR"))).toEqual(["record-expense"]);
+    expect(headerActions(viewer("ADMIN"))).toEqual(["record-expense"]);
+    expect(headerActions(viewer("FINANCE"))).toEqual(["record-expense"]);
+    expect(headerActions(viewer("CASHIER"))).toEqual(["record-expense"]);
+    expect(headerActions(viewer("TECHNICIAN"))).toEqual(["report-issue"]);
+    expect(headerActions(viewer("DRIVER"))).toEqual(["log-fuel", "report-issue"]);
+  });
+
+  it("gives work-order decisions to the managers and money decisions to Finance", () => {
+    const keys = (role: Role) => permittedActions(viewer(role)).map((action) => action.key);
+    for (const role of ["DIRECTOR", "ADMIN"] as const) {
+      expect(keys(role)).toEqual(expect.arrayContaining(["approve-work-order", "approve-completion"]));
+    }
+    expect(keys("FINANCE")).not.toContain("approve-work-order");
+    expect(keys("FINANCE")).not.toContain("approve-completion");
+    for (const role of ["DIRECTOR", "FINANCE"] as const) {
+      expect(keys(role)).toEqual(expect.arrayContaining(["review-entry", "reverse-entry"]));
+    }
+    expect(keys("ADMIN")).not.toContain("review-entry");
+    expect(keys("ADMIN")).not.toContain("reverse-entry");
+    expect(keys("DRIVER")).not.toContain("record-revenue");
+    expect(keys("DRIVER")).not.toContain("renew-document");
+    expect(keys("FINANCE")).toContain("renew-document");
   });
 
   it("lists the role's own area first in the sheet", () => {
-    expect(groupedActions(viewer("FINANCE_APPROVER"))[0]?.group).toBe("money");
-    expect(groupedActions(viewer("MAINTENANCE"))[0]?.group).toBe("maintenance");
+    expect(groupedActions(viewer("FINANCE"))[0]?.group).toBe("money");
+    expect(groupedActions(viewer("TECHNICIAN"))[0]?.group).toBe("maintenance");
     expect(groupedActions(viewer("ADMIN"))[0]?.group).toBe("capture");
   });
 });
@@ -134,44 +154,44 @@ describe("what the vehicle allows right now", () => {
   });
 
   it("finds the record a decision is about, and locks the maker out", () => {
-    expect(state("approve-work-order", facts(), "FINANCE_APPROVER")).toBe("locked:nothingAwaitingAuthorization");
+    expect(state("approve-work-order", facts(), "ADMIN")).toBe("locked:nothingAwaitingAuthorization");
     const mine = attention("WORK_ORDER_AWAITING_AUTHORIZATION", { makerPrincipalIds: [ME_ID] });
-    expect(state("approve-work-order", facts({ attention: [mine] }), "FINANCE_APPROVER")).toBe(
+    expect(state("approve-work-order", facts({ attention: [mine] }), "FINANCE")).toBe(
       "locked:makerCannotApprove",
     );
     const theirs = attention("WORK_ORDER_AWAITING_AUTHORIZATION", { makerPrincipalIds: [OTHER_ID] });
-    expect(state("approve-work-order", facts({ attention: [theirs] }), "FINANCE_APPROVER")).toBe(
+    expect(state("approve-work-order", facts({ attention: [theirs] }), "FINANCE")).toBe(
       "enabled:work_order",
     );
     const review = attention("ENTRY_AWAITING_REVIEW", { makerPrincipalIds: [ME_ID] });
-    expect(state("review-entry", facts({ attention: [review] }), "FINANCE_APPROVER")).toBe("locked:youRecordedIt");
+    expect(state("review-entry", facts({ attention: [review] }), "FINANCE")).toBe("locked:youRecordedIt");
   });
 
   it("releases only once the grounding's work order is completed", () => {
-    expect(state("release", facts(), "OPS_MANAGER")).toBe("locked:notGrounded");
+    expect(state("release", facts(), "ADMIN")).toBe("locked:notGrounded");
     const inRepair = facts({ asset: asset({ availability: grounded([groundingWorkOrder("APPROVED")]) }) });
-    expect(state("release", inRepair, "OPS_MANAGER")).toBe("locked:needsCompletion");
+    expect(state("release", inRepair, "ADMIN")).toBe("locked:needsCompletion");
     const done = facts({ asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }) });
-    expect(state("release", done, "OPS_MANAGER")).toBe("enabled:work_order");
+    expect(state("release", done, "ADMIN")).toBe("enabled:work_order");
     const ownRepair = facts({
       asset: asset({
         availability: grounded([groundingWorkOrder("COMPLETED", { completedBy: actor(ME_ID) })]),
       }),
     });
-    expect(state("release", ownRepair, "OPS_MANAGER")).toBe("locked:selfReleaseForbidden");
+    expect(state("release", ownRepair, "ADMIN")).toBe("locked:selfReleaseForbidden");
   });
 
   it("plans a work order from an unplanned problem when there is one", () => {
-    expect(state("create-work-order", facts(), "MAINTENANCE")).toBe("enabled:-");
-    expect(state("create-work-order", facts({ attention: [attention("ISSUE_UNPLANNED")] }), "MAINTENANCE")).toBe(
+    expect(state("create-work-order", facts(), "TECHNICIAN")).toBe("enabled:-");
+    expect(state("create-work-order", facts({ attention: [attention("ISSUE_UNPLANNED")] }), "TECHNICIAN")).toBe(
       "enabled:issue",
     );
   });
 
   it("completes the grounding work order first", () => {
-    expect(state("complete-work-order", facts(), "MAINTENANCE")).toBe("locked:noWorkOrderInProgress");
+    expect(state("complete-work-order", facts(), "TECHNICIAN")).toBe("locked:noWorkOrderInProgress");
     const inRepair = facts({ asset: asset({ availability: grounded([groundingWorkOrder("APPROVED")]) }) });
-    expect(state("complete-work-order", inRepair, "MAINTENANCE")).toBe("enabled:work_order");
+    expect(state("complete-work-order", inRepair, "TECHNICIAN")).toBe("enabled:work_order");
   });
 
   it("renews the expired document before the expiring one", () => {
@@ -188,9 +208,12 @@ describe("what the vehicle allows right now", () => {
 
   it("fills the phone bar with the first three actions the role can take now", () => {
     const f = facts();
-    expect(quickActions(f, viewer("FIELD_SUBMITTER"))).toEqual(["log-fuel", "report-issue", "record-reading"]);
+    expect(quickActions(f, viewer("DRIVER"))).toEqual(["log-fuel", "report-issue", "record-reading"]);
     // Nothing to complete yet, so the workshop's bar starts with planning.
-    expect(quickActions(f, viewer("MAINTENANCE"))).toEqual(["create-work-order", "report-issue", "add-note"]);
-    expect(quickActions(f, viewer("FINANCE_APPROVER"))).toEqual(["record-expense", "reverse-entry"]);
+    expect(quickActions(f, viewer("TECHNICIAN"))).toEqual(["create-work-order", "report-issue", "add-note"]);
+    expect(quickActions(f, viewer("FINANCE"))).toEqual(["record-expense", "reverse-entry"]);
+    expect(quickActions(f, viewer("ADMIN"))).toEqual(["record-expense", "report-issue", "start-trip"]);
+    expect(quickActions(f, viewer("DIRECTOR"))).toEqual(["record-expense", "report-issue", "start-trip"]);
+    expect(quickActions(f, viewer("CASHIER"))).toEqual(["record-expense", "record-revenue", "add-note"]);
   });
 });

@@ -83,7 +83,7 @@ const approver: MeContext = {
   principalId: "p",
   principalType: "HUMAN",
   membershipId: "m",
-  role: "FINANCE_APPROVER",
+  role: "FINANCE",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING"],

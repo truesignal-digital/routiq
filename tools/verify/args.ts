@@ -107,7 +107,7 @@ function parseLang(raw: string | undefined): Lang {
 
 function driveOptions(parsed: Parsed): DriveOptions {
   return {
-    role: parsed.values.get("role") ?? "admin",
+    role: parsed.values.get("role") ?? "director",
     lang: parseLang(parsed.values.get("lang")),
     video: parsed.flags.has("video"),
     strict: parsed.flags.has("strict"),
@@ -160,7 +160,7 @@ export function parseArgs(argv: readonly string[], env: Readonly<Record<string, 
       if (upper === undefined || !HTTP_METHODS.has(upper)) throw new Error("api needs a method: GET, POST, PUT, PATCH or DELETE");
       if (path === undefined || !path.startsWith("/")) throw new Error("api needs a path starting with /, e.g. /v1/me");
       if (extra.length > 0) throw new Error(`unexpected arguments: ${extra.join(" ")}`);
-      return { name, slot: slot(), method: upper, path, role: parsed.values.get("role") ?? "admin", body: parsed.values.get("json") };
+      return { name, slot: slot(), method: upper, path, role: parsed.values.get("role") ?? "director", body: parsed.values.get("json") };
     }
     case "db": {
       if (parsed.positionals.length !== 1) throw new Error('db takes one quoted query: pnpm verify db "select ..."');

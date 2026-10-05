@@ -114,7 +114,7 @@ export const approveWorkOrder: CommandDefinition<ApproveWorkOrderPayload> = {
   name: "approve-work-order",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: approveWorkOrderPayload,
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 
@@ -150,7 +150,7 @@ export const rejectWorkOrder: CommandDefinition<RejectWorkOrderPayload> = {
   name: "reject-work-order",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: rejectWorkOrderPayload,
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 
@@ -201,7 +201,7 @@ export const approveWorkOrderClosure: CommandDefinition<ApproveWorkOrderClosureP
     name: "approve-work-order-closure",
     version: 1,
     module: "MAINTENANCE",
-    allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+    allowedRoles: ["DIRECTOR", "ADMIN"],
     payloadSchema: approveWorkOrderClosurePayload,
     branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 
@@ -246,7 +246,7 @@ export const rejectWorkOrderCompletion: CommandDefinition<RejectWorkOrderComplet
     name: "reject-work-order-completion",
     version: 1,
     module: "MAINTENANCE",
-    allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+    allowedRoles: ["DIRECTOR", "ADMIN"],
     payloadSchema: rejectWorkOrderCompletionPayload,
     branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
 

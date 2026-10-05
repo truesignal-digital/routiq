@@ -192,14 +192,16 @@ export interface PlatformCommandDefinition<P> {
   version: number;
   payloadSchema: z.ZodType<P>;
   /**
-   * Creates the workspace the receipt is filed under, and nothing else.
+   * Returns the workspace the receipt is filed under: provisioning creates it
+   * here and nothing else; a command on an existing workspace (appoint-director)
+   * looks it up.
    *
    * The ordering is forced, not stylistic: `commands.workspace_id` is a real FK,
    * so the workspace must exist before the receipt — and every row `execute`
    * writes carries `created_by_command_id`, so the receipt must exist before
    * them. That leaves exactly one slot for the workspace insert, and it is here.
    */
-  createWorkspace(
+  resolveWorkspace(
     tx: Tx,
     ctx: OperatorContext,
     envelope: CommandEnvelope,
@@ -702,7 +704,7 @@ async function dispatchPlatform(
         );
       }
 
-      const workspaceId = await definition.createWorkspace(
+      const workspaceId = await definition.resolveWorkspace(
         tx,
         ctx,
         request.envelope,

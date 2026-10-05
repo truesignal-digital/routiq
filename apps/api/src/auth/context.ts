@@ -29,7 +29,11 @@ export async function resolveAuthContext(
     principalType: row.principalType,
     membershipId: row.membership.id,
     role: row.membership.role,
-    branchScope: row.membership.allBranches ? "ALL" : row.membership.branchIds,
+    // ADR-0009: Direction always covers every branch, whatever the row says.
+    branchScope:
+      row.membership.role === "DIRECTOR" || row.membership.allBranches
+        ? "ALL"
+        : row.membership.branchIds,
   };
 }
 

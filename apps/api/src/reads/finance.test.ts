@@ -44,7 +44,7 @@ describe("finance reads", () => {
 
     const admin = await seedMember(db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     allBranchesToken = (
@@ -53,7 +53,7 @@ describe("finance reads", () => {
 
     const scoped = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: false,
       branchIds: [branchId],
     });
@@ -475,7 +475,7 @@ describe("finance reads", () => {
       const seeded = await seedWorkspace(db);
       const submitter = await seedMember(db, {
         workspaceId: seeded.workspace.id,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       pagedToken = (
@@ -485,7 +485,7 @@ describe("finance reads", () => {
         })
       ).token;
 
-      // Below the 100_000 threshold a FIELD_SUBMITTER auto-approves → POSTED
+      // Below the 100_000 threshold a DRIVER auto-approves → POSTED
       // with a postedAt. Above it the entry stays SUBMITTED with postedAt null.
       for (let index = 0; index < POSTED_COUNT; index += 1) {
         const { entryId, recordStatus } = await recordExpense(pagedToken, {
@@ -694,7 +694,7 @@ describe("finance reads", () => {
       const seeded = await seedWorkspace(db);
       const submitter = await seedMember(db, {
         workspaceId: seeded.workspace.id,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       sortToken = (
@@ -923,7 +923,7 @@ describe("finance reads", () => {
 
       const submitter = await seedMember(db, {
         workspaceId: approvalsWorkspaceId,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       submitterPrincipalId = submitter.principal.id;
@@ -936,7 +936,7 @@ describe("finance reads", () => {
 
       const approverAll = await seedMember(db, {
         workspaceId: approvalsWorkspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: true,
       });
       approverAllToken = (
@@ -948,7 +948,7 @@ describe("finance reads", () => {
 
       const approverScoped = await seedMember(db, {
         workspaceId: approvalsWorkspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: false,
         branchIds: [dlaBranchId],
       });
@@ -959,7 +959,7 @@ describe("finance reads", () => {
         })
       ).token;
 
-      // Above the 100_000 threshold a FIELD_SUBMITTER cannot auto-approve, so
+      // Above the 100_000 threshold a DRIVER cannot auto-approve, so
       // these land SUBMITTED. Spaced so createdAt ordering is unambiguous.
       const first = await recordExpense(submitterToken, {
         amountMinor: 150_000,
@@ -1095,7 +1095,7 @@ describe("finance reads", () => {
       const seeded = await seedWorkspace(db);
       const submitter = await seedMember(db, {
         workspaceId: seeded.workspace.id,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       queueToken = (
@@ -1237,7 +1237,7 @@ describe("finance reads", () => {
 
       const admin = await seedMember(db, {
         workspaceId: periodsWorkspaceId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       periodsAdminToken = (
@@ -1249,7 +1249,7 @@ describe("finance reads", () => {
 
       const submitter = await seedMember(db, {
         workspaceId: periodsWorkspaceId,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       periodsSubmitterToken = (
@@ -1522,7 +1522,7 @@ describe("finance entry fields for the vehicle workspace", () => {
     workspaceId = seeded.workspace.id;
     branchId = seeded.branch.id;
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
     truckA = await seedAsset(ctx.app, admin.token, { assetCode: "SPLIT-A" });
     truckB = await seedAsset(ctx.app, admin.token, { assetCode: "SPLIT-B" });
 
