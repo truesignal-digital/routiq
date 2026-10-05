@@ -112,7 +112,6 @@
       }
     },
     "record": {
-      "title": "Saisir un trajet",
       "activityTypeLabel": "Type de trajet",
       "primaryAssetLabel": "Camion principal",
       "chooseAsset": "Choisir un camion",

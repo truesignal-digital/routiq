@@ -110,7 +110,6 @@
       }
     },
     "record": {
-      "title": "Saisir un voyage",
       "activityTypeLabel": "Type de voyage",
       "primaryAssetLabel": "Véhicule principal",
       "chooseAsset": "Choisir un véhicule",

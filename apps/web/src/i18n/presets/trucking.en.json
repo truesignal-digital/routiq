@@ -112,7 +112,6 @@
       }
     },
     "record": {
-      "title": "Record a trip",
       "activityTypeLabel": "Trip type",
       "primaryAssetLabel": "Primary truck",
       "chooseAsset": "Choose a truck",
