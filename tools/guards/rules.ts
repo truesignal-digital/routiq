@@ -71,6 +71,24 @@ function schemaTables(files: readonly SourceFile[]): string[] {
 const SMALL_CONTROL =
   /<(?:Button|SelectTrigger|Input|TabsList|AlertDialogAction|AlertDialogCancel|Link|button|a|input|select|summary)\b(?:[^<>]|=>)*?(?:\bsize=["'](?:sm|icon-sm|xs|icon-xs)["']|(?<![\w:/[-])(?:min-h|h|size)-(?:[6-9]|10)(?![\w-]))/;
 
+const CATALOG = /^apps\/web\/src\/i18n\/(locales|presets)\/[^/]+\.json$/;
+
+/**
+ * Each catalog key with its line, for the two-space JSON the catalogs are
+ * written in: a key's path is the keys opened above it at shallower depths.
+ */
+function catalogKeys(file: SourceFile): { path: string; line: number; text: string }[] {
+  const stack: string[] = [];
+  return file.content.split("\n").flatMap((text, index) => {
+    const match = /^( *)"([^"]+)":/.exec(text);
+    if (match === null) return [];
+    const depth = (match[1] ?? "").length / 2;
+    stack.length = Math.max(depth - 1, 0);
+    stack.push(match[2] ?? "");
+    return [{ path: stack.join("."), line: index + 1, text: text.trim() }];
+  });
+}
+
 export const RULES: readonly Rule[] = [
   {
     id: "A2",
@@ -286,6 +304,19 @@ export const RULES: readonly Rule[] = [
       /\b[A-Z][A-Z0-9_]*_TONES?\b|Record<[^,]*[Ss]tatus[^,]*,[^>]*([Tt]one|"(success|warning|info|danger|neutral)")|\btone=\{[^}]*\b(status|state)\s*[!=]==/,
       (path) => isWebProduction(path) && !/^apps\/web\/src\/[\w-]+\/[A-Z]\w*StatusBadge\.tsx$/.test(path),
     ),
+  },
+  {
+    id: "H15",
+    name: "submit-labels-in-commands",
+    fix: "A form's button names its command: put it at commands.<command-name>.submit and render it through CommandForm's `command` prop (apps/web/src/commands/labels.ts).",
+    check: (files) =>
+      files
+        .filter((file) => CATALOG.test(file.path))
+        .flatMap((file) =>
+          catalogKeys(file)
+            .filter((key) => /submit$/i.test(key.path) && !key.path.startsWith("commands."))
+            .map(({ line, text }) => ({ path: file.path, line, text })),
+        ),
   },
   {
     id: "J1",

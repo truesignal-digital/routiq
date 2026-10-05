@@ -5,9 +5,6 @@
   "E1": {
     "apps/web/src/components/money-input.tsx": 1
   },
-  "H6": {
-    "apps/web/src/shell/branch-context.tsx": 1
-  },
   "A18": {
     "apps/api/src/artifacts/artifacts.test.ts": 2,
     "apps/api/src/auth/auth.test.ts": 1,

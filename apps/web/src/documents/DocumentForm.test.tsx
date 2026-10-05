@@ -115,7 +115,7 @@ describe("DocumentForm on a vehicle's record panel", () => {
     const expires = within(panel).getByLabelText("Expires");
     await userEvent.clear(expires);
     await userEvent.type(expires, "2027-09-19");
-    await userEvent.click(within(panel).getByRole("button", { name: "Save" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Save renewal" }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith(true));
     expect(client.seen[0]!.name).toBe("add-or-renew-document");
@@ -141,7 +141,7 @@ describe("DocumentForm on a vehicle's record panel", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save renewal" }));
 
     await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
     expect(screen.queryByRole("alert")).toBeNull();

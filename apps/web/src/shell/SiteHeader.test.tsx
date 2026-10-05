@@ -10,6 +10,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+// The branch switcher's toast reads the real catalog; this test keeps i18n mocked.
+vi.mock("@/lib/notify.js", () => ({ notifyInfo: vi.fn() }));
+
 let pathname = "/";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -166,7 +169,7 @@ describe("SiteHeader breadcrumb", () => {
     expect(crumbs()).toEqual([
       ["nav.home", "/"],
       ["nav.activities", "/activities"],
-      ["activities.record.title", null],
+      ["commands.record-journey-sheet.label", null],
     ]);
   });
 

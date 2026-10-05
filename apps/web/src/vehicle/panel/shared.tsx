@@ -13,7 +13,7 @@ import { useVehicle } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import type { Step } from "../model.js";
 import { useLockText, useStepLabel } from "../parts.js";
-import { STEP_ICONS } from "../steps.js";
+import { DESTRUCTIVE_STEPS, STEP_ICONS } from "../steps.js";
 
 /** What every form opened on a record gets from the panel. */
 export function useFormHost(recordLabel: string): {
@@ -108,7 +108,9 @@ export function PanelFooter({
             return (
               <Button
                 key={step.key}
-                variant={step.key === solidKey ? "default" : "outline"}
+                variant={
+                  DESTRUCTIVE_STEPS.has(step.key) ? "destructive" : step.key === solidKey ? "default" : "outline"
+                }
                 className={cn(
                   "desktop:h-9",
                   index === 0 && ordered.length > 2 ? "basis-full sm:basis-auto" : "flex-1 sm:flex-none",

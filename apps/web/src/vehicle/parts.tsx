@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { STEP_ICONS } from "./steps.js";
+import { useCommandLabel } from "../commands/labels.js";
+import { DESTRUCTIVE_STEPS, STEP_COMMANDS, STEP_ICONS } from "./steps.js";
 import type { Lock as LockReason, OfferedStep, Step } from "./model.js";
 
 export type Tone = "neutral" | "success" | "warning" | "info" | "danger";
@@ -273,9 +274,14 @@ export function useLockText() {
   return (lock: LockReason) => t(`vehicle.locked.${lock.key}`, lock.params ?? {});
 }
 
+/** A step's name, from its command's words; `short` is the quick bar's. */
 export function useStepLabel() {
   const { t } = useTranslation();
-  return (step: Pick<Step, "key">) => t(`vehicle.steps.${step.key}`);
+  const label = useCommandLabel();
+  return (step: Pick<Step, "key">, part: "label" | "short" = "label") =>
+    step.key === "review-entry"
+      ? t(`vehicle.actions.review-entry.${part}`)
+      : label(STEP_COMMANDS[step.key], part);
 }
 
 /** The row's "…": its open steps first, then the locked ones with what they wait for. */
@@ -315,8 +321,13 @@ export function RowMenu({
           {open.map(({ step }) => {
             const Icon = STEP_ICONS[step.key];
             return (
-              <DropdownMenuItem key={step.key} className="py-1.5" onClick={() => onStep(step)}>
-                <Icon className="text-muted-foreground" aria-hidden />
+              <DropdownMenuItem
+                key={step.key}
+                className="py-1.5"
+                variant={DESTRUCTIVE_STEPS.has(step.key) ? "destructive" : "default"}
+                onClick={() => onStep(step)}
+              >
+                <Icon className={DESTRUCTIVE_STEPS.has(step.key) ? undefined : "text-muted-foreground"} aria-hidden />
                 {stepLabel(step)}
               </DropdownMenuItem>
             );

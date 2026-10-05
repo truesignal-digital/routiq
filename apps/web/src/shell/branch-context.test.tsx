@@ -391,6 +391,35 @@ describe("BranchSwitcher", () => {
     expect(screen.getByText("Agences…")).toBeTruthy();
   });
 
+  it("shows the full scope name on hover when the pill has to cut it short", async () => {
+    renderProvider(<BranchSwitcher />);
+    const trigger = screen.getByRole("combobox", { name: "Agence courante" });
+
+    expect(trigger.getAttribute("title")).toBe("Toutes mes agences");
+
+    await userEvent.click(trigger);
+    await userEvent.click(await screen.findByRole("option", { name: "Yaoundé" }));
+
+    expect(trigger.getAttribute("title")).toBe("Yaoundé");
+  });
+
+  // #137: the select value is a flex box, and text-overflow never draws an
+  // ellipsis on a flex container's own text, so the label clipped mid-word.
+  it("puts the label in a block that can end in an ellipsis", () => {
+    renderProvider(<BranchSwitcher />);
+    const label = screen.getByText("Toutes mes agences");
+
+    expect(label.dataset.slot).not.toBe("select-value");
+    expect(label.className.split(" ")).toContain("truncate");
+  });
+
+  it("names a single-branch member's agency on hover too", () => {
+    withBranches(DLA);
+    renderProvider(<BranchSwitcher />);
+
+    expect(screen.getByLabelText("Agence courante").getAttribute("title")).toBe("Douala");
+  });
+
   it("gives the trigger a 44px touch target", () => {
     renderProvider(<BranchSwitcher />);
 

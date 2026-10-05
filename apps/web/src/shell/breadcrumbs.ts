@@ -25,7 +25,7 @@ interface PageTrail {
  * actually looking at.
  */
 const PAGE_TRAILS: readonly PageTrail[] = [
-  { pattern: "/assets/new", trail: [{ labelKey: "assets.register" }] },
+  { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
   // The vehicle workspace: its sections are tabs on one record, so every
   // section shares the record's crumb and the tabs say where you are.
   ...["", "/maintenance", "/money", "/trips", "/documents", "/history", "/details"].map((section) => ({
@@ -33,7 +33,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "assets.detail.breadcrumb", record: true as const }],
   })),
   // Before the $activityId pattern, or "record" reads as a trip.
-  { pattern: "/activities/record", trail: [{ labelKey: "activities.record.title" }] },
+  { pattern: "/activities/record", trail: [{ labelKey: "commands.record-journey-sheet.label" }] },
   {
     pattern: "/activities/$activityId",
     trail: [{ labelKey: "activities.detail.breadcrumb", record: true }],

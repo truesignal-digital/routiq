@@ -20,6 +20,7 @@ import type { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
 import { localizedLabel } from "@/lib/format";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ const CAPACITY_UNITS = ["KG", "TONNE", "M3", "SEAT"] as const;
 
 export function AssetRegisterScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useActiveSession();
@@ -166,7 +168,7 @@ export function AssetRegisterScreen() {
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {t("assets.form.eyebrow")}
       </p>
-      <PageHeader className="mt-1" title={t("assets.form.title")} />
+      <PageHeader className="mt-1" title={label("register-asset")} />
 
       <Form {...form}>
         <form
@@ -469,15 +471,15 @@ export function AssetRegisterScreen() {
           )}
 
           <div className="flex items-center gap-3">
-            <Button type="submit" className="flex-1" disabled={submitting}>
-              {submitting ? t("assets.form.submitting") : t("assets.form.submit")}
-            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => void navigate({ to: "/assets" })}
             >
               {t("assets.form.cancel")}
+            </Button>
+            <Button type="submit" className="flex-1" disabled={submitting}>
+              {label("register-asset", submitting ? "submitting" : "submit")}
             </Button>
           </div>
         </form>
