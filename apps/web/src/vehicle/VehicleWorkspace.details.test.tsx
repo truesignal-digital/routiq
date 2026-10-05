@@ -175,25 +175,32 @@ describe("the Details card's edit mode", () => {
       asset: asset({ acquisitionDate: "2024-03-01" }),
     });
     expect(document.querySelector('input[type="date"]')).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Acquisition date" }));
-    await user.click(await screen.findByRole("button", { name: "Previous month" }));
-    await user.click(screen.getByRole("button", { name: "Thursday, February 15, 2024" }));
-    await user.click(screen.getByRole("button", { name: "Save details" }));
+    // jsdom restyles every candidate of a role query after each render (~4 ms
+    // a button), so the calendar opens once, its controls are found once, and
+    // queries stay inside it: page-wide queries after every click timed out on
+    // CI (#134).
+    const trigger = screen.getByRole("button", { name: "Acquisition date" });
+    const save = screen.getByRole("button", { name: "Save details" });
+    await user.click(trigger);
+    const calendar = within(await screen.findByRole("dialog"));
+    const previousMonth = calendar.getByRole("button", { name: "Previous month" });
+    const previousYear = calendar.getByRole("button", { name: "Previous year" });
+    const nextYear = calendar.getByRole("button", { name: "Next year" });
+
+    for (let step = 0; step < 4; step += 1) await user.click(nextYear);
+    const futureMonth = calendar.getByRole("grid", { name: "March 2028" });
+    // Named by the grid; `hidden` skips a second restyle of its 42 days.
+    const futureDays = within(futureMonth).getAllByRole("button", { hidden: true });
+    expect(futureDays).toHaveLength(42);
+    expect(futureDays.every((day) => (day as HTMLButtonElement).disabled)).toBe(true);
+
+    for (let step = 0; step < 4; step += 1) await user.click(previousYear);
+    await user.click(previousMonth);
+    await user.click(calendar.getByRole("button", { name: "Thursday, February 15, 2024" }));
+    expect(trigger.textContent).toContain("Feb 15, 2024");
+    await user.click(save);
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, acquisitionDate: "2024-02-15" });
-
-    cleanup();
-    await closeVehicle();
-    const again = await startEditing({ role: "OPS_MANAGER" });
-    await again.user.click(screen.getByRole("button", { name: "Acquisition date" }));
-    await again.user.click(await screen.findByRole("button", { name: "Next year" }));
-    for (let step = 0; step < 3; step += 1) {
-      await again.user.click(screen.getByRole("button", { name: "Next year" }));
-    }
-    const future = screen
-      .getAllByRole("button")
-      .find((button) => /, 2028$/.test(button.getAttribute("aria-label") ?? ""));
-    expect((future as HTMLButtonElement | undefined)?.disabled).toBe(true);
   });
 
   it("puts the server's refusal on the field it is about", async () => {
