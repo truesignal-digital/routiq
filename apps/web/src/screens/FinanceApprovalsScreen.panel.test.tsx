@@ -66,6 +66,7 @@ function entry(id: string, number: string, submittedBy = SUBMITTER) {
     rowVersion: 3,
     reversesEntryId: null,
     recordedBy: { principalId: submittedBy, displayName: "Hervé", scope: "WORKSPACE" },
+    directionDecides: false,
     evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
     assetShareMinor: null,
     assetLinks: null,
