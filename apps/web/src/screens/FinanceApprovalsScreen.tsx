@@ -126,10 +126,19 @@ export function FinanceApprovalsScreen() {
         ),
       },
       {
-        accessorKey: "submittedAt",
+        accessorKey: "economicDate",
         header: t("finance.entries.detail.date"),
-        enableSorting: true,
+        enableSorting: false,
         meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
+        cell: ({ row }) => formatDate(row.original.economicDate),
+      },
+      {
+        accessorKey: "submittedAt",
+        header: t("finance.approvals.columns.submittedAt"),
+        enableSorting: true,
+        // A phone row shows values without headings, so a second bare date
+        // there would read as the economic one.
+        meta: { mobile: "hidden", label: t("finance.approvals.columns.submittedAt") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
       },
       {
