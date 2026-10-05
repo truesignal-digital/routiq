@@ -19,8 +19,8 @@ Preconditions:
 
 - Slot up; any role.
 
-- **Default.** Run `pnpm verify login --role admin`. The screenshot shows "Accueil", "Camions", "Trajets", "Finances", "Plus" in the sidebar.
-- **Switch to English.** Run `pnpm verify login --role admin --lang en`. The step `switch language to English (More → English)` passes once the heading "Language" is visible; the home screenshot shows "Home", "Trucks", "Trips", "Finance", "More". `document.documentElement.lang` is `en`.
+- **Default.** Run `pnpm verify login --role director`. The screenshot shows "Accueil", "Camions", "Trajets", "Finances", "Plus" in the sidebar.
+- **Switch to English.** Run `pnpm verify login --role director --lang en`. The step `switch language to English (More → English)` passes once the heading "Language" is visible; the home screenshot shows "Home", "Trucks", "Trips", "Finance", "More". `document.documentElement.lang` is `en`.
 - **Stay in English.** In a DriveScript after `--lang en`, move with `ctx.nav("/finance/entries")` or clicks. Labels stay English.
 - **Reload resets.** In a DriveScript, `await ctx.page.reload()`; the sidebar shows "Accueil" again. This is #127's current behavior, not a harness fault.
 - **Proof.** The home screenshot in each language from the `login` run directories.

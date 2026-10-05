@@ -56,7 +56,7 @@ function membership(enabledModules: ModuleCode[]): MeContext {
     principalId: "22222222-2222-4222-8222-222222222222",
     principalType: "HUMAN",
     membershipId: "33333333-3333-4333-8333-333333333333",
-    role: "OPS_MANAGER",
+    role: "ADMIN",
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],

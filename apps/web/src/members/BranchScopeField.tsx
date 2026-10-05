@@ -22,11 +22,17 @@ export function BranchScopeField({
   value,
   onChange,
   disabled = false,
+  allowAll = true,
+  hint,
 }: {
   branches: readonly BranchOption[];
   value: MemberBranchScope;
   onChange: (value: MemberBranchScope) => void;
   disabled?: boolean;
+  /** False for an actor who does not hold every branch: they cannot give "all branches". */
+  allowAll?: boolean;
+  /** Why the field is locked, when it is. */
+  hint?: string | undefined;
 }) {
   const { t } = useTranslation();
   const selected = value === "ALL" ? [] : value;
@@ -35,27 +41,35 @@ export function BranchScopeField({
     const next = checked
       ? [...selected, branchId]
       : selected.filter((id) => id !== branchId);
-    // An empty pick list is not a scope the command accepts; falling back to
-    // ALL would silently widen it, so the last branch simply stays ticked.
-    onChange(next.length === 0 ? "ALL" : next);
+    // An empty pick list is not a scope the command accepts. Without "all
+    // branches" to fall back on, the last branch simply stays ticked.
+    if (next.length === 0) {
+      if (allowAll) onChange("ALL");
+      return;
+    }
+    onChange(next);
   }
 
   return (
     <fieldset className="flex flex-col gap-3" disabled={disabled}>
       <legend className="text-sm font-medium">{t("users.form.branchScope")}</legend>
 
-      <Label className="flex items-center gap-2 text-sm font-normal">
-        <Checkbox
-          checked={value === "ALL"}
-          onCheckedChange={(checked) =>
-            onChange(checked ? "ALL" : (branches[0] ? [branches[0].id] : "ALL"))
-          }
-        />
-        {t("users.form.allBranches")}
-      </Label>
+      {allowAll && (
+        <Label className="flex items-center gap-2 text-sm font-normal">
+          <Checkbox
+            checked={value === "ALL"}
+            onCheckedChange={(checked) =>
+              onChange(checked ? "ALL" : (branches[0] ? [branches[0].id] : "ALL"))
+            }
+          />
+          {t("users.form.allBranches")}
+        </Label>
+      )}
+
+      {hint !== undefined && <p className="text-sm text-muted-foreground">{hint}</p>}
 
       {value !== "ALL" && (
-        <div className="flex flex-col gap-2 pl-6">
+        <div className={allowAll ? "flex flex-col gap-2 pl-6" : "flex flex-col gap-2"}>
           {branches.map((branch) => (
             <Label
               key={branch.id}

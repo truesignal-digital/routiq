@@ -62,7 +62,7 @@ const manager: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "OPS_MANAGER",
+  role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ACTIVITIES", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
@@ -103,6 +103,7 @@ function fullHaulage(): ActivityDetail {
     closedAt: "2026-07-19T08:00:00.000Z",
     createdAt: "2026-07-18T05:30:00.000Z",
     createdByCommandId: COMMAND_ID,
+    recordedByPrincipalId: null,
     rowVersion: 4,
     segments: [
       {
@@ -238,6 +239,7 @@ function sparseJourney(): ActivityDetail {
     plannedEndAt: null,
     closedAt: null,
     createdByCommandId: null,
+    recordedByPrincipalId: null,
     segments: [],
     crew: [],
     legs: [],

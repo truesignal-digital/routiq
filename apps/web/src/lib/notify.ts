@@ -16,7 +16,8 @@ export type NotifyNamespace =
   | "users"
   | "vehicle";
 
-type NotifyKind = "success" | "info" | "warnings" | "errors";
+export const NOTIFY_KINDS = ["success", "info", "warnings", "errors"] as const;
+type NotifyKind = (typeof NOTIFY_KINDS)[number];
 
 /** ICU values for a message that names its record: `{name}`, `{branch}`. */
 export type NotifyValues = Readonly<Record<string, string | number>>;

@@ -111,24 +111,24 @@ describe("FinancePeriods - validateReopenReason", () => {
 });
 
 describe("FinancePeriods - canManagePeriods", () => {
-  it("grants access to FINANCE_APPROVER with FINANCE module", () => {
-    expect(canManagePeriods("FINANCE_APPROVER", ["FINANCE"])).toBe(true);
+  it("grants access to FINANCE with FINANCE module", () => {
+    expect(canManagePeriods("FINANCE", ["FINANCE"])).toBe(true);
   });
 
-  it("grants access to ADMIN with FINANCE module", () => {
-    expect(canManagePeriods("ADMIN", ["FINANCE"])).toBe(true);
+  it("grants access to DIRECTOR with FINANCE module", () => {
+    expect(canManagePeriods("DIRECTOR", ["FINANCE"])).toBe(true);
   });
 
   it("denies access without FINANCE module", () => {
-    expect(canManagePeriods("FINANCE_APPROVER", [])).toBe(false);
+    expect(canManagePeriods("FINANCE", [])).toBe(false);
     expect(canManagePeriods("ADMIN", [])).toBe(false);
   });
 
   it("denies access for non-approver roles", () => {
-    expect(canManagePeriods("FIELD_SUBMITTER", ["FINANCE"])).toBe(false);
-    expect(canManagePeriods("OPS_MANAGER", ["FINANCE"])).toBe(false);
-    expect(canManagePeriods("MAINTENANCE", ["FINANCE"])).toBe(false);
-    expect(canManagePeriods("EXECUTIVE_VIEWER", ["FINANCE"])).toBe(false);
+    expect(canManagePeriods("DRIVER", ["FINANCE"])).toBe(false);
+    expect(canManagePeriods("ADMIN", ["FINANCE"])).toBe(false);
+    expect(canManagePeriods("TECHNICIAN", ["FINANCE"])).toBe(false);
+    expect(canManagePeriods("CASHIER", ["FINANCE"])).toBe(false);
   });
 
   it("denies access for undefined role", () => {

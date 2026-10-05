@@ -128,7 +128,7 @@ vi.mock("../assets/useAssetOptions.js", () => ({
 }));
 
 const me = {
-  role: "OPS_MANAGER" as const,
+  role: "ADMIN" as const,
   enabledModules: ["CORE", "ACTIVITIES"] as const,
 };
 
@@ -296,7 +296,7 @@ describe("ActivitiesScreen", () => {
   });
 
   it("shows a denied surface when the module is off", async () => {
-    meValue = { role: "OPS_MANAGER", enabledModules: ["CORE"] };
+    meValue = { role: "ADMIN", enabledModules: ["CORE"] };
     render(<ActivitiesScreen />);
     expect(await screen.findByText("activities.title")).toBeTruthy();
     expect(screen.queryByText("DLA-2026-00042")).toBeNull();

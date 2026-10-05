@@ -41,7 +41,7 @@ describe("report-issue.v1", () => {
 
     const driver = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     driverToken = (

@@ -20,6 +20,7 @@ describe("work-order decision commands", () => {
   let adminToken: string;
   let managerToken: string;
   let approverToken: string;
+  let financeToken: string;
   let assetId: string;
   let otherWorkspaceWorkOrderId: string;
 
@@ -41,7 +42,7 @@ describe("work-order decision commands", () => {
 
     const manager = await seedMember(db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "TECHNICIAN",
       allBranches: true,
     });
     managerToken = (
@@ -50,7 +51,7 @@ describe("work-order decision commands", () => {
 
     const approver = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "DIRECTOR",
       allBranches: true,
     });
     approverToken = (
@@ -60,12 +61,22 @@ describe("work-order decision commands", () => {
       })
     ).token;
 
+    // FINANCE keeps the books but no longer decides on work orders (ADR-0009).
+    const finance = await seedMember(db, {
+      workspaceId,
+      role: "FINANCE",
+      allBranches: true,
+    });
+    financeToken = (
+      await createSession(db, { workspaceId, principalId: finance.principal.id })
+    ).token;
+
     assetId = await seedAsset(ctx.app, adminToken);
 
     /**
      * The tenant rule that makes these commands reachable at all: above
-     * 100 000 XAF the finance approver is the role that authorizes, so neither
-     * the manager nor the admin clears their own request. Left in place for the
+     * 100 000 XAF Direction is the role that authorizes, so neither the
+     * workshop nor the admin clears their own request. Left in place for the
      * whole suite — every order here is deliberately above the bound.
      */
     await db.insert(approvalRules).values(
@@ -76,7 +87,7 @@ describe("work-order decision commands", () => {
         branchId: null,
         amountMinMinor: 100_000n,
         amountMaxMinor: null,
-        requiredRole: "FINANCE_APPROVER" as const,
+        requiredRole: "DIRECTOR" as const,
         createdByCommandId: null,
       })),
     );
@@ -220,16 +231,18 @@ describe("work-order decision commands", () => {
 
     it("is closed to roles that are not approvers at all", async () => {
       const workOrderId = await submittedWorkOrder();
-      const response = await post(
-        managerToken,
-        "approve-work-order",
-        { workOrderId },
-        { expectedVersion: 1 },
-      );
-      expect(response.statusCode).toBe(403);
-      expect(response.json()).toMatchObject({
-        error: { code: "ROLE_FORBIDDEN" },
-      });
+      for (const token of [managerToken, financeToken]) {
+        const response = await post(
+          token,
+          "approve-work-order",
+          { workOrderId },
+          { expectedVersion: 1 },
+        );
+        expect(response.statusCode).toBe(403);
+        expect(response.json()).toMatchObject({
+          error: { code: "ROLE_FORBIDDEN" },
+        });
+      }
     });
 
     /** The split is about the person, not the role: an admin may approve, but not their own. */

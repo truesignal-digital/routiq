@@ -32,6 +32,7 @@ import {
   assets,
   branches,
   categories,
+  commands,
   financialEntries,
   financialPostings,
   meterReadings,
@@ -399,6 +400,7 @@ export function registerActivityReadRoutes(
               closedAt: activities.closedAt,
               createdAt: activities.createdAt,
               createdByCommandId: activities.createdByCommandId,
+              recordedByPrincipalId: commands.initiatedByPrincipalId,
               branchId: activities.branchId,
               branchCode: branches.code,
               rowVersion: activities.rowVersion,
@@ -423,6 +425,13 @@ export function registerActivityReadRoutes(
               and(
                 eq(branches.workspaceId, activities.workspaceId),
                 eq(branches.id, activities.branchId),
+              ),
+            )
+            .leftJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, activities.workspaceId),
+                eq(commands.id, activities.createdByCommandId),
               ),
             )
             .where(and(...conditions))
@@ -614,6 +623,7 @@ export function registerActivityReadRoutes(
           closedAt: header.closedAt?.toISOString() ?? null,
           createdAt: header.createdAt.toISOString(),
           createdByCommandId: header.createdByCommandId,
+          recordedByPrincipalId: header.recordedByPrincipalId,
           branchId: header.branchId,
           branchCode: header.branchCode,
           primaryAssetCode,

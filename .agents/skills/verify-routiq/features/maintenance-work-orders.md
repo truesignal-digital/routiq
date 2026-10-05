@@ -22,9 +22,9 @@ Problems reported on a truck become work orders; a work order is opened with an 
 
 Preconditions:
 
-- Fresh seed. VH003 has the open bodywork problem 99D91608 ("Rear mudguard cracked and loose on its bracket") with no work order, and the approved brake work order 059DC371. Roles allowed: ADMIN, OPS_MANAGER, MAINTENANCE.
+- Fresh seed. VH003 has the open bodywork problem 99D91608 ("Rear mudguard cracked and loose on its bracket") with no work order, and the approved brake work order 059DC371. Roles allowed: DIRECTOR, ADMIN, TECHNICIAN; approvals: ADMIN, DIRECTOR.
 
-- **Open and complete with cost.** Run `pnpm verify drive flow:work-order --role maintenance --lang en`. It opens VH003 → Maintenance, clicks the problem's "Actions for …99D91608" menu → "Create work order", fills "Expected cost" = 60000, clicks "Open work order", waits for the toast "Work order opened", closes the record panel with Escape, opens the new order's "Actions for …" menu → "Complete work", fills "Work summary" and "How much did the repair cost?" = 55000, clicks "Declare complete" and waits for "Work completed".
+- **Open and complete with cost.** Run `pnpm verify drive flow:work-order --role technician --lang en`. It opens VH003 → Maintenance, clicks the problem's "Actions for …99D91608" menu → "Create work order", fills "Expected cost" = 60000, clicks "Open work order", waits for the toast "Work order opened", closes the record panel with Escape, opens the new order's "Actions for …" menu → "Complete work", fills "Work summary" and "How much did the repair cost?" = 55000, clicks "Declare complete" and waits for "Work completed".
 - **Cross-check.** The flow reads `GET /v1/work-orders/<id>` → `COMPLETED`, `actualCostMinor` 55000, `costOutcome` `LINES`. Independently: `pnpm verify api GET '/v1/work-orders?status=COMPLETED' --role maintenance`.
 - **Proof.** `01-new-work-order.png`, `02-work-order-opened.png`, `03-complete-with-cost.png`, `04-work-order-completed.png`.
 - **Mutates.** Run `pnpm verify up --reseed` before repeating; the problem no longer offers "Create work order" once it has one.

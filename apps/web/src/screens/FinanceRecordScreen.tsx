@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { WalletCards } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -5,7 +6,7 @@ import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
-import { canRecordFinance } from "@/finance/permissions.js";
+import { canReadFinance, canRecordFinance, canRecordRevenue } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 
 export function FinanceRecordScreen() {
@@ -13,6 +14,10 @@ export function FinanceRecordScreen() {
   const navigate = useNavigate();
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
+  // A role that records but does not read the books (CASHIER) stays here on a
+  // fresh form: the entries list would only deny it.
+  const canRead = canReadFinance(me?.role, me?.enabledModules);
+  const [formKey, setFormKey] = useState(0);
 
   if (me !== undefined && !canRecord) {
     return (
@@ -32,8 +37,13 @@ export function FinanceRecordScreen() {
 
       <div className="max-w-xl">
         <RecordEntryForm
+          key={formKey}
           surface="page"
-          onRecorded={() => void navigate({ to: "/finance/entries" })}
+          // role-config: a role that records expenses only gets no revenue tab.
+          lockDirection={!canRecordRevenue(me?.role, me?.enabledModules)}
+          onRecorded={() =>
+            canRead ? void navigate({ to: "/finance/entries" }) : setFormKey((key) => key + 1)
+          }
         />
       </div>
     </PageContainer>

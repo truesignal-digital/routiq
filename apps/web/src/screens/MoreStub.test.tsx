@@ -82,26 +82,37 @@ describe("MoreStub administration links", () => {
     expect(link.getAttribute("href")).toBe("/more/users");
   });
 
-  it("leaves no Users entry for a role that could not use it", async () => {
-    renderMore(membership("OPS_MANAGER", ["CORE", "ACTIVITIES"]));
+  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
+    "leaves %s no Users entry",
+    async (role) => {
+    renderMore(membership(role, ["CORE", "ACTIVITIES"]));
 
     await screen.findByRole("link", { name: /Personnel/ });
     expect(screen.queryByRole("link", { name: /Utilisateurs/ })).toBeNull();
+    },
+  );
+
+  it("offers the Director the Users screen too", async () => {
+    renderMore(membership("DIRECTOR", ["CORE", "ACTIVITIES"]));
+    expect(await screen.findByRole("link", { name: /Utilisateurs/ })).toBeTruthy();
   });
 
-  it("offers an admin the Branches screen", async () => {
-    renderMore(membership("ADMIN", ["CORE", "ACTIVITIES"]));
+  it("offers the Director the Branches screen", async () => {
+    renderMore(membership("DIRECTOR", ["CORE", "ACTIVITIES"]));
 
     const link = await screen.findByRole("link", { name: /Agences/ });
     expect(link.getAttribute("href")).toBe("/more/branches");
   });
 
-  it("leaves no Branches entry for a role that could not use it", async () => {
-    renderMore(membership("OPS_MANAGER", ["CORE", "ACTIVITIES"]));
+  it.each(["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
+    "leaves %s no Branches entry",
+    async (role) => {
+      renderMore(membership(role, ["CORE", "ACTIVITIES"]));
 
-    await screen.findByRole("link", { name: /Personnel/ });
-    expect(screen.queryByRole("link", { name: /Agences/ })).toBeNull();
-  });
+      await screen.findByRole("link", { name: /Personnel/ });
+      expect(screen.queryByRole("link", { name: /Agences/ })).toBeNull();
+    },
+  );
 
   it("keeps the Users entry when the workspace bought no other module", async () => {
     // CORE cannot be disabled, so member administration never disappears with
@@ -120,7 +131,7 @@ describe("MoreStub language", () => {
   });
 
   it("remembers the language picked on More for the next load", async () => {
-    renderMore(membership("OPS_MANAGER", ["CORE"]));
+    renderMore(membership("ADMIN", ["CORE"]));
 
     await userEvent.click(await screen.findByRole("button", { name: "English" }));
 

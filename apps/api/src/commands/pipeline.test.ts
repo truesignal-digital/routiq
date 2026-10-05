@@ -200,7 +200,7 @@ describe("Command Pipeline", () => {
     it("role not allowed returns 403 ROLE_FORBIDDEN", async () => {
       const member = await seedMember(db, {
         workspaceId: workspace.id,
-        role: "EXECUTIVE_VIEWER",
+        role: "CASHIER",
       });
       const session = await createSession(db, {
         principalId: member.principal.id,

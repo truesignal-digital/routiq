@@ -15,7 +15,7 @@ describe("GET /v1/assets/:assetId/custodian-candidates", () => {
   let leaver: Actor;
   let ydeManager: Actor;
   let submitter: Actor;
-  let viewer: Actor;
+  let cashier: Actor;
   let outsider: Actor;
   let dlaAssetId: string;
 
@@ -31,28 +31,28 @@ describe("GET /v1/assets/:assetId/custodian-candidates", () => {
     if (!yaounde) throw new Error("branch insert returned no row");
 
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Diane" });
-    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", displayName: "Boris" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Boris" });
     dlaDriver = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
       displayName: "Awa",
     });
     ydeDriver = await seedActor(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [yaounde.id],
       displayName: "Patrice",
     });
-    leaver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Ancien" });
+    leaver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Ancien" });
     ydeManager = await seedActor(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [yaounde.id],
       displayName: "Yves",
     });
-    submitter = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
-    viewer = await seedActor(ctx.db, { workspaceId, role: "EXECUTIVE_VIEWER", displayName: "Paul" });
+    submitter = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
+    cashier = await seedActor(ctx.db, { workspaceId, role: "CASHIER", displayName: "Paul" });
     const other = await seedWorkspace(ctx.db);
     outsider = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "ADMIN" });
 
@@ -79,7 +79,7 @@ describe("GET /v1/assets/:assetId/custodian-candidates", () => {
     expect(items.find((item) => item.displayName === "Awa")).toEqual({
       membershipId: dlaDriver.membershipId,
       displayName: "Awa",
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
     });
     // Patrice and Yves see only Yaoundé; Ancien was deactivated.
     const ids = items.map((item) => item.membershipId);
@@ -89,7 +89,7 @@ describe("GET /v1/assets/:assetId/custodian-candidates", () => {
   });
 
   it("refuses roles that cannot change a custodian", async () => {
-    for (const actor of [submitter, viewer]) {
+    for (const actor of [submitter, cashier]) {
       const response = await api.get(actor.token, `/v1/assets/${dlaAssetId}/custodian-candidates`);
       expect(response.status).toBe(403);
       expect(response.body).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
@@ -106,7 +106,7 @@ describe("GET /v1/assets/:assetId/custodian-candidates", () => {
 
   it("answers MODULE_DISABLED when ASSETS is off", async () => {
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const gatedAsset = await seedAsset(ctx.app, gatedAdmin.token);
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ASSETS" });
 

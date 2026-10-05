@@ -31,6 +31,7 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
   let adminPool: pg.Pool;
   let pool: pg.Pool;
   let truncatedFolder: string;
+  let secondRun: { before: unknown; after: unknown };
 
   const ws = randomUUID();
   const bareWs = randomUUID();
@@ -67,7 +68,8 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
     const journal = JSON.parse(await readFile(journalPath, "utf8")) as {
       entries: Array<{ idx: number }>;
     };
-    journal.entries = journal.entries.filter((entry) => entry.idx <= 27);
+    const fullJournal = journal.entries;
+    journal.entries = fullJournal.filter((entry) => entry.idx <= 27);
     await writeFile(journalPath, JSON.stringify(journal));
     await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
 
@@ -93,6 +95,23 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
       INSERT INTO approval_rules (workspace_id, command_type, required_role)
         VALUES ('${ws}', 'add-note', 'ADMIN');
     `);
+
+    // A second run is judged right after 0035, before 0036 renames the roles
+    // their guards look for: rerun later, they would write legacy-coded rules again.
+    journal.entries = fullJournal.filter((entry) => entry.idx <= 35);
+    await writeFile(journalPath, JSON.stringify(journal));
+    await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
+    const before = await snapshot();
+    for (const { file } of VEHICLE_MIGRATIONS) {
+      const statements = (await readFile(join(MIGRATIONS, file), "utf8"))
+        .split("--> statement-breakpoint")
+        .map((statement) => statement.trim())
+        .filter((statement) => statement.length > 0);
+      for (const statement of statements) {
+        await pool.query(statement);
+      }
+    }
+    secondRun = { before, after: await snapshot() };
 
     await migrate(drizzle(pool), { migrationsFolder: MIGRATIONS });
   });
@@ -135,11 +154,15 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
         .map((rule) => `${rule.commandType}:${rule.requiredRole}`)
         .sort();
       expect(backfilled).toEqual(provisioned);
-      expect(backfilled).not.toContain("add-note:EXECUTIVE_VIEWER");
-      expect(backfilled).not.toContain("attach-evidence:EXECUTIVE_VIEWER");
-      expect(backfilled).toContain("attach-evidence:MAINTENANCE");
-      expect(backfilled).toContain("update-asset-details:OPS_MANAGER");
-      expect(backfilled).not.toContain("update-asset-details:MAINTENANCE");
+      // Migrated through 0036, so the rules carry the six team roles.
+      expect(
+        backfilled.filter((rule) =>
+          /:(OPS_MANAGER|EXECUTIVE_VIEWER|FIELD_SUBMITTER|MAINTENANCE|FINANCE_APPROVER)$/.test(rule),
+        ),
+      ).toEqual([]);
+      expect(backfilled).toContain("attach-evidence:TECHNICIAN");
+      expect(backfilled).toContain("update-asset-details:ADMIN");
+      expect(backfilled).not.toContain("update-asset-details:TECHNICIAN");
     }
   });
 
@@ -178,17 +201,7 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
   });
 
   it("finds nothing to do on a second run", async () => {
-    const before = await snapshot();
-    for (const { file } of VEHICLE_MIGRATIONS) {
-      const statements = (await readFile(join(MIGRATIONS, file), "utf8"))
-        .split("--> statement-breakpoint")
-        .map((statement) => statement.trim())
-        .filter((statement) => statement.length > 0);
-      for (const statement of statements) {
-        await pool.query(statement);
-      }
-    }
-    expect(await snapshot()).toEqual(before);
+    expect(secondRun.after).toEqual(secondRun.before);
     const applied = await query<{ n: string }>(
       `SELECT count(*)::text AS n FROM drizzle.__drizzle_migrations`,
     );

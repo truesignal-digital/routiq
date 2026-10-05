@@ -23,6 +23,7 @@ import "./commands/substitute-asset.js";
 import "./commands/activity-close.js";
 import "./commands/record-sheet.js";
 import "./commands/provision-workspace.js";
+import "./commands/appoint-director.js";
 import "./commands/category.js";
 import "./commands/set-template-preset.js";
 import "./commands/members.js";

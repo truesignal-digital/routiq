@@ -42,16 +42,16 @@ describe("GET /v1/assets/:assetId/attention", () => {
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
       .returning();
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE", displayName: "Hervé" });
-    driver = await seedActor(ctx.db, { workspaceId, role: "FIELD_SUBMITTER", displayName: "Sali" });
-    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE_APPROVER" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN", displayName: "Hervé" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
+    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
     dlaReader = await seedActor(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
+    ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
 
     // Work orders above 100 000 need an admin's authorization and sign-off, so
     // the two pending states can be reached.
@@ -477,7 +477,7 @@ describe("GET /v1/assets/:assetId/attention", () => {
 
   it("leaves out the sources of disabled modules", async () => {
     const gated = await seedWorkspace(ctx.db);
-    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const truck = await seedAsset(ctx.app, gatedAdmin.token);
     await api.ok(gatedAdmin.token, "report-issue", {
       issueId: randomUUID(),

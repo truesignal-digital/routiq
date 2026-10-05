@@ -11,6 +11,7 @@ import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 describe("substitute-asset.v1", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let token: string;
+  let driverToken: string;
   let tractorId: string;
   let reliefTractorId: string;
   let trailerId: string;
@@ -20,13 +21,24 @@ describe("substitute-asset.v1", () => {
     const seeded = await seedWorkspace(ctx.db);
     const member = await seedMember(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     token = (
       await createSession(ctx.db, {
         workspaceId: seeded.workspace.id,
         principalId: member.principal.id,
+      })
+    ).token;
+    const driver = await seedMember(ctx.db, {
+      workspaceId: seeded.workspace.id,
+      role: "DRIVER",
+      allBranches: true,
+    });
+    driverToken = (
+      await createSession(ctx.db, {
+        workspaceId: seeded.workspace.id,
+        principalId: driver.principal.id,
       })
     ).token;
     tractorId = await seedAsset(ctx.app, token, { assetCode: "CMR-TR-014" });
@@ -38,13 +50,13 @@ describe("substitute-asset.v1", () => {
     await ctx.close();
   });
 
-  async function openJob(): Promise<{ activityId: string; segmentId: string }> {
+  async function openJob(as = token): Promise<{ activityId: string; segmentId: string }> {
     const activityId = randomUUID();
     const segmentId = randomUUID();
     const response = await ctx.app.inject({
       method: "POST",
       url: "/v1/commands/create-activity",
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${as}` },
       payload: createActivityCommand.parse({
         name: "create-activity",
         version: 1,
@@ -71,12 +83,12 @@ describe("substitute-asset.v1", () => {
 
   function substitute(
     payload: Record<string, unknown>,
-    opts: { expectedVersion?: number } = {},
+    opts: { expectedVersion?: number; token?: string } = {},
   ) {
     return ctx.app.inject({
       method: "POST",
       url: "/v1/commands/substitute-asset",
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${opts.token ?? token}` },
       payload: substituteAssetCommand.parse({
         name: "substitute-asset",
         version: 1,
@@ -378,5 +390,35 @@ describe("substitute-asset.v1", () => {
       .from(activityAssetSegments)
       .where(eq(activityAssetSegments.activityId, activityId));
     expect(segments).toHaveLength(2);
+  });
+
+  /** docs/reference/roles-and-access.md: Chauffeur swaps the vehicle on a trip, own only. */
+  it("lets a DRIVER swap the vehicle only on trips they recorded", async () => {
+    const handover = async (activityId: string, segmentId: string, assetCode: string) =>
+      substitute(
+        {
+          activityId,
+          outgoingSegmentId: segmentId,
+          newSegmentId: randomUUID(),
+          substituteAssetId: await seedAsset(ctx.app, token, { assetCode }),
+          handoverAt: "2026-07-14T17:40:00Z",
+        },
+        { token: driverToken },
+      );
+
+    const managers = await openJob();
+    const refused = await handover(managers.activityId, managers.segmentId, "CMR-TR-101");
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json()).toMatchObject({
+      error: { code: "OWN_RECORDS_ONLY", metadata: { entityType: "activity" } },
+    });
+    const segments = await ctx.db
+      .select()
+      .from(activityAssetSegments)
+      .where(eq(activityAssetSegments.activityId, managers.activityId));
+    expect(segments).toHaveLength(1);
+
+    const own = await openJob(driverToken);
+    expect((await handover(own.activityId, own.segmentId, "CMR-TR-102")).statusCode).toBe(200);
   });
 });

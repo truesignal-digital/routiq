@@ -34,12 +34,12 @@ describe("reverse-entry.v1", () => {
 
     const submitter = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     const approver = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     const admin = await seedMember(db, {
@@ -199,7 +199,7 @@ describe("reverse-entry.v1", () => {
         and(
           eq(approvalRules.workspaceId, workspaceId),
           eq(approvalRules.commandType, "record-expense"),
-          eq(approvalRules.requiredRole, "FIELD_SUBMITTER"),
+          eq(approvalRules.requiredRole, "DRIVER"),
         ),
       );
     if (submitterRules.length > 0) {
@@ -219,7 +219,7 @@ describe("reverse-entry.v1", () => {
         and(
           eq(approvalRules.workspaceId, workspaceId),
           eq(approvalRules.commandType, "record-expense"),
-          eq(approvalRules.requiredRole, "FIELD_SUBMITTER"),
+          eq(approvalRules.requiredRole, "DRIVER"),
         ),
       );
 

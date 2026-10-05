@@ -17,6 +17,7 @@ describe("period commands", () => {
   let workspaceId: string;
   let assetId: string;
   let approverToken: string;
+  let directorToken: string;
   let submitterToken: string;
 
   beforeAll(async () => {
@@ -27,17 +28,17 @@ describe("period commands", () => {
     workspaceId = seeded.workspace.id;
     const approver = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     const admin = await seedMember(db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     const submitter = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     const [approverSession, adminSession, submitterSession] = await Promise.all([
@@ -55,6 +56,7 @@ describe("period commands", () => {
       }),
     ]);
     approverToken = approverSession.token;
+    directorToken = adminSession.token;
     submitterToken = submitterSession.token;
     assetId = await seedAsset(ctx.app, adminSession.token);
   });
@@ -75,8 +77,18 @@ describe("period commands", () => {
       rowVersion: 2,
     });
 
-    const reopened = await postCommand(
+    // FINANCE locks a month; only Direction reopens one (ADR-0009).
+    const refused = await postCommand(
       approverToken,
+      "reopen-period",
+      { periodCode: "2025-03", reason: "month-end correction" },
+      { expectedVersion: 2 },
+    );
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
+
+    const reopened = await postCommand(
+      directorToken,
       "reopen-period",
       { periodCode: "2025-03", reason: "month-end correction" },
       { expectedVersion: 2 },
@@ -108,7 +120,7 @@ describe("period commands", () => {
     });
 
     const reopened = await postCommand(
-      approverToken,
+      directorToken,
       "reopen-period",
       { periodCode: "2025-04", reason: "verify open-state guard" },
       { expectedVersion: 2 },
@@ -116,7 +128,7 @@ describe("period commands", () => {
     expect(reopened.statusCode).toBe(200);
 
     const reopenedAgain = await postCommand(
-      approverToken,
+      directorToken,
       "reopen-period",
       { periodCode: "2025-04", reason: "already open" },
       { expectedVersion: 3 },
@@ -127,7 +139,7 @@ describe("period commands", () => {
     });
 
     const absent = await postCommand(
-      approverToken,
+      directorToken,
       "reopen-period",
       { periodCode: "2025-12", reason: "missing period" },
       { expectedVersion: 1 },
@@ -147,7 +159,7 @@ describe("period commands", () => {
     expect(locked.statusCode).toBe(200);
 
     const missingVersion = await postCommand(
-      approverToken,
+      directorToken,
       "reopen-period",
       { periodCode: "2025-05", reason: "missing version" },
     );
@@ -157,7 +169,7 @@ describe("period commands", () => {
     });
 
     const wrongVersion = await postCommand(
-      approverToken,
+      directorToken,
       "reopen-period",
       { periodCode: "2025-05", reason: "stale version" },
       { expectedVersion: 99 },
@@ -218,7 +230,7 @@ describe("period commands", () => {
     expect(late.json().warnings).toContain("LATE_POSTING");
 
     const reopened = await postCommand(
-      approverToken,
+      directorToken,
       "reopen-period",
       { periodCode: "2025-01", reason: "accept corrected January posting" },
       { expectedVersion: 2 },

@@ -27,7 +27,7 @@ describe("command branch authorization", () => {
 
     const scopedOps = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [doualaBranchId],
     });
     scopedOpsToken = (
@@ -51,7 +51,7 @@ describe("command branch authorization", () => {
 
     const scopedField = await seedMember(ctx.db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [doualaBranchId],
     });
     scopedFieldToken = (

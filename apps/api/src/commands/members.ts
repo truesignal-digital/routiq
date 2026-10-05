@@ -1,5 +1,11 @@
 import {
   addMemberPayload,
+  addMemberV1Payload,
+  grantableRoles,
+  MEMBER_ADMIN_ROLES,
+  updateMemberRoleV1Payload,
+  type BranchScope,
+  type Role,
   deactivateMemberPayload,
   reactivateMemberPayload,
   resetMemberPinPayload,
@@ -19,6 +25,7 @@ import {
   CommandError,
   registerCommand,
   type CommandContext,
+  type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
 import { redactPin } from "./redaction.js";
@@ -31,8 +38,14 @@ import { redactPin } from "./redaction.js";
  * against: a membership switched off while a live session and an enabled
  * credential remain is an ex-employee who can still work.
  *
- * All five are ADMIN-only, CORE, workspace-scoped and never queued offline —
- * they are decisions about who the workspace trusts, not facts about the world.
+ * All five are CORE, workspace-scoped and never queued offline — they are
+ * decisions about who the workspace trusts, not facts about the world. Who may
+ * run them (ADR-0009): DIRECTOR for every role but DIRECTOR in every branch;
+ * ADMIN only for DRIVER, TECHNICIAN and CASHIER members inside the ADMIN's own
+ * branches, checked on the member as they are and as the command would leave
+ * them. No tenant command grants, changes or removes DIRECTOR: the vendor
+ * appoints it (`appoint-director`). Nobody changes their own role.
+ * `assertMayManage` is that rule.
  *
  * Optimistic concurrency is asked for where a lost update is possible and not
  * where it is not. `update-member-role` overwrites fields an admin read off the
@@ -51,7 +64,7 @@ type MembershipRow = typeof memberships.$inferSelect;
  * different class and cannot collide with a workspace id that happens to hash
  * into the same bucket. First advisory lock in the codebase — follow this shape.
  */
-const MEMBER_ADMIN_LOCK_CLASS = 8241;
+export const MEMBER_ADMIN_LOCK_CLASS = 8241;
 
 /**
  * Serializes member administration within one workspace, then re-reads the
@@ -74,13 +87,18 @@ const MEMBER_ADMIN_LOCK_CLASS = 8241;
 export async function beginMemberAdministration(
   tx: Tx,
   ctx: CommandContext,
-): Promise<void> {
+): Promise<MemberAdministrator> {
   await tx.execute(
     sql`select pg_advisory_xact_lock(${MEMBER_ADMIN_LOCK_CLASS}, hashtext(${ctx.workspaceId}))`,
   );
 
   const [actor] = await tx
-    .select({ role: memberships.role, deactivatedAt: memberships.deactivatedAt })
+    .select({
+      role: memberships.role,
+      allBranches: memberships.allBranches,
+      branchIds: memberships.branchIds,
+      deactivatedAt: memberships.deactivatedAt,
+    })
     .from(memberships)
     .where(
       and(
@@ -90,8 +108,50 @@ export async function beginMemberAdministration(
     )
     .limit(1);
 
-  if (!actor || actor.deactivatedAt !== null || actor.role !== "ADMIN") {
+  if (
+    !actor ||
+    actor.deactivatedAt !== null ||
+    !(MEMBER_ADMIN_ROLES as readonly Role[]).includes(actor.role)
+  ) {
     throw new CommandError(403, "ROLE_FORBIDDEN", { reason: "actor-no-longer-admin" });
+  }
+  return {
+    role: actor.role,
+    branchScope: actor.role === "DIRECTOR" || actor.allBranches ? "ALL" : actor.branchIds,
+  };
+}
+
+/** The caller as `beginMemberAdministration` re-read them under the lock. */
+interface MemberAdministrator {
+  role: Role;
+  branchScope: BranchScope;
+}
+
+/**
+ * ADR-0009's app-access rule, applied to one side of a member: as they stand,
+ * or as the command would leave them. The role must be one the actor may grant,
+ * and every branch the member reaches must be one the actor reaches — an ADMIN
+ * scoped to Bafoussam cannot touch a member who also works in Douala, nor hand
+ * out "all branches".
+ */
+function assertMayManage(
+  actor: MemberAdministrator,
+  member: { role: Role; branchScope: MemberBranchScope },
+): void {
+  if (!grantableRoles(actor.role).includes(member.role)) {
+    throw new CommandError(403, "MEMBER_ROLE_NOT_GRANTABLE", {
+      actorRole: actor.role,
+      memberRole: member.role,
+    });
+  }
+  if (actor.branchScope === "ALL") return;
+  const reach = actor.branchScope;
+  const outside =
+    member.branchScope === "ALL"
+      ? ["ALL"]
+      : member.branchScope.filter((branchId) => !reach.includes(branchId));
+  if (outside.length > 0) {
+    throw new CommandError(403, "MEMBER_BRANCH_OUT_OF_SCOPE", { outside });
   }
 }
 
@@ -151,12 +211,14 @@ function branchScopeOf(membership: MembershipRow): MemberBranchScope {
 }
 
 /**
- * §10's one structural rule about roles: a workspace always keeps at least one
- * active ADMIN, or nobody can ever administer it again. Checked by counting the
- * OTHER active admins, so the answer does not depend on whether the row being
- * changed has been written yet.
+ * §10's one structural rule about roles: a workspace that has a DIRECTOR keeps
+ * at least one active, or nobody can manage its settings and senior access
+ * again. Checked by counting the OTHER active directors, so the answer does not
+ * depend on whether the row being changed has been written yet. A workspace
+ * migrated from the old roles starts with none; its first is appointed by the
+ * vendor (`appoint-director`).
  */
-async function assertAnotherActiveAdminRemains(
+async function assertAnotherActiveDirectorRemains(
   tx: Tx,
   ctx: CommandContext,
   principalId: string,
@@ -167,14 +229,14 @@ async function assertAnotherActiveAdminRemains(
     .where(
       and(
         eq(memberships.workspaceId, ctx.workspaceId),
-        eq(memberships.role, "ADMIN"),
+        eq(memberships.role, "DIRECTOR"),
         isNull(memberships.deactivatedAt),
         ne(memberships.principalId, principalId),
       ),
     );
 
   if ((others?.count ?? 0) === 0) {
-    throw new CommandError(422, "LAST_ADMIN", { principalId });
+    throw new CommandError(422, "LAST_DIRECTOR", { principalId });
   }
 }
 
@@ -246,17 +308,16 @@ async function bumpMembership(
   return updated;
 }
 
-registerCommand<AddMemberPayload>({
+const addMember: Omit<CommandDefinition<AddMemberPayload>, "version" | "payloadSchema"> = {
   name: "add-member",
-  version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
-  payloadSchema: addMemberPayload,
+  allowedRoles: MEMBER_ADMIN_ROLES,
   branchAuthorization: { kind: "workspace" },
   redactPayload: redactPin,
 
   async execute(tx, ctx, envelope, payload) {
-    await beginMemberAdministration(tx, ctx);
+    const actor = await beginMemberAdministration(tx, ctx);
+    assertMayManage(actor, payload);
     const scope = await resolveBranchScope(tx, ctx, payload.branchScope);
 
     /*
@@ -321,30 +382,44 @@ registerCommand<AddMemberPayload>({
 
     return { recordId: payload.principalId, rowVersion: membership.rowVersion };
   },
-});
+};
 
-registerCommand<UpdateMemberRolePayload>({
+registerCommand<AddMemberPayload>({ ...addMember, version: 2, payloadSchema: addMemberPayload });
+/** v1 shipped with the pre-ADR-0009 roles; its payload maps each to the role it became. */
+registerCommand<AddMemberPayload>({ ...addMember, version: 1, payloadSchema: addMemberV1Payload });
+
+const updateMemberRole: Omit<
+  CommandDefinition<UpdateMemberRolePayload>,
+  "version" | "payloadSchema"
+> = {
   name: "update-member-role",
-  version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
-  payloadSchema: updateMemberRolePayload,
+  allowedRoles: MEMBER_ADMIN_ROLES,
   branchAuthorization: { kind: "workspace" },
 
   async execute(tx, ctx, envelope, payload) {
-    await beginMemberAdministration(tx, ctx);
+    const actor = await beginMemberAdministration(tx, ctx);
     const expectedVersion = envelope.expectedVersion;
     if (expectedVersion === undefined) {
       throw new CommandError(400, "EXPECTED_VERSION_REQUIRED");
     }
+    // Branches too, not just the role: an ADMIN widening their own reach is
+    // the same escalation as promoting themselves.
+    if (payload.principalId === ctx.principalId) {
+      throw new CommandError(422, "SELF_ROLE_CHANGE", { principalId: payload.principalId });
+    }
 
     const before = await loadMembership(tx, ctx, payload.principalId);
     const nextRole = payload.role ?? before.role;
+    const nextScope = payload.branchScope ?? branchScopeOf(before);
+    assertMayManage(actor, { role: before.role, branchScope: branchScopeOf(before) });
+    assertMayManage(actor, { role: nextRole, branchScope: nextScope });
 
-    // Only a live demotion can strand the workspace: an already-deactivated
-    // membership is not one of the admins the invariant counts.
-    if (before.role === "ADMIN" && nextRole !== "ADMIN" && before.deactivatedAt === null) {
-      await assertAnotherActiveAdminRemains(tx, ctx, payload.principalId);
+    // Unreachable while `grantableRoles` refuses a DIRECTOR target; kept as the
+    // backstop for a caller that is not a tenant. Only a live demotion can
+    // strand the workspace: a deactivated membership is not counted.
+    if (before.role === "DIRECTOR" && nextRole !== "DIRECTOR" && before.deactivatedAt === null) {
+      await assertAnotherActiveDirectorRemains(tx, ctx, payload.principalId);
     }
 
     const scope =
@@ -379,20 +454,32 @@ registerCommand<UpdateMemberRolePayload>({
 
     return { recordId: payload.principalId, rowVersion: after.rowVersion };
   },
+};
+
+registerCommand<UpdateMemberRolePayload>({
+  ...updateMemberRole,
+  version: 2,
+  payloadSchema: updateMemberRolePayload,
+});
+/** v1 shipped with the pre-ADR-0009 roles; its payload maps each to the role it became. */
+registerCommand<UpdateMemberRolePayload>({
+  ...updateMemberRole,
+  version: 1,
+  payloadSchema: updateMemberRoleV1Payload,
 });
 
 registerCommand<DeactivateMemberPayload>({
   name: "deactivate-member",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: MEMBER_ADMIN_ROLES,
   payloadSchema: deactivateMemberPayload,
   branchAuthorization: { kind: "workspace" },
 
   async execute(tx, ctx, envelope, payload) {
-    await beginMemberAdministration(tx, ctx);
+    const actor = await beginMemberAdministration(tx, ctx);
 
-    // Ordered ahead of the last-admin count so the lone admin who clicks their
+    // Ordered ahead of the last-director count so the lone admin who clicks their
     // own row is told what they actually did, not that a rule about other
     // people was violated.
     if (payload.principalId === ctx.principalId) {
@@ -400,6 +487,7 @@ registerCommand<DeactivateMemberPayload>({
     }
 
     const before = await loadMembership(tx, ctx, payload.principalId);
+    assertMayManage(actor, { role: before.role, branchScope: branchScopeOf(before) });
     if (before.deactivatedAt !== null) {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         from: "DEACTIVATED",
@@ -407,14 +495,13 @@ registerCommand<DeactivateMemberPayload>({
       });
     }
     /*
-     * A backstop rather than a live path today: the caller is always an active
-     * admin, so a target that is not them is never the last one. It stays
-     * because the day this command gains a caller who is not the workspace's
-     * own admin — a vendor support path, the AI principal of §7 — the self
-     * guard above stops covering the invariant and this one has to.
+     * A backstop rather than a live path today: no tenant command touches a
+     * DIRECTOR (`assertMayManage`). It stays because the day this command gains
+     * a caller who is not a tenant — a vendor support path, the AI principal of
+     * §7 — that rule stops covering the invariant and this one has to.
      */
-    if (before.role === "ADMIN") {
-      await assertAnotherActiveAdminRemains(tx, ctx, payload.principalId);
+    if (before.role === "DIRECTOR") {
+      await assertAnotherActiveDirectorRemains(tx, ctx, payload.principalId);
     }
 
     const deactivatedAt = new Date();
@@ -449,14 +536,15 @@ registerCommand<ReactivateMemberPayload>({
   name: "reactivate-member",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: MEMBER_ADMIN_ROLES,
   payloadSchema: reactivateMemberPayload,
   branchAuthorization: { kind: "workspace" },
 
   async execute(tx, ctx, envelope, payload) {
-    await beginMemberAdministration(tx, ctx);
+    const actor = await beginMemberAdministration(tx, ctx);
 
     const before = await loadMembership(tx, ctx, payload.principalId);
+    assertMayManage(actor, { role: before.role, branchScope: branchScopeOf(before) });
     if (before.deactivatedAt === null) {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         from: "ACTIVE",
@@ -494,14 +582,15 @@ registerCommand<ResetMemberPinPayload>({
   name: "reset-member-pin",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: MEMBER_ADMIN_ROLES,
   payloadSchema: resetMemberPinPayload,
   branchAuthorization: { kind: "workspace" },
   redactPayload: redactPin,
 
   async execute(tx, ctx, envelope, payload) {
-    await beginMemberAdministration(tx, ctx);
+    const actor = await beginMemberAdministration(tx, ctx);
     const membership = await loadMembership(tx, ctx, payload.principalId);
+    assertMayManage(actor, { role: membership.role, branchScope: branchScopeOf(membership) });
 
     const [credential] = await tx
       .select({ id: credentials.id })

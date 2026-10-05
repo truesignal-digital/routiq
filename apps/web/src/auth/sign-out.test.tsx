@@ -24,7 +24,7 @@ function financeReads(recorded: Recorded, from: number): string[] {
 }
 
 it("never renders or reads as the previous member after an account switch", async () => {
-  const recorded = await openVehicle("/", { role: "ADMIN", members: { herve: "MAINTENANCE" } });
+  const recorded = await openVehicle("/", { role: "ADMIN", members: { herve: "TECHNICIAN" } });
   const user = userEvent.setup();
   // The admin's Home reads the books.
   await waitFor(() => expect(financeReads(recorded, 0)).not.toEqual([]));

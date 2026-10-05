@@ -96,7 +96,7 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
   name: COMMAND,
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
   payloadSchema: updatePendingEntryPayload,
   branchAuthorization: {
     kind: "branches",

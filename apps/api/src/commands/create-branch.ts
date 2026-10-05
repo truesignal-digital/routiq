@@ -10,7 +10,7 @@ const createBranch: CommandDefinition<CreateBranchPayload> = {
   name: "create-branch",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: createBranchPayload,
   branchAuthorization: { kind: "workspace" },
 

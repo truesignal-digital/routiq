@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   addMemberPayload,
+  addMemberV1Payload,
+  updateMemberRoleV1Payload,
   deactivateMemberPayload,
   resetMemberPinPayload,
   updateMemberRolePayload,
@@ -16,7 +18,7 @@ describe("member command payloads", () => {
       displayName: "Adamou Bello",
       username: "adamou",
       pin: "4821",
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchScope: [branchId],
     });
     expect(parsed.branchScope).toEqual([branchId]);
@@ -84,7 +86,7 @@ describe("member command payloads", () => {
 
   it("takes a role change, a scope change, or both", () => {
     expect(
-      updateMemberRolePayload.safeParse({ principalId, role: "OPS_MANAGER" }).success,
+      updateMemberRolePayload.safeParse({ principalId, role: "ADMIN" }).success,
     ).toBe(true);
     expect(
       updateMemberRolePayload.safeParse({ principalId, branchScope: "ALL" }).success,
@@ -92,10 +94,27 @@ describe("member command payloads", () => {
     expect(
       updateMemberRolePayload.safeParse({
         principalId,
-        role: "OPS_MANAGER",
+        role: "ADMIN",
         branchScope: "ALL",
       }).success,
     ).toBe(true);
+  });
+
+  it("v2 takes only the six roles; v1 reads its legacy codes as the roles they became", () => {
+    expect(updateMemberRolePayload.safeParse({ principalId, role: "FIELD_SUBMITTER" }).success).toBe(false);
+    expect(updateMemberRoleV1Payload.parse({ principalId, role: "FIELD_SUBMITTER" }).role).toBe("DRIVER");
+    expect(updateMemberRoleV1Payload.safeParse({ principalId, role: "CASHIER" }).success).toBe(false);
+    expect(updateMemberRoleV1Payload.safeParse({ principalId }).success).toBe(false);
+    expect(
+      addMemberV1Payload.parse({
+        principalId,
+        displayName: "Boris",
+        username: "boris",
+        pin: "4821",
+        role: "OPS_MANAGER",
+        branchScope: "ALL",
+      }).role,
+    ).toBe("ADMIN");
   });
 
   it("rejects an update that changes nothing", () => {

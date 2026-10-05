@@ -16,12 +16,11 @@ export function canReadFinance(
   );
 }
 
-const FINANCE_WRITERS: readonly Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "FINANCE_APPROVER",
-  "FIELD_SUBMITTER",
-];
+/**
+ * record-expense outside the workshop: every role that handles money or runs
+ * trips. TECHNICIAN books costs only on work orders (`canAddWorkOrderCost`).
+ */
+const EXPENSE_RECORDERS: readonly Role[] = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "DRIVER"];
 
 export function canRecordFinance(
   role: Role | undefined,
@@ -30,21 +29,34 @@ export function canRecordFinance(
   return (
     (enabledModules?.includes("FINANCE") ?? false) &&
     role !== undefined &&
-    FINANCE_WRITERS.includes(role)
+    EXPENSE_RECORDERS.includes(role)
   );
 }
 
-const ENTRY_REVERSERS: readonly Role[] = ["FINANCE_APPROVER", "ADMIN"];
+const REVENUE_RECORDERS: readonly Role[] = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER"];
+
+/** record-revenue: the money roles and the managers; drivers record expenses only. */
+export function canRecordRevenue(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return (
+    (enabledModules?.includes("FINANCE") ?? false) &&
+    role !== undefined &&
+    REVENUE_RECORDERS.includes(role)
+  );
+}
+
+/** Approving, rejecting and reversing entries, and locking a period: Direction and Finance. */
+const ENTRY_DECIDERS: readonly Role[] = ["DIRECTOR", "FINANCE"];
 
 /** Reverse is only offered on a POSTED entry, to approver roles (maker guard lives server-side). */
 export function canReverseEntry(
   role: Role | undefined,
   entryStatus: string | undefined,
 ): boolean {
-  return entryStatus === "POSTED" && role !== undefined && ENTRY_REVERSERS.includes(role);
+  return entryStatus === "POSTED" && role !== undefined && ENTRY_DECIDERS.includes(role);
 }
-
-const ENTRY_APPROVERS: readonly Role[] = ["FINANCE_APPROVER", "ADMIN"];
 
 export function canApproveEntries(
   role: Role | undefined,
@@ -53,10 +65,11 @@ export function canApproveEntries(
   return (
     (enabledModules?.includes("FINANCE") ?? false) &&
     role !== undefined &&
-    ENTRY_APPROVERS.includes(role)
+    ENTRY_DECIDERS.includes(role)
   );
 }
 
+/** Locking a period, and seeing the periods screen at all. */
 export function canManagePeriods(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
@@ -64,40 +77,37 @@ export function canManagePeriods(
   return canApproveEntries(role, enabledModules);
 }
 
+/** Reopening a locked period undoes the books' boundary: Direction only. */
+export function canReopenPeriod(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return (enabledModules?.includes("FINANCE") ?? false) && role === "DIRECTOR";
+}
+
 /**
  * Attaching a receipt later is open to whoever could have attached it at
- * capture: record-expense's roles, the workshop included (its work-order costs).
+ * capture: every role, the workshop included (its work-order costs). The
+ * server limits TECHNICIAN and DRIVER to their own entries.
  */
-const EVIDENCE_ATTACHERS: readonly Role[] = [
-  "ADMIN",
-  "OPS_MANAGER",
-  "FINANCE_APPROVER",
-  "FIELD_SUBMITTER",
-  "MAINTENANCE",
-];
-
 export function canAttachEvidence(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
-  return (
-    (enabledModules?.includes("FINANCE") ?? false) &&
-    role !== undefined &&
-    EVIDENCE_ATTACHERS.includes(role)
-  );
+  return (enabledModules?.includes("FINANCE") ?? false) && role !== undefined;
 }
 
 /**
  * A cost booked against an approved work order. The workshop records expenses
  * only this way (the handler refuses its expenses without a work order), so
- * this is record-expense's list plus MAINTENANCE.
+ * this is record-expense's list plus TECHNICIAN.
  */
 export function canAddWorkOrderCost(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
   return canRecordFinance(role, enabledModules) || (
-    (enabledModules?.includes("FINANCE") ?? false) && role === "MAINTENANCE"
+    (enabledModules?.includes("FINANCE") ?? false) && role === "TECHNICIAN"
   );
 }
 

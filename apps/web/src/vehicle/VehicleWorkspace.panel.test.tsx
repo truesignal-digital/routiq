@@ -20,6 +20,7 @@ import {
 } from "./test/fixtures.js";
 import { closeVehicle, openVehicle, requested } from "./test/harness.js";
 import { openSelect } from "../test-select.js";
+import { formatDateTime } from "../lib/format.js";
 
 vi.mock("../commands/instance.js", async () => {
   const { createCommandClient } = await import("../commands/client.js");
@@ -47,7 +48,7 @@ const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
 const ISSUE_REF = ISSUE_ID.slice(0, 8).toUpperCase();
 
 const scenario = {
-  role: "MAINTENANCE" as const,
+  role: "TECHNICIAN" as const,
   asset: asset({ availability: grounded([groundingWorkOrder("APPROVED")]) }),
   workOrders: [workOrderRow("APPROVED")],
   workOrderDetails: [workOrderDetail("APPROVED")],
@@ -178,7 +179,7 @@ it("shows a refusal in place and keeps the form", async () => {
 });
 
 it("adds a note on the vehicle from the all-actions sheet", async () => {
-  const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "OPS_MANAGER" });
+  const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "More actions" }));
   await user.click(within(await screen.findByRole("dialog", { name: "All actions" })).getByRole("button", { name: /Add note/ }));
@@ -196,7 +197,7 @@ it("adds a note on the vehicle from the all-actions sheet", async () => {
 });
 
 it("reports a problem with the category's code and its safety default", async () => {
-  const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "FIELD_SUBMITTER" });
+  const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "DRIVER" });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Report a problem" }));
   const form = await screen.findByRole("dialog", { name: "Report a problem" });
@@ -217,7 +218,7 @@ it("reports a problem with the category's code and its safety default", async ()
 });
 
 it("changes the custodian through the member picker, and can clear it", async () => {
-  const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "OPS_MANAGER" });
+  const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "More actions" }));
   await user.click(within(await screen.findByRole("dialog", { name: "All actions" })).getByRole("button", { name: /Change custodian/ }));
@@ -237,7 +238,7 @@ it("opens a receipt through the entry's own route, never the generic artifact ro
   vi.stubGlobal("open", open);
   const artifactId = "00000000-0000-4000-8000-0000000000fa";
   const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
-    role: "FINANCE_APPROVER",
+    role: "FINANCE",
     entryDetails: [
       entryDetail({
         evidence: { state: "SUPPLIED", artifactCount: 1 },
@@ -278,6 +279,37 @@ it("opens an issue's photo through the issue's own route", async () => {
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
 });
 
+describe("a problem reported before it was recorded (#396)", () => {
+  const backdated = issueDetail({
+    reportedAt: "2026-09-21T08:20:00.000Z",
+    chronologie: [
+      {
+        eventId: "00000000-0000-4000-8000-0000000000c3",
+        kind: "operational_issue.reported",
+        occurredAt: "2026-09-22T09:24:00.000Z",
+        actor: actor(OTHER_ID, "Sali"),
+      },
+    ],
+  });
+
+  it.each([
+    ["en", "Reported", "Recorded "],
+    ["fr-CM", "Signalé", "Enregistré le "],
+  ] as const)("labels the chronology time as when it was recorded (%s)", async (locale, reported, recorded) => {
+    await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=issue:${ISSUE_ID}`, {
+      ...scenario,
+      issueDetails: [backdated],
+      locale,
+    });
+    const panel = await screen.findByRole("dialog", { name: /Kekem/ });
+    const reportedAt = formatDateTime("2026-09-21T08:20:00.000Z", locale);
+    const recordedAt = formatDateTime("2026-09-22T09:24:00.000Z", locale);
+    expect(within(panel).getByText(reported).nextElementSibling?.textContent).toContain(reportedAt);
+    const time = panel.querySelector('time[datetime="2026-09-22T09:24:00.000Z"]');
+    expect(time?.textContent).toBe(`${recorded}${recordedAt}`);
+  });
+});
+
 describe("the author's own pending entry (#85)", () => {
   const fuel = { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" };
   const mine = (overrides: Parameters<typeof entryDetail>[0] = {}) =>
@@ -303,7 +335,7 @@ describe("the author's own pending entry (#85)", () => {
 
   it("offers Edit to the author and saves the pre-filled form with update-pending-entry", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       entryDetails: [mine()],
     });
     const user = userEvent.setup();
@@ -329,9 +361,9 @@ describe("the author's own pending entry (#85)", () => {
     expect(recorded.commands[0]?.body.payload).not.toHaveProperty("branchCode");
   });
 
-  it("offers no Edit to anyone else, an admin included", async () => {
+  it("offers no Edit to anyone else, the Director included", async () => {
     await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
-      role: "ADMIN",
+      role: "DIRECTOR",
       entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
@@ -339,9 +371,30 @@ describe("the author's own pending entry (#85)", () => {
     expect(within(panel).queryByRole("button", { name: "Edit entry" })).toBeNull();
   });
 
+  it.each(["FINANCE", "DIRECTOR"] as const)("lets %s approve someone else's entry", async (role) => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role,
+      entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+    expect(within(panel).getByRole("button", { name: "Approve entry" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Reject entry" })).toBeTruthy();
+  });
+
+  it("leaves the Administrateur no approval on an entry", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "ADMIN",
+      entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Fuel/ });
+    await within(panel).findByText(/Fuel/);
+    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
+  });
+
   it("offers no Edit once the entry is decided", async () => {
     await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       entryDetails: [mine({ status: "POSTED", postingPeriodCode: "2026-09" })],
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });

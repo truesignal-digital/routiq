@@ -39,10 +39,10 @@ describe("Module Entitlement Commands", () => {
     workspaceBId = seededB.workspace.id;
     branchBId = seededB.branch.id;
 
-    // Seed ADMIN member in workspace A
+    // Seed DIRECTOR member in workspace A
     const adminMember = await seedMember(db, {
       workspaceId: workspaceAId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminPrincipalId = adminMember.principal.id;
@@ -52,10 +52,10 @@ describe("Module Entitlement Commands", () => {
     });
     adminToken = adminSession.token;
 
-    // Seed OPS_MANAGER member in workspace A
+    // Seed ADMIN member in workspace A
     const opsManagerMember = await seedMember(db, {
       workspaceId: workspaceAId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     opsManagerPrincipalId = opsManagerMember.principal.id;
@@ -290,7 +290,7 @@ describe("Module Entitlement Commands", () => {
   });
 
   describe("Authorization", () => {
-    it("should reject disable-module for non-ADMIN role", async () => {
+    it("should reject disable-module for a non-DIRECTOR role", async () => {
       const disableCommandId = randomUUID();
       const disableKey = `idem-${randomUUID()}`;
 
@@ -315,7 +315,7 @@ describe("Module Entitlement Commands", () => {
       expect(errorBody.error.code).toBe("ROLE_FORBIDDEN");
     });
 
-    it("should reject enable-module for non-ADMIN role", async () => {
+    it("should reject enable-module for a non-DIRECTOR role", async () => {
       const enableCommandId = randomUUID();
       const enableKey = `idem-${randomUUID()}`;
 
@@ -395,10 +395,10 @@ describe("Module Entitlement Commands", () => {
 
   describe("Tenant isolation", () => {
     it("should not affect other workspace when disabling module", async () => {
-      // Seed workspace B with ADMIN member and session
+      // Seed workspace B with DIRECTOR member and session
       const adminMemberB = await seedMember(db, {
         workspaceId: workspaceBId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const adminSessionB = await createSession(db, {

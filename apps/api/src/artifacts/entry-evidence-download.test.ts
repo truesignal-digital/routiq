@@ -80,11 +80,11 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
     admin = await seedActor(db, { workspaceId, role: "ADMIN" });
     dlaOnly = await seedActor(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [seeded.branch.id],
     });
-    ydeOnly = await seedActor(db, { workspaceId, role: "OPS_MANAGER", branchIds: [yaounde!.id] });
-    mechanic = await seedActor(db, { workspaceId, role: "MAINTENANCE" });
+    ydeOnly = await seedActor(db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
+    mechanic = await seedActor(db, { workspaceId, role: "TECHNICIAN" });
     assetId = await seedAsset(app, admin.token);
 
     recordedFile = await artifact();
@@ -200,7 +200,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
 
   it("answers MODULE_DISABLED when FINANCE is off", async () => {
     const gated = await seedWorkspace(db);
-    const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "ADMIN" });
+    const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
     const response = await api.get(gatedAdmin.token, url(randomUUID(), randomUUID()));
     expect(response.status).toBe(403);

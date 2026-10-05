@@ -9,6 +9,7 @@ import * as schema from "../src/db/schema.js";
 import { dispatchCommand } from "../src/commands/dispatcher.js";
 import { addDays, currentBusinessDate } from "../src/reads/business-date.js";
 import "../src/server.js";
+import { appointDirector } from "./appoint-director.js";
 import { deterministicProvisionId, provisionTenant } from "./provision.js";
 
 const demoWorkspaceSlug = "transports-ngwa";
@@ -29,6 +30,7 @@ const ids = {
   herve: demoId("user:herve"),
   nadege: demoId("user:nadege"),
   amadou: demoId("user:amadou"),
+  clarisse: demoId("user:clarisse"),
   driver: demoId("person:jean-ngwa"),
   vh001: demoId("asset:VH001"),
   vh003: demoId("asset:VH003"),
@@ -83,28 +85,31 @@ interface DemoUser {
   role: Role;
 }
 
-/** Provisioned with the workspace; all three see every branch. */
+/**
+ * Provisioned with the workspace; all three see every branch. Émilienne is the
+ * provisioned first account, so she is the workspace's DIRECTOR (ADR-0009).
+ */
 const users: DemoUser[] = [
   {
     id: ids.emilienne,
     username: "emilienne",
     displayName: "Émilienne",
     pin: "111111",
-    role: "ADMIN",
+    role: "DIRECTOR",
   },
   {
     id: ids.boris,
     username: "boris",
     displayName: "Boris",
     pin: "222222",
-    role: "OPS_MANAGER",
+    role: "ADMIN",
   },
   {
     id: ids.sali,
     username: "sali",
     displayName: "Sali",
     pin: "333333",
-    role: "FIELD_SUBMITTER",
+    role: "DRIVER",
   },
 ];
 
@@ -132,8 +137,9 @@ interface AddedMember extends DemoUser {
 
 /**
  * Members added after provisioning, one for every role the three provisioned
- * users leave without a login. Patrice is scoped to Yaoundé alone, so the demo
- * has a branch-scoped view to set beside the ALL-scope ones.
+ * users leave without a login. Patrice and Amadou are scoped to Yaoundé alone,
+ * so the demo has a branch-scoped driver and a branch-scoped Administrateur to
+ * set beside the ALL-scope ones; Clarisse keeps the Douala till.
  */
 const addedMembers: AddedMember[] = [
   {
@@ -141,7 +147,7 @@ const addedMembers: AddedMember[] = [
     username: "patrice",
     displayName: "Patrice",
     pin: "444444",
-    role: "FIELD_SUBMITTER",
+    role: "DRIVER",
     branches: [yaoundeBranch],
   },
   {
@@ -149,7 +155,7 @@ const addedMembers: AddedMember[] = [
     username: "herve",
     displayName: "Hervé Mbarga",
     pin: "666666",
-    role: "MAINTENANCE",
+    role: "TECHNICIAN",
     branches: "ALL",
   },
   {
@@ -157,7 +163,7 @@ const addedMembers: AddedMember[] = [
     username: "nadege",
     displayName: "Nadège Fotso",
     pin: "777777",
-    role: "FINANCE_APPROVER",
+    role: "FINANCE",
     branches: "ALL",
   },
   {
@@ -165,8 +171,16 @@ const addedMembers: AddedMember[] = [
     username: "amadou",
     displayName: "Amadou Bello",
     pin: "555555",
-    role: "EXECUTIVE_VIEWER",
-    branches: "ALL",
+    role: "ADMIN",
+    branches: [yaoundeBranch],
+  },
+  {
+    id: ids.clarisse,
+    username: "clarisse",
+    displayName: "Clarisse Ewane",
+    pin: "888888",
+    role: "CASHIER",
+    branches: [{ id: ids.branch, code: branchCode }],
   },
 ];
 
@@ -347,7 +361,8 @@ async function existingWorkspaceId(slug: string): Promise<string | undefined> {
 
 /**
  * Provisioning is skipped, not replayed, when the workspace is already there.
- * Its idempotency key moved to `provision-workspace.v2` with issue #20, so a
+ * Its idempotency key moved to `provision-workspace.v2` with issue #20 (and
+ * `.v3` with ADR-0009), so a
  * workspace provisioned under the old key finds no receipt: the command
  * re-executes and answers 409 DUPLICATE_WORKSPACE_SLUG. Every demo seeded
  * before that bump — the deployed one included — is in exactly that state, so
@@ -396,12 +411,12 @@ async function provisionOnce(): Promise<void> {
     {
       commandId: commandId("provision-workspace"),
       /**
-       * `.v2` only on this one command: provisioning is the only payload whose
-       * shape changed (issue #20), and reusing a key across a shape change is a
+       * Versioned on this one command: provisioning changed shape (issue #20,
+       * then ADR-0009's roles), and reusing a key across a shape change is a
        * 409 rather than a replay. Every other seed command keeps its key, or a
        * re-seed would write its records a second time.
        */
-      idempotencyKey: idempotencyKey("provision-workspace.v2"),
+      idempotencyKey: idempotencyKey("provision-workspace.v3"),
     },
   );
 }
@@ -738,6 +753,20 @@ try {
   }
 
   await provisionOnce();
+  // A demo seeded before ADR-0009 was migrated with no DIRECTOR; the vendor
+  // path gives Émilienne the role a fresh provisioning gives her.
+  const [emilienneMembership] = await authDb
+    .select({ role: schema.memberships.role })
+    .from(schema.memberships)
+    .where(
+      and(
+        eq(schema.memberships.workspaceId, ids.workspace),
+        eq(schema.memberships.principalId, ids.emilienne),
+      ),
+    );
+  if (emilienneMembership?.role !== "DIRECTOR") {
+    await appointDirector(workspaceSlug, "emilienne", console.log);
+  }
 
   const [emilienne, boris, sali] = await Promise.all([
     actor(ids.emilienne),
@@ -759,15 +788,20 @@ try {
   // belongs to this workspace before it writes the membership. Through the
   // command rather than the provisioning payload, which is frozen behind its key.
   for (const member of addedMembers) {
-    await runCommand(emilienne, `add-member:${member.username}`, {
-      principalId: member.id,
-      displayName: member.displayName,
-      username: member.username,
-      pin: member.pin,
-      role: member.role,
-      branchScope:
-        member.branches === "ALL" ? "ALL" : member.branches.map((branch) => branch.id),
-    });
+    await runCommand(
+      emilienne,
+      `add-member:${member.username}`,
+      {
+        principalId: member.id,
+        displayName: member.displayName,
+        username: member.username,
+        pin: member.pin,
+        role: member.role,
+        branchScope:
+          member.branches === "ALL" ? "ALL" : member.branches.map((branch) => branch.id),
+      },
+      { version: 2 },
+    );
   }
 
   const [herve, nadege] = await Promise.all([actor(ids.herve), actor(ids.nadege)]);
@@ -935,8 +969,19 @@ try {
     }),
   ]);
 
+  // Boris is an Administrateur since ADR-0009, and an ADMIN's entries post at
+  // any amount, so only what is still waiting is approved here.
+  const garouaWaiting = await authDb
+    .select({ id: schema.financialEntries.id })
+    .from(schema.financialEntries)
+    .where(
+      and(
+        inArray(schema.financialEntries.id, [ids.garouaRevenue, ids.garouaFuel, ids.garouaAllowance]),
+        eq(schema.financialEntries.status, "SUBMITTED"),
+      ),
+    );
   await Promise.all(
-    [ids.garouaRevenue, ids.garouaFuel, ids.garouaAllowance].map((entryId) =>
+    garouaWaiting.map(({ id: entryId }) =>
       runCommand(
         emilienne,
         `approve-entry:${entryId}`,
@@ -1064,8 +1109,10 @@ try {
     { clientOccurredAt: at(-3, "17:05") },
   );
   if (brakesOrder?.recordStatus === "SUBMITTED") {
+    // Boris opened the order, so the approval is Émilienne's: nobody approves
+    // what they submitted.
     await runCommand(
-      nadege,
+      emilienne,
       "approve-work-order:VH003:brakes",
       { workOrderId: ids.vh003BrakesOrder, note: "Brakes first: approved as quoted" },
       { expectedVersion: await workOrderRowVersion(ids.vh003BrakesOrder) },

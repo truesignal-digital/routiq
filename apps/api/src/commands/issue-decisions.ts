@@ -113,16 +113,16 @@ function requireOpen(
 }
 
 /**
- * The fault dealt with without a work order — fixed on the spot. Anyone who
- * could have reported it may say so (FIELD_SUBMITTER included): the driver who
- * tightened the clamp is the witness. Branch scope still applies through the
- * issue's asset.
+ * The fault dealt with without a work order — fixed on the spot. The workshop
+ * and the branch's managers may say so; a driver reports, the technician
+ * resolves (roles-and-access reference). Branch scope still applies through
+ * the issue's asset.
  */
 export const resolveIssue: CommandDefinition<ResolveIssuePayload> = {
   name: "resolve-issue",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN"],
   payloadSchema: resolveIssuePayload,
   branchAuthorization: { kind: "branches", resolve: issueBranchIds },
 
@@ -153,7 +153,7 @@ export const dismissIssue: CommandDefinition<DismissIssuePayload> = {
   name: "dismiss-issue",
   version: 1,
   module: "MAINTENANCE",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "MAINTENANCE"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "TECHNICIAN"],
   payloadSchema: dismissIssuePayload,
   branchAuthorization: { kind: "branches", resolve: issueBranchIds },
 

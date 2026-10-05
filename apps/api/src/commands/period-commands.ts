@@ -24,7 +24,7 @@ registerCommand<LockPeriodPayload>({
   name: "lock-period",
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR", "FINANCE"],
   payloadSchema: lockPeriodPayload,
   branchAuthorization: { kind: "workspace" },
 
@@ -153,7 +153,7 @@ registerCommand<ReopenPeriodPayload>({
   name: "reopen-period",
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: reopenPeriodPayload,
   branchAuthorization: { kind: "workspace" },
 

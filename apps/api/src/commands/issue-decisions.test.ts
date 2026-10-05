@@ -20,7 +20,7 @@ describe("issue decision commands", () => {
   let driverToken: string;
   let mechanicToken: string;
   let approverToken: string;
-  let yaoundeDriverToken: string;
+  let yaoundeMechanicToken: string;
   let assetId: string;
 
   beforeAll(async () => {
@@ -34,18 +34,18 @@ describe("issue decision commands", () => {
       .returning();
 
     const token = async (
-      role: "ADMIN" | "FIELD_SUBMITTER" | "MAINTENANCE" | "FINANCE_APPROVER",
+      role: "DIRECTOR" | "DRIVER" | "TECHNICIAN" | "FINANCE",
       scope: { allBranches: true } | { branchIds: string[] },
     ) => {
       const member = await seedMember(db, { workspaceId, role, ...scope });
       return (await createSession(db, { workspaceId, principalId: member.principal.id }))
         .token;
     };
-    adminToken = await token("ADMIN", { allBranches: true });
-    driverToken = await token("FIELD_SUBMITTER", { branchIds: [seeded.branch.id] });
-    mechanicToken = await token("MAINTENANCE", { allBranches: true });
-    approverToken = await token("FINANCE_APPROVER", { allBranches: true });
-    yaoundeDriverToken = await token("FIELD_SUBMITTER", { branchIds: [yaounde!.id] });
+    adminToken = await token("DIRECTOR", { allBranches: true });
+    driverToken = await token("DRIVER", { branchIds: [seeded.branch.id] });
+    mechanicToken = await token("TECHNICIAN", { allBranches: true });
+    approverToken = await token("FINANCE", { allBranches: true });
+    yaoundeMechanicToken = await token("TECHNICIAN", { branchIds: [yaounde!.id] });
     assetId = await seedAsset(ctx.app, adminToken);
   });
 
@@ -104,10 +104,23 @@ describe("issue decision commands", () => {
   });
 
   describe("resolve-issue.v1", () => {
-    it("lets the driver who fixed it on the spot close it, with a note", async () => {
+    it("refuses the driver, who reports a fault but no longer closes one (ADR-0009)", async () => {
       const issueId = await reportIssue();
       const response = await post(
         driverToken,
+        "resolve-issue",
+        { issueId, note: "Rétroviseur resserré" },
+        { expectedVersion: 1 },
+      );
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
+      expect((await readIssue(issueId))[0]).toMatchObject({ status: "OPEN" });
+    });
+
+    it("lets the workshop close one fixed on the spot, with a note", async () => {
+      const issueId = await reportIssue();
+      const response = await post(
+        mechanicToken,
         "resolve-issue",
         { issueId, note: "Rétroviseur resserré" },
         { expectedVersion: 1 },
@@ -183,7 +196,7 @@ describe("issue decision commands", () => {
     it("keeps a member outside the asset's branch out", async () => {
       const issueId = await reportIssue();
       const response = await post(
-        yaoundeDriverToken,
+        yaoundeMechanicToken,
         "resolve-issue",
         { issueId },
         { expectedVersion: 1 },

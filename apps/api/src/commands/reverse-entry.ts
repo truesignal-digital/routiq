@@ -21,7 +21,7 @@ registerCommand<ReverseEntryPayload>({
   name: "reverse-entry",
   version: 1,
   module: "FINANCE",
-  allowedRoles: ["FINANCE_APPROVER", "ADMIN"],
+  allowedRoles: ["DIRECTOR", "FINANCE"],
   payloadSchema: reverseEntryPayload,
   branchAuthorization: {
     kind: "branches",

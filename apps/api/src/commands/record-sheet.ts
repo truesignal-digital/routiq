@@ -32,7 +32,7 @@ function sheetCommand<P extends SheetPayload>(
     name: config.name,
     version: 1,
     module: "ACTIVITIES",
-    allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+    allowedRoles: ["DIRECTOR", "ADMIN", "DRIVER"],
     payloadSchema: config.payloadSchema,
 
     /** A sheet IS its preset — the template is the command, not a payload field. */

@@ -56,7 +56,7 @@ export const releaseAssetToService: CommandDefinition<ReleaseAssetToServicePaylo
     name: "release-asset-to-service",
     version: 1,
     module: "MAINTENANCE",
-    allowedRoles: ["ADMIN", "OPS_MANAGER"],
+    allowedRoles: ["DIRECTOR", "ADMIN"],
     requiresHumanPrincipal: true,
     payloadSchema: releaseAssetToServicePayload,
     operationalAssetId: (payload) => payload.assetId,

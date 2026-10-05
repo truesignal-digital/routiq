@@ -31,7 +31,7 @@ import {
 } from "@/shell/branch-scope.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
-import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
+import { canRegisterPersons, canViewActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
@@ -42,7 +42,7 @@ export function PersonsScreen() {
   const label = useCommandLabel();
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
-  const canRegister = canRecordActivities(me?.role, me?.enabledModules);
+  const canRegister = canRegisterPersons(me?.role, me?.enabledModules);
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});

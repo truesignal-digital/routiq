@@ -78,7 +78,7 @@ export function DetailsTab() {
 
   // role-config: editing what a vehicle is follows register-asset — the fleet
   // managers (update-asset-details' default rules). The server decides.
-  const mayEdit = viewer.role === "ADMIN" || viewer.role === "OPS_MANAGER";
+  const mayEdit = viewer.role === "DIRECTOR" || viewer.role === "ADMIN";
   const disposed = isDisposed(asset.lifecycleStatus);
   const editable = mayEdit && !disposed;
 

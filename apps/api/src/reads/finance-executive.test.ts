@@ -5,9 +5,10 @@ import { createSession } from "../auth/local.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 
-describe("executive financial HTTP boundaries", () => {
+describe("branch-scoped finance reader HTTP boundaries", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let executive: string;
+  let workshop: string;
   let branchId: string;
   const otherBranchId = randomUUID();
   const ownEntryId = randomUUID();
@@ -33,14 +34,17 @@ describe("executive financial HTTP boundaries", () => {
     const own = await seedWorkspace(ctx.db);
     const other = await seedWorkspace(ctx.db);
     branchId = own.branch.id;
-    const tokenFor = async (workspaceId: string, role: "ADMIN" | "EXECUTIVE_VIEWER") => {
+    const tokenFor = async (workspaceId: string, role: "DIRECTOR" | "FINANCE" | "TECHNICIAN") => {
       const member = await seedMember(ctx.db, { workspaceId, role,
-        allBranches: role === "ADMIN", branchIds: role === "ADMIN" ? [] : [branchId] });
+        allBranches: role === "DIRECTOR", branchIds: role === "DIRECTOR" ? [] : [branchId] });
       return (await createSession(ctx.db, { principalId: member.principal.id, workspaceId })).token;
     };
-    const admin = await tokenFor(own.workspace.id, "ADMIN");
-    const otherAdmin = await tokenFor(other.workspace.id, "ADMIN");
-    executive = await tokenFor(own.workspace.id, "EXECUTIVE_VIEWER");
+    const admin = await tokenFor(own.workspace.id, "DIRECTOR");
+    const otherAdmin = await tokenFor(other.workspace.id, "DIRECTOR");
+    // A FINANCE member held to Douala reads the books of that branch only.
+    executive = await tokenFor(own.workspace.id, "FINANCE");
+    // The workshop reads no books and may change none.
+    workshop = await tokenFor(own.workspace.id, "TECHNICIAN");
     const branch = await command(admin, "create-branch", { branchId: otherBranchId, code: "YDE", name: "Yaoundé" });
     expect(branch.statusCode, branch.body).toBe(200);
     for (const [token, id, code] of [[admin, ownEntryId, "DLA"], [admin, otherBranchEntryId, "YDE"], [otherAdmin, otherCompanyEntryId, "DLA"]]) {
@@ -95,7 +99,7 @@ describe("executive financial HTTP boundaries", () => {
     ["lock-period", { periodCode: "2026-09" }],
     ["reopen-period", { periodCode: "2026-09", reason: "Not authorized" }],
   ])("denies the %s command without changing the ledger", async (name, payload) => {
-    const response = await command(executive, name, payload);
+    const response = await command(workshop, name, payload);
     expect(response.statusCode, response.body).toBe(403);
     expect(response.json().error.code).toBe("ROLE_FORBIDDEN");
     const list = await read("/v1/finance/entries");
@@ -105,9 +109,9 @@ describe("executive financial HTTP boundaries", () => {
 
   it("drills through a total to its direction and both signed sides of a reversal", async () => {
     const seeded = await seedWorkspace(ctx.db);
-    const member = await seedMember(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN", allBranches: true });
+    const member = await seedMember(ctx.db, { workspaceId: seeded.workspace.id, role: "DIRECTOR", allBranches: true });
     const admin = (await createSession(ctx.db, { principalId: member.principal.id, workspaceId: seeded.workspace.id })).token;
-    const viewer = await seedMember(ctx.db, { workspaceId: seeded.workspace.id, role: "EXECUTIVE_VIEWER", branchIds: [seeded.branch.id] });
+    const viewer = await seedMember(ctx.db, { workspaceId: seeded.workspace.id, role: "FINANCE", branchIds: [seeded.branch.id] });
     const token = (await createSession(ctx.db, { principalId: viewer.principal.id, workspaceId: seeded.workspace.id })).token;
     const get = (path: string) => ctx.app.inject({ method: "GET", url: path, headers: { authorization: `Bearer ${token}` } });
     const originalId = randomUUID();

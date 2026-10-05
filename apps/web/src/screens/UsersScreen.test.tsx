@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemberListItem } from "@routiq/contracts";
@@ -30,7 +30,7 @@ const members: MemberListItem[] = [
     principalId: "11111111-1111-4111-8111-111111111111",
     displayName: "Amina Fotso",
     username: "amina",
-    role: "ADMIN",
+    role: "DIRECTOR",
     branchScope: "ALL",
     status: "ACTIVE",
     rowVersion: 3,
@@ -40,11 +40,51 @@ const members: MemberListItem[] = [
     principalId: "22222222-2222-4222-8222-222222222222",
     displayName: "Estelle Ngo",
     username: "estelle",
-    role: "FIELD_SUBMITTER",
+    role: "DRIVER",
     branchScope: ["branch-yde"],
     status: "DEACTIVATED",
     rowVersion: 5,
     createdAt: "2026-06-02T08:00:00.000Z",
+  },
+  {
+    principalId: "33333333-3333-4333-8333-333333333333",
+    displayName: "Brice Ekane",
+    username: "brice",
+    role: "FINANCE",
+    branchScope: ["branch-dla"],
+    status: "ACTIVE",
+    rowVersion: 1,
+    createdAt: "2026-06-03T08:00:00.000Z",
+  },
+  {
+    principalId: "44444444-4444-4444-8444-444444444444",
+    displayName: "Carine Mbida",
+    username: "carine",
+    role: "ADMIN",
+    branchScope: ["branch-dla"],
+    status: "ACTIVE",
+    rowVersion: 1,
+    createdAt: "2026-06-04T08:00:00.000Z",
+  },
+  {
+    principalId: "55555555-5555-4555-8555-555555555555",
+    displayName: "Didier Talla",
+    username: "didier",
+    role: "DRIVER",
+    branchScope: ["branch-dla"],
+    status: "ACTIVE",
+    rowVersion: 1,
+    createdAt: "2026-06-05T08:00:00.000Z",
+  },
+  {
+    principalId: "66666666-6666-4666-8666-666666666666",
+    displayName: "Eric Fouda",
+    username: "eric",
+    role: "TECHNICIAN",
+    branchScope: ["branch-yde"],
+    status: "ACTIVE",
+    rowVersion: 1,
+    createdAt: "2026-06-06T08:00:00.000Z",
   },
 ];
 
@@ -105,8 +145,20 @@ vi.mock("../members/MemberActionDialog.js", async () => {
   };
 });
 
-const admin = { role: "ADMIN" as const, enabledModules: ["CORE"] as const };
-let meValue: unknown = admin;
+const director = {
+  principalId: "11111111-1111-4111-8111-111111111111",
+  role: "DIRECTOR" as const,
+  branchScope: "ALL" as const,
+  enabledModules: ["CORE"] as const,
+};
+/** An Administrateur of Douala, listed as Carine. */
+const doualaAdmin = {
+  principalId: "44444444-4444-4444-8444-444444444444",
+  role: "ADMIN" as const,
+  branchScope: ["branch-dla"],
+  enabledModules: ["CORE"] as const,
+};
+let meValue: unknown = director;
 
 vi.mock("../auth/me.js", async () => {
   const actual = await vi.importActual<typeof import("../auth/me.js")>("../auth/me.js");
@@ -133,11 +185,24 @@ function mockDesktop() {
 
 const { UsersScreen } = await import("./UsersScreen.js");
 
+/** The ⋯ menu on one member's row, or null when the row offers none. */
+function rowMenuOrNull(name: string): HTMLElement | null {
+  const row = screen.getByText(name).closest("tr");
+  if (row === null) throw new Error(`No row for ${name}`);
+  return within(row).queryByRole("button", { name: "dataTable.actions" });
+}
+
+function rowMenu(name: string): HTMLElement {
+  const menu = rowMenuOrNull(name);
+  if (menu === null) throw new Error(`No actions on ${name}`);
+  return menu;
+}
+
 describe("UsersScreen", () => {
   beforeEach(() => {
     issuedQueries.length = 0;
     vi.clearAllMocks();
-    meValue = admin;
+    meValue = director;
     mockDesktop();
   });
   afterEach(cleanup);
@@ -147,15 +212,17 @@ describe("UsersScreen", () => {
 
     expect(await screen.findByText("Amina Fotso")).toBeTruthy();
     expect(screen.getByText("amina")).toBeTruthy();
-    expect(screen.getByText("users.roles.ADMIN")).toBeTruthy();
-    expect(screen.getByText("users.status.ACTIVE")).toBeTruthy();
+    expect(screen.getByText("users.roles.DIRECTOR")).toBeTruthy();
+    expect(screen.getAllByText("users.status.ACTIVE").length).toBeGreaterThan(0);
     // A scoped membership prints branch names, not the ids it stores.
-    expect(screen.getByText("Yaoundé")).toBeTruthy();
+    expect(screen.getAllByText("Yaoundé").length).toBeGreaterThan(0);
     expect(screen.getByText("users.status.DEACTIVATED")).toBeTruthy();
   });
 
-  it("shows a non-admin the reason rather than the workspace's usernames", async () => {
-    meValue = { role: "OPS_MANAGER", enabledModules: ["CORE", "ACTIVITIES"] };
+  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"])(
+    "shows %s the reason rather than the workspace's usernames",
+    async (role) => {
+    meValue = { ...director, role, enabledModules: ["CORE", "ACTIVITIES"] };
     render(<UsersScreen />);
 
     expect(await screen.findByText("users.title")).toBeTruthy();
@@ -163,7 +230,8 @@ describe("UsersScreen", () => {
     expect(screen.queryByText("Amina Fotso")).toBeNull();
     expect(screen.queryByText("amina")).toBeNull();
     expect(screen.queryByRole("button", { name: "commands.add-member.label" })).toBeNull();
-  });
+    },
+  );
 
   it("asks the server for former members rather than filtering the loaded page", async () => {
     render(<UsersScreen />);
@@ -185,8 +253,7 @@ describe("UsersScreen", () => {
     render(<UsersScreen />);
     await screen.findByText("Estelle Ngo");
 
-    const menus = screen.getAllByRole("button", { name: "dataTable.actions" });
-    await userEvent.click(menus[1]!);
+    await userEvent.click(rowMenu("Estelle Ngo"));
 
     expect(await screen.findByRole("menuitem", { name: "commands.reactivate-member.label" })).toBeTruthy();
     expect(screen.queryByRole("menuitem", { name: "commands.deactivate-member.label" })).toBeNull();
@@ -197,12 +264,42 @@ describe("UsersScreen", () => {
     render(<UsersScreen />);
     await screen.findByText("Amina Fotso");
 
-    await userEvent.click(screen.getAllByRole("button", { name: "dataTable.actions" })[0]!);
+    await userEvent.click(rowMenu("Brice Ekane"));
     await userEvent.click(await screen.findByRole("menuitem", { name: "commands.reset-member-pin.label" }));
 
     const dialog = await screen.findByRole("dialog", { name: "member-action" });
     expect(dialog.textContent).toContain("pin");
-    expect(dialog.textContent).toContain("Amina Fotso");
+    expect(dialog.textContent).toContain("Brice Ekane");
+  });
+
+  it("gives the Director every row but a Director's, their own included", async () => {
+    render(<UsersScreen />);
+    await screen.findByText("Amina Fotso");
+
+    for (const name of ["Brice Ekane", "Carine Mbida", "Didier Talla", "Eric Fouda"]) {
+      expect(rowMenuOrNull(name)).not.toBeNull();
+    }
+    // Direction is appointed by the vendor, never managed from Users (ADR-0009).
+    expect(rowMenuOrNull("Amina Fotso")).toBeNull();
+  });
+
+  it("gives an Administrateur only the field roles of their own branches", async () => {
+    meValue = doualaAdmin;
+    render(<UsersScreen />);
+    await screen.findByText("Amina Fotso");
+
+    // Director, Finance, another Administrateur (themselves), and a technician
+    // of Yaoundé are beyond them; the Douala driver is theirs.
+    expect(rowMenuOrNull("Amina Fotso")).toBeNull();
+    expect(rowMenuOrNull("Brice Ekane")).toBeNull();
+    expect(rowMenuOrNull("Carine Mbida")).toBeNull();
+    expect(rowMenuOrNull("Eric Fouda")).toBeNull();
+    expect(rowMenuOrNull("Estelle Ngo")).toBeNull();
+
+    await userEvent.click(rowMenu("Didier Talla"));
+    expect(await screen.findByRole("menuitem", { name: "commands.update-member-role.label" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "commands.reset-member-pin.label" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "commands.deactivate-member.label" })).toBeTruthy();
   });
 
   it("opens the add form from the header", async () => {

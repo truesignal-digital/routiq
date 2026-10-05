@@ -14,6 +14,8 @@ import { REDACTED_PIN } from "./redaction.js";
  * decide whether a revoked member can still work and whether a workspace can be
  * locked out of itself — everything else here is ordinary command plumbing.
  */
+const VERSIONED_BY_ROLE = new Set(["add-member", "update-member-role"]);
+
 describe("member commands", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let workspaceSlug: string;
@@ -30,9 +32,10 @@ describe("member commands", () => {
     workspaceId = seeded.workspace.id;
     branchId = seeded.branch.id;
 
+    // Member administration across every role is Direction's (ADR-0009).
     const admin = await seedMember(ctx.db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminPrincipalId = admin.principal.id;
@@ -40,13 +43,14 @@ describe("member commands", () => {
       await createSession(ctx.db, { workspaceId, principalId: adminPrincipalId })
     ).token;
 
-    // A second admin, so the last-admin invariant does not fire on every test
-    // that touches the first one.
-    await seedMember(ctx.db, { workspaceId, role: "ADMIN", allBranches: true });
+    // A second DIRECTOR, so the last-DIRECTOR invariant does not fire on every
+    // test that touches the first one.
+    await seedMember(ctx.db, { workspaceId, role: "DIRECTOR", allBranches: true });
 
+    // A role with no say over members at all.
     const ops = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "CASHIER",
       allBranches: true,
     });
     opsToken = (
@@ -61,14 +65,20 @@ describe("member commands", () => {
   async function send(
     name: string,
     payload: Record<string, unknown>,
-    options: { token?: string; expectedVersion?: number; idempotencyKey?: string } = {},
+    options: {
+      token?: string;
+      expectedVersion?: number;
+      idempotencyKey?: string;
+      version?: number;
+    } = {},
   ) {
     return ctx.app.inject({
       method: "POST",
       url: `/v1/commands/${name}`,
       headers: { authorization: `Bearer ${options.token ?? adminToken}` },
       payload: {
-        version: 1,
+        // The two commands that name a role have a six-role v2 (ADR-0009).
+        version: options.version ?? (VERSIONED_BY_ROLE.has(name) ? 2 : 1),
         envelope: {
           commandId: randomUUID(),
           idempotencyKey: options.idempotencyKey ?? `idem-${randomUUID()}`,
@@ -101,17 +111,17 @@ describe("member commands", () => {
       displayName: overrides.displayName ?? "Nouveau Membre",
       username,
       pin,
-      role: overrides.role ?? "FIELD_SUBMITTER",
+      role: overrides.role ?? "DRIVER",
       branchScope: overrides.branchScope ?? "ALL",
     });
     return { response, principalId, username, pin };
   }
 
-  describe("add-member.v1", () => {
+  describe("add-member.v2", () => {
     it("creates principal, membership and credential in one call", async () => {
       const { response, principalId, username, pin } = await addMember({
         displayName: "Abdoulaye Sanda",
-        role: "OPS_MANAGER",
+        role: "ADMIN",
         branchScope: [branchId],
       });
 
@@ -137,7 +147,7 @@ describe("member commands", () => {
           ),
         );
       expect(membership).toMatchObject({
-        role: "OPS_MANAGER",
+        role: "ADMIN",
         allBranches: false,
         branchIds: [branchId],
         deactivatedAt: null,
@@ -178,7 +188,7 @@ describe("member commands", () => {
           displayName: "Refusé",
           username: `user-${randomUUID().slice(0, 8)}`,
           pin: "4821",
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           branchScope: "ALL",
         },
         { token: opsToken },
@@ -196,7 +206,7 @@ describe("member commands", () => {
         displayName: "Ibrahim Njoya",
         username,
         pin: "4821",
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         branchScope: "ALL",
       };
 
@@ -260,7 +270,7 @@ describe("member commands", () => {
         displayName: "Rejeté",
         username: `user-${randomUUID().slice(0, 8)}`,
         pin,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         branchScope: [randomUUID()],
       });
       expect(response.statusCode).toBe(422);
@@ -279,7 +289,7 @@ describe("member commands", () => {
         displayName: "Invalide",
         username: `user-${randomUUID().slice(0, 8)}`,
         pin,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         branchScope: "ALL",
       });
       expect(response.statusCode).toBe(400);
@@ -298,7 +308,7 @@ describe("member commands", () => {
         displayName: "Rejouée",
         username: `user-${randomUUID().slice(0, 8)}`,
         pin: "4821",
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         branchScope: "ALL",
       };
       expect((await send("add-member", payload, { idempotencyKey: key })).statusCode).toBe(200);
@@ -415,13 +425,13 @@ describe("member commands", () => {
     });
   });
 
-  describe("update-member-role.v1", () => {
+  describe("update-member-role.v2", () => {
     it("changes role and branch scope under the expected version", async () => {
-      const { principalId } = await addMember({ role: "FIELD_SUBMITTER" });
+      const { principalId } = await addMember({ role: "DRIVER" });
 
       const response = await send(
         "update-member-role",
-        { principalId, role: "MAINTENANCE", branchScope: [branchId] },
+        { principalId, role: "TECHNICIAN", branchScope: [branchId] },
         { expectedVersion: 1 },
       );
       expect(response.statusCode).toBe(200);
@@ -437,7 +447,7 @@ describe("member commands", () => {
           ),
         );
       expect(membership).toMatchObject({
-        role: "MAINTENANCE",
+        role: "TECHNICIAN",
         allBranches: false,
         branchIds: [branchId],
       });
@@ -448,8 +458,8 @@ describe("member commands", () => {
         .where(eq(auditEvents.commandId, response.json().commandId as string));
       expect(event).toMatchObject({
         eventType: "member.role-updated",
-        beforeState: { role: "FIELD_SUBMITTER", branchScope: "ALL" },
-        afterState: { role: "MAINTENANCE", branchScope: [branchId] },
+        beforeState: { role: "DRIVER", branchScope: "ALL" },
+        afterState: { role: "TECHNICIAN", branchScope: [branchId] },
       });
     });
 
@@ -457,7 +467,7 @@ describe("member commands", () => {
       const { principalId } = await addMember();
       const response = await send("update-member-role", {
         principalId,
-        role: "MAINTENANCE",
+        role: "TECHNICIAN",
       });
       expect(response.statusCode).toBe(400);
       expect(response.json()).toMatchObject({
@@ -469,7 +479,7 @@ describe("member commands", () => {
       const { principalId } = await addMember();
       const response = await send(
         "update-member-role",
-        { principalId, role: "MAINTENANCE" },
+        { principalId, role: "TECHNICIAN" },
         { expectedVersion: 7 },
       );
       expect(response.statusCode).toBe(409);
@@ -478,11 +488,15 @@ describe("member commands", () => {
       });
     });
 
-    it("refuses to demote the workspace's last active admin", async () => {
+    /**
+     * No tenant command changes a DIRECTOR, and nobody their own role, so a
+     * lone DIRECTOR meets SELF_ROLE_CHANGE before LAST_DIRECTOR could fire.
+     */
+    it("refuses the workspace's lone DIRECTOR changing their own role", async () => {
       const lone = await seedWorkspace(ctx.db, `ws-lone-${randomUUID().slice(0, 8)}`);
       const loneAdmin = await seedMember(ctx.db, {
         workspaceId: lone.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const loneToken = (
@@ -494,21 +508,31 @@ describe("member commands", () => {
 
       const response = await send(
         "update-member-role",
-        { principalId: loneAdmin.principal.id, role: "OPS_MANAGER" },
+        { principalId: loneAdmin.principal.id, role: "ADMIN" },
         { token: loneToken, expectedVersion: 1 },
       );
       expect(response.statusCode).toBe(422);
-      expect(response.json()).toMatchObject({ error: { code: "LAST_ADMIN" } });
+      expect(response.json()).toMatchObject({ error: { code: "SELF_ROLE_CHANGE" } });
+      const [membership] = await ctx.db
+        .select()
+        .from(memberships)
+        .where(eq(memberships.principalId, loneAdmin.principal.id));
+      expect(membership).toMatchObject({ role: "DIRECTOR", rowVersion: 1 });
     });
 
-    it("allows demoting an admin while another active admin remains", async () => {
-      const { principalId } = await addMember({ role: "ADMIN" });
+    it("v1 still changes a role, reading the legacy code as the role it became", async () => {
+      const { principalId } = await addMember({ role: "DRIVER" });
       const response = await send(
         "update-member-role",
-        { principalId, role: "OPS_MANAGER" },
-        { expectedVersion: 1 },
+        { principalId, role: "MAINTENANCE" },
+        { expectedVersion: 1, version: 1 },
       );
       expect(response.statusCode).toBe(200);
+      const [membership] = await ctx.db
+        .select()
+        .from(memberships)
+        .where(eq(memberships.principalId, principalId));
+      expect(membership?.role).toBe("TECHNICIAN");
     });
   });
 
@@ -588,23 +612,21 @@ describe("member commands", () => {
     });
 
     /**
-     * The two guards divide the ground completely, which is worth pinning down
-     * because it makes LAST_ADMIN unreachable on this command: the caller is
-     * always an active admin, so either they are the target (self-guard) or
-     * they are themselves the admin that remains. LAST_ADMIN stays in the
-     * handler as the backstop that becomes load-bearing the day this command
-     * gains a caller who is not the workspace's own admin.
+     * LAST_DIRECTOR is unreachable from a tenant: no member command touches a
+     * DIRECTOR (ADR-0009), and the self-guards stop a DIRECTOR acting on
+     * themselves. The count stays in the handler as the backstop for the day
+     * this command gains a caller who is not the workspace's own DIRECTOR.
      */
-    it("protects the last admin through the self-guard, and allows the case that is safe", async () => {
+    it("protects the last DIRECTOR through the self-guards and the DIRECTOR-target rule", async () => {
       const lone = await seedWorkspace(ctx.db, `ws-lone2-${randomUUID().slice(0, 8)}`);
       const first = await seedMember(ctx.db, {
         workspaceId: lone.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const second = await seedMember(ctx.db, {
         workspaceId: lone.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const token = (
@@ -614,16 +636,14 @@ describe("member commands", () => {
         })
       ).token;
 
-      // Deactivating the other admin is safe — the caller is still standing.
       const other = await send(
         "deactivate-member",
         { principalId: second.principal.id },
         { token },
       );
-      expect(other.statusCode).toBe(200);
+      expect(other.statusCode).toBe(403);
+      expect(other.json()).toMatchObject({ error: { code: "MEMBER_ROLE_NOT_GRANTABLE" } });
 
-      // Now the only active admin left is the caller, and the workspace cannot
-      // be emptied of admins.
       const self = await send(
         "deactivate-member",
         { principalId: first.principal.id },
@@ -632,15 +652,13 @@ describe("member commands", () => {
       expect(self.statusCode).toBe(422);
       expect(self.json()).toMatchObject({ error: { code: "SELF_DEACTIVATION" } });
 
-      // Nor by the back door: demoting themselves now trips LAST_ADMIN, since
-      // the admin they could have handed off to is deactivated.
       const demote = await send(
         "update-member-role",
-        { principalId: first.principal.id, role: "OPS_MANAGER" },
+        { principalId: first.principal.id, role: "ADMIN" },
         { token, expectedVersion: 1 },
       );
       expect(demote.statusCode).toBe(422);
-      expect(demote.json()).toMatchObject({ error: { code: "LAST_ADMIN" } });
+      expect(demote.json()).toMatchObject({ error: { code: "SELF_ROLE_CHANGE" } });
     });
 
     it("refuses to deactivate an already-deactivated member", async () => {
@@ -813,7 +831,7 @@ describe("member commands", () => {
       const other = await seedWorkspace(ctx.db, `ws-other-${randomUUID().slice(0, 8)}`);
       const otherMember = await seedMember(ctx.db, {
         workspaceId: other.workspace.id,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
 
@@ -843,7 +861,7 @@ describe("member commands", () => {
         .select()
         .from(memberships)
         .where(eq(memberships.principalId, otherMember.principal.id));
-      expect(membership).toMatchObject({ role: "FIELD_SUBMITTER", deactivatedAt: null });
+      expect(membership).toMatchObject({ role: "DRIVER", deactivatedAt: null });
     });
 
     it("lets the same username exist in a different workspace", async () => {
@@ -870,7 +888,7 @@ describe("member commands", () => {
           displayName: "Homonyme",
           username,
           pin: "4821",
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           branchScope: "ALL",
         },
         { token: otherToken },
@@ -939,16 +957,16 @@ describe("member commands", () => {
      * transactions to overlap, so treat it as a statement of what must hold
      * rather than as the regression test for the lock — that is the case above.
      */
-    it("cannot be raced into a workspace with no admin", async () => {
+    it("cannot be raced into a workspace with no DIRECTOR", async () => {
       const arena = await seedWorkspace(ctx.db, `ws-race-${randomUUID().slice(0, 8)}`);
       const first = await seedMember(ctx.db, {
         workspaceId: arena.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const second = await seedMember(ctx.db, {
         workspaceId: arena.workspace.id,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       const tokenOf = async (principalId: string) =>
@@ -957,25 +975,25 @@ describe("member commands", () => {
       const firstToken = await tokenOf(first.principal.id);
       const secondToken = await tokenOf(second.principal.id);
 
-      // Each admin demotes the other, at the same time.
+      // Each DIRECTOR demotes the other, at the same time.
       const [a, b] = await Promise.all([
         send(
           "update-member-role",
-          { principalId: second.principal.id, role: "OPS_MANAGER" },
+          { principalId: second.principal.id, role: "ADMIN" },
           { token: firstToken, expectedVersion: 1 },
         ),
         send(
           "update-member-role",
-          { principalId: first.principal.id, role: "OPS_MANAGER" },
+          { principalId: first.principal.id, role: "ADMIN" },
           { token: secondToken, expectedVersion: 1 },
         ),
       ]);
 
-      const codes = [a.statusCode, b.statusCode].sort();
-      expect(codes[0]).toBe(200);
-      // The loser is refused either as the last admin or as an actor who is no
-      // longer one; which depends on commit order, and both are correct.
-      expect([403, 422]).toContain(codes[1]);
+      // No tenant command touches a DIRECTOR (ADR-0009), so both are refused.
+      for (const reply of [a, b]) {
+        expect(reply.statusCode).toBe(403);
+        expect(reply.json()).toMatchObject({ error: { code: "MEMBER_ROLE_NOT_GRANTABLE" } });
+      }
 
       const survivors = await ctx.db
         .select()
@@ -983,11 +1001,11 @@ describe("member commands", () => {
         .where(
           and(
             eq(memberships.workspaceId, arena.workspace.id),
-            eq(memberships.role, "ADMIN"),
+            eq(memberships.role, "DIRECTOR"),
             isNull(memberships.deactivatedAt),
           ),
         );
-      expect(survivors.length).toBeGreaterThanOrEqual(1);
+      expect(survivors).toHaveLength(2);
     });
 
     /**
@@ -1020,7 +1038,7 @@ describe("member commands", () => {
 
       await ctx.db
         .update(memberships)
-        .set({ role: "OPS_MANAGER" })
+        .set({ role: "DRIVER" })
         .where(eq(memberships.principalId, actor.principal.id));
 
       await expect(

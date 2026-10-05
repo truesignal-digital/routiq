@@ -197,7 +197,7 @@ export const assetDetail = assetListItem.extend({
   commissionedAt: z.iso.datetime().nullable(),
   customValues: z.record(z.string(), z.unknown()),
   /**
-   * Absent for roles outside FINANCE_READER_ROLES (MAINTENANCE): the workshop
+   * Absent for roles outside FINANCE_READER_ROLES (TECHNICIAN, CASHIER): the workshop
    * sees the cost lines of its own work orders, never the vehicle's ledger.
    */
   finance: assetFinancialSummary.optional(),

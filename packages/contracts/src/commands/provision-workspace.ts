@@ -3,7 +3,7 @@ import { commandEnvelope } from "../envelope.js";
 import { branchCode, branchName } from "./branch-fields.js";
 import { TEMPLATE_CODES } from "../templates.js";
 import { TOGGLEABLE_MODULE_CODES } from "../modules.js";
-import { ROLES } from "../roles.js";
+import { legacyRoleInput, ROLES } from "../roles.js";
 
 /** Same field rules as create-branch.v1 — literally, via the shared spellings. */
 const provisionedBranch = z.strictObject({
@@ -24,6 +24,9 @@ const provisionedUser = z.strictObject({
     z.array(z.string().min(1).max(40)),
   ]),
 });
+
+/** A user as v1 and v2 shipped them: pre-ADR-0009 role codes, read as the roles they became. */
+const legacyProvisionedUser = provisionedUser.extend({ role: legacyRoleInput });
 
 export const provisionWorkspacePayload = z.strictObject({
   workspace: z.strictObject({
@@ -93,7 +96,11 @@ export const provisionWorkspacePayload = z.strictObject({
 });
 
 /**
- * v2 is the array shape above. v1 took a single `branch` object and a loose code
+ * v3 is the payload above: v2's shape with the six roles of ADR-0009. The
+ * `admin` account is provisioned as DIRECTOR, the first and only DIRECTOR a
+ * tenant cannot give itself.
+ *
+ * v2 is the same array shape with the pre-ADR-0009 role codes. v1 took a single `branch` object and a loose code
  * rule; a receipt filed under v1 can never match a v2 payload hash, and a tenant
  * file whose code is lowercase or longer than eight characters no longer even
  * validates. Both versions stay registered, per ARCHITECTURE.md §6 — the server
@@ -101,9 +108,21 @@ export const provisionWorkspacePayload = z.strictObject({
  */
 export const provisionWorkspaceCommand = z.object({
   name: z.literal("provision-workspace"),
-  version: z.literal(2),
+  version: z.literal(3),
   envelope: commandEnvelope,
   payload: provisionWorkspacePayload,
+});
+
+/** v2: frozen as shipped, users carry legacy role codes mapped on parse. */
+export const provisionWorkspaceV2Payload = provisionWorkspacePayload.extend({
+  users: z.array(legacyProvisionedUser).optional(),
+});
+
+export const provisionWorkspaceV2Command = z.object({
+  name: z.literal("provision-workspace"),
+  version: z.literal(2),
+  envelope: commandEnvelope,
+  payload: provisionWorkspaceV2Payload,
 });
 
 /**
@@ -136,7 +155,7 @@ export const provisionWorkspaceV1Payload = z.strictObject({
   }),
   enabledPresets: z.array(z.enum(TEMPLATE_CODES)).min(1, "At least one preset must be enabled"),
   disabledModules: z.array(z.enum(TOGGLEABLE_MODULE_CODES)).default([]),
-  users: z.array(provisionedUser).optional(),
+  users: z.array(legacyProvisionedUser).optional(),
 });
 
 export const provisionWorkspaceV1Command = z.object({
@@ -147,8 +166,9 @@ export const provisionWorkspaceV1Command = z.object({
 });
 
 /**
- * The whole of the version difference: one branch becomes a one-element set, and
- * everything downstream — handler, packs, audit trail — sees only the v2 shape.
+ * The whole of the v1 → v2 difference: one branch becomes a one-element set.
+ * Roles were already mapped on parse, so the result is also a valid v3 payload
+ * and everything downstream — handler, packs, audit trail — sees only that.
  */
 export function provisionWorkspaceV1ToV2(
   payload: ProvisionWorkspaceV1Payload,
@@ -159,5 +179,6 @@ export function provisionWorkspaceV1ToV2(
 
 export type ProvisionWorkspacePayload = z.infer<typeof provisionWorkspacePayload>;
 export type ProvisionWorkspaceCommand = z.infer<typeof provisionWorkspaceCommand>;
+export type ProvisionWorkspaceV2Payload = z.infer<typeof provisionWorkspaceV2Payload>;
 export type ProvisionWorkspaceV1Payload = z.infer<typeof provisionWorkspaceV1Payload>;
 export type ProvisionWorkspaceV1Command = z.infer<typeof provisionWorkspaceV1Command>;

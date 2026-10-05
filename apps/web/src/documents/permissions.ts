@@ -1,6 +1,6 @@
 import type { ModuleCode, Role } from "@routiq/contracts";
 
-const DOCUMENT_WRITERS: readonly Role[] = ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"];
+const DOCUMENT_WRITERS: readonly Role[] = ["DIRECTOR", "ADMIN", "FINANCE"];
 
 export function canAccessDocuments(enabledModules: readonly ModuleCode[] | undefined): boolean {
   return enabledModules?.includes("DOCUMENTS") ?? false;

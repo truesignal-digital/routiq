@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeFinanceSection, visibleFinanceSections } from "./navigation.js";
 
-const ALL = visibleFinanceSections("FINANCE_APPROVER", ["CORE", "FINANCE"]);
+const ALL = visibleFinanceSections("FINANCE", ["CORE", "FINANCE"]);
 
 function activeKeyAt(pathname: string): string | undefined {
   return activeFinanceSection(ALL, pathname)?.key;
@@ -41,7 +41,7 @@ describe("activeFinanceSection", () => {
   });
 
   it("cannot activate a section the role does not see", () => {
-    const submitterSections = visibleFinanceSections("FIELD_SUBMITTER", [
+    const submitterSections = visibleFinanceSections("DRIVER", [
       "CORE",
       "FINANCE",
     ]);
