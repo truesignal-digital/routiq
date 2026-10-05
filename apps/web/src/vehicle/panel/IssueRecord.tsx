@@ -131,7 +131,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
           </DetailSection>
         )}
         {issue.safetyCritical && <Note>{t("vehicle.panel.safetyCriticalNote")}</Note>}
-        <DetailSection title={t("vehicle.panel.chronology")}>
+        <DetailSection title={t("maintenance.detail.chronologie")}>
           <Chronologie events={issue.chronologie} locale={locale} />
         </DetailSection>
       </div>
