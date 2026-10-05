@@ -87,7 +87,10 @@ function stubFetch(bodies: unknown[]) {
   return { requested, summaryRequested };
 }
 
-function renderScreen(role: MeContext["role"] = "ADMIN") {
+function renderScreen(
+  role: MeContext["role"] = "ADMIN",
+  enabledModules: MeContext["enabledModules"] = ["CORE", "ASSETS"],
+) {
   const me: MeContext = {
     workspaceId: "ws",
     principalId: "p",
@@ -95,7 +98,7 @@ function renderScreen(role: MeContext["role"] = "ADMIN") {
     membershipId: "m",
     role,
     branchScope: "ALL",
-    enabledModules: ["CORE", "ASSETS"],
+    enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
   return render(
@@ -152,7 +155,7 @@ describe("assets explorer server-side filtering", () => {
     await waitFor(() => expect(lastQuery(requested).get("search")).toBe("scania"));
   });
 
-  it("maps the ATTENTION choice onto its three lifecycle statuses", async () => {
+  it("asks the server for the Attention tile's set, not three lifecycle statuses", async () => {
     const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
     ]);
@@ -162,13 +165,8 @@ describe("assets explorer server-side filtering", () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Statut" }));
     await userEvent.click(await screen.findByRole("option", { name: "À surveiller" }));
 
-    await waitFor(() =>
-      expect(lastQuery(requested).getAll("status")).toEqual([
-        "UNDER_MAINTENANCE",
-        "RETIRED",
-        "WRITTEN_OFF",
-      ]),
-    );
+    await waitFor(() => expect(lastQuery(requested).get("attention")).toBe("true"));
+    expect(lastQuery(requested).getAll("status")).toEqual([]);
   });
 
   it("narrows by class on the server", async () => {
@@ -257,6 +255,21 @@ describe("assets explorer server-side filtering", () => {
       // One row is loaded; the tiles still report the whole fleet.
       expect(values).toEqual(["6", "4", "2"]);
       expect(summaryRequested).toHaveLength(1);
+    });
+
+    it("says the Attention count covers grounded vehicles only while MAINTENANCE is on", async () => {
+      stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
+      const { unmount } = renderScreen("ADMIN", ["CORE", "ASSETS", "MAINTENANCE"]);
+      expect(
+        await screen.findByText("Immobilisés, en maintenance, retirés ou réformés"),
+      ).toBeDefined();
+      unmount();
+
+      renderScreen("ADMIN", ["CORE", "ASSETS"]);
+      expect(await screen.findByText("En maintenance, retirés ou réformés")).toBeDefined();
+      expect(
+        screen.queryByText("Immobilisés, en maintenance, retirés ou réformés"),
+      ).toBeNull();
     });
 
     it("asks the summary to narrow with the table, minus the status bucket", async () => {
