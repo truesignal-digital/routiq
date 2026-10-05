@@ -117,13 +117,13 @@
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Ouvrez un ordre de travail sur un camion, avec ou sans signalement à l'origine.",
+      "newHint": "Ouvrez un ordre de travail sur un camion, avec ou sans problème à l'origine.",
       "columns": {
         "asset": "Camion"
       }
     },
     "issues": {
-      "newHint": "Décrivez le défaut constaté sur le camion. Un signalement critique pour la sécurité immobilise le camion immédiatement.",
+      "newHint": "Décrivez le défaut constaté sur le camion. Un problème critique pour la sécurité immobilise le camion immédiatement.",
       "columns": {
         "asset": "Camion"
       }
@@ -133,7 +133,7 @@
       "safetyCriticalHint": "Le camion est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
     },
     "actions": {
-      "releaseHint": "Le camion redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement."
+      "releaseHint": "Le camion redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème."
     },
     "detail": {
       "unavailableTitle": "Camion immobilisé"

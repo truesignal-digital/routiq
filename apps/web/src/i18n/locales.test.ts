@@ -5,6 +5,27 @@ import { describe, expect, it } from "vitest";
 import { commandLabelKeys, COMMAND_INTENTS, type CommandLabelRef } from "../commands/labels.js";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";
+import passengerEn from "./presets/passenger-transport.en.json";
+import passengerFr from "./presets/passenger-transport.fr.json";
+import truckingEn from "./presets/trucking.en.json";
+import truckingFr from "./presets/trucking.fr.json";
+
+function flattenEntries(obj: Record<string, unknown>, prefix = ""): [string, string][] {
+  return Object.entries(obj).flatMap(([key, value]): [string, string][] => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === "object" && value !== null) {
+      return flattenEntries(value as Record<string, unknown>, path);
+    }
+    return [[path, String(value)]];
+  });
+}
+
+/** The words a reader sees: ICU select keys and argument names removed, case text kept. */
+function visibleWords(message: string): string {
+  return message
+    .replace(/([,}])\s*[\w=]+\s*\{/g, "$1«")
+    .replace(/\{\s*\w+\s*(?=[,}])/g, "{");
+}
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
   return Object.entries(obj).flatMap(([key, value]) => {
@@ -56,6 +77,21 @@ describe("locale catalogs", () => {
   it("does not contain i18next-style interpolation", () => {
     for (const [locale, catalog] of CATALOGS) {
       expect(JSON.stringify(catalog), locale).not.toContain("{{");
+    }
+  });
+
+  // One word per concept (#288): a reported fault is a "problem" in English and
+  // a « problème » in French, on every screen, toast, error and history line.
+  it("calls a reported fault a problem, never an issue or a signalement", () => {
+    for (const catalog of [en, truckingEn, passengerEn]) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        expect(visibleWords(value), key).not.toMatch(/\bissues?\b/i);
+      }
+    }
+    for (const catalog of [fr, truckingFr, passengerFr]) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        expect(visibleWords(value), key).not.toMatch(/\bsignalements?\b/i);
+      }
     }
   });
 });

@@ -115,13 +115,13 @@
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Ouvrez un ordre de travail sur un véhicule, avec ou sans signalement à l'origine.",
+      "newHint": "Ouvrez un ordre de travail sur un véhicule, avec ou sans problème à l'origine.",
       "columns": {
         "asset": "Véhicule"
       }
     },
     "issues": {
-      "newHint": "Décrivez le défaut constaté sur le véhicule. Un signalement critique pour la sécurité immobilise le véhicule immédiatement.",
+      "newHint": "Décrivez le défaut constaté sur le véhicule. Un problème critique pour la sécurité immobilise le véhicule immédiatement.",
       "columns": {
         "asset": "Véhicule"
       }
@@ -131,7 +131,7 @@
       "safetyCriticalHint": "Le véhicule est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
     },
     "actions": {
-      "releaseHint": "Le véhicule redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement."
+      "releaseHint": "Le véhicule redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème."
     },
     "detail": {
       "unavailableTitle": "Véhicule immobilisé"

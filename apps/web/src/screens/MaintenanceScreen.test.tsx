@@ -27,6 +27,7 @@ const WORK_ORDER_REFERENCE = "1A2B3C4D";
 const mocks = vi.hoisted(() => ({
   submit: vi.fn(),
   toastAdd: vi.fn(),
+  language: "en",
 }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
@@ -43,13 +44,35 @@ vi.mock("react-i18next", async () => {
       // Command labels pass fallback keys; every key "exists" here, so the first wins.
       t: (key: string | string[]) => (Array.isArray(key) ? key[0] : key),
       i18n: {
-        language: "en",
-        resolvedLanguage: "en",
+        language: mocks.language,
+        resolvedLanguage: mocks.language,
         exists: () => true,
         t: (key: string) => key,
       },
     }),
     initReactI18next: { type: "3rdParty", init: () => {} },
+  };
+});
+
+// The workspace's ISSUE_TYPE list: a category travels as its code and reads
+// back as the label in the viewer's language.
+vi.mock("../documents/useCategories.js", async () => {
+  const actual = await vi.importActual<typeof import("../documents/useCategories.js")>(
+    "../documents/useCategories.js",
+  );
+  return {
+    ...actual,
+    useCategories: (kind: string, enabled?: boolean) =>
+      kind === "ISSUE_TYPE"
+        ? {
+            data: [
+              { code: "BRAKES", labelFr: "Freins", labelEn: "Brakes", defaultSafetyCritical: true },
+              { code: "BODYWORK", labelFr: "Carrosserie", labelEn: "Bodywork", defaultSafetyCritical: false },
+            ],
+            isPending: false,
+            isError: false,
+          }
+        : actual.useCategories(kind, enabled),
   };
 });
 
@@ -185,7 +208,7 @@ const issue: IssueListItem = {
   },
   description: "Freins qui sifflent en descente",
   safetyCritical: true,
-  category: "Freinage",
+  category: "BRAKES",
   reportedAt: "2026-07-31T16:30:00.000Z",
   status: "OPEN",
   resolvedAt: null,
@@ -248,6 +271,7 @@ beforeEach(() => {
   issuedQueries.length = 0;
   issuedIssueQueries.length = 0;
   me = opsManager;
+  mocks.language = "en";
   workOrderRow = makeWorkOrder("APPROVED");
   detail = makeDetail(workOrderRow);
   issueRows = [issue];
@@ -842,9 +866,24 @@ describe("MaintenanceScreen — signalements tab", () => {
     expect(
       await screen.findByText("Freins qui sifflent en descente"),
     ).toBeTruthy();
-    expect(screen.getByText("Freinage")).toBeTruthy();
+    expect(screen.getByText("Brakes")).toBeTruthy();
     expect(screen.getAllByText("maintenance.issues.safetyCritical").length).toBeGreaterThan(0);
     expect(screen.getByText("maintenance.issues.unavailable")).toBeTruthy();
+  });
+
+  it.each([
+    ["en", "Bodywork"],
+    ["fr", "Carrosserie"],
+  ])("shows the category's label in %s, never its code", async (language, label) => {
+    mocks.language = language;
+    issueRows = [{ ...issue, category: "BODYWORK" }];
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+
+    expect(await screen.findByText(label)).toBeTruthy();
+    expect(screen.queryByText("BODYWORK")).toBeNull();
   });
 
   it("opens the work-order form prefilled from a signalement row", async () => {
