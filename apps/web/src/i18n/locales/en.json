@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action completed"
     },
+    "info": {
+      "generic": "Noted"
+    },
     "warnings": {
       "generic": "The action completed with a warning ({code})."
     },
