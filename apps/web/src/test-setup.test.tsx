@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { expect, it } from "vitest";
+import { Button } from "./components/ui/button.js";
 
 function LoadsSlowly() {
   const [loaded, setLoaded] = useState(false);
@@ -15,4 +16,13 @@ function LoadsSlowly() {
 it("waits past a first render slower than one second", async () => {
   render(<LoadsSlowly />);
   expect((await screen.findByText("FIN-001")).tagName).toBe("P");
+});
+
+// #136: Base UI misuse only reaches console.error, so the setup fails the test.
+it.fails("fails a test whose render makes Base UI log an error", () => {
+  render(
+    <Button nativeButton render={<a href="/finance/record" />}>
+      Record
+    </Button>,
+  );
 });
