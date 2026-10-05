@@ -183,13 +183,13 @@ describe("activity money card", () => {
         " ",
       );
 
-    render(<ActivityMoney entries={lines} />);
+    render(<ActivityMoney totals entries={lines} />);
     expect(amountOf("DLA-2026-00008")).toBe("−FCFA 86,000");
     expect(amountOf("DLA-2026-00009")).toBe("+FCFA 86,000");
     cleanup();
 
     await i18n.changeLanguage("fr-CM");
-    render(<ActivityMoney entries={lines} />);
+    render(<ActivityMoney totals entries={lines} />);
     expect(amountOf("DLA-2026-00008")).toBe("−86 000 FCFA");
     await i18n.changeLanguage("en");
   });
