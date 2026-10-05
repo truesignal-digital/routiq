@@ -400,7 +400,7 @@ describe("finance record form", () => {
     expect(screen.queryByRole("tab", { name: "Revenue" })).toBeNull();
   });
 
-  it("keeps the cashier on a fresh form, since the entries list is not theirs", async () => {
+  it("takes the cashier to their branch's entries after recording (#264)", async () => {
     const user = userEvent.setup();
     renderScreen({ ...recorder, role: "CASHIER" });
     expect(screen.getByRole("tab", { name: "Revenue" })).toBeTruthy();
@@ -409,9 +409,7 @@ describe("finance record form", () => {
     await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
-    await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
-    expect(mocks.navigate).not.toHaveBeenCalled();
-    await waitFor(() => expect((screen.getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toBe(""));
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" }));
   });
 
   it("turns the workshop away: its costs go on work orders", () => {

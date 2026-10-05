@@ -1,9 +1,16 @@
-import { canReadLedger, type ModuleCode, type Role } from "@routiq/contracts";
+import {
+  canReadEntries,
+  canReadLedger,
+  moneyReadScope,
+  type ModuleCode,
+  type MoneyReadScope,
+  type Role,
+} from "@routiq/contracts";
 
 /**
- * Read access is independent of command capabilities; server scope still
- * applies. The role list is the server's own (`FINANCE_READER_ROLES`), so the
- * workshop never sees the books here either.
+ * The books: vehicle totals, period figures, the Money tab. Read access is
+ * independent of command capabilities; the role list is the server's own
+ * (`LEDGER_READER_ROLES`), so nobody is shown a figure the API withholds.
  */
 export function canReadFinance(
   role: Role | undefined,
@@ -14,6 +21,27 @@ export function canReadFinance(
     role !== undefined &&
     canReadLedger(role)
   );
+}
+
+/**
+ * The entries list and an entry's detail: the ledger readers, the counter
+ * (its branches' entries) and the drivers (their own). The server filters the
+ * rows; the workshop reads its costs on the work orders instead.
+ */
+export function canReadFinanceEntries(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return (
+    (enabledModules?.includes("FINANCE") ?? false) &&
+    role !== undefined &&
+    canReadEntries(role)
+  );
+}
+
+/** Which slice of the entries the server returns to this role, to say so on screen. */
+export function entriesScope(role: Role | undefined): MoneyReadScope | undefined {
+  return role === undefined ? undefined : moneyReadScope(role);
 }
 
 /**

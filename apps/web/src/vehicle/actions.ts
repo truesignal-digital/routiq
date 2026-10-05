@@ -1,5 +1,5 @@
 import {
-  FINANCE_READER_ROLES,
+  LEDGER_READER_ROLES,
   type AssetAttentionItem,
   type AssetDetail,
   type AttentionCode,
@@ -88,7 +88,7 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
   { key: "record-expense", group: "capture", icon: Receipt, module: "FINANCE", roles: EXPENSE_WRITERS, open: "form" },
   // Every role may attach, but on the vehicle only the ledger readers see
   // entries to attach to; the workshop reaches its own through work orders.
-  { key: "attach-evidence", group: "capture", icon: Paperclip, module: "FINANCE", roles: FINANCE_READER_ROLES, open: "record-form" },
+  { key: "attach-evidence", group: "capture", icon: Paperclip, module: "FINANCE", roles: LEDGER_READER_ROLES, open: "record-form" },
   {
     key: "record-reading",
     group: "capture",

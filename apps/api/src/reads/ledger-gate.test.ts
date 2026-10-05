@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { FINANCE_READER_ROLES } from "@routiq/contracts";
+import { LEDGER_READER_ROLES } from "@routiq/contracts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
 /**
- * Review P2: the books are for the roles that read them (FINANCE_READER_ROLES).
+ * Review P2: the books are for the roles that read them (LEDGER_READER_ROLES).
  * The workshop sees the cost lines of its own work orders on the work-order
  * reads, never the ledger — not through the finance routes, and not through
  * the money block of the vehicle header.
@@ -59,7 +59,7 @@ describe("ledger reads are for the ledger readers", () => {
 
   it("still serves them to every ledger-reading role", async () => {
     const workspaceId = (await seedWorkspace(ctx.db)).workspace.id;
-    for (const role of FINANCE_READER_ROLES) {
+    for (const role of LEDGER_READER_ROLES) {
       const reader = await seedActor(ctx.db, { workspaceId, role });
       for (const route of ["/v1/finance/entries", "/v1/finance/approvals"]) {
         expect((await api.get(reader.token, route)).status, `${role} ${route}`).toBe(200);

@@ -8,9 +8,9 @@ import { useAssetDetail } from "@/assets/useAssetDetail.js";
 import { useMeContext, type MeContext } from "@/auth/me.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { canAccessDocuments } from "@/documents/permissions.js";
+import { canViewDocuments } from "@/documents/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
-import { canReadFinance } from "@/finance/permissions.js";
+import { canReadFinance, canReadFinanceEntries } from "@/finance/permissions.js";
 import { canViewMaintenance } from "@/maintenance/permissions.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { actionAvailability, actionDef, actionPermitted, type VehicleFacts } from "./actions.js";
@@ -80,8 +80,9 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
   const gates = {
     maintenance: canViewMaintenance(modules),
     money: canReadFinance(me.role, modules),
+    entries: canReadFinanceEntries(me.role, modules),
     trips: canViewActivities(modules),
-    documents: canAccessDocuments(modules),
+    documents: canViewDocuments(me.role, modules),
   };
   const attentionQuery = useAssetAttention(asset.id);
   const attention = attentionQuery.data?.items ?? [];

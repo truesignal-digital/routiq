@@ -450,6 +450,8 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture enregistrée pour l'instant.",
       "branchEmpty": "Aucune écriture pour cette agence.",
+      "ownScope": "Seules les écritures que vous avez saisies apparaissent ici.",
+      "ownEmpty": "Vous n'avez saisi aucune écriture. Celles que vous saisirez apparaîtront ici.",
       "loadMore": "Charger plus",
       "recordAction": "Saisir une écriture",
       "status": {
@@ -738,7 +740,8 @@
         "net": "Résultat",
         "postedOnly": "comptabilisé seulement",
         "pending": "En attente d'approbation",
-        "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat."
+        "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat.",
+        "ownOnly": "Seules les écritures que vous avez saisies sur ce voyage."
       }
     },
     "actions": {
@@ -2245,6 +2248,7 @@
       "linkedMoney": "Argent lié",
       "wholeTrip": "Montants du trajet entier",
       "noMoney": "Aucune écriture liée à ce trajet.",
+      "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce voyage.",
       "odometer": "Compteur",
       "noReadings": "Aucun relevé de départ ou d'arrivée pour ce véhicule.",
       "readingLine": "{source} · {date}",

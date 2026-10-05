@@ -1,6 +1,6 @@
 import type { ModuleCode, Role } from "@routiq/contracts";
 import { isRouteActive } from "../lib/route-match.js";
-import { canManagePeriods, canReadFinance } from "./permissions.js";
+import { canManagePeriods, canReadFinanceEntries } from "./permissions.js";
 
 export type FinanceSectionKey = "entries" | "approvals" | "periods";
 
@@ -23,7 +23,7 @@ export function visibleFinanceSections(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): FinanceSection[] {
-  if (!canReadFinance(role, enabledModules)) return [];
+  if (!canReadFinanceEntries(role, enabledModules)) return [];
 
   const canManage = canManagePeriods(role, enabledModules);
 

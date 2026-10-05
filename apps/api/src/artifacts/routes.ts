@@ -9,7 +9,7 @@ import { and, eq, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
-import { canReadLedger, FINANCE_READER_ROLES } from "@routiq/contracts";
+import { DOCUMENT_READER_ROLES } from "@routiq/contracts";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
@@ -23,7 +23,8 @@ import {
   sourceArtifacts,
 } from "../db/schema.js";
 import { requireScopedAsset } from "../reads/asset-scope.js";
-import { entryEvidenceFiles, hasPostingWithoutWorkOrder } from "../reads/entry-evidence.js";
+import { entryEvidenceFiles } from "../reads/entry-evidence.js";
+import { canReadEntry } from "../reads/money-scope.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "../reads/define-read.js";
 import { invalidRequest, notFound, ReadRefusal } from "../reads/read-gate.js";
 import { linkedArtifact } from "../reads/record-artifacts.js";
@@ -392,7 +393,7 @@ export function registerArtifactRoutes(
     {
       path: "/v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url",
       module: "DOCUMENTS",
-      roles: ANY_ROLE,
+      roles: DOCUMENT_READER_ROLES,
       branchScope: "per-record",
     },
     async ({ req, reply, auth, read }) =>
@@ -464,11 +465,11 @@ export function registerArtifactRoutes(
    * workspace-wide route above answers any member of the tenant; an entry is a
    * financial record read against the caller's branches, so its receipt must be
    * too — this route is the only one the finance screens use (PLAN §1.7).
-   * Checked in order: the FINANCE module and a ledger-reading role, the entry in
-   * the caller's branches, the file among the entry's evidence; each miss past
-   * the role is the same 404, and storage is never touched before all pass.
-   * The workshop, outside the ledger readers, reaches only entries whose every
-   * line is a work-order cost — the rule attach-evidence applies to it.
+   * Checked in order: the FINANCE module, the entry readable by the caller
+   * (branches, then money scope: a driver's own entries, the workshop's
+   * work-order costs; `readableEntrySql`), the file among the entry's
+   * evidence; each miss is the same 404, and storage is never touched before
+   * all pass. Every role may attach a receipt, so every role passes the gate.
    */
   defineRead(
     app,
@@ -476,7 +477,7 @@ export function registerArtifactRoutes(
     {
       path: "/v1/finance/entries/:entryId/evidence/:artifactId/download-url",
       module: "FINANCE",
-      roles: [...FINANCE_READER_ROLES, "TECHNICIAN"],
+      roles: ANY_ROLE,
       branchScope: "per-record",
     },
     async ({ req, reply, auth, read }) =>
@@ -501,18 +502,7 @@ export function registerArtifactRoutes(
             ),
           )
           .limit(1);
-        if (
-          !entry ||
-          (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
-        ) {
-          throw notFound();
-        }
-        if (
-          !canReadLedger(auth.role) &&
-          (await hasPostingWithoutWorkOrder(tx, auth.workspaceId, entry.id))
-        ) {
-          throw notFound();
-        }
+        if (!entry || !(await canReadEntry(tx, auth, entry.id))) throw notFound();
 
         const files = await entryEvidenceFiles(tx, auth.workspaceId, entry);
         if (!files.some((file) => file.artifactId === artifactId)) throw notFound();

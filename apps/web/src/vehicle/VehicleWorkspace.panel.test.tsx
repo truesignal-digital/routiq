@@ -334,7 +334,7 @@ describe("the author's own pending entry (#85)", () => {
     });
 
   it("offers Edit to the author and saves the pre-filled form with update-pending-entry", async () => {
-    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/history?panel=entry:${ENTRY_ID}`, {
       role: "DRIVER",
       entryDetails: [mine()],
     });
@@ -393,7 +393,7 @@ describe("the author's own pending entry (#85)", () => {
   });
 
   it("offers no Edit once the entry is decided", async () => {
-    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    await openVehicle(`/assets/${ASSET_ID}/history?panel=entry:${ENTRY_ID}`, {
       role: "DRIVER",
       entryDetails: [mine({ status: "POSTED", postingPeriodCode: "2026-09" })],
     });
