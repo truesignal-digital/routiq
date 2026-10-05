@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: choices to make</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .decision { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; margin-top: 22px; scroll-margin-top: 20px; }
+  .decision > h3 { margin: 0 0 4px; font: 700 20px/1.25 var(--font-heading); }
+  .decision > .q { color: oklch(0.38 0.01 256); font-size: 14.5px; margin: 0 0 16px; max-width: 900px; }
+  .opts { display: grid; gap: 16px; grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); }
+  @media (max-width: 1150px) { .opts { grid-template-columns: 1fr; } }
+  .opt { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: oklch(0.99 0.002 256); }
+  .opt.rec { border: 2px solid var(--layer-overview); background: color-mix(in oklch, var(--layer-overview) 4%, white); }
+  .opt h4 { margin: 0 0 8px; font: 650 15px/1.3 var(--font-heading); display: flex; gap: 8px; align-items: center; }
+  .opt .tag-rec { font: 700 10.5px var(--font-sans); text-transform: uppercase; letter-spacing: .05em; color: white; background: var(--layer-overview); padding: 3px 7px; border-radius: 5px; }
+  .opt .lbl { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin: 10px 0 4px; }
+  .opt .lbl.for { color: var(--success-foreground); } .opt .lbl.against { color: var(--destructive); }
+  .opt ul { margin: 0; padding-left: 18px; font-size: 13.5px; } .opt li { margin: 4px 0; }
+  .verdict { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: stretch; }
+  @media (max-width: 1150px) { .verdict { grid-template-columns: 1fr; } }
+  .verdict .why { background: color-mix(in oklch, var(--layer-overview) 7%, white); border-radius: 12px; padding: 12px 16px; font-size: 14px; }
+  .verdict .why b { color: var(--layer-overview); }
+  .verdict .pick { border: 2px dashed var(--border); border-radius: 12px; padding: 12px 16px; font-size: 13px; color: var(--muted-foreground); }
+  .verdict .pick .box { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .verdict .pick .box span { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-weight: 600; color: var(--foreground); background: white; }
+  .theme-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 1150px) { .theme-pair { grid-template-columns: 1fr; } }
+  .theme-pair .frame.desktop { grid-template-columns: 200px minmax(0, 1fr); min-height: 470px; font-family: var(--font-sans); }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .swatches span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-foreground); }
+  .swatches i { width: 18px; height: 18px; border-radius: 5px; border: 1px solid oklch(0 0 0 / .08); display: inline-block; }
+  .sumtable td:nth-child(3) { font-weight: 650; color: var(--layer-overview); }
+</style>
+</head>
+<body data-fixed-theme>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">Decisions</div>
+    <a href="#d1">1 · Theme</a>
+    <a href="#d2">2 · Record pages</a>
+    <a href="#d3">3 · Where forms open</a>
+    <a href="#d4">4 · Fixed form layouts</a>
+    <a href="#d5">5 · Button order</a>
+    <a href="#d6">6 · Long forms on phone</a>
+    <a href="#d7">7 · Sidebar</a>
+    <a href="#d8">8 · Phone navigation</a>
+    <a href="#d9">9 · Coming soon</a>
+    <a href="#d10">10 · Overview strips</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Choices to make</h2>
+      <div class="attn info" style="margin-bottom:18px"><i data-i="check" data-c="lg"></i><div><div class="t">Decided 2026-10-04 by the owner</div><div class="s">1 · Theme: <b>neutral</b> (not the recommendation; the logo still ships). 2–10: <b>as recommended</b>. Follow-ups the same day: Money simplified to one place (<a href="sidebar.html#money">Navigation → Money</a>), lists on phone become list rows (<a href="pages.html#phone-lists">Pages → Lists on phone</a>), overviews and charts mapped (<a href="insights.html">Overviews and charts</a>).</div></div></div>
+      <p class="lede">Ten decisions shape everything else in this proposal. For each one, both sides are argued as strongly as I can, including the case against my own recommendation. My pick is outlined in blue. The empty box under each one is for your choice.</p>
+    </header>
+
+    <table class="spec-table sumtable">
+      <thead><tr><th>#</th><th>Decision</th><th>Recommended</th><th>Main alternative</th><th>What it costs</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Theme</td><td>Brand navy + logo, ported as tokens only</td><td>Keep neutral</td><td>1 small PR (tokens, logo, icons); retake screenshots</td></tr>
+        <tr><td>2</td><td>Record pages</td><td>Vehicle workspace shell for every record</td><td>Tidy each detail page separately</td><td>2 large slices (trip, entry)</td></tr>
+        <tr><td>3</td><td>Where forms open</td><td>Panel default; dialog only for decisions; page for long captures</td><td>Dialogs for short forms</td><td>Move ~8 dialogs to the panel</td></tr>
+        <tr><td>4</td><td>Form layouts</td><td>Six fixed layouts</td><td>Guidelines, free composition</td><td>One <code>FormLayout</code> component + migration</td></tr>
+        <tr><td>5</td><td>Button order</td><td>Submit last, everywhere</td><td>Submit first, everywhere</td><td>Flip 16 panel forms</td></tr>
+        <tr><td>6</td><td>Long forms on phone</td><td>Steps + review</td><td>One long scroll</td><td>Step renderer for 2 forms</td></tr>
+        <tr><td>7</td><td>Sidebar</td><td>C: places only, 3 groups, role-filtered, counts</td><td>B: the brand pass sidebar</td><td>1 medium slice</td></tr>
+        <tr><td>8</td><td>Phone navigation</td><td>Bottom bar (3 per role) + Menu</td><td>Hamburger only (today)</td><td>1 new component</td></tr>
+        <tr><td>9</td><td>Coming soon</td><td>One row + notices inside modules</td><td>Sidebar group (brand pass)</td><td>Port the catalog</td></tr>
+        <tr><td>10</td><td>Overview strips</td><td>Every list and queue, 2 to 4 numbers that filter</td><td>Only where obviously useful</td><td>Summary reads on 4 lists</td></tr>
+      </tbody>
+    </table>
+
+    <!-- D1 THEME -->
+    <section class="decision" id="d1">
+      <h3>1 · Theme: neutral or brand navy?</h3>
+      <p class="q">The same screen in both. Left is what develop ships. Right uses the tokens, logo and system font copied from the unmerged brand-identity pass. The logo is shown in both, because the team fixed the logo idea; only the colours are in question.</p>
+      <div class="theme-pair">
+        <div>
+          <div class="frame-label">Neutral (develop)</div>
+          <div class="frame desktop">
+            <div data-sidebar="trucks"></div>
+            <div class="main"><div class="topbar">Trucks <span class="sep">/</span> <b>VH003</b></div>
+              <div class="page">
+                <div class="row"><h1 class="pt">VH003 · Mercedes Actros</h1><span class="badge b-bad">Grounded</span></div>
+                <div class="attn bad"><i data-i="alert" data-c="lg"></i><div><div class="t">Do not drive. Brake problem.</div><div class="s">WO-0007 approved.</div></div></div>
+                <div class="tabs"><div class="on">Overview</div><div>Maintenance<span class="count hot">1</span></div><div>Money<span class="count">2</span></div><div>Trips</div></div>
+                <div class="row"><button class="btn primary"><i data-i="note"></i>Add a note</button><button class="btn"><i data-i="fuel"></i>Log fuel</button><span class="badge b-warn">Waiting</span><span class="badge b-info">In progress</span><span class="badge b-ok">Posted</span></div>
+              </div></div>
+          </div>
+          <div class="swatches"><span><i style="background:oklch(0.205 0 0)"></i>primary</span><span><i style="background:oklch(0.985 0 0)"></i>sidebar</span><span><i style="background:oklch(0.97 0 0)"></i>muted</span><span>font: ui-rounded (Apple), sans elsewhere</span></div>
+        </div>
+        <div class="theme-brand">
+          <div class="frame-label">Brand navy (feat/brand-identity, unmerged)</div>
+          <div class="frame desktop">
+            <div data-sidebar="trucks"></div>
+            <div class="main"><div class="topbar">Trucks <span class="sep">/</span> <b>VH003</b></div>
+              <div class="page">
+                <div class="row"><h1 class="pt">VH003 · Mercedes Actros</h1><span class="badge b-bad">Grounded</span></div>
+                <div class="attn bad"><i data-i="alert" data-c="lg"></i><div><div class="t">Do not drive. Brake problem.</div><div class="s">WO-0007 approved.</div></div></div>
+                <div class="tabs"><div class="on">Overview</div><div>Maintenance<span class="count hot">1</span></div><div>Money<span class="count">2</span></div><div>Trips</div></div>
+                <div class="row"><button class="btn primary"><i data-i="note"></i>Add a note</button><button class="btn"><i data-i="fuel"></i>Log fuel</button><span class="badge b-warn">Waiting</span><span class="badge b-info">In progress</span><span class="badge b-ok">Posted</span></div>
+              </div></div>
+          </div>
+          <div class="swatches"><span><i style="background:#192c45"></i>primary ink navy</span><span><i style="background:#101e33"></i>sidebar deep navy</span><span><i style="background:#3072c7"></i>brand route blue</span><span>font: system-ui (SF / Roboto)</span></div>
+        </div>
+      </div>
+      <div class="opts">
+        <div class="opt">
+          <h4>Keep neutral</h4>
+          <div class="lbl for">For</div><ul>
+            <li>Already shipped, tested, in every video and the tester handbook. Zero migration.</li>
+            <li>Colour is reserved for status, so red "Grounded" and amber "Waiting" stand out more than anywhere else.</li>
+            <li>Stock shadcn neutral reads well on cheap screens in sunlight; high contrast everywhere.</li>
+            <li>Keeps the decision open for a stronger direction later (the owners called the brand pass "not creative enough").</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>No identity: it looks like any shadcn template, in demos and to partners.</li>
+            <li>The owners' own brief (27 Sept) asked for identity from the logo; this leaves that undone.</li>
+            <li>The rounded font only exists on Apple devices; the pilot's Android phones fall back anyway, so desktop and phone already look different.</li>
+          </ul>
+        </div>
+        <div class="opt rec">
+          <h4>Brand navy <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>The product looks like ROUTIQ: logo colours, a navy rail that separates navigation from work, one blue accent for "you are here" and focus.</li>
+            <li>Neutrals tinted toward the navy so grey never looks like another product; system font is Roboto on the pilot phones, nothing to download.</li>
+            <li>Comes with guard tests already written (no monospace figures, no uppercase labels, no colour literals, logo only from one component).</li>
+            <li>Cheap if ported as tokens + logo only: one file of variables and one component, not the 89-file branch.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>The owners reviewed this exact pass and asked for something more creative. Picking it may feel like going backwards.</li>
+            <li>Brand blue sits close to the info-blue status; "In progress" badges need a different hue so they don't read as links.</li>
+            <li>Every screenshot, video and handbook page changes again.</li>
+            <li>Grey group labels on navy (55% white) are weaker in direct sun.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why I pick brand navy:</b> identity was the owners' own request, and the cost is one small PR when limited to tokens, logo and icons. The structure rules in this proposal work in either theme, so this choice doesn't block anything. <b>What would change my mind:</b> if the owners still find navy generic, keep neutral for now and pick colours from one of the design-lab directions later. Either way, the logo should ship now.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Neutral</span><span>Brand navy</span><span>Other</span></div></div>
+      </div>
+    </section>
+
+    <!-- D2 RECORD PAGES -->
+    <section class="decision" id="d2">
+      <h3>2 · Record pages: one shell for every record?</h3>
+      <p class="q">A truck already opens as identity → status → facts → tabs → action bar. Should a trip and a finance entry open the same way? <a href="pages.html#record">See the drawing.</a></p>
+      <div class="opts">
+        <div class="opt rec"><h4>One shell for every record <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>Users learn one way to read a record: status on top, who acts, numbers, then tabs.</li>
+            <li>The shell, record panel and action bar already exist and are tested on the truck.</li>
+            <li>New features land as a tab or a panel, not as a new page design.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>A finance entry is small; seven tabs would be mostly empty. Needs a "tabs only where there is content" rule.</li>
+            <li>The two largest slices in the fix list (trip detail, entry detail).</li>
+            <li>Finance people may prefer a dense ledger-style detail to a workspace.</li>
+          </ul></div>
+        <div class="opt"><h4>Tidy each detail page separately</h4>
+          <div class="lbl for">For</div><ul>
+            <li>Each page fits its data; an entry stays a compact sheet.</li>
+            <li>Less rework now; fixes ship faster.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Three different detail styles is exactly today's inconsistency, and it grows with each new record type.</li>
+            <li>The same entry would still look different from Finance and from the truck.</li>
+          </ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why one shell:</b> the owners asked for the same reading order everywhere. The fix for "small records" is to show only the tabs that have content (entry: Overview, History; trip: Overview, Legs, Money, History). Identity, status, facts and the action bar always appear.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ One shell</span><span>Per type</span></div></div>
+      </div>
+    </section>
+
+    <!-- D3 SURFACE -->
+    <section class="decision" id="d3">
+      <h3>3 · Where do forms open?</h3>
+      <p class="q">Today the same "report a problem" form opens as a centred dialog from Maintenance and as a side panel from the truck. <a href="forms.html#surfaces">See the surfaces.</a></p>
+      <div class="opts" style="--n:3">
+        <div class="opt rec"><h4>Side panel by default <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>The page behind stays visible: you see the truck you are recording against.</li>
+            <li>Room for 14 fields; scrolls well; on phone it becomes a full sheet with the same layout.</li>
+            <li>16 forms already use it; the back link returns to the record you came from.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Covers a third of a 1280 px laptop screen.</li>
+            <li>A form inside a form (register a person while recording a trip) needs a panel stack.</li>
+          </ul></div>
+        <div class="opt"><h4>Centred dialog for short forms</h4>
+          <div class="lbl for">For</div><ul>
+            <li>Familiar and focused; Settings already use it.</li>
+            <li>Good for 2 to 4 fields.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Cramped above 6 fields; scrolling inside a dialog on phone is poor.</li>
+            <li>Loses the signal "a dialog means a decision".</li>
+            <li>"Short" is a judgment call, so the drift comes back.</li>
+          </ul></div>
+        <div class="opt"><h4>A page per form</h4>
+          <div class="lbl for">For</div><ul>
+            <li>Deep links, all the room, drafts are natural.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Loses context; slow for quick entries like fuel or a note.</li>
+            <li>More navigation and back-button traps.</li>
+          </ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why the panel:</b> most forms record a fact about something on screen, and the panel keeps that thing in view. Dialogs stay for decisions so they keep meaning "stop and decide". Pages stay for the two long captures.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Panel</span><span>Dialog</span><span>Page</span></div></div>
+      </div>
+    </section>
+
+    <!-- D4 LAYOUTS -->
+    <section class="decision" id="d4">
+      <h3>4 · Fixed form layouts, or guidelines?</h3>
+      <p class="q">Six layouts (Quick entry, Record, Line items, Decision, Long capture, Edit in place) chosen by the form's type. <a href="form-layouts.html">See the layouts.</a></p>
+      <div class="opts">
+        <div class="opt rec"><h4>Six fixed layouts <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>A new form is a field list + a layout name: faster to build, same result every time.</li>
+            <li>Users meet the same arrangement in the same kind of form.</li>
+            <li>Tests can count fields and groups per layout and catch drift.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Edge cases get squeezed (closing a trip has a date and a reason: Decision or Record?).</li>
+            <li>Needs the <code>FormLayout</code> component and field kit built first (slice 8, the largest).</li>
+            <li>Can feel rigid to whoever designs the next feature.</li>
+          </ul></div>
+        <div class="opt"><h4>Guidelines, free composition</h4>
+          <div class="lbl for">For</div><ul>
+            <li>Flexible; no new component; each form tuned to its job.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>This is how today's forms ended up with 32 px and 44 px fields in one form, three button orders and two techniques.</li>
+            <li>Every review re-argues layout.</li>
+          </ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why fixed:</b> you asked for forms that are faster to build and predictable to use; guidelines alone have already failed once. The escape hatch: a form that truly fits none of the six adds a seventh layout to this page in its PR, so the system grows on purpose.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Fixed</span><span>Guidelines</span></div></div>
+      </div>
+    </section>
+
+    <!-- D5 BUTTON ORDER -->
+    <section class="decision" id="d5">
+      <h3>5 · Button order: submit last or submit first?</h3>
+      <p class="q">Today dialogs put Cancel then Submit on the right; panels put Submit then Cancel on the left. Either rule is fine; mixing them is not.</p>
+      <div class="opts">
+        <div class="opt rec"><h4>Submit last (right) <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>Matches dialogs today and the platform convention people know from Android and desktop dialogs.</li>
+            <li>The eye ends on the action; the hint on the left reads first.</li>
+            <li>On phone, submit sits under the right thumb (most users).</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>16 panel forms change.</li>
+            <li>On wide screens a right-aligned button is far from the fields on the left.</li>
+          </ul></div>
+        <div class="opt"><h4>Submit first (left)</h4>
+          <div class="lbl for">For</div><ul>
+            <li>GOV.UK-style research on long forms: the primary button sits where the eye finishes the last field.</li>
+            <li>Panels already do it.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Dialogs flip, and they then differ from the phone's own system dialogs.</li>
+            <li>Cancel ends up at the far right, where people expect the action.</li>
+          </ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why submit last:</b> it matches what users already see in system dialogs. The panel's narrow width (440 px) keeps the button near the fields anyway. To be honest, this one is close: consistency matters more than which side wins.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Submit last</span><span>Submit first</span></div></div>
+      </div>
+    </section>
+
+    <!-- D6 LONG FORMS PHONE -->
+    <section class="decision" id="d6">
+      <h3>6 · Long forms on phone: steps, or one scroll?</h3>
+      <p class="q">Only Record a trip and Register a truck. <a href="forms.html#page">See both layouts.</a></p>
+      <div class="opts">
+        <div class="opt rec"><h4>Steps + review <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>One section on a small screen at a time; the keyboard never hides the next required field.</li>
+            <li>The review step catches mistakes before an offline replay sends them.</li>
+            <li>Progress and drafts per step suit patchy connections.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>More taps; experienced users are slower.</li>
+            <li>Jumping between sections needs a step menu.</li>
+            <li>One definition has to render two ways (more code).</li>
+          </ul></div>
+        <div class="opt"><h4>One long scroll</h4>
+          <div class="lbl for">For</div><ul>
+            <li>What exists today; simplest; fast for experts.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Long scroll at 390 px with the keyboard open; required fields far down get missed.</li>
+            <li>No natural place to review.</li>
+          </ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why steps:</b> the people filling these on phones are drivers on low-end Android, often offline. For them, fewer mistakes beat fewer taps. A "Review" link on every step lets experienced users jump to the end.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Steps</span><span>One scroll</span></div></div>
+      </div>
+    </section>
+
+    <!-- D7 SIDEBAR -->
+    <section class="decision" id="d7">
+      <h3>7 · Sidebar: today, the brand pass, or the proposal?</h3>
+      <p class="q">All three drawn side by side on the <a href="sidebar.html#compare">navigation page</a>.</p>
+      <div class="opts" style="--n:3">
+        <div class="opt"><h4>A · Today</h4>
+          <div class="lbl for">For</div><ul><li>Short, known, nothing to learn.</li></ul>
+          <div class="lbl against">Against</div><ul><li>Finance shown to roles that can't open it (#64). Settings buried in More. No counts. Label ≠ page title.</li></ul></div>
+        <div class="opt"><h4>B · Brand pass</h4>
+          <div class="lbl for">For</div><ul><li>Real identity, groups, role in the footer.</li><li>Everyone sees the roadmap every day; strong in demos.</li></ul>
+          <div class="lbl against">Against</div><ul><li>4 of 11 main rows lead to pages that don't exist yet.</li><li>"Management" mixes money and settings; still role-blind.</li></ul></div>
+        <div class="opt rec"><h4>C · Proposal <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul><li>Every row is a real page; filtered by role; counts where someone waits.</li><li>Finance pages become rows, so the in-page pill tabs go.</li><li>Takes B's identity and catalog, drops its dead ends.</li></ul>
+          <div class="lbl against">Against</div><ul><li>9 rows for admins (longest of the three).</li><li>The roadmap is less visible day to day.</li></ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why C:</b> navigation should only promise what works today. The roadmap stays one tap away, and it now appears inside the module where each feature will land.</div>
+        <div class="pick">Owner pick<div class="box"><span>A</span><span>B</span><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ C</span></div></div>
+      </div>
+    </section>
+
+    <!-- D8 PHONE NAV -->
+    <section class="decision" id="d8">
+      <h3>8 · Phone navigation: bottom bar, or hamburger only?</h3>
+      <p class="q"><a href="sidebar.html#phone">See both.</a></p>
+      <div class="opts">
+        <div class="opt rec"><h4>Bottom bar: 3 places per role + Menu <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul>
+            <li>Daily places in thumb reach, one tap; how the Android apps people use every day work.</li>
+            <li>Counts visible without opening anything.</li>
+            <li>A driver's bar can be "Home, My truck, Trips": the app feels made for them.</li>
+          </ul>
+          <div class="lbl against">Against</div><ul>
+            <li>Uses 62 px of a small screen, and stacks with the truck's action bar.</li>
+            <li>Picking the three per role is a product decision to maintain.</li>
+            <li>A new component and its tests.</li>
+          </ul></div>
+        <div class="opt"><h4>Hamburger only (today)</h4>
+          <div class="lbl for">For</div><ul><li>Maximum screen for content; one navigation model; no work.</li></ul>
+          <div class="lbl against">Against</div><ul><li>Two taps to anything; hidden places get forgotten; counts invisible.</li></ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why the bar:</b> most daily use is on phones. The bar hides while a form is open, so it doesn't fight the form footer.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Bottom bar</span><span>Hamburger</span></div></div>
+      </div>
+    </section>
+
+    <!-- D9 SOON -->
+    <section class="decision" id="d9">
+      <h3>9 · Coming soon: in the sidebar, or in context?</h3>
+      <p class="q">Both read from the same catalog (<code>features/catalog.ts</code>, ported from the brand pass). <a href="sidebar.html#soon">See it.</a></p>
+      <div class="opts">
+        <div class="opt"><h4>Sidebar group (brand pass)</h4>
+          <div class="lbl for">For</div><ul><li>The direction is visible to everyone every day.</li><li>Great for demos and partner meetings.</li></ul>
+          <div class="lbl against">Against</div><ul><li>Dead ends in the main navigation; noise for drivers.</li><li>Grows as the roadmap grows; can make the product look unfinished to customers.</li></ul></div>
+        <div class="opt rec"><h4>One row + notices inside modules <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul><li>Navigation stays real.</li><li>"Parts and stock · coming" appears in Maintenance, where people would look for it.</li><li>The roadmap page still lists everything with its issue.</li></ul>
+          <div class="lbl against">Against</div><ul><li>Less visible day to day; partners may miss it unless shown the page.</li></ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why in context:</b> users meet a promised feature where it will live. For demos, open the "What's coming" page.</div>
+        <div class="pick">Owner pick<div class="box"><span>Sidebar group</span><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ In context</span></div></div>
+      </div>
+    </section>
+
+    <!-- D10 STRIPS -->
+    <section class="decision" id="d10">
+      <h3>10 · Overview strips: on every list, or only some?</h3>
+      <p class="q">The owners' rule is "overview first". Today only Trucks has a strip. <a href="pages.html#list">See the list page.</a></p>
+      <div class="opts">
+        <div class="opt rec"><h4>Every module list and queue <span class="tag-rec">Recommended</span></h4>
+          <div class="lbl for">For</div><ul><li>Same anatomy everywhere; the owners' rule applied literally.</li><li>Each number is also a filter, so it's a shortcut, not decoration.</li></ul>
+          <div class="lbl against">Against</div><ul><li>Pushes the table down on phone (two rows of tiles).</li><li>Needs a server summary read per list (API work on 4 lists).</li><li>Risk of vanity numbers if nobody owns what each one means.</li></ul></div>
+        <div class="opt"><h4>Only where obviously useful</h4>
+          <div class="lbl for">For</div><ul><li>Less to build; tables appear sooner.</li></ul>
+          <div class="lbl against">Against</div><ul><li>"Obviously useful" is a judgment call; the inconsistency returns.</li></ul></div>
+      </div>
+      <div class="verdict">
+        <div class="why"><b>Why every list:</b> it's what the owners asked for. Rules keep it honest: 2 to 4 numbers, each one filters the table, settings lists get a sentence instead, and on phone the strip shrinks to one row of chips.</div>
+        <div class="pick">Owner pick<div class="box"><span style="background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)">✓ Every list</span><span>Only some</span></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

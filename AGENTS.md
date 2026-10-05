@@ -92,6 +92,17 @@ Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/
 - **Deliberately deferred** (§13): no event sourcing, no CRDTs, no microservices, no configuration engine, no payroll/GPS/ticketing. Don't reintroduce them; template variance is data (categories, required-field lists, `custom_values` JSONB), not code.
 - **Project-scoped names:** nothing in this repo names another project or a personal host. Cross-project wiring lives in box env files, not here.
 
+## Product direction (decided 2026-10-04)
+
+The UI consistency system and the product direction live in [`docs/design/consistency/`](docs/design/consistency/README.md): rules in `README.md`, mockups in the HTML pages (open `index.html`). Follow them for any UI or new-feature work; change them in the same PR when a decision changes.
+
+- **Core vs modules.** The application is its core: shell and navigation, sign-in, roles and branch scope, branches, personnel, parties (customers and suppliers), approvals, history, categories and presets, company settings, the design system. Everything else is a module behind a module code (`packages/contracts/src/modules.ts`). A module declares its sidebar rows, the tabs, buttons, fields and Home cards it adds, its commands, reads and roles, and what disappears when it is off. Core never imports a module. Turning a module off hides its UI and keeps its data. When unsure, make it a module.
+- **Presets pick defaults.** Trucking, bus (passenger) and internal fleet presets choose default modules and words. Modules are entitlements the vendor grants (ADR-0005); tenants see a read-only "Your modules".
+- **Planned modules:** Scheduling (a PLANNED trip status, a Planning tab inside Trips, the driver's schedule), Customers, Parcels, Stock and purchasing. Later: Partners, Notifications, Ticketing. Build one module at a time, only when a pilot tenant will use it.
+- **Platform console:** a separate web app on a `console.` subdomain for vendor operators only, built on the existing platform-scope commands (`provision-workspace`, module toggles). It shows tenant setup and health, never tenant business data; support access needs the tenant administrator's time-boxed consent.
+- **Feature map is the truth** about what exists (`docs/design/consistency/featuremap.html`, to become a `features/catalog.ts` with a test). Every feature PR updates its row.
+- **UI decisions:** neutral theme; a company may set its logo and accent colour while "powered by ROUTIQ" stays; navigation and actions are scoped by role (the six team roles); five page archetypes; six form layouts; list rows (not cards) on phone.
+
 ## Definition of done for a feature PR
 
 1. The contract lives in `packages/contracts` with a test, and any shape change to a shipped command is a new version.
@@ -99,7 +110,8 @@ Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/
 3. The UI follows the paved paths in `apps/web/AGENTS.md`.
 4. `pnpm typecheck`, `pnpm lint` and `pnpm test` pass, and no guard baseline went up.
 5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions.
-6. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
+6. Before requesting merge, a reviewer using a different model from the author runs `.agents/skills/code-review/SKILL.md` against the linked issue and exact current PR head. The report records author/reviewer models, base/head SHAs, one verdict per acceptance line, file:line evidence, and reproduction steps for blockers. Link the report in the PR body. Missing spec or unverified acceptance prevents approval. Runtime reports, including Sentry intake reports, must first be triaged into reproducible behavior and explicit acceptance criteria; telemetry and a review video alone do not approve a fix.
+7. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
 
 ## Guards and the ratchet
 
@@ -122,7 +134,9 @@ Each row is a mistake agents made at least twice here, paired with what now fail
 
 ## Git and PRs
 
-- Branch off `develop`; open PRs into `develop`. Never push to `develop` or `main` directly, never force-push a shared branch, never merge your own PR.
+- Branch off `develop`; open PRs into `develop`. Never push to `develop` or `main` directly or force-push a shared branch. An agent may merge a PR, including one it authored, only when the user explicitly requests that PR's merge and the merge rule below passes. A request to implement, review or open a PR does not authorize merging it.
+- Merge rule for humans and agents: merge only with green `ci` and evidence/ratchet checks when present, resolved blocking findings, and `review:approve` backed by a different-model report for the current base/head SHAs. Every acceptance line must PASS. `review:changes` blocks merge. Any new commit invalidates approval; remove stale approval before requesting another review. Re-fetch the live PR before merging and bind the merge to its reviewed head SHA. CodeRabbit summaries, skipped reviews and a green status alone are not independent acceptance review.
+- `.github/branch-protection.json` records the required GitHub settings for `main` and `develop`: a PR, current green `ci` and resolved conversations, including for administrators. GitHub requires no separate approving review or latest-push approval; independent review remains mandatory through the report/label rule above. Read back the live API settings before claiming protection. GitHub does not enforce model identity, report SHA or `review:approve`; the human or authorized agent merger checks them. See `docs/agents/review-workflow.md`.
 - Commit messages: short imperative subject; body only when the why isn't obvious.
 - Issues live in GitHub (`docs/agents/issue-tracker.md`). `.scratch/` is read-only history; add nothing there.
 

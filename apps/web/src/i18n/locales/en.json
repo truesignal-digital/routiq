@@ -191,7 +191,9 @@
     "metrics": {
       "total": "Total",
       "inService": "In service",
-      "attention": "Attention"
+      "attention": "Attention",
+      "attentionHint": "Grounded, in maintenance, retired or written off",
+      "attentionHintNoGrounding": "In maintenance, retired or written off"
     },
     "status": {
       "REGISTERED": "Registered",

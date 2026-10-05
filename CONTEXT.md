@@ -20,9 +20,29 @@ _Avoid_: separate ledger, new vehicle database
 The branch administratively responsible for a vehicle; not its physical location and not automatic authority for a visiting branch.
 _Avoid_: current location, GPS location
 
-**Custodian**:
-The member of the workspace currently accountable for a vehicle. Never a person without a login, and not necessarily its driver, permanent manager or last user.
-_Avoid_: driver, reporting manager
+**Assigned Driver** (fr: **Chauffeur attitré**):
+The Person who regularly drives a vehicle; optional, must have the Chauffeur Fonction, needs no App Access. Replaces Custodian (ADR-0010). Accountability for a vehicle comes from its Home Branch's Administrateur, not from this field.
+_Avoid_: custodian, owner, responsable
+
+**Person** (fr: **Personne**):
+Someone who works for the company and appears in its records — driver, mechanic, hostess, convoyeur, manager. Listed in Personnel; may or may not have App Access.
+_Avoid_: user, member, contact, staff record
+
+**App Access** (fr: **Accès à l'application**):
+The login, Role and Branch Scope that let one Person use ROUTIQ. Belongs to exactly one Person; removing it keeps the Person and all history. Stored as a membership.
+_Avoid_: user account, member (in UI), second person
+
+**Role** (fr: **Rôle**):
+One of six fixed, code-defined sets of permissions a Person's App Access carries: Direction, Administrateur, Finance, Caissier, Technicien, Chauffeur (ADR-0009). Never tenant data; never encodes branches.
+_Avoid_: profile, permission set, job title, chef d'agence as a role name (the Chef d'agence of the org chart holds the Administrateur role)
+
+**Fonction**:
+What a Person does on the ground — Chauffeur, Mécanicien, Hôtesse, Convoyeur, Caissier, Autre. Decides who may crew a trip or drive a vehicle; grants nothing in the app.
+_Avoid_: role, job title (titles like DG or Chef de parc are free text)
+
+**Principal**:
+The internal identity that signs commands — a human's, an AI agent's or an integration's. Never shown in the UI.
+_Avoid_: user, person
 
 **Availability**:
 Whether a vehicle may take on work, read from its availability intervals: **Grounded** while one is open, available otherwise. Not assessed when the maintenance module is off. Distinct from lifecycle and physical location.
@@ -49,7 +69,7 @@ What the closer says about a repair's cost when completing its work order: the c
 _Avoid_: cost status, payment status
 
 **Note**:
-A free-text remark a member writes on a vehicle. Append-only: a correction is another note. Executive viewers write none.
+A free-text remark a person with App Access writes on a vehicle. Append-only: a correction is another note. Every Role may write one (ADR-0009; the built EXECUTIVE_VIEWER still cannot).
 _Avoid_: comment thread, description, edit
 
 **Correction**:
@@ -139,5 +159,6 @@ _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing
 - **Scope (historical 2026-07-29, refined by the internal-fleet direction):** the original profit-center-only test excluded a store. The current boundary admits a company's operated fleet without admitting its retail/inventory business. The refusal of configurable entities and a general business engine remains.
 - **"Workflow" (resolved 2026-07-29):** pinned to **Approval Chains** + **Entry Roles**, both tenant data. **Lifecycles** (status machines) stay fixed code with configurable labels — per-tenant state machines are the refused configuration engine.
 - **Template binding (resolved 2026-07-29; server enforcement shipped 2026-07-30):** a Workspace enables a SET of Template Presets (mixed fleets are real in Cameroon); single-preset tenants see single-preset UX. Enforced server-side like module flags — `workspace_templates` rows written at Provisioning, checked in the command pipeline (`PRESET_DISABLED`). Workspaces with zero rows (pre-provisioning pilots) are grandfathered all-enabled with a `preset.unenforced` warning until backfilled. Remaining gap: web UX still shows both presets to single-preset tenants.
+- **Roles and people (resolved 2026-09-27, not yet built):** six fixed Roles named in the pilot team's words replace ADMIN/OPS_MANAGER/FIELD_SUBMITTER/MAINTENANCE/FINANCE_APPROVER/EXECUTIVE_VIEWER (ADR-0009). Persons and App Access stay separate records shown as one Personnel list; every App Access belongs to one Person; Custodian becomes Assigned Driver (ADR-0010). Feature map: [roles and access](docs/reference/roles-and-access.md).
 - **Vehicle workspace terms (2026-09-25):** Grounded, Attention Item, Evidence State, Note and Vehicle History, and the refined Custodian and Availability, describe behaviour implemented on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. See [the vehicle workspace reference](docs/reference/vehicle-workspace-v1.md).
 - **Terminology variance (resolved 2026-07-29):** a tenant's words come from its enabled **Template Presets** (preset-level string overlays merged over base locale) plus its own category labels. Per-tenant renames of UI terms are NOT built — market survey: 4 of 5 mature vertical SaaS offer at most a two-value toggle. Revisit only if a paying tenant refuses the preset's word.
