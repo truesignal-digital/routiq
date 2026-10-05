@@ -20,9 +20,11 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header className={cn("flex flex-col", className)}>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className={cn("text-2xl font-semibold", titleClassName)}>{title}</h1>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {/* On a phone the actions sit under the title; they wrap rather than
+          push the page wider than the screen (#183). */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4">
+        <h1 className={cn("min-w-0 text-2xl font-semibold break-words", titleClassName)}>{title}</h1>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </header>
   );
@@ -49,7 +51,7 @@ export function EmptyState({ icon, message, action, className }: EmptyStateProps
       <div className="text-muted-foreground">{icon}</div>
       <div className="mt-4 max-w-md text-sm text-muted-foreground">{message}</div>
       {action && (
-        <Button type="button" variant="outline" className="mt-5 min-h-11" onClick={action.onClick}>
+        <Button type="button" variant="outline" className="mt-5" onClick={action.onClick}>
           {action.label}
         </Button>
       )}
@@ -75,7 +77,7 @@ export function ErrorState({ message, retryLabel, onRetry, className }: ErrorSta
     >
       <CircleAlert className="size-7 text-destructive" aria-hidden />
       <div className="mt-4 max-w-md text-sm text-destructive">{message}</div>
-      <Button type="button" variant="outline" className="mt-5 min-h-11" onClick={onRetry}>
+      <Button type="button" variant="outline" className="mt-5" onClick={onRetry}>
         {retryLabel}
       </Button>
     </div>

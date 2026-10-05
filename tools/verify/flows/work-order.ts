@@ -36,7 +36,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if ((await description.inputValue()) === "") await description.fill("Refit the rear mudguard bracket");
   await dialog.getByLabel(t("Coût prévu", "Expected cost")).fill("60000");
   await shot("new-work-order");
-  await dialog.getByRole("button", { name: t("Ouvrir l'ordre de travail", "Open work order") }).click();
+  await dialog.getByRole("button", { name: t("Créer l'ordre de travail", "Create the work order") }).click();
   await page.getByText(t("Ordre de travail ouvert", "Work order opened")).first().waitFor();
   await quiet();
   await shot("work-order-opened");
@@ -58,7 +58,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await dialog.getByLabel(t("Compte rendu", "Work summary")).fill("Bracket replaced, mudguard refitted");
   await dialog.getByLabel(t("Combien a coûté la réparation ?", "How much did the repair cost?")).fill("55000");
   await shot("complete-with-cost");
-  await dialog.getByRole("button", { name: t("Déclarer terminé", "Declare complete") }).click();
+  await dialog.getByRole("button", { name: t("Terminer les travaux", "Complete work") }).click();
   await page.getByText(new RegExp(`^${t("Travaux terminés", "Work completed")}`)).first().waitFor();
   await quiet();
   await shot("work-order-completed");

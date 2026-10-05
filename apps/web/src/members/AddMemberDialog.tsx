@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { ROLES, type AddMemberPayload, type MemberBranchScope } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ export function AddMemberDialog({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const [principalId, setPrincipalId] = useState(() => crypto.randomUUID());
@@ -153,7 +155,7 @@ export function AddMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("users.add.title")}</DialogTitle>
+          <DialogTitle>{label("add-member")}</DialogTitle>
           <DialogDescription>{t("users.add.description")}</DialogDescription>
         </DialogHeader>
 
@@ -171,7 +173,7 @@ export function AddMemberDialog({
                 <FormItem>
                   <FormLabel>{t("users.form.displayName")}</FormLabel>
                   <FormControl>
-                    <Input type="text" className="min-h-11" {...field} />
+                    <Input type="text" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -189,7 +191,6 @@ export function AddMemberDialog({
                       type="text"
                       autoComplete="off"
                       autoCapitalize="none"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -209,7 +210,7 @@ export function AddMemberDialog({
                     onValueChange={(value) => field.onChange(value ?? "")}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("users.form.rolePlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
@@ -243,7 +244,6 @@ export function AddMemberDialog({
                       type="password"
                       inputMode="numeric"
                       autoComplete="new-password"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -263,7 +263,6 @@ export function AddMemberDialog({
                       type="password"
                       inputMode="numeric"
                       autoComplete="new-password"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -276,19 +275,17 @@ export function AddMemberDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11"
                 onClick={() => onOpenChange(false)}
               >
                 {t("users.form.cancel")}
               </Button>
               <Button
                 type="submit"
-                className="min-h-11"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("users.form.submitting")
-                  : t("users.add.submit")}
+                  ? label("add-member", "submitting")
+                  : label("add-member", "submit")}
               </Button>
             </DialogFooter>
           </form>

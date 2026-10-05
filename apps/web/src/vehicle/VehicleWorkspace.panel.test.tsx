@@ -88,7 +88,7 @@ it("opens a step's form inside the panel, submits it pinned to the record, and c
   const before = detailReads();
 
   await user.click(within(panel).getByRole("button", { name: "Complete work" }));
-  const form = await screen.findByRole("dialog", { name: "Declare the work complete" });
+  const form = await screen.findByRole("dialog", { name: "Complete work" });
   // One overlay: the form replaced the record's page, it did not stack a second dialog.
   expect(screen.getAllByRole("dialog")).toHaveLength(1);
   // The way back returns to the record, with nothing sent.
@@ -97,12 +97,12 @@ it("opens a step's form inside the panel, submits it pinned to the record, and c
   expect(recorded.commands).toEqual([]);
 
   await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Complete work" }));
-  const again = await screen.findByRole("dialog", { name: "Declare the work complete" });
+  const again = await screen.findByRole("dialog", { name: "Complete work" });
   await user.type(within(again).getByLabelText("Work summary"), "Pads and air valve replaced");
   // Closing says what the repair cost; with nothing typed and nothing picked it stays shut.
-  expect(within(again).getByRole("button", { name: "Declare complete" }).hasAttribute("disabled")).toBe(true);
+  expect(within(again).getByRole("button", { name: "Complete work" }).hasAttribute("disabled")).toBe(true);
   await user.type(within(again).getByLabelText("How much did the repair cost?"), "50000");
-  await user.click(within(again).getByRole("button", { name: "Declare complete" }));
+  await user.click(within(again).getByRole("button", { name: "Complete work" }));
 
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   const [command] = recorded.commands;
@@ -170,11 +170,11 @@ it("shows a refusal in place and keeps the form", async () => {
   const user = userEvent.setup();
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
   await user.click(within(panel).getByRole("button", { name: "Cancel work order" }));
-  const form = await screen.findByRole("dialog", { name: "Cancel the work order" });
-  await user.type(within(form).getByLabelText("Reason"), "Truck sold as is");
-  await user.click(within(form).getByRole("button", { name: "Cancel the work order" }));
+  const form = await screen.findByRole("dialog", { name: "Cancel work order" });
+  await user.type(within(form).getByRole("textbox", { name: "Reason" }), "Truck sold as is");
+  await user.click(within(form).getByRole("button", { name: "Cancel work order" }));
   expect(await within(form).findByText("This action is not possible in the record's current state.")).toBeTruthy();
-  expect(screen.getByRole("dialog", { name: "Cancel the work order" })).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "Cancel work order" })).toBeTruthy();
 });
 
 it("adds a note on the vehicle from the all-actions sheet", async () => {
@@ -182,9 +182,9 @@ it("adds a note on the vehicle from the all-actions sheet", async () => {
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "More actions" }));
   await user.click(within(await screen.findByRole("dialog", { name: "All actions" })).getByRole("button", { name: /Add note/ }));
-  const form = await screen.findByRole("dialog", { name: "Add a note" });
+  const form = await screen.findByRole("dialog", { name: "Add note" });
   await user.type(within(form).getByLabelText("Note"), "Spare wheel missing at handover");
-  await user.click(within(form).getByRole("button", { name: "Add note" }));
+  await user.click(within(form).getByRole("button", { name: "Add the note" }));
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   expect(recorded.commands[0]?.name).toBe("add-note");
   expect(recorded.commands[0]?.body.payload).toMatchObject({
@@ -192,7 +192,7 @@ it("adds a note on the vehicle from the all-actions sheet", async () => {
     entityId: ASSET_ID,
     body: "Spare wheel missing at handover",
   });
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add a note" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add note" })).toBeNull());
 });
 
 it("reports a problem with the category's code and its safety default", async () => {
@@ -226,7 +226,7 @@ it("changes the custodian through the member picker, and can clear it", async ()
   expect(within(form).queryByLabelText("Assign to branch")).toBeNull();
   await openSelect(user, within(form).getByLabelText("New custodian"));
   await user.click(await screen.findByRole("option", { name: "Nobody (clear the custodian)" }));
-  await user.click(within(form).getByRole("button", { name: "Confirm" }));
+  await user.click(within(form).getByRole("button", { name: "Change custodian" }));
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   expect(recorded.commands[0]?.name).toBe("assign-asset");
   expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, custodianMembershipId: null });
@@ -309,7 +309,7 @@ describe("the author's own pending entry (#85)", () => {
     const user = userEvent.setup();
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
 
-    await user.click(within(panel).getByRole("button", { name: "Edit" }));
+    await user.click(within(panel).getByRole("button", { name: "Edit entry" }));
 
     const form = await screen.findByRole("dialog", { name: "Edit entry DLA-2026-00006" });
     const amount = within(form).getByLabelText("Amount (XAF)") as HTMLInputElement;
@@ -335,8 +335,8 @@ describe("the author's own pending entry (#85)", () => {
       entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
-    expect(within(panel).getByRole("button", { name: "Approve" })).toBeTruthy();
-    expect(within(panel).queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Approve entry" })).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Edit entry" })).toBeNull();
   });
 
   it("offers no Edit once the entry is decided", async () => {
@@ -345,6 +345,6 @@ describe("the author's own pending entry (#85)", () => {
       entryDetails: [mine({ status: "POSTED", postingPeriodCode: "2026-09" })],
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
-    expect(within(panel).queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Edit entry" })).toBeNull();
   });
 });

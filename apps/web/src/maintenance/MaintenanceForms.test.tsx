@@ -149,9 +149,9 @@ describe("maintenance forms pinned to one vehicle", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Brakes squeal on the descent" }));
     await userEvent.type(screen.getByLabelText("Description"), "Replace pads");
     // Required since the threshold is read against it.
-    expect((screen.getByRole("button", { name: "Open work order" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Create the work order" }) as HTMLButtonElement).disabled).toBe(true);
     await userEvent.type(screen.getByLabelText("Expected cost"), "85000");
-    await userEvent.click(screen.getByRole("button", { name: "Open work order" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create the work order" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload).toMatchObject({
@@ -179,7 +179,7 @@ describe("ReleaseForm on the override path", () => {
       />,
     );
 
-    const submit = screen.getByRole("button", { name: "Return to service" }) as HTMLButtonElement;
+    const submit = screen.getByRole("button", { name: "Release to service" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
     expect(screen.getByText("Brakes squeal on the descent")).toBeTruthy();
 

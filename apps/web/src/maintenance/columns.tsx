@@ -1,40 +1,13 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
-import type {
-  IssueListItem,
-  IssueStatus,
-  WorkOrderListItem,
-  WorkOrderStatus,
-} from "@routiq/contracts";
+import type { IssueListItem, WorkOrderListItem } from "@routiq/contracts";
 import { ShieldAlert, TriangleAlert } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge.js";
+import { IssueStatusBadge } from "./IssueStatusBadge.js";
+import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
 import { useIssueCategoryLabel } from "./issue-category.js";
-
-type Tone = "neutral" | "success" | "warning" | "info" | "danger";
-
-/**
- * How far through its life a work order is, at a glance. SUBMITTED and
- * COMPLETION_SUBMITTED are both "waiting on a decision", which is what warning
- * means everywhere else in the app; REJECTED is a refusal, so danger; CANCELLED
- * stays neutral because nothing went wrong, the job simply never happened.
- */
-export const WORK_ORDER_TONES: Record<WorkOrderStatus, Tone> = {
-  SUBMITTED: "warning",
-  APPROVED: "info",
-  COMPLETION_SUBMITTED: "warning",
-  COMPLETED: "success",
-  REJECTED: "danger",
-  CANCELLED: "neutral",
-};
-
-/** An open signalement still wants someone to act; a dismissal is not a failure. */
-export const ISSUE_TONES: Record<IssueStatus, Tone> = {
-  OPEN: "warning",
-  RESOLVED: "success",
-  DISMISSED: "neutral",
-};
 
 /**
  * A work order has no number of its own — the read publishes only its id — so
@@ -150,9 +123,7 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
         header: t("maintenance.workOrders.columns.status"),
         meta: { mobile: "primary", label: t("maintenance.workOrders.columns.status") },
         cell: ({ row }) => (
-          <StatusBadge tone={WORK_ORDER_TONES[row.original.status]}>
-            {t(`maintenance.workOrders.status.${row.original.status}`)}
-          </StatusBadge>
+          <WorkOrderStatusBadge status={row.original.status} />
         ),
       },
     ],
@@ -214,9 +185,7 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
               : row.original.resolutionNote;
           return (
             <span className="flex flex-col items-start gap-1">
-              <StatusBadge tone={ISSUE_TONES[row.original.status]}>
-                {t(`maintenance.issues.status.${row.original.status}`)}
-              </StatusBadge>
+              <IssueStatusBadge issue={row.original} />
               {row.original.status !== "OPEN" && closingWords !== null && (
                 <span className="text-xs text-muted-foreground">{closingWords}</span>
               )}
@@ -252,7 +221,7 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
           ) : (
             <span className="flex flex-wrap gap-1">
               {row.original.workOrders.map((workOrder) => (
-                <StatusBadge key={workOrder.id} tone={WORK_ORDER_TONES[workOrder.status]}>
+                <StatusBadge key={workOrder.id} tone={workOrderStatusTone(workOrder.status)}>
                   {workOrderReference(workOrder.id)}
                 </StatusBadge>
               ))}

@@ -62,6 +62,33 @@ function schemaTables(files: readonly SourceFile[]): string[] {
   );
 }
 
+/**
+ * An interactive element whose own tag sets a size below 44 px that applies on
+ * a phone: a small Button/SelectTrigger size, or an unprefixed h-, min-h- or
+ * size- class under 11. Prefixed classes (desktop:, md:) only apply on wider
+ * screens. The tag ends at its first ">" that is not part of an arrow "=>".
+ */
+const SMALL_CONTROL =
+  /<(?:Button|SelectTrigger|Input|TabsList|AlertDialogAction|AlertDialogCancel|Link|button|a|input|select|summary)\b(?:[^<>]|=>)*?(?:\bsize=["'](?:sm|icon-sm|xs|icon-xs)["']|(?<![\w:/[-])(?:min-h|h|size)-(?:[6-9]|10)(?![\w-]))/;
+
+const CATALOG = /^apps\/web\/src\/i18n\/(locales|presets)\/[^/]+\.json$/;
+
+/**
+ * Each catalog key with its line, for the two-space JSON the catalogs are
+ * written in: a key's path is the keys opened above it at shallower depths.
+ */
+function catalogKeys(file: SourceFile): { path: string; line: number; text: string }[] {
+  const stack: string[] = [];
+  return file.content.split("\n").flatMap((text, index) => {
+    const match = /^( *)"([^"]+)":/.exec(text);
+    if (match === null) return [];
+    const depth = (match[1] ?? "").length / 2;
+    stack.length = Math.max(depth - 1, 0);
+    stack.push(match[2] ?? "");
+    return [{ path: stack.join("."), line: index + 1, text: text.trim() }];
+  });
+}
+
 export const RULES: readonly Rule[] = [
   {
     id: "A2",
@@ -242,8 +269,22 @@ export const RULES: readonly Rule[] = [
   {
     id: "H9",
     name: "no-native-date-inputs",
-    fix: "Use a registry date picker (apps/web/AGENTS.md); add components/date-picker.tsx first if none fits.",
-    check: linesMatching(/type=["'](date|datetime-local)["']/, isWebProduction),
+    fix: "Use DateField or DateTimeField from components/date-field.tsx (apps/web/AGENTS.md).",
+    check: linesMatching(/\btype\s*=\s*\{?\s*["'`](date|datetime-local)["'`]/, isWebProduction),
+  },
+  {
+    id: "H13",
+    name: "touch-targets-44",
+    fix: "Controls are 44 px on phone (#23): use the primitive's default size, or a desktop-only size (size=\"desktop-sm\", size=\"desktop-icon-sm\", className=\"desktop:h-9\") for a compact look on a wide screen with a mouse.",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            file.path.endsWith(".tsx") &&
+            !file.path.startsWith("apps/web/src/components/ui/"),
+        )
+        .flatMap((file) => matchFile(file, SMALL_CONTROL)),
   },
   {
     id: "H12",
@@ -253,6 +294,29 @@ export const RULES: readonly Rule[] = [
       /toISOString\(\)\.slice\(0,\s*10\)/,
       (path) => isProductionSource(path) && path !== "apps/api/src/reads/business-date.ts",
     ),
+  },
+  {
+    id: "H14",
+    name: "one-status-badge",
+    fix: "Render the status through its domain's badge (e.g. finance/EntryStatusBadge.tsx); only that file maps the status to a tone.",
+    check: linesMatching(
+      // A *_TONE(S) constant, a Record from a status type to tones, or an inline tone={status === …}.
+      /\b[A-Z][A-Z0-9_]*_TONES?\b|Record<[^,]*[Ss]tatus[^,]*,[^>]*([Tt]one|"(success|warning|info|danger|neutral)")|\btone=\{[^}]*\b(status|state)\s*[!=]==/,
+      (path) => isWebProduction(path) && !/^apps\/web\/src\/[\w-]+\/[A-Z]\w*StatusBadge\.tsx$/.test(path),
+    ),
+  },
+  {
+    id: "H15",
+    name: "submit-labels-in-commands",
+    fix: "A form's button names its command: put it at commands.<command-name>.submit and render it through CommandForm's `command` prop (apps/web/src/commands/labels.ts).",
+    check: (files) =>
+      files
+        .filter((file) => CATALOG.test(file.path))
+        .flatMap((file) =>
+          catalogKeys(file)
+            .filter((key) => /submit$/i.test(key.path) && !key.path.startsWith("commands."))
+            .map(({ line, text }) => ({ path: file.path, line, text })),
+        ),
   },
   {
     id: "J1",

@@ -121,7 +121,7 @@ describe("BranchActionDialog", () => {
 
     await userEvent.clear(screen.getByLabelText("Nom"));
     await userEvent.type(screen.getByLabelText("Nom"), "Douala Port");
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Renommer l'agence" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
@@ -135,7 +135,7 @@ describe("BranchActionDialog", () => {
     const client = fakeClient(committed);
     renderDialog("rename", client);
 
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Renommer l'agence" }));
     expect(client.seen).toHaveLength(0);
   });
 
@@ -145,7 +145,7 @@ describe("BranchActionDialog", () => {
 
     await userEvent.clear(screen.getByLabelText("Nom"));
     await userEvent.type(screen.getByLabelText("Nom"), "   ");
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Renommer l'agence" }));
 
     expect(client.seen).toHaveLength(0);
   });
@@ -166,7 +166,7 @@ describe("BranchActionDialog", () => {
     expect(messageDescribing("Nom")).toContain(
       "Le nom ne doit pas dépasser 120 caractères.",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Renommer l'agence" }));
     expect(client.seen).toHaveLength(0);
   });
 
@@ -181,7 +181,7 @@ describe("BranchActionDialog", () => {
     expect(
       await screen.findByText("Le nom ne doit pas dépasser 120 caractères."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "Renommer l'agence" })).toHaveProperty(
       "disabled",
       true,
     );
@@ -193,7 +193,7 @@ describe("BranchActionDialog", () => {
 
     await userEvent.clear(screen.getByLabelText("Nom"));
     await userEvent.type(screen.getByLabelText("Nom"), "Yaoundé");
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Renommer l'agence" }));
 
     await screen.findByText("Ce nom d'agence existe déjà dans votre espace.");
     expect(messageDescribing("Nom")).toContain(
@@ -209,7 +209,7 @@ describe("BranchActionDialog", () => {
     expect(screen.getByText(/Douala/)).toBeTruthy();
     expect(client.seen).toHaveLength(0);
 
-    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver l'agence" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.name).toBe("set-branch-status");
@@ -223,7 +223,7 @@ describe("BranchActionDialog", () => {
     const client = fakeClient({ ok: false, code: "LAST_BRANCH" });
     const { onDismiss } = renderDialog("deactivate", client);
 
-    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver l'agence" }));
 
     expect(
       await screen.findByText("Votre espace doit garder au moins une agence active."),
@@ -235,7 +235,7 @@ describe("BranchActionDialog", () => {
     const client = fakeClient(committed);
     renderDialog("reactivate", client, { ...branch, active: false });
 
-    await userEvent.click(screen.getByRole("button", { name: "Réactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Réactiver l'agence" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload).toEqual({ branchId: branch.id, active: true });
@@ -247,7 +247,7 @@ describe("BranchActionDialog", () => {
 
     await userEvent.clear(screen.getByLabelText("Nom"));
     await userEvent.type(screen.getByLabelText("Nom"), "Douala Port");
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Renommer l'agence" }));
 
     expect(await screen.findByText("Cette agence a changé")).toBeTruthy();
     await userEvent.click(await screen.findByRole("button", { name: "Recharger" }));

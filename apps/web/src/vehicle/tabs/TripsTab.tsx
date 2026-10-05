@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Route } from "lucide-react";
 import type { ActivityListItem } from "@routiq/contracts";
-import { TripState } from "@/activities/TripState.js";
+import { TripStatusBadge, tripIconTone } from "@/activities/TripStatusBadge.js";
 import { useActivities } from "@/activities/useActivities.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -75,7 +75,7 @@ function TripsSection() {
               {trips.map((trip) => (
                 <RecordRow
                   key={trip.id}
-                  icon={<RowIcon icon={Route} tone={trip.status === "OPEN" ? "info" : "neutral"} />}
+                  icon={<RowIcon icon={Route} tone={tripIconTone(trip.status)} />}
                   title={tripRoute(trip, t) ?? localizedLabel(trip.activityType, locale)}
                   detail={
                     <span className="flex flex-wrap items-center gap-x-1.5">
@@ -96,7 +96,7 @@ function TripsSection() {
                       )}
                     </span>
                   }
-                  status={<TripState trip={trip} />}
+                  status={<TripStatusBadge trip={trip} />}
                   aside={
                     <>
                       <div className="whitespace-nowrap">
@@ -130,7 +130,7 @@ function TripsSection() {
           {query.hasNextPage && (
             <Button
               variant="outline"
-              className="mt-3 h-9"
+              className="mt-3 desktop:h-9"
               disabled={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
             >

@@ -20,11 +20,9 @@
       }
     },
     "title": "Vos véhicules",
-    "register": "Nouveau véhicule",
     "searchLabel": "Rechercher dans les véhicules",
     "filterLabel": "Filtrer les véhicules",
     "emptyHint": "Ajoutez un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
-    "emptyAction": "Enregistrer un véhicule",
     "loading": "Chargement des véhicules…",
     "noResultsTitle": "Aucun véhicule trouvé",
     "branchEmptyHint": "Aucun véhicule n'est rattaché à cette agence.",
@@ -39,9 +37,7 @@
       }
     },
     "form": {
-      "title": "Enregistrer un véhicule",
-      "assetCode": "Code du véhicule",
-      "submit": "Enregistrer le véhicule"
+      "assetCode": "Code du véhicule"
     },
     "actions": {
       "commissionHint": "Met le véhicule en service. Son historique d'exploitation démarre ici.",
@@ -88,14 +84,13 @@
       "open": "Ouvrir le voyage"
     },
     "detail": {
+      "breadcrumb": "Voyage",
       "loading": "Chargement du voyage…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
       }
     },
     "actions": {
-      "closeTitle": "Clôturer le voyage",
-      "reopenTitle": "Rouvrir le voyage",
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
       "addLegHint": "Étape n° {legNo} de ce voyage.",
       "addExpenseTitle": "Dépense du voyage",
@@ -167,6 +162,23 @@
       "filters": {
         "TRIPS": "Trajets"
       }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Enregistrer un véhicule",
+      "submit": "Enregistrer le véhicule"
+    },
+    "close-activity": {
+      "label": "Clôturer le voyage",
+      "submit": "Clôturer le voyage"
+    },
+    "reopen-activity": {
+      "label": "Rouvrir le voyage",
+      "submit": "Rouvrir le voyage"
+    },
+    "record-journey-sheet": {
+      "short": "Voyage"
     }
   }
 }

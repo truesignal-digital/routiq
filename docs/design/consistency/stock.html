@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: stock and purchasing (from the Loom videos)</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .shot { width: 100%; border-radius: 12px; border: 1px solid var(--border); display: block; }
+  .flow { display: grid; grid-template-columns: repeat(9, auto); gap: 8px; align-items: stretch; }
+  .flow .step { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .flow .step b { font-size: 13px; }
+  .flow .step .who { color: var(--muted-foreground); font-size: 11.5px; }
+  .flow .step.dec { border-color: var(--warning); background: color-mix(in oklch, var(--warning) 10%, white); }
+  .flow .step.money { border-color: var(--info); background: color-mix(in oklch, var(--info) 10%, white); }
+  .flow .arrow { align-self: center; color: var(--muted-foreground); font-size: 18px; }
+  @media (max-width: 1300px) { .flow { grid-template-columns: 1fr; } .flow .arrow { transform: rotate(90deg); justify-self: center; } }
+  .tag-new { font: 700 10.5px var(--font-sans); padding: 2px 7px; border-radius: 5px; background: color-mix(in oklch, var(--info) 18%, white); color: var(--info-foreground); }
+  .tag-have { font: 700 10.5px var(--font-sans); padding: 2px 7px; border-radius: 5px; background: color-mix(in oklch, var(--success) 18%, white); color: var(--success-foreground); }
+  .tag-diff { font: 700 10.5px var(--font-sans); padding: 2px 7px; border-radius: 5px; background: color-mix(in oklch, var(--warning) 25%, white); color: var(--warning-foreground); }
+  .pstatic { position: relative; background: white; border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgb(15 23 42 / .07); }
+  .pstatic.w560 { width: 560px; } .pstatic.w390 { width: 390px; border-radius: 26px; border: 8px solid oklch(0.2 0.01 256); min-height: 760px; }
+  .linerow { display: grid; grid-template-columns: 1.6fr .8fr 1fr 1fr 28px; gap: 8px; align-items: center; }
+  .linehead { font-size: 12px; color: var(--muted-foreground); font-weight: 600; }
+  .total { display: flex; justify-content: space-between; padding: 10px 12px; background: var(--muted); border-radius: 10px; font-weight: 650; }
+  .rline { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .rline .top { display: flex; justify-content: space-between; font-size: 13px; }
+  .stepper { display: grid; grid-template-columns: 48px 1fr 48px; gap: 6px; }
+  .stepper div { min-height: 48px; border: 1px solid var(--border); border-radius: 10px; display: grid; place-items: center; font-weight: 650; font-size: 18px; }
+  .q-list li { margin: 6px 0; }
+  .pstatic.w390 .sheet-f .btn { flex: 1; min-height: 46px; }
+</style>
+</head>
+<body data-future>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#videos">What the videos show</a>
+    <a href="#map">Reference app → ROUTIQ</a>
+    <a href="#flow">The workflow</a>
+    <a href="#nav">Where it lives</a>
+    <a href="#levels">Stock page</a>
+    <a href="#po">Purchase order</a>
+    <a href="#create">Forms</a>
+    <a href="#phone">On phone</a>
+    <a href="#overview">Overview and charts</a>
+    <a href="#customers">Video 1: customers</a>
+    <a href="#questions">Questions for the owners</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Stock and purchasing</h2>
+      <p class="lede">The two Loom videos are tutorials for <b>the reference app</b>, a separate business-management app, recorded in April 2025. Video 2's description says "replicate this process for our upcoming project". That process is purchasing and stock: buy parts with a purchase order, approve it, receive the goods into a store, pay, then track stock per store, move it between stores, and adjust it. ROUTIQ already plans a Stock module for workshop parts (#27, with decisions recorded). This page maps the reference flow onto it and draws the screens in ROUTIQ's consistency system.</p>
+    </header>
+
+    <section class="section" id="videos">
+      <div class="kicker">Source</div>
+      <h3>What the videos show</h3>
+      <div class="cols even">
+        <div><div class="spec-card" style="min-height:120px;display:grid;place-items:center;color:var(--muted-foreground);font-size:12.5px;text-align:center">Screenshot kept outside the repo (evidence folder)<br>the reference app purchase order 266, status Requested, two coffee lines</div><p class="caption">Video 2 at 04:50: a purchase order, "Requested", Supplier 1 → Main Warehouse, 70 + 50 bags, total 5 250 000. Next steps shown: approve, receive (only when goods physically arrive), pay by bank transfer, close (locked).</p></div>
+        <div><div class="spec-card" style="min-height:120px;display:grid;place-items:center;color:var(--muted-foreground);font-size:12.5px;text-align:center">Screenshot kept outside the repo (evidence folder)<br>the reference app stock list per warehouse with drill-in to purchase order</div><p class="caption">Video 2 at 06:40: stock per warehouse; each stock row traces back to the purchase order and price it came from. Note the negative balances (−16, −1034): the reference app lets stock go below zero.</p></div>
+      </div>
+      <table class="spec-table" style="margin-top:16px">
+        <thead><tr><th>Video</th><th>Length</th><th>What it covers</th><th>Relevance to ROUTIQ</th></tr></thead>
+        <tbody>
+          <tr><td>2 · "Exploring the reference app's procurement module"</td><td>9:05 (stops at "Next we have stock adjustments")</td><td>Products, purchase orders (Requested → Approved → Received → paid → closed), stock per warehouse, transfer orders between warehouses, stock adjustments, procurement overview</td><td><b>The ask.</b> Maps to the planned Stock module (#27) plus purchase orders and suppliers.</td></tr>
+          <tr><td>1 · "Customer Management Overview"</td><td>2:47</td><td>Customer register (standard / special with insurance), a page per customer with orders, transactions, totals owed and paid</td><td>Indirect. Could inform haulage customers and what they owe; needs the owners to confirm.</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">Transcripts, frames and the full review are kept outside the repo (project rule: no other product names in this repo), in the local evidence folder. Both videos are in English; no ROUTIQ-specific requirement is spoken, so everything below is a mapping, not a quote.</p>
+    </section>
+
+    <section class="section" id="map">
+      <div class="kicker">Mapping</div>
+      <h3>Reference app → ROUTIQ</h3>
+      <table class="spec-table">
+        <thead><tr><th>In the reference app</th><th>In ROUTIQ</th><th></th><th>Difference that matters</th></tr></thead>
+        <tbody>
+          <tr><td>Product (name, brand, category, unit, minimum in stock, picture)</td><td><b>Article</b> (name, category, unit, active), created explicitly</td><td><span class="tag-have">Decided in #27</span></td><td>Add "minimum in stock" for the low-stock alert; brand optional.</td></tr>
+          <tr><td>Warehouse / department</td><td><b>Magasin</b> (stock location) under a branch; one "Magasin principal" per branch by default</td><td><span class="tag-have">Decided in #27</span></td><td>The picker hides when a branch has one magasin.</td></tr>
+          <tr><td>Vendor</td><td><b>Supplier</b> list</td><td><span class="tag-new">New</span></td><td>Today a supplier is free text on an expense.</td></tr>
+          <tr><td>Purchase order: Requested → Approved → Received → paid → closed</td><td><b>Purchase order</b> reusing the approval pattern (Waiting → Approved), then receipts</td><td><span class="tag-new">New</span></td><td>#27 planned receipts without purchase orders. The PO adds approval before spending.</td></tr>
+          <tr><td>Receive (only on physical arrival)</td><td><b>Réception</b>: stock in at unit cost (weighted average)</td><td><span class="tag-have">Decided in #27</span></td><td>Allow partial receipts against a PO.</td></tr>
+          <tr><td>Payment recorded on the PO (amount tendered, balance)</td><td>The supplier invoice becomes an <b>expense entry</b> in Money, approved there; the PO shows "invoiced / paid" from it</td><td><span class="tag-diff">Differs</span></td><td>One write path: money only lives in Money. The PO never holds its own payments.</td></tr>
+          <tr><td>Transfer order between warehouses</td><td><b>Transfer</b> between magasins (and branches): Waiting → Approved → Received at the destination</td><td><span class="tag-have">Pattern in #26</span></td><td>Stock is "in transit" until the destination confirms.</td></tr>
+          <tr><td>Stock adjustment ("reduce stock for whatever reason")</td><td><b>Ajustement</b> with a reason, approved by someone other than the counter</td><td><span class="tag-have">Decided in #27</span></td><td>Increases and decreases, never silent.</td></tr>
+          <tr><td>Stock can go negative</td><td>Warn, don't block; movement flagged; the adjustment reconciles</td><td><span class="tag-have">Decided in #27</span></td><td>Same outcome, but visible as a flag.</td></tr>
+          <tr><td>Delivery / sale reduces stock</td><td><b>Sortie</b> to a work order (parts used on a truck); returns reverse it</td><td><span class="tag-have">Decided in #27</span></td><td>ROUTIQ consumes parts on vehicles instead of selling them.</td></tr>
+          <tr><td>Procurement overview: requested / approved / purchased / paid + charts</td><td>Stock page tiles + purchasing chart for managers and executives</td><td><span class="tag-new">New</span></td><td>Follows the overview rules.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="flow">
+      <div class="kicker">Workflow</div>
+      <h3>The workflow in ROUTIQ</h3>
+      <div class="flow">
+        <div class="step"><b>1 · Request</b><span>Workshop lead raises a PO: supplier, magasin, lines (article, qty, price).</span><span class="who">Workshop · phone or desktop</span></div>
+        <div class="arrow">→</div>
+        <div class="step dec"><b>2 · Approve</b><span>Within the auto band it's approved at once; above it, it waits for an approver.</span><span class="who">Admin / fleet manager</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><b>3 · Receive</b><span>When the goods arrive: received quantities per line (partial OK), delivery note photo. Stock goes up.</span><span class="who">Storekeeper / workshop · phone</span></div>
+        <div class="arrow">→</div>
+        <div class="step money"><b>4 · Invoice → Money</b><span>The supplier invoice is recorded as an expense linked to the PO, approved in Money like any expense.</span><span class="who">Finance</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><b>5 · Use on a truck</b><span>Parts go out to a work order (Sortie); their cost lands on that truck. Transfers and adjustments as needed.</span><span class="who">Workshop</span></div>
+      </div>
+      <p class="caption">A PO closes by itself when everything is received and invoiced. Like every approved record, it is never edited afterwards; a mistake is corrected by a reversing movement.</p>
+    </section>
+
+    <section class="section" id="nav">
+      <div class="kicker">Navigation</div>
+      <h3>Where it lives</h3>
+      <div class="cols" style="grid-template-columns:260px 260px minmax(0,1fr)">
+        <div><div class="frame-label">Workshop</div><div class="frame" style="display:flex;min-height:430px"><div data-sidebar="stock" data-role="workshop"></div></div></div>
+        <div><div class="frame-label">Administrator</div><div class="frame" style="display:flex;min-height:430px"><div data-sidebar="stock" data-role="admin"></div></div></div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li><b>Stock</b> is one row in Daily work, after Maintenance. Its count = purchase orders waiting for you + deliveries to receive.</li>
+          <li>Inside Stock, URL tabs of the one tab style: <b>Stock levels</b> · <b>Purchase orders</b> · <b>Transfers</b> · <b>Adjustments</b>.</li>
+          <li>Articles, Suppliers and Magasins are configuration: they go under Company for admins (and the workshop lead for articles).</li>
+          <li>Hidden when the workspace hasn't bought the Stock module; the coming-soon notice "Parts and stock · coming" is what Maintenance shows until then.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="levels">
+      <div class="kicker">Archetype 1 · Module list</div>
+      <h3>Stock page</h3>
+      <div class="frame desktop" style="min-height:620px">
+        <div data-sidebar="stock" data-role="admin"></div>
+        <div class="main"><div class="topbar"><b>Stock</b><div class="right"><span class="chip set">Douala</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Stock</h1><div class="lead">Parts and supplies in Douala's magasin, what's on order and what's running low.</div></div><button class="btn primary"><i data-i="plus"></i>New purchase order</button></div>
+            <div class="metrics">
+              <div><div class="k">Stock value</div><div class="v">1 284 000</div><div class="s">XAF · 46 articles</div></div>
+              <div style="background:color-mix(in oklch,var(--warning) 14%,white)"><div class="k">Below minimum</div><div class="v">3</div><div class="s">Brake pads, oil filter, 10W-40</div></div>
+              <div><div class="k">To receive</div><div class="v">2</div><div class="s">PO-0012, PO-0014</div></div>
+              <div><div class="k">Negative balance</div><div class="v bad">1</div><div class="s">Wiper blades: −2</div></div>
+            </div>
+            <div class="tabs"><div class="on">Stock levels</div><div>Purchase orders<span class="count hot">1</span></div><div>Transfers</div><div>Adjustments</div></div>
+            <div class="toolbar"><div class="input" style="width:260px"><i data-i="search"></i>Search an article</div><span class="chip"><i data-i="plus"></i>Category</span><span class="chip set">Below minimum ×</span></div>
+            <div class="dt-wrap"><table class="dt">
+              <thead><tr><th>Article</th><th>Category</th><th class="r">On hand</th><th class="r">Minimum</th><th class="r">Average cost</th><th class="r">Value XAF</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="pri">Brake pads (set, Actros)</td><td>Brakes</td><td class="r">1 set</td><td class="r">4</td><td class="r">60 000</td><td class="r">60 000</td><td class="dots"><i data-i="dots"></i></td></tr>
+                <tr><td class="pri">Oil filter (Kerax)</td><td>Engine</td><td class="r">2</td><td class="r">5</td><td class="r">8 500</td><td class="r">17 000</td><td class="dots"><i data-i="dots"></i></td></tr>
+                <tr><td class="pri">Engine oil 10W-40</td><td>Fluids</td><td class="r">18 L</td><td class="r">40 L</td><td class="r">3 200</td><td class="r">57 600</td><td class="dots"><i data-i="dots"></i></td></tr>
+              </tbody></table><div class="pager"><span>3 of 46 articles (filtered)</span><span>Page 1</span></div></div>
+          </div></div>
+      </div>
+      <p class="caption">Clicking an article opens its record: identity, on hand per magasin, average cost, and a Movements tab where every line traces back to its PO, transfer, adjustment or work order (the drill-in from the reference app, kept).</p>
+    </section>
+
+    <section class="section" id="po">
+      <div class="kicker">Archetype 2 · Record workspace</div>
+      <h3>Purchase order</h3>
+      <div class="frame desktop" style="min-height:620px">
+        <div data-sidebar="stock" data-role="admin"></div>
+        <div class="main" style="position:relative"><div class="topbar">Stock <span class="sep">/</span> Purchase orders <span class="sep">/</span> <b>PO-0014</b></div>
+          <div class="page" style="padding-bottom:84px">
+            <div><div class="row"><h1 class="pt">PO-0014 · Garage Akwa</h1><span class="badge b-warn">Waiting approval</span></div><div class="lead">To Magasin principal, Douala · requested by Hervé Nkou, 3 Oct · for WO-0007</div></div>
+            <div class="attn warn"><i data-i="clock" data-c="lg"></i><div><div class="t">Waiting for your approval</div><div class="s">Above the 100 000 XAF auto-approval band. Hervé is waiting to order.</div></div></div>
+            <div class="facts"><div><div class="k">Ordered</div><div class="v num">186 000 XAF</div></div><div><div class="k">Received</div><div class="v num">0 of 3 lines</div></div><div><div class="k">Invoiced in Money</div><div class="v none">Nothing yet</div></div><div><div class="k">Expected</div><div class="v">7 Oct</div></div></div>
+            <div class="tabs"><div class="on">Lines</div><div>Receipts</div><div>Money</div><div>Files</div><div>History</div></div>
+            <div class="dt-wrap"><table class="dt"><thead><tr><th>Article</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Total XAF</th><th class="r">Received</th></tr></thead><tbody>
+              <tr><td class="pri">Brake pads (set, Actros)</td><td class="r">2</td><td class="r">60 000</td><td class="r">120 000</td><td class="r">0</td></tr>
+              <tr><td class="pri">Brake fluid DOT4</td><td class="r">4 L</td><td class="r">4 500</td><td class="r">18 000</td><td class="r">0</td></tr>
+              <tr><td class="pri">Oil filter (Kerax)</td><td class="r">6</td><td class="r">8 000</td><td class="r">48 000</td><td class="r">0</td></tr>
+            </tbody></table></div>
+          </div>
+          <div class="actionbar"><button class="btn primary">Approve</button><button class="btn" style="color:var(--destructive)">Reject</button><button class="btn locked"><i data-i="lock"></i>Receive</button><button class="btn ghost" style="margin-left:auto"><i data-i="dots"></i>More</button></div>
+        </div>
+      </div>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>Status and who acts</h4>
+          <table class="spec-table" style="border:0"><tbody>
+            <tr><td><span class="badge b-warn">Waiting approval</span></td><td>Approver: Approve / Reject (decision dialog with reason)</td></tr>
+            <tr><td><span class="badge b-info">Ordered</span></td><td>Workshop: Receive (Line items form)</td></tr>
+            <tr><td><span class="badge b-info">Partly received</span></td><td>Workshop: Receive the rest · Finance: Record invoice</td></tr>
+            <tr><td><span class="badge b-ok">Received</span></td><td>Finance: Record invoice, if not yet</td></tr>
+            <tr><td><span class="badge b-mute">Closed</span></td><td>All received and invoiced; read-only</td></tr>
+            <tr><td><span class="badge b-bad">Cancelled</span></td><td>Before any receipt; reason required</td></tr>
+          </tbody></table></div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Same shell as the truck: identity, status block saying who acts, facts, tabs, action bar.</li>
+          <li>"Receive" is locked with a reason until the PO is approved.</li>
+          <li>The Money tab lists the expense entries linked to this PO; "Invoiced" and "Paid" come from them.</li>
+          <li>Linked from the work order it serves, and from each article's movements.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="create">
+      <div class="kicker">Form layouts</div>
+      <h3>Forms: all use existing layouts</h3>
+      <div class="cols even">
+        <div class="pstatic w560">
+          <div class="sheet-h"><div class="back"><i data-i="back"></i>Stock</div><h3>New purchase order</h3><div class="d">Above 100 000 XAF it waits for approval before you order.</div><span class="x"><i data-i="x"></i></span></div>
+          <div class="sheet-b">
+            <div class="fs"><div class="fs-h">From whom, to where</div>
+              <div class="two"><div class="field"><label>Supplier<span class="req">*</span></label><div class="input filled"><i data-i="search"></i>Garage Akwa</div></div><div class="field"><label>Deliver to<span class="req">*</span></label><div class="input filled">Magasin principal, Douala</div></div></div>
+            </div>
+            <div class="fs"><div class="fs-h">Lines</div>
+              <div class="linerow linehead"><span>Article</span><span style="text-align:right">Qty</span><span style="text-align:right">Unit price</span><span style="text-align:right">Total</span><span></span></div>
+              <div class="linerow"><div class="input filled">Brake pads (set)</div><div class="input filled num" style="justify-content:flex-end">2</div><div class="input filled num" style="justify-content:flex-end">60 000</div><b class="num" style="text-align:right">120 000</b><span style="color:var(--muted-foreground)"><i data-i="x"></i></span></div>
+              <div class="linerow"><div class="input filled">Brake fluid DOT4</div><div class="input filled num" style="justify-content:flex-end">4</div><div class="input filled num" style="justify-content:flex-end">4 500</div><b class="num" style="text-align:right">18 000</b><span style="color:var(--muted-foreground)"><i data-i="x"></i></span></div>
+              <div class="linerow"><div class="input filled">Oil filter (Kerax)</div><div class="input filled num" style="justify-content:flex-end">6</div><div class="input filled num" style="justify-content:flex-end">8 000</div><b class="num" style="text-align:right">48 000</b><span style="color:var(--muted-foreground)"><i data-i="x"></i></span></div>
+              <button class="btn" style="align-self:flex-start"><i data-i="plus"></i>Add a line</button>
+              <div class="total"><span>Total</span><span class="num">186 000 XAF</span></div>
+            </div>
+            <div class="fold"><i data-i="chev"></i>More details (optional)<span class="c">Expected date, for a work order, pro-forma, note · 1 of 4</span></div>
+          </div>
+          <div class="sheet-f"><span class="hint">Boris approves it; then you can order.</span><button class="btn">Cancel</button><button class="btn primary">Request purchase</button></div>
+        </div>
+        <div class="spec-card"><h4>Which layout for which form</h4>
+          <table class="spec-table" style="border:0"><thead><tr><th>Form</th><th>Layout</th></tr></thead><tbody>
+            <tr><td>New purchase order</td><td><span class="tag-have">Line items</span> panel 560</td></tr>
+            <tr><td>Receive a delivery</td><td><span class="tag-have">Line items</span>: ordered vs received per line, photo of delivery note</td></tr>
+            <tr><td>New transfer</td><td><span class="tag-have">Line items</span>: from → to magasin pair, lines with available qty shown</td></tr>
+            <tr><td>Adjust stock (count)</td><td><span class="tag-have">Record</span>: article, magasin, counted qty → difference preview, reason, photo</td></tr>
+            <tr><td>Approve / reject a PO, transfer or adjustment</td><td><span class="tag-have">Decision</span> dialog</td></tr>
+            <tr><td>Use parts on a work order</td><td><span class="tag-have">Line items</span> inside the WO: article, qty, available, cost; warning when stock goes below zero</td></tr>
+            <tr><td>Record supplier invoice</td><td><span class="tag-have">Quick entry</span>: the existing Record expense form, PO pinned, amount prefilled</td></tr>
+            <tr><td>New article / supplier / magasin</td><td><span class="tag-have">Record</span> panel under Company</td></tr>
+          </tbody></table>
+          <p class="caption">No new layout needed: the six layouts already cover purchasing. Pairs used: supplier + destination, from + to, quantity + unit price.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="phone">
+      <div class="kicker">Phone</div>
+      <h3>Receiving a delivery on phone</h3>
+      <div class="cols" style="grid-template-columns:390px minmax(0,1fr)">
+        <div class="pstatic w390">
+          <div class="grab"></div>
+          <div class="sheet-h"><div class="back"><i data-i="back"></i>PO-0014</div><h3>Receive a delivery</h3><div class="d">Count what arrived. You can receive the rest later.</div><span class="x"><i data-i="x"></i></span></div>
+          <div class="sheet-b">
+            <div class="pinned"><i data-i="cart"></i><b>PO-0014 · Garage Akwa</b></div>
+            <div class="rline"><div class="top"><b>Brake pads (set)</b><span class="caption" style="margin:0">ordered 2</span></div><div class="stepper"><div>−</div><div>2</div><div>+</div></div></div>
+            <div class="rline"><div class="top"><b>Brake fluid DOT4</b><span class="caption" style="margin:0">ordered 4 L</span></div><div class="stepper"><div>−</div><div>4</div><div>+</div></div></div>
+            <div class="rline"><div class="top"><b>Oil filter (Kerax)</b><span class="caption" style="margin:0">ordered 6</span></div><div class="stepper"><div>−</div><div style="color:var(--warning-foreground)">4</div><div>+</div></div><span class="caption" style="margin:0">2 still to come: the PO stays "Partly received".</span></div>
+            <div class="upload"><i data-i="camera" data-c="lg"></i><b style="color:var(--foreground)">Photo of the delivery note</b></div>
+          </div>
+          <div class="sheet-f"><button class="btn">Cancel</button><button class="btn primary">Receive 3 lines</button></div>
+        </div>
+        <div class="spec-card"><h4>Why it looks like this</h4><ul>
+          <li>Receiving happens in the magasin, on a phone, often with gloves on: big −/+ steppers prefilled with the ordered quantity, so the common case is one tap.</li>
+          <li>Anything short is shown in amber, with what happens next.</li>
+          <li>Works offline: it's a fact (goods arrived), so it's accepted later with a flag if needed. Approvals stay online, as for everything else in ROUTIQ.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="overview">
+      <div class="kicker">Overview</div>
+      <h3>Overview and charts</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>Tiles for everyone on Stock</h4><ul>
+          <li>Stock value · Below minimum · To receive · Negative balance (each one filters the list).</li>
+          <li>On Purchase orders: Waiting approval · Ordered, not received · Received, not invoiced · Spent this month.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Charts for managers and executives</h4><ul>
+          <li>Purchasing per month (columns, 12 months).</li>
+          <li>Top articles by spend (sorted bars), and parts cost per truck, which joins the executive "Top trucks by cost".</li>
+          <li>Stock value over time (line). Needs a monthly valuation snapshot.</li>
+        </ul></div>
+      </div>
+      <p class="caption">The reference app's overview showed Requested / Approved / Purchased / Paid totals; in ROUTIQ those become the purchase-order tiles above, and "Paid" comes from Money.</p>
+    </section>
+
+    <section class="section" id="customers">
+      <div class="kicker">Video 1</div>
+      <h3>Video 1: customers (needs confirmation)</h3>
+      <div class="cols even">
+        <div><div class="spec-card" style="min-height:120px;display:grid;place-items:center;color:var(--muted-foreground);font-size:12.5px;text-align:center">Screenshot kept outside the repo (evidence folder)<br>the reference app customer overview with debt and deposit totals</div><p class="caption">the reference app customer page: totals for debt, deposits, settled, payouts, orders and insurance coverage; tabs for orders, transactions, data and information.</p></div>
+        <div class="spec-card"><h4>Possible ROUTIQ reading</h4><ul>
+          <li>Haulage customers (the shippers on trips) as a list, each with a record page: trips done, revenue recorded, what they still owe.</li>
+          <li>It would follow the Record workspace archetype: identity, "owes 450 000 XAF since 30 Sep", facts, tabs Trips · Money · History.</li>
+          <li>Payments received would be revenue entries in Money, linked to the customer and trip.</li>
+          <li>Insurance coverage and health-sector data collection don't fit ROUTIQ and are left out.</li>
+          <li>ROUTIQ deliberately defers ticketing and invoicing (§13), so this needs an owner decision before any design.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="questions">
+      <div class="kicker">Ask back</div>
+      <h3>Questions for the owners</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>Scope</h4><ol class="q-list">
+          <li>Both videos are tutorials for another business app. Is "the upcoming project" ROUTIQ's parts and stock module, or a different product?</li>
+          <li>Is video 1 (customers) part of the ask? If yes: haulage customers and what they owe?</li>
+          <li>Purchase orders were not in the #27 plan (receipts only). Do you want approval before spending (PO), or is recording receipts enough for the pilot?</li>
+        </ol></div>
+        <div class="spec-card"><h4>Rules</h4><ol class="q-list" start="4">
+          <li>Who may approve a PO, and from what amount? (Reuses the approval bands.)</li>
+          <li>Partial receipts and partial invoices: needed from day one?</li>
+          <li>Transfers between branches: does the destination confirm receipt (in-transit stock)?</li>
+          <li>Minimum stock per article: per magasin or one number per article?</li>
+          <li>Should fuel be an article (bulk diesel in a tank) or stay as fuel expenses?</li>
+        </ol></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>

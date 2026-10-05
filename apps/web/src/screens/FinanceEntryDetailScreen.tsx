@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -34,6 +35,7 @@ export function FinanceEntryDetailScreen() {
 
 function FinanceEntryDetailContent() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { entryId } = useParams({ from: "/app/finance/entries/$entryId" });
   const navigate = useNavigate();
   const me = useMeContext();
@@ -137,7 +139,7 @@ function FinanceEntryDetailContent() {
             <Button
               variant="outline"
               onClick={() => setEditOpen(true)}
-              className="min-h-11 w-full"
+              className="w-full"
             >
               {t("finance.entries.detail.editAction")}
             </Button>
@@ -160,10 +162,11 @@ function FinanceEntryDetailContent() {
 
           {canReverse && (
             <Button
+              variant="destructive"
               onClick={() => setReverseOpen(true)}
-              className="min-h-11 w-full"
+              className="w-full"
             >
-              {t("finance.entries.detail.reverseAction")}
+              {label("reverse-entry")}
             </Button>
           )}
 

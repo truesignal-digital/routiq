@@ -86,7 +86,6 @@ export function LoginScreen() {
                 <FormLabel>{t("login.workspace")}</FormLabel>
                 <FormControl>
                   <Input
-                    className="min-h-11"
                     autoCapitalize="none"
                     autoCorrect="off"
                     {...field}
@@ -105,7 +104,6 @@ export function LoginScreen() {
                 <FormLabel>{t("login.username")}</FormLabel>
                 <FormControl>
                   <Input
-                    className="min-h-11"
                     autoCapitalize="none"
                     autoCorrect="off"
                     autoComplete="username"
@@ -125,7 +123,6 @@ export function LoginScreen() {
                 <FormLabel>{t("login.pin")}</FormLabel>
                 <FormControl>
                   <Input
-                    className="min-h-11"
                     type="password"
                     inputMode="numeric"
                     autoComplete="current-password"
@@ -141,12 +138,11 @@ export function LoginScreen() {
 
           <Button
             type="submit"
-            className="min-h-11"
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting
-              ? t("login.submitting")
-              : t("login.submit")}
+              ? t("login.signingIn")
+              : t("login.signIn")}
           </Button>
         </form>
       </Form>
