@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatDate, formatDateTime } from "@/lib/format.js"
 import { cn } from "@/lib/utils"
 
 type Kind = "date" | "datetime"
@@ -39,7 +40,7 @@ export interface DateFieldProps {
   "aria-invalid"?: boolean
 }
 
-const plainSpaces = (text: string) => text.replace(/[  ]/g, " ")
+const plainSpaces = (text: string) => text.replace(/[\u00a0\u202f]/g, " ")
 const pad = (value: number) => String(value).padStart(2, "0")
 
 function isoDate(date: Date) {
@@ -68,37 +69,34 @@ function nowTime() {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}`
 }
 
-function formatDay(iso: string, locale: string) {
-  const date = dateFromIso(iso)
-  if (date === undefined) return ""
-  return plainSpaces(
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", year: "numeric" }).format(date),
-  )
-}
-
 function formatTime(time: string, locale: string) {
   const [hours = 0, minutes = 0] = time.split(":").map(Number)
-  return plainSpaces(
-    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
-      new Date(2000, 0, 1, hours, minutes),
-    ),
+  return new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(
+    new Date(2000, 0, 1, hours, minutes),
   )
 }
 
+/** The same text `formatDate` / `formatDateTime` show everywhere else in the app. */
 function formatValue(kind: Kind, value: string, locale: string) {
-  const day = formatDay(value, locale)
-  if (kind === "date" || day === "") return day
+  if (dateFromIso(value) === undefined) return ""
+  if (kind === "date") return formatDate(value.slice(0, 10), locale)
   const time = timeOf(value)
-  return time === undefined ? "" : `${day} ${formatTime(time, locale)}`
+  return time === undefined ? "" : formatDateTime(`${value.slice(0, 10)}T${time}`, locale)
 }
 
-/** Where day, month and year sit in the locale's numeric date: d/m/y in French, m/d/y in English. */
+/** Where day, month and year sit in the locale's short date: d/m/y in French, m/d/y in English. */
 function fieldOrder(locale: string) {
-  return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", year: "numeric" })
+  return new Intl.DateTimeFormat(locale, { dateStyle: "short" })
     .formatToParts(new Date(2000, 0, 2))
     .flatMap((part) =>
       part.type === "day" || part.type === "month" || part.type === "year" ? [part.type] : [],
     )
+}
+
+function shortYearDigits(locale: string) {
+  return new Intl.DateTimeFormat(locale, { dateStyle: "short" })
+    .formatToParts(new Date(2000, 0, 2))
+    .find((part) => part.type === "year")?.value.length
 }
 
 function parseDay(text: string, locale: string) {
@@ -114,8 +112,11 @@ function parseDay(text: string, locale: string) {
     parts[type] = Number(numeric[index + 1])
   })
   const { day, month, year } = parts
-  if (day === undefined || month === undefined || year === undefined || year < 1000) return undefined
-  const date = realDate(year, month, day)
+  const digits = numeric[fieldOrder(locale).indexOf("year") + 1]?.length
+  if (day === undefined || month === undefined || year === undefined) return undefined
+  // The English short date writes the year as "26", so the text it shows must read back.
+  if (digits !== 4 && !(digits === 2 && shortYearDigits(locale) === 2)) return undefined
+  const date = realDate(digits === 2 ? 2000 + year : year, month, day)
   return date === undefined ? undefined : isoDate(date)
 }
 
@@ -205,16 +206,25 @@ function DateCalendarField({
     const raw = event.target.value
     setText(raw)
     setProblem(null)
+    if (raw.trim() === "") {
+      commit("")
+      return
+    }
+    // A half-typed date is not a value yet; leaving the field decides.
     const parsed = parseValue(kind, raw, locale)
-    commit(parsed !== undefined && rangeProblem(parsed) === null ? parsed : "")
+    if (parsed !== undefined && rangeProblem(parsed) === null) commit(parsed)
   }
 
   function left() {
     if (text.trim() !== "") {
       const parsed = parseValue(kind, text, locale)
-      if (parsed === undefined) setProblem("format")
-      else if (rangeProblem(parsed) !== null) setProblem(rangeProblem(parsed))
-      else setText(formatValue(kind, parsed, locale))
+      const problemFound = parsed === undefined ? "format" : rangeProblem(parsed)
+      if (parsed === undefined || problemFound !== null) {
+        setProblem(problemFound)
+        commit("")
+      } else {
+        setText(formatValue(kind, parsed, locale))
+      }
     }
     onBlur?.()
   }
@@ -243,10 +253,7 @@ function DateCalendarField({
       (maxDay !== undefined && maxDay !== "" && iso > maxDay)
   }
   const selected = dateFromIso(value)
-  const example =
-    kind === "date"
-      ? formatDay(isoDate(today), locale)
-      : `${formatDay(isoDate(today), locale)} ${formatTime("14:30", locale)}`
+  const example = formatValue(kind, `${isoDate(today)}T14:30`, locale)
   const problemText =
     problem === "format"
       ? t(kind === "date" ? "dateField.invalidDate" : "dateField.invalidDateTime", { example })

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
+import { formatDate, formatDateTime } from "../lib/format.js";
 import { DateField, DateTimeField } from "./date-field.js";
 
 type Props = { initial?: string; min?: string; max?: string };
@@ -95,7 +96,7 @@ describe("DateField", () => {
 
     await i18n.changeLanguage("en");
     renderField("date", { initial: "2026-10-04" });
-    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("10/04/2026");
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("10/4/26");
   });
 
   it("flags a day that does not exist and hands out nothing", async () => {
@@ -175,6 +176,46 @@ describe("DateField", () => {
   });
 });
 
+describe("reads the same as the rest of the app", () => {
+  it.each(["fr-CM", "en"])("in %s, for a date and a date with a time", async (language) => {
+    await i18n.changeLanguage(language);
+    renderField("date", { initial: "2026-10-04" });
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(formatDate("2026-10-04", language));
+    cleanup();
+
+    renderField("datetime", { initial: "2026-10-04T13:07" });
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(
+      formatDateTime("2026-10-04T13:07", language),
+    );
+  });
+
+  it.each(["fr-CM", "en"])("in %s, takes back the text it shows", async (language) => {
+    await i18n.changeLanguage(language);
+    const field = renderField("datetime", { initial: "2026-10-04T13:07" });
+
+    fireEvent.change(field.input, { target: { value: formatDateTime("2026-07-28T06:15", language) } });
+    expect(field.value()).toBe("2026-07-28T06:15");
+  });
+});
+
+describe("while typing", () => {
+  it("keeps the last full value until the field is left", async () => {
+    const user = userEvent.setup();
+    const field = renderField("date", { initial: "2026-07-28" });
+
+    await user.clear(field.input);
+    await user.type(field.input, "12/0");
+    expect(field.changes).toEqual([""]);
+    await user.type(field.input, "8/2026");
+    expect(field.value()).toBe("2026-08-12");
+    await user.type(field.input, "{Backspace}{Backspace}");
+    expect(field.value()).toBe("2026-08-12");
+    await user.tab();
+    expect(field.value()).toBe("");
+    expect(field.input.getAttribute("aria-invalid")).toBe("true");
+  });
+});
+
 describe("DateTimeField", () => {
   it("reads a date and a 24-hour time typed the French way", async () => {
     const user = userEvent.setup();
@@ -202,7 +243,7 @@ describe("DateTimeField", () => {
     await user.type(field.input, "07/28/2026 2:30 PM");
     expect(field.value()).toBe("2026-07-28T14:30");
     await user.tab();
-    expect(field.input.value).toBe("07/28/2026 02:30 PM");
+    expect(field.input.value).toBe(formatDateTime("2026-07-28T14:30", "en"));
   });
 
   it("accepts the ISO wall clock a datetime-local input produced", () => {
@@ -219,7 +260,7 @@ describe("DateTimeField", () => {
 
     await i18n.changeLanguage("en");
     renderField("datetime", { initial: "2026-10-04T13:07" });
-    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("10/04/2026 01:07 PM");
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(formatDateTime("2026-10-04T13:07", "en"));
   });
 
   it("wants a time as well as a date", async () => {
