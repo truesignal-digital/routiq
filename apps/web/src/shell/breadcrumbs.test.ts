@@ -100,7 +100,7 @@ describe("breadcrumbTrail", () => {
 
   it("never puts a record's name on a page that is not a record", () => {
     expect(breadcrumbTrail(ALL, "/activities/record", "TR-0042").at(-1)).toEqual({
-      labelKey: "activities.record.title",
+      labelKey: "commands.record-journey-sheet.label",
     });
   });
 
@@ -108,7 +108,7 @@ describe("breadcrumbTrail", () => {
     expect(trailAt("/activities/record")).toEqual([
       ["nav.home", "/"],
       ["nav.activities", "/activities"],
-      ["activities.record.title", undefined],
+      ["commands.record-journey-sheet.label", undefined],
     ]);
   });
 

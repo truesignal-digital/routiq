@@ -33,7 +33,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "assets.detail.breadcrumb", record: true as const }],
   })),
   // Before the $activityId pattern, or "record" reads as a trip.
-  { pattern: "/activities/record", trail: [{ labelKey: "activities.record.title" }] },
+  { pattern: "/activities/record", trail: [{ labelKey: "commands.record-journey-sheet.label" }] },
   {
     pattern: "/activities/$activityId",
     trail: [{ labelKey: "activities.detail.breadcrumb", record: true }],

@@ -191,8 +191,8 @@ describe("applyPresetVocabulary", () => {
         ["fr", "Saisir une fiche", "Enregistrer la fiche"],
         ["en", "Record a sheet", "Record sheet"],
       ] as const) {
-        expect(instance.t("activities.record.title", { lng }), `${preset} ${lng}`).toBe(title);
-        expect(instance.t("activities.record.submit", { lng }), `${preset} ${lng}`).toBe(submit);
+        expect(instance.t("commands.record-journey-sheet.label", { lng }), `${preset} ${lng}`).toBe(title);
+        expect(instance.t("commands.record-journey-sheet.submit", { lng }), `${preset} ${lng}`).toBe(submit);
       }
     }
   });
