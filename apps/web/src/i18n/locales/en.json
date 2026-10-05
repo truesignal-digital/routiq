@@ -523,7 +523,8 @@
       "empty": "No entries awaiting approval.",
       "columns": {
         "actions": "Actions",
-        "branch": "Branch"
+        "branch": "Branch",
+        "submittedAt": "Submitted"
       },
       "filters": {
         "branch": "Branch",
