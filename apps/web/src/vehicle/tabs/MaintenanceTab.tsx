@@ -17,7 +17,7 @@ import { recordReference, type VehicleActionKey } from "../model.js";
 import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader, useStepLabel } from "../parts.js";
 import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
-import { useIssueCategoryLabel } from "../panel/IssueRecord.js";
+import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 
 /** The one primary button a tab carries; it starts the action the way the catalogue says. */
 export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
