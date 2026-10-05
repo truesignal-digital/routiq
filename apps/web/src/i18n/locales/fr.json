@@ -537,7 +537,8 @@
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "actions": "Actions",
-        "branch": "Agence"
+        "branch": "Agence",
+        "submittedAt": "Soumis le"
       },
       "filters": {
         "branch": "Agence",

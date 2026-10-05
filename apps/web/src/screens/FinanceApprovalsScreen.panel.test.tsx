@@ -285,3 +285,61 @@ describe("approvals queue: the entry opens in the record panel", () => {
     expect(within(panel).queryByRole("button", { name: "Reject" })).toBeNull();
   });
 });
+
+describe("approvals queue: economic date and submission date (#55)", () => {
+  // DLA-2026-00005: a repair from July sent for approval in October.
+  const lateRepair = {
+    ...entry(FIN_001.id, "FIN-001"),
+    economicDate: "2026-07-29",
+    submittedAt: "2026-10-04T09:00:00.000Z",
+  };
+
+  beforeEach(() => {
+    sessionStore.save({
+      username: "amina",
+      workspaceSlug: "ws-1",
+      token: "tok",
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    });
+  });
+
+  afterEach(async () => {
+    cleanup();
+    vi.unstubAllGlobals();
+    sessionStore.logout({ username: "amina", workspaceSlug: "ws-1" });
+    await i18n.changeLanguage("fr-CM");
+  });
+
+  it.each([
+    {
+      locale: "en",
+      economicLabel: "Economic date",
+      economicDate: "7/29/26",
+      submittedLabel: "Submitted",
+      submittedDate: "10/4/26",
+    },
+    {
+      locale: "fr-CM",
+      economicLabel: "Date comptable",
+      economicDate: "29/07/2026",
+      submittedLabel: "Soumis le",
+      submittedDate: "04/10/2026",
+    },
+  ])("shows each date under its own heading in $locale", async (viewer) => {
+    await i18n.changeLanguage(viewer.locale);
+    stubServer([lateRepair]);
+    renderScreen();
+
+    const row = await screen.findByRole("row", { name: /FIN-001/ });
+    const headers = screen.getAllByRole("columnheader");
+    const cells = within(row).getAllByRole("cell");
+    const economicColumn = headers.indexOf(
+      screen.getByRole("columnheader", { name: viewer.economicLabel }),
+    );
+    expect(cells[economicColumn]?.textContent).toBe(viewer.economicDate);
+    const submittedColumn = headers.indexOf(
+      screen.getByRole("columnheader", { name: viewer.submittedLabel }),
+    );
+    expect(cells[submittedColumn]?.textContent).toBe(viewer.submittedDate);
+  });
+});
