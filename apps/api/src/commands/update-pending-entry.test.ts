@@ -323,6 +323,26 @@ describe("update-pending-entry.v1", () => {
       expect(rejected.status, JSON.stringify(rejected.body)).toBe(200);
     });
 
+    it("refuses a driver who moves their entry onto a work order (#410)", async () => {
+      const workOrderId = randomUUID();
+      await api.ok(admin.token, "create-work-order", {
+        workOrderId,
+        assetId,
+        description: "Plaquettes de frein",
+        expectedCostMinor: 60_000,
+      });
+      const { entryId } = await recordExpense(150_000);
+      const reply = await edit(
+        author,
+        entryId,
+        { amountMinor: 150_000, postings: [{ assetId, workOrderId, amountMinor: 150_000 }] },
+        1,
+      );
+      expect(reply.status).toBe(403);
+      expect(reply.body.error?.code).toBe("ROLE_FORBIDDEN");
+      expect((await lines(entryId)).map((line) => line.workOrderId)).toEqual([null]);
+    });
+
     it("refuses an approver", async () => {
       const { entryId } = await recordExpense(150_000);
       const reply = await edit(approver, entryId, { amountMinor: 1_000 }, 1);

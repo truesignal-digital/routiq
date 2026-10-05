@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ROLES, type Role } from "@routiq/contracts";
 import {
+  canAddWorkOrderCost,
   canApproveEntries,
   canEditPendingEntry,
   canManagePeriods,
@@ -36,6 +37,20 @@ describe("finance decisions, per role (ADR-0009)", () => {
 
   it("offers reverse on posted entries only", () => {
     expect(canReverseEntry("FINANCE", "SUBMITTED")).toBe(false);
+  });
+});
+
+describe("a cost on a work order (#410)", () => {
+  it("is the workshop's and the managers', never the driver's", () => {
+    const allowed = ROLES.filter((role) => canAddWorkOrderCost(role, FINANCE_ON));
+    expect(allowed).not.toContain("DRIVER");
+    expect(allowed).toContain("TECHNICIAN");
+    expect(allowed).toContain("DIRECTOR");
+    expect(allowed).toContain("ADMIN");
+  });
+
+  it("leaves the driver's own expenses alone", () => {
+    expect(canRecordFinance("DRIVER", FINANCE_ON)).toBe(true);
   });
 });
 

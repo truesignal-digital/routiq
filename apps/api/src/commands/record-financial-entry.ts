@@ -29,12 +29,23 @@ interface FinancialEntryCommandConfig {
  * The workshop records what a repair cost, and nothing else: a TECHNICIAN
  * member's expense is accepted only when every line is attributed to a work
  * order, which the writer then holds to APPROVED status and branch scope.
+ * A DRIVER is the opposite: parts and labour are not theirs to book (ADR-0009),
+ * so no line of theirs may name a work order.
  */
 export function requireWorkOrderAttribution(
   role: Role,
   payload: Pick<FinancialEntryPayload, "postings">,
   command: string,
 ): void {
+  if (
+    role === "DRIVER" &&
+    payload.postings.some((posting) => posting.workOrderId !== undefined)
+  ) {
+    throw new CommandError(403, "ROLE_FORBIDDEN", {
+      command,
+      reason: "WORK_ORDER_COST_FORBIDDEN",
+    });
+  }
   if (role !== "TECHNICIAN") return;
   if (payload.postings.some((posting) => posting.workOrderId === undefined)) {
     throw new CommandError(403, "ROLE_FORBIDDEN", {

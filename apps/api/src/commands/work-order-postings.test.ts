@@ -26,6 +26,7 @@ describe("work-order cost attribution", () => {
   let adminToken: string;
   let approverToken: string;
   let maintenanceToken: string;
+  let driverToken: string;
   let doualaManagerToken: string;
   let assetId: string;
   let otherAssetId: string;
@@ -45,7 +46,7 @@ describe("work-order cost attribution", () => {
       .returning();
 
     const session = async (
-      role: "ADMIN" | "FINANCE" | "TECHNICIAN" | "ADMIN",
+      role: "ADMIN" | "FINANCE" | "TECHNICIAN" | "DRIVER",
       scope: { allBranches: true } | { branchIds: string[] },
     ) => {
       const member = await seedMember(db, { workspaceId, role, ...scope });
@@ -56,6 +57,7 @@ describe("work-order cost attribution", () => {
     adminToken = await session("ADMIN", { allBranches: true });
     approverToken = await session("FINANCE", { allBranches: true });
     maintenanceToken = await session("TECHNICIAN", { allBranches: true });
+    driverToken = await session("DRIVER", { allBranches: true });
     doualaManagerToken = await session("ADMIN", {
       branchIds: [seeded.branch.id],
     });
@@ -416,6 +418,36 @@ describe("work-order cost attribution", () => {
       expect(response.json()).toMatchObject({
         error: { code: "ROLE_FORBIDDEN", metadata: { command: "record-revenue.v1" } },
       });
+    });
+  });
+
+  describe("drivers book no cost on a work order (#410)", () => {
+    it("refuses a driver's expense with a line that names a work order, and writes nothing", async () => {
+      for (const postings of [
+        [{ assetId, workOrderId, amountMinor: 10_000 }],
+        [
+          { assetId, amountMinor: 5_000 },
+          { assetId, workOrderId, amountMinor: 5_000 },
+        ],
+      ]) {
+        const { response, entryId } = await recordRepairExpense(postings, 10_000, driverToken);
+        expect(response.statusCode).toBe(403);
+        expect(response.json()).toMatchObject({
+          error: { code: "ROLE_FORBIDDEN", metadata: { reason: "WORK_ORDER_COST_FORBIDDEN" } },
+        });
+        expect(
+          await db.select().from(financialEntries).where(eq(financialEntries.id, entryId)),
+        ).toHaveLength(0);
+      }
+    });
+
+    it("still takes a driver's expense on the vehicle", async () => {
+      const { response } = await recordRepairExpense(
+        [{ assetId, amountMinor: 10_000 }],
+        10_000,
+        driverToken,
+      );
+      expect(response.statusCode).toBe(200);
     });
   });
 
