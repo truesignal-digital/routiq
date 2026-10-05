@@ -290,7 +290,7 @@ describe("MaintenanceScreen — work order queue", () => {
     expect(issuedQueries[0]).toEqual({});
 
     await user.click(
-      screen.getByRole("button", { name: "maintenance.workOrders.status.COMPLETED" }),
+      screen.getByRole("radio", { name: "maintenance.workOrders.status.COMPLETED" }),
     );
 
     // Filtering client-side would describe the loaded page, not the workshop.
@@ -319,7 +319,7 @@ describe("MaintenanceScreen — row sheet", () => {
     ).toBeTruthy();
     expect(within(sheet).getByText("DLA-2026-00007")).toBeTruthy();
     expect(
-      within(sheet).getByText("maintenance.detail.entryStatus.POSTED"),
+      within(sheet).getByText("finance.entries.status.POSTED"),
     ).toBeTruthy();
   });
 
@@ -530,7 +530,7 @@ describe("MaintenanceScreen — row sheet costs", () => {
     expect(within(posted).queryByText("DLA-2026-00009")).toBeNull();
     expect(within(pending).getByText("DLA-2026-00009")).toBeTruthy();
     expect(
-      within(pending).getByText("maintenance.detail.entryStatus.SUBMITTED"),
+      within(pending).getByText("finance.entries.status.SUBMITTED"),
     ).toBeTruthy();
     expect(
       within(pending).getByText("maintenance.detail.pendingCostLinesHint"),
@@ -914,7 +914,7 @@ describe("MaintenanceScreen — signalements tab", () => {
 
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await user.click(
-      await screen.findByRole("button", { name: "maintenance.issues.status.OPEN" }),
+      await screen.findByRole("radio", { name: "maintenance.issues.status.OPEN" }),
     );
 
     await waitFor(() => {
@@ -931,7 +931,7 @@ describe("MaintenanceScreen — signalements tab", () => {
 
     await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
     await user.click(
-      await screen.findByRole("button", { name: "maintenance.issues.status.DISMISSED" }),
+      await screen.findByRole("radio", { name: "maintenance.issues.status.DISMISSED" }),
     );
 
     expect(await screen.findByText("maintenance.issues.filteredEmpty")).toBeTruthy();

@@ -1,7 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { Clock } from "lucide-react";
-import type { IssueDetail } from "@routiq/contracts";
-import { StatusBadge } from "@/components/status-badge.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
 import {
@@ -9,6 +6,7 @@ import {
   IssueDecisionForm,
   ReleaseForm,
 } from "@/maintenance/MaintenanceDialogs.js";
+import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { Chronologie } from "@/maintenance/WorkOrderSheet.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps } from "../flow.js";
@@ -28,27 +26,6 @@ export function useIssueCategoryLabel() {
     const type = types.data?.find((candidate) => candidate.code === code);
     return type === undefined ? code : localizedLabel(type, i18n.language);
   };
-}
-
-export function IssueStatusBadge({ issue }: { issue: Pick<IssueDetail, "status" | "workOrders"> }) {
-  const { t } = useTranslation();
-  if (issue.status === "OPEN") {
-    const planned = issue.workOrders.some((wo) => isActiveWorkOrder(wo.status));
-    return planned ? (
-      <StatusBadge tone="info" className="rounded-md">
-        {t("vehicle.maintenance.inWorkOrder")}
-      </StatusBadge>
-    ) : (
-      <StatusBadge tone="warning" icon={Clock} className="rounded-md">
-        {t("vehicle.maintenance.notPlanned")}
-      </StatusBadge>
-    );
-  }
-  return (
-    <StatusBadge tone="neutral" className="rounded-md">
-      {t(`maintenance.issues.status.${issue.status}`)}
-    </StatusBadge>
-  );
 }
 
 export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefined }) {

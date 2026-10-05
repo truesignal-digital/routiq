@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { DateField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
@@ -147,7 +148,7 @@ export function DocumentForm({
           onValueChange={(value) => setTypeCode(value ?? "")}
           disabled={renews !== undefined || documentTypesFailed}
         >
-          <SelectTrigger className="min-h-11" id="doc-type">
+          <SelectTrigger id="doc-type">
             <SelectValue placeholder={t("assets.form.choose")} />
           </SelectTrigger>
           <SelectContent>
@@ -165,7 +166,6 @@ export function DocumentForm({
           <Label htmlFor="doc-title">{t("documents.fields.title")}</Label>
           <Input
             id="doc-title"
-            className="min-h-11"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
@@ -174,30 +174,17 @@ export function DocumentForm({
           <Label htmlFor="doc-number">{t("documents.fields.number")}</Label>
           <Input
             id="doc-number"
-            className="min-h-11"
             value={documentNumber}
             onChange={(event) => setDocumentNumber(event.target.value)}
           />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="doc-issued">{t("documents.fields.issuedAt")}</Label>
-          <Input
-            id="doc-issued"
-            className="min-h-11"
-            type="date"
-            value={issuedAt}
-            onChange={(event) => setIssuedAt(event.target.value)}
-          />
+          <DateField id="doc-issued" value={issuedAt} onChange={setIssuedAt} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="doc-expires">{t("documents.fields.expiresAt")}</Label>
-          <Input
-            id="doc-expires"
-            className="min-h-11"
-            type="date"
-            value={expiresAt}
-            onChange={(event) => setExpiresAt(event.target.value)}
-          />
+          <DateField id="doc-expires" value={expiresAt} onChange={setExpiresAt} />
         </div>
       </div>
 

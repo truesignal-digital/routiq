@@ -212,7 +212,7 @@ export function MemberActionDialog({
               <p className="mt-1">{t("users.actions.conflictBody")}</p>
             </div>
             <DialogFooter>
-              <Button className="min-h-11" onClick={() => void reload()}>
+              <Button onClick={() => void reload()}>
                 {t("users.actions.reload")}
               </Button>
             </DialogFooter>
@@ -229,7 +229,7 @@ export function MemberActionDialog({
               </p>
             </div>
             <DialogFooter>
-              <Button className="min-h-11" onClick={onDismiss}>
+              <Button onClick={onDismiss}>
                 {t("common.close")}
               </Button>
             </DialogFooter>
@@ -246,7 +246,7 @@ export function MemberActionDialog({
                     value={role}
                     onValueChange={(value) => value && setRole(value as Role)}
                   >
-                    <SelectTrigger className="min-h-11 w-full" aria-label={t("users.form.role")}>
+                    <SelectTrigger className="w-full" aria-label={t("users.form.role")}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -276,7 +276,6 @@ export function MemberActionDialog({
                     type="password"
                     inputMode="numeric"
                     autoComplete="new-password"
-                    className="min-h-11"
                     value={pin}
                     onChange={(event) => setPin(event.target.value)}
                   />
@@ -288,7 +287,6 @@ export function MemberActionDialog({
                     type="password"
                     inputMode="numeric"
                     autoComplete="new-password"
-                    className="min-h-11"
                     value={confirmPin}
                     onChange={(event) => setConfirmPin(event.target.value)}
                   />
@@ -302,13 +300,13 @@ export function MemberActionDialog({
             <DialogFooter>
               <Button
                 variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
                 onClick={onDismiss}
               >
                 {t("users.form.cancel")}
               </Button>
               <Button
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
                 variant={action === "deactivate" ? "destructive" : "default"}
                 disabled={!ready}
                 onClick={() => void submit()}

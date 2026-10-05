@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { DateTimeField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -256,12 +257,11 @@ export function LogFuelForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor="fuel-when">{t("vehicle.forms.fuel.when")}</Label>
-          <Input
+          <DateTimeField
             id="fuel-when"
-            type="datetime-local"
             value={when}
             disabled={expenseLocked}
-            onChange={(event) => setWhen(event.target.value)}
+            onChange={setWhen}
           />
         </div>
         <div className="flex flex-col gap-2">

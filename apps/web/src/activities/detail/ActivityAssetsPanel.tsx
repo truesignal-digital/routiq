@@ -166,7 +166,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
                 // A correction that hid what it replaced would be an edit. The
                 // chain is folded away, never dropped.
                 <details className="rounded-lg bg-foreground/[0.03] px-3 py-2">
-                  <summary className="min-h-9 cursor-pointer list-none text-xs text-muted-foreground">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-muted-foreground">
                     {t("activities.detail.readings.corrected", {
                       count: superseded.length,
                     })}

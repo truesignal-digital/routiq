@@ -173,7 +173,7 @@ export function AddMemberDialog({
                 <FormItem>
                   <FormLabel>{t("users.form.displayName")}</FormLabel>
                   <FormControl>
-                    <Input type="text" className="min-h-11" {...field} />
+                    <Input type="text" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -191,7 +191,6 @@ export function AddMemberDialog({
                       type="text"
                       autoComplete="off"
                       autoCapitalize="none"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -211,7 +210,7 @@ export function AddMemberDialog({
                     onValueChange={(value) => field.onChange(value ?? "")}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("users.form.rolePlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
@@ -245,7 +244,6 @@ export function AddMemberDialog({
                       type="password"
                       inputMode="numeric"
                       autoComplete="new-password"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -265,7 +263,6 @@ export function AddMemberDialog({
                       type="password"
                       inputMode="numeric"
                       autoComplete="new-password"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -278,14 +275,12 @@ export function AddMemberDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11"
                 onClick={() => onOpenChange(false)}
               >
                 {t("users.form.cancel")}
               </Button>
               <Button
                 type="submit"
-                className="min-h-11"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting

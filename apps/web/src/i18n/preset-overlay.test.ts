@@ -180,6 +180,23 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  // The sheet's title is its breadcrumb and the Trips button, and its submit
+  // says "la fiche": renaming only the title would leave the page disagreeing.
+  it("keeps the trip sheet's title in step with its submit in every preset", () => {
+    const instance = freshInstance();
+
+    for (const preset of TEMPLATE_CODES) {
+      applyPresetVocabulary(instance, preset);
+      for (const [lng, title, submit] of [
+        ["fr", "Saisir une fiche", "Enregistrer la fiche"],
+        ["en", "Record a sheet", "Record sheet"],
+      ] as const) {
+        expect(instance.t("activities.record.title", { lng }), `${preset} ${lng}`).toBe(title);
+        expect(instance.t("activities.record.submit", { lng }), `${preset} ${lng}`).toBe(submit);
+      }
+    }
+  });
+
   it("leaves a mixed fleet on the base vocabulary", () => {
     const instance = freshInstance();
 

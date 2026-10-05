@@ -80,7 +80,7 @@ export function VehicleTabsNav() {
           }
         }}
       >
-        <TabsList variant="line" className="h-11 w-max gap-6 p-0">
+        <TabsList variant="line" className="w-max gap-6 p-0">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab}

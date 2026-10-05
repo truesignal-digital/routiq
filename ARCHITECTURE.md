@@ -421,7 +421,7 @@ Every profitability figure discloses: layers included, approval statuses include
 ## 10. Security summary
 
 - Three-layer tenant isolation (§4.4); command layer is the only write path; runtime DB role can't touch audit or posted rows.
-- RBAC: ~6 fixed roles (admin, ops manager, field submitter, maintenance, finance approver, executive viewer) + branch scope. `principal_type` distinguishes humans/AI/integrations.
+- RBAC: 6 fixed roles (Direction, Administrateur, Finance, Caissier, Technicien, Chauffeur — [ADR-0009](docs/adr/0009-six-fixed-roles-named-by-the-team.md), decided 2026-09-27, replacing the built admin/ops manager/field submitter/maintenance/finance approver/executive viewer) + branch scope. App access always belongs to a person ([ADR-0010](docs/adr/0010-one-person-list-with-optional-app-access.md)). `principal_type` distinguishes humans/AI/integrations.
 - Evidence artifacts immutable + hashed; corrections attach, never replace.
 - For release and legacy-data handling, follow the [finalized receipt rollout guide](docs/howto/artifact-integrity-rollout.md).
 - Offline caches are branch-scoped and per-user; PINs re-auth on device; revoked users' unsynced drafts are recoverable by an admin (never silently destroyed — they may contain real business facts).

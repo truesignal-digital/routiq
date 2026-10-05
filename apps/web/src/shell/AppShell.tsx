@@ -8,6 +8,7 @@ import { i18n } from "../i18n/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overlay.js";
 import { AppSidebar } from "./AppSidebar.js";
 import { BranchProvider, useCurrentBranch } from "./branch-context.js";
+import { RecordCrumbProvider } from "./record-crumb.js";
 import { SiteHeader } from "./SiteHeader.js";
 
 /**
@@ -44,11 +45,13 @@ export function AppShell() {
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <SiteHeader />
-              <BranchScopeAnnouncer />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <Outlet />
-              </div>
+              <RecordCrumbProvider>
+                <SiteHeader />
+                <BranchScopeAnnouncer />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <Outlet />
+                </div>
+              </RecordCrumbProvider>
             </SidebarInset>
           </SidebarProvider>
         </TooltipProvider>

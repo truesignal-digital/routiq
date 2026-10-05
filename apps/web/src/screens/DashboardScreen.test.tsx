@@ -420,7 +420,7 @@ describe("DashboardScreen — recent entries", () => {
     await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
 
     expect(await screen.findByText("Posted")).toBeTruthy();
-    expect(screen.getByText("Pending")).toBeTruthy();
+    expect(screen.getByText("Awaiting review")).toBeTruthy();
     expect(screen.getByText("Fuel")).toBeTruthy();
   });
 

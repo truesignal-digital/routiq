@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: form system</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#surfaces">Three surfaces</a>
+    <a href="#panel">Panel form</a>
+    <a href="#fields">Field kit</a>
+    <a href="#states">States after submit</a>
+    <a href="#dialog">Decision dialog</a>
+    <a href="#page">Page form</a>
+    <a href="#edit">Edit and correct</a>
+    <a href="#recipe">Recipe: build a form</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Form system</h2>
+      <p class="lede">One rule decides where a form opens, one field kit decides how each field looks, and one recipe decides how a form gets built and tested. Every form a user fills in ROUTIQ should come out of these three.</p>
+    </header>
+
+    <section class="section" id="surfaces">
+      <div class="kicker">Decision</div>
+      <h3>Three surfaces, chosen by the job</h3>
+      <p class="rule">The question is not "how big is the form" but "what is the user doing". Recording or changing a fact opens a panel. Making a decision opens a dialog. Capturing a long multi-part record opens a page.</p>
+      <table class="spec-table">
+        <thead><tr><th style="width:150px">Surface</th><th>Use it when</th><th>Looks like</th><th>Examples</th><th>Never</th></tr></thead>
+        <tbody>
+          <tr><td><b>Panel</b><br><span class="caption">default</span></td><td>Recording or editing a fact, up to about 12 fields, while the page behind stays the context.</td><td>Right sheet 440 px on desktop. Full-height bottom sheet on phone. Pinned context at the top, sticky footer.</td><td>Log fuel, record expense, add note, report a problem, open a work order, complete a work order, add a document, add a branch, register a person, invite a user, edit details.</td><td>Centered dialog for a create form. Popover with fields.</td></tr>
+          <tr><td><b>Dialog</b></td><td>A decision on an existing record: approve with note, reject, reverse, cancel, deactivate, release, close a period. At most one or two fields, usually a reason.</td><td>Centered alert dialog. Names the record, says what happens next, verb-labelled buttons.</td><td>Reject expense, reverse entry, cancel trip, deactivate branch, close period.</td><td>Creating records. Long forms. "OK / Cancel" labels.</td></tr>
+          <tr><td><b>Page</b></td><td>A long capture with several sections that someone fills over minutes, often offline, and that needs a draft.</td><td>Own route, sections as cards, a sticky footer. On phone, one section per step with a review step at the end.</td><td>Record a trip, register a truck.</td><td>Short forms that could be a panel. A page for a single amount.</td></tr>
+        </tbody>
+      </table>
+      <p class="caption">How each form is arranged inside its surface (six layouts, measures, which fields share a row) is on <a href="form-layouts.html">Form layouts</a>. This maps onto <code>CommandForm</code>'s existing surfaces: <code>panel</code> and <code>sheet</code> become the one panel look, <code>dialog</code> is kept only for decisions, <code>page</code> stays. The current-form-to-surface table is on the <a href="audit.html#forms">audit page</a>.</p>
+    </section>
+
+    <section class="section" id="panel">
+      <div class="kicker">Surface 1</div>
+      <h3>Panel form: the default</h3>
+      <p class="rule">Same frame every time: back link to the record it came from, title as a verb phrase, the pinned context, field groups in a fixed order, a footer that says what happens next. Fields are grouped what → how much → when → proof → more details.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · Record an expense on VH003</div>
+          <div class="frame desktop" style="min-height:760px">
+            <div data-sidebar="trucks"></div>
+            <div class="main" style="position:relative">
+              <div class="topbar">Trucks <span class="sep">/</span> <b>VH003</b></div>
+              <div class="page"><div class="row"><h1 class="pt">VH003 · Mercedes Actros</h1><span class="badge b-bad">Grounded</span></div><div class="tabs"><div class="on">Overview</div><div>Maintenance</div><div>Money</div></div></div>
+              <div class="scrim"></div>
+              <div class="sheet">
+                <div class="sheet-h layer l-overview"><span class="tag">Header · back, verb title, one-line description</span><div class="back"><i data-i="back"></i>VH003</div><h3>Record an expense</h3><div class="d">Goes to finance for approval before it counts.</div><span class="x"><i data-i="x"></i></span></div>
+                <div class="sheet-b">
+                  <div class="pinned layer l-details"><span class="tag">Pinned context · not a field</span><i data-i="truck"></i><div><div class="k">Vehicle</div><b>VH003 · LT 118 CF · Douala</b></div></div>
+                  <div class="fs layer l-details"><span class="tag">Group 1 · What</span>
+                    <div class="fs-h">What</div>
+                    <div class="field"><label>Category<span class="req">*</span></label><div class="seg"><div>Fuel</div><div class="on">Parts</div><div>Tolls</div><div>Other</div></div></div>
+                    <div class="field"><label>Description<span class="req">*</span></label><div class="input filled">Brake pads, front axle</div></div>
+                  </div>
+                  <div class="fs layer l-details"><span class="tag">Group 2 · How much · When</span>
+                    <div class="fs-h">How much</div>
+                    <div class="two">
+                      <div class="field"><label>Amount<span class="req">*</span></label><div class="input filled focus num">150 000<span class="suffix">XAF</span></div></div>
+                      <div class="field"><label>Date<span class="req">*</span></label><div class="input filled"><i data-i="cal"></i>Today, 4 Oct</div><div class="quick"><span>Today</span><span>Yesterday</span></div></div>
+                    </div>
+                  </div>
+                  <div class="fs layer l-details"><span class="tag">Group 3 · Proof</span>
+                    <div class="fs-h">Proof</div>
+                    <div class="upload"><i data-i="camera" data-c="lg"></i><div><b style="color:var(--foreground)">Take a photo of the receipt</b><br>or choose a file · you can add it later</div></div>
+                  </div>
+                  <div class="fold layer l-details"><span class="tag">Optional fields fold away</span><i data-i="chev"></i>More details (optional)<span class="c">Supplier, work order, note · 0 of 3 filled</span></div>
+                </div>
+                <div class="sheet-f layer l-act"><span class="tag">Footer · what happens next, cancel, submit last</span><span class="hint">Nadège approves it. You'll see it as "Waiting".</span><button class="btn">Cancel</button><button class="btn primary">Record expense</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Phone · same form, bottom sheet</div>
+          <div class="frame phone" style="min-height:820px">
+            <div class="ptop"><i data-i="back"></i><span class="crumb">Trucks</span><b>VH003</b></div>
+            <div class="page"></div>
+            <div class="scrim"></div>
+            <div class="sheet">
+              <div class="grab"></div>
+              <div class="sheet-h"><div class="back"><i data-i="back"></i>VH003</div><h3>Record an expense</h3><div class="d">Goes to finance for approval.</div><span class="x"><i data-i="x"></i></span></div>
+              <div class="sheet-b">
+                <div class="pinned"><i data-i="truck"></i><b>VH003 · LT 118 CF</b></div>
+                <div class="field"><label>Category<span class="req">*</span></label><div class="seg"><div>Fuel</div><div class="on">Parts</div><div>Tolls</div><div>Other</div></div></div>
+                <div class="field"><label>Description<span class="req">*</span></label><div class="input filled">Brake pads, front axle</div></div>
+                <div class="field"><label>Amount<span class="req">*</span></label><div class="input filled num" style="min-height:48px;font-size:18px;font-weight:650;color:var(--foreground)">150 000<span class="suffix">XAF</span></div><div class="help">Numeric keypad opens. No decimals for XAF.</div></div>
+                <div class="field"><label>Date<span class="req">*</span></label><div class="quick"><span style="background:var(--primary);color:white">Today</span><span>Yesterday</span><span>Pick a date…</span></div></div>
+                <div class="upload"><i data-i="camera" data-c="lg"></i><b style="color:var(--foreground)">Photo of the receipt</b></div>
+              </div>
+              <div class="sheet-f"><span class="hint">Nadège approves it.</span><button class="btn">Cancel</button><button class="btn primary">Record expense</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cols three" style="margin-top:18px">
+        <div class="spec-card"><h4>Frame</h4><ul><li>Title is the action as a verb phrase, the same words as the button that opened it.</li><li>The submit button repeats that verb ("Record expense"), never "Save" or "OK".</li><li>Submit is always the last button: right on desktop, right half on phone. Cancel sits before it. Today <code>CommandForm</code> puts submit first in panels and last in dialogs.</li><li>The footer hint says what happens after submit (approval, who sees it).</li></ul></div>
+        <div class="spec-card"><h4>Content</h4><ul><li>What the page already knows (vehicle, branch, work order) is pinned, not asked.</li><li>Group order: what, how much, when, proof, more details.</li><li>Required fields first, marked with a red asterisk. Optional fields fold into "More details (optional)" with a filled count.</li><li>Defaults: today's date, the context branch, the last reading as a hint.</li></ul></div>
+        <div class="spec-card"><h4>Behaviour</h4><ul><li>Closing with typed data asks "Discard this expense?" (dialog rules).</li><li>Escape and the × close; the browser Back closes the panel, not the page.</li><li>Phone: the sheet fills the screen, the footer stays above the keyboard.</li><li>After submit: the panel closes, a toast confirms with "View", and the record shows as pending (ADR-0001).</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="fields">
+      <div class="kicker">Field kit</div>
+      <h3>One component per kind of input</h3>
+      <p class="rule">Every field in every form is one of these. Each one owns its label, help, error and touch size, so a form is a list of fields and nothing else. Rules come from the contract schema, never retyped.</p>
+      <div class="cols three">
+        <div class="spec-card fs">
+          <h4>TextField / NoteField</h4>
+          <div class="field"><label>Description<span class="req">*</span></label><div class="input filled">Brake pads, front axle</div></div>
+          <div class="field"><label>Note<span class="optl">(optional)</span></label><div class="input" style="min-height:64px;align-items:flex-start;padding-top:9px">What should the next person know?</div><div class="help">Notes can't be edited after saving.</div></div>
+        </div>
+        <div class="spec-card fs">
+          <h4>MoneyField</h4>
+          <div class="field"><label>Amount<span class="req">*</span></label><div class="input filled num">150 000<span class="suffix">XAF</span></div><div class="help">Spaces as thousands separator. Integer for XAF (exponent 0).</div></div>
+          <div class="field"><label>Amount<span class="req">*</span></label><div class="input filled err num">0<span class="suffix">XAF</span></div><div class="msg">Enter an amount above 0.</div></div>
+        </div>
+        <div class="spec-card fs">
+          <h4>DateField</h4>
+          <div class="field"><label>Date<span class="req">*</span></label><div class="input filled"><i data-i="cal"></i>Today, 4 Oct 2026</div><div class="quick"><span>Today</span><span>Yesterday</span></div><div class="help">Popover calendar. Never a native date input.</div></div>
+          <div class="field"><label>Date and time<span class="req">*</span></label><div class="two"><div class="input filled"><i data-i="cal"></i>4 Oct</div><div class="input filled"><i data-i="clock"></i>07:30</div></div></div>
+        </div>
+        <div class="spec-card fs">
+          <h4>ChoiceField</h4>
+          <div class="field"><label>Fuel type<span class="req">*</span></label><div class="seg"><div class="on">Diesel</div><div>Petrol</div></div><div class="help">2 to 4 options: segmented. 5 to 12: select. More, or people and vehicles: search.</div></div>
+          <div class="field"><label>Category<span class="req">*</span></label><div class="input filled">Parts<span class="suffix"><i data-i="chev"></i></span></div></div>
+        </div>
+        <div class="spec-card fs">
+          <h4>PersonField / VehicleField</h4>
+          <div class="field"><label>Driver<span class="req">*</span></label><div class="input filled"><i data-i="search"></i>Sali Ahmadou</div><div class="help">Search by name or phone. "Register a new person" at the end of the list.</div></div>
+          <div class="field"><label>Vehicle</label><div class="pinned"><i data-i="truck"></i><b>VH003</b><span class="caption" style="margin:0 0 0 auto">from this page</span></div></div>
+        </div>
+        <div class="spec-card fs">
+          <h4>FileField · ReadingField</h4>
+          <div class="upload"><i data-i="camera" data-c="lg"></i><div><b style="color:var(--foreground)">Take a photo</b><br>or choose a file · PDF, JPG, PNG</div></div>
+          <div class="field"><label>Odometer<span class="req">*</span></label><div class="input filled num">232 180<span class="suffix">km</span></div><div class="help">Last reading 231 940 km on 1 Oct.</div></div>
+        </div>
+      </div>
+      <div class="cols even" style="margin-top:18px">
+        <div class="spec-card"><h4>States every field supports</h4>
+          <table class="spec-table" style="border:0"><tbody>
+            <tr><td><b>Empty</b></td><td>Placeholder is an example, not the label.</td></tr>
+            <tr><td><b>Focus</b></td><td>Ring token, 3 px.</td></tr>
+            <tr><td><b>Error</b></td><td>Red border + message under the field, shown on blur and on submit.</td></tr>
+            <tr><td><b>Read-only</b></td><td>Pinned style (grey block), not a disabled input.</td></tr>
+            <tr><td><b>Locked</b></td><td>Lock icon + one line why ("Period August is closed").</td></tr>
+          </tbody></table>
+        </div>
+        <div class="spec-card"><h4>Shared rules</h4><ul>
+          <li>Label above the field, sentence case, no colon.</li>
+          <li>Every control is at least 44 px tall (48 px for the main amount on phone).</li>
+          <li>Labels, help and errors all come from <code>t()</code>; error text maps from the contract's codes.</li>
+          <li>Two fields share a row only when they belong together (amount + date, date + time).</li>
+          <li>The field reads back in the record panel with the same label, in the same group.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="states">
+      <div class="kicker">Feedback</div>
+      <h3>States after submit</h3>
+      <p class="rule">Five outcomes, each with one look. They already exist in parts in <code>CommandForm</code>; this fixes which one shows when.</p>
+      <div class="cols three">
+        <div class="spec-card fs"><h4>1 · Fields invalid (client)</h4>
+          <div class="errsum"><b>2 things to fix</b><br><a>Amount</a> · <a>Date</a></div>
+          <div class="field"><label>Amount<span class="req">*</span></label><div class="input err">0<span class="suffix">XAF</span></div><div class="msg">Enter an amount above 0.</div></div>
+          <p class="caption">Summary at the top of the body, links move focus to the field. Nothing is sent.</p>
+        </div>
+        <div class="spec-card fs"><h4>2 · Server refused</h4>
+          <div class="errsum"><b>The server refused this expense.</b><br>Period August 2026 is closed. Choose a date in October.</div>
+          <p class="caption">Banner above the untouched fields, text from the stable error code. Fields keep their values.</p>
+        </div>
+        <div class="spec-card fs"><h4>3 · Someone else changed it</h4>
+          <div class="banner-warn"><b>This entry changed while you were editing.</b><br>Refresh to see the latest version, then make your change again.</div>
+          <div class="row"><button class="btn primary sm">Refresh</button></div>
+          <p class="caption">VERSION_CONFLICT replaces the form, as today.</p>
+        </div>
+        <div class="spec-card fs"><h4>4 · Saved on this phone</h4>
+          <div class="attn info"><i data-i="wifioff"></i><div><div class="t">No connection. Saved on this phone.</div><div class="s">It sends by itself when you're back online.</div></div></div>
+          <p class="caption">Offline replay (§6). The record shows a "Not sent yet" badge until the server accepts it.</p>
+        </div>
+        <div class="spec-card fs"><h4>5 · Done</h4>
+          <div class="toast" style="position:static;width:auto;box-shadow:none"><i data-i="check" data-c="lg"></i><div><div class="t">Expense recorded</div><div class="s">#15 · 150 000 XAF · waiting for approval</div></div><a>View</a></div>
+          <p class="caption">Panel closes. One toast via <code>notifyCommandSuccess</code>. No inline success panels.</p>
+        </div>
+        <div class="spec-card fs"><h4>While sending</h4>
+          <div class="row"><button class="btn">Cancel</button><button class="btn primary" style="opacity:.7">Recording…</button></div>
+          <p class="caption">Submit shows the -ing form of its verb and is disabled. Fields stay visible. Double-submit is impossible (idempotency key is per form open).</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="dialog">
+      <div class="kicker">Surface 2</div>
+      <h3>Decision dialog</h3>
+      <p class="rule">A dialog is for a decision on something that already exists. It names the record, says what will happen and what stays, asks for a reason when the decision is negative, and labels both buttons with what they do.</p>
+      <div class="cols even">
+        <div>
+          <div class="frame-label">Desktop · Reverse a posted entry</div>
+          <div class="frame desktop" style="min-height:460px">
+            <div data-sidebar="finance"></div>
+            <div class="main" style="position:relative">
+              <div class="topbar">Finance <span class="sep">/</span> <b>#11 Fuel 180 L</b></div>
+              <div class="page"><h1 class="pt">#11 Fuel 180 L</h1></div>
+              <div class="scrim"></div>
+              <div class="dialog">
+                <div><h3>Reverse #11 Fuel 180 L?</h3><div class="d">A new entry of −135 000 XAF cancels it in the books. #11 stays in the history, marked "Reversed".</div></div>
+                <div class="field"><label>Reason<span class="req">*</span></label><div class="input" style="min-height:64px;align-items:flex-start;padding-top:9px">Recorded twice; the real entry is #12.</div></div>
+                <div class="f"><button class="btn">Keep entry</button><button class="btn danger">Reverse entry</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Phone · same dialog</div>
+          <div class="frame phone" style="min-height:560px">
+            <div class="ptop"><i data-i="back"></i><b>#11 Fuel 180 L</b></div>
+            <div class="scrim"></div>
+            <div class="dialog">
+              <div><h3>Reverse #11 Fuel 180 L?</h3><div class="d">A new entry of −135 000 XAF cancels it. #11 stays in the history.</div></div>
+              <div class="field"><label>Reason<span class="req">*</span></label><div class="input" style="min-height:64px"></div></div>
+              <div class="f"><button class="btn">Keep entry</button><button class="btn danger">Reverse entry</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="margin-top:18px"><h4>Which decisions ask for what</h4>
+        <table class="spec-table" style="border:0"><thead><tr><th>Decision</th><th>Reason</th><th>Button style</th><th>Dismiss label</th></tr></thead><tbody>
+          <tr><td>Approve expense</td><td>No dialog: one tap from the queue or panel footer</td><td>Primary</td><td>—</td></tr>
+          <tr><td>Reject expense</td><td>Required</td><td>Destructive "Reject expense"</td><td>Keep it</td></tr>
+          <tr><td>Reverse entry</td><td>Required</td><td>Destructive "Reverse entry"</td><td>Keep entry</td></tr>
+          <tr><td>Cancel trip / work order</td><td>Required</td><td>Destructive "Cancel trip"</td><td>Keep trip</td></tr>
+          <tr><td>Release a grounded vehicle</td><td>Required (who checked it)</td><td>Primary "Release VH003"</td><td>Not now</td></tr>
+          <tr><td>Deactivate branch / user</td><td>Optional</td><td>Destructive "Deactivate"</td><td>Keep active</td></tr>
+          <tr><td>Close period</td><td>No</td><td>Primary "Close August"</td><td>Not now</td></tr>
+          <tr><td>Discard a half-filled form</td><td>No</td><td>Destructive "Discard"</td><td>Keep editing</td></tr>
+        </tbody></table>
+        <p class="caption">French note: "Annuler" means both "dismiss" and "cancel the trip". The dismiss button never says "Annuler" in a dialog; it says what stays ("Garder le trajet").</p>
+      </div>
+    </section>
+
+    <section class="section" id="page">
+      <div class="kicker">Surface 3</div>
+      <h3>Page form</h3>
+      <p class="rule">For long captures only: Record a trip and Register a truck. On desktop all sections show at once with a sticky footer. On phone each section is a step, ending with a review screen where every answer has a "Change" link. The draft survives a closed tab and no connection.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · Record a trip</div>
+          <div class="frame desktop" style="min-height:620px">
+            <div data-sidebar="trips"></div>
+            <div class="main" style="position:relative">
+              <div class="topbar">Trips <span class="sep">/</span> <b>Record a trip</b><div class="right"><span class="caption" style="margin:0">Draft saved 07:42</span></div></div>
+              <div class="page" style="padding-bottom:80px;max-width:760px">
+                <div class="ph"><div><h1 class="pt">Record a trip</h1><div class="lead">Fill what you know now. You can close the trip later with the arrival reading.</div></div></div>
+                <div class="card"><div class="card-h"><h2>Vehicle and driver</h2><span class="badge b-ok">Done</span></div><div class="card-b two"><div class="field"><label>Truck<span class="req">*</span></label><div class="input filled">VH001 · LT 452 AB</div></div><div class="field"><label>Driver<span class="req">*</span></label><div class="input filled">Sali Ahmadou</div></div></div></div>
+                <div class="card"><div class="card-h"><h2>Route</h2><span class="badge b-warn">1 missing</span></div><div class="card-b two"><div class="field"><label>From<span class="req">*</span></label><div class="input filled">Douala, port</div></div><div class="field"><label>To<span class="req">*</span></label><div class="input err">Search a place</div><div class="msg">Choose where the trip goes.</div></div></div></div>
+                <div class="card"><div class="card-h"><h2>Departure</h2></div><div class="card-b two"><div class="field"><label>Date and time<span class="req">*</span></label><div class="input filled"><i data-i="cal"></i>Today, 07:30</div></div><div class="field"><label>Odometer<span class="req">*</span></label><div class="input filled num">184 220<span class="suffix">km</span></div></div></div></div>
+              </div>
+              <div class="actionbar"><span class="caption" style="margin:0">2 of 3 sections complete</span><button class="btn" style="margin-left:auto">Save draft</button><button class="btn primary">Start trip</button></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Phone · last step: review</div>
+          <div class="frame phone" style="min-height:780px">
+            <div class="ptop"><i data-i="x"></i><b>Record a trip</b><span class="caption" style="margin:0 0 0 auto">Step 4 of 4</span></div>
+            <div class="page review" style="padding-bottom:90px">
+              <div class="steps"><div class="done"></div><div class="done"></div><div class="done"></div><div class="on"></div></div>
+              <h1 class="pt">Check before you start</h1>
+              <div class="card"><div class="card-b" style="padding-top:14px"><dl>
+                <dt>Truck</dt><dd>VH001</dd><a class="chg">Change</a>
+                <dt>Driver</dt><dd>Sali Ahmadou</dd><a class="chg">Change</a>
+                <dt>From</dt><dd>Douala, port</dd><a class="chg">Change</a>
+                <dt>To</dt><dd>Yaoundé, Mvan</dd><a class="chg">Change</a>
+                <dt>Departure</dt><dd>Today 07:30</dd><a class="chg">Change</a>
+                <dt>Odometer</dt><dd class="num">184 220 km</dd><a class="chg">Change</a>
+              </dl></div></div>
+              <div class="banner-info">Works offline. It sends when you're back online.</div>
+            </div>
+            <div class="actionbar" style="bottom:0;grid-template-columns:1fr 2fr"><button class="btn">Back</button><button class="btn primary">Start trip</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">The same form definition drives both layouts: sections on desktop, steps on phone. Write the sections once.</p>
+    </section>
+
+    <section class="section" id="edit">
+      <div class="kicker">ADR-0008</div>
+      <h3>Edit and correct look the same to the user</h3>
+      <p class="rule">"Edit" opens the same form the record was created with, prefilled, in the same surface. What happens underneath depends on the record (ADR-0008): a plain edit, an author editing their own pending entry, or a correction that reverses and re-records. When it is a correction, the form says so with a banner, shows old → new on each changed field, and asks for a reason.</p>
+      <div class="cols even">
+        <div class="frame" style="min-height:540px">
+          <div class="sheet" style="position:relative;width:100%;box-shadow:none;border:0;height:100%">
+            <div class="sheet-h"><div class="back"><i data-i="back"></i>#14 Brake pads</div><h3>Edit expense</h3><div class="d">Still waiting for approval, so your change replaces it.</div></div>
+            <div class="sheet-b">
+              <div class="field"><label>Description<span class="req">*</span></label><div class="input filled">Brake pads, front axle</div></div>
+              <div class="field"><label>Amount<span class="req">*</span></label><div class="input filled num">150 000<span class="suffix">XAF</span></div></div>
+              <div class="field"><label>Date<span class="req">*</span></label><div class="input filled"><i data-i="cal"></i>3 Oct</div></div>
+            </div>
+            <div class="sheet-f"><span class="hint">Only you can edit it, until it's approved.</span><button class="btn">Cancel</button><button class="btn primary">Save changes</button></div>
+          </div>
+        </div>
+        <div class="frame" style="min-height:540px">
+          <div class="sheet" style="position:relative;width:100%;box-shadow:none;border:0;height:100%">
+            <div class="sheet-h"><div class="back"><i data-i="back"></i>#11 Fuel 180 L</div><h3>Correct expense</h3><div class="d">Posted, so the books keep the original.</div></div>
+            <div class="sheet-b">
+              <div class="banner-warn"><b>Correction.</b> #11 will be reversed and a new entry recorded with your change. Both show in the history.</div>
+              <div class="field"><label>Amount<span class="req">*</span></label><div class="input filled num">131 000<span class="suffix">XAF</span></div><div class="diff"><span class="strike num">135 000</span><span class="arrow">→</span><b class="num">131 000 XAF</b></div></div>
+              <div class="field"><label>Reason for the correction<span class="req">*</span></label><div class="input filled">Pump receipt says 175 L, not 180 L.</div></div>
+              <div class="spec-card" style="padding:12px 14px"><div class="caption" style="margin:0 0 6px">What will be recorded</div><div class="feed"><div><span class="dot bad"></span>#16 reverses #11<span class="when num">−135 000</span></div><div><span class="dot warn"></span>#17 Fuel 175 L, waiting approval<span class="when num">131 000</span></div></div></div>
+            </div>
+            <div class="sheet-f"><span class="hint">Goes to finance for approval.</span><button class="btn">Cancel</button><button class="btn primary">Record correction</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">The Details tab keeps its in-place edit (#84): the facts card turns into the same fields, in the same groups, with the same footer.</p>
+    </section>
+
+    <section class="section" id="recipe">
+      <div class="kicker">Reproduce</div>
+      <h3>Recipe: build a new form in five files</h3>
+      <p class="rule">A form should take an afternoon, not a week. The recipe fixes the files, the order and the tests, so every form arrives with the same checks.</p>
+      <div class="cols even">
+        <div class="spec-card"><h4>Files</h4><ol>
+          <li><code>packages/contracts/src/commands/&lt;name&gt;.ts</code>: payload schema + field helpers (already the command rule).</li>
+          <li><code>apps/web/src/&lt;feature&gt;/&lt;Name&gt;Form.tsx</code>: <code>useCommandForm(schema, command)</code> + <code>&lt;CommandForm surface&gt;</code> + field-kit fields. No layout code beyond groups.</li>
+          <li><code>&lt;Name&gt;Form.test.tsx</code>: the six standard tests below, from <code>test/form-harness.ts</code>.</li>
+          <li><code>i18n/locales/{fr,en}.json</code>: <code>&lt;feature&gt;.&lt;name&gt;.{title,description,submit,submitting,hint,success}</code> + field labels.</li>
+          <li><code>.agents/skills/verify-routiq/features/&lt;feature&gt;.md</code>: one "open, fill, submit, see it" recipe line.</li>
+        </ol></div>
+        <div class="spec-card"><h4>Six standard tests (one harness, one line each)</h4><ol>
+          <li>Opens with the pinned context and defaults filled.</li>
+          <li>Submit with empty required fields shows the summary and sends nothing.</li>
+          <li>A valid fill sends exactly the expected payload through <code>commandClient</code>.</li>
+          <li>A server error code shows its translated banner and keeps the values.</li>
+          <li>VERSION_CONFLICT replaces the form with Refresh.</li>
+          <li>Success closes the surface and calls <code>notifyCommandSuccess</code>.</li>
+        </ol></div>
+        <div class="spec-card"><h4>Guards (tests that fail the build)</h4><ul>
+          <li>No <code>type="date"</code> / <code>datetime-local</code> anywhere in <code>src/</code>.</li>
+          <li><code>Dialog</code> containing a <code>&lt;form&gt;</code> only in the allow-list of decision dialogs.</li>
+          <li>Every <code>*Form.tsx</code> has a sibling test that calls the harness.</li>
+          <li>Submit labels are not "Save"/"OK"/"Valider" alone (key lint on <code>*.submit</code>).</li>
+          <li>No <code>useState</code>-driven forms: every form goes through <code>useCommandForm</code>.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Done means</h4><ul>
+          <li>Typecheck and the form's test file pass.</li>
+          <li><code>pnpm verify drive</code> shows it open on desktop and phone, filled, submitted, and the stored row read back through the API.</li>
+          <li>Screenshots in fr and en; walkthrough video in English on the PR.</li>
+        </ul></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>
