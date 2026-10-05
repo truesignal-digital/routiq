@@ -32,7 +32,7 @@ async function startEditing(options: Parameters<typeof openVehicle>[1] = { role:
   const recorded = await openVehicle(DETAILS, options);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Edit details" }));
-  await screen.findByRole("button", { name: "Save" });
+  await screen.findByRole("button", { name: "Save details" });
   return { recorded, user };
 }
 
@@ -73,7 +73,7 @@ describe("the Details card's edit mode", () => {
     await user.type(field("Plate"), "  LT 132 AB ");
     await user.clear(field("Tonnage (t)"));
     await user.type(field("Tonnage (t)"), "26,5");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
 
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     const [command] = recorded.commands;
@@ -91,7 +91,7 @@ describe("the Details card's edit mode", () => {
 
   it("sends nothing when nothing changed", async () => {
     const { recorded, user } = await startEditing();
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
     expect(await screen.findByText("Nothing to save: no changes.")).toBeTruthy();
     expect(recorded.commands).toEqual([]);
     expect(await screen.findByRole("button", { name: "Edit details" })).toBeTruthy();
@@ -108,7 +108,7 @@ describe("the Details card's edit mode", () => {
     });
     await user.clear(field("Model"));
     await user.type(field("Model"), "Actros 1845");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
 
     const banner = await screen.findByRole("alert");
     expect(banner.textContent).toContain("Someone else changed this vehicle. Reload to see their changes.");
@@ -132,7 +132,7 @@ describe("the Details card's edit mode", () => {
     await waitFor(() => expect(screen.getAllByText("LT 999 ZZ").length).toBeGreaterThan(0));
     expect(field("Model").value).toBe("Actros 1845");
     expect(field("Plate").value).toBe("LT 482 AB");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     // Still versioned against what the editor started from.
     expect(recorded.commands[0]?.body.envelope["expectedVersion"]).toBe(4);
@@ -147,7 +147,7 @@ describe("the Details card's edit mode", () => {
     await user.type(field("Acquisition amount"), "45,000.50");
     await user.clear(field("Axle count"));
     await user.type(field("Axle count"), "three");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
 
     expect(await screen.findByText(`Enter a year between 1950 and ${latestModelYear()}.`)).toBeTruthy();
     expect(screen.getByText("The chassis number is too long (17 characters at most).")).toBeTruthy();
@@ -164,7 +164,7 @@ describe("the Details card's edit mode", () => {
       asset: asset({ acquisitionDate: null, acquisitionAmountMinor: null }),
     });
     await user.type(field("Acquisition amount"), "12000000");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
     expect(await screen.findByText("Add the acquisition date to record an amount.")).toBeTruthy();
     expect(recorded.commands).toEqual([]);
   });
@@ -178,7 +178,7 @@ describe("the Details card's edit mode", () => {
     await user.click(screen.getByRole("button", { name: "Acquisition date" }));
     await user.click(await screen.findByRole("button", { name: "Previous month" }));
     await user.click(screen.getByRole("button", { name: "Thursday, February 15, 2024" }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, acquisitionDate: "2024-02-15" });
 
@@ -203,7 +203,7 @@ describe("the Details card's edit mode", () => {
     });
     await user.clear(field("Plate"));
     await user.type(field("Plate"), "CE 777 AA");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save details" }));
     expect(await screen.findByText("Another vehicle already has this plate.")).toBeTruthy();
     expect(field("Plate").getAttribute("aria-invalid")).toBe("true");
   });
@@ -255,11 +255,11 @@ describe("who may edit", () => {
     expect(screen.queryByRole("button", { name: /Edit details|Modifier/ })).toBeNull();
   });
 
-  it("fr-CM: Modifier, Enregistrer and Annuler", async () => {
+  it("fr-CM: Modifier, Enregistrer les informations and Annuler", async () => {
     await openVehicle(DETAILS, { role: "OPS_MANAGER", locale: "fr-CM" });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Modifier" }));
-    expect(await screen.findByRole("button", { name: "Enregistrer" })).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: "Modifier les informations" }));
+    expect(await screen.findByRole("button", { name: "Enregistrer les informations" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Annuler" })).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Marque" })).toBeTruthy();
     expect(screen.getByText("Se modifie par ses propres actions")).toBeTruthy();
@@ -267,7 +267,7 @@ describe("who may edit", () => {
 
   it("keeps Save and Cancel on the phone", async () => {
     await startEditing({ role: "OPS_MANAGER", width: 390 });
-    expect(screen.getByRole("button", { name: "Save" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save details" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
   });
 });

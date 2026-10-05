@@ -3,6 +3,7 @@ import { DateField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AddOrRenewDocumentPayload } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import {
   CommandForm,
   useCommandSubmission,
@@ -61,6 +62,7 @@ export function DocumentForm({
   onDismiss,
 }: DocumentFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const typesQuery = useCategories("DOCUMENT_TYPE");
@@ -117,7 +119,7 @@ export function DocumentForm({
       title={
         renews
           ? t("documents.renewTitle", { name: renews.title ?? renews.type.code })
-          : t("documents.addTitle")
+          : label("add-or-renew-document")
       }
       back={back}
       error={submission.error}
@@ -126,9 +128,7 @@ export function DocumentForm({
         await invalidate();
         onDismiss();
       }}
-      submitLabel={t("documents.save")}
-      submittingLabel={t("assets.actions.working")}
-      cancelLabel={t("assets.form.cancel")}
+      command={renews ? { command: "add-or-renew-document", intent: "renew" } : "add-or-renew-document"}
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}

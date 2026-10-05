@@ -141,8 +141,8 @@ export function LoginScreen() {
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting
-              ? t("login.submitting")
-              : t("login.submit")}
+              ? t("login.signingIn")
+              : t("login.signIn")}
           </Button>
         </form>
       </Form>

@@ -83,10 +83,10 @@ describe("AssetActionForm", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByRole("dialog", { name: "Affecter" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Changer d'agence" })).toBeTruthy();
     expect(screen.getByText("Custodian picker")).toBeTruthy();
     // A custodian alone is enough: no branch has to be picked with it.
-    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Changer d'agence" }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalledOnce());
     expect(client.seen[0]!.name).toBe("assign-asset");

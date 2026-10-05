@@ -322,12 +322,12 @@ describe("assets explorer server-side filtering", () => {
       await userEvent.click(screen.getByRole("button", { name: "Actions" }));
       const menu = await screen.findByRole("menu");
       expect(within(menu).getByText("Mettre en service")).toBeDefined();
-      expect(within(menu).getByText("Affecter")).toBeDefined();
+      expect(within(menu).getByText("Changer d'agence")).toBeDefined();
 
       await userEvent.click(within(menu).getByText("Mettre en service"));
 
       const dialog = await screen.findByRole("dialog");
-      expect(within(dialog).getByRole("button", { name: "Confirmer" })).toBeDefined();
+      expect(within(dialog).getByRole("button", { name: "Mettre en service" })).toBeDefined();
     });
 
     it("offers a viewer no commands at all", async () => {
@@ -338,7 +338,7 @@ describe("assets explorer server-side filtering", () => {
       await userEvent.click(screen.getByRole("button", { name: "Actions" }));
       const menu = await screen.findByRole("menu");
 
-      expect(within(menu).queryByText("Affecter")).toBeNull();
+      expect(within(menu).queryByText("Changer d'agence")).toBeNull();
       expect(within(menu).getByText("Ouvrir la fiche")).toBeDefined();
     });
   });

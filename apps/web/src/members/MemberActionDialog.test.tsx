@@ -110,7 +110,7 @@ describe("MemberActionDialog", () => {
 
     await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
     await userEvent.click(await screen.findByRole("option", { name: "Maintenance" }));
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer le rôle" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
@@ -129,7 +129,7 @@ describe("MemberActionDialog", () => {
     expect(screen.getByText(/Estelle Ngo/)).toBeTruthy();
     expect(client.seen).toHaveLength(0);
 
-    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.name).toBe("deactivate-member");
@@ -144,7 +144,7 @@ describe("MemberActionDialog", () => {
       role: "ADMIN",
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver l'utilisateur" }));
 
     expect(
       await screen.findByText("Votre espace doit garder au moins un administrateur actif."),
@@ -156,7 +156,7 @@ describe("MemberActionDialog", () => {
     const client = fakeClient({ ok: false, code: "SELF_DEACTIVATION" });
     renderDialog("deactivate", client);
 
-    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver l'utilisateur" }));
 
     expect(
       await screen.findByText(
@@ -171,7 +171,7 @@ describe("MemberActionDialog", () => {
 
     await userEvent.type(screen.getByLabelText("Code PIN"), "9134");
     await userEvent.type(screen.getByLabelText("Confirmer le code PIN"), "9134");
-    await userEvent.click(screen.getByRole("button", { name: "Réinitialiser" }));
+    await userEvent.click(screen.getByRole("button", { name: "Réinitialiser le code" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.name).toBe("reset-member-pin");
@@ -192,7 +192,7 @@ describe("MemberActionDialog", () => {
     await userEvent.type(screen.getByLabelText("Confirmer le code PIN"), "9135");
 
     expect(screen.getByText("Les deux codes ne correspondent pas.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Réinitialiser" }));
+    await userEvent.click(screen.getByRole("button", { name: "Réinitialiser le code" }));
     expect(client.seen).toHaveLength(0);
   });
 
@@ -202,7 +202,7 @@ describe("MemberActionDialog", () => {
 
     await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
     await userEvent.click(await screen.findByRole("option", { name: "Maintenance" }));
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer le rôle" }));
 
     await userEvent.click(await screen.findByRole("button", { name: "Recharger" }));
     await waitFor(() => expect(onDismiss).toHaveBeenCalled());

@@ -166,7 +166,7 @@ describe("SiteHeader breadcrumb", () => {
     expect(crumbs()).toEqual([
       ["nav.home", "/"],
       ["nav.activities", "/activities"],
-      ["activities.record.title", null],
+      ["commands.record-journey-sheet.label", null],
     ]);
   });
 

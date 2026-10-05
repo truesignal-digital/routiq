@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { Pencil, RotateCw, TriangleAlert } from "lucide-react";
 import {
@@ -55,6 +56,7 @@ type Row = readonly [string, ReactNode];
  */
 export function DetailsTab() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { asset, viewer, refresh } = useVehicle();
   /** The vehicle as it stood when editing began: what the edit is compared and versioned against. */
   const [base, setBase] = useState<AssetDetail>();
@@ -92,7 +94,7 @@ export function DetailsTab() {
               render={<Button variant="outline" onClick={() => setBase(asset)} />}
             >
               <Pencil aria-hidden />
-              {t("vehicle.details.edit.button")}
+              {label("update-asset-details")}
             </TooltipTrigger>
             <TooltipContent>{t("vehicle.details.edit.tooltip")}</TooltipContent>
           </Tooltip>
@@ -338,6 +340,7 @@ function DetailsEditCard({
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const { gates, refresh } = useVehicle();
   const locale = i18n.language;
   const [submitting, setSubmitting] = useState(false);
@@ -546,7 +549,7 @@ function DetailsEditCard({
                 {t("vehicle.details.edit.cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? t("vehicle.details.edit.saving") : t("vehicle.details.edit.save")}
+                {label("update-asset-details", submitting ? "submitting" : "submit")}
               </Button>
             </div>
           </div>

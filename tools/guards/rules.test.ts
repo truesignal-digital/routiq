@@ -190,6 +190,23 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H15",
+    bad: [
+      file(
+        "apps/web/src/i18n/locales/fr.json",
+        JSON.stringify({ maintenance: { actions: { cancelWorkOrder: "Annuler l'ordre de travail", newSubmit: "Créer" } } }, null, 2),
+      ),
+      file("apps/web/src/i18n/presets/trucking.en.json", JSON.stringify({ assets: { form: { submit: "Register truck" } } }, null, 2)),
+    ],
+    good: [
+      file(
+        "apps/web/src/i18n/locales/fr.json",
+        JSON.stringify({ commands: { "create-work-order": { label: "Créer un ordre de travail", submit: "Créer l'ordre de travail" } } }, null, 2),
+      ),
+      file("apps/web/src/screens/X.tsx", 'const submit = t("commands.create-work-order.submit");'),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],

@@ -95,7 +95,7 @@ describe("AddMemberDialog", () => {
     const { onAdded, onOpenChange } = renderDialog(client);
 
     await fillForm();
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
@@ -119,7 +119,7 @@ describe("AddMemberDialog", () => {
     await fillForm();
     await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Yaoundé" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload.branchScope).toEqual(["branch-dla", "branch-yde"]);
@@ -130,7 +130,7 @@ describe("AddMemberDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm();
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     expect(
       await screen.findByText("Ce nom d'utilisateur est déjà pris dans votre espace."),
@@ -144,7 +144,7 @@ describe("AddMemberDialog", () => {
     renderDialog(client);
 
     await fillForm({ pin: "4821", confirmPin: "4822" });
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     expect(await screen.findByText("Les deux codes ne correspondent pas.")).toBeTruthy();
     expect(client.seen).toHaveLength(0);
@@ -157,7 +157,7 @@ describe("AddMemberDialog", () => {
     await fillForm();
     expect(screen.getByLabelText("Code PIN").getAttribute("type")).toBe("password");
 
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
     await waitFor(() => expect(client.seen).toHaveLength(1));
 
     // Not in a field, not in a confirmation, not anywhere: the PIN leaves this

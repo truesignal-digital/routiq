@@ -207,7 +207,7 @@ describe("LogFuelForm", () => {
     fireEvent.change(screen.getByLabelText("Odometer in km (optional)"), {
       target: { value: "412850" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Save the reading again" }));
+    await userEvent.click(screen.getByRole("button", { name: "Record the reading" }));
 
     await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
     // The retry replays the reading; the expense is never sent a second time.

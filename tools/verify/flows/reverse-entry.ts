@@ -16,11 +16,11 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await nav(`/finance/entries/${entry.id}`);
   await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
   await quiet();
-  await page.getByRole("button", { name: t("Contre-passer", "Reverse"), exact: true }).click();
+  await page.getByRole("button", { name: t("Contre-passer l'écriture", "Reverse entry"), exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(t("Motif du contre-passage", "Reason for reversal")).fill("Verification run: duplicate fuel receipt");
   await shot("reverse-dialog");
-  await dialog.getByRole("button", { name: t("Contre-passer", "Reverse"), exact: true }).click();
+  await dialog.getByRole("button", { name: t("Contre-passer l'écriture", "Reverse entry"), exact: true }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/finance/entries/") && !url.pathname.endsWith(entry.id), { timeout: 15_000 });
   await page.getByRole("button", { name: `${t("Extourne l'écriture", "Reverses entry")} #${entry.entryNumber}` }).waitFor();
   await quiet();
