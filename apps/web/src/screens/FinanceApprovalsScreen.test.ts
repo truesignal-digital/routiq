@@ -157,11 +157,7 @@ function successfulIntentRecorder(submissionOrder: string[]) {
   );
 }
 
-/**
- * Open a row's ⋯ menu and choose a decision. Approve and reject moved off the
- * row into the menu, so the dialog's confirm button is now the only plain
- * button carrying those labels.
- */
+/** Open a row's ⋯ menu and choose a decision. */
 async function chooseRowAction(
   user: ReturnType<typeof userEvent.setup>,
   rowIndex: number,
@@ -203,9 +199,10 @@ describe("finance approval command routing", () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen));
 
+    // Approve is one tap: the menu item sends the command, no dialog first.
     await chooseRowAction(user, 0, "Approve entry");
-    await user.click(screen.getByRole("button", { name: "Approve entry" }));
     await waitFor(() => expect(submissionOrder).toEqual(["approve-entry"]));
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.toastAdd).toHaveBeenCalledWith({
       type: "success",
       title: "Entry approved",
@@ -266,12 +263,12 @@ describe("finance approval command routing", () => {
     renderScreen(createElement(FinanceApprovalsScreen), client);
 
     await chooseRowAction(user, 0, "Approve entry");
-    await user.click(screen.getByRole("button", { name: "Approve entry" }));
 
-    await waitFor(() => expect(keys.length).toBe(2));
+    await waitFor(() => expect(keys.length).toBe(3));
     expect(keys).toEqual([
       ["ws", "sotrafret", "finance", "approvals"],
       ["ws", "sotrafret", "finance", "entries"],
+      ["ws", "sotrafret", "finance", "entry"],
     ]);
   });
 
