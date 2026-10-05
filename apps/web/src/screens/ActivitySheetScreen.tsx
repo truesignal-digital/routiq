@@ -900,9 +900,10 @@ function SheetForm({
             disabled={form.formState.isSubmitting}
             onClick={() => void submitSheet(true)()}
           >
-            {form.formState.isSubmitting && closing
-              ? t("activities.record.closingSubmitting")
-              : t("activities.record.submitAndClose")}
+            {label(
+              { command: "record-journey-sheet", intent: "close" },
+              form.formState.isSubmitting && closing ? "submitting" : "submit",
+            )}
           </Button>
           <Button
             type="submit"

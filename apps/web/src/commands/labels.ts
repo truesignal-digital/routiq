@@ -15,6 +15,7 @@ export const COMMAND_INTENTS = {
   "assign-asset": ["custodian"],
   "add-or-renew-document": ["renew"],
   "set-branch-status": ["deactivate", "reactivate"],
+  "record-journey-sheet": ["close"],
 } as const satisfies Partial<Record<CommandName, readonly string[]>>;
 
 type Intents = typeof COMMAND_INTENTS;
