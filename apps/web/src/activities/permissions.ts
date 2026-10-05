@@ -18,6 +18,19 @@ export function canRecordActivities(
   return role !== undefined && TRIP_RECORDERS.includes(role);
 }
 
+/**
+ * Closing a trip and swapping its vehicle: a trip recorder, but a DRIVER only
+ * on the trips they recorded (server: OWN_RECORDS_ONLY).
+ */
+export function canCloseActivity(
+  me: { role: Role; principalId: string } | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+  activity: { recordedByPrincipalId: string | null },
+): boolean {
+  if (!canRecordActivities(me?.role, enabledModules)) return false;
+  return me?.role !== "DRIVER" || activity.recordedByPrincipalId === me.principalId;
+}
+
 /** Reopening a closed job — §5.1 gives it one approval, i.e. a manager. */
 export function canReopenActivity(
   role: Role | undefined,

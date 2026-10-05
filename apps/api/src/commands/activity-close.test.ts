@@ -66,15 +66,16 @@ describe("close-activity.v1 / reopen-activity.v1", () => {
     await ctx.close();
   });
 
+  /** Recorded by the DRIVER unless told otherwise, so the DRIVER may close it. */
   async function openJob(
-    opts: { withCrew?: boolean; withReading?: boolean } = {},
+    opts: { withCrew?: boolean; withReading?: boolean; token?: string } = {},
   ): Promise<{ activityId: string; segmentId: string }> {
     const activityId = randomUUID();
     const segmentId = randomUUID();
     const response = await ctx.app.inject({
       method: "POST",
       url: "/v1/commands/create-activity",
-      headers: { authorization: `Bearer ${managerToken}` },
+      headers: { authorization: `Bearer ${opts.token ?? clerkToken}` },
       payload: createActivityCommand.parse({
         name: "create-activity",
         version: 1,
@@ -326,5 +327,24 @@ describe("close-activity.v1 / reopen-activity.v1", () => {
     expect(response.json().warnings).not.toContain("ACTIVITY_NO_LEGS");
     expect(response.json().warnings).not.toContain("ACTIVITY_MISSING_CREW");
     expect(response.json().warnings).not.toContain("ACTIVITY_MISSING_START_READING");
+  });
+
+  /** docs/reference/roles-and-access.md: Chauffeur closes a trip, own only. */
+  it("lets a DRIVER close only the trips they recorded", async () => {
+    const { activityId } = await openJob({ token: managerToken });
+    const refused = await close(activityId);
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json()).toMatchObject({
+      error: { code: "OWN_RECORDS_ONLY", metadata: { entityType: "activity" } },
+    });
+    const [untouched] = await ctx.db
+      .select()
+      .from(activities)
+      .where(eq(activities.id, activityId));
+    expect(untouched?.status).toBe("OPEN");
+
+    // A manager closes anyone's trip.
+    const { activityId: driversTrip } = await openJob();
+    expect((await close(driversTrip, { token: managerToken })).statusCode).toBe(200);
   });
 });

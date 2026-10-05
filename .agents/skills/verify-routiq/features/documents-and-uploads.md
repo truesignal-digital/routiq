@@ -20,7 +20,7 @@ Vehicle documents (inspection, insurance, permit, registration) are tracked with
 
 Preconditions:
 
-- Slot up (storage healthy in doctor). Fresh seed: VH003's technical inspection expired 3 days ago, insurance expires in 12 days, permit valid, registration without expiry; several entries have no receipt (`pnpm verify api GET '/v1/finance/entries?evidence=MISSING' --role admin`). Uploaders: ADMIN, OPS_MANAGER, FIELD_SUBMITTER.
+- Slot up (storage healthy in doctor). Fresh seed: VH003's technical inspection expired 3 days ago, insurance expires in 12 days, permit valid, registration without expiry; several entries have no receipt (`pnpm verify api GET '/v1/finance/entries?evidence=MISSING' --role admin`). Who adds or renews a document: DIRECTOR, ADMIN, FINANCE. Who attaches a receipt: every role, with TECHNICIAN and DRIVER limited to entries they recorded (`OWN_RECORDS_ONLY`).
 
 - **Documents tab.** `pnpm verify drive flow:vehicle-workspace --role admin --lang en` screenshots the Documents tab (`06-vh003-documents.png`). Cross-check: `pnpm verify api GET /v1/assets/<id>/documents --role admin`.
 - **Upload a receipt.** Run `pnpm verify drive flow:attach-receipt --role admin --lang en`. It finds the To do item for an entry listed by `GET /v1/finance/entries?evidence=MISSING`, clicks its "Attach receipt", sets a PNG on the file input labelled "Drop files here or click to choose" inside the dialog "Attach a receipt", clicks "Attach", and waits for the dialog to close. The cross-check reads the entry's `evidence` as `SUPPLIED` with one file.

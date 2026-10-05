@@ -272,16 +272,15 @@ describe("UsersScreen", () => {
     expect(dialog.textContent).toContain("Brice Ekane");
   });
 
-  it("gives the Director every row, but not their own role", async () => {
+  it("gives the Director every row but a Director's, their own included", async () => {
     render(<UsersScreen />);
     await screen.findByText("Amina Fotso");
 
     for (const name of ["Brice Ekane", "Carine Mbida", "Didier Talla", "Eric Fouda"]) {
       expect(rowMenuOrNull(name)).not.toBeNull();
     }
-    await userEvent.click(rowMenu("Amina Fotso"));
-    expect(await screen.findByRole("menuitem", { name: "users.actions.pin" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "users.actions.role" })).toBeNull();
+    // Direction is appointed by the vendor, never managed from Users (ADR-0009).
+    expect(rowMenuOrNull("Amina Fotso")).toBeNull();
   });
 
   it("gives an Administrateur only the field roles of their own branches", async () => {

@@ -167,7 +167,8 @@
     "SAFETY_ISSUE_OPEN": "Another safety-critical issue is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
-    "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it."
+    "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
   },
   "assets": {
     "notify": {
@@ -1294,7 +1295,6 @@
       "rolePlaceholder": "Choose a role",
       "branchScope": "Branch scope",
       "allBranches": "All branches",
-      "directorAllBranches": "A Director always covers every branch.",
       "pin": "PIN",
       "confirmPin": "Confirm PIN",
       "pinMismatch": "The two PINs do not match.",

@@ -8,7 +8,7 @@ import { seedWorkspace } from "../test/seed.js";
 
 /**
  * ADR-0009's app-access rule on the five member commands: DIRECTOR manages
- * every role in every branch; ADMIN only DRIVER, TECHNICIAN and CASHIER
+ * every role but DIRECTOR in every branch; ADMIN only DRIVER, TECHNICIAN and CASHIER
  * members inside its own branches, judged on the member as they are and as the
  * command would leave them; nobody changes their own role.
  */
@@ -82,17 +82,11 @@ describe("member commands: who may manage whom", () => {
   }
 
   describe("DIRECTOR", () => {
-    it("adds a member of every role", async () => {
-      for (const role of ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"]) {
-        const { reply } = await addMember(director, role, role === "DIRECTOR" ? "ALL" : [yaounde]);
+    it("adds a member of every role but DIRECTOR", async () => {
+      for (const role of ["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"]) {
+        const { reply } = await addMember(director, role, [yaounde]);
         expect(reply.status, role).toBe(200);
       }
-    });
-
-    it("must give a DIRECTOR every branch", async () => {
-      const { reply } = await addMember(director, "DIRECTOR", [douala]);
-      expect(reply.status).toBe(422);
-      expect(reply.body.error?.code).toBe("DIRECTOR_REQUIRES_ALL_BRANCHES");
     });
 
     it("changes an ADMIN to FINANCE and resets an ADMIN's PIN", async () => {
@@ -109,27 +103,67 @@ describe("member commands: who may manage whom", () => {
       expect(reply.body.error?.code).toBe("SELF_ROLE_CHANGE");
       expect((await membership(director.principalId)).role).toBe("DIRECTOR");
     });
+  });
 
-    it("may demote another DIRECTOR, but never removes themselves", async () => {
+  /**
+   * ADR-0009: Direction is appointed by the vendor (`appoint-director`) or at
+   * provisioning. No tenant command grants it, changes it or removes it, so a
+   * DIRECTOR target is refused on every member command, for every actor.
+   */
+  describe("a DIRECTOR target", () => {
+    it("is never granted, not even by a DIRECTOR", async () => {
+      const { reply } = await addMember(director, "DIRECTOR", "ALL");
+      expect(reply.status).toBe(403);
+      expect(reply.body.error?.code).toBe("MEMBER_ROLE_NOT_GRANTABLE");
+
+      const { principalId } = await addMember(director, "ADMIN", [yaounde]);
+      const promote = await updateRole(director, principalId, { role: "DIRECTOR", branchScope: "ALL" });
+      expect(promote.status).toBe(403);
+      expect(promote.body.error?.code).toBe("MEMBER_ROLE_NOT_GRANTABLE");
+      expect((await membership(principalId)).role).toBe("ADMIN");
+    });
+
+    it("is never changed nor removed by another DIRECTOR", async () => {
       const own = await seedWorkspace(ctx.db);
-      const onlyDirector = await seedActor(ctx.db, { workspaceId: own.workspace.id, role: "DIRECTOR" });
+      const first = await seedActor(ctx.db, { workspaceId: own.workspace.id, role: "DIRECTOR" });
       const second = await seedActor(ctx.db, { workspaceId: own.workspace.id, role: "DIRECTOR" });
-      // The last-DIRECTOR guard stays a backstop: only a DIRECTOR changes a
-      // DIRECTOR and never themselves, so one always remains.
-      const [first] = await ctx.db
+      const [row] = await ctx.db
         .select()
         .from(memberships)
-        .where(eq(memberships.principalId, onlyDirector.principalId));
-      const demote = await api.send(
-        second.token,
-        "update-member-role",
-        { principalId: onlyDirector.principalId, role: "ADMIN" },
-        { expectedVersion: first!.rowVersion },
-        2,
-      );
-      expect(demote.status).toBe(200);
-      const deactivate = await api.send(second.token, "deactivate-member", { principalId: second.principalId });
-      expect(deactivate.body.error?.code).toBe("SELF_DEACTIVATION");
+        .where(eq(memberships.principalId, first.principalId));
+      const replies = [
+        await api.send(
+          second.token,
+          "update-member-role",
+          { principalId: first.principalId, role: "ADMIN" },
+          { expectedVersion: row!.rowVersion },
+          2,
+        ),
+        await api.send(second.token, "deactivate-member", { principalId: first.principalId }),
+        await api.send(second.token, "reset-member-pin", { principalId: first.principalId, pin: "1234" }),
+      ];
+      for (const reply of replies) {
+        expect(reply.status).toBe(403);
+        expect(reply.body.error?.code).toBe("MEMBER_ROLE_NOT_GRANTABLE");
+      }
+      const [after] = await ctx.db
+        .select()
+        .from(memberships)
+        .where(eq(memberships.principalId, first.principalId));
+      expect(after).toMatchObject({ role: "DIRECTOR", deactivatedAt: null, rowVersion: row!.rowVersion });
+    });
+
+    it("is never reactivated by a tenant command", async () => {
+      const own = await seedWorkspace(ctx.db);
+      const acting = await seedActor(ctx.db, { workspaceId: own.workspace.id, role: "DIRECTOR" });
+      const former = await seedActor(ctx.db, { workspaceId: own.workspace.id, role: "DIRECTOR" });
+      await ctx.db
+        .update(memberships)
+        .set({ deactivatedAt: new Date() })
+        .where(eq(memberships.principalId, former.principalId));
+      const reply = await api.send(acting.token, "reactivate-member", { principalId: former.principalId });
+      expect(reply.status).toBe(403);
+      expect(reply.body.error?.code).toBe("MEMBER_ROLE_NOT_GRANTABLE");
     });
   });
 

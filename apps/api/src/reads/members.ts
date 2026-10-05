@@ -6,7 +6,7 @@ import {
   type MemberListSortField,
   type MemberStatus,
 } from "@routiq/contracts";
-import { and, eq, isNull, type SQL } from "drizzle-orm";
+import { and, arrayContained, eq, isNull, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -51,8 +51,11 @@ const memberSortColumns: Record<MemberListSortField, KeysetColumn> = {
  * people are its memberships — with the principal supplying the name and the
  * credential the login, left-joined because a member may hold no credential.
  *
- * ADMIN-only, matching the commands the screen sends: usernames and lockout
- * state are administrative facts, not directory information every role reads.
+ * DIRECTOR and ADMIN only, matching the commands the screen sends: usernames
+ * and lockout state are administrative facts, not directory information every
+ * role reads. An ADMIN scoped to some branches sees the members whose every
+ * branch is one of theirs, the members the member commands let them reach;
+ * a member who also works elsewhere, or everywhere, is Direction's to see.
  */
 export function registerMemberReadRoutes(
   app: FastifyInstance,
@@ -81,6 +84,12 @@ export function registerMemberReadRoutes(
         const conditions: SQL[] = [eq(memberships.workspaceId, auth.workspaceId)];
         if (!includeDeactivated) {
           conditions.push(isNull(memberships.deactivatedAt));
+        }
+        if (auth.branchScope !== "ALL") {
+          conditions.push(
+            eq(memberships.allBranches, false),
+            arrayContained(memberships.branchIds, auth.branchScope),
+          );
         }
         if (decodedCursor) {
           conditions.push(

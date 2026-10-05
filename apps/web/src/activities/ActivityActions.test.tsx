@@ -93,6 +93,8 @@ const openActivity: ActivityDetail = {
   closedAt: null,
   createdAt: "2026-07-20T05:45:00.000Z",
   createdByCommandId: "00000000-0000-4000-8000-0000000000d1",
+  // The signed-in member of `meWith`, so a DRIVER may close it.
+  recordedByPrincipalId: "00000000-0000-4000-8000-0000000000f2",
   rowVersion: 7,
   segments: [
     {
@@ -321,6 +323,22 @@ describe("role and status gating", () => {
     cleanup();
     renderActions(closedActivity, recordingClient(committed()), meWith("DRIVER"));
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("DRIVER may not close or substitute a trip someone else recorded, but still captures on it", () => {
+    const othersTrip = {
+      ...openActivity,
+      recordedByPrincipalId: "00000000-0000-4000-8000-0000000000e9",
+    };
+    renderActions(othersTrip, recordingClient(committed()), meWith("DRIVER"));
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add leg" })).toBeTruthy();
+
+    cleanup();
+    renderActions(othersTrip, recordingClient(committed()), meWith("ADMIN"));
+    expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Substitute asset" })).toBeTruthy();
   });
 
   it("ADMIN gets reopen on a closed job, and nothing else", () => {

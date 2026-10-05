@@ -54,6 +54,12 @@ export const COMMAND_ERROR_CODES = [
    * change it while it waits; anyone else with the right role rejects it.
    */
   "NOT_ENTRY_AUTHOR",
+  /**
+   * A role the roles reference limits to its own records acting on someone
+   * else's: a DRIVER closing or swapping the vehicle on a trip another person
+   * recorded, a DRIVER or TECHNICIAN attaching a file to another person's entry.
+   */
+  "OWN_RECORDS_ONLY",
   "ENTRY_ALREADY_REVERSED",
   "PERIOD_LOCKED",
   "CATEGORY_KIND_MISMATCH",
@@ -77,8 +83,9 @@ export const COMMAND_ERROR_CODES = [
   "SELF_ROLE_CHANGE",
   /**
    * A member command on a role the actor may not manage: an ADMIN gives,
-   * changes or removes only DRIVER, TECHNICIAN and CASHIER, checked on both the
-   * member's current role and the new one.
+   * changes or removes only DRIVER, TECHNICIAN and CASHIER, and no tenant
+   * command gives, changes or removes DIRECTOR. Checked on both the member's
+   * current role and the new one.
    */
   "MEMBER_ROLE_NOT_GRANTABLE",
   /** An ADMIN reaching a member, or a branch scope, outside their own branches. */

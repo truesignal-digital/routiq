@@ -25,7 +25,7 @@ Preconditions:
 
 - **Sign in.** Run `pnpm verify login --role admin`. The form is filled by label: "Espace de travail" = `transports-ngwa`, "Nom d'utilisateur" = `boris`, "Code PIN" = `222222`, then "Se connecter". The step `log in as boris` passes and the screenshot shows Home with `boris` and `transports-ngwa` in the sidebar footer.
 - **Every role.** Repeat with `--role director|admin|admin-yde|finance|cashier|technician|driver|driver-yde`. `pnpm verify doctor` already proves each PIN works against the API.
-- **Switch role.** Run `pnpm verify drive flow:switch-user --role director --lang en`. It clicks "Sign out", lands on `/login`, signs in as `clarisse` (CASHIER), and checks Home has no `[data-kpi="pendingApprovals"]` card. The flow's API cross-check reads `GET /v1/me` → role `EXECUTIVE_VIEWER`.
+- **Switch role.** Run `pnpm verify drive flow:switch-user --role director --lang en`. It clicks "Sign out", lands on `/login`, signs in as `clarisse` (CASHIER), and checks Home has no `[data-kpi="pendingApprovals"]` card. The flow's API cross-check reads `GET /v1/me` → role `CASHIER`.
 - **Wrong PIN.** In a DriveScript, sign out, fill the form with a wrong PIN and click "Se connecter". `getByRole("alert")` reads "Nom d'utilisateur ou code PIN incorrect." and the "Code PIN" field is empty. The API answers `401 {"error":{"code":"AUTH_INVALID_CREDENTIALS"}}`. Not yet a committed flow.
 - **Proof.** Screenshots `01-signed-out.png` and `02-home-as-clarisse.png` in the run directory, plus the `/v1/me` line on stdout.
 

@@ -10,6 +10,7 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { assertOwnRecord } from "./own-records.js";
 
 type SubstituteAssetPayload = z.infer<typeof substituteAssetPayload>;
 
@@ -41,7 +42,11 @@ const substituteAsset: CommandDefinition<SubstituteAssetPayload> = {
 
   async execute(tx, ctx, envelope, payload) {
     const [activity] = await tx
-      .select({ id: activities.id, status: activities.status })
+      .select({
+        id: activities.id,
+        status: activities.status,
+        createdByCommandId: activities.createdByCommandId,
+      })
       .from(activities)
       .where(
         and(
@@ -56,6 +61,11 @@ const substituteAsset: CommandDefinition<SubstituteAssetPayload> = {
         referenceCode: payload.activityId,
       });
     }
+    await assertOwnRecord(tx, ctx, ["DRIVER"], {
+      entityType: "activity",
+      id: activity.id,
+      createdByCommandId: activity.createdByCommandId,
+    });
     if (activity.status === "CLOSED") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         entityType: "activity",

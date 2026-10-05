@@ -181,11 +181,10 @@ describe("AddMemberDialog", () => {
     expect(document.body.innerHTML).not.toContain("4821");
   });
 
-  it("offers the Director all six roles", async () => {
+  it("offers the Director every role but Direction", async () => {
     renderDialog(fakeClient(committed));
     await openSelect(userEvent.setup(), screen.getByRole("combobox", { name: "Rôle" }));
     expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
-      "Direction",
       "Administrateur",
       "Finance",
       "Caissier / Caissière",
@@ -212,24 +211,5 @@ describe("AddMemberDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload).toMatchObject({ role: "CASHIER", branchScope: ["branch-dla"] });
-  });
-
-  it("locks the scope to all branches when Direction is picked", async () => {
-    const client = fakeClient(committed);
-    renderDialog(client);
-
-    await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
-    expect(screen.getByRole("checkbox", { name: "Douala" })).toBeTruthy();
-
-    await fillForm({ role: "Direction" });
-    expect(screen.getByRole("checkbox", { name: "Toutes les agences" }).getAttribute("aria-checked")).toBe(
-      "true",
-    );
-    expect(screen.queryByRole("checkbox", { name: "Douala" })).toBeNull();
-    expect(screen.getByText("La Direction couvre toujours toutes les agences.")).toBeTruthy();
-
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
-    await waitFor(() => expect(client.seen).toHaveLength(1));
-    expect(client.seen[0]!.payload).toMatchObject({ role: "DIRECTOR", branchScope: "ALL" });
   });
 });

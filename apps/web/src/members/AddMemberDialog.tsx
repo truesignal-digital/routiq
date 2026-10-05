@@ -38,7 +38,6 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
 import {
   pickableRoles,
-  roleRequiresAllBranches,
   type MemberActor,
 } from "./permissions.js";
 import { MIN_PIN_LENGTH } from "./pin.js";
@@ -132,8 +131,6 @@ export function AddMemberDialog({
     // Per opening only: actorScope is a fresh array on every /v1/me read.
   }, [open, form]);
 
-  const forcedAll = roleRequiresAllBranches(form.watch("role"));
-  const effectiveScope: MemberBranchScope = forcedAll ? "ALL" : branchScope;
 
   async function onSubmit(values: AddMemberValues) {
     setErrorCode(undefined);
@@ -145,7 +142,7 @@ export function AddMemberDialog({
       username: values.username.trim(),
       pin: values.pin,
       role: values.role as AddMemberPayload["role"],
-      branchScope: effectiveScope,
+      branchScope,
     });
 
     if (!result.ok) {
@@ -248,11 +245,9 @@ export function AddMemberDialog({
 
             <BranchScopeField
               branches={pickerBranches}
-              value={effectiveScope}
+              value={branchScope}
               onChange={setBranchScope}
-              disabled={forcedAll}
               allowAll={actorScope === "ALL"}
-              hint={forcedAll ? t("users.form.directorAllBranches") : undefined}
             />
 
             <FormField

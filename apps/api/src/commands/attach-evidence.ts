@@ -8,6 +8,7 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { assertOwnRecord } from "./own-records.js";
 
 /**
  * Files for an entry that already exists — the receipt that turned up after the
@@ -18,7 +19,9 @@ import {
  *
  * Who may attach is who may record an expense: anyone who could have attached
  * the file at capture. The workshop, which records only work-order costs,
- * attaches only to entries whose every line carries a work order.
+ * attaches only to entries whose every line carries a work order. TECHNICIAN
+ * and DRIVER attach only to entries they recorded themselves
+ * (docs/reference/roles-and-access.md, "own").
  */
 export const attachEvidence: CommandDefinition<AttachEvidencePayload> = {
   name: "attach-evidence",
@@ -52,6 +55,7 @@ export const attachEvidence: CommandDefinition<AttachEvidencePayload> = {
         status: financialEntries.status,
         reversesEntryId: financialEntries.reversesEntryId,
         rowVersion: financialEntries.rowVersion,
+        createdByCommandId: financialEntries.createdByCommandId,
       })
       .from(financialEntries)
       .where(
@@ -96,6 +100,11 @@ export const attachEvidence: CommandDefinition<AttachEvidencePayload> = {
         });
       }
     }
+    await assertOwnRecord(tx, ctx, ["TECHNICIAN", "DRIVER"], {
+      entityType: "financial_entry",
+      id: entry.id,
+      createdByCommandId: entry.createdByCommandId,
+    });
 
     await appendAuditEvent(tx, ctx, envelope, {
       eventType: EVIDENCE_ATTACHED_EVENT,

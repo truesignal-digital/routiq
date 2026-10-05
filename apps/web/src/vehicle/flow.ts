@@ -83,6 +83,14 @@ export function groundingFacts(asset: Pick<AssetDetail, "availability">): Ground
 const same = (actor: HistoryActor | null | undefined, viewer: Viewer) =>
   actor?.principalId != null && actor.principalId === viewer.principalId;
 
+/**
+ * A receipt on this entry: TECHNICIAN and DRIVER only on entries they recorded
+ * (server: OWN_RECORDS_ONLY), everyone else who may attach on any.
+ */
+const mayAttachTo = (recordedBy: HistoryActor | null | undefined, viewer: Viewer) =>
+  may.attachEvidence(viewer) &&
+  ((viewer.role !== "DRIVER" && viewer.role !== "TECHNICIAN") || same(recordedBy, viewer));
+
 const may = {
   manageWorkOrders: (v: Viewer) => canManageWorkOrders(v.role, v.enabledModules),
   approveWorkOrders: (v: Viewer) => canApproveWorkOrders(v.role, v.enabledModules),
@@ -338,7 +346,7 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
   const offered: OfferedStep[] = [];
   let primary: RoleStep = { kind: "none" };
 
-  if (missingReceipt(entry) && may.attachEvidence(viewer)) {
+  if (missingReceipt(entry) && mayAttachTo(entry.recordedBy, viewer)) {
     const step: Step = { key: "attach-evidence", record };
     offered.push({ step });
     primary = { kind: "go", step };
@@ -629,7 +637,7 @@ export function attentionStep(
       if (!may.approveEntries(viewer)) return { kind: "none" };
       return maker ? locked("review-entry", { key: "youRecordedIt" }) : go("review-entry");
     case "ENTRY_EVIDENCE_MISSING":
-      return may.attachEvidence(viewer) ? go("attach-evidence") : { kind: "none" };
+      return mayAttachTo(item.params.recordedBy, viewer) ? go("attach-evidence") : { kind: "none" };
   }
 }
 

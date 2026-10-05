@@ -40,10 +40,12 @@ import { redactPin } from "./redaction.js";
  *
  * All five are CORE, workspace-scoped and never queued offline — they are
  * decisions about who the workspace trusts, not facts about the world. Who may
- * run them (ADR-0009): DIRECTOR for every role in every branch; ADMIN only for
- * DRIVER, TECHNICIAN and CASHIER members inside the ADMIN's own branches,
- * checked on the member as they are and as the command would leave them.
- * Nobody changes their own role. `assertMayManage` is that rule.
+ * run them (ADR-0009): DIRECTOR for every role but DIRECTOR in every branch;
+ * ADMIN only for DRIVER, TECHNICIAN and CASHIER members inside the ADMIN's own
+ * branches, checked on the member as they are and as the command would leave
+ * them. No tenant command grants, changes or removes DIRECTOR: the vendor
+ * appoints it (`appoint-director`). Nobody changes their own role.
+ * `assertMayManage` is that rule.
  *
  * Optimistic concurrency is asked for where a lost update is possible and not
  * where it is not. `update-member-role` overwrites fields an admin read off the
@@ -150,13 +152,6 @@ function assertMayManage(
       : member.branchScope.filter((branchId) => !reach.includes(branchId));
   if (outside.length > 0) {
     throw new CommandError(403, "MEMBER_BRANCH_OUT_OF_SCOPE", { outside });
-  }
-}
-
-/** DIRECTOR always covers every branch (ADR-0009), so no other scope is storable. */
-function assertDirectorScope(role: Role, branchScope: MemberBranchScope): void {
-  if (role === "DIRECTOR" && branchScope !== "ALL") {
-    throw new CommandError(422, "DIRECTOR_REQUIRES_ALL_BRANCHES");
   }
 }
 
@@ -323,7 +318,6 @@ const addMember: Omit<CommandDefinition<AddMemberPayload>, "version" | "payloadS
   async execute(tx, ctx, envelope, payload) {
     const actor = await beginMemberAdministration(tx, ctx);
     assertMayManage(actor, payload);
-    assertDirectorScope(payload.role, payload.branchScope);
     const scope = await resolveBranchScope(tx, ctx, payload.branchScope);
 
     /*
@@ -420,10 +414,10 @@ const updateMemberRole: Omit<
     const nextScope = payload.branchScope ?? branchScopeOf(before);
     assertMayManage(actor, { role: before.role, branchScope: branchScopeOf(before) });
     assertMayManage(actor, { role: nextRole, branchScope: nextScope });
-    assertDirectorScope(nextRole, nextScope);
 
-    // Only a live demotion can strand the workspace: an already-deactivated
-    // membership is not one of the directors the invariant counts.
+    // Unreachable while `grantableRoles` refuses a DIRECTOR target; kept as the
+    // backstop for a caller that is not a tenant. Only a live demotion can
+    // strand the workspace: a deactivated membership is not counted.
     if (before.role === "DIRECTOR" && nextRole !== "DIRECTOR" && before.deactivatedAt === null) {
       await assertAnotherActiveDirectorRemains(tx, ctx, payload.principalId);
     }
@@ -501,12 +495,10 @@ registerCommand<DeactivateMemberPayload>({
       });
     }
     /*
-     * A backstop rather than a live path today: only a DIRECTOR may deactivate
-     * a DIRECTOR, and never themselves, so a target that is not them is never
-     * the last one. It stays because the day this command gains a caller who
-     * is not the workspace's own director — a vendor support path, the AI
-     * principal of §7 — the self guard above stops covering the invariant and
-     * this one has to.
+     * A backstop rather than a live path today: no tenant command touches a
+     * DIRECTOR (`assertMayManage`). It stays because the day this command gains
+     * a caller who is not a tenant — a vendor support path, the AI principal of
+     * §7 — that rule stops covering the invariant and this one has to.
      */
     if (before.role === "DIRECTOR") {
       await assertAnotherActiveDirectorRemains(tx, ctx, payload.principalId);

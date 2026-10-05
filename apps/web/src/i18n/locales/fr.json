@@ -167,7 +167,8 @@
     "SAFETY_ISSUE_OPEN": "Un autre signalement critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
-    "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter."
+    "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
+    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
   },
   "assets": {
     "notify": {
@@ -1294,7 +1295,6 @@
       "rolePlaceholder": "Choisir un rôle",
       "branchScope": "Portée des agences",
       "allBranches": "Toutes les agences",
-      "directorAllBranches": "La Direction couvre toujours toutes les agences.",
       "pin": "Code PIN",
       "confirmPin": "Confirmer le code PIN",
       "pinMismatch": "Les deux codes ne correspondent pas.",

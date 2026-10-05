@@ -16,6 +16,7 @@ import { apiClient, seedActor } from "../test/client.js";
 describe("activity, person and place reads", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let adminToken: string;
+  let adminPrincipalId: string;
   let doualaToken: string;
   let doualaBranchId: string;
   let yaoundeBranchId: string;
@@ -49,6 +50,7 @@ describe("activity, person and place reads", () => {
       role: "ADMIN",
       allBranches: true,
     });
+    adminPrincipalId = admin.principal.id;
     adminToken = (
       await createSession(ctx.db, {
         workspaceId: seeded.workspace.id,
@@ -372,6 +374,9 @@ describe("activity, person and place reads", () => {
     // §3.4 provenance: the detail read is where a record says which command
     // wrote it, so the stamp on the screen has something to name.
     expect(detail.createdByCommandId).not.toBeNull();
+    // Who recorded it: a DRIVER closes only their own trips, and the screen
+    // offers the close only where it will pass.
+    expect(detail.recordedByPrincipalId).toBe(adminPrincipalId);
     expect(Date.parse(detail.createdAt)).not.toBeNaN();
     expect(detail.branchId).toBe(doualaBranchId);
     expect(

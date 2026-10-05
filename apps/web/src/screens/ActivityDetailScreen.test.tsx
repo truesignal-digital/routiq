@@ -101,6 +101,7 @@ function fullHaulage(): ActivityDetail {
     closedAt: "2026-07-19T08:00:00.000Z",
     createdAt: "2026-07-18T05:30:00.000Z",
     createdByCommandId: COMMAND_ID,
+    recordedByPrincipalId: null,
     rowVersion: 4,
     segments: [
       {
@@ -236,6 +237,7 @@ function sparseJourney(): ActivityDetail {
     plannedEndAt: null,
     closedAt: null,
     createdByCommandId: null,
+    recordedByPrincipalId: null,
     segments: [],
     crew: [],
     legs: [],

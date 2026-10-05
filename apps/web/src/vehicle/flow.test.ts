@@ -405,6 +405,17 @@ describe("to-dos from the attention read", () => {
     expect(approver[0]?.record).toEqual({ kind: "entry", id: ENTRY_ID });
   });
 
+  it("offers a driver the missing receipt only on an entry they recorded", () => {
+    const mine = attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(ME_ID, "Sali") } });
+    const theirs = attention("ENTRY_EVIDENCE_MISSING", { params: { recordedBy: actor(OTHER_ID, "Boris") } });
+    expect(buildTodos([mine], vehicle, viewer("DRIVER")).map((todo) => token(todo.step))).toEqual([
+      "go:attach-evidence",
+    ]);
+    expect(buildTodos([theirs], vehicle, viewer("DRIVER")).map((todo) => token(todo.step))).toEqual([
+      "none",
+    ]);
+  });
+
   it("counts only the viewer's own steps on the tab, and flags maintenance work", () => {
     const items = [attention("ISSUE_UNPLANNED"), attention("DOCUMENT_EXPIRING")];
     expect(tabMarkers(items, vehicle, viewer("TECHNICIAN"))).toEqual({ todoCount: 1, maintenanceNeedsYou: true });
@@ -441,7 +452,7 @@ describe("an entry's steps", () => {
       "attach-evidence",
       "edit-entry",
     ]);
-    expect(keys(entry(), "DRIVER")).toEqual(["attach-evidence"]);
+    expect(keys(entry(), "DRIVER")).toEqual([]);
     expect(keys(entry(), "ADMIN")).not.toContain("edit-entry");
     for (const status of ["POSTED", "REJECTED", "REVERSED"] as const) {
       expect(keys(entry({ status, recordedBy: actor(ME_ID) }), "DRIVER")).not.toContain("edit-entry");
@@ -452,7 +463,14 @@ describe("an entry's steps", () => {
     expect(keys(entry({ status: "POSTED", reversesEntryId: "00000000-0000-4000-8000-0000000000ef" }), "FINANCE")).toEqual([]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "FINANCE")).toEqual(["reverse-entry"]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "DIRECTOR")).toEqual(["reverse-entry"]);
-    expect(keys(entry({ status: "POSTED" }), "DRIVER")).toEqual(["attach-evidence"]);
+    expect(keys(entry({ status: "POSTED", recordedBy: actor(ME_ID) }), "DRIVER")).toEqual(["attach-evidence"]);
+  });
+
+  it("offers the driver and the workshop a receipt on their own entries only (OWN_RECORDS_ONLY)", () => {
+    for (const role of ["DRIVER", "TECHNICIAN"] as const) {
+      expect(keys(entry({ status: "POSTED" }), role)).toEqual([]);
+    }
+    expect(keys(entry({ status: "POSTED" }), "CASHIER")).toEqual(["attach-evidence"]);
   });
 
   it("keeps approval and reversal off the Administrateur", () => {

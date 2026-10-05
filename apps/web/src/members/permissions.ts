@@ -63,8 +63,3 @@ export function canEditMemberRole(
     canManageMember(actor, member)
   );
 }
-
-/** Direction always covers every branch (server: DIRECTOR_REQUIRES_ALL_BRANCHES). */
-export function roleRequiresAllBranches(role: Role | string | undefined): boolean {
-  return role === "DIRECTOR";
-}

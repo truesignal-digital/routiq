@@ -220,7 +220,7 @@ describe("GET /v1/assets/:assetId/history", () => {
       uploadedByPrincipalId: admin.principalId,
     });
     await api.ok(
-      driver.token,
+      admin.token,
       "attach-evidence",
       { entryId, artifactIds: [file] },
       { sourceArtifactIds: [file] },

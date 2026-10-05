@@ -142,7 +142,7 @@ describe("attach-evidence.v1", () => {
     expect(await missingIds()).toContain(entryId);
 
     const file = await artifact();
-    const reply = await attach(colleague, entryId, [file]);
+    const reply = await attach(cashier, entryId, [file]);
     expect(reply.status).toBe(200);
     expect(reply.body).toMatchObject({
       recordId: entryId,
@@ -165,7 +165,11 @@ describe("attach-evidence.v1", () => {
         originalFileName: "recu.jpg",
         sha256: file.replaceAll("-", ""),
         attachedAt: expect.any(String),
-        attachedBy: { principalId: colleague.principalId, displayName: "Awa", scope: "WORKSPACE" },
+        attachedBy: {
+          principalId: cashier.principalId,
+          displayName: cashier.displayName,
+          scope: "WORKSPACE",
+        },
         via: "ATTACHED",
       },
     ]);
@@ -201,7 +205,7 @@ describe("attach-evidence.v1", () => {
   });
 
   it("works in a locked period — a file changes no posting", async () => {
-    const { entryId } = await expense(admin, { economicDate: "2026-05-10" });
+    const { entryId } = await expense(driver, { economicDate: "2026-05-10" });
     const periods = periodsResponse.parse((await api.get(admin.token, "/v1/finance/periods")).body);
     const may = periods.periods.find((period) => period.periodCode === "2026-05");
     await api.ok(
@@ -332,5 +336,29 @@ describe("attach-evidence.v1", () => {
     });
     const repair = await expense(mechanic, { workOrderId });
     expect((await attach(mechanic, repair.entryId, [await artifact()])).status).toBe(200);
+  });
+
+  /** docs/reference/roles-and-access.md: Technicien and Chauffeur attach to their own entries only. */
+  it("lets a DRIVER or a TECHNICIAN attach only to entries they recorded", async () => {
+    const colleagues = await expense(colleague);
+    const refused = await attach(driver, colleagues.entryId, [await artifact()]);
+    expect(refused.status).toBe(403);
+    expect(refused.body.error).toMatchObject({
+      code: "OWN_RECORDS_ONLY",
+      metadata: { entityType: "financial_entry" },
+    });
+    expect((await detail(colleagues.entryId)).evidence.artifactCount).toBe(0);
+
+    const workOrderId = randomUUID();
+    await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId,
+      description: "Plaquettes de frein",
+      expectedCostMinor: 0,
+    });
+    const directorsRepair = await expense(admin, { workOrderId });
+    const workshop = await attach(mechanic, directorsRepair.entryId, [await artifact()]);
+    expect(workshop.status).toBe(403);
+    expect(workshop.body.error?.code).toBe("OWN_RECORDS_ONLY");
   });
 });

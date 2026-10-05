@@ -80,12 +80,26 @@ export const ADMIN_GRANTABLE_ROLES = [
 ] as const satisfies readonly Role[];
 
 /**
- * Roles an actor may hand out or take away. DIRECTOR manages every role; ADMIN
- * only the field roles; everyone else none. The server enforces this on every
- * member command; the web uses it to fill the role picker.
+ * The roles DIRECTOR may give, change or remove: every role but DIRECTOR.
+ * Direction is appointed by the vendor (`appoint-director`) or at provisioning,
+ * never by a tenant command (ADR-0009).
+ */
+export const DIRECTOR_GRANTABLE_ROLES = [
+  "ADMIN",
+  "FINANCE",
+  "CASHIER",
+  "TECHNICIAN",
+  "DRIVER",
+] as const satisfies readonly Exclude<Role, "DIRECTOR">[];
+
+/**
+ * Roles an actor may hand out or take away. DIRECTOR manages every role but
+ * its own; ADMIN only the field roles; everyone else none. The server enforces
+ * this on every member command, on the member as they are and as they would
+ * be; the web uses it to fill the role picker.
  */
 export function grantableRoles(actorRole: Role): readonly Role[] {
-  if (actorRole === "DIRECTOR") return ROLES;
+  if (actorRole === "DIRECTOR") return DIRECTOR_GRANTABLE_ROLES;
   if (actorRole === "ADMIN") return ADMIN_GRANTABLE_ROLES;
   return [];
 }

@@ -23,6 +23,7 @@ import {
   type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
+import { assertOwnRecord } from "./own-records.js";
 
 type CloseActivityPayload = z.infer<typeof closeActivityPayload>;
 type ReopenActivityPayload = z.infer<typeof reopenActivityPayload>;
@@ -69,6 +70,11 @@ const closeActivity: CommandDefinition<CloseActivityPayload> = {
         referenceCode: payload.activityId,
       });
     }
+    await assertOwnRecord(tx, ctx, ["DRIVER"], {
+      entityType: "activity",
+      id: activity.id,
+      createdByCommandId: activity.createdByCommandId,
+    });
     checkOptimisticVersion(envelope, activity.rowVersion);
     if (activity.status === "CLOSED") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {

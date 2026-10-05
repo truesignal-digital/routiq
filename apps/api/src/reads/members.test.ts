@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { credentials } from "../db/schema.js";
+import { branches, credentials } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 
@@ -223,6 +223,47 @@ describe("GET /v1/members", () => {
     );
     expect(resorted.statusCode).toBe(400);
     expect(resorted.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  /**
+   * #260: an ADMIN reads the members of their own branches, the same members
+   * the member commands let them reach; DIRECTOR reads everyone.
+   */
+  it("shows an ADMIN only the members inside their own branches", async () => {
+    const arena = await seedWorkspace(ctx.db, `ws-read-scope-${randomUUID().slice(0, 8)}`);
+    const wsId = arena.workspace.id;
+    const dla = arena.branch.id;
+    const [second] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId: wsId, code: "YDE", name: "Yaoundé" })
+      .returning();
+    const yde = second!.id;
+
+    const member = (role: "DIRECTOR" | "ADMIN" | "FINANCE" | "DRIVER", scope: "ALL" | string[]) =>
+      seedMember(ctx.db, {
+        workspaceId: wsId,
+        role,
+        allBranches: scope === "ALL",
+        ...(scope === "ALL" ? {} : { branchIds: scope }),
+      });
+    const director = await member("DIRECTOR", "ALL");
+    const adminDla = await member("ADMIN", [dla]);
+    const driverDla = await member("DRIVER", [dla]);
+    await member("DRIVER", [yde]);
+    await member("DRIVER", [dla, yde]);
+    await member("FINANCE", "ALL");
+
+    const tokenOf = async (principalId: string) =>
+      (await createSession(ctx.db, { workspaceId: wsId, principalId })).token;
+
+    const asAdmin = await list("?limit=100", await tokenOf(adminDla.principal.id));
+    expect(asAdmin.statusCode).toBe(200);
+    expect(
+      (asAdmin.json() as { items: MemberRow[] }).items.map((item) => item.principalId).sort(),
+    ).toEqual([adminDla.principal.id, driverDla.principal.id].sort());
+
+    const asDirector = await list("?limit=100", await tokenOf(director.principal.id));
+    expect((asDirector.json() as { items: MemberRow[] }).items).toHaveLength(6);
   });
 
   it("is for DIRECTOR and ADMIN only", async () => {

@@ -117,10 +117,13 @@ describe("memberActions", () => {
     expect(memberActions({ ...member, username: null }, director)).not.toContain("pin");
   });
 
-  it("lets the Director act on every role", () => {
-    for (const role of ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+  it("lets the Director act on every role but Direction", () => {
+    for (const role of ["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
       expect(memberActions({ ...member, role }, director)).toEqual(["role", "pin", "deactivate"]);
     }
+    // Direction is appointed by the vendor, never managed from Users (ADR-0009).
+    expect(memberActions({ ...member, role: "DIRECTOR" }, director)).toEqual([]);
+    expect(memberActions({ ...member, role: "DIRECTOR", status: "DEACTIVATED" }, director)).toEqual([]);
   });
 
   it("lets an Administrateur act only on field roles in their own branches", () => {
@@ -138,9 +141,11 @@ describe("memberActions", () => {
     ).toEqual([]);
   });
 
-  it("never offers anyone their own role", () => {
+  it("never offers anyone an action on themselves", () => {
     const self = { ...member, principalId: director.principalId, role: "DIRECTOR" as const };
-    expect(memberActions(self, director)).toEqual(["pin", "deactivate"]);
+    expect(memberActions(self, director)).toEqual([]);
+    const adminSelf = { ...member, ...doualaAdmin, role: "ADMIN" as const };
+    expect(memberActions(adminSelf, doualaAdmin)).toEqual([]);
   });
 
   it("offers nothing to a role that manages no one", () => {
@@ -156,9 +161,8 @@ describe("the role picker, per actor", () => {
     return (await screen.findAllByRole("option")).map((option) => option.textContent);
   }
 
-  it("shows the Director all six roles", async () => {
+  it("shows the Director every role but Direction", async () => {
     expect(await pickerOptions(director)).toEqual([
-      "Direction",
       "Administrateur",
       "Finance",
       "Caissier / Caissière",
@@ -178,28 +182,6 @@ describe("the role picker, per actor", () => {
     expect(screen.queryByRole("checkbox", { name: "Toutes les agences" })).toBeNull();
     expect(screen.getByRole("checkbox", { name: "Douala" })).toBeTruthy();
     expect(screen.queryByRole("checkbox", { name: "Yaoundé" })).toBeNull();
-  });
-
-  it("locks the scope to all branches when Direction is picked, and sends ALL", async () => {
-    const client = fakeClient(committed);
-    renderDialog("role", client, { ...member, branchScope: ["branch-yde"] });
-    const user = userEvent.setup();
-
-    await openSelect(user, screen.getByRole("combobox", { name: "Rôle" }));
-    await user.click(await screen.findByRole("option", { name: "Direction" }));
-
-    const all = screen.getByRole("checkbox", { name: "Toutes les agences" });
-    expect(all.getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByText("La Direction couvre toujours toutes les agences.")).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    await waitFor(() => expect(client.seen).toHaveLength(1));
-    expect(client.seen[0]!.version).toBe(2);
-    expect(client.seen[0]!.payload).toEqual({
-      principalId: member.principalId,
-      role: "DIRECTOR",
-      branchScope: "ALL",
-    });
   });
 });
 

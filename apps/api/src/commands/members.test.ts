@@ -489,7 +489,7 @@ describe("member commands", () => {
     });
 
     /**
-     * Only a DIRECTOR may change a DIRECTOR, and nobody their own role, so a
+     * No tenant command changes a DIRECTOR, and nobody their own role, so a
      * lone DIRECTOR meets SELF_ROLE_CHANGE before LAST_DIRECTOR could fire.
      */
     it("refuses the workspace's lone DIRECTOR changing their own role", async () => {
@@ -518,16 +518,6 @@ describe("member commands", () => {
         .from(memberships)
         .where(eq(memberships.principalId, loneAdmin.principal.id));
       expect(membership).toMatchObject({ role: "DIRECTOR", rowVersion: 1 });
-    });
-
-    it("allows demoting a DIRECTOR while another active DIRECTOR remains", async () => {
-      const { principalId } = await addMember({ role: "DIRECTOR" });
-      const response = await send(
-        "update-member-role",
-        { principalId, role: "ADMIN" },
-        { expectedVersion: 1 },
-      );
-      expect(response.statusCode).toBe(200);
     });
 
     it("v1 still changes a role, reading the legacy code as the role it became", async () => {
@@ -622,15 +612,12 @@ describe("member commands", () => {
     });
 
     /**
-     * The two guards divide the ground completely, which is worth pinning down
-     * because it makes LAST_DIRECTOR unreachable on this command: only a
-     * DIRECTOR may deactivate a DIRECTOR, so either they are the target
-     * (self-guard) or they are themselves the DIRECTOR that remains.
-     * LAST_DIRECTOR stays in the handler as the backstop that becomes
-     * load-bearing the day this command gains a caller who is not the
-     * workspace's own DIRECTOR.
+     * LAST_DIRECTOR is unreachable from a tenant: no member command touches a
+     * DIRECTOR (ADR-0009), and the self-guards stop a DIRECTOR acting on
+     * themselves. The count stays in the handler as the backstop for the day
+     * this command gains a caller who is not the workspace's own DIRECTOR.
      */
-    it("protects the last DIRECTOR through the self-guard, and allows the case that is safe", async () => {
+    it("protects the last DIRECTOR through the self-guards and the DIRECTOR-target rule", async () => {
       const lone = await seedWorkspace(ctx.db, `ws-lone2-${randomUUID().slice(0, 8)}`);
       const first = await seedMember(ctx.db, {
         workspaceId: lone.workspace.id,
@@ -649,16 +636,14 @@ describe("member commands", () => {
         })
       ).token;
 
-      // Deactivating the other DIRECTOR is safe — the caller is still standing.
       const other = await send(
         "deactivate-member",
         { principalId: second.principal.id },
         { token },
       );
-      expect(other.statusCode).toBe(200);
+      expect(other.statusCode).toBe(403);
+      expect(other.json()).toMatchObject({ error: { code: "MEMBER_ROLE_NOT_GRANTABLE" } });
 
-      // Now the only active DIRECTOR left is the caller, and the workspace
-      // cannot be emptied of them.
       const self = await send(
         "deactivate-member",
         { principalId: first.principal.id },
@@ -667,8 +652,6 @@ describe("member commands", () => {
       expect(self.statusCode).toBe(422);
       expect(self.json()).toMatchObject({ error: { code: "SELF_DEACTIVATION" } });
 
-      // Nor by the back door: nobody changes their own role, so demoting
-      // themselves is refused before the last-DIRECTOR count is reached.
       const demote = await send(
         "update-member-role",
         { principalId: first.principal.id, role: "ADMIN" },
@@ -1006,12 +989,11 @@ describe("member commands", () => {
         ),
       ]);
 
-      const codes = [a.statusCode, b.statusCode].sort();
-      expect(codes[0]).toBe(200);
-      // The loser is refused either as the last DIRECTOR or as an actor who,
-      // demoted to ADMIN, may no longer touch a DIRECTOR; which depends on
-      // commit order, and both are correct.
-      expect([403, 422]).toContain(codes[1]);
+      // No tenant command touches a DIRECTOR (ADR-0009), so both are refused.
+      for (const reply of [a, b]) {
+        expect(reply.statusCode).toBe(403);
+        expect(reply.json()).toMatchObject({ error: { code: "MEMBER_ROLE_NOT_GRANTABLE" } });
+      }
 
       const survivors = await ctx.db
         .select()
@@ -1023,7 +1005,7 @@ describe("member commands", () => {
             isNull(memberships.deactivatedAt),
           ),
         );
-      expect(survivors.length).toBeGreaterThanOrEqual(1);
+      expect(survivors).toHaveLength(2);
     });
 
     /**

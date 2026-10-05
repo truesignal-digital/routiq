@@ -27,8 +27,9 @@ describe("role registry", () => {
     expect(legacyRoleInput.safeParse("DIRECTOR").success).toBe(false);
   });
 
-  it("lets DIRECTOR grant every role and ADMIN only the field roles", () => {
-    expect(grantableRoles("DIRECTOR")).toEqual(ROLES);
+  it("lets DIRECTOR grant every role but DIRECTOR, and ADMIN only the field roles", () => {
+    // Direction is appointed by the vendor or at provisioning, never by a tenant (ADR-0009).
+    expect(grantableRoles("DIRECTOR")).toEqual(ROLES.filter((role) => role !== "DIRECTOR"));
     expect(grantableRoles("ADMIN")).toEqual(ADMIN_GRANTABLE_ROLES);
     expect(ADMIN_GRANTABLE_ROLES).toEqual(["DRIVER", "TECHNICIAN", "CASHIER"]);
     for (const role of ["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {

@@ -37,7 +37,6 @@ import {
   canEditMemberRole,
   canManageMember,
   pickableRoles,
-  roleRequiresAllBranches,
   type MemberActor,
 } from "./permissions.js";
 import { MIN_PIN_LENGTH } from "./pin.js";
@@ -116,11 +115,9 @@ export function MemberActionDialog({
     () => scopedByBranch(actorScope, [...branches], (branch) => branch.id),
     [actorScope, branches],
   );
-  const forcedAll = roleRequiresAllBranches(role);
-  const effectiveScope: MemberBranchScope = forcedAll ? "ALL" : branchScope;
   const scopeChanged = useMemo(
-    () => JSON.stringify(effectiveScope) !== JSON.stringify(member.branchScope),
-    [effectiveScope, member.branchScope],
+    () => JSON.stringify(branchScope) !== JSON.stringify(member.branchScope),
+    [branchScope, member.branchScope],
   );
   const roleChanged = role !== member.role;
   const pinValid = pin.length >= MIN_PIN_LENGTH && pin === confirmPin;
@@ -152,7 +149,7 @@ export function MemberActionDialog({
       const payload: UpdateMemberRolePayload = {
         principalId: member.principalId,
         ...(roleChanged ? { role } : {}),
-        ...(scopeChanged ? { branchScope: effectiveScope } : {}),
+        ...(scopeChanged ? { branchScope } : {}),
       };
       roleIntent.current ??= createCommandIntent<UpdateMemberRolePayload>(
         client,
@@ -276,11 +273,9 @@ export function MemberActionDialog({
 
                 <BranchScopeField
                   branches={pickerBranches}
-                  value={effectiveScope}
+                  value={branchScope}
                   onChange={setBranchScope}
-                  disabled={forcedAll}
                   allowAll={actorScope === "ALL"}
-                  hint={forcedAll ? t("users.form.directorAllBranches") : undefined}
                 />
               </div>
             )}
