@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
+import { useIssueCategoryLabel } from "./issue-category.js";
 
 /**
  * A work order has no number of its own — the read publishes only its id — so
@@ -133,6 +134,7 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
 export function useIssueColumns(): ColumnDef<IssueListItem>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+  const categoryLabel = useIssueCategoryLabel();
 
   return useMemo(
     () => [
@@ -194,8 +196,8 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
       {
         id: "category",
         header: t("maintenance.issues.columns.category"),
-        meta: { mobile: "hidden", label: t("maintenance.issues.columns.category") },
-        cell: ({ row }) => row.original.category ?? "—",
+        meta: { mobile: "secondary", label: t("maintenance.issues.columns.category") },
+        cell: ({ row }) => categoryLabel(row.original.category) ?? "—",
       },
       {
         id: "reportedAt",
@@ -227,6 +229,6 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
           ),
       },
     ],
-    [locale, t],
+    [categoryLabel, locale, t],
   );
 }
