@@ -230,8 +230,8 @@ describe("decision on the entry page", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    expect(screen.getByRole("button", { name: "Reject" })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Approve" }));
+    expect(screen.getByRole("button", { name: "Reject entry" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Approve entry" }));
 
     await waitFor(() => expect(submit).toHaveBeenCalledOnce());
     expect(mocks.createCommandIntent).toHaveBeenCalledWith(expect.anything(), "approve-entry", 1);
@@ -250,9 +250,9 @@ describe("decision on the entry page", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reject" }));
-    await user.type(screen.getByLabelText("Rejection reason"), "No receipt");
-    await user.click(screen.getAllByRole("button", { name: "Reject" }).at(-1)!);
+    await user.click(screen.getByRole("button", { name: "Reject entry" }));
+    await user.type(screen.getByRole("textbox", { name: "Rejection reason" }), "No receipt");
+    await user.click(screen.getAllByRole("button", { name: "Reject entry" }).at(-1)!);
 
     await waitFor(() =>
       expect(submit).toHaveBeenCalledWith(
@@ -267,14 +267,14 @@ describe("decision on the entry page", () => {
     waiting(approver.principalId);
     renderScreen();
 
-    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject entry" })).toBeNull();
   });
 
   it("offers no decision once the entry is posted", () => {
     renderScreen();
 
-    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject entry" })).toBeNull();
   });
 });
