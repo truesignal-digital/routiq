@@ -37,9 +37,10 @@ describe("reverse-entry.v1", () => {
       role: "DRIVER",
       allBranches: true,
     });
+    // Its entries are above the recording band, which Direction decides.
     const approver = await seedMember(db, {
       workspaceId,
-      role: "FINANCE",
+      role: "DIRECTOR",
       allBranches: true,
     });
     const admin = await seedMember(db, {

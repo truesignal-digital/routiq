@@ -217,6 +217,7 @@ describe("finance reads", () => {
         ...vehicleFields,
         submittedByPrincipalId: randomUUID(),
         submittedAt: new Date().toISOString(),
+        directionDecides: false,
       };
       const parsed = pendingApprovalItem.parse(item);
       expect(parsed).toEqual(item);

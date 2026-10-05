@@ -334,6 +334,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
       },
     ],
     evidenceFiles: [],
+    directionDecides: false,
   };
 
   const submitted: SubmitResult = {

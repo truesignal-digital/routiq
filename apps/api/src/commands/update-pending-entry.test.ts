@@ -31,7 +31,8 @@ describe("update-pending-entry.v1", () => {
     [author, colleague, approver, admin, cashier] = await Promise.all([
       seedActor(db, { workspaceId, role: "DRIVER", allBranches: true }),
       seedActor(db, { workspaceId, role: "DRIVER", allBranches: true }),
-      seedActor(db, { workspaceId, role: "FINANCE", allBranches: true }),
+      // Above the recording band an entry is Direction's to decide.
+      seedActor(db, { workspaceId, role: "DIRECTOR", allBranches: true }),
       seedActor(db, { workspaceId, role: "DIRECTOR", allBranches: true }),
       // Revenue is the counter's to record now, no longer the driver's.
       seedActor(db, { workspaceId, role: "CASHIER", allBranches: true }),

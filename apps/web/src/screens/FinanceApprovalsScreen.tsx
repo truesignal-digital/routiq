@@ -186,6 +186,10 @@ export function FinanceApprovalsScreen() {
             <StatusBadge tone="warning">
               {t("finance.approvals.makerGuard")}
             </StatusBadge>
+          ) : row.original.directionDecides ? (
+            <StatusBadge tone="neutral">
+              {t("finance.approvals.directionDecides")}
+            </StatusBadge>
           ) : null,
       },
     ],
@@ -197,6 +201,8 @@ export function FinanceApprovalsScreen() {
     // submission — the maker guard the server also enforces.
     if (!canApprove) return [];
     if (isOwnSubmission(entry.submittedByPrincipalId, me?.principalId)) return [];
+    // Above the viewer's approval band: the server would answer APPROVAL_REQUIRED.
+    if (entry.directionDecides) return [];
 
     return [
       {

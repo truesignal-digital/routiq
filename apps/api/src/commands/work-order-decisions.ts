@@ -6,7 +6,7 @@ import {
 } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
-import { commands, workOrders } from "../db/schema.js";
+import { workOrders } from "../db/schema.js";
 import {
   appendAuditEvent,
   checkOptimisticVersion,
@@ -24,6 +24,7 @@ import {
   type WorkOrderRow,
 } from "./work-order-lookup.js";
 import { resolveLinkedIssueOnCompletion } from "./issue-decisions.js";
+import { receiptActor } from "./makers.js";
 
 type ApproveWorkOrderPayload = z.infer<typeof approveWorkOrderPayload>;
 type ApproveWorkOrderClosurePayload = z.infer<
@@ -34,28 +35,9 @@ type RejectWorkOrderCompletionPayload = z.infer<
   typeof rejectWorkOrderCompletionPayload
 >;
 
-/** The member behind a command receipt, for the maker/checker split. */
-async function commandActor(
-  tx: Tx,
-  ctx: CommandContext,
-  commandId: string,
-): Promise<string | undefined> {
-  const [receipt] = await tx
-    .select({ initiatedByPrincipalId: commands.initiatedByPrincipalId })
-    .from(commands)
-    .where(
-      and(eq(commands.workspaceId, ctx.workspaceId), eq(commands.id, commandId)),
-    )
-    .limit(1);
-  return receipt?.initiatedByPrincipalId;
-}
-
 /**
- * A pending work order, locked, in the state this decision resolves — and not
- * decided by the member who made it. Creation's maker is whoever asked for the
- * spend; a completion's maker is whoever declared it, found on the audit trail,
- * which stamps its actor in the same transaction as the write — so a
- * completion cannot exist without an author to compare.
+ * A pending work order, locked, in the state this decision resolves. Who may
+ * not decide it is the dispatcher's maker check, through the two hooks below.
  */
 async function loadPendingDecision(
   tx: Tx,
@@ -74,15 +56,47 @@ async function loadPendingDecision(
       to,
     });
   }
-
-  const maker =
-    pending === "SUBMITTED"
-      ? await commandActor(tx, ctx, workOrder.createdByCommandId)
-      : await lastActorForEvents(tx, ctx, workOrder.id, WORK_ORDER_COMPLETION_EVENTS);
-  if (maker === ctx.principalId) {
-    throw new CommandError(403, "MAKER_CANNOT_APPROVE");
-  }
   return workOrder;
+}
+
+/** The work order, locked for the transaction; undefined when it does not exist. */
+async function lockWorkOrder(
+  tx: Tx,
+  ctx: CommandContext,
+  workOrderId: string,
+): Promise<WorkOrderRow | undefined> {
+  const [workOrder] = await tx
+    .select()
+    .from(workOrders)
+    .where(and(eq(workOrders.workspaceId, ctx.workspaceId), eq(workOrders.id, workOrderId)))
+    .for("update");
+  return workOrder;
+}
+
+/** Creation's maker is whoever asked for the spend. */
+async function workOrderRequester(
+  tx: Tx,
+  ctx: CommandContext,
+  payload: { workOrderId: string },
+): Promise<string | undefined> {
+  const workOrder = await lockWorkOrder(tx, ctx, payload.workOrderId);
+  return workOrder ? receiptActor(tx, ctx, workOrder.createdByCommandId) : undefined;
+}
+
+/**
+ * A completion's maker is whoever declared it, found on the audit trail, which
+ * stamps its actor in the same transaction as the write — so a completion
+ * cannot exist without an author to compare.
+ */
+async function workOrderCompleter(
+  tx: Tx,
+  ctx: CommandContext,
+  payload: { workOrderId: string },
+): Promise<string | undefined> {
+  const workOrder = await lockWorkOrder(tx, ctx, payload.workOrderId);
+  return workOrder
+    ? lastActorForEvents(tx, ctx, workOrder.id, WORK_ORDER_COMPLETION_EVENTS)
+    : undefined;
 }
 
 async function writeStatus(
@@ -117,6 +131,7 @@ export const approveWorkOrder: CommandDefinition<ApproveWorkOrderPayload> = {
   allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: approveWorkOrderPayload,
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
+  maker: workOrderRequester,
 
   async execute(tx, ctx, envelope, payload) {
     const workOrder = await loadPendingDecision(
@@ -153,6 +168,7 @@ export const rejectWorkOrder: CommandDefinition<RejectWorkOrderPayload> = {
   allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: rejectWorkOrderPayload,
   branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
+  maker: workOrderRequester,
 
   async execute(tx, ctx, envelope, payload) {
     const workOrder = await loadPendingDecision(
@@ -204,6 +220,7 @@ export const approveWorkOrderClosure: CommandDefinition<ApproveWorkOrderClosureP
     allowedRoles: ["DIRECTOR", "ADMIN"],
     payloadSchema: approveWorkOrderClosurePayload,
     branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
+    maker: workOrderCompleter,
 
     async execute(tx, ctx, envelope, payload) {
       const workOrder = await loadPendingDecision(
@@ -249,6 +266,7 @@ export const rejectWorkOrderCompletion: CommandDefinition<RejectWorkOrderComplet
     allowedRoles: ["DIRECTOR", "ADMIN"],
     payloadSchema: rejectWorkOrderCompletionPayload,
     branchAuthorization: { kind: "branches", resolve: workOrderBranchIds },
+    maker: workOrderCompleter,
 
     async execute(tx, ctx, envelope, payload) {
       const workOrder = await loadPendingDecision(

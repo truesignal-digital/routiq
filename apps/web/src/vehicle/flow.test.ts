@@ -473,6 +473,19 @@ describe("an entry's steps", () => {
     expect(keys(entry({ status: "POSTED" }), "CASHIER")).toEqual(["attach-evidence"]);
   });
 
+  it("locks Finance's review of an entry above its band, which Direction decides", () => {
+    expect(keys(entry({ directionDecides: true }), "FINANCE")).toEqual([
+      "attach-evidence",
+      "approve-entry:directionDecides",
+      "reject-entry:directionDecides",
+    ]);
+    const steps = entrySteps(
+      entry({ directionDecides: true, evidence: { state: "SUPPLIED" } }),
+      viewer("FINANCE"),
+    );
+    expect(steps.primary).toMatchObject({ kind: "locked", lock: { key: "directionDecides" } });
+  });
+
   it("keeps approval and reversal off the Administrateur", () => {
     expect(keys(entry(), "ADMIN")).toEqual(["attach-evidence"]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "ADMIN")).toEqual([]);

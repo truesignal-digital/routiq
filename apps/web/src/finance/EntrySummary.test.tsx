@@ -86,6 +86,7 @@ const entry: FinancialEntryDetail = {
   reversedByEntryId: null,
   ...entryVehicleFields,
   evidenceFiles: [],
+  directionDecides: false,
   postings: [],
 };
 

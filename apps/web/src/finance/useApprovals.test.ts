@@ -28,6 +28,7 @@ describe("Approvals - Maker guard comparison", () => {
       ...entryVehicleFields,
       submittedByPrincipalId: sessionPrincipalId,
       submittedAt: "2026-07-26T10:00:00Z",
+      directionDecides: false,
     };
 
     // Own submission

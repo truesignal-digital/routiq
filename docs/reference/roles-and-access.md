@@ -4,8 +4,10 @@ The training source for who may do what in ROUTIQ. Decisions:
 [ADR-0009](../adr/0009-six-fixed-roles-named-by-the-team.md) (roles) and
 [ADR-0010](../adr/0010-one-person-list-with-optional-app-access.md) (people
 and app access). Status 2026-10: **the six roles are built** (role codes, command permissions,
-app-access rules, migration). Still to build: the default approval chain, the narrowed money read gates, and the Personnel list
-(ADR-0010). The "Built today" column in the migration table is the role each
+app-access rules, migration), and so is **the default approval chain**
+(migration 0037; every `approve-*` / `reject-*` command refuses the member who
+made the record). Still to build: the narrowed money read gates, and the
+Personnel list (ADR-0010). The "Built today" column in the migration table is the role each
 person held before.
 
 ## The six roles
@@ -36,7 +38,9 @@ person held before.
 - **✓** does it in their branches. Direction's ✓ covers all branches.
 - **S** submits it, and it may go to review under the approval bands.
 - **A** approves or rejects. The default chain: work orders → Administrateur,
-  money → Finance, above the top band → Direction.
+  money → Finance, above the top band → Direction. The top band is the highest
+  workspace-wide recording band (record an expense or revenue, 100 000 XAF by
+  default); changing a recording band moves Finance's band with it.
 - **V** view only. **Own** only their own records. **—** no access.
 - **Planned** rows are not built yet. The roles are fixed now so training does
   not change when they ship.

@@ -1,6 +1,6 @@
 import { updateApprovalThresholdPayload } from "@routiq/contracts";
 import type { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { approvalRules } from "../db/schema.js";
 import {
   appendAuditEvent,
@@ -68,6 +68,48 @@ async function bandUnboundedDefaults(
     banded.push(row);
   }
   return banded;
+}
+
+const RECORDING_COMMANDS = ["record-expense", "record-revenue"];
+const ENTRY_DECISIONS = ["approve-entry", "reject-entry"];
+
+const workspaceWideBand = [
+  isNull(approvalRules.categoryCode),
+  isNull(approvalRules.branchId),
+  isNull(approvalRules.amountMinMinor),
+  isNotNull(approvalRules.amountMaxMinor),
+];
+
+/**
+ * Finance decides an entry up to the top recording band and Direction above it
+ * (ADR-0009), so a moved recording band moves the workspace-wide bands on the
+ * entry decisions to the new top. Returns that top.
+ */
+async function alignEntryDecisionBand(tx: Tx, ctx: CommandContext): Promise<bigint | undefined> {
+  const [top] = await tx
+    .select({ band: sql<string | null>`max(${approvalRules.amountMaxMinor})::text` })
+    .from(approvalRules)
+    .where(
+      and(
+        eq(approvalRules.workspaceId, ctx.workspaceId),
+        inArray(approvalRules.commandType, RECORDING_COMMANDS),
+        ...workspaceWideBand,
+      ),
+    );
+  if (top?.band == null) return undefined;
+  const band = BigInt(top.band);
+  await tx
+    .update(approvalRules)
+    .set({ amountMaxMinor: band, rowVersion: sql`${approvalRules.rowVersion} + 1` })
+    .where(
+      and(
+        eq(approvalRules.workspaceId, ctx.workspaceId),
+        inArray(approvalRules.commandType, ENTRY_DECISIONS),
+        ...workspaceWideBand,
+        ne(approvalRules.amountMaxMinor, band),
+      ),
+    );
+  return band;
 }
 
 const updateApprovalThresholdCommand: CommandDefinition<
@@ -140,6 +182,10 @@ const updateApprovalThresholdCommand: CommandDefinition<
       if (!updated) throw new Error("approval_rules update returned no row");
     }
 
+    const entryDecisionBand = RECORDING_COMMANDS.includes(payload.commandType)
+      ? await alignEntryDecisionBand(tx, ctx)
+      : undefined;
+
     await appendAuditEvent(tx, ctx, envelope, {
       eventType: "approval-threshold.updated",
       entityType: "approval_rule",
@@ -151,6 +197,9 @@ const updateApprovalThresholdCommand: CommandDefinition<
       afterState: {
         commandType: payload.commandType,
         amountMaxMinor: payload.amountMaxMinor.toString(),
+        ...(entryDecisionBand === undefined
+          ? {}
+          : { entryDecisionBandMinor: entryDecisionBand.toString() }),
       },
       changedFields: ["amountMaxMinor", "rowVersion"],
     });

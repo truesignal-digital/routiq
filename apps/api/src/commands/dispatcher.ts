@@ -102,6 +102,8 @@ export interface CommandExecuteResult {
  *      rejected APPROVAL_REQUIRED (registry.test.ts enforces this).
  *   4. New tables need explicit GRANTs to routiq_app in their migration
  *      (db/grants.test.ts enforces this).
+ *   5. A decision command (`approve-*`, `reject-*`) declares `maker`, and gets
+ *      a row in maker-checker.test.ts.
  * The dispatcher supplies auth, module check, idempotency, approval evaluation,
  * receipt, audit atomicity; execute() owns only references, invariants, writes.
  */
@@ -158,6 +160,14 @@ export interface CommandDefinition<P> {
    * so the seam has to cover input that never parsed.
    */
   redactPayload?(payload: unknown): unknown;
+  /**
+   * Required on a decision command (`approve-*`, `reject-*`; registerCommand
+   * enforces it): the member who made the record being decided, or undefined
+   * when the record does not exist. The dispatcher refuses that member
+   * MAKER_CANNOT_APPROVE before approval rules are read. Lock the record here
+   * (`FOR UPDATE`) so its maker cannot change before `execute` runs.
+   */
+  maker?(tx: Tx, ctx: CommandContext, payload: P): Promise<string | undefined>;
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   /**
@@ -263,7 +273,15 @@ export function registerCommand<P>(def: CommandDefinition<P>): void {
   if (!def.branchAuthorization) {
     throw new Error(`command branch authorization missing: ${key}`);
   }
+  if (isDecisionCommand(def.name) && !def.maker) {
+    throw new Error(`decision command names no maker: ${key}`);
+  }
   registry.set(key, def as CommandDefinition<unknown>);
+}
+
+/** Nobody approves a record they submitted (ADR-0009): these commands must name its maker. */
+export function isDecisionCommand(name: string): boolean {
+  return /^(approve|reject)-/.test(name);
 }
 
 /** Separate entry point, so a platform command cannot be declared with tenant fields. */
@@ -510,6 +528,13 @@ export async function dispatchCommand(
               assetId: targetAssetId,
               lifecycleStatus: target.lifecycleStatus,
             });
+          }
+        }
+
+        if (definition.maker) {
+          const maker = await definition.maker(tx, ctx, parsedPayload.data);
+          if (maker !== undefined && maker === ctx.principalId) {
+            throw new CommandError(403, "MAKER_CANNOT_APPROVE");
           }
         }
 

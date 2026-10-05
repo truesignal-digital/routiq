@@ -38,7 +38,8 @@ describe("GET /v1/assets/:assetId/finance", () => {
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
       .returning();
     admin = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
-    approver = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
+    // Above the recording band an entry is Direction's to decide.
+    approver = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
     driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
     mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     director = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });

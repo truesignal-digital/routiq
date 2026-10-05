@@ -1,15 +1,22 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Finance → Approvals → approve the oldest pending entry someone else recorded,
- * then read it back as POSTED. Mutates the slot; reset with `pnpm verify up --reseed`.
- * Run: pnpm verify drive flow:approve-entry --role finance --lang en
+ * Finance → Approvals → approve the oldest pending entry the viewer may decide
+ * (someone else recorded it, and it is inside the viewer's approval band), then
+ * read it back as POSTED. Mutates the slot; reset with `pnpm verify up --reseed`.
+ * The demo's pending entries are above the 100 000 XAF band, which Direction
+ * decides (ADR-0009). Run: pnpm verify drive flow:approve-entry --role director --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const queue = await apiGet("/v1/finance/approvals");
-  const pending = (queue.body as { entries?: Array<{ id: string; entryNumber: string }> }).entries ?? [];
-  const entry = pending[0];
-  if (queue.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/approvals → ${queue.status}, nothing pending (reseed?)`);
+  const me = await apiGet("/v1/me");
+  const principalId = (me.body as { principalId?: string }).principalId;
+  const pending =
+    (queue.body as {
+      entries?: Array<{ id: string; entryNumber: string; submittedByPrincipalId: string; directionDecides: boolean }>;
+    }).entries ?? [];
+  const entry = pending.find((item) => !item.directionDecides && item.submittedByPrincipalId !== principalId);
+  if (queue.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/approvals → ${queue.status}, nothing this role may decide (reseed, or --role director)`);
   log(`api: ${pending.length} pending; approving ${entry.entryNumber}`);
 
   await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
