@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BRANCH_TIMEZONES, DEFAULT_BRANCH_TIMEZONE } from "./timezones.js";
@@ -144,6 +145,9 @@ export function CreateBranchDialog({
       return;
     }
 
+    notifyCommandSuccess("branches", "created", result.outcome.warnings, {
+      values: { name: values.name.trim() },
+    });
     await invalidateBranches();
     form.reset(EMPTY);
     onCreated();

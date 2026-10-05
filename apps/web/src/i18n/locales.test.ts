@@ -140,6 +140,22 @@ describe("command labels", () => {
   });
 });
 
+describe("pending words", () => {
+  // A button's sending state is its command's word, so one command never
+  // reads "Envoi…" on one screen and "Enregistrement…" on another.
+  it("a submitting or working key lives only under commands.* or commandForm", () => {
+    for (const [locale, catalog] of CATALOGS) {
+      const stray = flattenKeys(catalog).filter(
+        (key) =>
+          /(submitting|working)$/i.test(key.split(".").at(-1) ?? "") &&
+          !key.startsWith("commands.") &&
+          !key.startsWith("commandForm."),
+      );
+      expect(stray, locale).toEqual([]);
+    }
+  });
+});
+
 /**
  * The dismiss and close buttons' words. "Annuler" is also the verb for
  * cancelling a work order and "Close" for closing a trip, so each word may only

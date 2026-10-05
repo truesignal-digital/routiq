@@ -65,7 +65,6 @@
       "all": "Toutes mes agences",
       "loading": "Agences…",
       "loadFailed": "Agences indisponibles",
-      "switched": "Vous consultez : {branch}",
       "scopeLine": "Filtré : {branch} — {count, plural, one {# résultat} other {# résultats}}",
       "scopeLineAtLeast": "Filtré : {branch} — au moins {count, plural, one {# résultat} other {# résultats}}",
       "scopeLineLoading": "Filtré : {branch}",
@@ -966,9 +965,7 @@
           "BANK": "Banque",
           "OTHER": "Autre"
         }
-      },
-      "submitAndClose": "Enregistrer et clôturer",
-      "closingSubmitting": "Clôture…"
+      }
     }
   },
   "maintenance": {
@@ -1211,8 +1208,16 @@
       "reactivateHint": "{name} pourra de nouveau se connecter avec son code actuel.",
       "conflictTitle": "Cette fiche a changé",
       "conflictBody": "Quelqu'un a modifié cet utilisateur pendant votre saisie. Rechargez la liste et reprenez.",
-      "reload": "Recharger",
-      "pinResetTitle": "Code réinitialisé",
+      "reload": "Recharger"
+    },
+    "notify": {
+      "success": {
+        "added": "Utilisateur ajouté : {name}",
+        "roleChanged": "Rôle mis à jour : {name}",
+        "pinReset": "Code réinitialisé : {name}",
+        "deactivated": "Utilisateur désactivé : {name}",
+        "reactivated": "Utilisateur réactivé : {name}"
+      },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
     }
   },
@@ -1251,6 +1256,17 @@
       "conflictTitle": "Cette agence a changé",
       "conflictBody": "Quelqu'un a modifié cette agence pendant votre saisie. Rechargez la liste et reprenez.",
       "reload": "Recharger"
+    },
+    "notify": {
+      "success": {
+        "created": "Agence créée : {name}",
+        "renamed": "Agence renommée : {name}",
+        "deactivated": "Agence désactivée : {name}",
+        "reactivated": "Agence réactivée : {name}"
+      },
+      "info": {
+        "switched": "Vous consultez : {branch}"
+      }
     }
   },
   "provenance": {
@@ -1581,7 +1597,12 @@
       "label": "Saisir une fiche",
       "submit": "Enregistrer la fiche",
       "submitting": "Enregistrement…",
-      "short": "Fiche"
+      "short": "Fiche",
+      "close": {
+        "label": "Enregistrer et clôturer",
+        "submit": "Enregistrer et clôturer",
+        "submitting": "Clôture…"
+      }
     },
     "record-haulage-job-sheet": {
       "label": "Saisir une fiche",
