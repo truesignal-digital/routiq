@@ -9,20 +9,26 @@ import { i18n } from "../i18n/index.js";
 export type NotifyNamespace =
   | "activities"
   | "assets"
+  | "branches"
   | "documents"
   | "finance"
   | "maintenance"
+  | "users"
   | "vehicle";
 
 type NotifyKind = "success" | "info" | "warnings" | "errors";
+
+/** ICU values for a message that names its record: `{name}`, `{branch}`. */
+export type NotifyValues = Readonly<Record<string, string | number>>;
 
 function localizedNotifyMessage(
   namespace: NotifyNamespace,
   kind: NotifyKind,
   key: string,
+  values?: NotifyValues,
 ): string {
   const scoped = `${namespace}.notify.${kind}.${key}`;
-  if (i18n.exists(scoped)) return i18n.t(scoped);
+  if (i18n.exists(scoped)) return i18n.t(scoped, { ...values });
 
   const shared = `notify.${kind}.${key}`;
   if (i18n.exists(shared)) return i18n.t(shared);
@@ -53,6 +59,8 @@ function warningLines(
 }
 
 export interface NotifySuccessOptions {
+  /** Values for the title's placeholders, such as the record's name. */
+  values?: NotifyValues;
   /**
    * What only the caller knows, under the warnings — a composite command's
    * count of embedded records left waiting for an approver, say.
@@ -91,7 +99,7 @@ export function notifyCommandSuccess(
   options: NotifySuccessOptions = {},
 ): void {
   addSuccessToast(
-    localizedNotifyMessage(namespace, "success", messageKey),
+    localizedNotifyMessage(namespace, "success", messageKey, options.values),
     [warningLines(namespace, warnings), ...(options.extraLines ?? [])],
     options.action,
   );
@@ -112,9 +120,13 @@ export function notifyCommandError(
  * A note about a command the user asked for but that did not need sending —
  * "nothing to save" — so it reads as information, not as an error.
  */
-export function notifyInfo(namespace: NotifyNamespace, messageKey: string): void {
+export function notifyInfo(
+  namespace: NotifyNamespace,
+  messageKey: string,
+  values?: NotifyValues,
+): void {
   toast.add({
     type: "info",
-    title: localizedNotifyMessage(namespace, "info", messageKey),
+    title: localizedNotifyMessage(namespace, "info", messageKey, values),
   });
 }
