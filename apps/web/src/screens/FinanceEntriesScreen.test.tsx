@@ -182,10 +182,13 @@ vi.mock("../finance/useEntry.js", () => ({
   useEntry: () => ({
     isPending: false,
     isError: false,
-    data: { ...entry, postings: [] },
+    data: { ...entry, postings: [], evidenceFiles: [] },
     refetch: vi.fn(),
   }),
 }));
+
+// The summary's history button owns a read this suite has no client for.
+vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
 
 import { canReadFinance, canRecordFinance, canReverseEntry } from "../finance/permissions.js";
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
@@ -452,6 +455,20 @@ describe("FinanceEntriesScreen", () => {
       within(drawer).getByText("finance.entries.detail.paymentMethod"),
     ).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("signs an expense with a minus in the list and leaves it unsigned on the entry itself (E2.8)", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    // Revenue and expenses share this list, so the direction carries the sign.
+    expect(screen.getByText(/^−1\s000\sFCFA$/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
+    const drawer = await screen.findByRole("dialog");
+    // The record's own amount: no sign, the direction said in words beside it.
+    expect(within(drawer).getByText(/^1\s000\sFCFA$/)).toBeTruthy();
+    expect(within(drawer).getByText("finance.entries.detail.amountKind")).toBeTruthy();
   });
 
   it("hands the entry to its own route from the drawer's full-screen action", async () => {

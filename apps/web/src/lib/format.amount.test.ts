@@ -32,4 +32,10 @@ describe("whole amounts, as an input shows and reads them", () => {
     expect(parseWholeAmount("12abc", "en").kind).toBe("invalid");
     expect(parseWholeAmount("9".repeat(20), "en").kind).toBe("invalid");
   });
+
+  it("refuses a group separator out of place instead of gluing the digits", () => {
+    expect(parseWholeAmount("4,5", "en").kind).toBe("invalid");
+    expect(parseWholeAmount("45,00,000", "en").kind).toBe("invalid");
+    expect(parseWholeAmount("86,000", "en")).toEqual({ kind: "amount", minor: 86_000 });
+  });
 });

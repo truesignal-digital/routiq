@@ -91,7 +91,7 @@ function buildColumns(
         <span className="text-right font-mono font-semibold whitespace-nowrap">
           {formatMoney(row.original.amountMinor, {
             currency: row.original.currency,
-            signDisplay: "always",
+            sign: { context: "ledger", direction: row.original.direction },
           })}
         </span>
       ),

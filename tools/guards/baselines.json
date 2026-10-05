@@ -5,6 +5,11 @@
   "E1": {
     "apps/web/src/components/money-input.tsx": 1
   },
+  "H16": {
+    "apps/web/src/activities/detail/ActivityAssetsPanel.tsx": 3,
+    "apps/web/src/activities/detail/ActivityOverview.tsx": 1,
+    "apps/web/src/components/ui/file-upload.tsx": 1
+  },
   "A18": {
     "apps/api/src/artifacts/artifacts.test.ts": 2,
     "apps/api/src/auth/auth.test.ts": 1,

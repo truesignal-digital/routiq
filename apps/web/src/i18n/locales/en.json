@@ -274,7 +274,7 @@
       },
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
-      "acquisitionAmount": "Acquisition amount (XAF)"
+      "acquisitionAmount": "Acquisition amount (FCFA)"
     },
     "actions": {
       "assignTo": "Assign to branch",
@@ -414,7 +414,7 @@
       "categoryLabel": "Category",
       "chooseCategory": "Choose a category…",
       "categoriesFailed": "We couldn't load categories. Retry this page.",
-      "amountLabel": "Amount (XAF)",
+      "amountLabel": "Amount (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Payment method",
       "paymentMethods": {
@@ -461,6 +461,7 @@
         "status": "Status",
         "category": "Category",
         "amount": "Amount",
+        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue reversal} EXPENSE_REVERSAL {Expense reversal} other {Expense}}",
         "date": "Economic date",
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
@@ -480,7 +481,19 @@
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
         "breadcrumb": "Detail",
-        "editAction": "Edit"
+        "editAction": "Edit",
+        "receipt": "Receipt",
+        "noReceiptFile": "No file on this entry.",
+        "evidence": {
+          "SUPPLIED": "Receipt on file",
+          "PAYMENT_REFERENCE": "Payment reference",
+          "NOT_EXPECTED": "No receipt expected",
+          "NOT_SUPPLIED": "No receipt"
+        },
+        "evidenceVia": {
+          "RECORDED": "Recorded with the entry · {date} · {name}",
+          "ATTACHED": "Attached later · {date} · {name}"
+        }
       },
       "viewer": {
         "description": "Economic date {date}",
@@ -508,7 +521,8 @@
       "empty": "No entries awaiting approval.",
       "columns": {
         "actions": "Actions",
-        "branch": "Branch"
+        "branch": "Branch",
+        "submittedAt": "Submitted"
       },
       "filters": {
         "branch": "Branch",
@@ -935,7 +949,7 @@
         "expense": "Expense",
         "categoryLabel": "Category",
         "chooseCategory": "Choose a category",
-        "amountLabel": "Amount (XAF)",
+        "amountLabel": "Amount (FCFA)",
         "amountPlaceholder": "e.g. 125 000",
         "amountRequired": "Enter an amount above zero.",
         "paymentMethodLabel": "Payment method",
@@ -1858,7 +1872,7 @@
       "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
       "fuel": {
         "description": "Records the fuel expense, then the odometer if you enter it.",
-        "amount": "Amount paid (XAF)",
+        "amount": "Amount paid (FCFA)",
         "when": "Date and time",
         "station": "Station (optional)",
         "odometer": "Odometer in km (optional)",

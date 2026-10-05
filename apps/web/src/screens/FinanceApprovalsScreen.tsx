@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -18,8 +18,13 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
-import { ApproveEntryForm, RejectEntryForm } from "@/finance/EntryDecisionForms.js";
-import { isOwnSubmission } from "@/finance/model.js";
+import {
+  EntryDecisionButtons,
+  RejectEntryForm,
+  useApproveEntry,
+} from "@/finance/EntryDecisionForms.js";
+import { EntrySummary } from "@/finance/EntrySummary.js";
+import { amountKind, isOwnSubmission } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import {
   approvalsOutsideBranch,
@@ -32,9 +37,8 @@ import { BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { PendingApprovalItem } from "@routiq/contracts";
 
-type ActionDialogState =
-  | { open: false }
-  | { open: true; entryId: string; action: "approve" | "reject"; rowVersion: number };
+/** Only Reject asks anything first; Approve is one tap. */
+type RejectDialogState = { open: false } | { open: true; entryId: string; rowVersion: number };
 
 /** Mirrors the read's own default — oldest first is the queue's honest order. */
 const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
@@ -45,6 +49,7 @@ const APPROVALS_PAGE_SIZE = 100;
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
   const label = useCommandLabel();
+  const navigate = useNavigate();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
 
@@ -76,7 +81,8 @@ export function FinanceApprovalsScreen() {
   });
   const pendingTotal = approvalsTotal(approvalsQuery.data);
   const pendingElsewhere = approvalsOutsideBranch(approvalsQuery.data);
-  const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
+  const [rejectDialog, setRejectDialog] = useState<RejectDialogState>({ open: false });
+  const { approve } = useApproveEntry();
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const entries = approvalsQuery.data?.pages.flatMap((page) => page.entries) ?? [];
@@ -120,10 +126,19 @@ export function FinanceApprovalsScreen() {
         ),
       },
       {
-        accessorKey: "submittedAt",
+        accessorKey: "economicDate",
         header: t("finance.entries.detail.date"),
-        enableSorting: true,
+        enableSorting: false,
         meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
+        cell: ({ row }) => formatDate(row.original.economicDate),
+      },
+      {
+        accessorKey: "submittedAt",
+        header: t("finance.approvals.columns.submittedAt"),
+        enableSorting: true,
+        // A phone row shows values without headings, so a second bare date
+        // there would read as the economic one.
+        meta: { mobile: "hidden", label: t("finance.approvals.columns.submittedAt") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
       },
       {
@@ -156,8 +171,16 @@ export function FinanceApprovalsScreen() {
         enableSorting: true,
         meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
-          <span className="whitespace-nowrap font-mono font-semibold">
-            {formatMoney(row.original.amountMinor, { currency: row.original.currency, signDisplay: "never" })}
+          <span className="flex flex-col">
+            <span className="whitespace-nowrap font-mono font-semibold">
+              {formatMoney(row.original.amountMinor, {
+                currency: row.original.currency,
+                sign: { context: "record" },
+              })}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {t("finance.entries.detail.amountKind", { kind: amountKind(row.original) })}
+            </span>
           </span>
         ),
       },
@@ -192,37 +215,30 @@ export function FinanceApprovalsScreen() {
     [branchOptions, i18n.resolvedLanguage, me?.principalId, t],
   );
 
+  // role-config: deciding is an approver's call, and never on your own
+  // submission — the maker guard the server also enforces.
+  const canDecide = (entry: PendingApprovalItem) =>
+    canApprove && !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId);
+
+  const openReject = (entry: PendingApprovalItem) =>
+    setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });
+
   const rowActions = (entry: PendingApprovalItem) => {
-    // role-config: deciding is an approver's call, and never on your own
-    // submission — the maker guard the server also enforces.
-    if (!canApprove) return [];
-    if (isOwnSubmission(entry.submittedByPrincipalId, me?.principalId)) return [];
+    if (!canDecide(entry)) return [];
 
     return [
       {
         key: "approve",
         label: label("approve-entry"),
         icon: Check,
-        onSelect: () =>
-          setActionDialog({
-            open: true,
-            entryId: entry.id,
-            action: "approve" as const,
-            rowVersion: entry.rowVersion,
-          }),
+        onSelect: () => void approve({ id: entry.id, rowVersion: entry.rowVersion }),
       },
       {
         key: "reject",
         label: label("reject-entry"),
         icon: X,
         destructive: true,
-        onSelect: () =>
-          setActionDialog({
-            open: true,
-            entryId: entry.id,
-            action: "reject" as const,
-            rowVersion: entry.rowVersion,
-          }),
+        onSelect: () => openReject(entry),
       },
     ];
   };
@@ -297,6 +313,33 @@ export function FinanceApprovalsScreen() {
             onSortingChange={setSorting}
             primaryColumn={{ columnId: "entryNumber" }}
             rowActions={rowActions}
+            rowViewer={{
+              title: (entry) => entry.entryNumber,
+              description: (entry) =>
+                t("finance.entries.viewer.description", {
+                  date: formatDate(entry.economicDate),
+                }),
+              render: (entry) => <EntrySummary entryId={entry.id} />,
+              fullScreen: {
+                label: t("finance.entries.viewer.fullScreen"),
+                onOpen: (entry) =>
+                  void navigate({
+                    to: "/finance/entries/$entryId",
+                    params: { entryId: entry.id },
+                  }),
+              },
+              actions: (entry, drawer) =>
+                canDecide(entry) ? (
+                  <EntryDecisionButtons
+                    entry={{ id: entry.id, rowVersion: entry.rowVersion }}
+                    onApproved={drawer.close}
+                    onReject={() => {
+                      drawer.close();
+                      openReject(entry);
+                    }}
+                  />
+                ) : null,
+            }}
             loadMore={{
               hasNextPage: approvalsQuery.hasNextPage,
               isFetching: approvalsQuery.isFetchingNextPage,
@@ -331,20 +374,13 @@ export function FinanceApprovalsScreen() {
         </div>
       )}
 
-      {actionDialog.open &&
-        (actionDialog.action === "approve" ? (
-          <ApproveEntryForm
-            surface="dialog"
-            entry={{ id: actionDialog.entryId, rowVersion: actionDialog.rowVersion }}
-            onDismiss={() => setActionDialog({ open: false })}
-          />
-        ) : (
-          <RejectEntryForm
-            surface="dialog"
-            entry={{ id: actionDialog.entryId, rowVersion: actionDialog.rowVersion }}
-            onDismiss={() => setActionDialog({ open: false })}
-          />
-        ))}
+      {rejectDialog.open && (
+        <RejectEntryForm
+          surface="dialog"
+          entry={{ id: rejectDialog.entryId, rowVersion: rejectDialog.rowVersion }}
+          onDismiss={() => setRejectDialog({ open: false })}
+        />
+      )}
     </PageContainer>
   );
 }

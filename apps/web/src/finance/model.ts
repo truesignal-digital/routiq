@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseWholeAmount } from "../lib/format.js";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
@@ -11,18 +12,20 @@ type RecordRevenuePayload = z.infer<typeof recordRevenuePayload>;
 type UpdatePendingEntryPayload = z.infer<typeof updatePendingEntryPayload>;
 
 /**
- * Parse user input string to XAF minor units (positive integer).
- * Removes whitespace and thousands separators; returns null if invalid.
+ * A typed XAF amount in minor units (exponent 0), read with the grouping of
+ * the language the money input formatted it in. Null when empty or invalid.
  */
-export function parseMoneyXaf(input: string): number | null {
-  if (!input.trim()) return null;
-  // Reject if input contains decimal point or comma (which would be decimal in some locales)
-  if (input.includes(".") || input.includes(",")) return null;
-  // Remove whitespace and common separators
-  const normalized = input.replace(/[\s]/g, "");
-  const parsed = parseInt(normalized, 10);
-  if (isNaN(parsed) || parsed < 0) return null;
-  return parsed;
+export function parseMoneyXaf(input: string, locale?: string): number | null {
+  const amount = parseWholeAmount(input, locale);
+  return amount.kind === "amount" ? amount.minor : null;
+}
+
+/** A record's direction in words, where its own amount is shown unsigned. */
+export function amountKind(entry: {
+  direction: "REVENUE" | "EXPENSE";
+  reversesEntryId: string | null;
+}): string {
+  return entry.reversesEntryId === null ? entry.direction : `${entry.direction}_REVERSAL`;
 }
 
 export interface FinanceFormState {
