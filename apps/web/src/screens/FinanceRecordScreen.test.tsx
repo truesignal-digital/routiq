@@ -406,7 +406,7 @@ describe("finance record form", () => {
     await chooseFuelCategory(user);
 
     await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.toastAdd).toHaveBeenCalled());
     expect(mocks.navigate).not.toHaveBeenCalled();
@@ -415,6 +415,6 @@ describe("finance record form", () => {
 
   it("turns the workshop away: its costs go on work orders", () => {
     renderScreen({ ...recorder, role: "TECHNICIAN" });
-    expect(screen.queryByRole("button", { name: "Record" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Record the expense" })).toBeNull();
   });
 });

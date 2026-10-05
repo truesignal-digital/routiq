@@ -297,9 +297,9 @@ describe("UsersScreen", () => {
     expect(rowMenuOrNull("Estelle Ngo")).toBeNull();
 
     await userEvent.click(rowMenu("Didier Talla"));
-    expect(await screen.findByRole("menuitem", { name: "users.actions.role" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "users.actions.pin" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "users.actions.deactivate" })).toBeTruthy();
+    expect(await screen.findByRole("menuitem", { name: "commands.update-member-role.label" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "commands.reset-member-pin.label" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "commands.deactivate-member.label" })).toBeTruthy();
   });
 
   it("opens the add form from the header", async () => {

@@ -345,8 +345,8 @@ describe("the author's own pending entry (#85)", () => {
       entryDetails: [mine({ recordedBy: actor(OTHER_ID, "Hervé") })],
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
-    expect(within(panel).getByRole("button", { name: "Approve" })).toBeTruthy();
-    expect(within(panel).getByRole("button", { name: "Reject" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Approve entry" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Reject entry" })).toBeTruthy();
   });
 
   it("leaves the Administrateur no approval on an entry", async () => {
@@ -356,8 +356,8 @@ describe("the author's own pending entry (#85)", () => {
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
     await within(panel).findByText(/Fuel/);
-    expect(within(panel).queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(within(panel).queryByRole("button", { name: "Reject" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
   });
 
   it("offers no Edit once the entry is decided", async () => {

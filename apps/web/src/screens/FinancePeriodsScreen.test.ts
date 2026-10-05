@@ -187,8 +187,8 @@ describe("finance period command routing", () => {
     // Only the open period's row has a menu: the locked one offers Finance nothing.
     expect(menus).toHaveLength(1);
     await user.click(menus[0]!);
-    expect(await screen.findByRole("menuitem", { name: "Lock" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Reopen" })).toBeNull();
+    expect(await screen.findByRole("menuitem", { name: "Lock period" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Reopen period" })).toBeNull();
   });
 
   it.each(["ADMIN", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(

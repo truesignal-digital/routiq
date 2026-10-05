@@ -340,7 +340,7 @@ describe("the member refusals the server answers", () => {
     ["DIRECTOR_REQUIRES_ALL_BRANCHES", "La Direction couvre toujours toutes les agences."],
   ])("%s is read in place", async (code, text) => {
     renderDialog("deactivate", fakeClient({ ok: false, code }));
-    await userEvent.click(screen.getByRole("button", { name: "Désactiver" }));
+    await userEvent.click(screen.getByRole("button", { name: "Désactiver l'utilisateur" }));
     expect(await screen.findByText(text)).toBeTruthy();
   });
 });

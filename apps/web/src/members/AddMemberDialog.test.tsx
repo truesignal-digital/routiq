@@ -225,7 +225,7 @@ describe("AddMemberDialog", () => {
     expect(screen.queryByRole("checkbox", { name: "Yaoundé" })).toBeNull();
 
     await fillForm({ role: "Caissier / Caissière" });
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload).toMatchObject({ role: "CASHIER", branchScope: ["branch-dla"] });
   });

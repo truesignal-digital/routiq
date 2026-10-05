@@ -663,12 +663,12 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
       .returning();
     if (!yaounde) throw new Error("branch insert returned no row");
 
-    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER" });
-    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
+    admin = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     doualaOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [seeded.branch.id],
     });
 
