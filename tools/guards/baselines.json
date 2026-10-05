@@ -5,9 +5,6 @@
   "E1": {
     "apps/web/src/components/money-input.tsx": 1
   },
-  "H6": {
-    "apps/web/src/shell/branch-context.tsx": 1
-  },
   "H9": {
     "apps/web/src/activities/ActivityActions.tsx": 5,
     "apps/web/src/activities/ReadingForm.tsx": 1,

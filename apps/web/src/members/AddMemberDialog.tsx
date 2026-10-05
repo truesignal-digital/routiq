@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
@@ -141,6 +142,9 @@ export function AddMemberDialog({
       return;
     }
 
+    notifyCommandSuccess("users", "added", result.outcome.warnings, {
+      values: { name: values.displayName.trim() },
+    });
     // Nothing carries the PIN out of this function: the form is emptied before
     // the dialog closes, so no later render can hold it.
     form.reset(EMPTY);

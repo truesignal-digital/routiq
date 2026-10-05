@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { useInvalidateBranches } from "./useBranches.js";
@@ -40,6 +41,12 @@ export const BRANCH_ACTION_COMMANDS: Record<BranchActionKey, CommandLabelRef> = 
 export function branchActions(branch: BranchListItem): BranchActionKey[] {
   return branch.active ? ["rename", "deactivate"] : ["reactivate"];
 }
+
+const BRANCH_ACTION_SUCCESS: Record<BranchActionKey, string> = {
+  rename: "renamed",
+  deactivate: "deactivated",
+  reactivate: "reactivated",
+};
 
 type Outcome = { kind: "form" } | { kind: "conflict" } | { kind: "error"; code: string };
 
@@ -141,6 +148,9 @@ export function BranchActionDialog({
       return;
     }
 
+    notifyCommandSuccess("branches", BRANCH_ACTION_SUCCESS[action], result.outcome.warnings, {
+      values: { name: action === "rename" ? trimmedName : branch.name },
+    });
     await invalidateBranches();
     onDismiss();
   }

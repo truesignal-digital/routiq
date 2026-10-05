@@ -9,6 +9,20 @@ import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { AddMemberDialog } from "./AddMemberDialog.js";
 
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("@/components/ui/toast.js", () => ({ toast }));
+
+/** Success is one toast, and nothing in the dialog repeats it. */
+function expectOneSuccessToast(title: string, description?: string) {
+  expect(toast.add).toHaveBeenCalledTimes(1);
+  expect(toast.add).toHaveBeenCalledWith({
+    type: "success",
+    title,
+    ...(description === undefined ? {} : { description }),
+  });
+  expect(screen.queryByRole("status")).toBeNull();
+}
+
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const branches = [
@@ -110,6 +124,7 @@ describe("AddMemberDialog", () => {
     expect(submission.payload.principalId).toMatch(/^[0-9a-f-]{36}$/);
     expect(onAdded).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expectOneSuccessToast("Utilisateur ajouté : Estelle Ngo");
   });
 
   it("narrows the new member to the branches picked, by id", async () => {
@@ -137,6 +152,7 @@ describe("AddMemberDialog", () => {
     ).toBeTruthy();
     // The form stays open on the field that has to change.
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(toast.add).not.toHaveBeenCalled();
   });
 
   it("refuses two PINs that disagree before anything is sent", async () => {
@@ -163,5 +179,6 @@ describe("AddMemberDialog", () => {
     // Not in a field, not in a confirmation, not anywhere: the PIN leaves this
     // dialog only inside the command.
     expect(document.body.innerHTML).not.toContain("4821");
+    expect(JSON.stringify(toast.add.mock.calls)).not.toContain("4821");
   });
 });
