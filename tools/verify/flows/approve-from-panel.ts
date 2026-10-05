@@ -24,6 +24,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const panel = page.getByRole("dialog").filter({ has: page.getByRole("heading", { name: entry.entryNumber }) });
   await panel.waitFor();
   await quiet();
+  // The panel carries the receipt and the history, not just the fields.
+  await panel.getByText(t("Justificatif", "Receipt"), { exact: true }).waitFor();
+  await panel.getByRole("button", { name: t("Historique", "History") }).waitFor();
   await shot("entry-panel");
 
   await panel.getByRole("button", { name: t("Approuver", "Approve"), exact: true }).click();

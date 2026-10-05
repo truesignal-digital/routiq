@@ -49,6 +49,39 @@ const approver: MeContext = {
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
+const MAKER_ID = "00000000-0000-4000-8000-000000000031";
+
+/** The default fixture, waiting for a decision and recorded by `recordedBy`. */
+function waiting(recordedBy: string) {
+  const current = mocks.useEntry.getMockImplementation()?.() ?? mocks.useEntry();
+  mocks.useEntry.mockReturnValue({
+    ...current,
+    data: {
+      ...current.data,
+      status: "SUBMITTED",
+      postedAt: null,
+      postingPeriodCode: null,
+      rowVersion: 4,
+      recordedBy: { principalId: recordedBy, displayName: null, scope: "WORKSPACE" },
+    },
+  });
+}
+
+function succeedingIntent() {
+  const submit = vi.fn(async () => ({
+    ok: true,
+    outcome: {
+      commandId: crypto.randomUUID(),
+      recordId: crypto.randomUUID(),
+      rowVersion: 5,
+      warnings: [],
+      idempotentReplay: false,
+    },
+  }));
+  mocks.createCommandIntent.mockReturnValue({ current: vi.fn(), submit });
+  return submit;
+}
+
 function renderScreen() {
   return render(
     createElement(
@@ -99,6 +132,9 @@ beforeEach(() => {
       reversedByEntryId: null,
       postings: [],
       links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+      recordedBy: { principalId: MAKER_ID, displayName: "Sali", scope: "WORKSPACE" },
+      evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
+      evidenceFiles: [],
     },
     isPending: false,
     isError: false,
@@ -181,5 +217,61 @@ describe("finance entry detail enums", () => {
     expect(screen.getByText("Carburant")).toBeDefined();
 
     await i18n.changeLanguage("en");
+  });
+});
+
+describe("decision on the entry page", () => {
+  it("offers Approve and Reject while the entry waits, and approves in one tap", async () => {
+    waiting(MAKER_ID);
+    const submit = succeedingIntent();
+    const user = userEvent.setup();
+    renderScreen();
+
+    expect(screen.getByRole("button", { name: "Reject" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => expect(submit).toHaveBeenCalledOnce());
+    expect(mocks.createCommandIntent).toHaveBeenCalledWith(expect.anything(), "approve-entry", 1);
+    expect(submit).toHaveBeenCalledWith(
+      { entryId: "00000000-0000-4000-8000-000000000010" },
+      { expectedVersion: 4 },
+    );
+    // Approve is one tap: no dialog stands between the button and the command.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(mocks.toastAdd).toHaveBeenCalledWith({ type: "success", title: "Entry approved" });
+  });
+
+  it("asks for a reason before rejecting", async () => {
+    waiting(MAKER_ID);
+    const submit = succeedingIntent();
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.type(screen.getByLabelText("Rejection reason"), "No receipt");
+    await user.click(screen.getAllByRole("button", { name: "Reject" }).at(-1)!);
+
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith(
+        { entryId: "00000000-0000-4000-8000-000000000010", reason: "No receipt" },
+        { expectedVersion: 4 },
+      ),
+    );
+    expect(mocks.createCommandIntent).toHaveBeenCalledWith(expect.anything(), "reject-entry", 1);
+  });
+
+  it("offers no decision on the approver's own entry", () => {
+    waiting(approver.principalId);
+    renderScreen();
+
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+  });
+
+  it("offers no decision once the entry is posted", () => {
+    renderScreen();
+
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
   });
 });

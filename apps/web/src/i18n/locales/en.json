@@ -493,7 +493,19 @@
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
         "breadcrumb": "Detail",
-        "editAction": "Edit"
+        "editAction": "Edit",
+        "receipt": "Receipt",
+        "noReceiptFile": "No file on this entry.",
+        "evidence": {
+          "SUPPLIED": "Receipt on file",
+          "PAYMENT_REFERENCE": "Payment reference",
+          "NOT_EXPECTED": "No receipt expected",
+          "NOT_SUPPLIED": "No receipt"
+        },
+        "evidenceVia": {
+          "RECORDED": "Recorded with the entry · {date} · {name}",
+          "ATTACHED": "Attached later · {date} · {name}"
+        }
       },
       "viewer": {
         "description": "Economic date {date}",

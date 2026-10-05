@@ -76,7 +76,7 @@ function useDecisionChrome(host: EntryDecisionHost, refresh: () => Promise<void>
 
 export function ApproveEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
-  const refresh = useFinanceRefresh("approvals", "entries");
+  const refresh = useFinanceRefresh("approvals", "entries", "entry");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [note, setNote] = useState("");
@@ -131,8 +131,8 @@ export function ApproveEntryForm(host: EntryDecisionHost) {
  * Approve is one tap: no dialog, the outcome is a toast. One intent per entry,
  * so tapping again after a dropped connection replays the same envelope.
  */
-function useApproveEntry(client: CommandClient | undefined) {
-  const refresh = useFinanceRefresh("approvals", "entries");
+export function useApproveEntry(client?: CommandClient) {
+  const refresh = useFinanceRefresh("approvals", "entries", "entry");
   const [submitting, setSubmitting] = useState(false);
   const intents = useRef(new Map<string, CommandIntent<ApprovePayload>>());
 
@@ -172,7 +172,7 @@ export function EntryDecisionButtons({
 }: {
   entry: EntryRef;
   client?: CommandClient | undefined;
-  onApproved: () => void;
+  onApproved?: (() => void) | undefined;
   onReject: () => void;
 }) {
   const { t } = useTranslation();
@@ -195,7 +195,7 @@ export function EntryDecisionButtons({
         disabled={submitting}
         onClick={() =>
           void approve(entry).then((approved) => {
-            if (approved) onApproved();
+            if (approved) onApproved?.();
           })
         }
       >
@@ -207,7 +207,7 @@ export function EntryDecisionButtons({
 
 export function RejectEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
-  const refresh = useFinanceRefresh("approvals", "entries");
+  const refresh = useFinanceRefresh("approvals", "entries", "entry");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [reason, setReason] = useState("");

@@ -18,9 +18,9 @@ import { Button } from "@/components/ui/button";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
 import {
-  ApproveEntryForm,
   EntryDecisionButtons,
   RejectEntryForm,
+  useApproveEntry,
 } from "@/finance/EntryDecisionForms.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { isOwnSubmission } from "@/finance/model.js";
@@ -36,9 +36,8 @@ import { BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { PendingApprovalItem } from "@routiq/contracts";
 
-type ActionDialogState =
-  | { open: false }
-  | { open: true; entryId: string; action: "approve" | "reject"; rowVersion: number };
+/** Only Reject asks anything first; Approve is one tap. */
+type RejectDialogState = { open: false } | { open: true; entryId: string; rowVersion: number };
 
 /** Mirrors the read's own default — oldest first is the queue's honest order. */
 const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
@@ -80,7 +79,8 @@ export function FinanceApprovalsScreen() {
   });
   const pendingTotal = approvalsTotal(approvalsQuery.data);
   const pendingElsewhere = approvalsOutsideBranch(approvalsQuery.data);
-  const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
+  const [rejectDialog, setRejectDialog] = useState<RejectDialogState>({ open: false });
+  const { approve } = useApproveEntry();
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const entries = approvalsQuery.data?.pages.flatMap((page) => page.entries) ?? [];
@@ -204,12 +204,7 @@ export function FinanceApprovalsScreen() {
     canApprove && !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId);
 
   const openReject = (entry: PendingApprovalItem) =>
-    setActionDialog({
-      open: true,
-      entryId: entry.id,
-      action: "reject",
-      rowVersion: entry.rowVersion,
-    });
+    setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });
 
   const rowActions = (entry: PendingApprovalItem) => {
     if (!canDecide(entry)) return [];
@@ -219,13 +214,7 @@ export function FinanceApprovalsScreen() {
         key: "approve",
         label: t("finance.approvals.approve"),
         icon: Check,
-        onSelect: () =>
-          setActionDialog({
-            open: true,
-            entryId: entry.id,
-            action: "approve" as const,
-            rowVersion: entry.rowVersion,
-          }),
+        onSelect: () => void approve({ id: entry.id, rowVersion: entry.rowVersion }),
       },
       {
         key: "reject",
@@ -368,20 +357,13 @@ export function FinanceApprovalsScreen() {
         </div>
       )}
 
-      {actionDialog.open &&
-        (actionDialog.action === "approve" ? (
-          <ApproveEntryForm
-            surface="dialog"
-            entry={{ id: actionDialog.entryId, rowVersion: actionDialog.rowVersion }}
-            onDismiss={() => setActionDialog({ open: false })}
-          />
-        ) : (
-          <RejectEntryForm
-            surface="dialog"
-            entry={{ id: actionDialog.entryId, rowVersion: actionDialog.rowVersion }}
-            onDismiss={() => setActionDialog({ open: false })}
-          />
-        ))}
+      {rejectDialog.open && (
+        <RejectEntryForm
+          surface="dialog"
+          entry={{ id: rejectDialog.entryId, rowVersion: rejectDialog.rowVersion }}
+          onDismiss={() => setRejectDialog({ open: false })}
+        />
+      )}
     </PageContainer>
   );
 }

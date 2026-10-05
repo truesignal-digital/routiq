@@ -212,8 +212,12 @@ describe("approvals queue: the entry opens in the record panel", () => {
     await user.click(await screen.findByRole("button", { name: "FIN-001" }));
 
     const panel = await screen.findByRole("dialog");
-    // The entry itself, from the same summary the entries list shows.
+    // The entry itself, from the same summary the entries list shows: its
+    // receipt and its history come with it.
     expect(await within(panel).findByText("Plaquettes de frein")).toBeTruthy();
+    expect(within(panel).getByText("Receipt")).toBeTruthy();
+    expect(within(panel).getByText("No receipt")).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "History" })).toBeTruthy();
     expect(within(panel).getByRole("button", { name: "Approve" })).toBeTruthy();
     expect(within(panel).getByRole("button", { name: "Reject" })).toBeTruthy();
   });

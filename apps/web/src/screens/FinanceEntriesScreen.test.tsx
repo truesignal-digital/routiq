@@ -182,10 +182,13 @@ vi.mock("../finance/useEntry.js", () => ({
   useEntry: () => ({
     isPending: false,
     isError: false,
-    data: { ...entry, postings: [] },
+    data: { ...entry, postings: [], evidenceFiles: [] },
     refetch: vi.fn(),
   }),
 }));
+
+// The summary's history button owns a read this suite has no client for.
+vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
 
 import { canReadFinance, canRecordFinance, canReverseEntry } from "../finance/permissions.js";
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
