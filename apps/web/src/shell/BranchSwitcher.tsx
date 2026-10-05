@@ -25,8 +25,12 @@ export function BranchSwitcher({ className }: { className?: string }) {
     useCurrentBranch();
 
   // 44px: the shell's touch-target standard, and this is a header control on a
-  // phone held one-handed.
-  const pill = cn("h-11 w-auto max-w-44 gap-2 rounded-full md:h-9", className);
+  // phone held one-handed. The phone header has room for 11rem; from md up the
+  // pill widens so « Toutes mes agences » fits whole (#137).
+  const pill = cn(
+    "h-11 w-auto max-w-44 gap-2 rounded-full md:h-9 md:max-w-56",
+    className,
+  );
 
   if (status === "error") {
     return (
@@ -65,6 +69,7 @@ export function BranchSwitcher({ className }: { className?: string }) {
           "inline-flex items-center border border-border px-3 text-sm font-medium",
         )}
         aria-label={t("shell.branch.label")}
+        title={sole?.name}
       >
         <Building2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="truncate">{sole?.name}</span>
@@ -78,6 +83,8 @@ export function BranchSwitcher({ className }: { className?: string }) {
     { value: ALL_BRANCHES, label: t("shell.branch.all") },
     ...options.map((branch) => ({ value: branch.id, label: branch.name })),
   ];
+  const labelOf = (value: unknown) =>
+    items.find((item) => item.value === value)?.label;
 
   return (
     <Select
@@ -87,9 +94,15 @@ export function BranchSwitcher({ className }: { className?: string }) {
         setCurrentBranchId(value ?? ALL_BRANCHES)
       }
     >
-      <SelectTrigger aria-label={t("shell.branch.label")} className={pill}>
+      <SelectTrigger
+        aria-label={t("shell.branch.label")}
+        title={labelOf(currentBranchId)}
+        className={pill}
+      >
         <Building2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <SelectValue className="truncate" />
+        <SelectValue className="min-w-0">
+          {(value: unknown) => <span className="truncate">{labelOf(value)}</span>}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {items.map((item) => (
