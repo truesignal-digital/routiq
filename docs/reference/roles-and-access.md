@@ -4,7 +4,7 @@ The training source for who may do what in ROUTIQ. Decisions:
 [ADR-0009](../adr/0009-six-fixed-roles-named-by-the-team.md) (roles) and
 [ADR-0010](../adr/0010-one-person-list-with-optional-app-access.md) (people
 and app access). Status 2026-10: **the six roles are built** (role codes, command permissions,
-app-access rules, migration). Still to build: the default approval chain, the narrowed money read gates, and the Personnel list
+app-access rules, migration). The money read gates are built too (`MONEY_READ_SCOPE` in `packages/contracts/src/roles.ts`). Still to build: the default approval chain and the Personnel list
 (ADR-0010). The "Built today" column in the migration table is the role each
 person held before.
 

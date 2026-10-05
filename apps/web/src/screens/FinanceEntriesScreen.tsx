@@ -12,7 +12,7 @@ import {
   type DataTableFilterValues,
 } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
-import { ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
@@ -20,7 +20,12 @@ import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
-import { canReadFinance, canRecordFinance, canReverseEntry } from "@/finance/permissions.js";
+import {
+  canReadFinanceEntries,
+  canRecordFinance,
+  canReverseEntry,
+  entriesScope,
+} from "@/finance/permissions.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
   useFinanceEntryColumns,
@@ -52,7 +57,7 @@ export function FinanceEntriesScreen() {
   const { t } = useTranslation();
   const me = useMeContext();
   if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
-  if (!canReadFinance(me.role, me.enabledModules)) {
+  if (!canReadFinanceEntries(me.role, me.enabledModules)) {
     return <PermissionDenied width="wide" title={t("finance.entries.title")}
       icon={<FileText className="size-7" aria-hidden />}
       code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
@@ -65,6 +70,9 @@ function FinanceEntriesContent() {
   const navigate = useNavigate();
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
+  // role-config: a driver's list holds only what they recorded (#264); the
+  // screen says so, so a short list never reads as the whole ledger.
+  const ownOnly = entriesScope(me?.role) === "OWN_ENTRIES";
 
   // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
   // does the filtering, so the table never narrows rows itself.
@@ -200,6 +208,11 @@ function FinanceEntriesContent() {
         )}
       </FinanceToolbar>
 
+      {ownOnly && (
+        <p data-slot="money-scope-line" className="mt-3 text-sm text-muted-foreground">
+          {t("finance.entries.ownScope")}
+        </p>
+      )}
       <BranchScopeLine
         className="mt-3"
         count={entriesQuery.isPending ? undefined : allEntries.length}
@@ -287,6 +300,11 @@ function FinanceEntriesContent() {
             emptyState={
               entriesQuery.isPending ? (
                 <LoadingState label={t("finance.entries.loading")} />
+              ) : ownOnly ? (
+                <EmptyState
+                  icon={<FileText className="size-7" aria-hidden />}
+                  message={t("finance.entries.ownEmpty")}
+                />
               ) : (
                 <BranchScopedEmptyState
                   icon={<FileText className="size-7" aria-hidden />}

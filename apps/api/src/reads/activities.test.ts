@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   activityDetail,
   activityListResponse,
-  FINANCE_READER_ROLES,
+  LEDGER_READER_ROLES,
   personListResponse,
   placeListResponse,
 } from "@routiq/contracts";
@@ -732,7 +732,7 @@ describe("activity detail ledger gate", () => {
   }
 
   it("shows the trip's entries to every role that reads the books", async () => {
-    for (const role of FINANCE_READER_ROLES) {
+    for (const role of LEDGER_READER_ROLES) {
       const { token } = await seedActor(ctx.db, { workspaceId, role });
       const detail = await detailAs(token);
       expect({ role, entries: detail.financialEntries }).toEqual({

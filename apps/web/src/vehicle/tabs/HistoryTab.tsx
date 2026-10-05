@@ -25,7 +25,7 @@ export const EVENT_TONE_CLASS: Record<EventTone, string> = {
 function historyKinds(gates: VehicleGates): VehicleHistoryKind[] {
   const kinds: VehicleHistoryKind[] = [];
   if (gates.maintenance) kinds.push("MAINTENANCE");
-  if (gates.money) kinds.push("MONEY");
+  if (gates.entries) kinds.push("MONEY");
   if (gates.trips) kinds.push("TRIPS");
   if (gates.documents) kinds.push("DOCUMENTS");
   if (gates.trips) kinds.push("READINGS");
@@ -142,7 +142,7 @@ function EventRow({ item }: { item: VehicleHistoryItem }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <p className="font-medium leading-snug">{view.title}</p>
-          {item.amountMinor !== null && gates.money && (
+          {item.amountMinor !== null && gates.entries && (
             <span className={cn("shrink-0 text-sm tabular-nums", item.amountMinor < 0 && "text-muted-foreground")}>
               {formatMoney(item.amountMinor, {
                 currency: item.currency ?? "XAF",

@@ -102,13 +102,21 @@ describe("net sums", () => {
 
 describe("activity money card", () => {
   it("renders nothing when no money touched the activity", () => {
-    const { container } = render(<ActivityMoney entries={[]} />);
+    const { container } = render(<ActivityMoney totals entries={[]} />);
 
     expect(container.innerHTML).toBe("");
   });
 
+  it("lists a driver's own entries without a net summed over them (#264)", () => {
+    render(<ActivityMoney totals={false} entries={[entry()]} />);
+
+    expect(screen.getByRole("link", { name: /FIN-2026-0001/ })).toBeDefined();
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.getByText("Only the entries you recorded on this trip.")).toBeDefined();
+  });
+
   it("links each line to its finance entry", () => {
-    render(<ActivityMoney entries={[entry()]} />);
+    render(<ActivityMoney totals entries={[entry()]} />);
 
     const link = screen.getByRole("link", { name: /FIN-2026-0001/ });
     expect(link.getAttribute("href")).toBe(`/finance/entries/${ENTRY_ID}`);
@@ -117,6 +125,7 @@ describe("activity money card", () => {
   it("labels the net as posted-only and keeps pending money out of it", () => {
     render(
       <ActivityMoney
+        totals
         entries={[
           entry(),
           entry({
@@ -137,7 +146,7 @@ describe("activity money card", () => {
   });
 
   it("says nothing about pending money when every line is posted", () => {
-    render(<ActivityMoney entries={[entry()]} />);
+    render(<ActivityMoney totals entries={[entry()]} />);
 
     expect(screen.queryByText("Awaiting approval")).toBeNull();
   });
@@ -145,6 +154,7 @@ describe("activity money card", () => {
   it("signs an expense line so a reader can add the column up", () => {
     render(
       <ActivityMoney
+        totals
         entries={[
           entry({ direction: "EXPENSE", categoryCode: "FUEL", amountMinor: 400_000 }),
         ]}
@@ -163,7 +173,7 @@ describe("activity money card", () => {
       categoryLabelEn: "Fuel",
       amountMinor: 86_000,
     });
-    const { unmount } = render(<ActivityMoney entries={[fuel]} />);
+    const { unmount } = render(<ActivityMoney totals entries={[fuel]} />);
 
     const english = screen.getByRole("link", { name: /FIN-2026-0001/ });
     expect(english.textContent).toContain("Fuel");
@@ -172,7 +182,7 @@ describe("activity money card", () => {
 
     await i18n.changeLanguage("fr-CM");
     try {
-      render(<ActivityMoney entries={[fuel]} />);
+      render(<ActivityMoney totals entries={[fuel]} />);
       const french = screen.getByRole("link", { name: /FIN-2026-0001/ });
       expect(french.textContent).toContain("Carburant");
       expect(french.textContent).not.toContain("FUEL");

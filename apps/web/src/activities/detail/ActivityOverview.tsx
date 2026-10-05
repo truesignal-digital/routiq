@@ -11,6 +11,11 @@ export type ActivityOverviewData = Pick<
 
 export interface ActivityOverviewProps {
   activity: ActivityOverviewData;
+  /**
+   * Whether the reader sees the trip's whole money. A driver gets only the
+   * entries they recorded (#264), and a net over those is no trip's net.
+   */
+  showNet: boolean;
 }
 
 /**
@@ -18,7 +23,7 @@ export interface ActivityOverviewProps {
  * panel, which names every member — a count beside the names would be the same
  * fact twice, and the strip stops at four tiles.
  */
-export function ActivityOverview({ activity }: ActivityOverviewProps) {
+export function ActivityOverview({ activity, showNet }: ActivityOverviewProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
@@ -38,7 +43,7 @@ export function ActivityOverview({ activity }: ActivityOverviewProps) {
   };
 
   // No net for a reader the server kept the ledger from (#103).
-  if (activity.financialEntries === null) {
+  if (activity.financialEntries === null || !showNet) {
     return <MetricStrip tiles={[started, ended, legs]} />;
   }
 

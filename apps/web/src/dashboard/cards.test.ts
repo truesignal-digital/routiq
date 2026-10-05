@@ -41,12 +41,10 @@ describe("visibleDashboardCards (role gate)", () => {
     }
   });
 
-  it("a non-approver still sees the period totals", () => {
-    expect(visibleDashboardCards("DRIVER", ALL_MODULES)).toEqual([
-      "assets",
-      "openPeriodExpense",
-      "openPeriodRevenue",
-    ]);
+  it("keeps the period totals from the roles outside the ledger (#264)", () => {
+    for (const role of ["CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+      expect(visibleDashboardCards(role, ALL_MODULES)).toEqual(["assets"]);
+    }
   });
 
   it("the Administrateur keeps the period totals without the approvals queue", () => {
@@ -67,11 +65,10 @@ describe("visibleDashboardCards (finance read gate, #59)", () => {
 
 describe("canOpenEntriesList", () => {
   it("matches the gate the entries screen itself applies", () => {
-    const admitted: Role[] = ["DIRECTOR", "ADMIN", "FINANCE", "DRIVER"];
+    const admitted: Role[] = ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "DRIVER"];
     for (const role of admitted) {
       expect(canOpenEntriesList(role, ALL_MODULES)).toBe(true);
     }
-    expect(canOpenEntriesList("CASHIER", ALL_MODULES)).toBe(false);
     expect(canOpenEntriesList("TECHNICIAN", ALL_MODULES)).toBe(false);
     expect(canOpenEntriesList("ADMIN", ["CORE", "ASSETS"])).toBe(false);
     expect(canOpenEntriesList(undefined, undefined)).toBe(false);

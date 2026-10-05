@@ -90,10 +90,11 @@ vi.mock("../auth/me.js", () => ({
 }));
 
 vi.mock("../finance/permissions.js", () => ({
-  canReadFinance: vi.fn(() => true),
+  canReadFinanceEntries: vi.fn(() => true),
   canRecordFinance: vi.fn(() => true),
   canReverseEntry: vi.fn(() => false),
   canManagePeriods: () => false,
+  entriesScope: vi.fn(() => "LEDGER"),
 }));
 
 const entry = {
@@ -187,7 +188,12 @@ vi.mock("../finance/useEntry.js", () => ({
   }),
 }));
 
-import { canReadFinance, canRecordFinance, canReverseEntry } from "../finance/permissions.js";
+import {
+  canReadFinanceEntries,
+  canRecordFinance,
+  canReverseEntry,
+  entriesScope,
+} from "../finance/permissions.js";
 import { FinanceEntriesScreen } from "./FinanceEntriesScreen.js";
 
 const DEBOUNCE_MS = 300;
@@ -218,8 +224,9 @@ beforeEach(() => {
   // clearAllMocks keeps implementations, so an opt-out set by one test would
   // otherwise follow the next one.
   vi.mocked(canRecordFinance).mockReturnValue(true);
-  vi.mocked(canReadFinance).mockReturnValue(true);
+  vi.mocked(canReadFinanceEntries).mockReturnValue(true);
   vi.mocked(canReverseEntry).mockReturnValue(false);
+  vi.mocked(entriesScope).mockReturnValue("LEDGER");
   mockDesktop();
   issuedQueries.length = 0;
 });
@@ -326,13 +333,24 @@ describe("FinanceEntriesScreen", () => {
   });
 
   it("drops the record action along with the screen when finance reading is denied", () => {
-    vi.mocked(canReadFinance).mockReturnValue(false);
+    vi.mocked(canReadFinanceEntries).mockReturnValue(false);
     render(<FinanceEntriesScreen />);
 
     expect(
       screen.queryByRole("link", { name: /finance\.entries\.recordAction/ }),
     ).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("tells a driver the list holds only what they recorded (#264)", () => {
+    vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
+    render(<FinanceEntriesScreen />);
+    expect(screen.getByText("finance.entries.ownScope")).toBeTruthy();
+  });
+
+  it("says nothing about scope to a ledger reader", () => {
+    render(<FinanceEntriesScreen />);
+    expect(screen.queryByText("finance.entries.ownScope")).toBeNull();
   });
 
   it("sends the chosen order to the read, restarting the cursor", async () => {

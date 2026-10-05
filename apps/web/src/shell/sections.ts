@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleCode, Role } from "@routiq/contracts";
-import { canReadFinance, canRecordFinance } from "../finance/permissions.js";
+import { canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 
 export interface ShellSection {
@@ -60,17 +60,16 @@ const HIDDEN_FOR: Partial<Record<Role, ReadonlyArray<ShellSection["key"]>>> = {
 };
 
 /**
- * Money: the ledger for the roles that read it; the record form for a role that
- * records but does not read the books; nothing for the workshop.
+ * Money: the entries for every role that reads some (the ledger, the counter's
+ * branch entries, a driver's own); every role that records money is one of
+ * them. Nothing for the workshop, which books its costs on work orders.
  */
 function financeSection(
   section: ShellSection,
   role: Role,
   enabledModules: readonly ModuleCode[],
 ): ShellSection | undefined {
-  if (canReadFinance(role, enabledModules)) return section;
-  if (canRecordFinance(role, enabledModules)) return { ...section, to: "/finance/record" };
-  return undefined;
+  return canReadFinanceEntries(role, enabledModules) ? section : undefined;
 }
 
 /**

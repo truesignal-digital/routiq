@@ -351,7 +351,7 @@ describe("DashboardScreen — gating", () => {
 
   it("hides the approvals card from a role that cannot approve", async () => {
     installFetch();
-    await renderHome(membership("DRIVER", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiKeys().length).toBe(3));
     expect(kpiKeys()).not.toContain("pendingApprovals");

@@ -151,9 +151,10 @@ export const activityDetail = activityListItem.extend({
   legs: z.array(activityLegRead),
   readings: z.array(activityReadingRead),
   /**
-   * The trip's entries with their amounts. Null when the caller may not read
-   * the ledger (`canReadLedger`) or FINANCE is off (#103): hidden, never an
-   * empty list that would claim the trip had no money.
+   * The trip's entries with their amounts, as many as the caller's money
+   * scope reads (a driver's own, #264). Null when the caller reads no entries
+   * (`canReadEntries`) or FINANCE is off (#103): hidden, never an empty list
+   * that would claim the trip had no money.
    */
   financialEntries: z.array(activityFinancialEntryRead).nullable(),
 });

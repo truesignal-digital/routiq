@@ -462,6 +462,8 @@
       "retry": "Try again",
       "empty": "No entries recorded yet.",
       "branchEmpty": "No entry recorded for this branch.",
+      "ownScope": "Only the entries you recorded appear here.",
+      "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
@@ -753,7 +755,8 @@
         "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
-        "pendingHint": "Lines awaiting approval are listed but stay out of the net."
+        "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
+        "ownOnly": "Only the entries you recorded on this trip."
       }
     },
     "actions": {
@@ -2038,6 +2041,7 @@
       "linkedMoney": "Linked money",
       "wholeTrip": "Whole-trip amounts",
       "noMoney": "No entries linked to this trip yet.",
+      "noOwnMoney": "You have not recorded any entry on this trip.",
       "odometer": "Odometer",
       "noReadings": "No start or end reading for this vehicle.",
       "readingLine": "{source} · {date}",

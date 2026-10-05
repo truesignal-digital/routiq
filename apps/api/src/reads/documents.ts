@@ -1,15 +1,18 @@
 import { and, asc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { assetDocumentsReadResponse } from "@routiq/contracts";
+import { assetDocumentsReadResponse, DOCUMENT_READER_ROLES } from "@routiq/contracts";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { ANY_ROLE, defineRead } from "./define-read.js";
+import { defineRead } from "./define-read.js";
 import { assets, categories, documents } from "../db/schema.js";
 import { commandArtifacts } from "./record-artifacts.js";
 
-/** Documents of one asset, with type labels and the superseding back-link. */
+/**
+ * Documents of one asset, with type labels and the superseding back-link. The
+ * counter does not see vehicle documents (ADR-0009).
+ */
 export function registerDocumentReadRoutes(
   app: FastifyInstance,
   db: Db,
@@ -18,7 +21,7 @@ export function registerDocumentReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/assets/:assetId/documents", module: "DOCUMENTS", roles: ANY_ROLE, branchScope: "per-record" },
+    { path: "/v1/assets/:assetId/documents", module: "DOCUMENTS", roles: DOCUMENT_READER_ROLES, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedParams = z.object({ assetId: z.uuid() }).safeParse(req.params);

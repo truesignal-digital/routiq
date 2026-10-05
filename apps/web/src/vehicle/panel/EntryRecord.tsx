@@ -30,12 +30,12 @@ export function vehicleShare(entry: Pick<FinancialEntryDetail, "postings">, asse
 export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
   const { asset, viewer, panel, gates, pinnedLabel } = useVehicle();
-  // The books are read only by the roles that may read them; the workshop never fetches them.
-  const query = useEntry(gates.money ? id : undefined);
+  // Entries are read by the roles that read some, as the server scopes them; the workshop never fetches them.
+  const query = useEntry(gates.entries ? id : undefined);
   const host = useFormHost(t("vehicle.panel.entryTitle"));
   const locale = i18n.language;
 
-  if (!gates.money) return <PanelMissing />;
+  if (!gates.entries) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
   if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
   const entry = query.data;

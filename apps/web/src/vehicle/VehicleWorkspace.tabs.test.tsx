@@ -57,6 +57,19 @@ describe("which sections a viewer gets", () => {
     expect(tabNames()).toEqual(["Now", "History", "Details"]);
   });
 
+  it("keeps the books from the counter and the drivers, and documents from the counter (#264)", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "CASHIER", asset: asset({ finance: undefined }) });
+    await screen.findByText("Available.");
+    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "History", "Details"]);
+    expect(requested(recorded, `/v1/assets/${ASSET_ID}/documents`)).toEqual([]);
+    expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`)).toEqual([]);
+    cleanup();
+    const driver = await openVehicle(`/assets/${ASSET_ID}`, { role: "DRIVER", asset: asset({ finance: undefined }) });
+    await screen.findByText("Available.");
+    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "Documents", "History", "Details"]);
+    expect(requested(driver, `/v1/assets/${ASSET_ID}/finance`)).toEqual([]);
+  });
+
   it("renders the workshop's header and Now without a money card, from a detail with no finance block", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}`, {
       role: "TECHNICIAN",

@@ -7,7 +7,10 @@ import type { PanelRef, Step, StepKey, VehicleActionKey, Viewer } from "./model.
 /** Which sections this viewer may open; a hidden section's reads are never fetched. */
 export interface VehicleGates {
   maintenance: boolean;
+  /** The vehicle's books: Money tab, totals, purchase price (ledger readers). */
   money: boolean;
+  /** Entries one by one, as the server scopes them (a driver's own, #264). */
+  entries: boolean;
   trips: boolean;
   documents: boolean;
 }

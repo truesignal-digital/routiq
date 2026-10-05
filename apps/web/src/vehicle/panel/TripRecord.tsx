@@ -82,8 +82,8 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
         {trip.completeness === "COMPLETE_WITH_EXCEPTIONS" && (
           <Note>{t("vehicle.trips.gapsNote", { count: trip.completenessCodes.length })}</Note>
         )}
-        {gates.money && trip.financialEntries !== null && (
-          <TripMoney entries={trip.financialEntries} />
+        {gates.entries && trip.financialEntries !== null && (
+          <TripMoney entries={trip.financialEntries} ownOnly={!gates.money} />
         )}
         <DetailSection title={t("vehicle.trips.odometer")}>
           {readings.length === 0 ? (
@@ -119,8 +119,17 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
   );
 }
 
-/** The trip's own entries, whole amounts: a trip can carry costs for several vehicles. */
-function TripMoney({ entries }: { entries: NonNullable<ActivityDetail["financialEntries"]> }) {
+/**
+ * The trip's own entries, whole amounts: a trip can carry costs for several
+ * vehicles. Outside the ledger the server sends only the reader's own (#264).
+ */
+function TripMoney({
+  entries,
+  ownOnly,
+}: {
+  entries: NonNullable<ActivityDetail["financialEntries"]>;
+  ownOnly: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { panel } = useVehicle();
   return (
@@ -129,7 +138,9 @@ function TripMoney({ entries }: { entries: NonNullable<ActivityDetail["financial
       aside={entries.length > 0 ? t("vehicle.trips.wholeTrip") : undefined}
     >
       {entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("vehicle.trips.noMoney")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t(ownOnly ? "vehicle.trips.noOwnMoney" : "vehicle.trips.noMoney")}
+        </p>
       ) : (
         <ul className="divide-y rounded-lg border">
           {entries.map((entry) => (

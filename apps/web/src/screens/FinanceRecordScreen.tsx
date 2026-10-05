@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
-import { canReadFinance, canRecordFinance, canRecordRevenue } from "@/finance/permissions.js";
+import { canReadFinanceEntries, canRecordFinance, canRecordRevenue } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 
 export function FinanceRecordScreen() {
@@ -14,9 +14,9 @@ export function FinanceRecordScreen() {
   const navigate = useNavigate();
   const me = useMeContext();
   const canRecord = canRecordFinance(me?.role, me?.enabledModules);
-  // A role that records but does not read the books (CASHIER) stays here on a
-  // fresh form: the entries list would only deny it.
-  const canRead = canReadFinance(me?.role, me?.enabledModules);
+  // A role that records but reads no entries stays here on a fresh form: the
+  // entries list would only deny it.
+  const canRead = canReadFinanceEntries(me?.role, me?.enabledModules);
   const [formKey, setFormKey] = useState(0);
 
   if (me !== undefined && !canRecord) {

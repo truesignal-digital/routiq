@@ -190,13 +190,15 @@ export const assetDetail = assetListItem.extend({
   chassisNumber: z.string().nullable(),
   modelYear: z.number().int().nullable(),
   acquisitionDate: z.iso.date().nullable(),
+  /** The purchase price. Null when unknown, and for whoever may not read `finance` below (#121). */
   acquisitionAmountMinor: z.number().int().nullable(),
   currency: z.string().length(3),
   commissionedAt: z.iso.datetime().nullable(),
   customValues: z.record(z.string(), z.unknown()),
   /**
-   * Absent for roles outside FINANCE_READER_ROLES (TECHNICIAN, CASHIER): the workshop
-   * sees the cost lines of its own work orders, never the vehicle's ledger.
+   * Absent outside LEDGER_READER_ROLES or with FINANCE off: the counter reads
+   * entries, the workshop its work-order costs, a driver their own entries,
+   * never the vehicle's totals.
    */
   finance: assetFinancialSummary.optional(),
   recentActivities: z.array(assetRecentActivity),

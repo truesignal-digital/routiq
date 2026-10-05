@@ -341,7 +341,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("counts pending approvals with the same predicate as the approvals queue", async () => {
-      for (const token of [adminToken, scopedToken, submitterToken]) {
+      for (const token of [adminToken, scopedToken]) {
         const [dashboard, queue] = await Promise.all([
           fetchDashboard(token),
           fetchApprovals(token),
@@ -352,7 +352,7 @@ describe("GET /v1/dashboard", () => {
     });
 
     it("agrees with the queue on the overflow a branch narrowing hides", async () => {
-      for (const token of [adminToken, scopedToken, submitterToken]) {
+      for (const token of [adminToken, scopedToken]) {
         const [dashboard, queue] = await Promise.all([
           fetchDashboard(token, undefined, dlaBranchId),
           fetchApprovals(token, dlaBranchId),
@@ -361,6 +361,13 @@ describe("GET /v1/dashboard", () => {
           queue.outsideBranchCount,
         );
       }
+    });
+
+    it("gives the submitting driver no queue and no figures (#264)", async () => {
+      const dashboard = await fetchDashboard(submitterToken);
+      expect(dashboard.pendingApprovals).toBeNull();
+      expect(dashboard.openPeriod).toBeNull();
+      expect(dashboard.series).toBeNull();
     });
 
     it("rejects an unauthenticated request", async () => {

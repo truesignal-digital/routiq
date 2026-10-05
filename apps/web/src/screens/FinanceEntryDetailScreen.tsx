@@ -14,7 +14,7 @@ import { EntrySummary } from "@/finance/EntrySummary.js";
 import { useMeContext } from "@/auth/me.js";
 import { useActiveSession } from "@/auth/store.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { canEditPendingEntry, canReadFinance, canReverseEntry } from "@/finance/permissions.js";
+import { canEditPendingEntry, canReadFinanceEntries, canReverseEntry } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import { ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
 import { ReversalLink } from "@/finance/ReversalLink.js";
@@ -24,7 +24,7 @@ export function FinanceEntryDetailScreen() {
   const { t } = useTranslation();
   const me = useMeContext();
   if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
-  if (!canReadFinance(me.role, me.enabledModules)) {
+  if (!canReadFinanceEntries(me.role, me.enabledModules)) {
     return <PermissionDenied title={t("finance.entries.detail.title")}
       icon={<FileText className="size-7" aria-hidden />}
       code={deniedCode(me.enabledModules.includes("FINANCE"))} />;

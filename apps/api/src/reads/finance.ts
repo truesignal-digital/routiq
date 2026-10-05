@@ -51,7 +51,8 @@ import {
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
-import { defineRead, LEDGER_GATE } from "./define-read.js";
+import { defineRead, ENTRIES_GATE, LEDGER_GATE } from "./define-read.js";
+import { canReadEntry, readableEntrySql } from "./money-scope.js";
 import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 
@@ -407,7 +408,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/entries", ...LEDGER_GATE, branchScope: "per-record" },
+    { path: "/v1/finance/entries", ...ENTRIES_GATE, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedQuery = listQuerySchema.safeParse(req.query);
@@ -436,14 +437,9 @@ export function registerFinanceReadRoutes(
             return { error: "VALIDATION_FAILED" };
           }
 
-          const conditions: SQL[] = [
-            eq(financialEntries.workspaceId, auth.workspaceId),
-          ];
+          // Workspace, branch scope and the caller's money scope (#264).
+          const conditions: SQL[] = [readableEntrySql(auth)];
 
-          // Apply branch scope
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(financialEntries.branchId, auth.branchScope));
-          }
           // Also apply branchId filter if provided (works for both ALL and scoped)
           if (branchId) {
             conditions.push(eq(financialEntries.branchId, branchId));
@@ -576,7 +572,7 @@ export function registerFinanceReadRoutes(
   defineRead(
     app,
     { db, requireAuth },
-    { path: "/v1/finance/entries/:entryId", ...LEDGER_GATE, branchScope: "per-record" },
+    { path: "/v1/finance/entries/:entryId", ...ENTRIES_GATE, branchScope: "per-record" },
     async ({ req, reply, auth, read }) => {
       try {
         const parsedParams = z.object({ entryId: z.uuid() }).safeParse(req.params);
@@ -620,10 +616,7 @@ export function registerFinanceReadRoutes(
               ),
             );
 
-          if (
-            !entry ||
-            (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
-          ) {
+          if (!entry || !(await canReadEntry(tx, auth, entry.id))) {
             return undefined;
           }
 
@@ -688,12 +681,9 @@ export function registerFinanceReadRoutes(
           const [reversedByEntry] = await tx
             .select({ id: financialEntries.id })
             .from(financialEntries)
-            .where(
-              and(
-                eq(financialEntries.workspaceId, auth.workspaceId),
-                eq(financialEntries.reversesEntryId, entryId),
-              ),
-            );
+            // A link the caller could not open is no link: a driver's entry
+            // reversed by Finance shows its status, not Finance's entry.
+            .where(and(readableEntrySql(auth), eq(financialEntries.reversesEntryId, entryId)));
           if (reversedByEntry) {
             reversedByEntryId = reversedByEntry.id;
           }
