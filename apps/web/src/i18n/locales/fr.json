@@ -1607,7 +1607,7 @@
     },
     "report-issue": {
       "label": "Signaler un problème",
-      "submit": "Enregistrer le signalement",
+      "submit": "Signaler le problème",
       "submitting": "Envoi…",
       "short": "Problème"
     },
@@ -1820,7 +1820,7 @@
       "label": "Classer sans suite",
       "submit": "Classer sans suite",
       "submitting": "Classement…",
-      "dismiss": "Garder le signalement"
+      "dismiss": "Garder le problème ouvert"
     },
     "update-pending-entry": {
       "label": "Modifier l'écriture",
