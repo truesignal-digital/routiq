@@ -1,10 +1,19 @@
-import type { ModuleCode, Role } from "@routiq/contracts";
+import { canReadWorkOrderCosts, type ModuleCode, type Role } from "@routiq/contracts";
 
 /** Reading the workshop queue is open to every role; the module flag gates it. */
 export function canViewMaintenance(
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
   return enabledModules?.includes("MAINTENANCE") ?? false;
+}
+
+/**
+ * A work order's estimate, actual cost and cost lines: every role but the
+ * driver (#390). The server sends null to the others; this only decides how
+ * the screen words a figure it never received.
+ */
+export function canSeeWorkOrderCosts(role: Role | undefined): boolean {
+  return role !== undefined && canReadWorkOrderCosts(role);
 }
 
 /**

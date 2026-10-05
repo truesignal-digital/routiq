@@ -255,6 +255,94 @@ describe("money read scope, role by read", () => {
     }
   });
 
+  describe("work-order costs (#390)", () => {
+    // Every scope but a driver's own entries: the ledger, the counter (its
+    // branch's entries) and the workshop (work-order costs).
+    const readsCosts = (role: Role) => role !== "DRIVER";
+
+    it("serves a work order's amounts and cost lines by scope, null for a driver", async () => {
+      for (const role of ROLES) {
+        const response = await api.get(actors[role].token, `/v1/work-orders/${workOrderId}`);
+        expect({ role, status: response.status }).toEqual({ role, status: 200 });
+        const body = response.body as {
+          expectedCostMinor: number | null;
+          actualCostMinor: number | null;
+          declaredCostMinor: number | null;
+          costLines: Array<{ entryId: string }> | null;
+          pendingCostLines: Array<{ entryId: string }> | null;
+        };
+        const lines =
+          body.costLines === null || body.pendingCostLines === null
+            ? null
+            : [...body.costLines, ...body.pendingCostLines].map((line) => line.entryId);
+        expect({
+          role,
+          expected: body.expectedCostMinor,
+          costLines: body.costLines === null ? null : "list",
+          pendingCostLines: body.pendingCostLines === null ? null : "list",
+          lines,
+        }).toEqual(
+          readsCosts(role)
+            ? { role, expected: 80_000, costLines: "list", pendingCostLines: "list", lines: [entry.workOrder] }
+            : { role, expected: null, costLines: null, pendingCostLines: null, lines: null },
+        );
+        if (!readsCosts(role)) {
+          expect({ role, actual: body.actualCostMinor, declared: body.declaredCostMinor }).toEqual({
+            role,
+            actual: null,
+            declared: null,
+          });
+        }
+      }
+    });
+
+    it("lists work orders without their amounts for a driver", async () => {
+      for (const role of ROLES) {
+        const response = await api.get(actors[role].token, `/v1/work-orders?assetId=${truckId}`);
+        expect({ role, status: response.status }).toEqual({ role, status: 200 });
+        const row = (response.body as { items: Array<{ id: string; expectedCostMinor: number | null }> }).items.find(
+          (item) => item.id === workOrderId,
+        );
+        expect({ role, expected: row?.expectedCostMinor }).toEqual({
+          role,
+          expected: readsCosts(role) ? 80_000 : null,
+        });
+      }
+    });
+
+    it("leaves the amounts off a work order's attention item for a driver", async () => {
+      for (const role of ROLES) {
+        const response = await api.get(actors[role].token, `/v1/assets/${truckId}/attention`);
+        expect({ role, status: response.status }).toEqual({ role, status: 200 });
+        const item = (
+          response.body as { items: Array<{ subject: { id: string }; params: Record<string, unknown> }> }
+        ).items.find((candidate) => candidate.subject.id === workOrderId);
+        expect(item).toBeDefined();
+        expect({ role, amounts: "expectedCostMinor" in item!.params || "actualCostMinor" in item!.params }).toEqual({
+          role,
+          amounts: readsCosts(role),
+        });
+      }
+    });
+
+    it("drops the money changes from a work order's history for a driver", async () => {
+      const timeline = await api.get(actors.DIRECTOR.token, `/v1/history/work_order/${workOrderId}`);
+      const items = (timeline.body as { items: Array<{ eventId: string; eventType: string }> }).items;
+      const created = items.find((item) => item.eventType === "work_order.created");
+      expect(created).toBeDefined();
+      for (const role of ROLES) {
+        const diff = await api.get(actors[role].token, `/v1/history/work_order/${workOrderId}/${created!.eventId}`);
+        expect({ role, status: diff.status }).toEqual({ role, status: 200 });
+        const changes = (diff.body as { changes: Array<{ field: string; kind: string }> }).changes;
+        expect({
+          role,
+          money: changes.some((change) => change.kind === "MONEY"),
+          description: changes.some((change) => change.field === "description"),
+        }).toEqual({ role, money: readsCosts(role), description: true });
+      }
+    });
+  });
+
   it("gives the home figures to the ledger only", async () => {
     for (const role of ROLES) {
       const response = await api.get(actors[role].token, "/v1/dashboard");

@@ -137,6 +137,24 @@ it("reads a close with the invoice still to come as such, not as a zero cost", a
   expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
+it("gives a driver the work order without its money: dashes, no cost lines (#390)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    role: "DRIVER",
+    workOrders: [workOrderRow("APPROVED", { expectedCostMinor: null })],
+    workOrderDetails: [
+      workOrderDetail("APPROVED", { expectedCostMinor: null, costLines: null, pendingCostLines: null }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  const fact = (label: string) => within(panel).getByText(label).nextElementSibling?.textContent;
+  expect(fact("Expected cost")).toBe("—");
+  expect(fact("Actual cost")).toBe("—");
+  expect(within(panel).queryByText("No estimate")).toBeNull();
+  expect(within(panel).queryByText("Costs")).toBeNull();
+  expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
+});
+
 it("says the grounding order still has work to do while it is open (#109)", async () => {
   await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, scenario);
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });

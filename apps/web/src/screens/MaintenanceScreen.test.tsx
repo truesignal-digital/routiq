@@ -576,6 +576,22 @@ describe("MaintenanceScreen — row sheet costs", () => {
     ).toBeTruthy();
   });
 
+  it("shows a driver dashes and no cost sections when the server withholds the money (#390)", async () => {
+    const user = userEvent.setup();
+    me = as("DRIVER");
+    workOrderRow = { ...makeWorkOrder("COMPLETED"), expectedCostMinor: null, actualCostMinor: null };
+    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    const fact = (label: string) => within(sheet).getByText(label).nextElementSibling?.textContent;
+    expect(fact("maintenance.workOrders.columns.expectedCost")).toBe("—");
+    expect(fact("maintenance.workOrders.columns.actualCost")).toBe("—");
+    expect(within(sheet).queryByText("maintenance.detail.costLines")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.detail.costLinesEmpty")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
+  });
+
   it("shows no pending section when nothing awaits approval", async () => {
     const user = userEvent.setup();
     renderScreen();

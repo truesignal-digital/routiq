@@ -3,6 +3,7 @@ import {
   ADMIN_GRANTABLE_ROLES,
   canReadEntries,
   canReadLedger,
+  canReadWorkOrderCosts,
   DOCUMENT_READER_ROLES,
   ENTRY_READER_ROLES,
   grantableRoles,
@@ -67,5 +68,15 @@ describe("role registry", () => {
       ROLES.filter((role) => MONEY_READ_SCOPE[role] !== "WORK_ORDER_COSTS"),
     );
     expect(DOCUMENT_READER_ROLES).toEqual(ROLES.filter((role) => role !== "CASHIER"));
+  });
+
+  it("gives work-order money to every role but the driver (#390)", () => {
+    expect(ROLES.filter(canReadWorkOrderCosts)).toEqual([
+      "DIRECTOR",
+      "ADMIN",
+      "FINANCE",
+      "CASHIER",
+      "TECHNICIAN",
+    ]);
   });
 });

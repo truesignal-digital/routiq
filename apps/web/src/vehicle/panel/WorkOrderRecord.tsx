@@ -101,17 +101,21 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
             ],
             [
               t("vehicle.panel.expectedCost"),
-              wo.expectedCostMinor === null
-                ? t("vehicle.maintenance.noEstimate")
-                : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
+              !gates.workOrderCosts
+                ? "—"
+                : wo.expectedCostMinor === null
+                  ? t("vehicle.maintenance.noEstimate")
+                  : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
             ],
             [
               t("vehicle.panel.actualCost"),
-              wo.actualCostMinor === null
-                ? t("vehicle.panel.actualCostLater")
-                : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
-                  ? t("vehicle.panel.invoicePending")
-                  : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
+              !gates.workOrderCosts
+                ? "—"
+                : wo.actualCostMinor === null
+                  ? t("vehicle.panel.actualCostLater")
+                  : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
+                    ? t("vehicle.panel.invoicePending")
+                    : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
             ],
             ...(wo.completedAt === null
               ? []
@@ -140,14 +144,17 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        <DetailSection title={t("vehicle.panel.costs")}>
-          {wo.costLines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
-          ) : (
-            <CostLines lines={wo.costLines} locale={locale} />
-          )}
-        </DetailSection>
-        {wo.pendingCostLines.length > 0 && (
+        {/* Null when the reader may not see work-order costs (#390). */}
+        {wo.costLines !== null && (
+          <DetailSection title={t("vehicle.panel.costs")}>
+            {wo.costLines.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
+            ) : (
+              <CostLines lines={wo.costLines} locale={locale} />
+            )}
+          </DetailSection>
+        )}
+        {wo.pendingCostLines !== null && wo.pendingCostLines.length > 0 && (
           <DetailSection title={t("maintenance.detail.pendingCostLines")}>
             <p className="text-xs text-muted-foreground">{t("maintenance.detail.pendingCostLinesHint")}</p>
             <CostLines lines={wo.pendingCostLines} locale={locale} />

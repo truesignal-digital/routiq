@@ -72,7 +72,11 @@ export const workOrderListItem = z.object({
   description: z.string(),
   asset: maintenanceAssetRef,
   branch: maintenanceBranchRef,
-  /** Minor units, XAF exponent 0 — the client formats, it never divides. */
+  /**
+   * Minor units, XAF exponent 0 — the client formats, it never divides. This
+   * and the other two amounts are null for a caller who may not read
+   * work-order costs (`canReadWorkOrderCosts`, #390).
+   */
   expectedCostMinor: z.number().int().nullable(),
   /**
    * What the repair cost: the sum of the order's non-rejected cost lines (#81),
@@ -199,9 +203,11 @@ export const workOrderDetail = workOrderListItem.extend({
    * Only postings in the reader's branch scope: a cost line is a financial
    * record, and its entry's branch is what finance scope is read against.
    * REJECTED entries are excluded — they record a spend that was refused.
+   * Null, never an empty list, when the caller may not read work-order costs
+   * (`canReadWorkOrderCosts`, #390).
    */
-  costLines: z.array(workOrderCostLine),
-  pendingCostLines: z.array(workOrderPendingCostLine),
+  costLines: z.array(workOrderCostLine).nullable(),
+  pendingCostLines: z.array(workOrderPendingCostLine).nullable(),
 });
 
 const queryBoolean = z

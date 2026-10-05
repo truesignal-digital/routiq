@@ -1,4 +1,5 @@
 import {
+  canReadWorkOrderCosts,
   issueDetail,
   issueListQuery,
   issueListResponse,
@@ -12,6 +13,7 @@ import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
+import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import {
   ISSUE_CLOSURE_EVENTS,
@@ -79,6 +81,29 @@ const issueReportedAtColumn: KeysetColumn = {
 
 function serializeOptionalMinor(value: bigint | null): number | null {
   return value === null ? null : serializeMinor(value);
+}
+
+/**
+ * A work order's three amounts, or null for each when the caller may not read
+ * work-order costs (#390). Null, never zero: a hidden figure must not read as
+ * a free repair.
+ */
+function workOrderAmounts(
+  auth: AuthContext,
+  row: {
+    expectedCostMinor: bigint | null;
+    actualCostMinor: string | null;
+    declaredCostMinor: bigint | null;
+  },
+) {
+  if (!canReadWorkOrderCosts(auth.role)) {
+    return { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null };
+  }
+  return {
+    expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
+    actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
+    declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+  };
 }
 
 /** Statuses in which a completion stands, so its declarer is a live maker. */
@@ -247,9 +272,7 @@ export function registerMaintenanceReadRoutes(
             code: row.branchCode,
             name: row.branchName,
           },
-          expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
-          actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
-          declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+          ...workOrderAmounts(auth, row),
           costOutcome: row.costOutcome,
           currency: row.currency,
           issue:
@@ -409,6 +432,10 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
+          if (!canReadWorkOrderCosts(auth.role)) {
+            return { header, eventRows, costRows: null, completedBy: completers.get(header.id) ?? null };
+          }
+
           // A cost line is a financial record: its entry's branch is read
           // against the actor's scope, whatever branch the truck is in now.
           // REJECTED spend was refused and is not a cost of this repair.
@@ -456,7 +483,7 @@ export function registerMaintenanceReadRoutes(
         }
 
         const { header, eventRows, costRows, completedBy } = result;
-        const costLine = (line: (typeof costRows)[number]) => ({
+        const costLine = (line: NonNullable<typeof costRows>[number]) => ({
           ...line,
           amountMinor: serializeMinor(line.amountMinor),
         });
@@ -474,9 +501,7 @@ export function registerMaintenanceReadRoutes(
             code: header.branchCode,
             name: header.branchName,
           },
-          expectedCostMinor: serializeOptionalMinor(header.expectedCostMinor),
-          actualCostMinor: serializeOptionalMinor(parseActualCost(header.actualCostMinor)),
-          declaredCostMinor: serializeOptionalMinor(header.declaredCostMinor),
+          ...workOrderAmounts(auth, header),
           costOutcome: header.costOutcome,
           currency: header.currency,
           issue:
@@ -513,12 +538,10 @@ export function registerMaintenanceReadRoutes(
               scope: event.scope,
             },
           })),
-          costLines: costRows
-            .filter((line) => line.entryStatus !== "SUBMITTED")
-            .map(costLine),
-          pendingCostLines: costRows
-            .filter((line) => line.entryStatus === "SUBMITTED")
-            .map(costLine),
+          costLines:
+            costRows?.filter((line) => line.entryStatus !== "SUBMITTED").map(costLine) ?? null,
+          pendingCostLines:
+            costRows?.filter((line) => line.entryStatus === "SUBMITTED").map(costLine) ?? null,
         });
       } catch (error) {
         req.log.error({ err: error }, "work order detail read failed");
