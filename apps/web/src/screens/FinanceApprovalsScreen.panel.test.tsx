@@ -66,6 +66,7 @@ function entry(id: string, number: string, submittedBy = SUBMITTER) {
     rowVersion: 3,
     reversesEntryId: null,
     recordedBy: { principalId: submittedBy, displayName: "Hervé", scope: "WORKSPACE" },
+    directionDecides: false,
     evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
     assetShareMinor: null,
     assetLinks: null,
@@ -274,6 +275,19 @@ describe("approvals queue: the entry opens in the record panel", () => {
 
   it("offers no decision on the approver's own submission", async () => {
     stubServer([entry(FIN_001.id, "FIN-001", approver.principalId)]);
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(await screen.findByRole("button", { name: "FIN-001" }));
+    const panel = await screen.findByRole("dialog");
+    expect(await within(panel).findByText("Plaquettes de frein")).toBeTruthy();
+
+    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
+  });
+
+  it("offers no decision in the footer above the approver's band, where the Director decides (#262)", async () => {
+    stubServer([{ ...entry(FIN_001.id, "FIN-001"), directionDecides: true }]);
     const user = userEvent.setup();
     renderScreen();
 

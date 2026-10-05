@@ -321,6 +321,8 @@ export interface EntryFacts {
   reversesEntryId: string | null;
   recordedBy: HistoryActor;
   evidence: { state: "SUPPLIED" | "PAYMENT_REFERENCE" | "NOT_EXPECTED" | "NOT_SUPPLIED" };
+  /** The detail's word that the viewer's role may not decide it (above its band). */
+  directionDecides?: boolean;
 }
 
 /** A reversal never needs paperwork of its own, and a refused spend needs none at all. */
@@ -350,7 +352,9 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
   if (entry.status === "SUBMITTED" && may.approveEntries(viewer)) {
     const lock: Lock | undefined = same(entry.recordedBy, viewer)
       ? { key: "youRecordedIt" }
-      : undefined;
+      : entry.directionDecides === true
+        ? { key: "directionDecides" }
+        : undefined;
     offered.push({ step: { key: "approve-entry", record }, lock });
     offered.push({ step: { key: "reject-entry", record }, lock });
     if (!lock) primary = { kind: "go", step: { key: "approve-entry", record } };
@@ -627,7 +631,10 @@ export function attentionStep(
       return may.renewDocuments(viewer) ? go("renew-document") : { kind: "none" };
     case "ENTRY_AWAITING_REVIEW":
       if (!may.approveEntries(viewer)) return { kind: "none" };
-      return maker ? locked("review-entry", { key: "youRecordedIt" }) : go("review-entry");
+      if (maker) return locked("review-entry", { key: "youRecordedIt" });
+      return item.params.directionDecides === true
+        ? locked("review-entry", { key: "directionDecides" })
+        : go("review-entry");
     case "ENTRY_EVIDENCE_MISSING":
       return mayAttachTo(item.params.recordedBy, viewer) ? go("attach-evidence") : { kind: "none" };
   }

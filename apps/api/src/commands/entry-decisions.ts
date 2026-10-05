@@ -1,11 +1,8 @@
 import { approveEntryPayload, rejectEntryPayload } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
-import {
-  commands,
-  financialEntries,
-  financialPostings,
-} from "../db/schema.js";
+import { financialEntries, financialPostings } from "../db/schema.js";
+import type { ApprovalContext } from "./approvals.js";
 import {
   appendAuditEvent,
   checkOptimisticVersion,
@@ -14,6 +11,7 @@ import {
   type CommandContext,
   type Tx,
 } from "./dispatcher.js";
+import { receiptActor } from "./makers.js";
 import { resolvePostingPeriod } from "./periods.js";
 
 type ApproveEntryPayload = z.infer<typeof approveEntryPayload>;
@@ -55,21 +53,52 @@ async function validateAndSelectEntry(
     });
   }
 
-  const [maker] = await tx
-    .select({ initiatedByPrincipalId: commands.initiatedByPrincipalId })
-    .from(commands)
+  return entry;
+}
+
+/** Locks the entry, so the maker compared is the maker of the row `execute` decides. */
+async function entryMaker(
+  tx: Tx,
+  ctx: CommandContext,
+  payload: EntryDecisionPayload,
+): Promise<string | undefined> {
+  const [entry] = await tx
+    .select({ createdByCommandId: financialEntries.createdByCommandId })
+    .from(financialEntries)
     .where(
       and(
-        eq(commands.workspaceId, ctx.workspaceId),
-        eq(commands.id, entry.createdByCommandId),
+        eq(financialEntries.workspaceId, ctx.workspaceId),
+        eq(financialEntries.id, payload.entryId),
+      ),
+    )
+    .for("update");
+  return entry ? receiptActor(tx, ctx, entry.createdByCommandId) : undefined;
+}
+
+/**
+ * The default chain (ADR-0009) bands the decision by the entry's size: Finance
+ * decides up to its band (1 000 000 XAF by default), Direction above it. Branch is the
+ * entry's own, so a tenant may also route one branch's entries.
+ */
+async function entryApprovalContext(
+  tx: Tx,
+  ctx: CommandContext,
+  payload: EntryDecisionPayload,
+): Promise<ApprovalContext> {
+  const [entry] = await tx
+    .select({ branchId: financialEntries.branchId, amountMinor: financialEntries.amountMinor })
+    .from(financialEntries)
+    .where(
+      and(
+        eq(financialEntries.workspaceId, ctx.workspaceId),
+        eq(financialEntries.id, payload.entryId),
       ),
     );
-
-  if (maker?.initiatedByPrincipalId === ctx.principalId) {
-    throw new CommandError(403, "MAKER_CANNOT_APPROVE");
-  }
-
-  return entry;
+  if (!entry) return {};
+  return {
+    branchId: entry.branchId,
+    amountMinor: entry.amountMinor < 0n ? -entry.amountMinor : entry.amountMinor,
+  };
 }
 
 async function resolveEntryBranchIds(
@@ -99,6 +128,8 @@ registerCommand<ApproveEntryPayload>({
     kind: "branches",
     resolve: resolveEntryBranchIds,
   },
+  maker: entryMaker,
+  approvalContext: entryApprovalContext,
 
   async execute(tx, ctx, envelope, payload) {
     const entry = await validateAndSelectEntry(
@@ -191,6 +222,8 @@ registerCommand<RejectEntryPayload>({
     kind: "branches",
     resolve: resolveEntryBranchIds,
   },
+  maker: entryMaker,
+  approvalContext: entryApprovalContext,
 
   async execute(tx, ctx, envelope, payload) {
     const entry = await validateAndSelectEntry(

@@ -40,6 +40,7 @@ import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { workOrderActualCostSql } from "./work-order-cost.js";
+import { directionDecidesEntries } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
 const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
@@ -440,6 +441,8 @@ async function entryItems(
       id: financialEntries.id,
       entryNumber: financialEntries.entryNumber,
       status: financialEntries.status,
+      branchId: financialEntries.branchId,
+      amountMinor: financialEntries.amountMinor,
       rowVersion: financialEntries.rowVersion,
       createdAt: financialEntries.createdAt,
       currency: financialEntries.currency,
@@ -473,8 +476,9 @@ async function entryItems(
     )
     .where(and(...conditions));
 
+  const directionDecides = await directionDecidesEntries(tx, auth, rows);
   const items: AssetAttentionItem[] = [];
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     const recordedBy = toActor({
       principalId: row.recorderPrincipalId,
       displayName: row.recorderDisplayName,
@@ -501,7 +505,7 @@ async function entryItems(
         since: row.createdAt.toISOString(),
         partOfGrounding: false,
         makerPrincipalIds: row.recorderPrincipalId ? [row.recorderPrincipalId] : [],
-        params,
+        params: { ...params, directionDecides: directionDecides[index] ?? false },
       });
     }
     if (row.evidenceMissing) {

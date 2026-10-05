@@ -4,7 +4,10 @@ The training source for who may do what in ROUTIQ. Decisions:
 [ADR-0009](../adr/0009-six-fixed-roles-named-by-the-team.md) (roles) and
 [ADR-0010](../adr/0010-one-person-list-with-optional-app-access.md) (people
 and app access). Status 2026-10: **the six roles are built** (role codes, command permissions,
-app-access rules, migration). The money read gates are built too (`MONEY_READ_SCOPE` in `packages/contracts/src/roles.ts`). Still to build: the default approval chain and the Personnel list
+app-access rules, migration), and so are **the default approval chain**
+(migration 0037; every `approve-*` / `reject-*` command refuses the member who
+made the record) and **the money read gates** (`MONEY_READ_SCOPE` in
+`packages/contracts/src/roles.ts`). Still to build: the Personnel list
 (ADR-0010). The "Built today" column in the migration table is the role each
 person held before.
 
@@ -36,7 +39,11 @@ person held before.
 - **✓** does it in their branches. Direction's ✓ covers all branches.
 - **S** submits it, and it may go to review under the approval bands.
 - **A** approves or rejects. The default chain: work orders → Administrateur,
-  money → Finance, above the top band → Direction.
+  money → Finance up to 1 000 000 XAF, above that → Direction (owner,
+  2026-10-05). Entries up to the recording band (100 000 XAF) post without
+  review; Finance decides the ones above it up to 1 000 000 XAF; Direction
+  decides above 1 000 000 XAF and may decide anything. Both bands are tenant
+  data: Direction moves them in the approval settings.
 - **V** view only. **Own** only their own records. **—** no access.
 - **Planned** rows are not built yet. The roles are fixed now so training does
   not change when they ship.

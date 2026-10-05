@@ -1,6 +1,6 @@
 import { updateApprovalThresholdPayload } from "@routiq/contracts";
 import type { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { approvalRules } from "../db/schema.js";
 import {
   appendAuditEvent,
@@ -70,6 +70,11 @@ async function bandUnboundedDefaults(
   return banded;
 }
 
+/** One band decides an entry both ways: moving approve-entry's moves reject-entry's. */
+function bandedCommandTypes(commandType: string): string[] {
+  return commandType === "approve-entry" ? ["approve-entry", "reject-entry"] : [commandType];
+}
+
 const updateApprovalThresholdCommand: CommandDefinition<
   UpdateApprovalThresholdPayload
 > = {
@@ -88,7 +93,7 @@ const updateApprovalThresholdCommand: CommandDefinition<
       .where(
         and(
           eq(approvalRules.workspaceId, ctx.workspaceId),
-          eq(approvalRules.commandType, payload.commandType),
+          inArray(approvalRules.commandType, bandedCommandTypes(payload.commandType)),
           isNull(approvalRules.categoryCode),
           isNull(approvalRules.branchId),
           isNull(approvalRules.amountMinMinor),
