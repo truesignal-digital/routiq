@@ -18,7 +18,7 @@ import {
 } from "@routiq/contracts";
 import type { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
-import { localizedLabel } from "@/lib/format";
+import { formatMoney, localizedLabel } from "@/lib/format";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { PageHeader } from "@/components/page";
@@ -47,7 +47,6 @@ import { commandClient, commandStatusStore } from "@/commands/instance";
 import { createCommandIntent } from "@/commands/intent";
 import { FileUpload } from "@/components/ui/file-upload";
 import { notifyCommandSuccess } from "@/lib/notify.js";
-import { formatXAF } from "@routiq/domain";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type FormInput = z.input<typeof registerAssetPayload>;
@@ -377,7 +376,7 @@ export function AssetRegisterScreen() {
                     />
                   </FormControl>
                   {typeof acquisitionAmount === "number" && Number.isFinite(acquisitionAmount) ? (
-                    <FormDescription>{formatXAF(acquisitionAmount)}</FormDescription>
+                    <FormDescription>{formatMoney(acquisitionAmount)}</FormDescription>
                   ) : undefined}
                   <FormMessage />
                 </FormItem>
