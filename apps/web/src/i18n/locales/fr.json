@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action terminée"
     },
+    "info": {
+      "generic": "C'est noté"
+    },
     "warnings": {
       "generic": "L'action est terminée avec un avertissement ({code})."
     },
@@ -518,7 +521,8 @@
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "actions": "Actions",
-        "branch": "Agence"
+        "branch": "Agence",
+        "submittedAt": "Soumis le"
       },
       "filters": {
         "branch": "Agence",
@@ -1110,6 +1114,7 @@
     "detail": {
       "chronologie": "Chronologie",
       "chronologieEmpty": "Aucun évènement enregistré.",
+      "recordedAt": "Enregistré le {date}",
       "costLines": "Coûts comptabilisés",
       "costLinesEmpty": "Aucun coût comptabilisé sur cet ordre de travail.",
       "pendingCostLines": "Coûts en attente d'examen",

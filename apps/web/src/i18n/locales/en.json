@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action completed"
     },
+    "info": {
+      "generic": "Noted"
+    },
     "warnings": {
       "generic": "The action completed with a warning ({code})."
     },
@@ -518,7 +521,8 @@
       "empty": "No entries awaiting approval.",
       "columns": {
         "actions": "Actions",
-        "branch": "Branch"
+        "branch": "Branch",
+        "submittedAt": "Submitted"
       },
       "filters": {
         "branch": "Branch",
@@ -1110,6 +1114,7 @@
     "detail": {
       "chronologie": "Timeline",
       "chronologieEmpty": "No events recorded.",
+      "recordedAt": "Recorded {date}",
       "costLines": "Posted costs",
       "costLinesEmpty": "No costs posted against this work order.",
       "pendingCostLines": "Costs awaiting review",
