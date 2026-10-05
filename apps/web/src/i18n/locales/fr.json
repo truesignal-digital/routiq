@@ -90,6 +90,9 @@
     "success": {
       "generic": "Action terminée"
     },
+    "info": {
+      "generic": "C'est noté"
+    },
     "warnings": {
       "generic": "L'action est terminée avec un avertissement ({code})."
     },
@@ -478,7 +481,19 @@
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
-        "editAction": "Modifier"
+        "editAction": "Modifier",
+        "receipt": "Justificatif",
+        "noReceiptFile": "Aucun fichier sur cette écriture.",
+        "evidence": {
+          "SUPPLIED": "Reçu joint",
+          "PAYMENT_REFERENCE": "Référence de paiement",
+          "NOT_EXPECTED": "Reçu non requis",
+          "NOT_SUPPLIED": "Sans reçu"
+        },
+        "evidenceVia": {
+          "RECORDED": "Joint à la saisie · {date} · {name}",
+          "ATTACHED": "Joint après coup · {date} · {name}"
+        }
       },
       "viewer": {
         "description": "Date comptable {date}",
@@ -506,7 +521,8 @@
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "actions": "Actions",
-        "branch": "Agence"
+        "branch": "Agence",
+        "submittedAt": "Soumis le"
       },
       "filters": {
         "branch": "Agence",

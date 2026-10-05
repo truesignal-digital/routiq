@@ -40,6 +40,15 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+// The history sheet owns its read; this suite only cares that the entry offers it.
+vi.mock("@/components/record-history-sheet.js", () => ({
+  RecordHistorySheet: ({ entityId }: { entityId: string }) => (
+    <button type="button" data-entity={entityId}>
+      history.action
+    </button>
+  ),
+}));
+
 type EntryQueryState = {
   isPending: boolean;
   isError: boolean;
@@ -192,5 +201,65 @@ describe("EntrySummary", () => {
     expect(screen.queryByText("finance.entries.detail.description")).toBeNull();
     expect(screen.queryByText("finance.entries.detail.linkedTo")).toBeNull();
     expect(screen.getByText("finance.entries.detail.entryNumber")).toBeTruthy();
+  });
+
+  it("shows the postings, the receipt and a way into the history", () => {
+    entryQuery = {
+      isPending: false,
+      isError: false,
+      data: {
+        ...entry,
+        evidence: { state: "SUPPLIED", artifactCount: 1 },
+        evidenceFiles: [
+          {
+            artifactId: "00000000-0000-4000-8000-0000000000f1",
+            mimeType: "image/jpeg",
+            sizeBytes: 2048,
+            originalFileName: "recu-total.jpg",
+            sha256: "abc",
+            attachedAt: "2026-07-01T10:00:00.000Z",
+            attachedBy: {
+              principalId: "00000000-0000-4000-8000-000000000031",
+              displayName: "Sali",
+              scope: "WORKSPACE",
+            },
+            via: "RECORDED",
+          },
+        ],
+        postings: [
+          {
+            lineNo: 1,
+            amountMinor: 25000,
+            assetId: "00000000-0000-4000-8000-0000000000a1",
+            assetCode: "VH003",
+            assetAttribution: "DIRECT",
+            activityId: null,
+            workOrderId: null,
+            category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+          },
+        ],
+      },
+      refetch: vi.fn(),
+    };
+
+    render(<EntrySummary entryId={entry.id} />);
+
+    expect(screen.getByText("finance.entries.detail.postings")).toBeTruthy();
+    expect(screen.getByText("VH003")).toBeTruthy();
+    expect(screen.getByText("finance.entries.detail.receipt")).toBeTruthy();
+    expect(screen.getByText("finance.entries.detail.evidence.SUPPLIED")).toBeTruthy();
+    expect(screen.getByText("recu-total.jpg")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "history.action" }).getAttribute("data-entity"),
+    ).toBe(entry.id);
+  });
+
+  it("says when no receipt is on file", () => {
+    entryQuery = { isPending: false, isError: false, data: entry, refetch: vi.fn() };
+
+    render(<EntrySummary entryId={entry.id} />);
+
+    expect(screen.getByText("finance.entries.detail.evidence.NOT_SUPPLIED")).toBeTruthy();
+    expect(screen.getByText("finance.entries.detail.noReceiptFile")).toBeTruthy();
   });
 });
