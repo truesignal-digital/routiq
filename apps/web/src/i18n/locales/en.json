@@ -1115,6 +1115,7 @@
     "detail": {
       "chronologie": "Timeline",
       "chronologieEmpty": "No events recorded.",
+      "recordedAt": "Recorded {date}",
       "costLines": "Posted costs",
       "costLinesEmpty": "No costs posted against this work order.",
       "pendingCostLines": "Costs awaiting review",
