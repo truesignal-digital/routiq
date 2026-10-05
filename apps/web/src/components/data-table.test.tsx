@@ -830,6 +830,39 @@ describe("DataTable", () => {
       expect(await screen.findByRole("dialog")).toBeTruthy();
     });
 
+    it("puts the row's decisions last in the footer and lets them close the drawer", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={data}
+          primaryColumn={primary}
+          rowViewer={{
+            ...viewer,
+            fullScreen: { label: "Open full screen", onOpen: vi.fn() },
+            actions: (person, drawer) => (
+              <button type="button" onClick={drawer.close}>
+                Decide on {person.name}
+              </button>
+            ),
+          }}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Ada Lovelace" }));
+      const drawer = await screen.findByRole("dialog");
+      const footerButtons = within(drawer).getAllByRole("button");
+      expect(footerButtons.at(-1)?.textContent).toBe("Decide on Ada Lovelace");
+      // The decision owns the one filled button; full screen steps down.
+      expect(
+        within(drawer).getByRole("button", { name: "Open full screen" }).className,
+      ).not.toContain("bg-primary");
+
+      await userEvent.click(
+        within(drawer).getByRole("button", { name: "Decide on Ada Lovelace" }),
+      );
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    });
+
     it("navigates instead of opening when the screen chose onRowClick", async () => {
       const onRowClick = vi.fn();
       render(

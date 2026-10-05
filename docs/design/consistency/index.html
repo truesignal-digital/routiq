@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .three-layers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 8px 0 8px; }
+  .three-layers .spec-card { border-top: 4px solid var(--c); }
+  .three-layers .q { font: 650 18px/1.25 var(--font-heading); margin: 2px 0 8px; }
+  .fit { font-weight: 600; white-space: nowrap; }
+  .fit.yes { color: var(--success-foreground); } .fit.part { color: var(--warning-foreground); } .fit.no { color: var(--destructive); }
+  @media (max-width: 1100px) { .three-layers { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#rule">The rule</a>
+    <a href="#map">Every feature, mapped</a>
+    <a href="#decide">Decisions for the owners</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>One way to read every screen</h2>
+      <p class="lede">The product owners asked that every page and every tab first say what it is about, then show the details, then let the user act. This proposal turns that into five page types and one form system, checks every feature in the feature map against them, and lists what has to change.</p>
+    </header>
+
+    <section class="section" id="rule">
+      <div class="kicker">The rule</div>
+      <h3>Overview, then details, then act</h3>
+      <p class="rule">It applies at three sizes: a page, a tab inside a page, and a record opened in the side panel. The same three questions, in the same order, at every size.</p>
+      <div class="three-layers">
+        <div class="spec-card" style="--c:var(--layer-overview)"><div class="caption" style="margin:0">Overview</div><div class="q">What is this, and does anything need me?</div><ul><li>Page: title + one-line purpose, a metric strip, up to 3 attention items.</li><li>Tab: one summary strip.</li><li>Record: status badge + the one blocking thing + who acts.</li></ul></div>
+        <div class="spec-card" style="--c:var(--layer-details)"><div class="caption" style="margin:0">Details</div><div class="q">Show me the records.</div><ul><li>Page: toolbar + DataTable (cards on phone).</li><li>Tab: the list for that tab.</li><li>Record: fields in the same groups and labels as the form that made it.</li></ul></div>
+        <div class="spec-card" style="--c:var(--layer-act)"><div class="caption" style="margin:0">Act</div><div class="q">What can I do here?</div><ul><li>Page: one primary button in the header (bottom bar on phone).</li><li>Record: the action bar; locked actions stay visible and say why.</li><li>Forms: panel for facts, dialog for decisions, page for long captures.</li></ul></div>
+      </div>
+      <p class="caption">See it drawn: <a href="pages.html">page archetypes</a> (list, record workspace, tab, queue, home, settings) and <a href="forms.html">form system</a> (surfaces, field kit, states, edit vs correct, the build recipe).</p>
+    </section>
+
+    <section class="section" id="map">
+      <div class="kicker">Feature map</div>
+      <h3>Every feature, mapped to an archetype</h3>
+      <p class="rule">Rows follow <code>.agents/skills/verify-routiq/features/</code> and the routes in <code>apps/web/src/router.tsx</code>. "Fits today" is from the page-anatomy audit of develop at <code>6399529</code>.</p>
+      <table class="spec-table">
+        <thead><tr><th>Feature</th><th>Route</th><th>Archetype</th><th>Fits today</th><th>What changes</th></tr></thead>
+        <tbody>
+          <tr><td>Home dashboard</td><td><code>/</code></td><td>4 · Home</td><td><span class="fit part">Partly</span></td><td>Lead with "Needs you" (same rows as the vehicle To do); KPI cards move to the shared metric strip with links.</td></tr>
+          <tr><td rowspan="2">Vehicle workspace</td><td><code>/assets</code></td><td>1 · Module list</td><td><span class="fit yes">Yes</span></td><td>Reference list page. Swap the hand-styled Link + yellow FAB for the standard primary button / phone bottom bar.</td></tr>
+          <tr><td><code>/assets/$id</code> + 7 tabs</td><td>2 · Record workspace</td><td><span class="fit yes">Yes</span></td><td>Reference record. Give Now and Details a tab header; Documents gets an expiry strip; tab-local "load more" moves to the shared pager.</td></tr>
+          <tr><td>Register a truck</td><td><code>/assets/new</code></td><td>Page form</td><td><span class="fit part">Partly</span></td><td>Same page-form frame as Record a trip (width, sticky footer, steps on phone); drop the eyebrow.</td></tr>
+          <tr><td>Maintenance and work orders</td><td><code>/maintenance</code></td><td>1 · Module list (+ 3 · queue for new problems)</td><td><span class="fit no">No</span></td><td>Add a metric strip (open problems, grounded, WOs in progress). Tabs into the URL, 44 px. Work orders open in the record panel like on the vehicle.</td></tr>
+          <tr><td rowspan="2">Finance entries and reversal</td><td><code>/finance/entries</code></td><td>1 · Module list</td><td><span class="fit no">No</span></td><td>Add a metric strip (out this month, waiting, missing receipt). Primary button back in the header at full size. One detail surface: the record panel.</td></tr>
+          <tr><td><code>/finance/entries/$id</code></td><td>2 · Record workspace</td><td><span class="fit part">Partly</span></td><td>Title = entry number, status first, actions in the action bar, wide width. Reverse becomes a decision dialog.</td></tr>
+          <tr><td>Record an entry</td><td><code>/finance/record</code></td><td>Panel form</td><td><span class="fit no">No</span></td><td>Open <code>RecordEntryForm</code> as a panel over the entries list (it already supports the panel surface); keep the route as a deep link that opens it.</td></tr>
+          <tr><td>Finance approvals</td><td><code>/finance/approvals</code></td><td>3 · Decision queue → the Money page's waiting view</td><td><span class="fit part">Partly</span></td><td>Merges into Money as the "Waiting approval" view (route redirects); inline Approve and Reject; reject asks a reason in a dialog.</td></tr>
+          <tr><td>Finance periods</td><td><code>/finance/periods</code></td><td>5 · Settings list → Company → Accounting months</td><td><span class="fit part">Partly</span></td><td>Leaves daily navigation; Money's lead line names the open month; lock is a decision dialog.</td></tr>
+          <tr><td rowspan="3">Trips</td><td><code>/activities</code></td><td>1 · Module list</td><td><span class="fit no">No</span></td><td>Add a metric strip (trips this week, open, incomplete data).</td></tr>
+          <tr><td><code>/activities/$id</code></td><td>2 · Record workspace</td><td><span class="fit part">Partly</span></td><td>Move into the record shell (identity, status, facts, tabs). Fix the missing breadcrumb trail (no way back on phone).</td></tr>
+          <tr><td><code>/activities/record</code></td><td>Page form</td><td><span class="fit yes">Mostly</span></td><td>Reference page form. Add the phone step mode with a review step.</td></tr>
+          <tr><td>Documents and uploads</td><td>vehicle Documents tab</td><td>2b · Tab</td><td><span class="fit part">Partly</span></td><td>Tab strip: valid / expiring / missing required. Upload uses the camera-first FileField.</td></tr>
+          <tr><td rowspan="3">Settings</td><td><code>/more/branches</code></td><td>5 · Settings list</td><td><span class="fit part">Partly</span></td><td>Lead sentence; create and rename in the panel; deactivate in a dialog.</td></tr>
+          <tr><td><code>/more/users</code></td><td>5 · Settings list</td><td><span class="fit part">Partly</span></td><td>Same as branches.</td></tr>
+          <tr><td><code>/more/persons</code></td><td>5 · Settings list</td><td><span class="fit part">Partly</span></td><td>Branch select to 44 px; register a person in the panel.</td></tr>
+          <tr><td>Language, sign in and roles</td><td><code>/more</code>, <code>/login</code></td><td>Settings hub · outside shell</td><td><span class="fit yes">Yes</span></td><td>More becomes a grouped list where each setting has a one-line explanation.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="decide">
+      <div class="kicker">Owner decisions · decided 2026-10-04</div>
+      <h3>Decisions for the owners</h3>
+      <p class="rule"><b>Decided:</b> neutral theme; everything else as recommended (record shell, panel default, fixed form layouts, submit last, phone steps, sidebar C with Money as one place, bottom bar, coming soon in context, overview strips on every list). The full debate, both sides of each, is on <a href="choices.html">Choices to make</a> (ten decisions). Everything else follows from the existing ADRs and the vehicle workspace.</p>
+      <div class="cols even">
+        <div class="spec-card"><h4>1 · Is the vehicle workspace the model for every record?</h4><p>Recommended: yes. Trips and finance entries move into the same shell (identity, status, facts, tabs, action bar), and work orders keep using its record panel. This matches design-lab direction D, which is still waiting for a pick.</p></div>
+        <div class="spec-card"><h4>2 · Panel as the default form surface?</h4><p>Recommended: yes. All create and edit forms open in the right panel on desktop and a full-height sheet on phone. Dialogs only for decisions. Record a trip and Register a truck stay pages.</p></div>
+        <div class="spec-card"><h4>3 · Phone page forms as steps?</h4><p>Recommended: yes for Record a trip and Register a truck only: one section per step with a review step. Panel forms stay single-scroll.</p></div>
+        <div class="spec-card"><h4>4 · Where does the button order go?</h4><p>Recommended: submit is always last (right), cancel before it, on every surface. Today panels and sheets put submit first and dialogs put it last.</p></div>
+        <div class="spec-card"><h4>5 · Which sidebar?</h4><p>Recommended: proposal C on <a href="sidebar.html">Navigation</a>: places only in three groups (Daily work, Money, Company), filtered by role, counts where someone waits, one quiet "What's coming" row. Phone gets a bottom bar of three places per role + Menu.</p></div>
+        <div class="spec-card"><h4>6 · Neutral theme or brand navy?</h4><p>Your call: switch every mockup with the theme button at the bottom left. The navy comes from the unmerged brand-identity pass; if chosen, its tokens and logo get ported onto develop in their own PR.</p></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>

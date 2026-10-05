@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DateTimeField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { legEndpoint } from "@routiq/contracts";
 import { Gauge, Plus, Route as RouteIcon, Trash2, Truck } from "lucide-react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -78,6 +80,7 @@ function isTemplate(value: unknown): value is SheetTemplate {
 
 export function ActivitySheetScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
   const search = useSearch({ strict: false }) as { template?: unknown; assetId?: unknown };
@@ -94,7 +97,7 @@ export function ActivitySheetScreen() {
   if (me !== undefined && !canRecord) {
     return (
       <PermissionDenied
-        title={t("activities.record.title")}
+        title={label("record-journey-sheet")}
         icon={<RouteIcon className="size-7" aria-hidden />}
         code={deniedCode(me.enabledModules.includes("ACTIVITIES"))}
       />
@@ -103,7 +106,7 @@ export function ActivitySheetScreen() {
 
   return (
     <PageContainer width="wide">
-      <PageHeader title={t("activities.record.title")} />
+      <PageHeader title={label("record-journey-sheet")} />
       <p className="mt-1 text-sm text-muted-foreground">
         {t("activities.record.subtitle")}
       </p>
@@ -128,6 +131,7 @@ function SheetForm({
   initialAssetId?: string | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
 
   /**
@@ -450,7 +454,7 @@ function SheetForm({
                   }}
                 >
                   <TabsList
-                    className="w-full group-data-horizontal/tabs:h-11"
+                    className="w-full"
                     aria-label={t("activities.record.templateLegend")}
                   >
                     <TabsTrigger value="journey">
@@ -490,7 +494,7 @@ function SheetForm({
                     disabled={reference.isPending || reference.isError}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("activities.record.chooseBranch")} />
                       </SelectTrigger>
                     </FormControl>
@@ -524,7 +528,7 @@ function SheetForm({
                     disabled={activityTypes.isPending || activityTypes.isError}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={t("activities.record.chooseActivityType")}
                         />
@@ -552,7 +556,6 @@ function SheetForm({
                   <FormControl>
                     <Input
                       type="text"
-                      className="min-h-11"
                       placeholder={t("activities.record.customerPlaceholder")}
                       {...field}
                     />
@@ -571,7 +574,6 @@ function SheetForm({
                   <FormControl>
                     <Input
                       type="text"
-                      className="min-h-11"
                       placeholder={t("activities.record.clientReferencePlaceholder")}
                       {...field}
                     />
@@ -619,7 +621,7 @@ function SheetForm({
                       disabled={assetOptions.length === 0}
                     >
                       <FormControl>
-                        <SelectTrigger className="min-h-11 w-full">
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder={t("activities.record.chooseAsset")} />
                         </SelectTrigger>
                       </FormControl>
@@ -643,7 +645,7 @@ function SheetForm({
                   <FormItem>
                     <FormLabel>{t("activities.record.startedAtLabel")}</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" className="min-h-11" {...field} />
+                      <DateTimeField {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -657,7 +659,7 @@ function SheetForm({
                   <FormItem>
                     <FormLabel>{t("activities.record.endedAtLabel")}</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" className="min-h-11" {...field} />
+                      <DateTimeField {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -674,8 +676,7 @@ function SheetForm({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="min-h-9"
+                    size="desktop-sm"
                     onClick={() => setShowReadings(false)}
                   >
                     {t("activities.record.readings.hide")}
@@ -691,7 +692,7 @@ function SheetForm({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11 self-start"
+                className="self-start"
                 onClick={() => setShowReadings(true)}
               >
                 <Gauge className="size-4" aria-hidden />
@@ -710,8 +711,7 @@ function SheetForm({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="min-h-9"
+                    size="desktop-sm"
                     onClick={() => setShowSegments(false)}
                   >
                     {t("activities.record.segments.hide")}
@@ -737,7 +737,7 @@ function SheetForm({
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11 self-start"
+                  className="self-start"
                   onClick={() => segments.append(newSegmentRow())}
                 >
                   <Plus className="size-4" aria-hidden />
@@ -748,7 +748,7 @@ function SheetForm({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11 self-start"
+                className="self-start"
                 onClick={() => {
                   setShowSegments(true);
                   if (segments.fields.length === 0) segments.append(newSegmentRow());
@@ -804,7 +804,6 @@ function SheetForm({
                         <Input
                           type="text"
                           inputMode="numeric"
-                          className="min-h-11"
                           placeholder={t("activities.record.journey.seatsPlaceholder")}
                           {...field}
                         />
@@ -825,7 +824,6 @@ function SheetForm({
                         <Input
                           type="text"
                           inputMode="numeric"
-                          className="min-h-11"
                           placeholder={t("activities.record.journey.seatsPlaceholder")}
                           {...field}
                         />
@@ -848,7 +846,6 @@ function SheetForm({
                       <FormControl>
                         <Input
                           type="text"
-                          className="min-h-11"
                           placeholder={t(
                             "activities.record.haulage.cargoDescriptionPlaceholder",
                           )}
@@ -869,7 +866,6 @@ function SheetForm({
                         <Input
                           type="text"
                           inputMode="numeric"
-                          className="min-h-11"
                           placeholder={t("activities.record.haulage.cargoWeightPlaceholder")}
                           {...field}
                         />
@@ -896,26 +892,27 @@ function SheetForm({
           </CardContent>
         </Card>
 
-        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col-reverse items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
+        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
           <Button
             type="button"
             variant="outline"
-            className="min-h-11 w-full sm:w-auto"
+            className="w-full sm:w-auto"
             disabled={form.formState.isSubmitting}
             onClick={() => void submitSheet(true)()}
           >
-            {form.formState.isSubmitting && closing
-              ? t("activities.record.closingSubmitting")
-              : t("activities.record.submitAndClose")}
+            {label(
+              { command: "record-journey-sheet", intent: "close" },
+              form.formState.isSubmitting && closing ? "submitting" : "submit",
+            )}
           </Button>
           <Button
             type="submit"
-            className="min-h-11 w-full sm:w-auto"
+            className="w-full sm:w-auto"
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting && !closing
-              ? t("activities.record.submitting")
-              : t("activities.record.submit")}
+              ? label("record-journey-sheet", "submitting")
+              : label("record-journey-sheet", "submit")}
           </Button>
         </div>
       </form>
@@ -946,7 +943,6 @@ function ReadingField({
               <Input
                 type="text"
                 inputMode="numeric"
-                className="min-h-11"
                 placeholder={t("activities.record.readings.valuePlaceholder")}
                 {...field}
               />
@@ -972,7 +968,7 @@ function ReadingField({
             >
               <FormControl>
                 <SelectTrigger
-                  className="min-h-11 w-full"
+                  className="w-full"
                   aria-label={t(`activities.record.readings.${which}Type`)}
                 >
                   <SelectValue />
@@ -1026,7 +1022,7 @@ function SegmentRow({
               >
                 <FormControl>
                   <SelectTrigger
-                    className="min-h-11 w-full"
+                    className="w-full"
                     aria-label={t("activities.record.segments.rowAsset", { position })}
                   >
                     <SelectValue placeholder={t("activities.record.chooseAsset")} />
@@ -1061,7 +1057,7 @@ function SegmentRow({
               >
                 <FormControl>
                   <SelectTrigger
-                    className="min-h-11 w-full"
+                    className="w-full"
                     aria-label={t("activities.record.segments.rowRole", { position })}
                   >
                     <SelectValue />
@@ -1091,9 +1087,7 @@ function SegmentRow({
                 {t("activities.record.segments.startedAtLabel")}
               </FormLabel>
               <FormControl>
-                <Input
-                  type="datetime-local"
-                  className="min-h-11"
+                <DateTimeField
                   aria-label={t("activities.record.segments.rowStartedAt", { position })}
                   {...field}
                 />
@@ -1112,9 +1106,7 @@ function SegmentRow({
                 {t("activities.record.segments.endedAtLabel")}
               </FormLabel>
               <FormControl>
-                <Input
-                  type="datetime-local"
-                  className="min-h-11"
+                <DateTimeField
                   aria-label={t("activities.record.segments.rowEndedAt", { position })}
                   {...field}
                 />
@@ -1128,8 +1120,8 @@ function SegmentRow({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="min-h-9 self-start text-muted-foreground"
+        size="desktop-sm"
+        className="self-start text-muted-foreground"
         onClick={() => onRemove(index)}
       >
         <Trash2 className="size-4" aria-hidden />

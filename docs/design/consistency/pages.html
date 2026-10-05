@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: page archetypes</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#list">1 · Module list</a>
+    <a href="#phone-lists">1b · Lists on phone</a>
+    <a href="#record">2 · Record workspace</a>
+    <a href="#tab">2b · A tab inside a record</a>
+    <a href="#queue">3 · Decision queue</a>
+    <a href="#home">4 · Home</a>
+    <a href="#settings">5 · Settings list</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Page archetypes</h2>
+      <p class="lede">Five page types cover every route in the feature map. Each one reads top to bottom in the same order: what this is and what needs attention, then the records, then what you can do. Coloured outlines mark the three layers; turn them off with the button at the bottom right.</p>
+      <div class="legend"><span style="--c:var(--layer-overview)">Overview: what is here, what needs me</span><span style="--c:var(--layer-details)">Details: the records</span><span style="--c:var(--layer-act)">Act: the actions</span></div>
+    </header>
+
+    <!-- 1. MODULE LIST -->
+    <section class="section" id="list">
+      <div class="kicker">Archetype 1</div>
+      <h3>Module list</h3>
+      <p class="rule">For the top of each module: Trucks, Trips, Maintenance, Finance entries, People. The page opens on numbers the server already counted, then up to three items that need someone, then the table. Each metric is a link that filters the table below it.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · Trucks</div>
+          <div class="frame desktop">
+            <div data-sidebar="trucks"></div>
+            <div class="main">
+              <div class="topbar"><b>Trucks</b><div class="right"><span class="chip set">Douala</span></div></div>
+              <div class="page">
+                <div class="ph layer l-act"><span class="tag">Header · title, purpose, one primary action</span>
+                  <div><h1 class="pt">Trucks</h1><div class="lead">Every truck and trailer in Douala, with its status today.</div></div>
+                  <div class="row"><button class="btn primary"><i data-i="plus"></i>Register a truck</button></div>
+                </div>
+                <div class="metrics layer l-overview"><span class="tag">Overview · server counts, each one filters the table</span>
+                  <div><div class="k">In service</div><div class="v">2</div><div class="s">of 3 vehicles</div></div>
+                  <div><div class="k">Grounded</div><div class="v bad">1</div><div class="s">VH003 · brakes</div></div>
+                  <div><div class="k">Documents expiring</div><div class="v">1</div><div class="s">in the next 30 days</div></div>
+                  <div><div class="k">Costs this month</div><div class="v">412 500</div><div class="s">XAF · 2 pending</div></div>
+                </div>
+                <div class="attn bad layer l-overview"><span class="tag">Overview · needs someone (max 3, then "See all")</span>
+                  <i data-i="alert" data-c="lg"></i>
+                  <div><div class="t">VH003 must not be driven</div><div class="s">Brake problem reported 2 Oct. Work order WO-0007 approved, not started.</div></div>
+                  <button class="btn sm">Open VH003</button>
+                </div>
+                <div class="layer l-details" style="display:flex;flex-direction:column;gap:10px"><span class="tag">Details · toolbar + DataTable</span>
+                  <div class="toolbar">
+                    <div class="input" style="width:260px"><i data-i="search"></i>Search code or plate</div>
+                    <span class="chip"><i data-i="plus"></i>Status</span><span class="chip"><i data-i="plus"></i>Type</span>
+                  </div>
+                  <div class="dt-wrap"><table class="dt">
+                    <thead><tr><th>Truck</th><th>Plate</th><th>Status</th><th>Last reading</th><th class="r">Costs this month</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td class="pri">VH001 · Renault Kerax</td><td>LT 452 AB</td><td><span class="badge b-ok">In service</span></td><td class="num">184 220 km</td><td class="r">96 000</td><td class="dots"><i data-i="dots"></i></td></tr>
+                      <tr><td class="pri">VH003 · Mercedes Actros</td><td>LT 118 CF</td><td><span class="badge b-bad">Grounded</span></td><td class="num">231 940 km</td><td class="r">316 500</td><td class="dots"><i data-i="dots"></i></td></tr>
+                      <tr><td class="pri">TR001 · Trailer 3 axles</td><td>LT 009 RQ</td><td><span class="badge b-ok">In service</span></td><td class="none" style="color:var(--muted-foreground)">Not recorded</td><td class="r">0</td><td class="dots"><i data-i="dots"></i></td></tr>
+                    </tbody></table>
+                    <div class="pager"><span>3 trucks</span><span>Page 1</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Phone · same page</div>
+          <div class="frame phone">
+            <div class="ptop"><b>Trucks</b><span class="chip set" style="margin-left:auto">Douala</span></div>
+            <div class="page">
+              <div class="ph layer l-act"><span class="tag">Header</span><div><h1 class="pt">Trucks</h1><div class="lead">Every truck in Douala, with its status today.</div></div></div>
+              <div class="metrics layer l-overview"><span class="tag">Overview</span>
+                <div><div class="k">In service</div><div class="v">2</div></div>
+                <div><div class="k">Grounded</div><div class="v bad">1</div></div>
+                <div><div class="k">Docs expiring</div><div class="v">1</div></div>
+                <div><div class="k">Costs (XAF)</div><div class="v">412 500</div></div>
+              </div>
+              <div class="attn bad layer l-overview"><span class="tag">Needs someone</span><i data-i="alert" data-c="lg"></i><div><div class="t">VH003 must not be driven</div><div class="s">WO-0007 approved, not started</div></div></div>
+              <div class="layer l-details" style="display:flex;flex-direction:column;gap:8px"><span class="tag">Details · table becomes cards</span>
+                <div class="input"><i data-i="search"></i>Search code or plate</div>
+                <div class="list-card"><div><div class="main-t">VH001 · Kerax</div><div class="sub-t">LT 452 AB · 184 220 km</div></div><div class="end"><span class="badge b-ok">In service</span></div></div>
+                <div class="list-card"><div><div class="main-t">VH003 · Actros</div><div class="sub-t">LT 118 CF · 231 940 km</div></div><div class="end"><span class="badge b-bad">Grounded</span></div></div>
+                <div class="list-card"><div><div class="main-t">TR001 · Trailer</div><div class="sub-t">LT 009 RQ</div></div><div class="end"><span class="badge b-ok">In service</span></div></div>
+              </div>
+            </div>
+            <div class="actionbar layer l-act" style="grid-template-columns:1fr"><span class="tag">Primary action moves to the bottom</span><button class="btn primary block"><i data-i="plus"></i>Register a truck</button></div>
+            <div data-tabbar="trucks"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cols three" style="margin-top:18px">
+        <div class="spec-card"><h4>Region order</h4><ol><li>Header: title, one-line purpose, one primary action</li><li>Metric strip: 2 to 4 server aggregates; each is a filter link</li><li>Attention: up to 3 items, "See all" after</li><li>Toolbar: search, then filter chips</li><li>DataTable (cards on phone)</li></ol></div>
+        <div class="spec-card"><h4>Rules</h4><ul><li>Only one filled button on the page.</li><li>Clicking a row opens the record workspace, or the record panel for small records.</li><li>Metrics never count rows on the client (<code>/v1/dashboard</code> or a summary read).</li><li>Missing values say "Not recorded", never "—" alone.</li></ul></div>
+        <div class="spec-card"><h4>Used by</h4><ul><li>Trucks <code>/assets</code></li><li>Trips <code>/activities</code></li><li>Maintenance <code>/maintenance</code></li><li>Finance entries <code>/finance/entries</code></li><li>People <code>/more/persons</code> (no metrics; see archetype 5)</li></ul></div>
+      </div>
+    </section>
+
+    <!-- PHONE LISTS -->
+    <section class="section" id="phone-lists">
+      <div class="kicker">Phone</div>
+      <h3>Lists on phone: one list, not cards, not a squeezed table</h3>
+      <p class="rule">On phones the DataTable today turns each row into a bordered card (same columns, marked primary or secondary). The owner's suggestion is to keep the list or table instead of cards. Three versions of the same five entries at 390 px:</p>
+      <div class="cols three" style="grid-template-columns:repeat(3,390px);justify-content:start">
+        <div>
+          <div class="frame-label">1 · The desktop table, squeezed</div>
+          <div class="frame phone" style="min-height:640px">
+            <div class="ptop"><b>Money</b></div>
+            <div class="page" style="gap:10px">
+              <div class="dt-wrap" style="overflow:hidden"><table class="dt" style="font-size:12px;min-width:560px">
+                <thead><tr><th>Entry</th><th>Date</th><th>Vehicle</th><th>Status</th><th class="r">XAF</th></tr></thead>
+                <tbody>
+                  <tr><td class="pri">#14 Brake pads</td><td>3 Oct</td><td>VH003</td><td><span class="badge b-warn">Waiting</span></td><td class="r">150 000</td></tr>
+                  <tr><td class="pri">#13 Road toll</td><td>2 Oct</td><td>VH003</td><td><span class="badge b-warn">Waiting</span></td><td class="r">35 000</td></tr>
+                  <tr><td class="pri">#12 Fuel 175 L</td><td>1 Oct</td><td>VH001</td><td><span class="badge b-ok">Posted</span></td><td class="r">131 000</td></tr>
+                  <tr><td class="pri">#11 Fuel 180 L</td><td>1 Oct</td><td>VH003</td><td><span class="badge b-mute">Reversed</span></td><td class="r">135 000</td></tr>
+                  <tr><td class="pri">#10 Haulage DLA→YDE</td><td>30 Sep</td><td>VH001</td><td><span class="badge b-ok">Posted</span></td><td class="r">+450 000</td></tr>
+                </tbody></table></div>
+              <p class="caption gap" style="margin:0">Status and amount, the two things people scan for, are cut off. Sideways scroll on a 390 px screen, small tap targets.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">2 · Today: one bordered card per row</div>
+          <div class="frame phone" style="min-height:640px">
+            <div class="ptop"><b>Money</b></div>
+            <div class="page" style="gap:10px">
+              <div class="list-card" style="flex-direction:column;align-items:stretch;gap:6px"><div class="row" style="justify-content:space-between"><b>#14 Brake pads</b><span class="dots"><i data-i="dots"></i></span></div><div class="sub-t">3 Oct · VH003 · Waiting · 150 000 XAF</div></div>
+              <div class="list-card" style="flex-direction:column;align-items:stretch;gap:6px"><div class="row" style="justify-content:space-between"><b>#13 Road toll</b><span class="dots"><i data-i="dots"></i></span></div><div class="sub-t">2 Oct · VH003 · Waiting · 35 000 XAF</div></div>
+              <div class="list-card" style="flex-direction:column;align-items:stretch;gap:6px"><div class="row" style="justify-content:space-between"><b>#12 Fuel 175 L</b><span class="dots"><i data-i="dots"></i></span></div><div class="sub-t">1 Oct · VH001 · Posted · 131 000 XAF</div></div>
+              <div class="list-card" style="flex-direction:column;align-items:stretch;gap:6px"><div class="row" style="justify-content:space-between"><b>#11 Fuel 180 L</b><span class="dots"><i data-i="dots"></i></span></div><div class="sub-t">1 Oct · – · Reversed · 135 000 XAF</div></div>
+              <p class="caption gap" style="margin:0">About 5 rows per screen. Status and amount are buried in grey text and move around from card to card. An empty value leaves a stray "·  – ·".</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">3 · Proposal: list rows from the same table</div>
+          <div class="frame phone" style="min-height:640px">
+            <div class="ptop"><b>Money</b></div>
+            <div class="page" style="gap:0;padding-top:6px">
+              <div class="mrow"><div><b>#14 Brake pads</b><span>VH003 · 3 Oct</span></div><div class="end"><b class="num">150 000</b><span class="badge b-warn">Waiting</span></div><i data-i="dots"></i></div>
+              <div class="mrow"><div><b>#13 Road toll</b><span>VH003 · 2 Oct</span></div><div class="end"><b class="num">35 000</b><span class="badge b-warn">Waiting</span></div><i data-i="dots"></i></div>
+              <div class="mrow"><div><b>#12 Fuel 175 L</b><span>VH001 · 1 Oct</span></div><div class="end"><b class="num">131 000</b><span class="badge b-ok">Posted</span></div><i data-i="dots"></i></div>
+              <div class="mrow"><div><b>#11 Fuel 180 L</b><span>VH003 · 1 Oct</span></div><div class="end"><b class="num" style="color:var(--muted-foreground);text-decoration:line-through">135 000</b><span class="badge b-mute">Reversed</span></div><i data-i="dots"></i></div>
+              <div class="mrow"><div><b>#10 Haulage DLA → YDE</b><span>VH001 · 30 Sep</span></div><div class="end"><b class="num">+450 000</b><span class="badge b-ok">Posted</span></div><i data-i="dots"></i></div>
+              <div class="mrow"><div><b>#9 Tyres (2)</b><span>TR001 · 29 Sep</span></div><div class="end"><b class="num">240 000</b><span class="badge b-ok">Posted</span></div><i data-i="dots"></i></div>
+              <div class="mrow"><div><b>#8 Driver allowance</b><span>VH001 · 28 Sep</span></div><div class="end"><b class="num">25 000</b><span class="badge b-ok">Posted</span></div><i data-i="dots"></i></div>
+              <p class="caption" style="margin:10px 0 0">About 9 rows per screen. Title left, value and status right, always in the same place. Amounts line up for scanning.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cols even" style="margin-top:18px">
+        <div class="spec-card"><h4>My answer</h4>
+          <p>Agree with dropping the cards; disagree with showing the table itself on phone. A real table only fits two or three columns at 390 px, so it either cuts off status and amount or scrolls sideways. The middle way keeps your idea: <b>one list, no boxes</b>, rendered by the same DataTable from the same column definitions. It looks and scans like a table (aligned values on the right, thin dividers), but each row is two lines instead of five columns.</p>
+          <p>Exception: none for now. If finance ever needs to compare many numbers side by side on phone, that's a report, and reports are desktop-first.</p></div>
+        <div class="spec-card"><h4>Row anatomy (every list, every module)</h4><ul>
+          <li>Each column declares one phone role: <code>title</code>, <code>meta</code>, <code>value</code>, <code>status</code> or <code>hidden</code>. This replaces today's primary/secondary.</li>
+          <li>Line 1: title left (the primary column, the only tap target), value right (amount, reading, count) in tabular figures.</li>
+          <li>Line 2: meta joined with " · " (empty values skipped, never "–"), status badge right under the value.</li>
+          <li>⋯ row menu at the end, 44 px target. Rows 60 px tall minimum, divided by a 1 px line, no card border.</li>
+          <li>Filters collapse into one "Filters (2)" button above the list on phone, instead of stacking five deep.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <!-- 2. RECORD WORKSPACE -->
+    <section class="section" id="record">
+      <div class="kicker">Archetype 2</div>
+      <h3>Record workspace</h3>
+      <p class="rule">For one thing: a truck, a trip, a work order, a finance entry. The vehicle workspace already works this way and becomes the model. The identity strip says what it is, the status block says what is wrong and who has to act, the facts line gives the numbers. Tabs hold the details. The first tab is always the overview.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · VH003, Overview tab</div>
+          <div class="frame desktop" style="min-height:720px">
+            <div data-sidebar="trucks"></div>
+            <div class="main" style="position:relative">
+              <div class="topbar">Trucks <span class="sep">/</span> <b>VH003</b></div>
+              <div class="page" style="padding-bottom:84px">
+                <div class="layer l-overview" style="display:flex;flex-direction:column;gap:12px"><span class="tag">Overview · identity, status, facts</span>
+                  <div class="ph"><div><div class="row"><h1 class="pt">VH003 · Mercedes Actros</h1><span class="badge b-bad">Grounded</span></div><div class="lead">LT 118 CF · Douala · Assigned driver: Sali Ahmadou</div></div></div>
+                  <div class="attn bad"><i data-i="alert" data-c="lg"></i><div><div class="t">Do not drive. Brake problem, safety critical.</div><div class="s">WO-0007 is approved. Hervé (workshop) starts it next.</div></div><button class="btn sm">Open WO-0007</button></div>
+                  <div class="facts"><div><div class="k">Odometer</div><div class="v num">231 940 km</div></div><div><div class="k">Costs this month</div><div class="v num">316 500 XAF</div></div><div><div class="k">Open work orders</div><div class="v">1</div></div><div><div class="k">Insurance</div><div class="v">Expires 30 Oct</div></div></div>
+                </div>
+                <div class="tabs layer l-details"><span class="tag">Details · fixed tab order, hidden by role, never reordered</span><div class="on">Overview</div><div>Maintenance<span class="count hot">1</span></div><div>Money<span class="count">2</span></div><div>Trips</div><div>Documents</div><div>History</div><div>Details</div></div>
+                <div class="cols even" style="gap:16px">
+                  <div class="card layer l-overview"><span class="tag">Overview tab · what needs someone</span>
+                    <div class="card-h"><div><h2>To do <span class="count">2</span></h2><div class="d">What has to happen before VH003 drives again</div></div></div>
+                    <div class="card-b feed">
+                      <div><span class="dot bad"></span><div><b>Start WO-0007</b><br><span class="caption" style="margin:0">Workshop · approved 3 Oct</span></div><span class="when">Hervé</span></div>
+                      <div><span class="dot warn"></span><div><b>Approve 2 expenses</b><br><span class="caption" style="margin:0">185 000 XAF waiting</span></div><span class="when">Nadège</span></div>
+                    </div>
+                  </div>
+                  <div class="card"><div class="card-h"><h2>Latest</h2><a class="caption" style="margin:0">History</a></div>
+                    <div class="card-b feed">
+                      <div><span class="dot info"></span>WO-0007 approved<span class="when">3 Oct</span></div>
+                      <div><span class="dot bad"></span>Brake problem reported<span class="when">2 Oct</span></div>
+                      <div><span class="dot ok"></span>Fuel 180 L · 135 000 XAF<span class="when">1 Oct</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="actionbar layer l-act"><span class="tag">Act · one primary, two secondary, "All actions"</span>
+                <button class="btn primary"><i data-i="note"></i>Add a note</button>
+                <button class="btn"><i data-i="fuel"></i>Log fuel</button>
+                <button class="btn"><i data-i="receipt"></i>Record expense</button>
+                <button class="btn locked" title="VH003 is grounded"><i data-i="lock"></i>Start a trip</button>
+                <button class="btn ghost" style="margin-left:auto"><i data-i="dots"></i>More</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Phone · same record</div>
+          <div class="frame phone" style="min-height:820px">
+            <div class="ptop"><i data-i="back"></i><span class="crumb">Trucks</span><b>VH003</b></div>
+            <div class="page" style="padding-bottom:150px">
+              <div class="layer l-overview" style="display:flex;flex-direction:column;gap:10px"><span class="tag">Overview</span>
+                <div><div class="row"><h1 class="pt">VH003</h1><span class="badge b-bad">Grounded</span></div><div class="lead">Actros · LT 118 CF · Douala</div></div>
+                <div class="attn bad"><i data-i="alert" data-c="lg"></i><div><div class="t">Do not drive</div><div class="s">Brakes. WO-0007 approved.</div></div></div>
+                <div class="facts"><div><div class="k">Odometer</div><div class="v num">231 940 km</div></div><div><div class="k">This month</div><div class="v num">316 500 XAF</div></div></div>
+              </div>
+              <div class="tabs layer l-details"><span class="tag">Tabs scroll sideways</span><div class="on">Overview</div><div>Maint.<span class="count hot">1</span></div><div>Money<span class="count">2</span></div><div>Trips</div></div>
+              <div class="card"><div class="card-h"><div><h2>To do <span class="count">2</span></h2></div></div><div class="card-b feed"><div><span class="dot bad"></span><b>Start WO-0007</b><span class="when">Hervé</span></div><div><span class="dot warn"></span><b>Approve 2 expenses</b><span class="when">Nadège</span></div></div></div>
+            </div>
+            <div class="actionbar layer l-act"><span class="tag">Act · two big buttons + more</span><button class="btn primary"><i data-i="note"></i>Note</button><button class="btn"><i data-i="fuel"></i>Fuel</button><button class="btn"><i data-i="dots"></i></button></div>
+            <div data-tabbar="trucks"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cols three" style="margin-top:18px">
+        <div class="spec-card"><h4>Region order</h4><ol><li>Breadcrumb in the top bar (no back links in pages)</li><li>Identity strip: code + name, status badge, one line of who/where</li><li>Status block: the one thing blocking this record, with who acts</li><li>Facts line: 3 to 4 numbers</li><li>Tabs, first one "Overview"</li><li>Action bar, fixed at the bottom</li></ol></div>
+        <div class="spec-card"><h4>Rules</h4><ul><li>Sub-records (an entry, a problem, a note) open in the record panel on the right, never a new page.</li><li>Actions you can't use right now stay visible with a lock and say why when tapped. Actions your role can never use are hidden.</li><li>Tab counts are server counts; red means overdue or blocking.</li><li>The same tab names in the same order on every record type that has them.</li></ul></div>
+        <div class="spec-card"><h4>Used by</h4><ul><li>Vehicle <code>/assets/$id</code> (reference, already built)</li><li>Trip <code>/activities/$id</code>: move to this shell</li><li>Finance entry <code>/finance/entries/$id</code>: move to this shell</li><li>Work order: today a sheet; keep it in the panel, same header parts</li></ul></div>
+      </div>
+    </section>
+
+    <!-- 2b. TAB -->
+    <section class="section" id="tab">
+      <div class="kicker">Archetype 2b</div>
+      <h3>A tab inside a record</h3>
+      <p class="rule">Every tab repeats the page rule at a smaller size. It opens with a one-line summary of the tab, then the list, then the tab's own action. Clicking an item opens the record panel. This is the "when you open a tab you get an overview first" rule.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · VH003, Money tab, an entry open in the record panel</div>
+          <div class="frame desktop" style="min-height:640px">
+            <div data-sidebar="trucks"></div>
+            <div class="main" style="position:relative">
+              <div class="topbar">Trucks <span class="sep">/</span> VH003 <span class="sep">/</span> <b>Money</b></div>
+              <div class="page">
+                <div class="row"><h1 class="pt" style="font-size:20px">VH003 · Mercedes Actros</h1><span class="badge b-bad">Grounded</span></div>
+                <div class="tabs"><div>Overview</div><div>Maintenance<span class="count hot">1</span></div><div class="on">Money<span class="count">2</span></div><div>Trips</div><div>Documents</div><div>History</div></div>
+                <div class="metrics layer l-overview" style="grid-template-columns:repeat(3,1fr)"><span class="tag">Tab overview · one strip</span>
+                  <div><div class="k">Out this month</div><div class="v">316 500</div><div class="s">XAF</div></div>
+                  <div><div class="k">Waiting approval</div><div class="v">2</div><div class="s">185 000 XAF</div></div>
+                  <div><div class="k">Missing receipt</div><div class="v">1</div><div class="s">Fuel 1 Oct</div></div>
+                </div>
+                <div class="dt-wrap layer l-details"><span class="tag">Tab details</span><table class="dt"><thead><tr><th>Entry</th><th>Date</th><th>Status</th><th class="r">Amount XAF</th></tr></thead><tbody>
+                  <tr><td class="pri">#14 Brake pads</td><td>3 Oct</td><td><span class="badge b-warn">Waiting approval</span></td><td class="r">150 000</td></tr>
+                  <tr><td class="pri">#13 Road toll</td><td>2 Oct</td><td><span class="badge b-warn">Waiting approval</span></td><td class="r">35 000</td></tr>
+                  <tr><td class="pri">#11 Fuel 180 L</td><td>1 Oct</td><td><span class="badge b-ok">Posted</span></td><td class="r">135 000</td></tr>
+                </tbody></table></div>
+              </div>
+              <div class="scrim"></div>
+              <div class="sheet">
+                <div class="sheet-h"><div class="back"><i data-i="back"></i>VH003 · Money</div><h3>#14 Brake pads</h3><div class="d">Expense · 150 000 XAF · recorded by Hervé, 3 Oct</div><span class="x"><i data-i="x"></i></span></div>
+                <div class="sheet-b">
+                  <div class="layer l-overview"><span class="tag">Record overview</span><div class="attn warn"><i data-i="clock"></i><div><div class="t">Waiting for your approval</div><div class="s">Linked to WO-0007</div></div></div></div>
+                  <div class="layer l-details fs"><span class="tag">Record details · same groups as the form</span>
+                    <div class="fs-h">What</div>
+                    <div class="facts" style="grid-template-columns:1fr 1fr"><div><div class="k">Category</div><div class="v">Parts</div></div><div><div class="k">Supplier</div><div class="v">Garage Akwa</div></div></div>
+                    <div class="fs-h">How much</div>
+                    <div class="facts" style="grid-template-columns:1fr 1fr"><div><div class="k">Amount</div><div class="v num">150 000 XAF</div></div><div><div class="k">Paid by</div><div class="v">Cash, branch till</div></div></div>
+                    <div class="fs-h">Proof</div>
+                    <div class="facts" style="grid-template-columns:1fr"><div><div class="k">Receipt</div><div class="v none">Not attached<a>Attach</a></div></div></div>
+                  </div>
+                </div>
+                <div class="sheet-f layer l-act"><span class="tag">Act · decisions live in the panel footer</span><button class="btn">Edit</button><button class="btn" style="color:var(--destructive)">Reject</button><button class="btn primary" style="margin-left:auto">Approve</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="spec-card"><h4>Every tab, same three parts</h4>
+          <table class="spec-table" style="border:0"><thead><tr><th>Tab</th><th>Overview strip</th><th>Tab action</th></tr></thead><tbody>
+          <tr><td>Overview</td><td>To-do list + latest events</td><td>none</td></tr>
+          <tr><td>Maintenance</td><td>Open problems · open WOs · last service</td><td>Report a problem</td></tr>
+          <tr><td>Money</td><td>Out this month · waiting · missing receipt</td><td>Record expense</td></tr>
+          <tr><td>Trips</td><td>Trips this month · km · revenue</td><td>Start a trip</td></tr>
+          <tr><td>Documents</td><td>Valid · expiring · missing required</td><td>Add document</td></tr>
+          <tr><td>History</td><td>Filter chips by kind</td><td>none (read-only)</td></tr>
+          <tr><td>Details</td><td>Completeness "8 of 10 filled"</td><td>Edit details</td></tr>
+          </tbody></table>
+          <p class="caption">The record panel shows a record in the same groups, order and labels as the form that created it. Labels sit above values.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. QUEUE -->
+    <section class="section" id="queue">
+      <div class="kicker">Archetype 3</div>
+      <h3>Decision queue</h3>
+      <p class="rule">For views whose job is to clear items: the Money page's "Waiting approval" view (replacing the Approvals page), later maintenance problem triage. The overview is "how much is waiting and how old". Each item shows enough to decide without opening it. Approve is one tap; reject asks for a reason in a dialog.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · Approvals</div>
+          <div class="frame desktop" style="min-height:560px">
+            <div data-sidebar="approvals"></div>
+            <div class="main" style="position:relative">
+              <div class="topbar">Finance <span class="sep">/</span> <b>Approvals</b></div>
+              <div class="page">
+                <div class="ph layer l-act"><span class="tag">Header · no primary action on a queue</span><div><h1 class="pt">Approvals</h1><div class="lead">Expenses waiting for a finance decision.</div></div></div>
+                <div class="metrics layer l-overview" style="grid-template-columns:repeat(3,1fr)"><span class="tag">Overview · waiting, amount, oldest</span>
+                  <div><div class="k">Waiting</div><div class="v">2</div></div>
+                  <div><div class="k">Amount</div><div class="v">185 000</div><div class="s">XAF</div></div>
+                  <div><div class="k">Oldest</div><div class="v">2 days</div><div class="s">#13 Road toll</div></div>
+                </div>
+                <div class="layer l-details" style="display:flex;flex-direction:column;gap:10px"><span class="tag">Details + inline act</span>
+                  <div class="list-card"><i data-i="receipt" data-c="lg"></i><div><div class="main-t">#14 Brake pads · VH003</div><div class="sub-t">Parts · Hervé · 3 Oct · linked to WO-0007 · <span class="gap">no receipt</span></div></div><div class="end row"><b class="num" style="margin-right:8px">150 000 XAF</b><button class="btn sm">Reject</button><button class="btn sm primary">Approve</button></div></div>
+                  <div class="list-card"><i data-i="receipt" data-c="lg"></i><div><div class="main-t">#13 Road toll · VH003</div><div class="sub-t">Tolls · Sali · 2 Oct · receipt attached</div></div><div class="end row"><b class="num" style="margin-right:8px">35 000 XAF</b><button class="btn sm">Reject</button><button class="btn sm primary">Approve</button></div></div>
+                </div>
+              </div>
+              <div class="scrim"></div>
+              <div class="dialog layer l-act"><span class="tag">Dialog · only for decisions</span>
+                <div><h3>Reject #14 Brake pads?</h3><div class="d">Hervé will see your reason. The expense stays in the history as rejected.</div></div>
+                <div class="field"><label>Reason<span class="req">*</span></label><div class="input" style="min-height:72px;align-items:flex-start;padding-top:9px">Attach the garage receipt and resubmit.</div></div>
+                <div class="f"><button class="btn">Keep it</button><button class="btn danger">Reject expense</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Queues have no "create" button. The work arrives.</li>
+          <li>Each row shows the missing thing in red text ("no receipt"), so the reviewer doesn't need to open it.</li>
+          <li>Approve: one tap, toast with "Undo" only if the server supports it (today it doesn't: no undo).</li>
+          <li>Reject, reverse, cancel, deactivate: a dialog that names the record, says what happens after, requires a reason, and uses a destructive button whose label repeats the verb ("Reject expense", not "Confirm").</li>
+          <li>The dismiss button says what stays ("Keep it"), not "Cancel", because "Annuler" also means cancel the record in French.</li>
+          <li>Clicking the title opens the record panel with the same buttons in its footer.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <!-- 4. HOME -->
+    <section class="section" id="home">
+      <div class="kicker">Archetype 4</div>
+      <h3>Home</h3>
+      <p class="rule">Home is a role's overview of everything. It leads with "what needs you", in the same to-do format as a record's Overview tab, then the few numbers that role watches, then recent activity. Cards link into module lists with the filter already set.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · Home as fleet manager</div>
+          <div class="frame desktop" style="min-height:560px">
+            <div data-sidebar="home"></div>
+            <div class="main">
+              <div class="topbar"><b>Home</b><div class="right"><span class="chip set">Douala</span></div></div>
+              <div class="page">
+                <div class="ph"><div><h1 class="pt">Good morning, Boris</h1><div class="lead">Douala branch · Saturday 4 October</div></div></div>
+                <div class="card layer l-overview"><span class="tag">Overview · needs you, first</span>
+                  <div class="card-h"><div><h2>Needs you <span class="count hot">3</span></h2></div></div>
+                  <div class="card-b feed">
+                    <div><span class="dot bad"></span><b>VH003 grounded</b>&nbsp;· WO-0007 approved, not started<span class="when"><a>Open</a></span></div>
+                    <div><span class="dot warn"></span><b>2 expenses waiting approval</b>&nbsp;· 185 000 XAF<span class="when"><a>Review</a></span></div>
+                    <div><span class="dot warn"></span><b>TR001 insurance</b>&nbsp;expires in 26 days<span class="when"><a>Open</a></span></div>
+                  </div>
+                </div>
+                <div class="metrics layer l-overview"><span class="tag">The numbers this role watches</span>
+                  <div><div class="k">Vehicles available</div><div class="v">2 / 3</div></div>
+                  <div><div class="k">Trips this week</div><div class="v">3</div></div>
+                  <div><div class="k">Costs this month</div><div class="v">412 500</div><div class="s">XAF</div></div>
+                  <div><div class="k">Open work orders</div><div class="v">1</div></div>
+                </div>
+                <div class="card layer l-details"><span class="tag">Details · recent activity</span><div class="card-h"><h2>Recent</h2></div><div class="card-b feed"><div><span class="dot info"></span>WO-0007 approved by Boris<span class="when">3 Oct</span></div><div><span class="dot ok"></span>Trip T-0003 Douala → Yaoundé closed<span class="when">2 Oct</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>"Needs you" uses the same row format as the vehicle's To do card; both come from attention reads, never client counting.</li>
+          <li>Each role gets its own card set (data, not code): driver sees their truck, finance sees approvals and cash, workshop sees work orders.</li>
+          <li>No primary action on Home; the action is in each row ("Open", "Review").</li>
+          <li>An empty "Needs you" says so with a check mark: "Nothing waiting for you".</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <!-- 5. SETTINGS LIST -->
+    <section class="section" id="settings">
+      <div class="kicker">Archetype 5</div>
+      <h3>Settings list</h3>
+      <p class="rule">For configuration: Branches, Users and roles, People. Fewer records, changed rarely, by admins. The overview is a sentence that explains what this list controls, not metrics. Create and edit both open the side panel.</p>
+      <div class="cols">
+        <div>
+          <div class="frame-label">Desktop · Branches</div>
+          <div class="frame desktop" style="min-height:440px">
+            <div data-sidebar="branches"></div>
+            <div class="main">
+              <div class="topbar">More <span class="sep">/</span> <b>Branches</b></div>
+              <div class="page">
+                <div class="ph layer l-act"><span class="tag">Header · title, what it controls, primary action</span><div><h1 class="pt">Branches</h1><div class="lead">Branches split vehicles, people and money by city. Members only see their branch unless their role says otherwise.</div></div><button class="btn primary"><i data-i="plus"></i>Add a branch</button></div>
+                <div class="dt-wrap layer l-details"><span class="tag">Details</span><table class="dt"><thead><tr><th>Branch</th><th>Code</th><th>Time zone</th><th>Vehicles</th><th>Status</th><th></th></tr></thead><tbody>
+                  <tr><td class="pri">Douala</td><td>DLA</td><td>Africa/Douala</td><td>3</td><td><span class="badge b-ok">Active</span></td><td class="dots"><i data-i="dots"></i></td></tr>
+                  <tr><td class="pri">Yaoundé</td><td>YDE</td><td>Africa/Douala</td><td>0</td><td><span class="badge b-ok">Active</span></td><td class="dots"><i data-i="dots"></i></td></tr>
+                  <tr><td class="pri">Bafoussam</td><td>BAF</td><td>Africa/Douala</td><td>0</td><td><span class="badge b-mute">Inactive</span></td><td class="dots"><i data-i="dots"></i></td></tr>
+                </tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>No metric strip: the lead sentence is the overview.</li>
+          <li>Row click opens the record panel with details and an "Edit" button; the ⋯ menu holds the rest (rename, deactivate).</li>
+          <li>Deactivate is a dialog (archetype 3 rules). Rename and edit are the panel form.</li>
+          <li>The More page itself is a grouped list of these settings, each with the same one-line explanation.</li>
+        </ul></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ export function PersonPicker({
   client,
 }: PersonPickerProps) {
   const { t } = useTranslation();
+  const commandLabel = useCommandLabel();
   const [open, setOpen] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [search, setSearch] = useState("");
@@ -92,7 +94,7 @@ export function PersonPicker({
               variant="outline"
               disabled={disabled}
               className={cn(
-                "min-h-11 w-full justify-between font-normal",
+                "w-full justify-between font-normal",
                 selected === undefined && "text-muted-foreground",
                 className,
               )}
@@ -111,7 +113,6 @@ export function PersonPicker({
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t("activities.pickers.person.searchPlaceholder")}
             aria-label={t("activities.pickers.person.search")}
-            className="min-h-10"
           />
 
           {personsQuery.isPending ? (
@@ -152,14 +153,14 @@ export function PersonPicker({
           <Button
             type="button"
             variant="ghost"
-            className="min-h-10 justify-start"
+            className="justify-start"
             onClick={() => {
               setOpen(false);
               setRegistering(true);
             }}
           >
             <Plus className="size-4" aria-hidden />
-            {t("activities.pickers.person.new")}
+            {commandLabel("register-person")}
           </Button>
         </PopoverContent>
       </Popover>

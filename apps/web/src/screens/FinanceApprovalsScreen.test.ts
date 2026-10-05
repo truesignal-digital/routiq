@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -157,11 +157,7 @@ function successfulIntentRecorder(submissionOrder: string[]) {
   );
 }
 
-/**
- * Open a row's ⋯ menu and choose a decision. Approve and reject moved off the
- * row into the menu, so the dialog's confirm button is now the only plain
- * button carrying those labels.
- */
+/** Open a row's ⋯ menu and choose a decision. */
 async function chooseRowAction(
   user: ReturnType<typeof userEvent.setup>,
   rowIndex: number,
@@ -203,9 +199,10 @@ describe("finance approval command routing", () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen));
 
-    await chooseRowAction(user, 0, "Approve");
-    await user.click(screen.getByRole("button", { name: "Approve" }));
+    // Approve is one tap: the menu item sends the command, no dialog first.
+    await chooseRowAction(user, 0, "Approve entry");
     await waitFor(() => expect(submissionOrder).toEqual(["approve-entry"]));
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.toastAdd).toHaveBeenCalledWith({
       type: "success",
       title: "Entry approved",
@@ -213,9 +210,9 @@ describe("finance approval command routing", () => {
 
     // Both rows are still in the queue: ADR-0001 leaves removal to the server's
     // next answer rather than crossing the approved row off locally.
-    await chooseRowAction(user, 0, "Reject");
-    await user.type(screen.getByLabelText("Rejection reason"), "Duplicate entry");
-    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await chooseRowAction(user, 0, "Reject entry");
+    await user.type(screen.getByRole("textbox", { name: "Rejection reason" }), "Duplicate entry");
+    await user.click(screen.getByRole("button", { name: "Reject entry" }));
 
     await waitFor(() =>
       expect(submissionOrder).toEqual(["approve-entry", "reject-entry"]),
@@ -265,13 +262,13 @@ describe("finance approval command routing", () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen), client);
 
-    await chooseRowAction(user, 0, "Approve");
-    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await chooseRowAction(user, 0, "Approve entry");
 
-    await waitFor(() => expect(keys.length).toBe(2));
+    await waitFor(() => expect(keys.length).toBe(3));
     expect(keys).toEqual([
       ["ws", "sotrafret", "finance", "approvals"],
       ["ws", "sotrafret", "finance", "entries"],
+      ["ws", "sotrafret", "finance", "entry"],
     ]);
   });
 
@@ -279,10 +276,10 @@ describe("finance approval command routing", () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen));
 
-    await chooseRowAction(user, 0, "Reject");
+    await chooseRowAction(user, 0, "Reject entry");
 
     expect(
-      (screen.getByRole("button", { name: "Reject" }) as HTMLButtonElement)
+      (screen.getByRole("button", { name: "Reject entry" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
   });
@@ -291,10 +288,13 @@ describe("finance approval command routing", () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen));
 
-    await chooseRowAction(user, 0, "Reject");
-    expect(screen.getByRole("dialog")).toBeDefined();
+    await chooseRowAction(user, 0, "Reject entry");
+    const dialog = screen.getByRole("dialog", { name: "Reject entry" });
+    const submit = within(dialog).getByRole("button", { name: "Reject entry" });
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Keep entry", "Reject entry"]);
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Keep entry" }));
 
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).toBeNull(),

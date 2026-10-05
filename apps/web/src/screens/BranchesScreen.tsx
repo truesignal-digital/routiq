@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { Building2, Pencil, Plus, PowerOff, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { BranchListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
+  BRANCH_ACTION_COMMANDS,
   branchActions,
   BranchActionDialog,
   type BranchActionKey,
@@ -41,6 +43,7 @@ const ACTION_ICONS: Record<BranchActionKey, typeof Pencil> = {
  */
 export function BranchesScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canAdminister = canAdministerBranches(me?.role);
 
@@ -120,9 +123,9 @@ export function BranchesScreen() {
       <PageHeader
         title={t("branches.title")}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button type="button" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden />
-            {t("branches.add.open")}
+            {label("create-branch")}
           </Button>
         }
       />
@@ -158,7 +161,7 @@ export function BranchesScreen() {
               branchActions(branch).map(
                 (action): DataTableRowAction<BranchListItem> => ({
                   key: action,
-                  label: t(`branches.actions.${action}`),
+                  label: label(BRANCH_ACTION_COMMANDS[action]),
                   icon: ACTION_ICONS[action],
                   ...(action === "deactivate" ? { destructive: true } : {}),
                   onSelect: (row) => setActing({ branch: row, action }),

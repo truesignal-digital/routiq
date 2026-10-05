@@ -132,6 +132,11 @@ export interface DataTableRowViewer<TData> {
     label: string;
     onOpen: (row: TData) => void;
   };
+  /**
+   * Decisions on the row, rendered last in the footer. When present they own
+   * the page's one filled button, so `fullScreen` steps down to an outline.
+   */
+  actions?: (row: TData, drawer: { close: () => void }) => ReactNode;
 }
 
 /**
@@ -493,7 +498,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       )}
 
       {hasActiveFilter && (
-        <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+        <Button type="button" variant="ghost" size="desktop-sm" onClick={clearFilters}>
           {t("dataTable.clearFilters")}
         </Button>
       )}
@@ -579,7 +584,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
+                          size="desktop-sm"
                           className="-ml-2.5"
                           onClick={header.column.getToggleSortingHandler()}
                         >
@@ -756,7 +761,7 @@ function DataTableRowDrawer<TData>({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { description, fullScreen } = viewer;
+  const { description, fullScreen, actions } = viewer;
 
   return (
     <Drawer
@@ -784,6 +789,7 @@ function DataTableRowDrawer<TData>({
               {fullScreen && (
                 <Button
                   type="button"
+                  variant={actions ? "outline" : "default"}
                   className="min-h-11"
                   onClick={() => fullScreen.onOpen(state.row)}
                 >
@@ -795,6 +801,7 @@ function DataTableRowDrawer<TData>({
               >
                 {t("dataTable.viewer.close")}
               </DrawerClose>
+              {actions?.(state.row, { close: onClose })}
             </DrawerFooter>
           </>
         )}
@@ -888,7 +895,7 @@ function DataTableFooter<TData>({
                 }
               }}
             >
-              <SelectTrigger size="sm" className="w-20" id={rowsPerPageId}>
+              <SelectTrigger size="desktop-sm" className="w-20" id={rowsPerPageId}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent side="top">
@@ -912,7 +919,7 @@ function DataTableFooter<TData>({
             <Button
               type="button"
               variant="outline"
-              size="icon"
+              size="desktop-icon-sm"
               className="hidden lg:flex"
               aria-label={t("dataTable.firstPage")}
               disabled={!canPrevious}
@@ -924,7 +931,7 @@ function DataTableFooter<TData>({
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size="desktop-icon-sm"
             aria-label={t("dataTable.previousPage")}
             disabled={!canPrevious || busy}
             onClick={goPrevious}
@@ -934,7 +941,7 @@ function DataTableFooter<TData>({
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size="desktop-icon-sm"
             aria-label={t("dataTable.nextPage")}
             disabled={!canNext || busy}
             onClick={goNext}
@@ -945,7 +952,7 @@ function DataTableFooter<TData>({
             <Button
               type="button"
               variant="outline"
-              size="icon"
+              size="desktop-icon-sm"
               className="hidden lg:flex"
               aria-label={t("dataTable.lastPage")}
               disabled={!canNext}
@@ -980,7 +987,7 @@ function RowActionsMenu<TData>({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="desktop-icon-sm"
             aria-label={t("dataTable.actions")}
             className={className}
           />
@@ -1025,7 +1032,7 @@ function ColumnVisibilityMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" size="sm" className={className}>
+          <Button type="button" variant="outline" size="desktop-sm" className={className}>
             <SlidersHorizontal aria-hidden />
             {t("dataTable.view")}
           </Button>
@@ -1140,7 +1147,7 @@ function DataTableSearchFilter({
       placeholder={placeholder}
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      className="h-9 w-full sm:w-56"
+      className="w-full desktop:h-8 sm:w-56"
     />
   );
 }
@@ -1162,7 +1169,7 @@ function DataTableSelectFilter({
       value={value === "" ? null : value}
       onValueChange={(next) => onCommit(next ?? "")}
     >
-      <SelectTrigger aria-label={filter.placeholder} className="h-9 w-full sm:w-48">
+      <SelectTrigger size="desktop-sm" aria-label={filter.placeholder} className="w-full sm:w-48">
         <SelectValue placeholder={filter.placeholder} />
       </SelectTrigger>
       <SelectContent>

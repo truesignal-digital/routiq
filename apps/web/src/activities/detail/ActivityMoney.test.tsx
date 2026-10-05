@@ -52,7 +52,8 @@ function entry(overrides: Partial<Entry> = {}): Entry {
 }
 
 function digits(element: HTMLElement): string {
-  return (element.textContent ?? "").replace(/[^\d+-]/g, "");
+  // The minus is the typographic U+2212 in every language.
+  return (element.textContent ?? "").replace(/\u2212/g, "-").replace(/[^\d+-]/g, "");
 }
 
 /** The `<dd>` that follows a summary line's `<dt>`. */
@@ -163,6 +164,34 @@ describe("activity money card", () => {
 
     const link = screen.getByRole("link", { name: /FIN-2026-0001/ });
     expect(digits(link)).toContain("-400000");
+  });
+
+  it("signs DLA-2026-00008 as Finance does: an expense reads minus, its reversal plus (E2.8)", async () => {
+    const fuel = { entryNumber: "DLA-2026-00008", direction: "EXPENSE", categoryCode: "FUEL" } as const;
+    const lines = [
+      entry({ ...fuel, amountMinor: 86_000, status: "REVERSED" }),
+      entry({
+        ...fuel,
+        entryId: "00000000-0000-4000-8000-000000000033",
+        entryNumber: "DLA-2026-00009",
+        amountMinor: -86_000,
+      }),
+    ];
+    const amountOf = (number: string) =>
+      (screen.getByRole("link", { name: new RegExp(number) }).lastElementChild?.textContent ?? "").replace(
+        /\s/g,
+        " ",
+      );
+
+    render(<ActivityMoney entries={lines} />);
+    expect(amountOf("DLA-2026-00008")).toBe("−FCFA 86,000");
+    expect(amountOf("DLA-2026-00009")).toBe("+FCFA 86,000");
+    cleanup();
+
+    await i18n.changeLanguage("fr-CM");
+    render(<ActivityMoney entries={lines} />);
+    expect(amountOf("DLA-2026-00008")).toBe("−86 000 FCFA");
+    await i18n.changeLanguage("en");
   });
 
   it("names each line's category in the reader's language, never its code (#129)", async () => {

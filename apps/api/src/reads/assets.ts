@@ -11,6 +11,7 @@ import {
   type AssetLifecycleStatus,
   type AssetListSortField,
   type ListSort,
+  type ModuleCode,
 } from "@routiq/contracts";
 import {
   and,
@@ -20,6 +21,7 @@ import {
   exists,
   ilike,
   inArray,
+  isNull,
   or,
   sql,
   type SQL,
@@ -32,6 +34,7 @@ import type { TenantTx } from "../db/tenant.js";
 import {
   activities,
   activityAssetSegments,
+  assetAvailabilityIntervals,
   assets,
   branches,
   categories,
@@ -81,6 +84,8 @@ const listQuerySchema = listQuery(
       .transform((value) =>
         value === undefined ? undefined : Array.isArray(value) ? value : [value],
       ),
+    // The Attention tile's set, which is not a list of lifecycle statuses.
+    attention: z.literal("true").optional(),
   },
   { sortFields: assetListSortFields },
 );
@@ -100,9 +105,27 @@ const assetSortColumns: Record<AssetListSortField, KeysetColumn> = {
 
 interface AssetScopeFilters {
   status?: readonly AssetLifecycleStatus[] | undefined;
+  attention?: boolean | undefined;
   category?: string | undefined;
   branchId?: string | undefined;
   search?: string | undefined;
+}
+
+/**
+ * "Needs someone now": an attention lifecycle status, or grounded. Grounding is
+ * availability, owned by MAINTENANCE: with the module off its intervals say
+ * nothing, so only lifecycle statuses count. The summary's tile and the list's
+ * `attention` filter both read this, so the tile is what filtering on it lists.
+ */
+function needsAttention(modules: ReadonlySet<ModuleCode>): SQL {
+  const status = inArray(assets.lifecycleStatus, [...assetAttentionStatuses]);
+  if (!modules.has("MAINTENANCE")) return status;
+  const openInterval = and(
+    eq(assetAvailabilityIntervals.workspaceId, assets.workspaceId),
+    eq(assetAvailabilityIntervals.assetId, assets.id),
+    isNull(assetAvailabilityIntervals.closedAt),
+  );
+  return sql`(${status} or exists (select 1 from ${assetAvailabilityIntervals} where ${openInterval}))`;
 }
 
 /**
@@ -111,6 +134,7 @@ interface AssetScopeFilters {
  */
 function assetScopeConditions(
   auth: AuthContext,
+  modules: ReadonlySet<ModuleCode>,
   filters: AssetScopeFilters,
 ): SQL[] {
   const conditions: SQL[] = [eq(assets.workspaceId, auth.workspaceId)];
@@ -126,6 +150,9 @@ function assetScopeConditions(
 
   if (filters.status) {
     conditions.push(inArray(assets.lifecycleStatus, [...filters.status]));
+  }
+  if (filters.attention) {
+    conditions.push(needsAttention(modules));
   }
 
   if (filters.category) {
@@ -274,13 +301,13 @@ export function registerAssetReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/assets", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, category, branchId, search, cursor, limit } =
+        const { status, attention, category, branchId, search, cursor, limit } =
           parsedQuery.data;
         const sort = parsedQuery.data.sort ?? defaultAssetSort;
         const sortColumn = assetSortColumns[sort.field];
@@ -294,8 +321,9 @@ export function registerAssetReadRoutes(
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
 
-        const conditions = assetScopeConditions(auth, {
+        const conditions = assetScopeConditions(auth, modules, {
           status,
+          attention: attention === "true",
           category,
           branchId,
           search,
@@ -385,27 +413,27 @@ export function registerAssetReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/assets/summary", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = summaryQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
 
-        const conditions = assetScopeConditions(auth, parsedQuery.data);
+        const conditions = assetScopeConditions(auth, modules, parsedQuery.data);
 
         // Counted in one aggregate over the whole scope, so the numbers do not
         // depend on how far a client has paged.
         const countAll = sql<number>`count(*)::int`;
-        const countWhere = (statuses: readonly AssetLifecycleStatus[]) =>
-          sql<number>`count(*) filter (where ${inArray(assets.lifecycleStatus, [...statuses])})::int`;
+        const countWhere = (condition: SQL) =>
+          sql<number>`count(*) filter (where ${condition})::int`;
 
         const [totals] = await read((tx) =>
           tx
             .select({
               total: countAll,
-              inService: countWhere(["IN_SERVICE"]),
-              attention: countWhere(assetAttentionStatuses),
+              inService: countWhere(eq(assets.lifecycleStatus, "IN_SERVICE")),
+              attention: countWhere(needsAttention(modules)),
             })
             .from(assets)
             .innerJoin(

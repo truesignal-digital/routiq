@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @custom-variant dark (&:is(.dark *));
+/* Compact control sizes apply only on a wide screen driven by a mouse; phones and tablets keep 44 px targets. */
+@custom-variant desktop (@media (width >= 48rem) and (pointer: fine));
 
 @theme inline {
     --font-heading: system-ui, Helvetica, Arial, sans-serif;

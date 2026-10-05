@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { AttachEvidencePayload } from "@routiq/contracts";
 import {
   CommandForm,
@@ -39,6 +40,7 @@ export function AttachEvidenceForm({
   onDismiss,
 }: AttachEvidenceFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const submission = useCommandSubmission();
@@ -67,11 +69,11 @@ export function AttachEvidenceForm({
   return (
     <CommandForm
       surface={surface}
-      title={t("vehicle.forms.evidence.title")}
+      title={label("attach-evidence")}
       description={t("vehicle.forms.evidence.description")}
       back={back}
       error={submission.error}
-      submitLabel={t("vehicle.forms.evidence.submit")}
+      command="attach-evidence"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}

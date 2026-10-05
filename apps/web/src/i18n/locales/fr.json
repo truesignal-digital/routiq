@@ -65,7 +65,6 @@
       "all": "Toutes mes agences",
       "loading": "Agences…",
       "loadFailed": "Agences indisponibles",
-      "switched": "Vous consultez : {branch}",
       "scopeLine": "Filtré : {branch} — {count, plural, one {# résultat} other {# résultats}}",
       "scopeLineAtLeast": "Filtré : {branch} — au moins {count, plural, one {# résultat} other {# résultats}}",
       "scopeLineLoading": "Filtré : {branch}",
@@ -84,8 +83,8 @@
     "workspace": "Espace de travail",
     "username": "Nom d'utilisateur",
     "pin": "Code PIN",
-    "submit": "Se connecter",
-    "submitting": "Connexion…"
+    "signIn": "Se connecter",
+    "signingIn": "Connexion…"
   },
   "notify": {
     "success": {
@@ -154,17 +153,17 @@
     "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
     "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
     "BRANCH_STATUS_ALREADY_SET": "Cette agence est déjà dans cet état. Actualisez la page.",
-    "ISSUE_ASSET_MISMATCH": "Ce signalement concerne un autre actif. Choisissez un signalement du même actif.",
+    "ISSUE_ASSET_MISMATCH": "Ce problème concerne un autre actif. Choisissez un problème du même actif.",
     "WORK_ORDER_ASSET_MISMATCH": "Cet ordre de travail concerne un autre actif.",
-    "WORK_ORDER_NOT_COMPLETED": "Aucun ordre de travail terminé ne répond au signalement qui a immobilisé cet actif. Terminez les travaux avant la remise en service.",
-    "WORK_ORDER_ISSUE_MISMATCH": "Cet ordre de travail ne répond pas au signalement qui a immobilisé l'actif.",
+    "WORK_ORDER_NOT_COMPLETED": "Aucun ordre de travail terminé ne répond au problème qui a immobilisé cet actif. Terminez les travaux avant la remise en service.",
+    "WORK_ORDER_ISSUE_MISMATCH": "Cet ordre de travail ne répond pas au problème qui a immobilisé l'actif.",
     "WORK_ORDER_NOT_OPEN": "Cet ordre de travail n'est pas en cours : un coût ne peut y être imputé qu'une fois l'ordre approuvé, et tant qu'il n'est ni terminé, ni rejeté, ni annulé.",
     "WORK_ORDER_COST_MISSING": "Indiquez le coût de la réparation, ou choisissez « Aucun coût » ou « Facture pas encore reçue ».",
     "WORK_ORDER_HAS_COSTS": "Des coûts ont déjà été enregistrés sur cet ordre de travail. Rouvrez le formulaire pour les voir.",
     "HUMAN_PRINCIPAL_REQUIRED": "Cette action doit être faite par une personne, pas par une intégration ni un agent automatique.",
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
-    "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
-    "SAFETY_ISSUE_OPEN": "Un autre signalement critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
+    "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le problème.",
+    "SAFETY_ISSUE_OPEN": "Un autre problème critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
@@ -182,7 +181,6 @@
     "eyebrow": "Parc opérationnel",
     "title": "Vos actifs",
     "subtitle": "Suivez chaque véhicule, de son enregistrement à sa mise hors service.",
-    "register": "Nouvel actif",
     "searchLabel": "Rechercher dans les actifs",
     "searchPlaceholder": "Code, plaque ou modèle…",
     "filterLabel": "Filtrer les actifs",
@@ -196,7 +194,9 @@
     "metrics": {
       "total": "Total",
       "inService": "En service",
-      "attention": "À surveiller"
+      "attention": "À surveiller",
+      "attentionHint": "Immobilisés, en maintenance, retirés ou réformés",
+      "attentionHintNoGrounding": "En maintenance, retirés ou réformés"
     },
     "status": {
       "REGISTERED": "Enregistré",
@@ -209,7 +209,6 @@
     "emptyEyebrow": "Votre parc commence ici",
     "emptyTitle": "Enregistrez votre premier véhicule",
     "emptyHint": "Ajoutez un camion, une remorque, un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
-    "emptyAction": "Enregistrer un actif",
     "loading": "Chargement des actifs…",
     "noResultsTitle": "Aucun actif trouvé",
     "noResultsHint": "Essayez un autre terme ou retirez les filtres.",
@@ -240,7 +239,6 @@
     },
     "form": {
       "eyebrow": "Nouvel enregistrement",
-      "title": "Enregistrer un actif",
       "assetCode": "Code de l'actif",
       "assetClass": "Classe d'actif",
       "branch": "Agence",
@@ -270,8 +268,6 @@
         "lineType": "Type de ligne"
       },
       "choose": "Choisir…",
-      "submit": "Enregistrer l'actif",
-      "submitting": "Enregistrement…",
       "cancel": "Annuler",
       "fieldErrors": {
         "required": "Ce champ est obligatoire.",
@@ -280,14 +276,10 @@
       },
       "chassisNumber": "Numéro de châssis",
       "acquisitionDate": "Date d'acquisition",
-      "acquisitionAmount": "Montant d'acquisition (XAF)"
+      "acquisitionAmount": "Montant d'acquisition (FCFA)"
     },
     "actions": {
-      "commission": "Mettre en service",
-      "assign": "Affecter",
       "assignTo": "Affecter à l'agence",
-      "confirm": "Confirmer",
-      "working": "En cours…",
       "close": "Fermer",
       "reload": "Actualiser",
       "conflictTitle": "Modifié ailleurs",
@@ -297,7 +289,6 @@
       "open": "Ouvrir la fiche",
       "commissionHint": "Met l'actif en service. Son historique d'exploitation démarre ici.",
       "assignHint": "Rattache l'actif à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies.",
-      "custodian": "Changer de responsable",
       "custodianHint": "Désigne qui répond de l'actif au quotidien."
     },
     "columns": {
@@ -357,10 +348,8 @@
     "link": "Documents",
     "title": "Documents de l'actif",
     "add": "Ajouter un document",
-    "addTitle": "Nouveau document",
     "renew": "Renouveler",
     "renewTitle": "Renouveler « {name} »",
-    "save": "Enregistrer",
     "loading": "Chargement…",
     "loadFailed": "Impossible de charger les documents de cet actif.",
     "typesFailed": "Impossible de charger les types de document. Actualisez cette page.",
@@ -427,7 +416,7 @@
       "categoryLabel": "Catégorie",
       "chooseCategory": "Choisir une catégorie…",
       "categoriesFailed": "Impossible de charger les catégories. Actualisez cette page.",
-      "amountLabel": "Montant (XAF)",
+      "amountLabel": "Montant (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Moyen de paiement",
       "paymentMethods": {
@@ -447,13 +436,9 @@
       "assetLabel": "Actif (optionnel)",
       "assetPlaceholder": "Attribuer à un véhicule…",
       "evidenceLabel": "Justificatif (optionnel)",
-      "submit": "Enregistrer",
-      "submitting": "Enregistrement…",
       "branchLabel": "Agence",
       "chooseBranch": "Choisir une agence…",
-      "branchesFailed": "Impossible de charger les agences. Actualisez cette page.",
-      "expenseTitle": "Saisir une dépense",
-      "revenueTitle": "Saisir une recette"
+      "branchesFailed": "Impossible de charger les agences. Actualisez cette page."
     },
     "entries": {
       "title": "Écritures comptables",
@@ -467,7 +452,7 @@
       "loadMore": "Charger plus",
       "recordAction": "Saisir une écriture",
       "status": {
-        "SUBMITTED": "En attente",
+        "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
         "REJECTED": "Rejetée",
         "REVERSED": "Extournée"
@@ -480,6 +465,7 @@
         "status": "Statut",
         "category": "Catégorie",
         "amount": "Montant",
+        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Extourne de recette} EXPENSE_REVERSAL {Extourne de dépense} other {Dépense}}",
         "date": "Date comptable",
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
@@ -496,23 +482,30 @@
         "reversalChain": "Chaîne d'extournement",
         "reversesEntry": "Extourne l'écriture",
         "reversedByEntry": "Extournée par l'écriture",
-        "reverseAction": "Contre-passer",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
-        "editAction": "Modifier"
+        "editAction": "Modifier",
+        "receipt": "Justificatif",
+        "noReceiptFile": "Aucun fichier sur cette écriture.",
+        "evidence": {
+          "SUPPLIED": "Reçu joint",
+          "PAYMENT_REFERENCE": "Référence de paiement",
+          "NOT_EXPECTED": "Reçu non requis",
+          "NOT_SUPPLIED": "Sans reçu"
+        },
+        "evidenceVia": {
+          "RECORDED": "Joint à la saisie · {date} · {name}",
+          "ATTACHED": "Joint après coup · {date} · {name}"
+        }
       },
       "viewer": {
         "description": "Date comptable {date}",
         "fullScreen": "Ouvrir en plein écran"
       },
       "reversal": {
-        "title": "Contre-passer l'écriture",
         "reasonLabel": "Motif du contre-passage",
         "reasonPlaceholder": "Expliquez pourquoi cette écriture est contre-passée…",
-        "cancel": "Annuler",
-        "submit": "Contre-passer",
-        "submitting": "Contre-passage…",
         "success": "Écriture contre-passée",
         "successDesc": "L'écriture de contre-passage a été créée avec succès."
       },
@@ -532,7 +525,8 @@
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "actions": "Actions",
-        "branch": "Agence"
+        "branch": "Agence",
+        "submittedAt": "Soumis le"
       },
       "filters": {
         "branch": "Agence",
@@ -541,10 +535,6 @@
       "branchEmpty": "Aucune écriture en attente pour {branch}.",
       "outsideBranch": "{count, plural, one {+# en attente dans une autre agence} other {+# en attente dans d'autres agences}}",
       "makerGuard": "Votre saisie — un autre approbateur doit décider",
-      "approve": "Approuver",
-      "reject": "Rejeter",
-      "approveTitle": "Approuver l'écriture",
-      "rejectTitle": "Rejeter l'écriture",
       "noteLabel": "Remarque",
       "optional": "(optionnel)",
       "notePlaceholder": "Ajoutez une remarque…",
@@ -553,8 +543,6 @@
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
-      "cancel": "Annuler",
-      "submitting": "En cours…",
       "done": "Fermer"
     },
     "periods": {
@@ -572,15 +560,10 @@
       "statusOpen": "Ouverte",
       "statusLocked": "Verrouillée depuis le {date}",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "lock": "Verrouiller",
-      "reopen": "Rouvrir",
-      "lockTitle": "Verrouiller la période",
-      "reopenTitle": "Rouvrir la période",
       "lockExplanation": "Une fois verrouillée, aucune écriture ne pourra être créée pour cette période.",
       "reasonLabel": "Motif de la réouverture",
       "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
       "cancel": "Annuler",
-      "submitting": "En cours…",
       "locked": "Période verrouillée",
       "reopened": "Période rouverte",
       "warningsLabel": "Avis",
@@ -590,8 +573,6 @@
     "edit": {
       "title": "Modifier l'écriture {number}",
       "description": "Vous pouvez la modifier tant que personne ne l'a approuvée ni rejetée. L'approbateur verra ce que vous avez changé.",
-      "submit": "Enregistrer les modifications",
-      "submitting": "Enregistrement…",
       "decidedTitle": "Cette écriture a déjà été traitée",
       "decidedBody": "Un approbateur l'a approuvée ou rejetée pendant que vous la modifiiez. Vos changements n'ont pas été enregistrés.",
       "branchUnknown": "L'agence d'origine"
@@ -638,7 +619,7 @@
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
     "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le signalement qui l'avait immobilisé est encore ouvert."
+    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le problème qui l'avait immobilisé est encore ouvert."
   },
   "activities": {
     "title": "Activités",
@@ -701,6 +682,7 @@
       "OTHER": "Autre"
     },
     "detail": {
+      "breadcrumb": "Activité",
       "loading": "Chargement de l'activité…",
       "loadFailed": "Impossible de charger cette activité.",
       "summary": "Résumé",
@@ -760,26 +742,15 @@
       }
     },
     "actions": {
-      "close": "Clôturer",
-      "reopen": "Rouvrir",
-      "substitute": "Remplacer l'engin",
-      "cancel": "Annuler",
-      "submitting": "Envoi en cours…",
       "choose": "Choisir",
-      "closeTitle": "Clôturer l'activité",
       "closeHint": "Ce qui manque sera signalé sur la fiche, jamais inventé.",
-      "closeSubmit": "Confirmer la clôture",
       "endedAt": "Date et heure d'arrivée",
       "endedAtOptional": "Date et heure d'arrivée (facultatif)",
       "note": "Note (facultatif)",
-      "reopenTitle": "Rouvrir l'activité",
       "reopenHint": "La réouverture efface le verdict de complétude. Le motif reste au journal.",
-      "reopenSubmit": "Confirmer la réouverture",
       "reason": "Motif",
       "reasonPlaceholder": "Pourquoi rouvrir cette activité ?",
-      "substituteTitle": "Remplacer l'engin",
       "substituteHint": "L'engin sortant s'arrête à l'heure du relais ; le remplaçant prend la suite.",
-      "substituteSubmit": "Confirmer le remplacement",
       "outgoing": "Engin sortant",
       "incoming": "Engin remplaçant",
       "handoverAt": "Date et heure du relais",
@@ -788,10 +759,7 @@
       "substituteReason": "Motif (facultatif)",
       "assetOption": "{code} — {name}",
       "segmentOption": "{code} — {role}",
-      "addLeg": "Ajouter une étape",
-      "addLegTitle": "Ajouter une étape",
       "addLegHint": "Étape n° {legNo} de cette activité.",
-      "addLegSubmit": "Enregistrer l'étape",
       "legOrigin": "Départ",
       "legDestination": "Arrivée",
       "legDepartedAt": "Heure de départ (facultatif)",
@@ -799,18 +767,13 @@
       "legDistanceKm": "Distance en km (facultatif)",
       "legLoadState": "Charge (facultatif)",
       "legSegment": "Engin de l'étape (facultatif)",
-      "addReading": "Relever le compteur",
-      "addReadingTitle": "Relever le compteur",
       "addReadingHint": "Le relevé reste tel qu'il a été saisi ; une correction ajoute une nouvelle ligne.",
-      "addReadingSubmit": "Enregistrer le relevé",
       "readingAsset": "Engin",
       "readingType": "Unité",
       "readingValue": "Valeur",
       "readingObservedAt": "Date et heure du relevé",
-      "addExpense": "Saisir une dépense",
       "addExpenseTitle": "Dépense de l'activité",
       "addExpenseHint": "La dépense est rattachée à cette activité et à l'engin choisi.",
-      "addExpenseSubmit": "Enregistrer la dépense",
       "expenseCategory": "Catégorie",
       "expenseAmount": "Montant",
       "expenseEconomicDate": "Date économique",
@@ -826,8 +789,7 @@
         "searchPlaceholder": "Nom ou matricule…",
         "loading": "Chargement des personnes…",
         "loadFailed": "Impossible de charger les personnes.",
-        "empty": "Aucune personne trouvée.",
-        "new": "Nouvelle personne"
+        "empty": "Aucune personne trouvée."
       },
       "place": {
         "placeholder": "Ville ou lieu",
@@ -837,17 +799,13 @@
       }
     },
     "registerPerson": {
-      "title": "Nouvelle personne",
       "description": "Enregistrez un chauffeur, un receveur ou un mécanicien sans quitter la feuille.",
       "nameLabel": "Nom complet",
       "namePlaceholder": "Ex. Amadou Bello",
       "roleLabel": "Rôle habituel",
       "rolePlaceholder": "Choisir un rôle",
       "phoneLabel": "Téléphone",
-      "phonePlaceholder": "6 XX XX XX XX",
-      "submit": "Enregistrer",
-      "submitting": "Enregistrement…",
-      "cancel": "Annuler"
+      "phonePlaceholder": "6 XX XX XX XX"
     },
     "notify": {
       "success": {
@@ -877,7 +835,6 @@
       "pendingEntries": "{count, plural, one {# ligne en attente d'approbation} other {# lignes en attente d'approbation}}"
     },
     "record": {
-      "title": "Saisir une fiche",
       "subtitle": "Reprenez la feuille de route papier de haut en bas. Tout ce qui n'y figure pas peut rester vide.",
       "templateLegend": "Type de fiche",
       "journeyTab": "Voyage",
@@ -997,7 +954,7 @@
         "expense": "Dépense",
         "categoryLabel": "Catégorie",
         "chooseCategory": "Choisir une catégorie",
-        "amountLabel": "Montant (XAF)",
+        "amountLabel": "Montant (FCFA)",
         "amountPlaceholder": "Ex. 125 000",
         "amountRequired": "Indiquez un montant supérieur à zéro.",
         "paymentMethodLabel": "Mode de paiement",
@@ -1030,11 +987,7 @@
           "BANK": "Banque",
           "OTHER": "Autre"
         }
-      },
-      "submit": "Enregistrer la fiche",
-      "submitting": "Enregistrement…",
-      "submitAndClose": "Enregistrer et clôturer",
-      "closingSubmitting": "Clôture…"
+      }
     }
   },
   "maintenance": {
@@ -1045,9 +998,7 @@
     },
     "workOrders": {
       "tab": "Ordres de travail",
-      "new": "Nouvel ordre de travail",
-      "newHint": "Ouvrez un ordre de travail sur un actif, avec ou sans signalement à l'origine.",
-      "newSubmit": "Ouvrir l'ordre de travail",
+      "newHint": "Ouvrez un ordre de travail sur un actif, avec ou sans problème à l'origine.",
       "loading": "Chargement des ordres de travail…",
       "loadFailed": "Impossible de charger les ordres de travail. Veuillez réessayer.",
       "emptyHint": "Aucun ordre de travail pour l'instant. Les réparations ouvertes apparaîtront ici.",
@@ -1075,19 +1026,16 @@
       }
     },
     "issues": {
-      "tab": "Signalements",
-      "new": "Nouveau signalement",
-      "newHint": "Décrivez le défaut constaté sur l'actif. Un signalement critique pour la sécurité immobilise l'actif immédiatement.",
-      "newSubmit": "Enregistrer le signalement",
-      "loading": "Chargement des signalements…",
-      "loadFailed": "Impossible de charger les signalements. Veuillez réessayer.",
-      "emptyHint": "Aucun signalement pour l'instant. Les défauts constatés apparaîtront ici.",
-      "branchEmptyHint": "Aucun signalement pour cette agence.",
-      "filteredEmpty": "Aucun signalement avec ce statut.",
+      "tab": "Problèmes",
+      "newHint": "Décrivez le défaut constaté sur l'actif. Un problème critique pour la sécurité immobilise l'actif immédiatement.",
+      "loading": "Chargement des problèmes…",
+      "loadFailed": "Impossible de charger les problèmes. Veuillez réessayer.",
+      "emptyHint": "Aucun problème pour l'instant. Les défauts constatés apparaîtront ici.",
+      "branchEmptyHint": "Aucun problème pour cette agence.",
+      "filteredEmpty": "Aucun problème avec ce statut.",
       "safetyCritical": "Sécurité",
       "unavailable": "Immobilisé",
       "noWorkOrder": "Aucun",
-      "createWorkOrder": "Créer un ordre de travail",
       "filters": {
         "status": "Statut"
       },
@@ -1114,12 +1062,12 @@
       "categoryPlaceholder": "Freinage, pneumatique, moteur…",
       "safetyCritical": "Critique pour la sécurité",
       "safetyCriticalHint": "L'actif est immobilisé dès l'enregistrement et jusqu'à sa remise en service.",
-      "issue": "Signalement",
-      "issueHint": "Sans signalement, l'ordre de travail est préventif.",
+      "issue": "Problème",
+      "issueHint": "Sans problème lié, l'ordre de travail est préventif.",
       "preventive": "Préventif",
       "expectedCost": "Coût prévu",
       "summary": "Compte rendu",
-      "resolveLinkedIssue": "Clore le signalement lié",
+      "resolveLinkedIssue": "Clore le problème lié",
       "resolveLinkedIssueHint": "Décochez si les travaux sont faits mais que le problème persiste.",
       "reason": "Motif",
       "cancelReason": "Motif d'annulation",
@@ -1128,38 +1076,18 @@
       "note": "Note",
       "photos": "Photos (facultatif)",
       "overrideReason": "Pourquoi aucun ordre de travail n'a été nécessaire",
-      "overrideReasonHint": "Le signalement a été clos sans ordre de travail terminé. Ce motif reste dans la piste d'audit."
+      "overrideReasonHint": "Le problème a été clos sans ordre de travail terminé. Ce motif reste dans la piste d'audit."
     },
     "actions": {
-      "cancel": "Annuler",
-      "submitting": "Envoi…",
-      "approve": "Approuver",
-      "approveTitle": "Approuver l'ordre de travail",
       "approveHint": "Vous autorisez la dépense prévue. L'ordre de travail passe en travaux.",
-      "reject": "Rejeter",
-      "rejectTitle": "Rejeter l'ordre de travail",
       "rejectHint": "Vous refusez la dépense prévue. Le rejet est définitif et le motif reste au journal.",
-      "complete": "Déclarer terminé",
-      "completeTitle": "Déclarer les travaux terminés",
-      "approveCompletion": "Valider la fin des travaux",
-      "approveCompletionTitle": "Valider la fin des travaux",
       "approveCompletionHint": "Vous acceptez les coûts réels déclarés. L'ordre de travail est terminé.",
-      "rejectCompletion": "Refuser la fin des travaux",
-      "rejectCompletionTitle": "Refuser la fin des travaux",
       "rejectCompletionHint": "Les travaux restent ouverts. L'atelier voit le motif et peut déclarer à nouveau la fin des travaux.",
-      "cancelWorkOrder": "Annuler l'ordre de travail",
-      "cancelWorkOrderTitle": "Annuler l'ordre de travail",
       "cancelWorkOrderHint": "L'ordre de travail est abandonné. Le motif reste au journal.",
-      "release": "Remise en service",
-      "releaseTitle": "Remise en service",
-      "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement.",
+      "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème.",
       "releaseSubject": "Ordre de travail {reference}",
-      "resolveIssue": "Marquer résolu",
-      "resolveIssueTitle": "Résoudre le signalement",
       "resolveIssueHint": "Le problème a été traité, par exemple réparé sur place. La résolution ne lève pas l'immobilisation : seule la remise en service le fait.",
-      "dismissIssue": "Classer sans suite",
-      "dismissIssueTitle": "Classer le signalement sans suite",
-      "dismissIssueHint": "Le signalement n'aurait pas dû être ouvert : erreur, doublon, rien constaté. Le motif reste au journal."
+      "dismissIssueHint": "Le problème n'aurait pas dû être signalé : erreur, doublon, rien constaté. Le motif reste au journal."
     },
     "close": {
       "hint": "Indiquez ce qui a été fait et ce que la réparation a coûté.",
@@ -1198,21 +1126,16 @@
       "pendingCostLinesHint": "Enregistrés mais pas encore dépensés : ils ne comptent pas dans les coûts comptabilisés.",
       "loading": "Chargement de la chronologie…",
       "loadFailed": "Impossible de charger la chronologie. Veuillez réessayer.",
-      "preventive": "Préventif — aucun signalement",
-      "linkedIssue": "Signalement lié",
+      "preventive": "Préventif — aucun problème",
+      "linkedIssue": "Problème lié",
       "unavailableTitle": "Actif immobilisé",
-      "unavailableHint": "Seule la remise en service rouvre la disponibilité.",
-      "entryStatus": {
-        "SUBMITTED": "En attente d'examen",
-        "POSTED": "Comptabilisé",
-        "REVERSED": "Extourné"
-      }
+      "unavailableHint": "Seule la remise en service rouvre la disponibilité."
     },
     "notify": {
       "success": {
-        "issueReported": "Signalement enregistré",
-        "issueResolved": "Signalement résolu",
-        "issueDismissed": "Signalement classé sans suite",
+        "issueReported": "Problème signalé",
+        "issueResolved": "Problème résolu",
+        "issueDismissed": "Problème classé sans suite",
         "workOrderCreated": "Ordre de travail ouvert",
         "workOrderApproved": "Ordre de travail approuvé",
         "workOrderRejected": "Ordre de travail rejeté",
@@ -1227,7 +1150,6 @@
   },
   "persons": {
     "title": "Personnel",
-    "register": "Ajouter une personne",
     "searchPlaceholder": "Rechercher un nom",
     "branchLabel": "Agence",
     "branchPlaceholder": "Choisir une agence",
@@ -1286,10 +1208,7 @@
       "includeDeactivated": "Inclure les désactivés"
     },
     "add": {
-      "open": "Ajouter un utilisateur",
-      "title": "Ajouter un utilisateur",
-      "description": "Créez l'accès d'un membre de votre équipe. Remettez-lui vous-même son identifiant et son code : ils ne sont envoyés nulle part.",
-      "submit": "Ajouter"
+      "description": "Créez l'accès d'un membre de votre équipe. Remettez-lui vous-même son identifiant et son code : ils ne sont envoyés nulle part."
     },
     "form": {
       "displayName": "Nom complet",
@@ -1302,26 +1221,25 @@
       "confirmPin": "Confirmer le code PIN",
       "pinMismatch": "Les deux codes ne correspondent pas.",
       "pinTooShort": "Le code doit contenir au moins {min} chiffres.",
-      "cancel": "Annuler",
-      "submitting": "Envoi en cours…"
+      "cancel": "Annuler"
     },
     "actions": {
-      "role": "Modifier le rôle",
       "roleHint": "Rôle et portée des agences de {name}.",
-      "roleConfirm": "Enregistrer",
-      "pin": "Réinitialiser le code",
       "pinHint": "Définissez un nouveau code pour {name}. Cela déverrouille aussi le compte et ferme ses sessions ouvertes.",
-      "pinConfirm": "Réinitialiser",
-      "deactivate": "Désactiver",
       "deactivateHint": "{name} ne pourra plus se connecter. Son historique est conservé et le compte peut être réactivé.",
-      "deactivateConfirm": "Désactiver",
-      "reactivate": "Réactiver",
       "reactivateHint": "{name} pourra de nouveau se connecter avec son code actuel.",
-      "reactivateConfirm": "Réactiver",
       "conflictTitle": "Cette fiche a changé",
       "conflictBody": "Quelqu'un a modifié cet utilisateur pendant votre saisie. Rechargez la liste et reprenez.",
-      "reload": "Recharger",
-      "pinResetTitle": "Code réinitialisé",
+      "reload": "Recharger"
+    },
+    "notify": {
+      "success": {
+        "added": "Utilisateur ajouté : {name}",
+        "roleChanged": "Rôle mis à jour : {name}",
+        "pinReset": "Code réinitialisé : {name}",
+        "deactivated": "Utilisateur désactivé : {name}",
+        "reactivated": "Utilisateur réactivé : {name}"
+      },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
     }
   },
@@ -1342,10 +1260,7 @@
       "inactive": "Désactivée"
     },
     "add": {
-      "open": "Nouvelle agence",
-      "title": "Nouvelle agence",
-      "description": "Créez une agence de votre espace. Elle devient aussitôt disponible dans les formulaires et la portée des utilisateurs.",
-      "submit": "Créer"
+      "description": "Créez une agence de votre espace. Elle devient aussitôt disponible dans les formulaires et la portée des utilisateurs."
     },
     "form": {
       "code": "Code",
@@ -1354,22 +1269,26 @@
       "nameTooLong": "Le nom ne doit pas dépasser {max} caractères.",
       "name": "Nom",
       "timezone": "Fuseau horaire",
-      "cancel": "Annuler",
-      "submitting": "Envoi en cours…"
+      "cancel": "Annuler"
     },
     "actions": {
-      "rename": "Renommer",
       "renameHint": "Nouveau nom pour « {name} ». Le code reste inchangé.",
-      "renameConfirm": "Enregistrer",
-      "deactivate": "Désactiver",
       "deactivateHint": "Aucune nouvelle opération ne pourra viser « {name} ». Les enregistrements existants et l'historique sont conservés.",
-      "deactivateConfirm": "Désactiver",
-      "reactivate": "Réactiver",
       "reactivateHint": "« {name} » pourra de nouveau recevoir des opérations.",
-      "reactivateConfirm": "Réactiver",
       "conflictTitle": "Cette agence a changé",
       "conflictBody": "Quelqu'un a modifié cette agence pendant votre saisie. Rechargez la liste et reprenez.",
       "reload": "Recharger"
+    },
+    "notify": {
+      "success": {
+        "created": "Agence créée : {name}",
+        "renamed": "Agence renommée : {name}",
+        "deactivated": "Agence désactivée : {name}",
+        "reactivated": "Agence réactivée : {name}"
+      },
+      "info": {
+        "switched": "Vous consultez : {branch}"
+      }
     }
   },
   "provenance": {
@@ -1443,9 +1362,9 @@
       "template_preset-materialized": "Modèle métier activé",
       "template_preset-disabled": "Modèle métier désactivé",
       "workspace-provisioned": "Espace de travail créé",
-      "operational_issue-reported": "Signalement enregistré",
-      "operational_issue-resolved": "Signalement résolu",
-      "operational_issue-dismissed": "Signalement classé sans suite",
+      "operational_issue-reported": "Problème signalé",
+      "operational_issue-resolved": "Problème résolu",
+      "operational_issue-dismissed": "Problème classé sans suite",
       "work_order-created": "Ordre de travail créé",
       "work_order-submitted": "Ordre de travail soumis",
       "work_order-approved": "Ordre de travail approuvé",
@@ -1591,13 +1510,13 @@
       "cancelReason": "motif d'annulation",
       "cancelledAt": "annulation",
       "closedByCommandId": "commande de clôture",
-      "issueId": "signalement",
-      "openedByIssueId": "signalement à l'origine",
+      "issueId": "problème",
+      "openedByIssueId": "problème à l'origine",
       "openedAt": "ouverture",
       "reportedAt": "signalé le",
       "safetyCritical": "critique pour la sécurité",
       "category": "catégorie",
-      "resolveLinkedIssue": "clore le signalement lié",
+      "resolveLinkedIssue": "clore le problème lié",
       "rejectReason": "motif du rejet",
       "rejectedAt": "rejet",
       "completionRejectReason": "motif du refus de fin des travaux",
@@ -1614,6 +1533,19 @@
       "postings": "lignes d'imputation"
     }
   },
+  "dateField": {
+    "placeholderDate": "jj/mm/aaaa",
+    "placeholderDateTime": "jj/mm/aaaa hh:mm",
+    "openCalendar": "Ouvrir le calendrier",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "time": "Heure",
+    "done": "OK",
+    "invalidDate": "Date non reconnue. Écrivez-la ainsi : {example}",
+    "invalidDateTime": "Date et heure non reconnues. Écrivez-les ainsi : {example}",
+    "tooEarly": "Au plus tôt le {min}.",
+    "tooLate": "Au plus tard le {max}."
+  },
   "datePicker": {
     "placeholder": "Choisir une date",
     "clear": "Effacer"
@@ -1629,37 +1561,340 @@
     "approvalTitle": "Approbation requise",
     "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié."
   },
+  "commands": {
+    "register-asset": {
+      "label": "Enregistrer un actif",
+      "submit": "Enregistrer l'actif",
+      "submitting": "Enregistrement…"
+    },
+    "add-or-renew-document": {
+      "label": "Ajouter un document",
+      "submit": "Enregistrer le document",
+      "submitting": "Enregistrement…",
+      "short": "Document",
+      "renew": {
+        "label": "Renouveler le document",
+        "short": "Renouveler",
+        "submit": "Enregistrer le renouvellement"
+      }
+    },
+    "assign-asset": {
+      "label": "Changer d'agence",
+      "submit": "Changer d'agence",
+      "submitting": "Changement…",
+      "short": "Agence",
+      "custodian": {
+        "label": "Changer de responsable",
+        "short": "Responsable",
+        "submit": "Changer de responsable"
+      }
+    },
+    "register-person": {
+      "label": "Ajouter une personne",
+      "submit": "Enregistrer la personne",
+      "submitting": "Enregistrement…"
+    },
+    "create-activity": {
+      "label": "Créer une activité",
+      "submit": "Créer l'activité",
+      "submitting": "Création…"
+    },
+    "record-movement-leg": {
+      "label": "Ajouter une étape",
+      "submit": "Enregistrer l'étape",
+      "submitting": "Enregistrement…"
+    },
+    "record-meter-reading": {
+      "label": "Relever le compteur",
+      "submit": "Enregistrer le relevé",
+      "submitting": "Enregistrement…",
+      "short": "Compteur"
+    },
+    "substitute-asset": {
+      "label": "Remplacer l'engin",
+      "submit": "Remplacer l'engin",
+      "submitting": "Remplacement…"
+    },
+    "record-journey-sheet": {
+      "label": "Saisir une fiche",
+      "submit": "Enregistrer la fiche",
+      "submitting": "Enregistrement…",
+      "short": "Fiche",
+      "close": {
+        "label": "Enregistrer et clôturer",
+        "submit": "Enregistrer et clôturer",
+        "submitting": "Clôture…"
+      }
+    },
+    "record-haulage-job-sheet": {
+      "label": "Saisir une fiche",
+      "submit": "Enregistrer la fiche",
+      "submitting": "Enregistrement…"
+    },
+    "record-expense": {
+      "label": "Saisir une dépense",
+      "submit": "Enregistrer la dépense",
+      "submitting": "Enregistrement…",
+      "short": "Dépense",
+      "fuel": {
+        "label": "Enregistrer un plein",
+        "short": "Plein",
+        "submit": "Enregistrer le plein"
+      }
+    },
+    "record-revenue": {
+      "label": "Saisir une recette",
+      "submit": "Enregistrer la recette",
+      "submitting": "Enregistrement…",
+      "short": "Recette"
+    },
+    "report-issue": {
+      "label": "Signaler un problème",
+      "submit": "Signaler le problème",
+      "submitting": "Envoi…",
+      "short": "Problème"
+    },
+    "resolve-issue": {
+      "label": "Marquer résolu",
+      "submit": "Marquer résolu",
+      "submitting": "Enregistrement…"
+    },
+    "create-work-order": {
+      "label": "Créer un ordre de travail",
+      "submit": "Créer l'ordre de travail",
+      "submitting": "Création…",
+      "short": "Ordre"
+    },
+    "complete-work-order": {
+      "label": "Terminer les travaux",
+      "submit": "Terminer les travaux",
+      "submitting": "Envoi…",
+      "short": "Terminer"
+    },
+    "add-note": {
+      "label": "Ajouter une note",
+      "submit": "Ajouter la note",
+      "submitting": "Enregistrement…",
+      "short": "Note"
+    },
+    "attach-evidence": {
+      "label": "Joindre un reçu",
+      "submit": "Joindre le reçu",
+      "submitting": "Envoi…",
+      "short": "Reçu"
+    },
+    "close-activity": {
+      "label": "Clôturer l'activité",
+      "submit": "Clôturer l'activité",
+      "submitting": "Clôture…"
+    },
+    "reopen-activity": {
+      "label": "Rouvrir l'activité",
+      "submit": "Rouvrir l'activité",
+      "submitting": "Réouverture…"
+    },
+    "commission-asset": {
+      "label": "Mettre en service",
+      "submit": "Mettre en service",
+      "submitting": "Mise en service…",
+      "short": "Service"
+    },
+    "approve-entry": {
+      "label": "Approuver l'écriture",
+      "submit": "Approuver l'écriture",
+      "submitting": "Approbation…"
+    },
+    "reject-entry": {
+      "label": "Rejeter l'écriture",
+      "submit": "Rejeter l'écriture",
+      "submitting": "Rejet…",
+      "dismiss": "Garder l'écriture"
+    },
+    "reverse-entry": {
+      "label": "Contre-passer l'écriture",
+      "submit": "Contre-passer l'écriture",
+      "submitting": "Contre-passage…",
+      "short": "Contre-passer",
+      "dismiss": "Garder l'écriture"
+    },
+    "lock-period": {
+      "label": "Verrouiller la période",
+      "submit": "Verrouiller la période",
+      "submitting": "Verrouillage…"
+    },
+    "reopen-period": {
+      "label": "Rouvrir la période",
+      "submit": "Rouvrir la période",
+      "submitting": "Réouverture…"
+    },
+    "enable-module": {
+      "label": "Activer le module",
+      "submit": "Activer le module",
+      "submitting": "Activation…"
+    },
+    "disable-module": {
+      "label": "Désactiver le module",
+      "submit": "Désactiver le module",
+      "submitting": "Désactivation…"
+    },
+    "update-approval-threshold": {
+      "label": "Modifier le seuil d'approbation",
+      "submit": "Enregistrer le seuil",
+      "submitting": "Enregistrement…"
+    },
+    "create-category": {
+      "label": "Créer une catégorie",
+      "submit": "Créer la catégorie",
+      "submitting": "Création…"
+    },
+    "relabel-category": {
+      "label": "Renommer la catégorie",
+      "submit": "Renommer la catégorie",
+      "submitting": "Enregistrement…"
+    },
+    "deactivate-category": {
+      "label": "Désactiver la catégorie",
+      "submit": "Désactiver la catégorie",
+      "submitting": "Désactivation…"
+    },
+    "reactivate-category": {
+      "label": "Réactiver la catégorie",
+      "submit": "Réactiver la catégorie",
+      "submitting": "Réactivation…"
+    },
+    "set-template-preset": {
+      "label": "Choisir les modèles",
+      "submit": "Enregistrer les modèles",
+      "submitting": "Enregistrement…"
+    },
+    "create-branch": {
+      "label": "Créer une agence",
+      "submit": "Créer l'agence",
+      "submitting": "Création…"
+    },
+    "rename-branch": {
+      "label": "Renommer l'agence",
+      "submit": "Renommer l'agence",
+      "submitting": "Enregistrement…"
+    },
+    "set-branch-status": {
+      "label": "Changer le statut de l'agence",
+      "submit": "Changer le statut",
+      "submitting": "Enregistrement…",
+      "deactivate": {
+        "label": "Désactiver l'agence",
+        "submit": "Désactiver l'agence",
+        "submitting": "Désactivation…"
+      },
+      "reactivate": {
+        "label": "Réactiver l'agence",
+        "submit": "Réactiver l'agence",
+        "submitting": "Réactivation…"
+      }
+    },
+    "add-member": {
+      "label": "Ajouter un utilisateur",
+      "submit": "Ajouter l'utilisateur",
+      "submitting": "Ajout…"
+    },
+    "update-member-role": {
+      "label": "Modifier le rôle",
+      "submit": "Enregistrer le rôle",
+      "submitting": "Enregistrement…"
+    },
+    "deactivate-member": {
+      "label": "Désactiver l'utilisateur",
+      "submit": "Désactiver l'utilisateur",
+      "submitting": "Désactivation…"
+    },
+    "reactivate-member": {
+      "label": "Réactiver l'utilisateur",
+      "submit": "Réactiver l'utilisateur",
+      "submitting": "Réactivation…"
+    },
+    "reset-member-pin": {
+      "label": "Réinitialiser le code",
+      "submit": "Réinitialiser le code",
+      "submitting": "Réinitialisation…"
+    },
+    "cancel-work-order": {
+      "label": "Annuler l'ordre de travail",
+      "submit": "Annuler l'ordre de travail",
+      "submitting": "Annulation…",
+      "short": "Annuler l'ordre",
+      "dismiss": "Garder l'ordre de travail"
+    },
+    "release-asset-to-service": {
+      "label": "Remettre en service",
+      "submit": "Remettre en service",
+      "submitting": "Remise en service…",
+      "short": "Remettre"
+    },
+    "update-asset-details": {
+      "label": "Modifier les informations",
+      "submit": "Enregistrer les informations",
+      "submitting": "Enregistrement…"
+    },
+    "approve-work-order": {
+      "label": "Autoriser l'ordre de travail",
+      "submit": "Autoriser l'ordre de travail",
+      "submitting": "Autorisation…",
+      "short": "Autoriser"
+    },
+    "approve-work-order-closure": {
+      "label": "Valider la fin des travaux",
+      "submit": "Valider la fin des travaux",
+      "submitting": "Validation…",
+      "short": "Valider"
+    },
+    "reject-work-order": {
+      "label": "Rejeter l'ordre de travail",
+      "submit": "Rejeter l'ordre de travail",
+      "submitting": "Rejet…",
+      "dismiss": "Garder l'ordre de travail"
+    },
+    "reject-work-order-completion": {
+      "label": "Refuser la fin des travaux",
+      "submit": "Refuser la fin des travaux",
+      "submitting": "Envoi…",
+      "dismiss": "Retour"
+    },
+    "dismiss-issue": {
+      "label": "Classer sans suite",
+      "submit": "Classer sans suite",
+      "submitting": "Classement…",
+      "dismiss": "Garder le problème ouvert"
+    },
+    "update-pending-entry": {
+      "label": "Modifier l'écriture",
+      "submit": "Enregistrer les modifications",
+      "submitting": "Enregistrement…"
+    }
+  },
   "vehicle": {
     "forms": {
       "pinnedVehicle": "Véhicule",
       "lastReading": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}",
       "fuel": {
-        "title": "Enregistrer un plein",
         "description": "Enregistre la dépense de carburant, puis le compteur si vous le saisissez.",
-        "amount": "Montant payé (XAF)",
+        "amount": "Montant payé (FCFA)",
         "when": "Date et heure",
         "station": "Station (facultatif)",
         "odometer": "Compteur en km (facultatif)",
         "receipt": "Photo du reçu (facultatif)",
-        "submit": "Enregistrer le plein",
-        "retryReading": "Réessayer le relevé",
         "expenseStands": "La dépense de carburant est enregistrée. Le relevé du compteur n'a pas été enregistré.",
         "readingSaved": "Relevé du compteur enregistré"
       },
       "note": {
-        "title": "Ajouter une note",
         "description": "Une remarque dans l'historique du véhicule. Une note n'est jamais modifiée ; une correction est une nouvelle note.",
         "label": "Note",
-        "placeholder": "Que doivent savoir les autres sur ce véhicule ?",
-        "submit": "Ajouter la note"
+        "placeholder": "Que doivent savoir les autres sur ce véhicule ?"
       },
       "evidence": {
-        "title": "Joindre un reçu",
         "description": "Ajoute une preuve à cette écriture. L'écriture elle-même n'est pas modifiée.",
         "entry": "Écriture",
         "files": "Photo ou PDF",
-        "hint": "Ajoutez au moins un fichier.",
-        "submit": "Joindre"
+        "hint": "Ajoutez au moins un fichier."
       },
       "custodian": {
         "label": "Nouveau responsable",
@@ -1702,7 +1937,7 @@
       "reading": "{readingType, select, HOURS {Horamètre} other {Compteur}} {value}, {ago}",
       "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
       "noReading": "Aucun relevé de compteur",
-      "locationNoReport": "Position : aucun signalement",
+      "locationNoReport": "Position : non signalée",
       "lifecycleSince": "{status} depuis {since}"
     },
     "details": {
@@ -1723,7 +1958,7 @@
       "custodianInactive": "Accès désactivé",
       "nobodyAssigned": "Personne",
       "reportedLocation": "Position signalée",
-      "reportedLocationNone": "Aucun signalement. Les positions sont signalées par des personnes, pas par GPS.",
+      "reportedLocationNone": "Aucune position signalée. Les positions sont signalées par des personnes, pas par GPS.",
       "odometer": "Compteur",
       "readingMeta": "{date} · {source} · {by}",
       "fleetCode": "Code flotte",
@@ -1737,10 +1972,7 @@
       "notRecorded": "Non renseigné",
       "noSpecifications": "Aucune caractéristique pour ce modèle.",
       "edit": {
-        "button": "Modifier",
         "tooltip": "Modifier les informations du véhicule",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
         "cancel": "Annuler",
         "make": "Marque",
         "model": "Modèle",
@@ -1763,8 +1995,8 @@
     },
     "status": {
       "grounded": {
-        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — signalement : « {report} ».",
-        "noWorkOrder": "Personne n'a encore planifié la réparation : le signalement {issue} n'a pas d'ordre de travail.",
+        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — problème signalé : « {report} ».",
+        "noWorkOrder": "Personne n'a encore planifié la réparation : le problème {issue} n'a pas d'ordre de travail.",
         "repairRefused": "La réparation a été refusée ({workOrder}) ; aucune autre n'est encore planifiée.",
         "awaitingAuthorization": "La réparation ({workOrder}) attend l'autorisation d'un responsable.",
         "inProgress": "En attente de l'atelier pour terminer la réparation ({workOrder}).",
@@ -1772,7 +2004,7 @@
         "awaitingSignOff": "La réparation est terminée ; en attente de la validation de {workOrder} par un responsable.",
         "awaitingRelease": "La réparation ({workOrder}) est terminée ; en attente d'un responsable pour la remise en service.",
         "awaitingReleaseSignedOff": "La réparation ({workOrder}) est validée ; en attente d'un responsable pour la remise en service.",
-        "issueClosedAwaitingRelease": "Le signalement {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
+        "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
         "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
       },
       "available": {
@@ -1795,46 +2027,18 @@
         "follow": "Son historique reste consultable ; plus rien ne peut être enregistré."
       },
       "alsoDocumentExpired": "Aussi : {document} a expiré le {date}.",
-      "openRecord": "{kind, select, work_order {Ouvrir l'ordre de travail {ref}} issue {Ouvrir le signalement {ref}} other {Ouvrir}}",
+      "openRecord": "{kind, select, work_order {Ouvrir l'ordre de travail {ref}} issue {Ouvrir le problème {ref}} other {Ouvrir}}",
       "lockedCaption": "{step} · {reason}"
     },
     "steps": {
-      "log-fuel": "Enregistrer un plein",
-      "record-expense": "Saisir une dépense",
-      "attach-evidence": "Joindre le reçu",
-      "record-reading": "Relever le compteur",
-      "add-note": "Ajouter une note",
-      "report-issue": "Signaler un problème",
-      "create-work-order": "Créer un ordre de travail",
-      "approve-work-order": "Autoriser",
-      "complete-work-order": "Terminer les travaux",
-      "approve-completion": "Valider",
-      "cancel-work-order": "Annuler l'ordre de travail",
-      "release": "Remettre en service",
-      "start-trip": "Démarrer un trajet",
-      "change-custodian": "Changer de responsable",
-      "transfer-branch": "Changer d'agence",
-      "add-document": "Ajouter un document",
-      "renew-document": "Renouveler",
-      "record-revenue": "Saisir une recette",
-      "review-entry": "Examiner",
-      "reverse-entry": "Contre-passer",
-      "commission": "Mettre en service",
-      "reject-work-order": "Refuser",
-      "reject-completion": "Renvoyer",
-      "resolve-issue": "Marquer résolu",
-      "dismiss-issue": "Classer sans suite",
-      "approve-entry": "Approuver",
-      "reject-entry": "Rejeter",
-      "add-cost": "Ajouter un coût",
-      "edit-entry": "Modifier"
+      "review-entry": "Examiner"
     },
     "locked": {
       "needsAuthorization": "Il faut d'abord qu'un responsable autorise {ref}.",
       "needsCompletion": "Il faut d'abord que {ref} soit terminé.",
       "needsSignOff": "Il faut que {ref} soit validé.",
       "needsAll": "Il faut que {ref} soit autorisé et terminé.",
-      "needsWorkOrder": "Il faut un ordre de travail terminé, ou le signalement clos.",
+      "needsWorkOrder": "Il faut un ordre de travail terminé, ou le problème clos.",
       "makerCannotApprove": "Vous avez créé {ref} ; une autre personne l'autorise.",
       "completerCannotSignOff": "Vous avez terminé {ref} ; une autre personne le valide.",
       "youRecordedIt": "Vous l'avez saisie ; une autre personne l'examine.",
@@ -1888,12 +2092,12 @@
     },
     "attention": {
       "ISSUE_UNPLANNED": {
-        "title": "Le signalement {ref} n'a pas d'ordre de travail",
+        "title": "Le problème {ref} n'a pas d'ordre de travail",
         "detail": "{description}"
       },
       "ISSUE_OPEN_WHILE_AVAILABLE": {
-        "title": "Le signalement {ref} est toujours ouvert",
-        "detail": "{description}. Le véhicule a été remis en service ; résolvez ou classez le signalement."
+        "title": "Le problème {ref} est toujours ouvert",
+        "detail": "{description}. Le véhicule a été remis en service ; résolvez ou classez le problème."
       },
       "WORK_ORDER_AWAITING_AUTHORIZATION": {
         "title": "{ref} en attente d'autorisation",
@@ -1913,7 +2117,7 @@
       },
       "ASSET_AWAITING_RELEASE": {
         "title": "Prêt pour la remise en service",
-        "detail": "{override, select, yes {Le signalement a été clos sans réparation ; la remise en service demande un motif.} other {La réparation est terminée.}}"
+        "detail": "{override, select, yes {Le problème a été clos sans réparation ; la remise en service demande un motif.} other {La réparation est terminée.}}"
       },
       "DOCUMENT_EXPIRED": {
         "title": "Document expiré : {type}",
@@ -1948,7 +2152,7 @@
       "nextStepYours": "La suite vous revient",
       "notPlanned": "Pas encore planifié",
       "inWorkOrder": "Dans un ordre de travail",
-      "fromProblem": "du signalement {ref}",
+      "fromProblem": "du problème {ref}",
       "planned": "{amount} prévus",
       "noEstimate": "Sans estimation",
       "overBudget": "+{percent} %",
@@ -2131,7 +2335,7 @@
         "financial_entry-evidence_attached": "{count, plural, one {Reçu joint} other {# fichiers joints}}",
         "operational_issue-reported": "Problème signalé",
         "operational_issue-resolved": "Problème résolu",
-        "operational_issue-dismissed": "Signalement classé sans suite",
+        "operational_issue-dismissed": "Problème classé sans suite",
         "work_order-created": "Ordre de travail ouvert",
         "work_order-submitted": "Ordre de travail soumis à autorisation",
         "work_order-approved": "Ordre de travail autorisé",
@@ -2155,11 +2359,11 @@
       "notFound": "Indisponible",
       "notFoundHint": "Cet enregistrement n'existe pas, est hors de vos agences ou n'est pas consultable avec votre rôle.",
       "retry": "Réessayer",
-      "backTo": "{kind, select, work_order {Retour à l'ordre de travail {ref}} issue {Retour au signalement {ref}} entry {Retour à l'écriture} trip {Retour au trajet} document {Retour au document} note {Retour à la note} other {Retour aux relevés}}",
+      "backTo": "{kind, select, work_order {Retour à l'ordre de travail {ref}} issue {Retour au problème {ref}} entry {Retour à l'écriture} trip {Retour au trajet} document {Retour au document} note {Retour à la note} other {Retour aux relevés}}",
       "workOrderTitle": "Ordre de travail {ref}",
       "workOrderEyebrow": "Ordre de travail {ref}",
-      "issueTitle": "Signalement {ref}",
-      "issueEyebrow": "Signalement {ref}",
+      "issueTitle": "Problème {ref}",
+      "issueEyebrow": "Problème {ref}",
       "entryTitle": "Écriture",
       "entryEyebrow": "{direction, select, REVENUE {Recette {number}} other {Dépense {number}}}",
       "tripTitle": "Trajet",
@@ -2169,7 +2373,7 @@
       "noteEyebrow": "Note",
       "noteBy": "Note de {name}",
       "noteAppendOnly": "Une note n'est jamais modifiée. Une correction est une nouvelle note.",
-      "fromProblem": "Du signalement {ref}",
+      "fromProblem": "Du problème {ref}",
       "keepsGrounded": "Cet ordre de travail maintient le véhicule immobilisé. Une fois terminé, un responsable le remet en service.",
       "keepsGroundedUntilRelease": "Les travaux sont terminés, mais le véhicule reste immobilisé jusqu'à sa remise en service par un responsable.",
       "completionSentBack": "Fin des travaux renvoyée : {reason}",
@@ -2192,7 +2396,7 @@
       "workOrders": "Ordres de travail",
       "noneYet": "Aucun pour l'instant",
       "resolution": "Résolution",
-      "safetyCriticalNote": "Un signalement critique immobilise le véhicule dès sa saisie. Seul un responsable peut le remettre en service.",
+      "safetyCriticalNote": "Un problème critique immobilise le véhicule dès sa saisie. Seul un responsable peut le remettre en service.",
       "date": "Date",
       "costType": "Type de coût",
       "thisVehicle": "Ce véhicule",
@@ -2249,93 +2453,57 @@
     },
     "actions": {
       "log-fuel": {
-        "label": "Enregistrer un plein",
-        "short": "Plein",
         "description": "Le carburant payé pour ce véhicule, avec le compteur si vous l'avez relevé. La dépense est enregistrée d'abord."
       },
       "record-expense": {
-        "label": "Saisir une dépense",
-        "short": "Dépense",
         "description": "Tout coût de ce véhicule. Au-delà du seuil, elle attend l'examen de la finance."
       },
       "attach-evidence": {
-        "label": "Joindre un reçu",
-        "short": "Reçu",
         "description": "Ajoute une preuve à une écriture saisie sans. L'écriture elle-même n'est pas modifiée."
       },
       "record-reading": {
-        "label": "Relever le compteur",
-        "short": "Compteur",
         "description": "Un relevé isolé. Une valeur plus basse que la précédente est gardée avec un avertissement, jamais refusée."
       },
       "add-note": {
-        "label": "Ajouter une note",
-        "short": "Note",
         "description": "Une courte remarque dans l'historique du véhicule. Une note n'est jamais modifiée."
       },
       "report-issue": {
-        "label": "Signaler un problème",
-        "short": "Problème",
         "description": "Quelque chose ne va pas sur le véhicule. Un problème critique pour la sécurité l'immobilise aussitôt."
       },
       "create-work-order": {
-        "label": "Créer un ordre de travail",
-        "short": "Ordre",
         "description": "Planifiez la réparation et son coût prévu, à partir d'un problème signalé ou en préventif."
       },
       "approve-work-order": {
-        "label": "Autoriser un ordre de travail",
-        "short": "Autoriser",
         "description": "La finance autorise la dépense avant les travaux. Son auteur ne peut pas l'autoriser."
       },
       "complete-work-order": {
-        "label": "Terminer les travaux",
-        "short": "Terminer",
         "description": "Indiquez ce qui a été fait et ce que cela a coûté."
       },
       "approve-completion": {
-        "label": "Valider un ordre de travail",
-        "short": "Valider",
         "description": "Contrôle les travaux terminés et leur coût réel. Celui qui les a terminés ne peut pas les valider."
       },
       "cancel-work-order": {
-        "label": "Annuler un ordre de travail",
-        "short": "Annuler",
         "description": "Arrête un ordre de travail devenu inutile. Un motif est obligatoire."
       },
       "release": {
-        "label": "Remettre en service",
-        "short": "Remettre",
         "description": "Lève l'immobilisation une fois la réparation terminée. Après un problème critique, celui qui a garanti la réparation ne peut pas remettre en service."
       },
       "start-trip": {
-        "label": "Démarrer un trajet",
-        "short": "Trajet",
         "description": "Ouvre la feuille de route avec ce véhicule comme véhicule principal."
       },
       "change-custodian": {
-        "label": "Changer de responsable",
-        "short": "Responsable",
         "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque trajet."
       },
       "transfer-branch": {
-        "label": "Changer d'agence",
-        "short": "Agence",
         "description": "Change durablement l'agence de rattachement. Les écritures passées restent à l'agence qui les a saisies."
       },
       "add-document": {
-        "label": "Ajouter un document",
-        "short": "Document",
         "description": "Assurance, visite technique, autorisations. Sans date d'expiration, un document n'est jamais présenté comme valide."
       },
       "renew-document": {
-        "label": "Renouveler un document",
-        "short": "Renouveler",
         "description": "Enregistre la nouvelle version d'un document. L'ancienne est conservée."
       },
       "record-revenue": {
-        "label": "Saisir une recette",
-        "short": "Recette",
         "description": "Fret ou recettes voyageurs gagnés avec ce véhicule."
       },
       "review-entry": {
@@ -2344,13 +2512,9 @@
         "description": "Approuvez ou rejetez une écriture en attente. Son auteur ne peut pas l'approuver."
       },
       "reverse-entry": {
-        "label": "Contre-passer une écriture",
-        "short": "Contre-passer",
         "description": "Une écriture comptabilisée n'est jamais modifiée : la contre-passation l'annule et les deux restent. Choisissez-la dans Argent."
       },
       "commission": {
-        "label": "Mettre en service",
-        "short": "Service",
         "description": "D'enregistré à en service : l'historique d'exploitation démarre ici."
       },
       "groups": {

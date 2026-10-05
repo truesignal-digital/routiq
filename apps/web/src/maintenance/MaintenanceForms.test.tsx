@@ -111,12 +111,12 @@ describe("maintenance forms pinned to one vehicle", () => {
       />,
     );
 
-    const panel = screen.getByRole("dialog", { name: "New issue" });
+    const panel = screen.getByRole("dialog", { name: "Report a problem" });
     expect(within(panel).getByText("DLA-T-001 · Mercedes Actros")).toBeTruthy();
     expect(within(panel).queryByRole("combobox", { name: "Asset" })).toBeNull();
 
     await userEvent.type(within(panel).getByLabelText("Description"), "Left mirror cracked");
-    await userEvent.click(within(panel).getByRole("button", { name: "Report issue" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Report the problem" }));
 
     await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
     expect(client.seen[0]!.name).toBe("report-issue");
@@ -145,13 +145,13 @@ describe("maintenance forms pinned to one vehicle", () => {
       status: "OPEN",
       branchId: "ALL",
     });
-    await openSelect(user(), screen.getByRole("combobox", { name: "Issue" }));
+    await openSelect(user(), screen.getByRole("combobox", { name: "Problem" }));
     await userEvent.click(await screen.findByRole("option", { name: "Brakes squeal on the descent" }));
     await userEvent.type(screen.getByLabelText("Description"), "Replace pads");
     // Required since the threshold is read against it.
-    expect((screen.getByRole("button", { name: "Open work order" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Create the work order" }) as HTMLButtonElement).disabled).toBe(true);
     await userEvent.type(screen.getByLabelText("Expected cost"), "85000");
-    await userEvent.click(screen.getByRole("button", { name: "Open work order" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create the work order" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload).toMatchObject({
@@ -179,7 +179,7 @@ describe("ReleaseForm on the override path", () => {
       />,
     );
 
-    const submit = screen.getByRole("button", { name: "Return to service" }) as HTMLButtonElement;
+    const submit = screen.getByRole("button", { name: "Release to service" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
     expect(screen.getByText("Brakes squeal on the descent")).toBeTruthy();
 

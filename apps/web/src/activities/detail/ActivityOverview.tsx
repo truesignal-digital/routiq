@@ -55,7 +55,7 @@ export function ActivityOverview({ activity, showNet }: ActivityOverviewProps) {
       label: t("activities.detail.overview.net"),
       // The sign is spelled out, never left to colour alone; a job that lost
       // money is exactly the tile that wants someone's attention.
-      value: formatMoney(net, { locale, signDisplay: "exceptZero" }),
+      value: formatMoney(net, { locale, sign: { context: "net" } }),
       hint: t("activities.detail.overview.postedOnly"),
       ...(net < 0 ? { tone: "warning" as const } : {}),
     },

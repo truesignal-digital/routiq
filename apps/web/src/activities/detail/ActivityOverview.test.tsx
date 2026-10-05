@@ -34,7 +34,8 @@ function tone(label: string): string | null {
 }
 
 function digits(element: HTMLElement): string {
-  return (element.textContent ?? "").replace(/[^\d+-]/g, "");
+  // The minus is the typographic U+2212 in every language.
+  return (element.textContent ?? "").replace(/\u2212/g, "-").replace(/[^\d+-]/g, "");
 }
 
 beforeAll(async () => {
