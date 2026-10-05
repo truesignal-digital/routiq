@@ -776,6 +776,16 @@ describe("mid-trip capture", () => {
     );
   });
 
+  it.each(["Add a leg", "Record odometer", "Record expense"])(
+    "titles the %s form with the words of the button that opened it (#401)",
+    async (button) => {
+      const user = userEvent.setup();
+      renderActions(openActivity, recordingClient(committed()));
+      await user.click(screen.getByRole("button", { name: button }));
+      expect(await screen.findByRole("dialog", { name: button })).toBeTruthy();
+    },
+  );
+
   it("attributes a mid-trip expense to both the truck and the trip", async () => {
     const user = userEvent.setup();
     const client = recordingClient(committed());
