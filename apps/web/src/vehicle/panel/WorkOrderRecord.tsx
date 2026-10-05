@@ -154,7 +154,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        <DetailSection title={t("vehicle.panel.chronology")}>
+        <DetailSection title={t("maintenance.detail.chronologie")}>
           <Chronologie events={wo.chronologie} locale={locale} />
         </DetailSection>
       </div>

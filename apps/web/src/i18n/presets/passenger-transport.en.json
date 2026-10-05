@@ -93,7 +93,6 @@
     "actions": {
       "reasonPlaceholder": "Why reopen this trip?",
       "addLegHint": "Leg no. {legNo} of this trip.",
-      "addExpenseTitle": "Expense on this trip",
       "addExpenseHint": "The expense is attributed to this trip and to the chosen vehicle."
     },
     "notify": {

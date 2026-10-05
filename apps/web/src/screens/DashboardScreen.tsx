@@ -17,6 +17,7 @@ import { ChartAreaInteractive, type ChartRange } from "@/dashboard/ChartAreaInte
 import { SectionCards } from "@/dashboard/SectionCards.js";
 import { useDashboard } from "@/dashboard/useDashboard.js";
 import { canOpenEntriesList } from "@/dashboard/cards.js";
+import { canReadFinance } from "@/finance/permissions.js";
 import {
   useFinanceEntryColumns,
   type FinanceEntryColumnId,
@@ -41,7 +42,10 @@ export function DashboardScreen() {
   const [range, setRange] = useState<ChartRange>(DEFAULT_RANGE);
 
   const dashboard = useDashboard(range);
-  const showFinance = canOpenEntriesList(me?.role, me?.enabledModules);
+  // role-config: the chart sums the books (ledger readers); recent entries
+  // are whatever slice the read returns this role (#264).
+  const showChart = canReadFinance(me?.role, me?.enabledModules);
+  const showEntries = canOpenEntriesList(me?.role, me?.enabledModules);
 
   return (
     <PageContainer width="wide">
@@ -59,7 +63,7 @@ export function DashboardScreen() {
       <div className="mt-6 flex flex-col gap-6">
         <SectionCards data={dashboard.data} isPending={dashboard.isPending} />
 
-        {showFinance && (
+        {showChart && (
           <ChartAreaInteractive
             series={dashboard.data?.series ?? undefined}
             currency={dashboard.data?.openPeriod?.currency ?? "XAF"}
@@ -69,7 +73,7 @@ export function DashboardScreen() {
           />
         )}
 
-        {showFinance && (
+        {showEntries && (
           <RecentEntries
             onOpenEntry={(entryId) =>
               void navigate({

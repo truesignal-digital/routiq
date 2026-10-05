@@ -893,6 +893,7 @@ function ExpenseDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, invalidate } = useActivityCommit();
   const submission = useCommandSubmission();
   const categoriesQuery = useCategories("EXPENSE_CATEGORY");
@@ -967,7 +968,7 @@ function ExpenseDialog({
 
   return (
     <ActivityDialog
-      title={t("activities.actions.addExpenseTitle")}
+      title={label("record-expense")}
       description={t("activities.actions.addExpenseHint")}
       error={submission.error}
       command="record-expense"

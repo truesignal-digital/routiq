@@ -450,6 +450,8 @@
       "retry": "Try again",
       "empty": "No entries recorded yet.",
       "branchEmpty": "No entry recorded for this branch.",
+      "ownScope": "Only the entries you recorded appear here.",
+      "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
@@ -739,7 +741,8 @@
         "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
-        "pendingHint": "Lines awaiting approval are listed but stay out of the net."
+        "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
+        "ownOnly": "Only the entries you recorded on this trip."
       }
     },
     "actions": {
@@ -773,7 +776,6 @@
       "readingType": "Unit",
       "readingValue": "Value",
       "readingObservedAt": "Reading date and time",
-      "addExpenseTitle": "Expense on this activity",
       "addExpenseHint": "The expense is attributed to this activity and to the chosen asset.",
       "expenseCategory": "Category",
       "expenseAmount": "Amount",
@@ -1119,15 +1121,15 @@
       "addLine": "Add a line"
     },
     "detail": {
-      "chronologie": "Timeline",
+      "chronologie": "Chronology",
       "chronologieEmpty": "No events recorded.",
       "recordedAt": "Recorded {date}",
       "costLines": "Posted costs",
       "costLinesEmpty": "No costs posted against this work order.",
       "pendingCostLines": "Costs awaiting review",
       "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
-      "loading": "Loading the timeline…",
-      "loadFailed": "Could not load the timeline. Please try again.",
+      "loading": "Loading the chronology…",
+      "loadFailed": "Could not load the chronology. Please try again.",
       "preventive": "Preventive — no problem",
       "linkedIssue": "Linked problem",
       "unavailableTitle": "Asset grounded",
@@ -2248,6 +2250,7 @@
       "linkedMoney": "Linked money",
       "wholeTrip": "Whole-trip amounts",
       "noMoney": "No entries linked to this trip yet.",
+      "noOwnMoney": "You have not recorded any entry on this trip.",
       "odometer": "Odometer",
       "noReadings": "No start or end reading for this vehicle.",
       "readingLine": "{source} · {date}",
@@ -2390,7 +2393,6 @@
       "whatWasDone": "What was done",
       "reason": "Reason",
       "costs": "Costs",
-      "chronology": "Chronology",
       "category": "Category",
       "reported": "Reported",
       "photos": "Photos",

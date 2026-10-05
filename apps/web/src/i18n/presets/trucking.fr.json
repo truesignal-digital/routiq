@@ -95,7 +95,6 @@
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",
       "addLegHint": "Étape n° {legNo} de ce trajet.",
-      "addExpenseTitle": "Dépense du trajet",
       "addExpenseHint": "La dépense est rattachée à ce trajet et au camion choisi."
     },
     "notify": {

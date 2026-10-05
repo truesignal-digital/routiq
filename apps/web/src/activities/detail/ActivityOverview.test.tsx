@@ -50,13 +50,13 @@ afterEach(cleanup);
 
 describe("activity overview band", () => {
   it("counts the legs the server counted", () => {
-    render(<ActivityOverview activity={overview()} />);
+    render(<ActivityOverview showNet activity={overview()} />);
 
     expect(tile("Legs").textContent).toContain("2");
   });
 
   it("keeps the end a time: an open activity's end is a dash, not a state (#94)", () => {
-    render(<ActivityOverview activity={overview({ status: "OPEN", endedAt: null })} />);
+    render(<ActivityOverview showNet activity={overview({ status: "OPEN", endedAt: null })} />);
 
     expect(tile("Ended").textContent).toBe("—");
     expect(screen.queryByText("Running")).toBeNull();
@@ -64,7 +64,7 @@ describe("activity overview band", () => {
   });
 
   it("dashes a closed activity with no end rather than calling it running", () => {
-    render(<ActivityOverview activity={overview({ status: "CLOSED", endedAt: null })} />);
+    render(<ActivityOverview showNet activity={overview({ status: "CLOSED", endedAt: null })} />);
 
     expect(tile("Ended").textContent).toContain("—");
     expect(screen.queryByText("Running")).toBeNull();
@@ -73,6 +73,7 @@ describe("activity overview band", () => {
   it("nets only the posted lines, and says so", () => {
     render(
       <ActivityOverview
+        showNet
         activity={overview({
           financialEntries: [
             {
@@ -120,6 +121,7 @@ describe("activity overview band", () => {
   it("flags a loss and signs it, so colour is never the only signal", () => {
     render(
       <ActivityOverview
+        showNet
         activity={overview({
           financialEntries: [
             {
@@ -141,8 +143,15 @@ describe("activity overview band", () => {
     expect(tone("Net")).toBe("warning");
   });
 
+  it("leaves the net out for a driver, whose entries are only their own (#264)", () => {
+    render(<ActivityOverview showNet={false} activity={overview()} />);
+
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(tile("Legs").textContent).toContain("2");
+  });
+
   it("leaves the net out when the server kept the ledger back (#103)", () => {
-    render(<ActivityOverview activity={overview({ financialEntries: null })} />);
+    render(<ActivityOverview showNet activity={overview({ financialEntries: null })} />);
 
     expect(screen.queryByText("Net")).toBeNull();
     expect(tile("Legs").textContent).toContain("2");

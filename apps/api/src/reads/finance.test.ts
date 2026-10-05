@@ -1074,13 +1074,14 @@ describe("finance reads", () => {
       expect(body.outsideBranchCount).toBe(0);
     });
 
-    it("does not hide the caller's own submissions (maker guard is client-side)", async () => {
-      const body = await fetchApprovals(submitterToken);
-
-      expect(body.total).toBe(3);
-      expect(body.entries.map((entry) => entry.id).sort()).toEqual(
-        [...inScopeIds, outOfScopeId].sort(),
-      );
+    it("refuses the queue to the driver who submitted to it (#264)", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/finance/approvals",
+        headers: { authorization: `Bearer ${submitterToken}` },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
     });
   });
 
@@ -1094,20 +1095,25 @@ describe("finance reads", () => {
 
     beforeAll(async () => {
       const seeded = await seedWorkspace(db);
-      const submitter = await seedMember(db, {
-        workspaceId: seeded.workspace.id,
-        role: "DRIVER",
-        allBranches: true,
-      });
-      queueToken = (
-        await createSession(db, {
-          principalId: submitter.principal.id,
+      const session = async (role: "DRIVER" | "FINANCE") => {
+        const member = await seedMember(db, {
           workspaceId: seeded.workspace.id,
-        })
-      ).token;
+          role,
+          allBranches: true,
+        });
+        return (
+          await createSession(db, {
+            principalId: member.principal.id,
+            workspaceId: seeded.workspace.id,
+          })
+        ).token;
+      };
+      // The driver submits inside its band; the books read the queue.
+      const submitterToken = await session("DRIVER");
+      queueToken = await session("FINANCE");
 
       for (const amountMinor of amounts) {
-        const entry = await recordExpense(queueToken, { amountMinor });
+        const entry = await recordExpense(submitterToken, { amountMinor });
         expect(entry.recordStatus).toBe("SUBMITTED");
         queued.push(entry.entryId);
         await tick();

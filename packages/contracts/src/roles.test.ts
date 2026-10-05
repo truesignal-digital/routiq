@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_GRANTABLE_ROLES, grantableRoles, LEGACY_ROLE_MAP, legacyRoleInput, ROLES } from "./roles.js";
+import {
+  ADMIN_GRANTABLE_ROLES,
+  canReadEntries,
+  canReadLedger,
+  DOCUMENT_READER_ROLES,
+  ENTRY_READER_ROLES,
+  grantableRoles,
+  LEDGER_READER_ROLES,
+  LEGACY_ROLE_MAP,
+  legacyRoleInput,
+  MONEY_READ_SCOPE,
+  ROLES,
+} from "./roles.js";
 
 describe("role registry", () => {
   it("has exactly the six team roles of ADR-0009", () => {
@@ -35,5 +47,25 @@ describe("role registry", () => {
     for (const role of ["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
       expect(grantableRoles(role)).toEqual([]);
     }
+  });
+
+  it("gives each role the money scope of the roles reference", () => {
+    expect(MONEY_READ_SCOPE).toEqual({
+      DIRECTOR: "LEDGER",
+      ADMIN: "LEDGER",
+      FINANCE: "LEDGER",
+      CASHIER: "BRANCH_ENTRIES",
+      TECHNICIAN: "WORK_ORDER_COSTS",
+      DRIVER: "OWN_ENTRIES",
+    });
+  });
+
+  it("derives the role lists from the scope, so they cannot drift", () => {
+    expect(LEDGER_READER_ROLES).toEqual(ROLES.filter(canReadLedger));
+    expect(ENTRY_READER_ROLES).toEqual(ROLES.filter(canReadEntries));
+    expect(ROLES.filter(canReadEntries)).toEqual(
+      ROLES.filter((role) => MONEY_READ_SCOPE[role] !== "WORK_ORDER_COSTS"),
+    );
+    expect(DOCUMENT_READER_ROLES).toEqual(ROLES.filter((role) => role !== "CASHIER"));
   });
 });

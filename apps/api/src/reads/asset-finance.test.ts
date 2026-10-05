@@ -44,7 +44,7 @@ describe("GET /v1/assets/:assetId/finance", () => {
     director = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
     dlaReader = await seedActor(ctx.db, {
       workspaceId,
-      role: "DRIVER",
+      role: "ADMIN",
       branchIds: [seeded.branch.id],
     });
     ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
@@ -251,12 +251,14 @@ describe("GET /v1/assets/:assetId/finance", () => {
   });
 
   it("serves the roles that read the books, and no other", async () => {
-    for (const actor of [admin, approver, driver, director]) {
+    for (const actor of [admin, approver, dlaReader, director]) {
       expect((await api.get(actor.token, `/v1/assets/${truck}/finance`)).status).toBe(200);
     }
-    const workshop = await api.get(mechanic.token, `/v1/assets/${truck}/finance`);
-    expect(workshop.status).toBe(403);
-    expect(workshop.body).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+    for (const actor of [mechanic, driver]) {
+      const refused = await api.get(actor.token, `/v1/assets/${truck}/finance`);
+      expect(refused.status).toBe(403);
+      expect(refused.body).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
+    }
   });
 
   it("refuses a malformed month", async () => {

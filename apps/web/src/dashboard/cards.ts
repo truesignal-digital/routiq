@@ -1,5 +1,5 @@
 import type { ModuleCode, Role } from "@routiq/contracts";
-import { canApproveEntries, canReadFinance } from "../finance/permissions.js";
+import { canApproveEntries, canReadFinance, canReadFinanceEntries } from "../finance/permissions.js";
 
 export type DashboardCardKey =
   | "pendingApprovals"
@@ -49,14 +49,13 @@ export function visibleDashboardCards(
 }
 
 /**
- * Whether the open-period totals may link through to the entries list. The
- * numbers themselves stay visible to every finance member — a read-only
- * executive is exactly who they are for — but the link only appears for roles
- * the entries screen actually admits.
+ * Whether the open-period totals may link through to the entries list: the
+ * gate the entries screen itself applies. The totals are for the ledger
+ * readers only (`canReadFinance`), and every one of them reads entries.
  */
 export function canOpenEntriesList(
   role: Role | undefined,
   enabledModules: ModuleCode[] | undefined,
 ): boolean {
-  return canReadFinance(role, enabledModules);
+  return canReadFinanceEntries(role, enabledModules);
 }

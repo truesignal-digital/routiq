@@ -45,9 +45,14 @@ export function netToneClass(minor: number): string {
 
 export interface ActivityMoneyProps {
   entries: readonly Entry[];
+  /**
+   * Whether `entries` is the trip's whole money. False for a driver, who reads
+   * only the entries they recorded (#264): no net is summed over a part.
+   */
+  totals: boolean;
 }
 
-export function ActivityMoney({ entries }: ActivityMoneyProps) {
+export function ActivityMoney({ entries, totals }: ActivityMoneyProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
@@ -94,6 +99,14 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
           ))}
         </ul>
 
+        {!totals && (
+          <p className="mt-3 text-muted-foreground text-xs">
+            {t("activities.detail.moneySummary.ownOnly")}
+          </p>
+        )}
+
+        {totals && (
+        <>
         <Separator className="my-4" />
 
         <dl className="flex flex-col gap-2">
@@ -130,6 +143,8 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
           <p className="mt-2 text-muted-foreground text-xs">
             {t("activities.detail.moneySummary.pendingHint")}
           </p>
+        )}
+        </>
         )}
       </CardContent>
     </Card>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 import { visibleFinanceSections } from "../finance/navigation.js";
+import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
 import { canAdministerBranches } from "../branches/permissions.js";
 import { canAdministerMembers } from "../members/permissions.js";
 import { activeSection, isSectionActive, visibleSections } from "./sections.js";
@@ -110,8 +111,8 @@ describe("navigation per role (ADR-0009)", () => {
     ADMIN: { sections: ALL_SECTIONS, finance: ["entries"], users: true, branches: false },
     FINANCE: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: false, branches: false },
     CASHIER: {
-      sections: ["home", "assets", "finances:/finance/record", "more"],
-      finance: [],
+      sections: ["home", "assets", "finances:/finance/entries", "more"],
+      finance: ["entries"],
       users: false,
       branches: false,
     },
@@ -128,8 +129,28 @@ describe("navigation per role (ADR-0009)", () => {
     expect(nav(role)).toEqual(expected[role]);
   });
 
-  it("keeps a recording-only Finances entry lit across the finance subtree", () => {
+  it("keeps the cashier's Finances entry lit across the finance subtree (#264)", () => {
     const cashier = visibleSections(EVERY, "CASHIER");
+    expect(activeSection(cashier, "/finance/entries")?.key).toBe("finances");
     expect(activeSection(cashier, "/finance/record")?.key).toBe("finances");
+  });
+
+  it("shows Finances exactly to the roles that read entries, so it never leads to a denial (#64)", () => {
+    const withFinance = ROLES.filter((role) =>
+      visibleSections(EVERY, role).some((section) => section.key === "finances"),
+    );
+    expect(withFinance).toEqual(ROLES.filter((role) => canReadFinanceEntries(role, EVERY)));
+    expect(withFinance).toContain("CASHIER");
+    expect(withFinance).not.toContain("TECHNICIAN");
+    for (const role of ROLES) {
+      expect(visibleSections(["CORE", "ASSETS"], role).some((s) => s.key === "finances"), role).toBe(false);
+    }
+  });
+
+  it("gives every role that records money a Finances entry to read it back", () => {
+    for (const role of ROLES) {
+      if (!canRecordFinance(role, EVERY)) continue;
+      expect(canReadFinanceEntries(role, EVERY), role).toBe(true);
+    }
   });
 });

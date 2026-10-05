@@ -12,6 +12,7 @@ import { ActivityTimeline } from "@/activities/detail/ActivityTimeline.js";
 import { canViewActivities } from "@/activities/permissions.js";
 import { useActivity } from "@/activities/useActivities.js";
 import { useMeContext } from "@/auth/me.js";
+import { canReadFinance } from "@/finance/permissions.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -61,6 +62,9 @@ export function ActivityDetailScreen() {
 
   const activity = activityQuery.data;
   const locale = i18n.language;
+  // role-config: the trip's net is for the ledger readers; a driver reads only
+  // the entries they recorded (#264).
+  const tripTotals = canReadFinance(me?.role, me?.enabledModules);
 
   // The two halves of the middle band each disappear on their own; a lone
   // survivor takes the full width rather than sitting beside a hole.
@@ -123,7 +127,7 @@ export function ActivityDetailScreen() {
       )}
 
       <div className="mt-6 flex flex-col gap-6">
-        <ActivityOverview activity={activity} />
+        <ActivityOverview activity={activity} showNet={tripTotals} />
 
         {middleColumns > 0 && (
           <div className={middleColumns === 2 ? "grid gap-6 lg:grid-cols-2" : undefined}>
@@ -133,9 +137,10 @@ export function ActivityDetailScreen() {
         )}
 
         <ActivityLegs legs={activity.legs} />
-        {/* Null for roles that don't read the books, or with FINANCE off (#103). */}
+        {/* Null for roles that read no entries, or with FINANCE off (#103). A
+            driver's list is their own entries only (#264). */}
         {activity.financialEntries !== null && (
-          <ActivityMoney entries={activity.financialEntries} />
+          <ActivityMoney entries={activity.financialEntries} totals={tripTotals} />
         )}
       </div>
 

@@ -112,7 +112,7 @@ None of the four says a person checked the paper. A reversal never counts as mis
 | ENTRY_AWAITING_REVIEW | A SUBMITTED entry with a posting on this vehicle | INFO |
 | ENTRY_EVIDENCE_MISSING | A NOT_SUPPLIED entry that is SUBMITTED, or POSTED in an open period | WARNING |
 
-Maintenance items need MAINTENANCE, document items need DOCUMENTS, and entry items need FINANCE and a ledger-reader role (FINANCE_READER_ROLES, which leaves out TECHNICIAN). Say “{type} expired on {date}”; never say the vehicle cannot legally run.
+Maintenance items need MAINTENANCE, document items need DOCUMENTS, and entry items need FINANCE and a ledger-reader role (LEDGER_READER_ROLES: Direction, Administrateur, Finance). Say “{type} expired on {date}”; never say the vehicle cannot legally run.
 
 ## History
 
@@ -121,7 +121,7 @@ Maintenance items need MAINTENANCE, document items need DOCUMENTS, and entry ite
 - **Kinds** (filter with `kind`, repeatable): MAINTENANCE (issues, work orders, availability intervals), MONEY (entries with a posting on the vehicle), TRIPS (activities, legs, segments), DOCUMENTS, READINGS, ASSIGNMENTS (`asset.assigned`), LIFECYCLE (the vehicle's other events) and NOTES.
 - **Vocabulary.** `eventType` is the audit event's own code (`operational_issue.reported`, `work_order.completed`, `asset.assigned` and so on), an open vocabulary: an unknown code renders raw. Each item also carries the actor, the origin, the subject with its number, an allowlisted set of facts per subject (never the raw audit snapshot) and the event's own reason. A MONEY item carries this vehicle's signed share of the entry, so a reversal is negative. `occurredAt` is when the event was written.
 - **Branch rule.** An activity, its legs and segments are read by the activity's branch; a financial entry by its own branch; a reading taken during a job by the job's branch. Everything the vehicle owns outright (its documents, issues, work orders, availability intervals, notes and its own events) follows the vehicle's current branch, so after a transfer it moves with the vehicle. This is the rule the record history applies (#58).
-- **Gates.** Sources whose module is off are left out. MONEY is served only to FINANCE_READER_ROLES; TECHNICIAN sees work-order cost lines in the maintenance reads, never ledger figures.
+- **Gates.** Sources whose module is off are left out. MONEY entries follow the caller's money scope (`MONEY_READ_SCOPE`): the ledger readers and CASHIER see the entries of their branches, DRIVER only the entries they recorded, TECHNICIAN none (it sees work-order cost lines in the maintenance reads). A detail edit's purchase price is for the ledger readers. DOCUMENTS is not served to CASHIER.
 
 ## Notes
 
@@ -133,9 +133,9 @@ Served on `feat/maintenance-on-develop`:
 
 | Endpoint | Module and roles | Period basis |
 | --- | --- | --- |
-| `GET /v1/assets/:assetId` | ASSETS; adds `custodian`, `availability`, `lastReading`; `finance` only for FINANCE_READER_ROLES (absent for MAINTENANCE) | The existing `finance` field stays lifetime data and must not be relabelled as a selected-period total. |
+| `GET /v1/assets/:assetId` | ASSETS; adds `custodian`, `availability`, `lastReading`; `finance` and `acquisitionAmountMinor` only for LEDGER_READER_ROLES with FINANCE on (`finance` absent and the price null otherwise) | The existing `finance` field stays lifetime data and must not be relabelled as a selected-period total. |
 | `GET /v1/assets/:assetId/readings` | ACTIVITIES | None; newest observation first, superseded rows listed and flagged. |
-| `GET /v1/assets/:assetId/finance?periodCode=YYYY-MM` | FINANCE; FINANCE_READER_ROLES only | Posted by POSTING_PERIOD; pending and rejected by ECONOMIC_MONTH; `periodStatus` OPEN, LOCKED or NOT_STARTED; six-period series ending at the period. Defaults to the current month in the workspace timezone. Only this vehicle's signed posting lines, entries read by their own branch. |
+| `GET /v1/assets/:assetId/finance?periodCode=YYYY-MM` | FINANCE; LEDGER_READER_ROLES only | Posted by POSTING_PERIOD; pending and rejected by ECONOMIC_MONTH; `periodStatus` OPEN, LOCKED or NOT_STARTED; six-period series ending at the period. Defaults to the current month in the workspace timezone. Only this vehicle's signed posting lines, entries read by their own branch. |
 | `GET /v1/assets/:assetId/attention` | ASSETS; items gated as above | Business date in the workspace timezone. |
 | `GET /v1/assets/:assetId/history` | ASSETS; MONEY for ledger readers only | None; newest first. |
 | `GET /v1/assets/:assetId/custodian-candidates` | ASSETS; DIRECTOR and ADMIN | None. |
@@ -144,10 +144,10 @@ Served on `feat/maintenance-on-develop`:
 | `GET /v1/assets/:assetId/documents` | Branch scope of the vehicle | None. Each document lists its scans (`artifacts`, same shape) beside `artifactCount`. |
 | `GET /v1/assets/:assetId/documents/:documentId/artifacts/:artifactId/download-url` | DOCUMENTS; the vehicle in the caller's branches; the document on that vehicle; the file linked by the command that recorded it | None. |
 | `GET /v1/artifacts/:id/download-url` | The caller's own upload, not yet linked to any command; anything else answers 404 | None. A linked file downloads only through its record's route. |
-| `GET /v1/finance/entries` | FINANCE; FINANCE_READER_ROLES only | `periodCode` is the posting period; `economicMonth` is the economic month. `status=LEDGER` means POSTED and REVERSED. Each item carries its evidence state and file count; `evidence=MISSING` filters to NOT_SUPPLIED. With `assetId`, each item also carries the vehicle's signed share (`assetShareMinor`). |
-| `GET /v1/finance/entries/:entryId` | FINANCE; FINANCE_READER_ROLES only | Adds `evidenceFiles`. |
-| `GET /v1/finance/approvals` | FINANCE; FINANCE_READER_ROLES only | None. |
-| `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` | FINANCE; FINANCE_READER_ROLES, or MAINTENANCE on an entry whose every posting names a work order; entry in the caller's branches | None. |
+| `GET /v1/finance/entries` | FINANCE; ENTRY_READER_ROLES, rows by money scope (CASHIER their branches, DRIVER own) | `periodCode` is the posting period; `economicMonth` is the economic month. `status=LEDGER` means POSTED and REVERSED. Each item carries its evidence state and file count; `evidence=MISSING` filters to NOT_SUPPLIED. With `assetId`, each item also carries the vehicle's signed share (`assetShareMinor`). |
+| `GET /v1/finance/entries/:entryId` | FINANCE; ENTRY_READER_ROLES; 404 outside the caller's money scope | Adds `evidenceFiles`. |
+| `GET /v1/finance/approvals` | FINANCE; LEDGER_READER_ROLES only | None. |
+| `GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url` | FINANCE; any role that may read the entry: its branches, then its money scope (DRIVER own entries, TECHNICIAN entries whose every posting names a work order) | None. |
 
 Commands served for the workspace: `add-note.v1`, `attach-evidence.v1`, `update-asset-details.v1` (the Details tab's edit mode, #84), custodian changes through `assign-asset` (`custodianMembershipId`), and the maintenance commands listed in ARCHITECTURE §5.1. Migrations 0025 to 0029 on the branch add the maintenance tables (issues, work orders, availability intervals and the work-order column on postings), their approval defaults, the state machines, notes and the attach-evidence defaults. No stored balance, monthly total, vehicle ledger, availability flag or location field was added.
 

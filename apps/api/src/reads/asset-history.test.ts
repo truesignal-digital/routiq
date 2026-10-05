@@ -42,7 +42,7 @@ describe("GET /v1/assets/:assetId/history", () => {
     driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
     dlaOnly = await seedActor(ctx.db, {
       workspaceId,
-      role: "DRIVER",
+      role: "ADMIN",
       branchIds: [seeded.branch.id],
     });
     ydeOnly = await seedActor(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });

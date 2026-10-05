@@ -68,7 +68,7 @@ export type CustodianCandidatesResponse = z.infer<typeof custodianCandidatesResp
  * posting lines only — a split entry contributes its share, a reversal
  * subtracts — in the workspace currency; XAF has exponent 0. Entries are read
  * against the caller's branches by the ENTRY's branch, not the vehicle's.
- * Served only to the roles in FINANCE_READER_ROLES.
+ * Served only to the roles in LEDGER_READER_ROLES.
  */
 export const assetFinanceQuery = z.object({
   /** Defaults to the current month in the workspace timezone. */

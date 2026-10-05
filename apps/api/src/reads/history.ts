@@ -1,6 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
 import {
+  canReadDocuments,
   canReadLedger,
+  moneyReadScope,
   HISTORY_ENTITY_MODULE,
   HISTORY_MONEY_STATE_KEYS,
   HISTORY_STATE_KEYS,
@@ -38,7 +40,7 @@ import {
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { isModuleEnabled } from "../modules/registry.js";
-import { hasPostingWithoutWorkOrder } from "./entry-evidence.js";
+import { canReadEntry } from "./money-scope.js";
 import {
   afterKeyset,
   bindTimestampText,
@@ -319,9 +321,10 @@ const HISTORY_BRANCH_SCOPE: Record<HistoryEntityType, BranchOf | "WORKSPACE"> = 
  * side door to data the detail withholds. Checked against the branch the record
  * belongs to NOW (an asset transferred away takes its history with it).
  *
- * An entry's snapshots carry its amounts, so outside the ledger readers its
- * timeline follows the entry-evidence rule: the workshop reaches only entries
- * whose every line is a work-order cost, and any other entry is the same 404.
+ * An entry's snapshots carry its amounts, so its timeline follows the
+ * caller's money scope (`readableEntrySql`): a driver's own entries, the
+ * workshop's work-order costs; any other entry is the same 404. A document's
+ * timeline is for the roles that read documents.
  */
 async function canReadHistory(
   tx: TenantTx,
@@ -334,9 +337,14 @@ async function canReadHistory(
     const branchId = await scope(tx, auth.workspaceId, entityId);
     if (branchId === undefined || !auth.branchScope.includes(branchId)) return false;
   }
-  if (entityType === "financial_entry" && !canReadLedger(auth.role)) {
-    return !(await hasPostingWithoutWorkOrder(tx, auth.workspaceId, entityId));
+  if (entityType === "financial_entry") {
+    // The branch check above is the whole rule for the ledger and the counter.
+    const scope = moneyReadScope(auth.role);
+    if (scope === "OWN_ENTRIES" || scope === "WORK_ORDER_COSTS") {
+      return canReadEntry(tx, auth, entityId);
+    }
   }
+  if (entityType === "document") return canReadDocuments(auth.role);
   return true;
 }
 
@@ -347,8 +355,8 @@ export function registerHistoryReadRoutes(
 ) {
   /**
    * History is visible to whoever can read the record: the gate is the owning
-   * module's entitlement plus RLS and the record's branch scope, with one
-   * per-role rule on top — ledger money (`canReadHistory`). Field staff
+   * module's entitlement plus RLS and the record's branch scope, with the
+   * per-role rules on top — money scope and documents (`canReadHistory`). Field staff
    * seeing "the office corrected my sheet" is the point, not a leak.
    */
   defineRead(
@@ -498,14 +506,14 @@ export function registerHistoryReadRoutes(
 
   /**
    * What one event changed. Same gate as the timeline it hangs off — owning
-   * module, RLS, branch scope and the ledger rule — and the same rule about the snapshots: they are projected
+   * module, RLS, branch scope and the money scope — and the same rule about the snapshots: they are projected
    * through `HISTORY_STATE_KEYS` here and never served raw.
    */
   defineRead(
     app,
     { db, requireAuth },
     { path: "/v1/history/:entityType/:entityId/:eventId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedParams = z
           .object({
@@ -567,10 +575,16 @@ export function registerHistoryReadRoutes(
         }
 
         const { beforeState, afterState, workspaceCurrency } = result.row;
+        // A vehicle's purchase price is a ledger figure (#121): the same rule
+        // as the vehicle's own detail and its History tab.
+        const hidesMoney =
+          entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"));
         return historyEventDiff.parse({
           eventId: result.row.eventId,
           currency: diffCurrency(beforeState, afterState, workspaceCurrency),
-          changes: diffStates(entityType, beforeState, afterState),
+          changes: diffStates(entityType, beforeState, afterState).filter(
+            (change) => !hidesMoney || change.kind !== "MONEY",
+          ),
         });
       } catch (error) {
         req.log.error({ err: error }, "record history diff read failed");
