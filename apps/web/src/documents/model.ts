@@ -15,6 +15,14 @@ export function expiryState(expiresAt: string | null, today: Date, soonDays = 30
   return expiry <= soon ? "expiringSoon" : "ok";
 }
 
+const DAY_MS = 86_400_000;
+
+/** Whole days until expiry on the reader's calendar; negative once expired. */
+export function daysLeft(expiresAt: string, now: Date): number {
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((Date.parse(`${expiresAt}T00:00:00Z`) - today) / DAY_MS);
+}
+
 export interface DocumentGroup {
   type: AssetDocument["type"];
   current: AssetDocument[];

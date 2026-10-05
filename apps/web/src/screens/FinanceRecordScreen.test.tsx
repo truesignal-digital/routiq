@@ -183,7 +183,7 @@ describe("finance record form", () => {
     await chooseFuelCategory(user);
 
     await user.type(screen.getByLabelText("Amount (XAF)"), "0");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     expect(mocks.submit).not.toHaveBeenCalled();
   });
@@ -202,7 +202,7 @@ describe("finance record form", () => {
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");
     await openSelect(user, screen.getByLabelText("Asset (optional)"));
     await user.keyboard("{ArrowDown}{Enter}");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
     const submission = mocks.submit.mock.calls[0]?.[0];
@@ -240,7 +240,7 @@ describe("finance record form", () => {
     await chooseFuelCategory(user);
 
     await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -269,7 +269,7 @@ describe("finance record form", () => {
     await chooseFuelCategory(user);
 
     await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
@@ -294,7 +294,7 @@ describe("finance record form", () => {
     );
     await waitFor(() => expect(screen.queryByRole("progressbar")).toBeNull());
     await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
-    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
     expect(mocks.submit.mock.calls[0]?.[0].envelope.sourceArtifactIds).toEqual([

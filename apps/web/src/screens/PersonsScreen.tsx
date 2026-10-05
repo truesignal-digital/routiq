@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { PersonListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ const SEARCH_FILTER_ID = "search";
 
 export function PersonsScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
   const canRegister = canRegisterPersons(me?.role, me?.enabledModules);
@@ -147,7 +149,7 @@ export function PersonsScreen() {
                 >
                   <SelectTrigger
                     aria-label={t("persons.branchLabel")}
-                    className="h-9 w-40"
+                    className="w-40"
                   >
                     <SelectValue placeholder={t("persons.branchPlaceholder")} />
                   </SelectTrigger>
@@ -162,12 +164,11 @@ export function PersonsScreen() {
               )}
               <Button
                 type="button"
-                className="min-h-11"
                 disabled={branchCode === ""}
                 onClick={() => setRegistering(true)}
               >
                 <UserPlus className="size-4" aria-hidden />
-                {t("persons.register")}
+                {label("register-person")}
               </Button>
             </>
           ) : undefined

@@ -10,6 +10,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+// The branch switcher's toast reads the real catalog; this test keeps i18n mocked.
+vi.mock("@/lib/notify.js", () => ({ notifyInfo: vi.fn() }));
+
 let pathname = "/";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -42,7 +45,7 @@ vi.mock("../auth/me.js", () => ({
   useMeContext: () => ({
     principalId: "test-user",
     role: "FINANCE",
-    enabledModules: ["CORE", "ASSETS", "FINANCE"],
+    enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"],
   }),
 }));
 
@@ -52,7 +55,16 @@ vi.mock("@/components/ui/sidebar", () => ({
   ),
 }));
 
+import { RecordCrumbProvider, useRecordCrumb } from "./record-crumb.js";
 import { SiteHeader } from "./SiteHeader.js";
+
+const TRIP = "/activities/00000000-0000-4000-8000-000000000020";
+
+/** Stands in for a detail screen that has loaded its record. */
+function Publishes({ label }: { label: string }) {
+  useRecordCrumb(label);
+  return null;
+}
 
 /** [label, href] per crumb; href is null for the current page. */
 function crumbs(): Array<[string, string | null]> {
@@ -123,6 +135,44 @@ describe("SiteHeader breadcrumb", () => {
     ]);
   });
 
+  it("walks Home / Trips / the trip's number", () => {
+    pathname = TRIP;
+    render(
+      <RecordCrumbProvider>
+        <SiteHeader />
+        <Publishes label="TR-0042" />
+      </RecordCrumbProvider>,
+    );
+
+    expect(crumbs()).toEqual([
+      ["nav.home", "/"],
+      ["nav.activities", "/activities"],
+      ["TR-0042", null],
+    ]);
+  });
+
+  it("says what the record is while the trip loads", () => {
+    pathname = TRIP;
+    render(
+      <RecordCrumbProvider>
+        <SiteHeader />
+      </RecordCrumbProvider>,
+    );
+
+    expect(crumbs().at(-1)).toEqual(["activities.detail.breadcrumb", null]);
+  });
+
+  it("walks Home / Trips / Record a trip", () => {
+    pathname = "/activities/record";
+    render(<SiteHeader />);
+
+    expect(crumbs()).toEqual([
+      ["nav.home", "/"],
+      ["nav.activities", "/activities"],
+      ["commands.record-journey-sheet.label", null],
+    ]);
+  });
+
   it("marks the last crumb as the current page for assistive tech", () => {
     pathname = "/finance/periods";
     render(<SiteHeader />);
@@ -165,6 +215,17 @@ describe("SiteHeader breadcrumb", () => {
 
       expect(phoneCrumb(container)?.getAttribute("href")).toBe("/finance/entries");
       expect(phoneCrumb(container)?.textContent).toBe("finance.navigation.entries");
+    });
+
+    it("steps back to Trips from a trip and from Record a trip", () => {
+      for (const path of [TRIP, "/activities/record"]) {
+        pathname = path;
+        const { container, unmount } = render(<SiteHeader />);
+
+        expect(phoneCrumb(container)?.getAttribute("href"), path).toBe("/activities");
+        expect(phoneCrumb(container)?.textContent, path).toBe("nav.activities");
+        unmount();
+      }
     });
 
     it("names the section at its root, unlinked", () => {

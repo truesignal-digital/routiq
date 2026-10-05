@@ -8,8 +8,9 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import { assets, branches } from "../db/schema.js";
+import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedMember, seedWorkspace } from "../test/seed.js";
+import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
 describe("GET /v1/assets", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -576,12 +577,9 @@ describe("GET /v1/assets", () => {
       expect(await codes(adminToken, "status=IN_SERVICE")).toHaveLength(
         counts.inService,
       );
-      expect(
-        await codes(
-          adminToken,
-          "status=UNDER_MAINTENANCE&status=RETIRED&status=WRITTEN_OFF",
-        ),
-      ).toHaveLength(counts.attention);
+      expect(await codes(adminToken, "attention=true")).toHaveLength(
+        counts.attention,
+      );
     });
 
     it("counts only the branches a scoped member may see", async () => {
@@ -635,5 +633,151 @@ describe("GET /v1/assets", () => {
       expect(response.statusCode).toBe(400);
       expect(response.json()).toEqual({ error: { code: "VALIDATION_FAILED" } });
     });
+  });
+});
+
+/**
+ * Grounding is availability, not lifecycle status: a truck still IN_SERVICE
+ * with an open availability interval needs someone now, so the Attention
+ * bucket counts it while MAINTENANCE is on.
+ */
+describe("GET /v1/assets/summary counts grounded vehicles", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
+  let admin: Actor;
+  let manager: Actor;
+  let mechanic: Actor;
+  let doualaOnly: Actor;
+  let groundedId: string;
+  let workOrderId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    const [yaounde] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId, code: "YDE", name: "Yaoundé" })
+      .returning();
+    if (!yaounde) throw new Error("branch insert returned no row");
+
+    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
+    manager = await seedActor(ctx.db, { workspaceId, role: "OPS_MANAGER" });
+    mechanic = await seedActor(ctx.db, { workspaceId, role: "MAINTENANCE" });
+    doualaOnly = await seedActor(ctx.db, {
+      workspaceId,
+      role: "OPS_MANAGER",
+      branchIds: [seeded.branch.id],
+    });
+
+    const commission = async (assetId: string) =>
+      api.ok(admin.token, "commission-asset", { assetId }, { expectedVersion: 1 });
+    const ground = async (assetId: string) => {
+      const issueId = randomUUID();
+      await api.ok(admin.token, "report-issue", {
+        issueId,
+        assetId,
+        description: "Freins",
+        safetyCritical: true,
+      });
+      return issueId;
+    };
+
+    // In service and available: never attention.
+    await commission(await seedAsset(ctx.app, admin.token, { assetCode: "VH001" }));
+
+    // In service and grounded in Douala.
+    groundedId = await seedAsset(ctx.app, admin.token, { assetCode: "VH002" });
+    await commission(groundedId);
+    const issueId = await ground(groundedId);
+    workOrderId = randomUUID();
+    const created = await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId: groundedId,
+      issueId,
+      description: "Remplacer les plaquettes",
+      expectedCostMinor: 0,
+    });
+    await api.ok(
+      mechanic.token,
+      "complete-work-order",
+      { workOrderId, summary: "Plaquettes remplacées" },
+      { expectedVersion: created.rowVersion },
+    );
+
+    // Grounded AND under maintenance: one vehicle, counted once.
+    const both = await seedAsset(ctx.app, admin.token, { assetCode: "VH003" });
+    await commission(both);
+    await ground(both);
+    await ctx.db
+      .update(assets)
+      .set({ lifecycleStatus: "UNDER_MAINTENANCE" })
+      .where(and(eq(assets.workspaceId, workspaceId), eq(assets.id, both)));
+
+    // Grounded in Yaoundé, outside the Douala-only member's scope.
+    const yaoundeTruck = await seedAsset(ctx.app, admin.token, {
+      assetCode: "VH004",
+      branchCode: "YDE",
+    });
+    await commission(yaoundeTruck);
+    await ground(yaoundeTruck);
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function summary(token: string) {
+    const response = await api.get(token, "/v1/assets/summary");
+    expect(response.status).toBe(200);
+    return assetSummary.parse(response.body);
+  }
+
+  async function attentionCodes(token: string) {
+    const response = await api.get(token, "/v1/assets?attention=true");
+    expect(response.status).toBe(200);
+    return assetListResponse.parse(response.body).items.map((item) => item.assetCode);
+  }
+
+  /** The tile is a number that filters the list: both read one predicate. */
+  async function expectTileMatchesFilter(token: string, codes: string[]) {
+    expect(await attentionCodes(token)).toEqual(codes);
+    expect((await summary(token)).attention).toBe(codes.length);
+  }
+
+  it("counts an IN_SERVICE vehicle with an open availability interval, once", async () => {
+    expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 3 });
+    await expectTileMatchesFilter(admin.token, ["VH002", "VH003", "VH004"]);
+  });
+
+  it("rejects an attention filter other than true", async () => {
+    const response = await api.get(admin.token, "/v1/assets?attention=false");
+    expect(response.status).toBe(400);
+  });
+
+  it("never counts a grounded vehicle outside the caller's branch scope", async () => {
+    expect(await summary(doualaOnly.token)).toEqual({ total: 3, inService: 2, attention: 2 });
+    await expectTileMatchesFilter(doualaOnly.token, ["VH002", "VH003"]);
+  });
+
+  it("counts lifecycle statuses only while MAINTENANCE is off", async () => {
+    await api.ok(admin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    try {
+      expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 1 });
+      await expectTileMatchesFilter(admin.token, ["VH003"]);
+    } finally {
+      await api.ok(admin.token, "enable-module", { moduleCode: "MAINTENANCE" });
+    }
+  });
+
+  it("stops counting a vehicle once it is released to service", async () => {
+    await api.ok(manager.token, "release-asset-to-service", {
+      assetId: groundedId,
+      workOrderId,
+    });
+    expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 2 });
+    await expectTileMatchesFilter(admin.token, ["VH003", "VH004"]);
   });
 });

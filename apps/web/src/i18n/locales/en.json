@@ -65,7 +65,6 @@
       "all": "All my branches",
       "loading": "Branches…",
       "loadFailed": "Branches unavailable",
-      "switched": "You are viewing: {branch}",
       "scopeLine": "Filtered: {branch} — {count, plural, one {# result} other {# results}}",
       "scopeLineAtLeast": "Filtered: {branch} — at least {count, plural, one {# result} other {# results}}",
       "scopeLineLoading": "Filtered: {branch}",
@@ -84,8 +83,8 @@
     "workspace": "Workspace",
     "username": "Username",
     "pin": "PIN code",
-    "submit": "Sign in",
-    "submitting": "Signing in…"
+    "signIn": "Sign in",
+    "signingIn": "Signing in…"
   },
   "notify": {
     "success": {
@@ -154,17 +153,17 @@
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
-    "ISSUE_ASSET_MISMATCH": "That issue was reported against a different asset. Pick an issue for the same asset.",
+    "ISSUE_ASSET_MISMATCH": "That problem was reported against a different asset. Pick a problem for the same asset.",
     "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
-    "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the issue that grounded this asset. Complete the work before returning it to service.",
-    "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the issue that grounded the asset.",
+    "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the problem that grounded this asset. Complete the work before returning it to service.",
+    "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the problem that grounded the asset.",
     "WORK_ORDER_NOT_OPEN": "This work order is not open: costs can only be booked against it after approval and before it is completed, rejected or cancelled.",
     "WORK_ORDER_COST_MISSING": "Enter the repair cost, or choose “No cost” or “Invoice not received yet”.",
     "WORK_ORDER_HAS_COSTS": "Costs are already recorded on this work order. Reopen the form to see them.",
     "HUMAN_PRINCIPAL_REQUIRED": "This action must be taken by a person, not by an integration or an automated agent.",
     "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
-    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the issue.",
-    "SAFETY_ISSUE_OPEN": "Another safety-critical issue is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
+    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the problem.",
+    "SAFETY_ISSUE_OPEN": "Another safety-critical problem is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
@@ -182,7 +181,6 @@
     "eyebrow": "Operational fleet",
     "title": "Your assets",
     "subtitle": "Track every vehicle from registration through retirement.",
-    "register": "New asset",
     "searchLabel": "Search assets",
     "searchPlaceholder": "Code, plate or model…",
     "filterLabel": "Filter assets",
@@ -196,7 +194,9 @@
     "metrics": {
       "total": "Total",
       "inService": "In service",
-      "attention": "Attention"
+      "attention": "Attention",
+      "attentionHint": "Grounded, in maintenance, retired or written off",
+      "attentionHintNoGrounding": "In maintenance, retired or written off"
     },
     "status": {
       "REGISTERED": "Registered",
@@ -209,7 +209,6 @@
     "emptyEyebrow": "Your fleet starts here",
     "emptyTitle": "Register your first vehicle",
     "emptyHint": "Add a truck, trailer, bus, or minibus. Its trustworthy history starts building from day one.",
-    "emptyAction": "Register an asset",
     "loading": "Loading assets…",
     "noResultsTitle": "No assets found",
     "noResultsHint": "Try another search or clear the filters.",
@@ -240,7 +239,6 @@
     },
     "form": {
       "eyebrow": "New registration",
-      "title": "Register an asset",
       "assetCode": "Asset code",
       "assetClass": "Asset class",
       "branch": "Branch",
@@ -270,8 +268,6 @@
         "lineType": "Line type"
       },
       "choose": "Choose…",
-      "submit": "Register asset",
-      "submitting": "Registering…",
       "cancel": "Cancel",
       "fieldErrors": {
         "required": "This field is required.",
@@ -283,11 +279,7 @@
       "acquisitionAmount": "Acquisition amount (XAF)"
     },
     "actions": {
-      "commission": "Commission",
-      "assign": "Assign",
       "assignTo": "Assign to branch",
-      "confirm": "Confirm",
-      "working": "Working…",
       "close": "Close",
       "reload": "Refresh",
       "conflictTitle": "Modified elsewhere",
@@ -297,7 +289,6 @@
       "open": "Open asset record",
       "commissionHint": "Puts the asset into service. Its operating history starts counting from here.",
       "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them.",
-      "custodian": "Change custodian",
       "custodianHint": "Names who answers for the asset day to day."
     },
     "columns": {
@@ -357,10 +348,8 @@
     "link": "Documents",
     "title": "Asset documents",
     "add": "Add a document",
-    "addTitle": "New document",
     "renew": "Renew",
     "renewTitle": "Renew {name}",
-    "save": "Save",
     "loading": "Loading…",
     "loadFailed": "We couldn't load this asset's documents.",
     "typesFailed": "We couldn't load document types. Retry this page.",
@@ -447,13 +436,9 @@
       "assetLabel": "Asset (optional)",
       "assetPlaceholder": "Assign to a vehicle…",
       "evidenceLabel": "Supporting document (optional)",
-      "submit": "Record",
-      "submitting": "Recording…",
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch…",
-      "branchesFailed": "We couldn't load branches. Retry this page.",
-      "expenseTitle": "Record an expense",
-      "revenueTitle": "Record revenue"
+      "branchesFailed": "We couldn't load branches. Retry this page."
     },
     "entries": {
       "title": "Entries",
@@ -465,7 +450,7 @@
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
-        "SUBMITTED": "Pending",
+        "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
         "REJECTED": "Rejected",
         "REVERSED": "Reversed"
@@ -494,7 +479,6 @@
         "reversalChain": "Reversal chain",
         "reversesEntry": "Reverses entry",
         "reversedByEntry": "Reversed by entry",
-        "reverseAction": "Reverse",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
         "breadcrumb": "Detail",
@@ -505,12 +489,8 @@
         "fullScreen": "Open full screen"
       },
       "reversal": {
-        "title": "Reverse entry",
         "reasonLabel": "Reason for reversal",
         "reasonPlaceholder": "Explain why this entry is being reversed…",
-        "cancel": "Cancel",
-        "submit": "Reverse",
-        "submitting": "Reversing…",
         "success": "Entry reversed",
         "successDesc": "The reversal entry has been created successfully."
       },
@@ -539,10 +519,6 @@
       "branchEmpty": "Nothing awaiting approval for {branch}.",
       "outsideBranch": "{count, plural, one {+# pending in another branch} other {+# pending in other branches}}",
       "makerGuard": "Your submission — another approver must decide",
-      "approve": "Approve",
-      "reject": "Reject",
-      "approveTitle": "Approve entry",
-      "rejectTitle": "Reject entry",
       "noteLabel": "Note",
       "optional": "(optional)",
       "notePlaceholder": "Add a note…",
@@ -551,8 +527,6 @@
       "approved": "Entry approved",
       "rejected": "Entry rejected",
       "warningsLabel": "Notices",
-      "cancel": "Cancel",
-      "submitting": "Working…",
       "done": "Close"
     },
     "periods": {
@@ -570,15 +544,10 @@
       "statusOpen": "Open",
       "statusLocked": "Locked since {date}",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "lock": "Lock",
-      "reopen": "Reopen",
-      "lockTitle": "Lock period",
-      "reopenTitle": "Reopen period",
       "lockExplanation": "Once locked, no entries can be created for this period.",
       "reasonLabel": "Reason for reopening",
       "reasonPlaceholder": "Explain why this period needs to be reopened…",
       "cancel": "Cancel",
-      "submitting": "Submitting…",
       "locked": "Period locked",
       "reopened": "Period reopened",
       "warningsLabel": "Warnings",
@@ -588,8 +557,6 @@
     "edit": {
       "title": "Edit entry {number}",
       "description": "You can change it until someone approves or rejects it. The approver will see what you changed.",
-      "submit": "Save changes",
-      "submitting": "Saving…",
       "decidedTitle": "This entry has already been decided",
       "decidedBody": "An approver approved or rejected it while you were editing. Your changes were not saved.",
       "branchUnknown": "The branch it was recorded in"
@@ -636,7 +603,7 @@
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
     "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the issue that grounded it is still open."
+    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open."
   },
   "activities": {
     "title": "Activities",
@@ -699,6 +666,7 @@
       "OTHER": "Other"
     },
     "detail": {
+      "breadcrumb": "Activity",
       "loading": "Loading activity…",
       "loadFailed": "We couldn't load this activity.",
       "summary": "Summary",
@@ -757,26 +725,15 @@
       }
     },
     "actions": {
-      "close": "Close",
-      "reopen": "Reopen",
-      "substitute": "Substitute asset",
-      "cancel": "Cancel",
-      "submitting": "Submitting…",
       "choose": "Choose",
-      "closeTitle": "Close the activity",
       "closeHint": "Anything missing is flagged on the record, never invented.",
-      "closeSubmit": "Confirm closing",
       "endedAt": "End date and time",
       "endedAtOptional": "End date and time (optional)",
       "note": "Note (optional)",
-      "reopenTitle": "Reopen the activity",
       "reopenHint": "Reopening clears the completeness verdict. The reason stays in the audit trail.",
-      "reopenSubmit": "Confirm reopening",
       "reason": "Reason",
       "reasonPlaceholder": "Why reopen this activity?",
-      "substituteTitle": "Substitute asset",
       "substituteHint": "The outgoing asset stops at the handover; the replacement carries on from there.",
-      "substituteSubmit": "Confirm substitution",
       "outgoing": "Outgoing asset",
       "incoming": "Replacement asset",
       "handoverAt": "Handover date and time",
@@ -785,10 +742,7 @@
       "substituteReason": "Reason (optional)",
       "assetOption": "{code} — {name}",
       "segmentOption": "{code} — {role}",
-      "addLeg": "Add leg",
-      "addLegTitle": "Add a leg",
       "addLegHint": "Leg no. {legNo} of this activity.",
-      "addLegSubmit": "Record the leg",
       "legOrigin": "From",
       "legDestination": "To",
       "legDepartedAt": "Departure time (optional)",
@@ -796,17 +750,12 @@
       "legDistanceKm": "Distance in km (optional)",
       "legLoadState": "Load (optional)",
       "legSegment": "Asset on this leg (optional)",
-      "addReading": "Record reading",
-      "addReadingTitle": "Record a meter reading",
       "addReadingHint": "A reading stays as it was captured; a correction adds a new row.",
-      "addReadingSubmit": "Record the reading",
       "readingAsset": "Asset",
       "readingType": "Unit",
       "readingValue": "Value",
       "readingObservedAt": "Reading date and time",
-      "addExpense": "Record expense",
       "addExpenseTitle": "Expense on this activity",
-      "addExpenseSubmit": "Record the expense",
       "addExpenseHint": "The expense is attributed to this activity and to the chosen asset.",
       "expenseCategory": "Category",
       "expenseAmount": "Amount",
@@ -823,8 +772,7 @@
         "searchPlaceholder": "Name or staff number…",
         "loading": "Loading people…",
         "loadFailed": "We couldn't load the people list.",
-        "empty": "No person found.",
-        "new": "New person"
+        "empty": "No person found."
       },
       "place": {
         "placeholder": "Town or place",
@@ -834,17 +782,13 @@
       }
     },
     "registerPerson": {
-      "title": "New person",
       "description": "Register a driver, conductor or mechanic without leaving the sheet.",
       "nameLabel": "Full name",
       "namePlaceholder": "e.g. Amadou Bello",
       "roleLabel": "Usual role",
       "rolePlaceholder": "Choose a role",
       "phoneLabel": "Phone",
-      "phonePlaceholder": "6 XX XX XX XX",
-      "submit": "Register",
-      "submitting": "Registering…",
-      "cancel": "Cancel"
+      "phonePlaceholder": "6 XX XX XX XX"
     },
     "notify": {
       "success": {
@@ -874,7 +818,6 @@
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
     },
     "record": {
-      "title": "Record a sheet",
       "subtitle": "Work down the paper trip sheet. Anything it does not say can stay empty.",
       "templateLegend": "Sheet type",
       "journeyTab": "Journey",
@@ -1027,11 +970,7 @@
           "BANK": "Bank",
           "OTHER": "Other"
         }
-      },
-      "submit": "Record sheet",
-      "submitting": "Recording…",
-      "submitAndClose": "Record and close",
-      "closingSubmitting": "Closing…"
+      }
     }
   },
   "maintenance": {
@@ -1042,9 +981,7 @@
     },
     "workOrders": {
       "tab": "Work orders",
-      "new": "New work order",
-      "newHint": "Open a work order on an asset, with or without an originating issue.",
-      "newSubmit": "Open work order",
+      "newHint": "Open a work order on an asset, with or without a problem behind it.",
       "loading": "Loading work orders…",
       "loadFailed": "Could not load the work orders. Please try again.",
       "emptyHint": "No work orders yet. Repairs opened here will show up in this list.",
@@ -1072,19 +1009,16 @@
       }
     },
     "issues": {
-      "tab": "Issues",
-      "new": "New issue",
-      "newHint": "Describe the fault found on the asset. A safety-critical issue grounds the asset immediately.",
-      "newSubmit": "Report issue",
-      "loading": "Loading issues…",
-      "loadFailed": "Could not load the issues. Please try again.",
-      "emptyHint": "No issues yet. Faults reported here will show up in this list.",
-      "branchEmptyHint": "No issues for this branch.",
-      "filteredEmpty": "No issues with this status.",
+      "tab": "Problems",
+      "newHint": "Describe the fault found on the asset. A safety-critical problem grounds the asset immediately.",
+      "loading": "Loading problems…",
+      "loadFailed": "Could not load the problems. Please try again.",
+      "emptyHint": "No problems yet. Faults reported here will show up in this list.",
+      "branchEmptyHint": "No problems for this branch.",
+      "filteredEmpty": "No problems with this status.",
       "safetyCritical": "Safety",
       "unavailable": "Grounded",
       "noWorkOrder": "None",
-      "createWorkOrder": "Create a work order",
       "filters": {
         "status": "Status"
       },
@@ -1111,12 +1045,12 @@
       "categoryPlaceholder": "Brakes, tyres, engine…",
       "safetyCritical": "Safety-critical",
       "safetyCriticalHint": "The asset is grounded from the moment this is filed until it is returned to service.",
-      "issue": "Issue",
-      "issueHint": "With no issue linked, the work order is preventive.",
+      "issue": "Problem",
+      "issueHint": "With no problem linked, the work order is preventive.",
       "preventive": "Preventive",
       "expectedCost": "Expected cost",
       "summary": "Work summary",
-      "resolveLinkedIssue": "Resolve the linked issue",
+      "resolveLinkedIssue": "Resolve the linked problem",
       "resolveLinkedIssueHint": "Untick it if the work is done but the problem remains.",
       "reason": "Reason",
       "cancelReason": "Cancellation reason",
@@ -1125,38 +1059,18 @@
       "note": "Note",
       "photos": "Photos (optional)",
       "overrideReason": "Why no work order was needed",
-      "overrideReasonHint": "The issue was closed without a completed work order. This reason stays on the audit trail."
+      "overrideReasonHint": "The problem was closed without a completed work order. This reason stays on the audit trail."
     },
     "actions": {
-      "cancel": "Cancel",
-      "submitting": "Submitting…",
-      "approve": "Approve",
-      "approveTitle": "Approve the work order",
       "approveHint": "You authorize the expected spend. The work order moves into repair.",
-      "reject": "Reject",
-      "rejectTitle": "Reject the work order",
       "rejectHint": "You refuse the expected spend. The rejection is final and the reason stays on the audit trail.",
-      "complete": "Declare complete",
-      "completeTitle": "Declare the work complete",
-      "approveCompletion": "Approve completion",
-      "approveCompletionTitle": "Approve the completion",
       "approveCompletionHint": "You accept the declared actual costs. The work order is completed.",
-      "rejectCompletion": "Reject completion",
-      "rejectCompletionTitle": "Reject the completion",
       "rejectCompletionHint": "The work stays open. The workshop sees the reason and can declare completion again.",
-      "cancelWorkOrder": "Cancel the work order",
-      "cancelWorkOrderTitle": "Cancel the work order",
       "cancelWorkOrderHint": "The work order is abandoned. The reason stays on the audit trail.",
-      "release": "Return to service",
-      "releaseTitle": "Return to service",
-      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the issue.",
+      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem.",
       "releaseSubject": "Work order {reference}",
-      "resolveIssue": "Mark resolved",
-      "resolveIssueTitle": "Resolve the issue",
       "resolveIssueHint": "The problem has been dealt with, for example fixed on the spot. Resolving does not lift a grounding: only a return to service does.",
-      "dismissIssue": "Dismiss",
-      "dismissIssueTitle": "Dismiss the issue",
-      "dismissIssueHint": "The issue should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
+      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
     },
     "close": {
       "hint": "Say what was done and what the repair cost.",
@@ -1195,21 +1109,16 @@
       "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
       "loading": "Loading the timeline…",
       "loadFailed": "Could not load the timeline. Please try again.",
-      "preventive": "Preventive — no issue",
-      "linkedIssue": "Linked issue",
+      "preventive": "Preventive — no problem",
+      "linkedIssue": "Linked problem",
       "unavailableTitle": "Asset grounded",
-      "unavailableHint": "Only a return to service reopens availability.",
-      "entryStatus": {
-        "SUBMITTED": "Awaiting review",
-        "POSTED": "Posted",
-        "REVERSED": "Reversed"
-      }
+      "unavailableHint": "Only a return to service reopens availability."
     },
     "notify": {
       "success": {
-        "issueReported": "Issue reported",
-        "issueResolved": "Issue resolved",
-        "issueDismissed": "Issue dismissed",
+        "issueReported": "Problem reported",
+        "issueResolved": "Problem resolved",
+        "issueDismissed": "Problem dismissed",
         "workOrderCreated": "Work order opened",
         "workOrderApproved": "Work order approved",
         "workOrderRejected": "Work order rejected",
@@ -1224,7 +1133,6 @@
   },
   "persons": {
     "title": "People",
-    "register": "Add a person",
     "searchPlaceholder": "Search a name",
     "branchLabel": "Branch",
     "branchPlaceholder": "Choose a branch",
@@ -1283,10 +1191,7 @@
       "includeDeactivated": "Include deactivated"
     },
     "add": {
-      "open": "Add user",
-      "title": "Add a user",
-      "description": "Create access for a member of your team. Hand them their username and PIN yourself: neither is sent anywhere.",
-      "submit": "Add"
+      "description": "Create access for a member of your team. Hand them their username and PIN yourself: neither is sent anywhere."
     },
     "form": {
       "displayName": "Full name",
@@ -1299,26 +1204,25 @@
       "confirmPin": "Confirm PIN",
       "pinMismatch": "The two PINs do not match.",
       "pinTooShort": "The PIN must be at least {min} digits.",
-      "cancel": "Cancel",
-      "submitting": "Sending…"
+      "cancel": "Cancel"
     },
     "actions": {
-      "role": "Change role",
       "roleHint": "Role and branch scope for {name}.",
-      "roleConfirm": "Save",
-      "pin": "Reset PIN",
       "pinHint": "Set a new PIN for {name}. This also unlocks the account and ends their open sessions.",
-      "pinConfirm": "Reset",
-      "deactivate": "Deactivate",
       "deactivateHint": "{name} will no longer be able to sign in. Their history is kept and the account can be reactivated.",
-      "deactivateConfirm": "Deactivate",
-      "reactivate": "Reactivate",
       "reactivateHint": "{name} will be able to sign in again with their current PIN.",
-      "reactivateConfirm": "Reactivate",
       "conflictTitle": "This record changed",
       "conflictBody": "Someone edited this user while you were working. Reload the list and start again.",
-      "reload": "Reload",
-      "pinResetTitle": "PIN reset",
+      "reload": "Reload"
+    },
+    "notify": {
+      "success": {
+        "added": "User added: {name}",
+        "roleChanged": "Role updated: {name}",
+        "pinReset": "PIN reset: {name}",
+        "deactivated": "User deactivated: {name}",
+        "reactivated": "User reactivated: {name}"
+      },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
     }
   },
@@ -1339,10 +1243,7 @@
       "inactive": "Deactivated"
     },
     "add": {
-      "open": "New branch",
-      "title": "New branch",
-      "description": "Create a branch in your workspace. It becomes available in the forms and in user scope straight away.",
-      "submit": "Create"
+      "description": "Create a branch in your workspace. It becomes available in the forms and in user scope straight away."
     },
     "form": {
       "code": "Code",
@@ -1351,22 +1252,26 @@
       "nameTooLong": "The name must be at most {max} characters.",
       "name": "Name",
       "timezone": "Time zone",
-      "cancel": "Cancel",
-      "submitting": "Sending…"
+      "cancel": "Cancel"
     },
     "actions": {
-      "rename": "Rename",
       "renameHint": "New name for “{name}”. The code stays as it is.",
-      "renameConfirm": "Save",
-      "deactivate": "Deactivate",
       "deactivateHint": "No new operation will be able to target “{name}”. Existing records and history are kept.",
-      "deactivateConfirm": "Deactivate",
-      "reactivate": "Reactivate",
       "reactivateHint": "“{name}” will be able to receive operations again.",
-      "reactivateConfirm": "Reactivate",
       "conflictTitle": "This branch changed",
       "conflictBody": "Someone edited this branch while you were working. Reload the list and start again.",
       "reload": "Reload"
+    },
+    "notify": {
+      "success": {
+        "created": "Branch created: {name}",
+        "renamed": "Branch renamed: {name}",
+        "deactivated": "Branch deactivated: {name}",
+        "reactivated": "Branch reactivated: {name}"
+      },
+      "info": {
+        "switched": "You are viewing: {branch}"
+      }
     }
   },
   "provenance": {
@@ -1440,9 +1345,9 @@
       "template_preset-materialized": "Business preset enabled",
       "template_preset-disabled": "Business preset disabled",
       "workspace-provisioned": "Workspace provisioned",
-      "operational_issue-reported": "Issue reported",
-      "operational_issue-resolved": "Issue resolved",
-      "operational_issue-dismissed": "Issue dismissed",
+      "operational_issue-reported": "Problem reported",
+      "operational_issue-resolved": "Problem resolved",
+      "operational_issue-dismissed": "Problem dismissed",
       "work_order-created": "Work order created",
       "work_order-submitted": "Work order submitted",
       "work_order-approved": "Work order approved",
@@ -1588,13 +1493,13 @@
       "cancelReason": "cancellation reason",
       "cancelledAt": "cancelled",
       "closedByCommandId": "closing command",
-      "issueId": "issue",
-      "openedByIssueId": "originating issue",
+      "issueId": "problem",
+      "openedByIssueId": "originating problem",
       "openedAt": "opened",
       "reportedAt": "reported",
       "safetyCritical": "safety-critical",
       "category": "category",
-      "resolveLinkedIssue": "resolve linked issue",
+      "resolveLinkedIssue": "resolve linked problem",
       "rejectReason": "rejection reason",
       "rejectedAt": "rejected",
       "completionRejectReason": "completion rejection reason",
@@ -1611,6 +1516,19 @@
       "postings": "posting lines"
     }
   },
+  "dateField": {
+    "placeholderDate": "mm/dd/yyyy",
+    "placeholderDateTime": "mm/dd/yyyy hh:mm",
+    "openCalendar": "Open calendar",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "time": "Time",
+    "done": "Done",
+    "invalidDate": "Date not recognised. Write it like this: {example}",
+    "invalidDateTime": "Date and time not recognised. Write them like this: {example}",
+    "tooEarly": "No earlier than {min}.",
+    "tooLate": "No later than {max}."
+  },
   "datePicker": {
     "placeholder": "Pick a date",
     "clear": "Clear"
@@ -1626,37 +1544,340 @@
     "approvalTitle": "Approval required",
     "approvalBody": "This action needs an approval before it takes effect. Nothing was changed."
   },
+  "commands": {
+    "register-asset": {
+      "label": "Register an asset",
+      "submit": "Register asset",
+      "submitting": "Registering…"
+    },
+    "add-or-renew-document": {
+      "label": "Add a document",
+      "submit": "Save document",
+      "submitting": "Saving…",
+      "short": "Document",
+      "renew": {
+        "label": "Renew document",
+        "short": "Renew",
+        "submit": "Save renewal"
+      }
+    },
+    "assign-asset": {
+      "label": "Transfer home branch",
+      "submit": "Transfer home branch",
+      "submitting": "Transferring…",
+      "short": "Transfer",
+      "custodian": {
+        "label": "Change custodian",
+        "short": "Custodian",
+        "submit": "Change custodian"
+      }
+    },
+    "register-person": {
+      "label": "Add a person",
+      "submit": "Register person",
+      "submitting": "Registering…"
+    },
+    "create-activity": {
+      "label": "Create an activity",
+      "submit": "Create activity",
+      "submitting": "Creating…"
+    },
+    "record-movement-leg": {
+      "label": "Add a leg",
+      "submit": "Record the leg",
+      "submitting": "Recording…"
+    },
+    "record-meter-reading": {
+      "label": "Record odometer",
+      "submit": "Record the reading",
+      "submitting": "Recording…",
+      "short": "Odometer"
+    },
+    "substitute-asset": {
+      "label": "Substitute asset",
+      "submit": "Substitute asset",
+      "submitting": "Substituting…"
+    },
+    "record-journey-sheet": {
+      "label": "Record a sheet",
+      "submit": "Record sheet",
+      "submitting": "Recording…",
+      "short": "Sheet",
+      "close": {
+        "label": "Record and close",
+        "submit": "Record and close",
+        "submitting": "Closing…"
+      }
+    },
+    "record-haulage-job-sheet": {
+      "label": "Record a sheet",
+      "submit": "Record sheet",
+      "submitting": "Recording…"
+    },
+    "record-expense": {
+      "label": "Record expense",
+      "submit": "Record the expense",
+      "submitting": "Recording…",
+      "short": "Expense",
+      "fuel": {
+        "label": "Log fuel",
+        "short": "Fuel",
+        "submit": "Save fuel"
+      }
+    },
+    "record-revenue": {
+      "label": "Record revenue",
+      "submit": "Record the revenue",
+      "submitting": "Recording…",
+      "short": "Revenue"
+    },
+    "report-issue": {
+      "label": "Report a problem",
+      "submit": "Report the problem",
+      "submitting": "Reporting…",
+      "short": "Problem"
+    },
+    "resolve-issue": {
+      "label": "Mark resolved",
+      "submit": "Mark resolved",
+      "submitting": "Saving…"
+    },
+    "create-work-order": {
+      "label": "Create work order",
+      "submit": "Create the work order",
+      "submitting": "Creating…",
+      "short": "Work order"
+    },
+    "complete-work-order": {
+      "label": "Complete work",
+      "submit": "Complete work",
+      "submitting": "Submitting…",
+      "short": "Complete"
+    },
+    "add-note": {
+      "label": "Add note",
+      "submit": "Add the note",
+      "submitting": "Saving…",
+      "short": "Note"
+    },
+    "attach-evidence": {
+      "label": "Attach receipt",
+      "submit": "Attach the receipt",
+      "submitting": "Attaching…",
+      "short": "Receipt"
+    },
+    "close-activity": {
+      "label": "Close the activity",
+      "submit": "Close the activity",
+      "submitting": "Closing…"
+    },
+    "reopen-activity": {
+      "label": "Reopen the activity",
+      "submit": "Reopen the activity",
+      "submitting": "Reopening…"
+    },
+    "commission-asset": {
+      "label": "Commission",
+      "submit": "Commission",
+      "submitting": "Commissioning…",
+      "short": "Commission"
+    },
+    "approve-entry": {
+      "label": "Approve entry",
+      "submit": "Approve entry",
+      "submitting": "Approving…"
+    },
+    "reject-entry": {
+      "label": "Reject entry",
+      "submit": "Reject entry",
+      "submitting": "Rejecting…",
+      "dismiss": "Keep entry"
+    },
+    "reverse-entry": {
+      "label": "Reverse entry",
+      "submit": "Reverse entry",
+      "submitting": "Reversing…",
+      "short": "Reverse",
+      "dismiss": "Keep entry"
+    },
+    "lock-period": {
+      "label": "Lock period",
+      "submit": "Lock period",
+      "submitting": "Locking…"
+    },
+    "reopen-period": {
+      "label": "Reopen period",
+      "submit": "Reopen period",
+      "submitting": "Reopening…"
+    },
+    "enable-module": {
+      "label": "Enable module",
+      "submit": "Enable module",
+      "submitting": "Enabling…"
+    },
+    "disable-module": {
+      "label": "Disable module",
+      "submit": "Disable module",
+      "submitting": "Disabling…"
+    },
+    "update-approval-threshold": {
+      "label": "Change approval threshold",
+      "submit": "Save threshold",
+      "submitting": "Saving…"
+    },
+    "create-category": {
+      "label": "Create a category",
+      "submit": "Create category",
+      "submitting": "Creating…"
+    },
+    "relabel-category": {
+      "label": "Rename category",
+      "submit": "Rename category",
+      "submitting": "Saving…"
+    },
+    "deactivate-category": {
+      "label": "Deactivate category",
+      "submit": "Deactivate category",
+      "submitting": "Deactivating…"
+    },
+    "reactivate-category": {
+      "label": "Reactivate category",
+      "submit": "Reactivate category",
+      "submitting": "Reactivating…"
+    },
+    "set-template-preset": {
+      "label": "Choose templates",
+      "submit": "Save templates",
+      "submitting": "Saving…"
+    },
+    "create-branch": {
+      "label": "Create a branch",
+      "submit": "Create branch",
+      "submitting": "Creating…"
+    },
+    "rename-branch": {
+      "label": "Rename branch",
+      "submit": "Rename branch",
+      "submitting": "Saving…"
+    },
+    "set-branch-status": {
+      "label": "Change branch status",
+      "submit": "Change status",
+      "submitting": "Saving…",
+      "deactivate": {
+        "label": "Deactivate branch",
+        "submit": "Deactivate branch",
+        "submitting": "Deactivating…"
+      },
+      "reactivate": {
+        "label": "Reactivate branch",
+        "submit": "Reactivate branch",
+        "submitting": "Reactivating…"
+      }
+    },
+    "add-member": {
+      "label": "Add a user",
+      "submit": "Add user",
+      "submitting": "Adding…"
+    },
+    "update-member-role": {
+      "label": "Change role",
+      "submit": "Save role",
+      "submitting": "Saving…"
+    },
+    "deactivate-member": {
+      "label": "Deactivate user",
+      "submit": "Deactivate user",
+      "submitting": "Deactivating…"
+    },
+    "reactivate-member": {
+      "label": "Reactivate user",
+      "submit": "Reactivate user",
+      "submitting": "Reactivating…"
+    },
+    "reset-member-pin": {
+      "label": "Reset PIN",
+      "submit": "Reset PIN",
+      "submitting": "Resetting…"
+    },
+    "cancel-work-order": {
+      "label": "Cancel work order",
+      "submit": "Cancel work order",
+      "submitting": "Cancelling…",
+      "short": "Cancel order",
+      "dismiss": "Keep work order"
+    },
+    "release-asset-to-service": {
+      "label": "Release to service",
+      "submit": "Release to service",
+      "submitting": "Releasing…",
+      "short": "Release"
+    },
+    "update-asset-details": {
+      "label": "Edit details",
+      "submit": "Save details",
+      "submitting": "Saving…"
+    },
+    "approve-work-order": {
+      "label": "Authorize work order",
+      "submit": "Authorize work order",
+      "submitting": "Authorizing…",
+      "short": "Authorize"
+    },
+    "approve-work-order-closure": {
+      "label": "Sign off the work",
+      "submit": "Sign off the work",
+      "submitting": "Signing off…",
+      "short": "Sign off"
+    },
+    "reject-work-order": {
+      "label": "Reject work order",
+      "submit": "Reject work order",
+      "submitting": "Rejecting…",
+      "dismiss": "Keep work order"
+    },
+    "reject-work-order-completion": {
+      "label": "Reject the completion",
+      "submit": "Reject the completion",
+      "submitting": "Rejecting…",
+      "dismiss": "Back"
+    },
+    "dismiss-issue": {
+      "label": "Dismiss the problem",
+      "submit": "Dismiss the problem",
+      "submitting": "Dismissing…",
+      "dismiss": "Keep it open"
+    },
+    "update-pending-entry": {
+      "label": "Edit entry",
+      "submit": "Save changes",
+      "submitting": "Saving…"
+    }
+  },
   "vehicle": {
     "forms": {
       "pinnedVehicle": "Vehicle",
       "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
       "fuel": {
-        "title": "Log fuel",
         "description": "Records the fuel expense, then the odometer if you enter it.",
         "amount": "Amount paid (XAF)",
         "when": "Date and time",
         "station": "Station (optional)",
         "odometer": "Odometer in km (optional)",
         "receipt": "Receipt photo (optional)",
-        "submit": "Save fuel",
-        "retryReading": "Save the reading again",
         "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
         "readingSaved": "Odometer reading saved"
       },
       "note": {
-        "title": "Add a note",
         "description": "A remark on the vehicle's history. Notes are never edited; a correction is another note.",
         "label": "Note",
-        "placeholder": "What should others know about this vehicle?",
-        "submit": "Add note"
+        "placeholder": "What should others know about this vehicle?"
       },
       "evidence": {
-        "title": "Attach a receipt",
         "description": "Adds proof to this entry. The entry itself is not edited.",
         "entry": "Entry",
         "files": "Photo or PDF",
-        "hint": "Add at least one file.",
-        "submit": "Attach"
+        "hint": "Add at least one file."
       },
       "custodian": {
         "label": "New custodian",
@@ -1734,10 +1955,7 @@
       "notRecorded": "Not recorded",
       "noSpecifications": "No specifications for this template.",
       "edit": {
-        "button": "Edit details",
         "tooltip": "Edit vehicle details",
-        "save": "Save",
-        "saving": "Saving…",
         "cancel": "Cancel",
         "make": "Make",
         "model": "Model",
@@ -1796,35 +2014,7 @@
       "lockedCaption": "{step} · {reason}"
     },
     "steps": {
-      "log-fuel": "Log fuel",
-      "record-expense": "Record expense",
-      "attach-evidence": "Attach receipt",
-      "record-reading": "Record odometer",
-      "add-note": "Add note",
-      "report-issue": "Report a problem",
-      "create-work-order": "Create work order",
-      "approve-work-order": "Authorize",
-      "complete-work-order": "Complete work",
-      "approve-completion": "Sign off",
-      "cancel-work-order": "Cancel work order",
-      "release": "Release to service",
-      "start-trip": "Start a trip",
-      "change-custodian": "Change custodian",
-      "transfer-branch": "Transfer home branch",
-      "add-document": "Add document",
-      "renew-document": "Renew",
-      "record-revenue": "Record revenue",
-      "review-entry": "Review",
-      "reverse-entry": "Reverse",
-      "commission": "Commission",
-      "reject-work-order": "Refuse",
-      "reject-completion": "Send back",
-      "resolve-issue": "Mark resolved",
-      "dismiss-issue": "Dismiss",
-      "approve-entry": "Approve",
-      "reject-entry": "Reject",
-      "add-cost": "Add a cost",
-      "edit-entry": "Edit"
+      "review-entry": "Review"
     },
     "locked": {
       "needsAuthorization": "Needs a manager to authorize {ref} first.",
@@ -2245,93 +2435,57 @@
     },
     "actions": {
       "log-fuel": {
-        "label": "Log fuel",
-        "short": "Fuel",
         "description": "Fuel paid for this vehicle, with the odometer if you read it. The expense is saved first."
       },
       "record-expense": {
-        "label": "Record expense",
-        "short": "Expense",
         "description": "Any cost for this vehicle. Above the threshold it waits for finance review."
       },
       "attach-evidence": {
-        "label": "Attach receipt",
-        "short": "Receipt",
         "description": "Adds proof to an entry recorded without it. The entry itself is not edited."
       },
       "record-reading": {
-        "label": "Record odometer",
-        "short": "Odometer",
         "description": "A standalone reading. A value lower than the last is kept with a warning, never refused."
       },
       "add-note": {
-        "label": "Add note",
-        "short": "Note",
         "description": "A short remark on the vehicle's history. Notes are never edited."
       },
       "report-issue": {
-        "label": "Report a problem",
-        "short": "Problem",
         "description": "Something is wrong with the vehicle. Safety-critical grounds it at once."
       },
       "create-work-order": {
-        "label": "Create work order",
-        "short": "Work order",
         "description": "Plan the repair and its expected cost, from a reported problem or as preventive work."
       },
       "approve-work-order": {
-        "label": "Authorize work order",
-        "short": "Authorize",
         "description": "Finance authorizes the spending before work starts. Whoever created it cannot authorize it."
       },
       "complete-work-order": {
-        "label": "Complete work",
-        "short": "Complete",
         "description": "Say what was done and what it cost."
       },
       "approve-completion": {
-        "label": "Sign off work order",
-        "short": "Sign off",
         "description": "Checks the completed work and its actual cost. Whoever completed it cannot sign it off."
       },
       "cancel-work-order": {
-        "label": "Cancel work order",
-        "short": "Cancel",
         "description": "Stop a work order that is no longer needed. A reason is required."
       },
       "release": {
-        "label": "Release to service",
-        "short": "Release",
         "description": "Ends the grounding once the repair is completed. After a safety-critical problem, whoever vouched for the repair cannot release."
       },
       "start-trip": {
-        "label": "Start a trip",
-        "short": "Trip",
         "description": "Opens the trip sheet with this vehicle as the main vehicle."
       },
       "change-custodian": {
-        "label": "Change custodian",
-        "short": "Custodian",
         "description": "Who answers for the vehicle day to day. Not the same as who drives each trip."
       },
       "transfer-branch": {
-        "label": "Transfer home branch",
-        "short": "Transfer",
         "description": "Moves the vehicle's home branch for good. Past records stay with the branch that made them."
       },
       "add-document": {
-        "label": "Add document",
-        "short": "Document",
         "description": "Insurance, inspection, permits. A missing expiry date shows as unknown, never as valid."
       },
       "renew-document": {
-        "label": "Renew document",
-        "short": "Renew",
         "description": "Records the new version of a document. The old one is kept."
       },
       "record-revenue": {
-        "label": "Record revenue",
-        "short": "Revenue",
         "description": "Freight or fares earned with this vehicle."
       },
       "review-entry": {
@@ -2340,13 +2494,9 @@
         "description": "Approve or reject an entry waiting for review. Whoever recorded it cannot approve it."
       },
       "reverse-entry": {
-        "label": "Reverse entry",
-        "short": "Reverse",
         "description": "Posted money is never edited: a reversal cancels it and both stay. Pick the entry in Money."
       },
       "commission": {
-        "label": "Commission",
-        "short": "Commission",
         "description": "From registered to in service: the operating history starts here."
       },
       "groups": {

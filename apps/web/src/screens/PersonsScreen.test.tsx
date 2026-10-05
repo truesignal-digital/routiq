@@ -140,7 +140,7 @@ describe("PersonsScreen", () => {
   it("registers into the branch it resolved, then reloads the list", async () => {
     render(<PersonsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: /persons.register/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "commands.register-person.label" }));
 
     const dialog = await screen.findByRole("dialog", { name: "register-person" });
     expect(dialog.textContent).toContain("DLA");
@@ -152,7 +152,7 @@ describe("PersonsScreen", () => {
   it("confirms the registration with a toast, as the other capture forms do", async () => {
     render(<PersonsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: /persons.register/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "commands.register-person.label" }));
     await userEvent.click(await screen.findByRole("button", { name: "confirm" }));
 
     // The row lands in the branch on screen, so nothing is added about where.
@@ -169,7 +169,7 @@ describe("PersonsScreen", () => {
       render(<PersonsScreen />);
 
       expect(await screen.findByText("Amadou Bello")).toBeTruthy();
-      expect(screen.queryByRole("button", { name: /persons.register/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: "commands.register-person.label" })).toBeNull();
     },
   );
 

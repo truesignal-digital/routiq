@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { LayoutGrid } from "lucide-react";
 import { actionDef, quickActions } from "./actions.js";
 import { useVehicle } from "./context.js";
+import { useStepLabel } from "./parts.js";
 
 /**
  * The phone's three most frequent actions for this role, then More. A toolbar,
@@ -9,6 +10,7 @@ import { useVehicle } from "./context.js";
  */
 export function QuickActionBar() {
   const { t } = useTranslation();
+  const stepLabel = useStepLabel();
   const { viewer, facts, runAction, openAllActions } = useVehicle();
   const keys = quickActions(facts, viewer);
 
@@ -28,7 +30,7 @@ export function QuickActionBar() {
             className="flex h-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-medium transition-colors hover:bg-muted active:bg-muted"
           >
             <Icon className="size-5" aria-hidden />
-            {t(`vehicle.actions.${key}.short`)}
+            {stepLabel({ key }, "short")}
           </button>
         );
       })}

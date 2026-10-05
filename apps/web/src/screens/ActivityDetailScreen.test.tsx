@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({ useActivity: vi.fn() }));
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ activityId: ACTIVITY_ID }),
+  useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+    select({ location: { pathname: `/activities/${ACTIVITY_ID}` } }),
   Link: ({
     to,
     params,

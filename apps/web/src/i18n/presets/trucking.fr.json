@@ -21,12 +21,10 @@
     },
     "title": "Vos camions",
     "subtitle": "Suivez chaque camion, de son enregistrement à sa mise hors service.",
-    "register": "Nouveau camion",
     "searchLabel": "Rechercher dans les camions",
     "filterLabel": "Filtrer les camions",
     "emptyTitle": "Enregistrez votre premier camion",
     "emptyHint": "Ajoutez un camion ou une remorque. Son historique fiable se construira dès le premier jour.",
-    "emptyAction": "Enregistrer un camion",
     "loading": "Chargement des camions…",
     "noResultsTitle": "Aucun camion trouvé",
     "branchEmptyHint": "Aucun camion n'est rattaché à cette agence.",
@@ -41,9 +39,7 @@
       }
     },
     "form": {
-      "title": "Enregistrer un camion",
-      "assetCode": "Code du camion",
-      "submit": "Enregistrer le camion"
+      "assetCode": "Code du camion"
     },
     "actions": {
       "commissionHint": "Met le camion en service. Son historique d'exploitation démarre ici.",
@@ -90,14 +86,13 @@
       "open": "Ouvrir le trajet"
     },
     "detail": {
+      "breadcrumb": "Trajet",
       "loading": "Chargement du trajet…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce trajet ont été corrigés."
       }
     },
     "actions": {
-      "closeTitle": "Clôturer le trajet",
-      "reopenTitle": "Rouvrir le trajet",
       "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",
       "addLegHint": "Étape n° {legNo} de ce trajet.",
       "addExpenseTitle": "Dépense du trajet",
@@ -122,13 +117,13 @@
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Ouvrez un ordre de travail sur un camion, avec ou sans signalement à l'origine.",
+      "newHint": "Ouvrez un ordre de travail sur un camion, avec ou sans problème à l'origine.",
       "columns": {
         "asset": "Camion"
       }
     },
     "issues": {
-      "newHint": "Décrivez le défaut constaté sur le camion. Un signalement critique pour la sécurité immobilise le camion immédiatement.",
+      "newHint": "Décrivez le défaut constaté sur le camion. Un problème critique pour la sécurité immobilise le camion immédiatement.",
       "columns": {
         "asset": "Camion"
       }
@@ -138,7 +133,7 @@
       "safetyCriticalHint": "Le camion est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
     },
     "actions": {
-      "releaseHint": "Le camion redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le signalement."
+      "releaseHint": "Le camion redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème."
     },
     "detail": {
       "unavailableTitle": "Camion immobilisé"
@@ -175,6 +170,23 @@
       "filters": {
         "TRIPS": "Trajets"
       }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Enregistrer un camion",
+      "submit": "Enregistrer le camion"
+    },
+    "close-activity": {
+      "label": "Clôturer le trajet",
+      "submit": "Clôturer le trajet"
+    },
+    "reopen-activity": {
+      "label": "Rouvrir le trajet",
+      "submit": "Rouvrir le trajet"
+    },
+    "record-journey-sheet": {
+      "short": "Trajet"
     }
   }
 }

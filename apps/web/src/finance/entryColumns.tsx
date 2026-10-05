@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
 import { EntryLinks } from "@/finance/EntryLinks.js";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 
 export type FinanceEntryColumnId =
@@ -47,9 +47,7 @@ function buildColumns(
       meta: { mobile: "primary", label: t("finance.entries.detail.status") },
       cell: ({ row }) => (
         <div className="flex flex-wrap items-center gap-2">
-          <FinanceStatusBadge status={row.original.status}>
-            {t(`finance.entries.status.${row.original.status}`)}
-          </FinanceStatusBadge>
+          <EntryStatusBadge status={row.original.status} />
           {row.original.isLatePosting && (
             <StatusBadge tone="warning">
               {t("finance.entries.detail.latePosting")}

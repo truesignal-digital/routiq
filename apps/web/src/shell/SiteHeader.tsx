@@ -17,14 +17,17 @@ import { cn } from "@/lib/utils";
 import { useMeContext } from "../auth/me.js";
 import { useBranchScope } from "./branch-scope.js";
 import { BranchSwitcher } from "./BranchSwitcher.js";
-import { breadcrumbTrail } from "./breadcrumbs.js";
+import { breadcrumbTrail, type Crumb } from "./breadcrumbs.js";
+import { useRecordCrumbLabel } from "./record-crumb.js";
 import { visibleSections } from "./sections.js";
 
 export function SiteHeader() {
   const { t } = useTranslation();
   const me = useMeContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const crumbs = breadcrumbTrail(visibleSections(me?.enabledModules, me?.role), pathname);
+  const recordLabel = useRecordCrumbLabel(pathname);
+  const crumbs = breadcrumbTrail(visibleSections(me?.enabledModules, me?.role), pathname, recordLabel);
+  const crumbText = (crumb: Crumb) => crumb.label ?? t(crumb.labelKey);
   const { scoped } = useBranchScope();
   // Beside the branch pill a phone has room for one crumb: the full trail
   // shrank to initials there. Below a section it is the way back up; at a
@@ -73,7 +76,7 @@ export function SiteHeader() {
               aria-current="page"
               className="block truncate text-sm text-foreground md:hidden"
             >
-              {t(current.labelKey)}
+              {crumbText(current)}
             </span>
           )
         )}
@@ -84,14 +87,14 @@ export function SiteHeader() {
               <BreadcrumbItem className="min-w-0">
                 {crumb.to === undefined ? (
                   <BreadcrumbPage className="truncate">
-                    {t(crumb.labelKey)}
+                    {crumbText(crumb)}
                   </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink
                     className="truncate"
                     render={<Link to={crumb.to} />}
                   >
-                    {t(crumb.labelKey)}
+                    {crumbText(crumb)}
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>

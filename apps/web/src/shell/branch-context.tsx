@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
-import { toast } from "@/components/ui/toast.js";
+import { notifyInfo } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 
 /**
@@ -145,11 +145,10 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         branchId === ALL_BRANCHES
           ? t("shell.branch.all")
           : (options.find((option) => option.id === branchId)?.name ?? branchId);
-      const message = t("shell.branch.switched", { branch });
       // One transient toast plus the live region: switching is a change of lens,
       // not an operation with an outcome, so it never blocks a collection.
-      toast.add({ type: "info", title: message });
-      setAnnouncement(message);
+      notifyInfo("branches", "switched", { branch });
+      setAnnouncement(t("branches.notify.info.switched", { branch }));
     },
     [workspaceSlug, options, t],
   );

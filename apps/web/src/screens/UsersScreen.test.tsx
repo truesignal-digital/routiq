@@ -229,7 +229,7 @@ describe("UsersScreen", () => {
     expect(screen.getByText("errors.ROLE_FORBIDDEN")).toBeTruthy();
     expect(screen.queryByText("Amina Fotso")).toBeNull();
     expect(screen.queryByText("amina")).toBeNull();
-    expect(screen.queryByRole("button", { name: "users.add.open" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "commands.add-member.label" })).toBeNull();
     },
   );
 
@@ -255,9 +255,9 @@ describe("UsersScreen", () => {
 
     await userEvent.click(rowMenu("Estelle Ngo"));
 
-    expect(await screen.findByRole("menuitem", { name: "users.actions.reactivate" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "users.actions.deactivate" })).toBeNull();
-    expect(screen.queryByRole("menuitem", { name: "users.actions.pin" })).toBeNull();
+    expect(await screen.findByRole("menuitem", { name: "commands.reactivate-member.label" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "commands.deactivate-member.label" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "commands.reset-member-pin.label" })).toBeNull();
   });
 
   it("opens the action dialog on the row the admin chose", async () => {
@@ -265,7 +265,7 @@ describe("UsersScreen", () => {
     await screen.findByText("Amina Fotso");
 
     await userEvent.click(rowMenu("Brice Ekane"));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "users.actions.pin" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "commands.reset-member-pin.label" }));
 
     const dialog = await screen.findByRole("dialog", { name: "member-action" });
     expect(dialog.textContent).toContain("pin");
@@ -307,7 +307,7 @@ describe("UsersScreen", () => {
     await screen.findByText("Amina Fotso");
 
     expect(screen.queryByRole("dialog", { name: "add-member" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "users.add.open" }));
+    await userEvent.click(screen.getByRole("button", { name: "commands.add-member.label" }));
     expect(await screen.findByRole("dialog", { name: "add-member" })).toBeTruthy();
   });
 });

@@ -20,8 +20,8 @@ vi.mock("react-i18next", async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, options?: Record<string, unknown>) =>
-        key === "activities.completeness.short"
-          ? `${String(options?.["count"])} exceptions`
+        key === "activities.state.closedWithGaps"
+          ? `Closed, ${String(options?.["count"])} gaps`
           : key,
       i18n: { language: "en", resolvedLanguage: "en", exists: () => true, t: (k: string) => k },
     }),
@@ -160,7 +160,7 @@ describe("ActivitiesScreen", () => {
     render(<ActivitiesScreen />);
     // §3.4 inv. 6 lets a job close with gaps; the list has to say so, or the
     // reader takes an incomplete record for a complete one.
-    expect(await screen.findByText("1 exceptions")).toBeTruthy();
+    expect(await screen.findByText("Closed, 1 gaps")).toBeTruthy();
   });
 
   it("asks the server to filter rather than narrowing the loaded page", async () => {

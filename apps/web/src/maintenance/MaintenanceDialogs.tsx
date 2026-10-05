@@ -16,6 +16,7 @@ import type {
 } from "@routiq/contracts";
 import {
   CommandForm,
+  ReasonField,
   useCommandSubmission,
   type CommandFormBack,
   type CommandSurface,
@@ -51,6 +52,7 @@ import { formatDate, formatMoney, localizedLabel } from "../lib/format.js";
 import { cn } from "../lib/utils.js";
 import { useAssetOptions } from "../assets/useAssetOptions.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
+import { useCommandLabel, type CommandName } from "../commands/labels.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { parseMoneyXaf } from "../finance/model.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
@@ -162,8 +164,6 @@ function useMaintenanceChrome(host: MaintenanceFormHost) {
     chrome: {
       surface: host.surface,
       back: host.back,
-      submittingLabel: t("maintenance.actions.submitting"),
-      cancelLabel: t("maintenance.actions.cancel"),
       onReload: async () => {
         await invalidate();
         host.onDismiss();
@@ -226,6 +226,7 @@ export function ReportIssueForm({
   pinnedAssetLabel?: string | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
   const client = host.client ?? commandClient;
@@ -269,10 +270,10 @@ export function ReportIssueForm({
   return (
     <CommandForm
       {...chrome}
-      title={t("maintenance.issues.new")}
+      title={label("report-issue")}
       description={t("maintenance.issues.newHint")}
       error={submission.error}
-      submitLabel={t("maintenance.issues.newSubmit")}
+      command="report-issue"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -389,6 +390,7 @@ function CreateWorkOrderFields({
   ...host
 }: CreateWorkOrderProps & { issues: readonly IssueListItem[] }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
   const client = host.client ?? commandClient;
@@ -437,10 +439,10 @@ function CreateWorkOrderFields({
   return (
     <CommandForm
       {...chrome}
-      title={t("maintenance.workOrders.new")}
+      title={label("create-work-order")}
       description={t("maintenance.workOrders.newHint")}
       error={submission.error}
-      submitLabel={t("maintenance.workOrders.newSubmit")}
+      command="create-work-order"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -536,6 +538,7 @@ export function CompleteWorkOrderForm({
   ...host
 }: MaintenanceFormHost & { workOrder: WorkOrderRef }) {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const locale = i18n.language;
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
@@ -649,7 +652,7 @@ export function CompleteWorkOrderForm({
       variant="outline"
       aria-pressed={effectiveChoice === value}
       className={cn(
-        "min-h-11 justify-start whitespace-normal text-left",
+        "justify-start whitespace-normal text-left",
         effectiveChoice === value && "border-foreground bg-muted",
       )}
       onClick={() => choose(value)}
@@ -681,7 +684,7 @@ export function CompleteWorkOrderForm({
                       onValueChange={(value) => categoryField.onChange(value ?? "")}
                     >
                       <FormControl>
-                        <SelectTrigger className="min-h-11 w-full">
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder={t("maintenance.fields.choose")} />
                         </SelectTrigger>
                       </FormControl>
@@ -749,7 +752,6 @@ export function CompleteWorkOrderForm({
                     <FormLabel>{t("maintenance.close.lineNote")}</FormLabel>
                     <FormControl>
                       <Input
-                        className="min-h-11"
                         maxLength={500}
                         placeholder={t("maintenance.close.lineNotePlaceholder")}
                         {...noteField}
@@ -775,7 +777,7 @@ export function CompleteWorkOrderForm({
               <Button
                 type="button"
                 variant="ghost"
-                className="min-h-11 self-start"
+                className="self-start"
                 onClick={() => {
                   setUploading((current) => ({ ...current, [field.entryId]: false }));
                   lines.remove(index);
@@ -790,7 +792,7 @@ export function CompleteWorkOrderForm({
       <Button
         type="button"
         variant="ghost"
-        className="min-h-11 self-start"
+        className="self-start"
         onClick={() => lines.append(newCostLine(askCategory ? "" : REPAIR_CATEGORY_CODE))}
       >
         <Plus aria-hidden />
@@ -803,10 +805,10 @@ export function CompleteWorkOrderForm({
     <Form {...form}>
       <CommandForm
         {...chrome}
-        title={t("maintenance.actions.completeTitle")}
+        title={label("complete-work-order")}
         description={t("maintenance.close.hint")}
         error={submission.error}
-        submitLabel={t("maintenance.actions.complete")}
+        command="complete-work-order"
         ready={ready}
         submitting={submission.submitting}
         onSubmit={() => void form.handleSubmit(onValid)()}
@@ -861,7 +863,7 @@ export function CompleteWorkOrderForm({
                 <Button
                   type="button"
                   variant="link"
-                  className="min-h-11 self-start px-0"
+                  className="self-start px-0"
                   onClick={() => choose("AMOUNT")}
                 >
                   {t("maintenance.close.enterAmount")}
@@ -917,6 +919,7 @@ export function CancelWorkOrderForm({
   ...host
 }: MaintenanceFormHost & { workOrder: WorkOrderRef }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
   const client = host.client ?? commandClient;
@@ -949,34 +952,30 @@ export function CancelWorkOrderForm({
   return (
     <CommandForm
       {...chrome}
-      title={t("maintenance.actions.cancelWorkOrderTitle")}
+      title={label("cancel-work-order")}
       description={t("maintenance.actions.cancelWorkOrderHint")}
       error={submission.error}
-      submitLabel={t("maintenance.actions.cancelWorkOrder")}
+      command="cancel-work-order"
+      tone="destructive"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="work-order-cancel-reason">{t("maintenance.fields.reason")}</Label>
-        <Textarea
-          id="work-order-cancel-reason"
-          maxLength={500}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-        />
-      </div>
+      <ReasonField
+        id="work-order-cancel-reason"
+        label={t("maintenance.fields.reason")}
+        value={reason}
+        onChange={setReason}
+      />
     </CommandForm>
   );
 }
 
 interface DecisionSpec {
-  command: string;
+  command: CommandName;
   text: "note" | "reason";
   successKey: string;
-  title: string;
   hint: string;
-  submit: string;
 }
 
 /**
@@ -998,6 +997,7 @@ function DecisionForm({
   context?: string | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
   const client = host.client ?? commandClient;
@@ -1024,10 +1024,12 @@ function DecisionForm({
   return (
     <CommandForm
       {...chrome}
-      title={t(spec.title)}
+      title={label(spec.command)}
       description={t(spec.hint)}
       error={submission.error}
-      submitLabel={t(spec.submit)}
+      command={spec.command}
+      // A reason is asked only of the refusals: they are the destructive ones.
+      tone={spec.text === "reason" ? "destructive" : "default"}
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -1036,15 +1038,24 @@ function DecisionForm({
         <p className="text-sm text-muted-foreground">{context}</p>
       )}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="decision-text">{t(`maintenance.fields.${spec.text}`)}</Label>
-        <Textarea
+      {spec.text === "reason" ? (
+        <ReasonField
           id="decision-text"
-          maxLength={500}
+          label={t("maintenance.fields.reason")}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={setValue}
         />
-      </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="decision-text">{t("maintenance.fields.note")}</Label>
+          <Textarea
+            id="decision-text"
+            maxLength={500}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+          />
+        </div>
+      )}
     </CommandForm>
   );
 }
@@ -1059,33 +1070,25 @@ const WORK_ORDER_DECISIONS: Record<WorkOrderDecision, DecisionSpec> = {
     command: "approve-work-order",
     text: "note",
     successKey: "workOrderApproved",
-    title: "maintenance.actions.approveTitle",
     hint: "maintenance.actions.approveHint",
-    submit: "maintenance.actions.approve",
   },
   reject: {
     command: "reject-work-order",
     text: "reason",
     successKey: "workOrderRejected",
-    title: "maintenance.actions.rejectTitle",
     hint: "maintenance.actions.rejectHint",
-    submit: "maintenance.actions.reject",
   },
   "approve-completion": {
     command: "approve-work-order-closure",
     text: "note",
     successKey: "completionApproved",
-    title: "maintenance.actions.approveCompletionTitle",
     hint: "maintenance.actions.approveCompletionHint",
-    submit: "maintenance.actions.approveCompletion",
   },
   "reject-completion": {
     command: "reject-work-order-completion",
     text: "reason",
     successKey: "completionRejected",
-    title: "maintenance.actions.rejectCompletionTitle",
     hint: "maintenance.actions.rejectCompletionHint",
-    submit: "maintenance.actions.rejectCompletion",
   },
 };
 
@@ -1094,17 +1097,13 @@ const ISSUE_DECISIONS: Record<IssueDecision, DecisionSpec> = {
     command: "resolve-issue",
     text: "note",
     successKey: "issueResolved",
-    title: "maintenance.actions.resolveIssueTitle",
     hint: "maintenance.actions.resolveIssueHint",
-    submit: "maintenance.actions.resolveIssue",
   },
   dismiss: {
     command: "dismiss-issue",
     text: "reason",
     successKey: "issueDismissed",
-    title: "maintenance.actions.dismissIssueTitle",
     hint: "maintenance.actions.dismissIssueHint",
-    submit: "maintenance.actions.dismissIssue",
   },
 };
 
@@ -1153,6 +1152,7 @@ export function ReleaseForm({
   ...host
 }: MaintenanceFormHost & { subject: ReleaseSubject }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const { commit, finish, chrome } = useMaintenanceChrome(host);
   const submission = useCommandSubmission();
   const client = host.client ?? commandClient;
@@ -1195,10 +1195,10 @@ export function ReleaseForm({
   return (
     <CommandForm
       {...chrome}
-      title={t("maintenance.actions.releaseTitle")}
+      title={label("release-asset-to-service")}
       description={t("maintenance.actions.releaseHint")}
       error={submission.error}
-      submitLabel={t("maintenance.actions.release")}
+      command="release-asset-to-service"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
