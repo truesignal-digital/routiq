@@ -135,6 +135,18 @@ describe("navigation per role (ADR-0009)", () => {
     expect(activeSection(cashier, "/finance/record")?.key).toBe("finances");
   });
 
+  it("shows Finances exactly to the roles that read entries, so it never leads to a denial (#64)", () => {
+    const withFinance = ROLES.filter((role) =>
+      visibleSections(EVERY, role).some((section) => section.key === "finances"),
+    );
+    expect(withFinance).toEqual(ROLES.filter((role) => canReadFinanceEntries(role, EVERY)));
+    expect(withFinance).toContain("CASHIER");
+    expect(withFinance).not.toContain("TECHNICIAN");
+    for (const role of ROLES) {
+      expect(visibleSections(["CORE", "ASSETS"], role).some((s) => s.key === "finances"), role).toBe(false);
+    }
+  });
+
   it("gives every role that records money a Finances entry to read it back", () => {
     for (const role of ROLES) {
       if (!canRecordFinance(role, EVERY)) continue;
