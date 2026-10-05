@@ -103,8 +103,8 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   }
 
   const share = vehicleShare(entry, asset.id);
-  const money = (minor: number) => formatMoney(minor, { currency: entry.currency, locale });
-  const revenue = entry.direction === "REVENUE";
+  const money = (minor: number) =>
+    formatMoney(minor, { currency: entry.currency, locale, sign: { context: "record" } });
   const recorder = entry.recordedBy.displayName ?? t("history.actor.unknown");
   const waiting =
     entry.status === "SUBMITTED"
@@ -121,7 +121,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
           <span className="flex items-baseline justify-between gap-3">
             <span>{localizedLabel(entry.category, locale)}</span>
             <span className="tabular-nums">
-              {formatMoney(share, { currency: entry.currency, locale, ...(revenue ? { signDisplay: "exceptZero" } : {}) })}
+              {money(share)}
             </span>
           </span>
         }

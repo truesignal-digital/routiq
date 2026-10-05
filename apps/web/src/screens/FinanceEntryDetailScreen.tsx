@@ -113,7 +113,7 @@ function FinanceEntryDetailContent() {
                       )}
                     </div>
                     <span className="font-mono font-semibold">
-                      {formatMoney(posting.amountMinor, { signDisplay: "always" })}
+                      {formatMoney(posting.amountMinor, { currency: entryQuery.data.currency })}
                     </span>
                   </div>
                 ))}

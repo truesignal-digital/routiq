@@ -182,7 +182,7 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "0");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "0");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     expect(mocks.submit).not.toHaveBeenCalled();
@@ -193,10 +193,11 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    const amount = screen.getByLabelText("Amount (XAF)");
+    const amount = screen.getByLabelText("Amount (FCFA)");
     await user.type(amount, "125000");
     await user.tab();
-    expect((amount as HTMLInputElement).value).toBe("125 000");
+    // Grouped the way English reads money, as the rest of the screen shows it.
+    expect((amount as HTMLInputElement).value).toBe("125,000");
     await user.type(screen.getByLabelText("Counterparty (optional)"), "Fuel Station");
     await user.type(screen.getByLabelText("Description (optional)"), "Diesel");
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");
@@ -239,7 +240,7 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
@@ -268,7 +269,7 @@ describe("finance record form", () => {
     renderScreen();
     await chooseFuelCategory(user);
 
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
@@ -293,7 +294,7 @@ describe("finance record form", () => {
       new File(["receipt"], "receipt.jpg", { type: "image/jpeg" }),
     );
     await waitFor(() => expect(screen.queryByRole("progressbar")).toBeNull());
-    await user.type(screen.getByLabelText("Amount (XAF)"), "125000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());

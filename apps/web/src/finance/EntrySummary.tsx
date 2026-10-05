@@ -10,6 +10,7 @@ import {
   localizedLabel,
 } from "@/lib/format.js";
 import { FileText } from "lucide-react";
+import { amountKind } from "@/finance/model.js";
 
 /**
  * The entry's field list, shared by the detail route and the entries table's
@@ -71,11 +72,13 @@ export function EntrySummary({ entryId }: { entryId: string }) {
         <dt className="text-xs font-semibold uppercase text-muted-foreground">
           {t("finance.entries.detail.amount")}
         </dt>
-        <dd className="mt-1 font-mono text-lg font-semibold">
-          {formatMoney(entry.amountMinor, {
-            currency: entry.currency,
-            signDisplay: "always",
-          })}
+        <dd className="mt-1 flex flex-wrap items-baseline gap-x-2">
+          <span className="font-mono text-lg font-semibold">
+            {formatMoney(entry.amountMinor, { currency: entry.currency, sign: { context: "record" } })}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {t("finance.entries.detail.amountKind", { kind: amountKind(entry) })}
+          </span>
         </dd>
       </div>
       <div>

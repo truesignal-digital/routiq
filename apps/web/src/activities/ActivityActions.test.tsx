@@ -21,6 +21,7 @@ import {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
+import { PageHeader } from "../components/page.js";
 import { i18n } from "../i18n/index.js";
 import { openSelect } from "../test-select.js";
 import { ActivityActions, localOffsetMinutes, toOffsetIso } from "./ActivityActions.js";
@@ -366,6 +367,59 @@ describe("role and status gating", () => {
     );
     expect(screen.getByRole("button", { name: "Close the activity" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Substitute asset" })).toBeNull();
+  });
+});
+
+describe("trip header on a phone (#395)", () => {
+  // jsdom has no layout, so this pins the classes between the header and each
+  // button; the 390 px width itself is measured in the running app by
+  // `pnpm verify drive flow:phone-overflow`, which opens an open and a closed trip.
+  function wrapBlockers(button: HTMLElement): string[] {
+    const blockers: string[] = [];
+    for (let node = button.parentElement; node !== null; node = node.parentElement) {
+      if (node.tagName === "HEADER") break;
+      const classes = node.className.split(/\s+/);
+      blockers.push(
+        ...classes.filter(
+          (c) => c === "shrink-0" || c === "flex-nowrap" || c === "whitespace-nowrap",
+        ),
+      );
+    }
+    return blockers;
+  }
+
+  it.each([
+    ["an open trip, OPS_MANAGER", openActivity, "OPS_MANAGER"],
+    ["an open trip, FIELD_SUBMITTER", openActivity, "FIELD_SUBMITTER"],
+    ["a closed trip, OPS_MANAGER", closedActivity, "OPS_MANAGER"],
+  ] as const)("stacks under the trip number and wraps every action for %s", (_, activity, role) => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MeCtx.Provider value={meWith(role)}>
+          <PageHeader
+            title={activity.activityNumber}
+            actions={
+              <>
+                <ActivityActions activity={activity} client={recordingClient(committed())} />
+                <button type="button">History</button>
+              </>
+            }
+          />
+        </MeCtx.Provider>
+      </QueryClientProvider>,
+    );
+
+    const title = screen.getByRole("heading", { level: 1, name: activity.activityNumber });
+    expect(title.parentElement?.className.split(/\s+/)).toContain("flex-col");
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.length).toBeGreaterThan(1);
+    for (const button of buttons) {
+      expect(button.parentElement?.className.split(/\s+/)).toContain("flex-wrap");
+      expect({ button: button.textContent, blockers: wrapBlockers(button) }).toEqual({
+        button: button.textContent,
+        blockers: [],
+      });
+    }
   });
 });
 

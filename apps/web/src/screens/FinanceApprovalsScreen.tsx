@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { ApproveEntryForm, RejectEntryForm } from "@/finance/EntryDecisionForms.js";
-import { isOwnSubmission } from "@/finance/model.js";
+import { amountKind, isOwnSubmission } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import {
   approvalsOutsideBranch,
@@ -156,8 +156,16 @@ export function FinanceApprovalsScreen() {
         enableSorting: true,
         meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
-          <span className="whitespace-nowrap font-mono font-semibold">
-            {formatMoney(row.original.amountMinor, { currency: row.original.currency, signDisplay: "never" })}
+          <span className="flex flex-col">
+            <span className="whitespace-nowrap font-mono font-semibold">
+              {formatMoney(row.original.amountMinor, {
+                currency: row.original.currency,
+                sign: { context: "record" },
+              })}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {t("finance.entries.detail.amountKind", { kind: amountKind(row.original) })}
+            </span>
           </span>
         ),
       },

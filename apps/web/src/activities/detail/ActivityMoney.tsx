@@ -84,7 +84,10 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                   <EntryStatusBadge status={entry.status} />
                 </span>
                 <span className="tabular-nums">
-                  {formatMoney(signedMinor(entry), { locale, signDisplay: "exceptZero" })}
+                  {formatMoney(entry.amountMinor, {
+                    locale,
+                    sign: { context: "ledger", direction: entry.direction },
+                  })}
                 </span>
               </Link>
             </li>
@@ -107,7 +110,7 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                 netToneClass(postedNet),
               )}
             >
-              {formatMoney(postedNet, { locale, signDisplay: "exceptZero" })}
+              {formatMoney(postedNet, { locale, sign: { context: "net" } })}
             </dd>
           </div>
 
@@ -117,7 +120,7 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                 {t("activities.detail.moneySummary.pending")}
               </dt>
               <dd className="text-sm tabular-nums text-muted-foreground">
-                {formatMoney(pendingNet, { locale, signDisplay: "exceptZero" })}
+                {formatMoney(pendingNet, { locale, sign: { context: "net" } })}
               </dd>
             </div>
           )}
