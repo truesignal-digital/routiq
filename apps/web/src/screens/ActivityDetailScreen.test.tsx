@@ -402,8 +402,8 @@ describe("activity detail — whose entries the money card lists (#408)", () => 
       branch: "Only the entries of your branches on this trip.",
     },
     "fr-CM": {
-      own: "Seules les écritures que vous avez saisies sur ce voyage.",
-      branch: "Seules les écritures de vos agences sur ce voyage.",
+      own: "Seules les écritures que vous avez saisies sur ce trajet.",
+      branch: "Seules les écritures de vos agences sur ce trajet.",
     },
   } as const;
 

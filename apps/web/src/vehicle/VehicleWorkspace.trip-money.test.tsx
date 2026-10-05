@@ -47,8 +47,8 @@ describe("the trip panel's money, per entries scope (#408)", () => {
       branch: "No entry from your branches on this trip yet.",
     },
     "fr-CM": {
-      own: "Vous n'avez saisi aucune écriture sur ce voyage.",
-      branch: "Aucune écriture de vos agences sur ce voyage pour l'instant.",
+      own: "Vous n'avez saisi aucune écriture sur ce trajet.",
+      branch: "Aucune écriture de vos agences sur ce trajet pour l'instant.",
     },
   } as const;
 
