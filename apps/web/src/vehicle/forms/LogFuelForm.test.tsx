@@ -79,7 +79,7 @@ function renderForm(client: CommandClient, handlers = { onDone: vi.fn(), onDismi
 }
 
 async function fill({ amount, odometer }: { amount: string; odometer?: string }) {
-  await userEvent.type(screen.getByLabelText("Amount paid (XAF)"), amount);
+  await userEvent.type(screen.getByLabelText("Amount paid (FCFA)"), amount);
   fireEvent.change(screen.getByLabelText("Date and time"), {
     target: { value: "2026-09-25T07:40" },
   });
@@ -198,7 +198,7 @@ describe("LogFuelForm", () => {
     );
     expect(screen.getByRole("alert")).toBeTruthy();
     // The expense stands: its fields are closed, and nothing was announced yet.
-    expect((screen.getByLabelText("Amount paid (XAF)") as HTMLInputElement).disabled).toBe(
+    expect((screen.getByLabelText("Amount paid (FCFA)") as HTMLInputElement).disabled).toBe(
       true,
     );
     expect(onDismiss).not.toHaveBeenCalled();

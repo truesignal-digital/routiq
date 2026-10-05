@@ -6,7 +6,7 @@ import { FilterChips } from "@/components/filter-chips";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatDayLong, formatMoney, localDayKey } from "@/lib/format.js";
+import { formatDayLong, formatMoney, localDayKey, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useVehicle, type VehicleGates } from "../context.js";
 import { describeEvent, type EventTone } from "../historyEvents.js";
@@ -124,6 +124,14 @@ export function HistoryTab() {
   );
 }
 
+/** An entry's events sit in the ledger; any other amount is a record's own. */
+function historySign(item: VehicleHistoryItem): MoneySign {
+  const direction = item.params["direction"];
+  return direction === "REVENUE" || direction === "EXPENSE"
+    ? { context: "ledger", direction }
+    : { context: "record" };
+}
+
 function EventRow({ item }: { item: VehicleHistoryItem }) {
   const { t, i18n } = useTranslation();
   const { gates, panel } = useVehicle();
@@ -148,9 +156,7 @@ function EventRow({ item }: { item: VehicleHistoryItem }) {
               {formatMoney(item.amountMinor, {
                 currency: item.currency ?? "XAF",
                 locale,
-                ...(item.amountMinor < 0 || item.params["direction"] === "REVENUE"
-                  ? { signDisplay: "exceptZero" as const }
-                  : {}),
+                sign: historySign(item),
               })}
             </span>
           )}

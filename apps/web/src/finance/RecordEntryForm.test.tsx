@@ -167,7 +167,7 @@ describe("RecordEntryForm opened from a vehicle", () => {
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Branch").textContent).toContain("Douala");
 
-    await userEvent.type(within(panel).getByLabelText("Amount (XAF)"), "85000");
+    await userEvent.type(within(panel).getByLabelText("Amount (FCFA)"), "85000");
     const submit = within(panel).getByRole("button", { name: "Record the expense" });
     expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
       .toEqual(["Cancel", "Record the expense"]);
@@ -208,7 +208,7 @@ describe("RecordEntryForm opened from a vehicle", () => {
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Amount (XAF)"), "20000");
+    await userEvent.type(screen.getByLabelText("Amount (FCFA)"), "20000");
     await userEvent.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
@@ -388,7 +388,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
   it("opens pre-filled with what the author recorded", () => {
     const panel = openEdit(recordingClient(submitted));
 
-    expect((within(panel).getByLabelText("Amount (XAF)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
+    expect((within(panel).getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
     expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
@@ -413,7 +413,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     const onRecorded = vi.fn();
     const panel = openEdit(client, onRecorded);
 
-    const amount = within(panel).getByLabelText("Amount (XAF)");
+    const amount = within(panel).getByLabelText("Amount (FCFA)");
     await userEvent.clear(amount);
     await userEvent.type(amount, "54000");
     await userEvent.click(within(panel).getByRole("button", { name: "Save changes" }));

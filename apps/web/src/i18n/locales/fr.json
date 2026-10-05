@@ -271,7 +271,7 @@
       },
       "chassisNumber": "Numéro de châssis",
       "acquisitionDate": "Date d'acquisition",
-      "acquisitionAmount": "Montant d'acquisition (XAF)"
+      "acquisitionAmount": "Montant d'acquisition (FCFA)"
     },
     "actions": {
       "assignTo": "Affecter à l'agence",
@@ -411,7 +411,7 @@
       "categoryLabel": "Catégorie",
       "chooseCategory": "Choisir une catégorie…",
       "categoriesFailed": "Impossible de charger les catégories. Actualisez cette page.",
-      "amountLabel": "Montant (XAF)",
+      "amountLabel": "Montant (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Moyen de paiement",
       "paymentMethods": {
@@ -458,6 +458,7 @@
         "status": "Statut",
         "category": "Catégorie",
         "amount": "Montant",
+        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Extourne de recette} EXPENSE_REVERSAL {Extourne de dépense} other {Dépense}}",
         "date": "Date comptable",
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
@@ -944,7 +945,7 @@
         "expense": "Dépense",
         "categoryLabel": "Catégorie",
         "chooseCategory": "Choisir une catégorie",
-        "amountLabel": "Montant (XAF)",
+        "amountLabel": "Montant (FCFA)",
         "amountPlaceholder": "Ex. 125 000",
         "amountRequired": "Indiquez un montant supérieur à zéro.",
         "paymentMethodLabel": "Mode de paiement",
@@ -1867,7 +1868,7 @@
       "lastReading": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}",
       "fuel": {
         "description": "Enregistre la dépense de carburant, puis le compteur si vous le saisissez.",
-        "amount": "Montant payé (XAF)",
+        "amount": "Montant payé (FCFA)",
         "when": "Date et heure",
         "station": "Station (facultatif)",
         "odometer": "Compteur en km (facultatif)",

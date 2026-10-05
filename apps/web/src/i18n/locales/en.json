@@ -271,7 +271,7 @@
       },
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
-      "acquisitionAmount": "Acquisition amount (XAF)"
+      "acquisitionAmount": "Acquisition amount (FCFA)"
     },
     "actions": {
       "assignTo": "Assign to branch",
@@ -411,7 +411,7 @@
       "categoryLabel": "Category",
       "chooseCategory": "Choose a category…",
       "categoriesFailed": "We couldn't load categories. Retry this page.",
-      "amountLabel": "Amount (XAF)",
+      "amountLabel": "Amount (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Payment method",
       "paymentMethods": {
@@ -458,6 +458,7 @@
         "status": "Status",
         "category": "Category",
         "amount": "Amount",
+        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue reversal} EXPENSE_REVERSAL {Expense reversal} other {Expense}}",
         "date": "Economic date",
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
@@ -944,7 +945,7 @@
         "expense": "Expense",
         "categoryLabel": "Category",
         "chooseCategory": "Choose a category",
-        "amountLabel": "Amount (XAF)",
+        "amountLabel": "Amount (FCFA)",
         "amountPlaceholder": "e.g. 125 000",
         "amountRequired": "Enter an amount above zero.",
         "paymentMethodLabel": "Payment method",
@@ -1867,7 +1868,7 @@
       "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
       "fuel": {
         "description": "Records the fuel expense, then the odometer if you enter it.",
-        "amount": "Amount paid (XAF)",
+        "amount": "Amount paid (FCFA)",
         "when": "Date and time",
         "station": "Station (optional)",
         "odometer": "Odometer in km (optional)",
