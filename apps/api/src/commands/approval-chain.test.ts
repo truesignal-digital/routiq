@@ -12,8 +12,8 @@ import { currentPeriodCode } from "./periods.js";
 /**
  * The default approval chain (ADR-0009), per role, on a workspace provisioned
  * with the catalog defaults: work orders go to the Administrateur of the
- * branch, money entries to Finance up to the top recording band, anything
- * above it to Direction, and Direction may decide anything.
+ * branch, money entries to Finance up to 1 000 000 XAF, anything above it to
+ * Direction, and Direction may decide anything (owner decision 2026-10-05).
  */
 describe("default approval chain", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -26,7 +26,9 @@ describe("default approval chain", () => {
   >;
 
   /** The recording band every maker role ships with (provisioning/packs/core.ts). */
-  const TOP_BAND = 100_000;
+  const RECORDING_BAND = 100_000;
+  /** Finance's decision band: above it, Direction decides. */
+  const FINANCE_BAND = 1_000_000;
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -130,12 +132,13 @@ describe("default approval chain", () => {
 
   describe("money entries", () => {
     let belowBandEntryIds: string[];
+    let financeBandEntryIds: string[];
     let aboveBandEntryIds: string[];
 
     beforeAll(async () => {
-      // This workspace reviews every driver expense, whatever the amount: the
-      // driver's band is tenant data, and the other roles' bands stay at 100 000.
-      await db
+      // A tenant may hold every driver expense for review: the driver's band is
+      // tenant data. The other roles keep the recording band.
+      const driverRules = await db
         .delete(approvalRules)
         .where(
           and(
@@ -143,9 +146,12 @@ describe("default approval chain", () => {
             eq(approvalRules.commandType, "record-expense"),
             eq(approvalRules.requiredRole, "DRIVER"),
           ),
-        );
-      belowBandEntryIds = await Promise.all([1, 2, 3, 4].map(() => pendingExpense(60_000)));
-      aboveBandEntryIds = await Promise.all([1, 2, 3, 4].map(() => pendingExpense(TOP_BAND + 50_000)));
+        )
+        .returning();
+      belowBandEntryIds = await Promise.all([1, 2].map(() => pendingExpense(60_000)));
+      await db.insert(approvalRules).values(driverRules);
+      financeBandEntryIds = await Promise.all([1, 2, 3, 4].map(() => pendingExpense(450_000)));
+      aboveBandEntryIds = await Promise.all([1, 2, 3, 4].map(() => pendingExpense(FINANCE_BAND + 500_000)));
     });
 
     it("tells each decider, on the queue and the entry, which entries Direction decides", async () => {
@@ -159,7 +165,7 @@ describe("default approval chain", () => {
           entries: Array<{ id: string; directionDecides: boolean }>;
         };
         const flag = (id: string) => queue.entries.find((entry) => entry.id === id)?.directionDecides;
-        expect(belowBandEntryIds.map(flag)).toEqual([false, false, false, false]);
+        expect([...belowBandEntryIds, ...financeBandEntryIds].map(flag)).toEqual([false, false, false, false, false, false]);
         expect(aboveBandEntryIds.map(flag)).toEqual([aboveBand, aboveBand, aboveBand, aboveBand]);
 
         const detail = await read(token, `/v1/finance/entries/${aboveBandEntryIds[0]}`);
@@ -167,18 +173,20 @@ describe("default approval chain", () => {
       }
     });
 
-    it("lets FINANCE approve and reject up to the top band", async () => {
-      expect(await decideEntry(tokens.finance, "approve-entry", belowBandEntryIds[0]!)).toEqual({
+    it("lets FINANCE approve and reject above the recording band, up to its own", async () => {
+      expect(RECORDING_BAND).toBeLessThan(450_000);
+      expect(await decideEntry(tokens.finance, "approve-entry", financeBandEntryIds[0]!)).toEqual({
         status: 200,
         code: undefined,
       });
-      expect(await decideEntry(tokens.finance, "reject-entry", belowBandEntryIds[1]!)).toEqual({
+      expect(await decideEntry(tokens.finance, "reject-entry", financeBandEntryIds[1]!)).toEqual({
         status: 200,
         code: undefined,
       });
+      expect((await decideEntry(tokens.finance, "approve-entry", belowBandEntryIds[0]!)).status).toBe(200);
     });
 
-    it("sends an entry above the top band to Direction: FINANCE is refused", async () => {
+    it("sends an entry above Finance's band to Direction: FINANCE is refused", async () => {
       for (const name of ["approve-entry", "reject-entry"] as const) {
         expect(await decideEntry(tokens.finance, name, aboveBandEntryIds[0]!)).toEqual({
           status: 403,
@@ -190,12 +198,12 @@ describe("default approval chain", () => {
     it("lets DIRECTOR decide at any amount", async () => {
       expect((await decideEntry(tokens.director, "approve-entry", aboveBandEntryIds[0]!)).status).toBe(200);
       expect((await decideEntry(tokens.director, "reject-entry", aboveBandEntryIds[1]!)).status).toBe(200);
-      expect((await decideEntry(tokens.director, "approve-entry", belowBandEntryIds[2]!)).status).toBe(200);
+      expect((await decideEntry(tokens.director, "approve-entry", financeBandEntryIds[2]!)).status).toBe(200);
     });
 
     it("refuses every other role at any amount", async () => {
       for (const token of [tokens.adminDla, tokens.cashier, tokens.technician, tokens.driver]) {
-        for (const entryId of [belowBandEntryIds[3]!, aboveBandEntryIds[2]!]) {
+        for (const entryId of [belowBandEntryIds[1]!, financeBandEntryIds[3]!, aboveBandEntryIds[2]!]) {
           expect(await decideEntry(token, "approve-entry", entryId)).toEqual({
             status: 403,
             code: "ROLE_FORBIDDEN",
@@ -204,24 +212,42 @@ describe("default approval chain", () => {
       }
     });
 
-    it("moves Finance's band with the recording bands Direction sets", async () => {
-      for (const commandType of ["record-expense", "record-revenue"]) {
-        expect(
-          (
-            await post(tokens.director, "update-approval-threshold", {
-              commandType,
-              amountMaxMinor: TOP_BAND * 2,
-            })
-          ).statusCode,
-        ).toBe(200);
-      }
-      expect(await decideEntry(tokens.finance, "approve-entry", aboveBandEntryIds[3]!)).toEqual({
+    it("lets Direction move Finance's band, for approving and rejecting alike", async () => {
+      expect(
+        (
+          await post(tokens.director, "update-approval-threshold", {
+            commandType: "approve-entry",
+            amountMaxMinor: FINANCE_BAND * 2,
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect(await decideEntry(tokens.finance, "reject-entry", aboveBandEntryIds[3]!)).toEqual({
         status: 200,
         code: undefined,
       });
       expect(
-        await decideEntry(tokens.finance, "approve-entry", await pendingExpense(TOP_BAND * 2 + 1)),
+        await decideEntry(tokens.finance, "approve-entry", await pendingExpense(FINANCE_BAND * 2 + 1)),
       ).toEqual({ status: 403, code: "APPROVAL_REQUIRED" });
+      // Recording bands no longer move it.
+      expect(
+        (
+          await post(tokens.director, "update-approval-threshold", {
+            commandType: "record-expense",
+            amountMaxMinor: 50_000,
+          })
+        ).statusCode,
+      ).toBe(200);
+      const [band] = await db
+        .select({ max: approvalRules.amountMaxMinor })
+        .from(approvalRules)
+        .where(
+          and(
+            eq(approvalRules.workspaceId, workspaceId),
+            eq(approvalRules.commandType, "reject-entry"),
+            eq(approvalRules.requiredRole, "FINANCE"),
+          ),
+        );
+      expect(band?.max).toBe(BigInt(FINANCE_BAND * 2));
     });
   });
 

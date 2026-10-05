@@ -19,7 +19,8 @@ type RuleRow = {
 
 /**
  * 0037 on workspaces as 0036 left them: Finance and Direction unbounded on the
- * entry decisions, beside recording bands the tenant may have moved. Migrated to
+ * entry decisions. Finance gets its 1 000 000 XAF band whatever the recording
+ * bands are. Migrated to
  * 0036 from a truncated journal, seeded, then brought forward by the real
  * migrator. Its own database inside the suite's container (guard T1).
  */
@@ -154,41 +155,22 @@ describe("0037 entry decision chain", () => {
     if (truncatedFolder) await rm(truncatedFolder, { recursive: true, force: true });
   });
 
-  it("bands Finance at the default top band and gives Direction the band and the rest", async () => {
-    for (const ws of [defaultWs, provisionedWs]) expect(await entryDecisionRules(ws)).toEqual(
-      [
-        "approve-entry:DIRECTOR:*",
-        "approve-entry:DIRECTOR:100000",
-        "approve-entry:FINANCE:100000",
-        "reject-entry:DIRECTOR:*",
-        "reject-entry:DIRECTOR:100000",
-        "reject-entry:FINANCE:100000",
-      ].sort(),
-    );
+  const banded = [
+    "approve-entry:DIRECTOR:*",
+    "approve-entry:DIRECTOR:1000000",
+    "approve-entry:FINANCE:1000000",
+    "reject-entry:DIRECTOR:*",
+    "reject-entry:DIRECTOR:1000000",
+    "reject-entry:FINANCE:1000000",
+  ].sort();
+
+  it("bands Finance at 1 000 000 and gives Direction the band and the rest", async () => {
+    for (const ws of [defaultWs, provisionedWs]) expect(await entryDecisionRules(ws)).toEqual(banded);
   });
 
-  it("follows the highest workspace-wide band the tenant set", async () => {
-    expect(await entryDecisionRules(movedWs)).toEqual(
-      [
-        "approve-entry:DIRECTOR:*",
-        "approve-entry:DIRECTOR:250000",
-        "approve-entry:FINANCE:250000",
-        "reject-entry:DIRECTOR:*",
-        "reject-entry:DIRECTOR:250000",
-        "reject-entry:FINANCE:250000",
-      ].sort(),
-    );
-  });
-
-  it("keeps Finance unbounded where no recording band is set", async () => {
-    expect(await entryDecisionRules(unbandedWs)).toEqual(
-      [
-        "approve-entry:DIRECTOR:*",
-        "approve-entry:FINANCE:*",
-        "reject-entry:DIRECTOR:*",
-        "reject-entry:FINANCE:*",
-      ].sort(),
-    );
+  it("does not depend on the recording bands the tenant set, or on there being any", async () => {
+    expect(await entryDecisionRules(movedWs)).toEqual(banded);
+    expect(await entryDecisionRules(unbandedWs)).toEqual(banded);
   });
 
   it("leaves a rule a tenant command created untouched", async () => {

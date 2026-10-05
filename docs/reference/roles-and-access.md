@@ -38,9 +38,11 @@ person held before.
 - **✓** does it in their branches. Direction's ✓ covers all branches.
 - **S** submits it, and it may go to review under the approval bands.
 - **A** approves or rejects. The default chain: work orders → Administrateur,
-  money → Finance, above the top band → Direction. The top band is the highest
-  workspace-wide recording band (record an expense or revenue, 100 000 XAF by
-  default); changing a recording band moves Finance's band with it.
+  money → Finance up to 1 000 000 XAF, above that → Direction (owner,
+  2026-10-05). Entries up to the recording band (100 000 XAF) post without
+  review; Finance decides the ones above it up to 1 000 000 XAF; Direction
+  decides above 1 000 000 XAF and may decide anything. Both bands are tenant
+  data: Direction moves them in the approval settings.
 - **V** view only. **Own** only their own records. **—** no access.
 - **Planned** rows are not built yet. The roles are fixed now so training does
   not change when they ship.

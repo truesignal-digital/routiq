@@ -1,10 +1,8 @@
--- The default approval chain for money entries (ADR-0009): Finance decides an
--- entry up to the top recording band, Direction at any amount. 0036 left both
--- roles unbounded on approve-entry and reject-entry; this bands Finance.
---
--- The top recording band is the workspace's highest workspace-wide bound on
--- record-expense or record-revenue (100 000 XAF unless the tenant moved it). A
--- workspace with no such bound keeps Finance unbounded.
+-- The default approval chain for money entries (ADR-0009, owner decision
+-- 2026-10-05): Finance decides a pending entry up to 1 000 000 XAF, Direction
+-- above it and at any amount. 0036 left both roles unbounded on approve-entry
+-- and reject-entry; this gives Finance its band. Direction moves it later with
+-- update-approval-threshold.
 --
 -- Only Finance's catalog default changes: the unfiltered, unbounded rule that
 -- either no command created (seeded before provisioning was a command) or
@@ -19,22 +17,10 @@
 -- Work-order decisions and the cross-branch transfer already follow the chain
 -- after 0036 (Administrateur and Direction; Finance and Direction).
 
-WITH top_band AS (
-  SELECT workspace_id, max(amount_max_minor) AS band
-  FROM approval_rules
-  WHERE command_type IN ('record-expense', 'record-revenue')
-    AND category_code IS NULL
-    AND branch_id IS NULL
-    AND amount_min_minor IS NULL
-    AND amount_max_minor IS NOT NULL
-  GROUP BY workspace_id
-)
 UPDATE approval_rules r
-SET amount_max_minor = t.band,
+SET amount_max_minor = 1000000,
   row_version = r.row_version + 1
-FROM top_band t
-WHERE r.workspace_id = t.workspace_id
-  AND r.command_type IN ('approve-entry', 'reject-entry')
+WHERE r.command_type IN ('approve-entry', 'reject-entry')
   AND r.required_role = 'FINANCE'
   AND (
     r.created_by_command_id IS NULL

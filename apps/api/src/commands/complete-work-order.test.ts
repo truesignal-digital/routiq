@@ -32,7 +32,6 @@ describe("complete-work-order.v2", () => {
   let boris: Actor;
   let mechanic: Actor;
   let approver: Actor;
-  let director: Actor;
   let driver: Actor;
   let truck: string;
 
@@ -47,7 +46,6 @@ describe("complete-work-order.v2", () => {
     boris = await seedActor(db, { workspaceId, role: "TECHNICIAN" });
     mechanic = await seedActor(db, { workspaceId, role: "TECHNICIAN" });
     approver = await seedActor(db, { workspaceId, role: "FINANCE" });
-    director = await seedActor(db, { workspaceId, role: "DIRECTOR" });
     driver = await seedActor(db, { workspaceId, role: "DRIVER" });
     truck = await seedAsset(ctx.app, admin.token);
   });
@@ -462,8 +460,7 @@ describe("complete-work-order.v2", () => {
       expect(read.actualCostMinor).toBe(190_000);
       expect(read.pendingCostLines.map((costLine) => costLine.entryId)).toEqual([large.entryId]);
 
-      // Above the recording band, so Direction decides it.
-      await api.ok(director.token, "reject-entry", { entryId: large.entryId, reason: "Devis" }, {
+      await api.ok(approver.token, "reject-entry", { entryId: large.entryId, reason: "Devis" }, {
         expectedVersion: 1,
       });
       expect((await detail(boris.token, workOrderId)).actualCostMinor).toBe(40_000);

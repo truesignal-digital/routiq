@@ -77,7 +77,7 @@ async function entryMaker(
 
 /**
  * The default chain (ADR-0009) bands the decision by the entry's size: Finance
- * decides up to the top recording band, Direction above it. Branch is the
+ * decides up to its band (1 000 000 XAF by default), Direction above it. Branch is the
  * entry's own, so a tenant may also route one branch's entries.
  */
 async function entryApprovalContext(

@@ -41,15 +41,14 @@ describe("entry decisions", () => {
       role: "DRIVER",
       allBranches: true,
     });
-    // The entries here are above the recording band, which Direction decides.
     const approverA = await seedMember(db, {
       workspaceId,
-      role: "DIRECTOR",
+      role: "FINANCE",
       allBranches: true,
     });
     const approverB = await seedMember(db, {
       workspaceId,
-      role: "DIRECTOR",
+      role: "FINANCE",
       allBranches: true,
     });
     const admin = await seedMember(db, {

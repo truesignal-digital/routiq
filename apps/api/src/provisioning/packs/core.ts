@@ -6,6 +6,9 @@ type ApprovalRuleDefault = Omit<typeof approvalRules.$inferInsert, "workspaceId"
 /** The amount up to which a maker role's money record posts without review. */
 const RECORDING_BAND = 100_000n;
 
+/** The amount up to which Finance decides a pending entry; above it, Direction (owner, 2026-10-05). */
+const ENTRY_DECISION_BAND = 1_000_000n;
+
 /** Rules with no filter: each role runs the command at any amount, in any branch. */
 function wildcard(commandTypes: readonly string[], roles: readonly Role[]): ApprovalRuleDefault[] {
   return commandTypes.flatMap((commandType) =>
@@ -40,8 +43,8 @@ function banded(
  * shape, since Direction may approve anything; CASHIER on the money it records,
  * inside the same band as a driver; FINANCE on documents. The decisions follow
  * the ADR-0009 chain (migration 0037): work orders go to the branch's
- * Administrateur, entries to Finance up to the top recording band, and
- * anything above it to Direction.
+ * Administrateur, entries to Finance up to 1 000 000 XAF, and anything above
+ * it to Direction.
  */
 function defaultApprovalRules(): ApprovalRuleDefault[] {
   const DIRECTOR_ADMIN = ["DIRECTOR", "ADMIN"] as const;
@@ -102,11 +105,11 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
     ...banded(["record-revenue"], ["ADMIN", "FINANCE", "DIRECTOR", "CASHIER"], RECORDING_BAND),
     ...wildcard(["record-expense", "record-revenue"], ["FINANCE", "ADMIN", "DIRECTOR"]),
 
-    // Finance decides an entry up to the top recording band, Direction at any
-    // amount. DIRECTOR holds the band too: wherever the band matches it is the
-    // more specific rule, and only the roles on it decide.
-    // update-approval-threshold moves this band with the recording bands.
-    ...banded(["approve-entry", "reject-entry"], ["FINANCE", "DIRECTOR"], RECORDING_BAND),
+    // Finance decides an entry up to its own band, Direction at any amount.
+    // DIRECTOR holds the band too: wherever the band matches it is the more
+    // specific rule, and only the roles on it decide. Direction moves it with
+    // update-approval-threshold ("approve-entry" moves both decisions).
+    ...banded(["approve-entry", "reject-entry"], ["FINANCE", "DIRECTOR"], ENTRY_DECISION_BAND),
     ...wildcard(["approve-entry", "reject-entry"], ["DIRECTOR"]),
     ...wildcard(["reverse-entry", "lock-period"], ["FINANCE", "DIRECTOR"]),
     ...wildcard(["reopen-period"], ["DIRECTOR"]),

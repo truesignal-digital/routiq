@@ -153,8 +153,8 @@ export const financialEntryDetail = financialEntryListItem.extend({
   evidenceFiles: z.array(entryEvidenceFile),
   /**
    * For the viewer: the approval chain keeps their role from deciding this
-   * pending entry, so Direction decides it (ADR-0009: Finance up to the top
-   * recording band). False when the entry is not pending, when the viewer may
+   * pending entry, so Direction decides it (ADR-0009: Finance up to its band,
+   * 1 000 000 XAF by default). False when the entry is not pending, when the viewer may
    * decide it, and for roles outside the entry chain.
    */
   directionDecides: z.boolean().default(false),
@@ -173,8 +173,8 @@ export const pendingApprovalItem = financialEntryListItem.extend({
   submittedAt: z.iso.datetime(),
   /**
    * For the viewer: the approval chain keeps their role from deciding this
-   * pending entry, so Direction decides it (ADR-0009: Finance up to the top
-   * recording band). False when the entry is not pending, when the viewer may
+   * pending entry, so Direction decides it (ADR-0009: Finance up to its band,
+   * 1 000 000 XAF by default). False when the entry is not pending, when the viewer may
    * decide it, and for roles outside the entry chain.
    */
   directionDecides: z.boolean().default(false),

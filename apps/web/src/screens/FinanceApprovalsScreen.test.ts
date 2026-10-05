@@ -249,7 +249,7 @@ describe("finance approval command routing", () => {
   });
 
   it("withholds decisions on an entry above the approver's band and says the Director decides", () => {
-    // ADR-0009: Finance decides up to the top recording band; the read flags the rest.
+    // ADR-0009: Finance decides up to its band; the read flags the rest.
     const above = [
       { ...approvalEntries[0]!, directionDecides: true },
       approvalEntries[1]!,
