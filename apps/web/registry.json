@@ -914,6 +914,19 @@
       ]
     },
     {
+      "name": "filter-chips",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/filter-chips.tsx",
+          "type": "registry:file",
+          "target": "components/filter-chips.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
       "name": "record-history-sheet",
       "type": "registry:component",
       "files": [

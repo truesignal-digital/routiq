@@ -60,7 +60,7 @@ export function PanelMissing({ onRetry }: { onRetry?: (() => void) | undefined }
       <SheetTitle>{t("vehicle.panel.notFound")}</SheetTitle>
       <SheetDescription>{t("vehicle.panel.notFoundHint")}</SheetDescription>
       {onRetry && (
-        <Button variant="outline" className="h-9" onClick={onRetry}>
+        <Button variant="outline" className="desktop:h-9" onClick={onRetry}>
           {t("vehicle.panel.retry")}
         </Button>
       )}
@@ -107,7 +107,7 @@ export function PanelFooter({
       )}
       {lock !== undefined && (
         <div className="flex items-center gap-3">
-          <Button variant="outline" disabled className="h-9 shrink-0">
+          <Button variant="outline" disabled className="shrink-0 desktop:h-9">
             <Lock aria-hidden />
             {stepLabel(lock.step)}
           </Button>
@@ -123,7 +123,7 @@ export function PanelFooter({
                 key={step.key}
                 variant={step.key === solidKey ? "default" : "outline"}
                 className={cn(
-                  "h-10 sm:h-9",
+                  "desktop:h-9",
                   index === 0 && ordered.length > 2 ? "basis-full sm:basis-auto" : "flex-1 sm:flex-none",
                 )}
                 onClick={() => onStep(step)}
@@ -243,7 +243,7 @@ export function RecordFileRow({
           {error !== undefined && <p className="text-xs text-destructive">{errorMessage(i18n, error)}</p>}
         </div>
       </div>
-      <Button variant="ghost" size="icon-sm" aria-label={t("vehicle.panel.openFile")} onClick={() => void open()}>
+      <Button variant="ghost" size="desktop-icon-sm" aria-label={t("vehicle.panel.openFile")} onClick={() => void open()}>
         <Download aria-hidden />
       </Button>
     </li>

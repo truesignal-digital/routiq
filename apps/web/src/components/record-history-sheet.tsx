@@ -210,7 +210,7 @@ export function RecordHistorySheet({
       }}
     >
       <SheetTrigger
-        render={<Button variant="outline" className={cn("min-h-9", className)} />}
+        render={<Button variant="outline" className={className} />}
       >
         <History className="size-4" aria-hidden />
         {t("history.action")}
@@ -240,7 +240,7 @@ export function RecordHistorySheet({
               <div className="flex justify-end">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="desktop-sm"
                   aria-pressed={showAll}
                   onClick={() => setShowAll((value) => !value)}
                   className="aria-pressed:bg-muted aria-pressed:text-foreground"
@@ -281,7 +281,7 @@ export function RecordHistorySheet({
           {historyQuery.hasNextPage === true && (
             <Button
               variant="outline"
-              className="min-h-11 w-full"
+              className="w-full"
               disabled={historyQuery.isFetchingNextPage}
               onClick={() => void historyQuery.fetchNextPage()}
             >
@@ -386,7 +386,7 @@ function HistoryRow({
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((value) => !value)}
-        className="mt-1.5 -ml-1 flex min-h-8 items-center gap-1 rounded-md px-1 text-xs text-muted-foreground hover:text-foreground"
+        className="mt-1.5 -ml-1 flex min-h-11 items-center gap-1 rounded-md px-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ChevronDown
           className={cn("size-3.5 transition-transform", expanded && "rotate-180")}

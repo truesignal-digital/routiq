@@ -83,7 +83,7 @@ function DatePicker({
             aria-describedby={aria["aria-describedby"]}
             aria-invalid={aria["aria-invalid"]}
             className={cn(
-              "min-h-11 w-full justify-between px-3 font-normal aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
+              "w-full justify-between px-3 font-normal aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
               selected === undefined && "text-muted-foreground",
               className,
             )}
@@ -113,7 +113,7 @@ function DatePicker({
             <Button
               type="button"
               variant="ghost"
-              className="min-h-11 w-full"
+              className="w-full"
               onClick={() => {
                 onChange("")
                 setOpen(false)

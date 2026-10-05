@@ -25,7 +25,7 @@ export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
   if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
   const Icon = actionDef(actionKey).icon;
   return (
-    <Button className="h-10 self-start sm:h-9 sm:self-auto" onClick={() => runAction(actionKey)}>
+    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
       <Icon aria-hidden />
       {t(`vehicle.actions.${actionKey}.label`)}
     </Button>

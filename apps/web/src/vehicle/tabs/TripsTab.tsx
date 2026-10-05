@@ -130,7 +130,7 @@ function TripsSection() {
           {query.hasNextPage && (
             <Button
               variant="outline"
-              className="mt-3 h-9"
+              className="mt-3 desktop:h-9"
               disabled={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
             >

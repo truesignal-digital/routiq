@@ -51,7 +51,7 @@ export function EmptyState({ icon, message, action, className }: EmptyStateProps
       <div className="text-muted-foreground">{icon}</div>
       <div className="mt-4 max-w-md text-sm text-muted-foreground">{message}</div>
       {action && (
-        <Button type="button" variant="outline" className="mt-5 min-h-11" onClick={action.onClick}>
+        <Button type="button" variant="outline" className="mt-5" onClick={action.onClick}>
           {action.label}
         </Button>
       )}
@@ -77,7 +77,7 @@ export function ErrorState({ message, retryLabel, onRetry, className }: ErrorSta
     >
       <CircleAlert className="size-7 text-destructive" aria-hidden />
       <div className="mt-4 max-w-md text-sm text-destructive">{message}</div>
-      <Button type="button" variant="outline" className="mt-5 min-h-11" onClick={onRetry}>
+      <Button type="button" variant="outline" className="mt-5" onClick={onRetry}>
         {retryLabel}
       </Button>
     </div>

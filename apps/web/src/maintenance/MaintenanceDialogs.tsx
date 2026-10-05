@@ -649,7 +649,7 @@ export function CompleteWorkOrderForm({
       variant="outline"
       aria-pressed={effectiveChoice === value}
       className={cn(
-        "min-h-11 justify-start whitespace-normal text-left",
+        "justify-start whitespace-normal text-left",
         effectiveChoice === value && "border-foreground bg-muted",
       )}
       onClick={() => choose(value)}
@@ -681,7 +681,7 @@ export function CompleteWorkOrderForm({
                       onValueChange={(value) => categoryField.onChange(value ?? "")}
                     >
                       <FormControl>
-                        <SelectTrigger className="min-h-11 w-full">
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder={t("maintenance.fields.choose")} />
                         </SelectTrigger>
                       </FormControl>
@@ -749,7 +749,6 @@ export function CompleteWorkOrderForm({
                     <FormLabel>{t("maintenance.close.lineNote")}</FormLabel>
                     <FormControl>
                       <Input
-                        className="min-h-11"
                         maxLength={500}
                         placeholder={t("maintenance.close.lineNotePlaceholder")}
                         {...noteField}
@@ -775,7 +774,7 @@ export function CompleteWorkOrderForm({
               <Button
                 type="button"
                 variant="ghost"
-                className="min-h-11 self-start"
+                className="self-start"
                 onClick={() => {
                   setUploading((current) => ({ ...current, [field.entryId]: false }));
                   lines.remove(index);
@@ -790,7 +789,7 @@ export function CompleteWorkOrderForm({
       <Button
         type="button"
         variant="ghost"
-        className="min-h-11 self-start"
+        className="self-start"
         onClick={() => lines.append(newCostLine(askCategory ? "" : REPAIR_CATEGORY_CODE))}
       >
         <Plus aria-hidden />
@@ -861,7 +860,7 @@ export function CompleteWorkOrderForm({
                 <Button
                   type="button"
                   variant="link"
-                  className="min-h-11 self-start px-0"
+                  className="self-start px-0"
                   onClick={() => choose("AMOUNT")}
                 >
                   {t("maintenance.close.enterAmount")}

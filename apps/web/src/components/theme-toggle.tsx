@@ -42,7 +42,6 @@ export function ThemeToggle({ className }: { className?: string }) {
             key={option.mode}
             type="button"
             variant={selected ? "default" : "outline"}
-            className="min-h-11"
             aria-pressed={selected}
             onClick={() => setMode(option.mode)}
           >
@@ -70,7 +69,7 @@ export function ThemeToggleMenu({ className }: { className?: string }) {
             variant="ghost"
             size="icon"
             aria-label={t("more.theme.label")}
-            className={cn("size-11 md:size-8", className)}
+            className={cn("md:size-8", className)}
           />
         }
       >

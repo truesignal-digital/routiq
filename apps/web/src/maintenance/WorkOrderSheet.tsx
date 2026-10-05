@@ -185,7 +185,6 @@ function SheetActions({
         key={key}
         type="button"
         variant={variant}
-        className="min-h-9"
         onClick={() => onAction(dialog)}
       >
         {label}

@@ -157,6 +157,14 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H13",
+    bad: [file("apps/web/src/screens/X.tsx", '<Button variant="outline" className="h-9">')],
+    good: [
+      file("apps/web/src/screens/X.tsx", '<Button variant="outline" className="desktop:h-9">'),
+      file("apps/web/src/components/ui/button.tsx", '<ButtonPrimitive className="h-8" />'),
+    ],
+  },
+  {
     id: "H12",
     bad: [file("apps/api/src/reads/x.ts", "const day = now.toISOString().slice(0, 10);")],
     good: [file("apps/api/src/reads/business-date.ts", "return shifted.toISOString().slice(0, 10);")],
@@ -230,6 +238,41 @@ describe.each(CASES)("rule $id", ({ id, bad, good }) => {
 
   it("allows the paved path", () => {
     expect(rule(id).check(good)).toEqual([]);
+  });
+});
+
+describe("H13 touch targets", () => {
+  const h13 = rule("H13");
+  const at = (content: string) => h13.check([file("apps/web/src/screens/X.tsx", content)]).length;
+
+  it.each([
+    '<Button size="sm">',
+    '<Button variant="ghost" size="icon-sm" aria-label={label} />',
+    '<SelectTrigger size="sm" className="w-20">',
+    '<Input className="h-9 w-full" />',
+    '<Button\n  variant="outline"\n  className="h-8"\n  onClick={() => open()}\n>',
+    '<button type="button" className="min-h-9 rounded-full border">',
+    '<button\n  className={cn(\n    "inline-flex h-8 items-center",\n    active && "bg-muted",\n  )}\n>',
+    '<summary className="min-h-9 cursor-pointer">',
+    '<a href="/x" className="flex size-8 items-center">',
+    '<Button className="h-10 sm:h-9">',
+  ])("catches %s", (snippet) => {
+    expect(at(snippet)).toBe(1);
+  });
+
+  it.each([
+    "<Button>",
+    '<Button size="desktop-sm">',
+    '<Button className="desktop:h-9" onClick={() => go()}>',
+    '<Input className="pl-8 desktop:h-9" />',
+    '<Skeleton className="h-8 w-full" />',
+    '<Card size="sm">',
+    '<SidebarMenuButton size="lg">',
+    '<span className="grid size-8 place-items-center">',
+    '<Button className="md:h-9">',
+    '<Button onClick={() => setOpen(true)}>Open</Button>\n<div className="h-8" />',
+  ])("allows %s", (snippet) => {
+    expect(at(snippet)).toBe(0);
   });
 });
 

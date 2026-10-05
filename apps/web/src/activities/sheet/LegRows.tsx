@@ -58,7 +58,7 @@ const LegRow = memo(function LegRow({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-9 text-muted-foreground"
+          className="text-muted-foreground"
           aria-label={t("activities.record.legs.remove", { position })}
           onClick={() => onRemove(index)}
         >
@@ -161,7 +161,6 @@ const LegRow = memo(function LegRow({
                 <Input
                   type="text"
                   inputMode="numeric"
-                  className="min-h-11"
                   placeholder={t("activities.record.legs.distancePlaceholder")}
                   aria-label={t("activities.record.legs.rowDistance", { position })}
                   {...field}
@@ -185,7 +184,6 @@ const LegRow = memo(function LegRow({
                   <Input
                     type="text"
                     inputMode="numeric"
-                    className="min-h-11"
                     placeholder={t("activities.record.legs.passengersPlaceholder")}
                     aria-label={t("activities.record.legs.rowPassengers", { position })}
                     {...field}
@@ -210,7 +208,7 @@ const LegRow = memo(function LegRow({
                 >
                   <FormControl>
                     <SelectTrigger
-                      className="min-h-11 w-full"
+                      className="w-full"
                       aria-label={t("activities.record.legs.rowLoadState", { position })}
                     >
                       <SelectValue
@@ -262,7 +260,7 @@ export function LegRows({ control, template }: LegRowsProps) {
       <Button
         type="button"
         variant="outline"
-        className="min-h-11 self-start"
+        className="self-start"
         onClick={() => append(newLegRow())}
       >
         <MapPin className="size-4" aria-hidden />
