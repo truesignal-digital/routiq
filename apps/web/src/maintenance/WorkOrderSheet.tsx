@@ -12,15 +12,17 @@ import type {
 import { ErrorState, LoadingState } from "@/components/page";
 import { historyEventLabelKey } from "@/components/record-history-sheet.js";
 import { StatusBadge } from "@/components/status-badge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format.js";
-import { ISSUE_TONES, WORK_ORDER_TONES } from "./columns.js";
 import type {
   MaintenanceDialog,
   WorkOrderDecision,
   WorkOrderRef,
 } from "./MaintenanceDialogs.js";
+import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { useWorkOrder } from "./useMaintenance.js";
+import { WorkOrderStatusBadge } from "./WorkOrderStatusBadge.js";
 
 export interface WorkOrderSheetPermissions {
   manage: boolean;
@@ -102,12 +104,6 @@ export function Chronologie({
   );
 }
 
-const ENTRY_STATUS_TONES = {
-  POSTED: "success",
-  REVERSED: "neutral",
-  SUBMITTED: "warning",
-} as const;
-
 /**
  * Labour and parts booked against this repair, one list per set: the posted
  * lines are money spent, the pending ones are awaiting finance review and are
@@ -120,8 +116,6 @@ export function CostLines({
   lines: readonly (WorkOrderCostLine | WorkOrderPendingCostLine)[];
   locale: string;
 }) {
-  const { t } = useTranslation();
-
   return (
     <ul className="flex flex-col gap-2">
       {lines.map((line) => (
@@ -132,9 +126,7 @@ export function CostLines({
           <span className="flex min-w-0 flex-col">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs">{line.entryNumber}</span>
-              <StatusBadge tone={ENTRY_STATUS_TONES[line.entryStatus]} icon={null}>
-                {t(`maintenance.detail.entryStatus.${line.entryStatus}`)}
-              </StatusBadge>
+              <EntryStatusBadge status={line.entryStatus} />
             </span>
             <span className="text-xs text-muted-foreground">
               {line.description ?? formatDate(line.economicDate, locale)}
@@ -316,9 +308,7 @@ export function WorkOrderSheet({
         facts={[
           [
             t("maintenance.workOrders.columns.status"),
-            <StatusBadge key="status" tone={WORK_ORDER_TONES[header.status]}>
-              {t(`maintenance.workOrders.status.${header.status}`)}
-            </StatusBadge>,
+            <WorkOrderStatusBadge key="status" status={header.status} />,
           ],
           [
             t("maintenance.workOrders.columns.asset"),
@@ -353,9 +343,7 @@ export function WorkOrderSheet({
               <span key="issue" className="flex flex-wrap items-center gap-1.5">
                 <span>{linkedIssue?.description ?? t("maintenance.detail.linkedIssue")}</span>
                 {linkedIssue !== undefined && (
-                  <StatusBadge tone={ISSUE_TONES[linkedIssue.status]}>
-                    {t(`maintenance.issues.status.${linkedIssue.status}`)}
-                  </StatusBadge>
+                  <IssueStatusBadge issue={linkedIssue} />
                 )}
                 {safetyCritical && (
                   <StatusBadge tone="danger" icon={ShieldAlert}>

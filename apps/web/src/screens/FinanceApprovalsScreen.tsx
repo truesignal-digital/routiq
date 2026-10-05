@@ -16,7 +16,7 @@ import { deniedCode, PermissionDenied } from "@/components/permission-denied.js"
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { ApproveEntryForm, RejectEntryForm } from "@/finance/EntryDecisionForms.js";
 import { isOwnSubmission } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
@@ -114,9 +114,7 @@ export function FinanceApprovalsScreen() {
         header: t("finance.entries.detail.status"),
         meta: { mobile: "primary", label: t("finance.entries.detail.status") },
         cell: ({ row }) => (
-          <FinanceStatusBadge status={row.original.status}>
-            {t(`finance.entries.status.${row.original.status}`)}
-          </FinanceStatusBadge>
+          <EntryStatusBadge status={row.original.status} />
         ),
       },
       {

@@ -1,26 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Check,
-  CircleX,
-  Clock,
-  Download,
-  FileText,
-  Hourglass,
-  Lock,
-  Paperclip,
-  TriangleAlert,
-  Undo2,
-} from "lucide-react";
-import type { FinancialEntryListItem, WorkOrderStatus } from "@routiq/contracts";
+import { Download, FileText, Hourglass, Lock, Paperclip, TriangleAlert } from "lucide-react";
+import type { FinancialEntryListItem } from "@routiq/contracts";
 import type { CommandFormBack } from "@/components/command-form.js";
 import { sessionStore } from "@/auth/store.js";
 import { LoadingState } from "@/components/page";
-import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
 import { errorMessage } from "@/lib/error-message.js";
-import { WORK_ORDER_TONES } from "@/maintenance/columns.js";
 import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import type { RecordSteps } from "../flow.js";
@@ -136,39 +123,6 @@ export function PanelFooter({
         </div>
       )}
     </SheetFooter>
-  );
-}
-
-const WO_ICON: Record<WorkOrderStatus, typeof Clock> = {
-  SUBMITTED: Clock,
-  APPROVED: Hourglass,
-  COMPLETION_SUBMITTED: Clock,
-  COMPLETED: Check,
-  REJECTED: CircleX,
-  CANCELLED: CircleX,
-};
-
-export function WorkOrderStatusBadge({ status }: { status: WorkOrderStatus }) {
-  const { t } = useTranslation();
-  return (
-    <StatusBadge tone={WORK_ORDER_TONES[status]} icon={WO_ICON[status]} className="rounded-md">
-      {t(`maintenance.workOrders.status.${status}`)}
-    </StatusBadge>
-  );
-}
-
-type EntryStatus = FinancialEntryListItem["status"];
-
-const ENTRY_TONE = { POSTED: "neutral", SUBMITTED: "warning", REJECTED: "danger", REVERSED: "neutral" } as const;
-const ENTRY_ICON = { POSTED: Check, SUBMITTED: Clock, REJECTED: CircleX, REVERSED: Undo2 } as const;
-
-export function EntryStatusBadge({ status }: { status: EntryStatus }) {
-  const { t } = useTranslation();
-  return (
-    <StatusBadge tone={ENTRY_TONE[status]} icon={ENTRY_ICON[status]} className="rounded-md">
-      {/* The workspace's one name for the pending state, the Money card's. */}
-      {status === "SUBMITTED" ? t("vehicle.money.review") : t(`finance.entries.status.${status}`)}
-    </StatusBadge>
   );
 }
 

@@ -318,7 +318,7 @@ describe("MaintenanceScreen — row sheet", () => {
     ).toBeTruthy();
     expect(within(sheet).getByText("DLA-2026-00007")).toBeTruthy();
     expect(
-      within(sheet).getByText("maintenance.detail.entryStatus.POSTED"),
+      within(sheet).getByText("finance.entries.status.POSTED"),
     ).toBeTruthy();
   });
 
@@ -524,7 +524,7 @@ describe("MaintenanceScreen — row sheet costs", () => {
     expect(within(posted).queryByText("DLA-2026-00009")).toBeNull();
     expect(within(pending).getByText("DLA-2026-00009")).toBeTruthy();
     expect(
-      within(pending).getByText("maintenance.detail.entryStatus.SUBMITTED"),
+      within(pending).getByText("finance.entries.status.SUBMITTED"),
     ).toBeTruthy();
     expect(
       within(pending).getByText("maintenance.detail.pendingCostLinesHint"),

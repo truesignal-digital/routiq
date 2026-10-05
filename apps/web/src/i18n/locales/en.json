@@ -462,7 +462,7 @@
       "loadMore": "Load more",
       "recordAction": "Record an entry",
       "status": {
-        "SUBMITTED": "Pending",
+        "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
         "REJECTED": "Rejected",
         "REVERSED": "Reversed"
@@ -1196,12 +1196,7 @@
       "preventive": "Preventive — no issue",
       "linkedIssue": "Linked issue",
       "unavailableTitle": "Asset grounded",
-      "unavailableHint": "Only a return to service reopens availability.",
-      "entryStatus": {
-        "SUBMITTED": "Awaiting review",
-        "POSTED": "Posted",
-        "REVERSED": "Reversed"
-      }
+      "unavailableHint": "Only a return to service reopens availability."
     },
     "notify": {
       "success": {

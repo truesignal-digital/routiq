@@ -170,6 +170,26 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [file("apps/api/src/reads/business-date.ts", "return shifted.toISOString().slice(0, 10);")],
   },
   {
+    id: "H14",
+    // The four entry-status maps that disagreed before #177, one per shape.
+    bad: [
+      file("apps/web/src/finance/FinanceStatusBadge.tsx", "const STATUS_TONES: Record<FinanceEntryStatus, StatusBadgeTone> = {"),
+      file("apps/web/src/vehicle/panel/shared.tsx", 'const ENTRY_TONE = { POSTED: "neutral", SUBMITTED: "warning" } as const;'),
+      file("apps/web/src/maintenance/WorkOrderSheet.tsx", "<StatusBadge tone={ENTRY_STATUS_TONES[line.entryStatus]}>"),
+      file("apps/web/src/activities/detail/ActivityMoney.tsx", 'const tones: Record<Entry["status"], "success" | "warning"> = {'),
+      file("apps/web/src/activities/activityColumns.tsx", '<StatusBadge tone={status === "OPEN" ? "info" : "neutral"}>'),
+      file("apps/web/src/vehicle/tabs/DocumentsTab.tsx", 'tone={state === "expired" ? "danger" : "neutral"}'),
+    ],
+    good: [
+      file("apps/web/src/finance/EntryStatusBadge.tsx", "const ENTRY_STATUS_TONES: Record<EntryStatus, StatusTone> = {"),
+      file("apps/web/src/documents/DocumentStatusBadge.tsx", 'tone={state === "expired" ? "danger" : "neutral"}'),
+      file("apps/web/src/finance/EntryStatusBadge.test.tsx", 'const tones: Record<EntryStatus, string> = { POSTED: "success" };'),
+      file("apps/web/src/activities/activityColumns.tsx", "<TripStatusBadge trip={row.original} />"),
+      file("apps/web/src/components/metric-strip.tsx", "const TONE_VALUE: Record<MetricTone, string> = {"),
+      file("apps/web/src/vehicle/tabs/HistoryTab.tsx", "export const EVENT_TONE_CLASS: Record<EventTone, string> = {"),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],

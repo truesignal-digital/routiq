@@ -13,6 +13,7 @@ import {
 } from "@/maintenance/MaintenanceDialogs.js";
 import { Chronologie, CostLines } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
+import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, workOrderSteps, workOrderWaiting } from "../flow.js";
 import { recordReference } from "../model.js";
@@ -21,7 +22,6 @@ import {
   PanelFooter,
   PanelLoading,
   PanelMissing,
-  WorkOrderStatusBadge,
   useFormHost,
 } from "./shared.js";
 

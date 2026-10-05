@@ -1,7 +1,6 @@
 import type { AssetListItem } from "@routiq/contracts";
 import { describe, expect, it } from "vitest";
 import {
-  ASSET_STATUS_TONES,
   assetDisplayName,
   assetFilterQuery,
   isAssetFilter,
@@ -43,14 +42,6 @@ describe("asset display helpers", () => {
   it("uses make and model when present, then falls back to asset code", () => {
     expect(assetDisplayName(assets[0]!)).toBe("Mercedes Actros");
     expect(assetDisplayName(assets[1]!)).toBe("BUS-004");
-  });
-
-  it("tones every lifecycle status, and never conflates sold with written off", () => {
-    expect(ASSET_STATUS_TONES.IN_SERVICE).toBe("success");
-    expect(ASSET_STATUS_TONES.UNDER_MAINTENANCE).toBe("warning");
-    expect(ASSET_STATUS_TONES.WRITTEN_OFF).toBe("danger");
-    expect(ASSET_STATUS_TONES.SOLD).toBe("neutral");
-    expect(Object.keys(ASSET_STATUS_TONES)).toHaveLength(6);
   });
 
   it("rejects a filter value the screen does not offer", () => {

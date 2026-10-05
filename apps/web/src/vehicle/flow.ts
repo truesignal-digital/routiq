@@ -21,6 +21,7 @@ import {
   canReleaseAssets,
   canResolveIssues,
 } from "../maintenance/permissions.js";
+import { isActiveWorkOrder } from "../maintenance/status.js";
 import {
   recordReference,
   type Lock,
@@ -40,16 +41,7 @@ import {
 
 export type Grounded = Extract<AssetAvailability, { state: "GROUNDED" }>;
 
-const ACTIVE_WORK_ORDER: readonly WorkOrderStatus[] = [
-  "SUBMITTED",
-  "APPROVED",
-  "COMPLETION_SUBMITTED",
-];
-
-/** Still moving through the flow; COMPLETED, REJECTED and CANCELLED are done. */
-export function isActiveWorkOrder(status: WorkOrderStatus): boolean {
-  return ACTIVE_WORK_ORDER.includes(status);
-}
+export { isActiveWorkOrder };
 
 const DISPOSED = ["SOLD", "RETIRED", "WRITTEN_OFF"] as const;
 type DisposedStatus = (typeof DISPOSED)[number];

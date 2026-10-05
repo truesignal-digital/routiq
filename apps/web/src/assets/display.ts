@@ -4,18 +4,6 @@ import type { AssetListParams } from "./api.js";
 /** The status filter's three choices; `ALL` narrows nothing. */
 export type AssetFilter = "ALL" | "IN_SERVICE" | "ATTENTION";
 
-export const ASSET_STATUS_TONES: Record<
-  AssetLifecycleStatus,
-  "neutral" | "success" | "warning" | "danger"
-> = {
-  REGISTERED: "neutral",
-  IN_SERVICE: "success",
-  UNDER_MAINTENANCE: "warning",
-  SOLD: "neutral",
-  RETIRED: "neutral",
-  WRITTEN_OFF: "danger",
-};
-
 export function assetDisplayName(
   asset: Pick<AssetListItem, "assetCode" | "manufacturer" | "model">,
 ): string {
