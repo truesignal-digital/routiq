@@ -218,8 +218,8 @@ describe("approvals queue: the entry opens in the record panel", () => {
     expect(within(panel).getByText("Receipt")).toBeTruthy();
     expect(within(panel).getByText("No receipt")).toBeTruthy();
     expect(within(panel).getByRole("button", { name: "History" })).toBeTruthy();
-    expect(within(panel).getByRole("button", { name: "Approve" })).toBeTruthy();
-    expect(within(panel).getByRole("button", { name: "Reject" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Approve entry" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Reject entry" })).toBeTruthy();
   });
 
   it("approves in one tap from the panel, and the row leaves the queue", async () => {
@@ -229,7 +229,7 @@ describe("approvals queue: the entry opens in the record panel", () => {
 
     await user.click(await screen.findByRole("button", { name: "FIN-001" }));
     const panel = await screen.findByRole("dialog");
-    await user.click(within(panel).getByRole("button", { name: "Approve" }));
+    await user.click(within(panel).getByRole("button", { name: "Approve entry" }));
 
     await waitFor(() =>
       expect(sent).toEqual([
@@ -254,12 +254,12 @@ describe("approvals queue: the entry opens in the record panel", () => {
 
     await user.click(await screen.findByRole("button", { name: "FIN-001" }));
     const panel = await screen.findByRole("dialog");
-    await user.click(within(panel).getByRole("button", { name: "Reject" }));
+    await user.click(within(panel).getByRole("button", { name: "Reject entry" }));
 
-    const reason = await screen.findByLabelText("Rejection reason");
+    const reason = await screen.findByRole("textbox", { name: "Rejection reason" });
     expect(sent).toEqual([]);
     await user.type(reason, "No receipt");
-    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.click(screen.getByRole("button", { name: "Reject entry" }));
 
     await waitFor(() =>
       expect(sent).toEqual([
@@ -281,8 +281,8 @@ describe("approvals queue: the entry opens in the record panel", () => {
     const panel = await screen.findByRole("dialog");
     expect(await within(panel).findByText("Plaquettes de frein")).toBeTruthy();
 
-    expect(within(panel).queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(within(panel).queryByRole("button", { name: "Reject" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
   });
 });
 

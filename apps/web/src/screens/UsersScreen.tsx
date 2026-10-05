@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { KeyRound, ShieldCheck, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { MemberListItem, MemberStatus } from "@routiq/contracts";
+import { useCommandLabel } from "@/commands/labels.js";
+import type { MemberListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -14,13 +15,14 @@ import {
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
-import { StatusBadge } from "@/components/status-badge.js";
+import { MemberStatusBadge } from "@/members/MemberStatusBadge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { AddMemberDialog } from "@/members/AddMemberDialog.js";
 import { branchScopeLabel } from "@/members/BranchScopeField.js";
 import {
+  MEMBER_ACTION_COMMANDS,
   memberActions,
   MemberActionDialog,
   type MemberActionKey,
@@ -30,12 +32,6 @@ import { useMembers } from "@/members/useMembers.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
 const DEACTIVATED_FILTER_ID = "includeDeactivated";
-
-const STATUS_TONES: Record<MemberStatus, "success" | "warning" | "neutral"> = {
-  ACTIVE: "success",
-  LOCKED: "warning",
-  DEACTIVATED: "neutral",
-};
 
 const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
   role: ShieldCheck,
@@ -53,6 +49,7 @@ const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
  */
 export function UsersScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canAdminister = canAdministerMembers(me?.role);
 
@@ -141,9 +138,7 @@ export function UsersScreen() {
         header: t("users.columns.status"),
         meta: { mobile: "primary", label: t("users.columns.status") },
         cell: ({ row }) => (
-          <StatusBadge tone={STATUS_TONES[row.original.status]}>
-            {t(`users.status.${row.original.status}`)}
-          </StatusBadge>
+          <MemberStatusBadge status={row.original.status} />
         ),
       },
     ],
@@ -168,9 +163,9 @@ export function UsersScreen() {
       <PageHeader
         title={t("users.title")}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button type="button" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" aria-hidden />
-            {t("users.add.open")}
+            {label("add-member")}
           </Button>
         }
       />
@@ -209,7 +204,7 @@ export function UsersScreen() {
               memberActions(member).map(
                 (action): DataTableRowAction<MemberListItem> => ({
                   key: action,
-                  label: t(`users.actions.${action}`),
+                  label: label(MEMBER_ACTION_COMMANDS[action]),
                   icon: ACTION_ICONS[action],
                   ...(action === "deactivate" ? { destructive: true } : {}),
                   onSelect: (row) => setActing({ member: row, action }),

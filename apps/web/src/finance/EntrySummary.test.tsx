@@ -140,8 +140,24 @@ describe("EntrySummary", () => {
     expect(screen.getByText("Total Douala")).toBeTruthy();
     expect(screen.getByText("Plein du camion")).toBeTruthy();
     // XAF has exponent 0 — 25 000 minor units are 25 000 francs, not 250.
-    expect(container.textContent).toMatch(/\+?25\s?000/);
+    // The record's own amount is unsigned; its direction is said in words (E2.8).
+    expect(screen.getByText(/^25\s000\sFCFA$/)).toBeTruthy();
+    expect(screen.getByText("finance.entries.detail.amountKind")).toBeTruthy();
     expect(container.textContent).not.toContain("250,00");
+  });
+
+  it("shows a reversal's negative amount unsigned, like any record", () => {
+    entryQuery = {
+      isPending: false,
+      isError: false,
+      data: { ...entry, entryNumber: "FIN-002", amountMinor: -25000, reversesEntryId: entry.id },
+      refetch: vi.fn(),
+    };
+
+    const { container } = render(<EntrySummary entryId={entry.id} />);
+
+    expect(screen.getByText(/^25\s000\sFCFA$/)).toBeTruthy();
+    expect(container.textContent).not.toMatch(/[−-]25/);
   });
 
   it("names the work order and trip the entry belongs to (#87)", () => {

@@ -13,7 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { groupedActions } from "./actions.js";
 import { useVehicle } from "./context.js";
-import { useLockText } from "./parts.js";
+import { useLockText, useStepLabel } from "./parts.js";
 
 /**
  * Every action this role has on the vehicle, by area, the role's own area
@@ -32,6 +32,7 @@ export function AllActionsSheet({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { asset, viewer, availability, runAction } = useVehicle();
   const lockText = useLockText();
+  const stepLabel = useStepLabel();
   const [query, setQuery] = useState("");
 
   const needle = query.trim().toLocaleLowerCase();
@@ -41,7 +42,7 @@ export function AllActionsSheet({
       actions: actions.filter((action) => {
         if (needle === "") return true;
         const haystack = [
-          t(`vehicle.actions.${action.key}.label`),
+          stepLabel(action),
           t(`vehicle.actions.${action.key}.description`),
           t(`vehicle.actions.groups.${group}`),
         ]
@@ -81,7 +82,7 @@ export function AllActionsSheet({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("vehicle.actions.all.searchPlaceholder")}
-              className="h-9 pl-8"
+              className="pl-8 desktop:h-9"
               aria-label={t("vehicle.actions.all.search")}
             />
           </div>
@@ -124,7 +125,7 @@ export function AllActionsSheet({
                                 lock && "text-muted-foreground",
                               )}
                             >
-                              {t(`vehicle.actions.${action.key}.label`)}
+                              {stepLabel(action)}
                               {lock && <Lock className="size-3" aria-hidden />}
                             </span>
                             <span className="block text-xs leading-snug text-muted-foreground">

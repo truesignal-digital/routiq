@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { STEP_ICONS } from "./steps.js";
+import { useCommandLabel } from "../commands/labels.js";
+import { DESTRUCTIVE_STEPS, STEP_COMMANDS, STEP_ICONS } from "./steps.js";
 import type { Lock as LockReason, OfferedStep, Step } from "./model.js";
 
 export type Tone = "neutral" | "success" | "warning" | "info" | "danger";
@@ -200,55 +201,6 @@ export function SubHead({
   );
 }
 
-export interface ChipOption<K extends string> {
-  key: K;
-  label: string;
-  count?: number | undefined;
-}
-
-export function FilterChips<K extends string>({
-  options,
-  value,
-  onChange,
-  label,
-}: {
-  options: ReadonlyArray<ChipOption<K>>;
-  value: K;
-  onChange: (key: K) => void;
-  label: string;
-}) {
-  return (
-    <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-      <div role="radiogroup" aria-label={label} className="flex w-max gap-1.5">
-        {options.map((option) => {
-          const active = option.key === value;
-          return (
-            <button
-              key={option.key}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              disabled={option.count === 0 && !active}
-              onClick={() => onChange(option.key)}
-              className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors disabled:opacity-40",
-                active
-                  ? "border-foreground/20 bg-muted font-medium text-foreground"
-                  : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-              )}
-            >
-              {option.label}
-              {option.count !== undefined && (
-                <span className="text-xs tabular-nums text-muted-foreground">{option.count}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 /** One row anatomy for every list: what it is · status · amount or date · "…". */
 export function RecordRow({
   icon,
@@ -322,9 +274,14 @@ export function useLockText() {
   return (lock: LockReason) => t(`vehicle.locked.${lock.key}`, lock.params ?? {});
 }
 
+/** A step's name, from its command's words; `short` is the quick bar's. */
 export function useStepLabel() {
   const { t } = useTranslation();
-  return (step: Pick<Step, "key">) => t(`vehicle.steps.${step.key}`);
+  const label = useCommandLabel();
+  return (step: Pick<Step, "key">, part: "label" | "short" = "label") =>
+    step.key === "review-entry"
+      ? t(`vehicle.actions.review-entry.${part}`)
+      : label(STEP_COMMANDS[step.key], part);
 }
 
 /** The row's "…": its open steps first, then the locked ones with what they wait for. */
@@ -352,7 +309,7 @@ export function RowMenu({
           render={
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="desktop-icon-sm"
               className="text-muted-foreground"
               aria-label={t("vehicle.rows.actionsFor", { record: label })}
             />
@@ -364,8 +321,13 @@ export function RowMenu({
           {open.map(({ step }) => {
             const Icon = STEP_ICONS[step.key];
             return (
-              <DropdownMenuItem key={step.key} className="py-1.5" onClick={() => onStep(step)}>
-                <Icon className="text-muted-foreground" aria-hidden />
+              <DropdownMenuItem
+                key={step.key}
+                className="py-1.5"
+                variant={DESTRUCTIVE_STEPS.has(step.key) ? "destructive" : "default"}
+                onClick={() => onStep(step)}
+              >
+                <Icon className={DESTRUCTIVE_STEPS.has(step.key) ? undefined : "text-muted-foreground"} aria-hidden />
                 {stepLabel(step)}
               </DropdownMenuItem>
             );

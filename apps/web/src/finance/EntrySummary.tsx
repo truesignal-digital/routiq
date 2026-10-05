@@ -3,7 +3,7 @@ import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts"
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { EntryLinks } from "@/finance/EntryLinks.js";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { useEntry } from "@/finance/useEntry.js";
 import { RecordFileRow } from "@/vehicle/panel/shared.js";
 import {
@@ -14,6 +14,7 @@ import {
   localizedLabel,
 } from "@/lib/format.js";
 import { FileText } from "lucide-react";
+import { amountKind } from "@/finance/model.js";
 
 /**
  * The entry as a reader needs it before deciding on it: fields, postings,
@@ -65,9 +66,7 @@ export function EntrySummary({ entryId }: { entryId: string }) {
             {t("finance.entries.detail.status")}
           </dt>
           <dd className="mt-1">
-            <FinanceStatusBadge status={entry.status}>
-              {t(`finance.entries.status.${entry.status}`)}
-            </FinanceStatusBadge>
+            <EntryStatusBadge status={entry.status} />
           </dd>
         </div>
         <div>
@@ -80,11 +79,13 @@ export function EntrySummary({ entryId }: { entryId: string }) {
           <dt className="text-xs font-semibold uppercase text-muted-foreground">
             {t("finance.entries.detail.amount")}
           </dt>
-          <dd className="mt-1 font-mono text-lg font-semibold">
-            {formatMoney(entry.amountMinor, {
-              currency: entry.currency,
-              signDisplay: "always",
-            })}
+          <dd className="mt-1 flex flex-wrap items-baseline gap-x-2">
+            <span className="font-mono text-lg font-semibold">
+              {formatMoney(entry.amountMinor, { currency: entry.currency, sign: { context: "record" } })}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {t("finance.entries.detail.amountKind", { kind: amountKind(entry) })}
+            </span>
           </dd>
         </div>
         <div>
@@ -186,10 +187,7 @@ function EntryPostings({ entry }: { entry: FinancialEntryDetail }) {
               )}
             </div>
             <span className="font-mono font-semibold whitespace-nowrap">
-              {formatMoney(posting.amountMinor, {
-                currency: entry.currency,
-                signDisplay: "always",
-              })}
+              {formatMoney(posting.amountMinor, { currency: entry.currency })}
             </span>
           </li>
         ))}

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
-import { CommandForm, PinnedField, type CommandFormProps } from "./command-form.js";
+import { CommandForm, PinnedField, ReasonField, type CommandFormProps, type CommandSurface } from "./command-form.js";
 import { Sheet, SheetContent } from "./ui/sheet.js";
 
 beforeAll(async () => {
@@ -22,7 +22,7 @@ type Overrides = Partial<Omit<CommandFormProps, "surface" | "title">>;
 function base(overrides: Overrides) {
   return {
     description: "Declare what was done.",
-    submitLabel: "Declare complete",
+    command: "complete-work-order" as const,
     ready: true,
     submitting: false,
     onSubmit: vi.fn(),
@@ -79,7 +79,7 @@ describe("CommandForm on a record panel page", () => {
       </CommandForm>,
     );
 
-    const submit = screen.getByRole("button", { name: "Declare complete" });
+    const submit = screen.getByRole("button", { name: "Complete work" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
     await user.type(screen.getByLabelText("Summary"), "Pads{Enter}");
     expect(props.onSubmit).not.toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe("CommandForm on a record panel page", () => {
         </SheetContent>
       </Sheet>,
     );
-    await user.click(screen.getByRole("button", { name: "Declare complete" }));
+    await user.click(screen.getByRole("button", { name: "Complete work" }));
     expect(props.onSubmit).toHaveBeenCalledOnce();
   });
 
@@ -198,8 +198,81 @@ describe("CommandForm in the flow of a page", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(container.querySelector("form")).not.toBeNull();
     expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
-      "Declare complete",
+      "Complete work",
     ]);
+  });
+});
+
+const SURFACES: readonly CommandSurface[] = ["dialog", "sheet", "panel", "page"];
+
+function onSurface(surface: CommandSurface, props: Overrides) {
+  const form =
+    surface === "page" ? (
+      <CommandForm surface="page" {...base(props)}>
+        {field}
+      </CommandForm>
+    ) : (
+      <CommandForm surface={surface} title="Cancel work order" {...base(props)}>
+        {field}
+      </CommandForm>
+    );
+  return surface === "panel" ? inPanel(form) : render(form);
+}
+
+/** The footer's buttons, in order, without the overlay's own corner close. */
+function footerButtons(): HTMLElement[] {
+  const submit = screen
+    .getAllByRole("button")
+    .find((button) => button.getAttribute("type") === "submit");
+  const footer = submit?.parentElement;
+  if (footer == null) throw new Error("no footer");
+  return within(footer).getAllByRole("button");
+}
+
+describe.each(SURFACES)("CommandForm footer on a %s", (surface) => {
+  it("puts submit last, after the way out", () => {
+    onSurface(surface, {});
+    const buttons = footerButtons();
+    expect(buttons.map((button) => button.textContent)).toEqual(["Cancel", "Complete work"]);
+    expect(buttons.at(-1)?.getAttribute("type")).toBe("submit");
+  });
+
+  it("renders a destructive command in the destructive variant, with a dismiss that is not its verb", () => {
+    onSurface(surface, { command: "cancel-work-order", tone: "destructive" });
+    const [dismiss, submit] = footerButtons();
+    expect(submit?.textContent).toBe("Cancel work order");
+    expect(submit?.className).toContain("text-destructive");
+    expect(dismiss?.textContent).toBe("Keep work order");
+  });
+
+  it("keeps the default variant otherwise", () => {
+    onSurface(surface, {});
+    expect(footerButtons().at(-1)?.className).not.toContain("text-destructive");
+  });
+});
+
+describe("CommandForm labels", () => {
+  it("reads a command's intent words, falling back to the command's", () => {
+    render(
+      <CommandForm
+        surface="page"
+        {...base({ command: { command: "record-expense", intent: "fuel" }, submitting: true })}
+      >
+        {field}
+      </CommandForm>,
+    );
+    // Submitting has no fuel-specific wording: the command's is used.
+    expect(screen.getByRole("button", { name: "Recording…" })).toBeTruthy();
+  });
+});
+
+describe("ReasonField", () => {
+  it("is marked required and capped at 500 characters", () => {
+    render(<ReasonField id="r" label="Reason" value="" onChange={() => undefined} />);
+    const input = screen.getByRole("textbox", { name: /Reason/ });
+    expect(input.getAttribute("aria-required")).toBe("true");
+    expect(input.getAttribute("maxlength")).toBe("500");
+    expect(screen.getByText("*")).toBeTruthy();
   });
 });
 

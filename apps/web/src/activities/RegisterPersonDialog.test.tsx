@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n/index.js";
@@ -80,7 +80,11 @@ describe("RegisterPersonDialog", () => {
     const { onRegistered, onOpenChange } = renderDialog(client);
 
     await userEvent.type(screen.getByLabelText("Nom complet"), "  Amadou Bello  ");
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(screen.getByRole("dialog", { name: "Ajouter une personne" })).toBeTruthy();
+    const submit = screen.getByRole("button", { name: "Enregistrer la personne" });
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Annuler", "Enregistrer la personne"]);
+    await userEvent.click(submit);
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0] as SeenSubmission;
@@ -108,7 +112,7 @@ describe("RegisterPersonDialog", () => {
     await userEvent.type(screen.getByLabelText("Téléphone"), "699112233");
     await userEvent.click(screen.getByLabelText("Rôle habituel"));
     await userEvent.click(await screen.findByRole("option", { name: "Receveur" }));
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer la personne" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const { payload } = client.seen[0] as SeenSubmission;
@@ -121,7 +125,7 @@ describe("RegisterPersonDialog", () => {
     const { onRegistered, onOpenChange } = renderDialog(client);
 
     await userEvent.type(screen.getByLabelText("Nom complet"), "Amadou Bello");
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer la personne" }));
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(onRegistered).not.toHaveBeenCalled();
@@ -132,7 +136,7 @@ describe("RegisterPersonDialog", () => {
     const client = fakeClient(committed);
     renderDialog(client);
 
-    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer la personne" }));
 
     await waitFor(() =>
       expect(screen.getByText("Ce champ est obligatoire.")).toBeTruthy(),

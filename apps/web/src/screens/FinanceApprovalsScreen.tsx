@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { useMeContext } from "@/auth/me.js";
 import {
@@ -16,14 +17,14 @@ import { deniedCode, PermissionDenied } from "@/components/permission-denied.js"
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
-import { FinanceStatusBadge } from "@/finance/FinanceStatusBadge.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import {
   EntryDecisionButtons,
   RejectEntryForm,
   useApproveEntry,
 } from "@/finance/EntryDecisionForms.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
-import { isOwnSubmission } from "@/finance/model.js";
+import { amountKind, isOwnSubmission } from "@/finance/model.js";
 import { canApproveEntries } from "@/finance/permissions.js";
 import {
   approvalsOutsideBranch,
@@ -47,6 +48,7 @@ const APPROVALS_PAGE_SIZE = 100;
 
 export function FinanceApprovalsScreen() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
@@ -120,9 +122,7 @@ export function FinanceApprovalsScreen() {
         header: t("finance.entries.detail.status"),
         meta: { mobile: "primary", label: t("finance.entries.detail.status") },
         cell: ({ row }) => (
-          <FinanceStatusBadge status={row.original.status}>
-            {t(`finance.entries.status.${row.original.status}`)}
-          </FinanceStatusBadge>
+          <EntryStatusBadge status={row.original.status} />
         ),
       },
       {
@@ -171,8 +171,16 @@ export function FinanceApprovalsScreen() {
         enableSorting: true,
         meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
-          <span className="whitespace-nowrap font-mono font-semibold">
-            {formatMoney(row.original.amountMinor, { currency: row.original.currency, signDisplay: "never" })}
+          <span className="flex flex-col">
+            <span className="whitespace-nowrap font-mono font-semibold">
+              {formatMoney(row.original.amountMinor, {
+                currency: row.original.currency,
+                sign: { context: "record" },
+              })}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {t("finance.entries.detail.amountKind", { kind: amountKind(row.original) })}
+            </span>
           </span>
         ),
       },
@@ -221,13 +229,13 @@ export function FinanceApprovalsScreen() {
     return [
       {
         key: "approve",
-        label: t("finance.approvals.approve"),
+        label: label("approve-entry"),
         icon: Check,
         onSelect: () => void approve({ id: entry.id, rowVersion: entry.rowVersion }),
       },
       {
         key: "reject",
-        label: t("finance.approvals.reject"),
+        label: label("reject-entry"),
         icon: X,
         destructive: true,
         onSelect: () => openReject(entry),

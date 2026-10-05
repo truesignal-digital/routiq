@@ -20,7 +20,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
   // Approve is one tap: the menu item sends the command, no dialog first.
-  await page.getByRole("menuitem", { name: t("Approuver", "Approve") }).click();
+  await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await quiet();
   await shot("approved");

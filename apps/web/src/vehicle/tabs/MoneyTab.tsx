@@ -3,19 +3,21 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, CircleDollarSign, Info, Receipt, TriangleAlert } from "lucide-react";
 import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contracts";
+import { FilterChips } from "@/components/filter-chips";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCategories } from "@/documents/useCategories.js";
-import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
 import { recordReference } from "../model.js";
-import { CardHead, FilterChips, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
-import { EntryStatusBadge, EvidenceMark } from "../panel/shared.js";
+import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
+import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
 import { TabAction } from "./MaintenanceTab.js";
 import { periodLabel } from "./NowTab.js";
@@ -115,8 +117,8 @@ function MoneySection() {
   const entriesQuery = useVehicleEntries(asset.id, entriesFilter(chip, period), true);
   const revenueTypes = useCategories("REVENUE_CATEGORY");
   const finance = financeQuery.data;
-  const money = (minor: number, signed = false) =>
-    formatMoney(minor, { currency: asset.currency, locale, ...(signed ? { signDisplay: "exceptZero" as const } : {}) });
+  const money = (minor: number, sign?: MoneySign) =>
+    formatMoney(minor, { currency: asset.currency, locale, ...(sign === undefined ? {} : { sign }) });
 
   const go = (next: Partial<MoneySearch>) =>
     void navigate({
@@ -142,7 +144,7 @@ function MoneySection() {
             <div className="flex items-center" role="group" aria-label={t("vehicle.money.periodLabel")}>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="desktop-icon-sm"
                 aria-label={t("vehicle.money.periodPrev")}
                 onClick={() => go({ ...searchOf(chip), period: shiftMonth(period, -1) })}
               >
@@ -150,7 +152,7 @@ function MoneySection() {
               </Button>
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="desktop-icon-sm"
                 aria-label={t("vehicle.money.periodNext")}
                 disabled={period >= currentMonth()}
                 onClick={() => go({ ...searchOf(chip), period: shiftMonth(period, 1) })}
@@ -233,7 +235,7 @@ function MoneySection() {
             {entriesQuery.hasNextPage && (
               <Button
                 variant="outline"
-                className="mt-3 h-9"
+                className="mt-3 desktop:h-9"
                 disabled={entriesQuery.isFetchingNextPage}
                 onClick={() => void entriesQuery.fetchNextPage()}
               >
@@ -250,7 +252,7 @@ function MoneySection() {
           {t("vehicle.money.lifetime", {
             revenue: money(lifetime.revenueMinor),
             expenses: money(lifetime.expenseMinor),
-            net: money(lifetime.netMinor, true),
+            net: money(lifetime.netMinor, { context: "net" }),
           })}
         </p>
       )}
@@ -301,7 +303,7 @@ function PeriodStats({
   showRevenue,
 }: {
   finance: AssetFinanceResponse;
-  money: (minor: number, signed?: boolean) => string;
+  money: (minor: number) => string;
   showRevenue: boolean;
 }) {
   const { t } = useTranslation();
@@ -468,8 +470,8 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
   const split = share !== entry.amountMinor;
   const steps = entrySteps(entry, viewer);
   const links = entry.assetLinks;
-  const money = (minor: number, signed = false) =>
-    formatMoney(minor, { currency: entry.currency, locale, ...(signed ? { signDisplay: "exceptZero" as const } : {}) });
+  const money = (minor: number, sign?: MoneySign) =>
+    formatMoney(minor, { currency: entry.currency, locale, ...(sign === undefined ? {} : { sign }) });
 
   return (
     <RecordRow
@@ -526,11 +528,11 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
       aside={
         <>
           <div className={cn("font-medium", entry.status === "REVERSED" && "text-muted-foreground line-through")}>
-            {money(share, revenue || share < 0)}
+            {money(share, { context: "ledger", direction: entry.direction })}
           </div>
           {split && (
             <div className="text-xs text-muted-foreground">
-              {t("vehicle.money.ofEntry", { amount: money(entry.amountMinor) })}
+              {t("vehicle.money.ofEntry", { amount: money(entry.amountMinor, { context: "record" }) })}
             </div>
           )}
         </>

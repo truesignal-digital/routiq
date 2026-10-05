@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { NOTE_BODY_MAX, type AddNotePayload } from "@routiq/contracts";
 import {
   CommandForm,
@@ -39,6 +40,7 @@ export function AddNoteForm({
   onDismiss,
 }: AddNoteFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const submission = useCommandSubmission();
   // Minted once per opening, so a retry replays this note instead of adding a second.
   const noteId = useRef(crypto.randomUUID());
@@ -67,12 +69,12 @@ export function AddNoteForm({
   return (
     <CommandForm
       surface={surface}
-      title={t("vehicle.forms.note.title")}
+      title={label("add-note")}
       description={t("vehicle.forms.note.description")}
       back={back}
       error={submission.error}
       informativeCodes={["ASSET_NOT_OPERATIONAL"]}
-      submitLabel={t("vehicle.forms.note.submit")}
+      command="add-note"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}

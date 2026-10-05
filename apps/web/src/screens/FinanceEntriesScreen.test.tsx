@@ -418,7 +418,7 @@ describe("FinanceEntriesScreen", () => {
       (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
     ).toEqual([
       "finance.entries.viewer.fullScreen",
-      "finance.entries.detail.reverseAction",
+      "commands.reverse-entry.label",
     ]);
   });
 
@@ -430,7 +430,7 @@ describe("FinanceEntriesScreen", () => {
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
     await user.click(
       await screen.findByRole("menuitem", {
-        name: "finance.entries.detail.reverseAction",
+        name: "commands.reverse-entry.label",
       }),
     );
 
@@ -455,6 +455,20 @@ describe("FinanceEntriesScreen", () => {
       within(drawer).getByText("finance.entries.detail.paymentMethod"),
     ).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("signs an expense with a minus in the list and leaves it unsigned on the entry itself (E2.8)", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    // Revenue and expenses share this list, so the direction carries the sign.
+    expect(screen.getByText(/^−1\s000\sFCFA$/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
+    const drawer = await screen.findByRole("dialog");
+    // The record's own amount: no sign, the direction said in words beside it.
+    expect(within(drawer).getByText(/^1\s000\sFCFA$/)).toBeTruthy();
+    expect(within(drawer).getByText("finance.entries.detail.amountKind")).toBeTruthy();
   });
 
   it("hands the entry to its own route from the drawer's full-screen action", async () => {

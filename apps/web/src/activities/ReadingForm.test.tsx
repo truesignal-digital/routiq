@@ -115,7 +115,7 @@ describe("ReadingForm on a vehicle's record panel", () => {
       />,
     );
 
-    const panel = screen.getByRole("dialog", { name: "Record a meter reading" });
+    const panel = screen.getByRole("dialog", { name: "Record odometer" });
     // The vehicle is shown, not offered: there is no asset picker to change.
     expect(within(panel).getByText("Vehicle")).toBeTruthy();
     expect(within(panel).queryByRole("combobox", { name: "Asset" })).toBeNull();
@@ -125,7 +125,10 @@ describe("ReadingForm on a vehicle's record panel", () => {
     expect(within(panel).getByText("Last reading: 412,000 km")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Value"), { target: { value: "412850" } });
-    await userEvent.click(screen.getByRole("button", { name: "Record the reading" }));
+    const submit = screen.getByRole("button", { name: "Record the reading" });
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Cancel", "Record the reading"]);
+    await userEvent.click(submit);
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const payload = recordMeterReadingPayload.parse(client.seen[0]!.payload);

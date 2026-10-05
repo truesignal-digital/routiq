@@ -85,6 +85,7 @@ Role codes and usernames work too (`--role FINANCE_APPROVER`, `--role boris`).
 | `trips` | trips list → a closed trip's detail | no |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | More → Branches, Users, People against their reads | no |
+| `phone-overflow` | every demo account, every list route at 390 × 844 in fr and en: no sideways scroll, no control past the right edge (#183) | no |
 
 A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label)`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. Copy a flow as a starting point. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
 

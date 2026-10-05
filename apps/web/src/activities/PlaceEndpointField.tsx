@@ -75,7 +75,6 @@ export function PlaceEndpointField({
           type="text"
           value={text}
           disabled={disabled}
-          className="min-h-11"
           placeholder={
             adHoc
               ? t("activities.pickers.place.textPlaceholder")

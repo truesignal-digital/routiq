@@ -113,7 +113,7 @@ function TodoRow({ todo }: { todo: Todo }) {
         </div>
         <Button
           variant="outline"
-          className="h-9 self-start sm:h-8 sm:self-center"
+          className="self-start sm:self-center desktop:h-8"
           onClick={() => panel.openStep(step.step)}
         >
           <Icon aria-hidden />
@@ -269,7 +269,7 @@ function MonthCard() {
         aside={
           <Button
             variant="ghost"
-            size="sm"
+            size="desktop-sm"
             className="-my-1 -mr-1.5 text-muted-foreground"
             onClick={() => void navigate({ to: tabPath(asset.id, "money") })}
           >
@@ -319,7 +319,7 @@ function RecentCard() {
         aside={
           <Button
             variant="ghost"
-            size="sm"
+            size="desktop-sm"
             className="-my-1 -mr-1.5 text-muted-foreground"
             onClick={() => void navigate({ to: tabPath(asset.id, "history") })}
           >

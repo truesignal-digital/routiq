@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: navigation</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  .navcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  .navcols.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 1200px) { .navcols, .navcols.four { grid-template-columns: 1fr 1fr; } }
+  .navcol .frame { display: flex; min-height: 600px; }
+  .navcol .frame > .sb, .navcol .frame > aside { width: 100%; }
+  .navcol h4 { margin: 0 0 4px; font: 650 15px/1.3 var(--font-heading); }
+  .navcol .caption { margin: 0 0 10px; min-height: 34px; }
+  .procon { font-size: 13px; margin-top: 12px; }
+  .procon li { margin: 3px 0; }
+  .procon .plus::marker { content: "+  "; color: var(--success-foreground); font-weight: 700; }
+  .procon .minus::marker { content: "–  "; color: var(--destructive); font-weight: 700; }
+
+  /* Static renders of today's sidebar and the brand-identity sidebar. */
+  .sb.static .item { justify-content: flex-start; }
+  .sb.brand { background: #101e33; color: rgb(255 255 255 / .72); border-right-color: #101e33; }
+  .sb.brand .ws { color: #fff; }
+  .sb.brand .logo { background: #3072c7; }
+  .sb.brand .item { color: rgb(255 255 255 / .72); }
+  .sb.brand .item.on { background: rgb(255 255 255 / .09); color: #fff; box-shadow: inset 3px 0 0 #3072c7; }
+  .sb.brand .item.soonitem { color: rgb(255 255 255 / .5); }
+  .sb.brand .glabel { color: rgb(255 255 255 / .5); }
+  .sb.brand .nb.q { background: rgb(48 114 199 / .3); color: #fff; border-radius: 10px; }
+  .sb.brand .who { border-top-color: rgb(255 255 255 / .1); color: rgb(255 255 255 / .55); }
+  .sb.brand .who b { color: #fff; }
+  .sb.brand .av { background: #3072c7; }
+  .soon-card { border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; background: var(--muted); }
+  .soon-card .t { font-weight: 650; }
+  .soon-card .s { font-size: 12.5px; color: var(--muted-foreground); }
+  .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; gap: 10px; align-items: stretch; }
+  .flow .step { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+  .flow .step.hl { border-color: var(--warning); background: color-mix(in oklch, var(--warning) 10%, white); }
+  .flow .arrow { align-self: center; color: var(--muted-foreground); font-size: 20px; }
+  @media (max-width: 1150px) { .flow { grid-template-columns: 1fr; } .flow .arrow { transform: rotate(90deg); justify-self: center; } }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-04 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#compare">Today, brand pass, proposal</a>
+    <a href="#issues">What's inconsistent</a>
+    <a href="#rules">Rules</a>
+    <a href="#money">Money: one place</a>
+    <a href="#roles">Each role's sidebar</a>
+    <a href="#phone">Phone</a>
+    <a href="#soon">Coming soon</a>
+    <a href="#brand">The brand-identity branch</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Navigation</h2>
+      <p class="lede">The sidebar is the first consistency surface: it decides what a user thinks the product is. This page compares the sidebar on develop, the sidebar from the unmerged brand-identity pass, and a proposal that takes the best of both. The theme button at the bottom left switches every mockup between the neutral theme on develop and the brand navy.</p>
+    </header>
+
+    <section class="section" id="compare">
+      <div class="kicker">Compare</div>
+      <h3>Today, the brand pass, the proposal</h3>
+      <div class="navcols">
+        <div class="navcol">
+          <h4>A · Develop today</h4>
+          <p class="caption">Flat list of six. Settings hide under "More". Phone opens the same list as a sheet.</p>
+          <div class="frame">
+            <aside class="sb static">
+              <div class="ws"><span class="logo"><i data-i="truck"></i></span>ROUTIQ</div>
+              <div class="item"><i data-i="home"></i>Home</div>
+              <div class="item on"><i data-i="truck"></i>Trucks</div>
+              <div class="item"><i data-i="route"></i>Trips</div>
+              <div class="item"><i data-i="wrench"></i>Maintenance</div>
+              <div class="item"><i data-i="money"></i>Finance</div>
+              <div class="item"><i data-i="menu"></i>More</div>
+              <div class="who" style="margin-top:auto"><span><b>boris</b>transports-ngwa</span></div>
+              <div class="item"><i data-i="back"></i>Sign out</div>
+            </aside>
+          </div>
+          <ul class="procon">
+            <li class="plus">Short, nothing to learn.</li>
+            <li class="plus">Modules the workspace didn't buy disappear.</li>
+            <li class="minus">Shows Finance to roles that can't read it (#64).</li>
+            <li class="minus">Branches, users and people sit two clicks deep under "More", whose hamburger icon reads as "open menu".</li>
+            <li class="minus">Footer shows the login and the workspace slug, not a name and role. Sign out appears here and on More.</li>
+            <li class="minus">Finance's three pages are pill tabs inside the page; nothing in the sidebar says Approvals is waiting.</li>
+          </ul>
+        </div>
+
+        <div class="navcol">
+          <h4>B · Brand-identity pass (unmerged)</h4>
+          <p class="caption">Navy, logo, two groups, and a "Coming soon" group of five features with a roadmap link.</p>
+          <div class="frame">
+            <aside class="sb static brand">
+              <div class="ws"><span data-mark></span><span class="wordmark">Routi<b>q</b></span></div>
+              <div class="glabel">Operations</div>
+              <div class="item"><i data-i="home"></i>Home</div>
+              <div class="item on"><i data-i="truck"></i>Trucks</div>
+              <div class="item"><i data-i="route"></i>Trips</div>
+              <div class="item"><i data-i="wrench"></i>Maintenance</div>
+              <div class="glabel">Management</div>
+              <div class="item"><i data-i="money"></i>Finance</div>
+              <div class="item"><i data-i="sliders"></i>More</div>
+              <div class="glabel">Coming soon</div>
+              <div class="item soonitem"><i data-i="gauge"></i>Fleet review</div>
+              <div class="item soonitem"><i data-i="undo"></i>Branch transfers</div>
+              <div class="item soonitem"><i data-i="wifioff"></i>Offline capture</div>
+              <div class="item soonitem"><i data-i="alert"></i>Notifications</div>
+              <div class="item soonitem"><i data-i="clock"></i><span style="flex:1">Full roadmap</span><span class="nb q">11</span></div>
+              <div class="who" style="margin-top:auto"><span class="av">B</span><span><b>boris</b>Administrator</span></div>
+            </aside>
+          </div>
+          <ul class="procon">
+            <li class="plus">Real identity: logo, navy, a blue active edge.</li>
+            <li class="plus">Groups give the list a shape; footer shows the role.</li>
+            <li class="plus">Coming soon is backed by one catalog and a test that every route belongs to a feature.</li>
+            <li class="minus">Four of the eleven main rows lead to pages that don't exist yet. A driver sees "Notifications" and taps it.</li>
+            <li class="minus">"Management" mixes money (Finance) and settings (More), and still hides settings under More.</li>
+            <li class="minus">Still role-blind (#64); still no counts.</li>
+          </ul>
+        </div>
+
+        <div class="navcol">
+          <h4>C · Proposal</h4>
+          <p class="caption">Places only, in two groups named after the work. Money is one row. Counts where someone waits. One quiet link to what's coming.</p>
+          <div class="frame"><div data-sidebar="trucks" data-role="admin"></div></div>
+          <ul class="procon">
+            <li class="plus">Every row is a page with records. Nothing leads to a dead end or a denial.</li>
+            <li class="plus">Money is one row for everyone; its count is the approvals waiting for you. Entries, approvals and periods become views of one page (see <a href="#money">Money</a>).</li>
+            <li class="plus">Settings come out of "More" for admins; personal settings move into the name menu.</li>
+            <li class="plus">Coming soon stays visible in one row and inside the module where each feature will live.</li>
+            <li class="minus">Eight rows for admins. Other roles see 3 to 5.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="issues">
+      <div class="kicker">Audit</div>
+      <h3>What's inconsistent about navigation today</h3>
+      <table class="spec-table">
+        <thead><tr><th></th><th>Finding</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td><span class="sev p0">P0</span></td><td>The sidebar offers Finance to roles that can't read it. Clicking leads to a permission notice. Home's cards already follow "absent, never greyed"; the sidebar doesn't.</td><td><code>shell/sections.ts</code> gates by module only; issue #64 (open)</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Sidebar label and page title disagree: "Finances" opens "Écritures comptables"; "Plus" holds settings; English "Assets" opens "Your assets".</td><td><code>fr.json</code> <code>nav.*</code> vs page titles</td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Second-level navigation has three forms: Finance pill tabs that are routes, Maintenance tabs held in page state (lost on reload, not linkable), vehicle line tabs.</td><td><code>FinanceNav.tsx</code>, <code>MaintenanceScreen.tsx:197</code>, <code>VehicleTabsNav.tsx</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Trip detail and Record a trip have no breadcrumb trail; on a phone there's no way back up.</td><td><code>shell/breadcrumbs.ts:23-48</code></td></tr>
+          <tr><td><span class="sev p1">P1</span></td><td>Branches, users and people are two clicks deep under "More", next to language and theme. "More" uses the hamburger icon.</td><td><code>MoreStub.tsx</code>, <code>sections.ts</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>Sign out appears twice (sidebar footer and More). The footer shows the login name and the workspace slug, not the person and role.</td><td><code>AppSidebar.tsx</code>, <code>MoreStub.tsx</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>Nothing in navigation says work is waiting; counts only appear on Home and inside Finance's tab.</td><td><code>FinanceNav.tsx</code> badge</td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>The French branch switcher is cut to "Toutes mes agen" on every page.</td><td>live run, <code>03-vh003-now-desktop-fr</code></td></tr>
+          <tr><td><span class="sev p2">P2</span></td><td>The logo is a generic truck icon; the brand mark exists only in the unmerged branch.</td><td><code>AppSidebar.tsx</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="rules">
+      <div class="kicker">Rules</div>
+      <h3>Rules for navigation</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>What goes in the sidebar</h4><ul>
+          <li>Places, never actions and never single records. Every row opens a page that follows an archetype (list, queue, settings list, home).</li>
+          <li>Two groups named after the work: <b>Daily work</b> (Home, Trucks, Trips, Maintenance, Money) and <b>Company</b> (Personnel, Branches, Accounting months). Money is one row (see <a href="#money">Money</a>).</li>
+          <li>Hidden when the module is off <i>or</i> the role can't read it. Never greyed, never a link to a denial.</li>
+          <li>The row label is the page title, word for word, and the first breadcrumb.</li>
+          <li>Personal things (language, theme, sign out) live in the name menu at the bottom. The "More" page goes away.</li>
+        </ul></div>
+        <div class="spec-card"><h4>How it behaves</h4><ul>
+          <li>Counts only where someone has to act, from server aggregates: expenses waiting for your approval (on Money), new Maintenance problems. Red means it waits on you.</li>
+          <li>One active-route matcher (<code>isRouteActive</code>), active on child routes too.</li>
+          <li>No nested, collapsible groups: one click to any place.</li>
+          <li>Collapsed rail on desktop: icons, tooltips, counts become dots.</li>
+          <li>Second-level navigation inside a page is always URL tabs of one style (the vehicle's line tabs, 44 px).</li>
+          <li>Visibility is data: <code>sections.ts</code> lists group, module and the read capability, so a test can assert each role's sidebar.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="money">
+      <div class="kicker">Money</div>
+      <h3>Money: three pages today, one place proposed</h3>
+      <p class="rule">Today Finance has three pages behind pill tabs: Entries, Approvals and Periods. They are three views of one flow, not three separate things.</p>
+      <div class="flow">
+        <div class="step"><b>1 · Recorded</b><span>Anyone allowed records an expense or revenue: on a truck, a trip, when completing a work order, or in Money. It becomes an <b>entry</b> with status "Waiting".</span></div>
+        <div class="arrow">→</div>
+        <div class="step hl"><b>2 · Approved or rejected</b><span>A finance approver or admin decides. <b>Approvals</b> is just the list of entries still "Waiting", oldest first, across their branches.</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><b>3 · Posted</b><span>Approved entries count in the books for the month of their date. Mistakes are reversed, never edited.</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><b>4 · Month locked</b><span>At month end, finance locks the <b>period</b> (the accounting month). Nothing posts into it afterwards; late corrections go into the open month.</span></div>
+      </div>
+      <table class="spec-table" style="margin-top:16px">
+        <thead><tr><th>Page today</th><th>What it is</th><th>Who uses it</th><th>How often</th></tr></thead>
+        <tbody>
+          <tr><td><b>Entries</b></td><td>The ledger: every expense and revenue, any status, filterable</td><td>Finance, admin, executives (read), branch managers</td><td>Daily</td></tr>
+          <tr><td><b>Approvals</b></td><td>Entries with status "Waiting", plus Approve / Reject. A filter of Entries with decision buttons</td><td>Finance approver, admin</td><td>Daily</td></tr>
+          <tr><td><b>Periods</b></td><td>One row per month, open or locked, with Lock / Reopen</td><td>Finance approver, admin</td><td>Once a month</td></tr>
+        </tbody>
+      </table>
+      <div class="cols" style="margin-top:18px;grid-template-columns:minmax(0,1fr) 390px">
+        <div>
+          <div class="frame-label">Proposal · one Money page, approvals as a view</div>
+          <div class="frame desktop" style="min-height:560px">
+            <div data-sidebar="money" data-role="finance"></div>
+            <div class="main"><div class="topbar"><b>Money</b><div class="right"><span class="chip set">All branches</span></div></div>
+              <div class="page">
+                <div class="ph"><div><h1 class="pt">Money</h1><div class="lead">Every expense and revenue. October is open; September is locked.</div></div><button class="btn primary"><i data-i="plus"></i>Record an expense</button></div>
+                <div class="metrics">
+                  <div><div class="k">Out in October</div><div class="v">412 500</div><div class="s">XAF</div></div>
+                  <div style="background:color-mix(in oklch,var(--warning) 14%,white)"><div class="k">Waiting your approval</div><div class="v">2</div><div class="s">185 000 XAF · oldest 2 days</div></div>
+                  <div><div class="k">Missing receipt</div><div class="v">1</div><div class="s">Fuel 1 Oct</div></div>
+                  <div><div class="k">In in October</div><div class="v">450 000</div><div class="s">XAF</div></div>
+                </div>
+                <div class="toolbar"><span class="chip set">Waiting approval ×</span><span class="chip"><i data-i="plus"></i>Vehicle</span><span class="chip"><i data-i="plus"></i>Category</span></div>
+                <div class="list-card"><i data-i="receipt" data-c="lg"></i><div><div class="main-t">#14 Brake pads · VH003</div><div class="sub-t">Parts · Hervé · 3 Oct · <span class="gap">no receipt</span></div></div><div class="end row"><b class="num" style="margin-right:8px">150 000 XAF</b><button class="btn sm">Reject</button><button class="btn sm primary">Approve</button></div></div>
+                <div class="list-card"><i data-i="receipt" data-c="lg"></i><div><div class="main-t">#13 Road toll · VH003</div><div class="sub-t">Tolls · Sali · 2 Oct · receipt attached</div></div><div class="end row"><b class="num" style="margin-right:8px">35 000 XAF</b><button class="btn sm">Reject</button><button class="btn sm primary">Approve</button></div></div>
+              </div></div>
+          </div>
+          <p class="caption">The "Waiting your approval" tile is the approvals queue: clicking it filters the list and shows Approve / Reject on each row. The count on the Money row in the sidebar opens straight into this view.</p>
+        </div>
+        <div class="spec-card"><h4>The simplification</h4><ul>
+          <li><b>Entries + Approvals → one Money page.</b> Approvals becomes the "Waiting approval" view of the same list. Decision buttons appear on rows only for people who can approve.</li>
+          <li><b>Periods leave daily navigation.</b> The Money page's lead line says which month is open. Locking and reopening move to <b>Company → Accounting months</b>, for finance approvers and admins only.</li>
+          <li><b>Old links keep working:</b> <code>/finance/approvals</code> redirects to the waiting view; notifications link there.</li>
+          <li>The in-page pill tabs (one of the four tab styles) go away.</li>
+        </ul>
+        <h4 style="margin-top:14px">Case for keeping three</h4><ul>
+          <li>Approvers get a page that is only their queue, nothing else on it.</li>
+          <li>No routing changes, no redirects.</li>
+        </ul>
+        <h4 style="margin-top:14px">Why one still wins</h4><ul>
+          <li>The filtered view <i>is</i> that queue: one click from the sidebar count, with rows people already know.</li>
+          <li>Periods are a monthly admin task; a daily-navigation spot makes everyone else walk past it.</li>
+          <li>Fewer places to learn: a driver's expense, the approver's queue and the ledger are the same list.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="roles">
+      <div class="kicker">By role</div>
+      <h3>Each role's sidebar</h3>
+      <p class="rule">Same structure, filtered. A driver sees three rows, so the product feels small and safe; an administrator sees everything.</p>
+      <div class="navcols four">
+        <div class="navcol"><h4>Driver</h4><p class="caption">Their truck, their trips.</p><div class="frame" style="min-height:440px"><div data-sidebar="trucks" data-role="driver"></div></div></div>
+        <div class="navcol"><h4>Workshop</h4><p class="caption">Problems and work orders, with the count of new problems.</p><div class="frame" style="min-height:440px"><div data-sidebar="maintenance" data-role="workshop"></div></div></div>
+        <div class="navcol"><h4>Finance</h4><p class="caption">Money with the approvals count; Accounting months under Company.</p><div class="frame" style="min-height:440px"><div data-sidebar="money" data-role="finance"></div></div></div>
+        <div class="navcol"><h4>Administrator</h4><p class="caption">Everything, including Company.</p><div class="frame" style="min-height:440px"><div data-sidebar="home" data-role="admin"></div></div></div>
+      </div>
+      <p class="caption">Role names follow the roles-and-access decision (2026-09-27, branch <code>docs/roles-and-access</code>), which also merges People and Users into one Personnel list.</p>
+    </section>
+
+    <section class="section" id="phone">
+      <div class="kicker">Phone</div>
+      <h3>Phone: a bottom bar, not only a hamburger</h3>
+      <p class="rule">Today the phone shows a hamburger that opens the full sidebar as a sheet. The proposal keeps that sheet behind a "Menu" tab and adds a bottom bar with the three places each role uses most, in thumb reach. The three are data per role.</p>
+      <div class="cols" style="grid-template-columns:390px 390px minmax(0,1fr)">
+        <div>
+          <div class="frame-label">Today · hamburger opens the sheet</div>
+          <div class="frame phone" style="min-height:700px">
+            <div class="ptop"><i data-i="menu" data-c="lg"></i><b>Trucks</b><span class="chip set" style="margin-left:auto">Douala</span></div>
+            <div class="scrim" style="top:0"></div>
+            <aside class="sb static" style="position:absolute;top:0;bottom:0;left:0;width:280px;z-index:12">
+              <div class="ws"><span class="logo"><i data-i="truck"></i></span>ROUTIQ</div>
+              <div class="item"><i data-i="home"></i>Home</div>
+              <div class="item on"><i data-i="truck"></i>Trucks</div>
+              <div class="item"><i data-i="route"></i>Trips</div>
+              <div class="item"><i data-i="wrench"></i>Maintenance</div>
+              <div class="item"><i data-i="money"></i>Finance</div>
+              <div class="item"><i data-i="menu"></i>More</div>
+            </aside>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Proposal · driver: 3 places + Menu</div>
+          <div class="frame phone" style="min-height:700px">
+            <div class="ptop"><b>My truck</b><span class="chip set" style="margin-left:auto">Douala</span></div>
+            <div class="page">
+              <div class="row"><h1 class="pt">VH001</h1><span class="badge b-ok">In service</span></div>
+              <div class="attn info"><i data-i="route" data-c="lg"></i><div><div class="t">No trip open</div><div class="s">Start one when you leave.</div></div></div>
+              <div class="card"><div class="card-h"><h2>Today</h2></div><div class="card-b feed"><div><span class="dot ok"></span>Fuel 120 L<span class="when">07:10</span></div></div></div>
+            </div>
+            <div data-tabbar="trucks" data-role="driver"></div>
+          </div>
+        </div>
+        <div class="spec-card"><h4>Rules</h4><ul>
+          <li>Bottom bar: three places + Menu, chosen per role (data): driver Home / My truck / Trips; workshop Home / Maintenance / Trucks; finance Home / Money / Trucks; admin Home / Trucks / Money; executive Overview / Trucks / Money.</li>
+          <li>Menu opens the full sidebar as a sheet, same groups and counts.</li>
+          <li>The bar hides when a form panel is open; the record action bar sits above it.</li>
+          <li>Counts show on bar items too (Money).</li>
+          <li>Drivers with one assigned truck land on that truck; "My truck" is that truck's workspace.</li>
+        </ul>
+        <p class="caption">Owner decision: this adds a component on phone. The page mockups on <a href="pages.html">pages.html</a> already use it.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="soon">
+      <div class="kicker">Roadmap</div>
+      <h3>Coming soon: visible, but out of the way</h3>
+      <p class="rule">The brand pass was right that the team should see where the product goes, and right to drive it from one catalog. The proposal moves "soon" out of the main list: one quiet "What's coming" row at the bottom, and a notice inside the module where each feature will live, so it shows up where people would look for it.</p>
+      <div class="cols even">
+        <div class="spec-card fs">
+          <h4>Inside the module: Maintenance → a soon notice under the tabs</h4>
+          <div class="tabs"><div class="on">Work orders</div><div>Problems<span class="count hot">2</span></div></div>
+          <div class="soon-card"><i data-i="file" data-c="lg"></i><div><div class="t">Parts and stock · coming</div><div class="s">Track parts used on each work order and what's left on the shelf. Waits on #27.</div></div></div>
+          <p class="caption">One line, dashed, never a tab of its own, never a button. Linked to the feature's page in "What's coming".</p>
+        </div>
+        <div class="spec-card fs">
+          <h4>"What's coming" page: the roadmap, grouped by where it will live</h4>
+          <table class="spec-table" style="border:0"><thead><tr><th>Feature</th><th>Lands in</th><th>Issue</th></tr></thead><tbody>
+            <tr><td>Branch transfers (submit, confirm)</td><td>Trucks</td><td>#26</td></tr>
+            <tr><td>Parts and stock</td><td>Maintenance</td><td>#27</td></tr>
+            <tr><td>Service plans</td><td>Maintenance</td><td>—</td></tr>
+            <tr><td>Notifications</td><td>Top bar</td><td>#33</td></tr>
+            <tr><td>Offline capture with drafts</td><td>Every form</td><td>#45</td></tr>
+            <tr><td>Handovers, location</td><td>Vehicle</td><td>#46</td></tr>
+            <tr><td>Mobile money, reports and exports</td><td>Money</td><td>#46 / —</td></tr>
+            <tr><td>Fleet review, disposal</td><td>Home / Vehicle</td><td>—</td></tr>
+          </tbody></table>
+          <p class="caption">From the brand pass catalog (<code>features/catalog.ts</code>), corrected: "Fuel and consumption" is already live on develop (Log fuel), so it leaves the soon list. All five linked issues are still open.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="brand">
+      <div class="kicker">The branch</div>
+      <h3>What to do with the brand-identity branch</h3>
+      <p class="rule">It is not a PR and has no issue. It is 89 uncommitted files in a local worktree (<code>~/Developer/routiq-worktrees/brand-identity</code>, branch <code>feat/brand-identity</code>, never pushed), built on <code>feat/maintenance-on-develop@4392247</code>, which is now 158 commits behind develop. The owner review of 2026-09-28 asked for more creative directions, which became the design lab (directions A to E); no direction was picked.</p>
+      <div class="cols even">
+        <div class="spec-card"><h4>Keep, and port onto develop in small PRs</h4><ul>
+          <li>The logo component (R with map-pin counter and road stem) and icons/manifest.</li>
+          <li><code>features/catalog.ts</code> + <code>feature-map.test.ts</code>: every route and command belongs to a feature. This is the "feature map linked to tests" you asked for, and the source for "What's coming".</li>
+          <li><code>/soon/$featureId</code> pages, rewritten as the "What's coming" page.</li>
+          <li>The design-system guard tests (DS-1 to DS-4) and <code>DESIGN.md</code>, merged into this proposal's rules.</li>
+          <li>The navy and blue tokens, <b>if</b> the owners pick the brand theme (toggle at the bottom left to compare).</li>
+        </ul></div>
+        <div class="spec-card"><h4>Drop or redo</h4><ul>
+          <li>The "Coming soon" sidebar group (replaced by one row plus in-module notices).</li>
+          <li>The Operations / Management groups (replaced by Daily work / Money / Company).</li>
+          <li>The 60 modified screens: develop has moved too far; redo against the archetypes here instead of merging.</li>
+          <li><code>src/lab</code> and its "design-lab" catalog entry, once this consistency view is chosen (it is close to lab direction D).</li>
+          <li>Never merge the worktree as a whole. The worktree stays untouched until you say so.</li>
+        </ul></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+</body>
+</html>

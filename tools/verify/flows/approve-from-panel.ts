@@ -29,7 +29,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await panel.getByRole("button", { name: t("Historique", "History") }).waitFor();
   await shot("entry-panel");
 
-  await panel.getByRole("button", { name: t("Approuver", "Approve"), exact: true }).click();
+  await panel.getByRole("button", { name: t("Approuver l'écriture", "Approve entry"), exact: true }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await panel.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: entry.entryNumber, exact: true }).waitFor({ state: "detached" });

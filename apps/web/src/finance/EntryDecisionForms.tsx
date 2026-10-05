@@ -9,6 +9,7 @@ import type {
 } from "@routiq/contracts";
 import {
   CommandForm,
+  ReasonField,
   useCommandSubmission,
   type CommandFormBack,
   type CommandSurface,
@@ -19,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
+import { useCommandLabel } from "../commands/labels.js";
 import { notifyCommandError, notifyCommandSuccess } from "../lib/notify.js";
 import { validateRejectionReason, validateReversalReason } from "./model.js";
 
@@ -60,12 +62,9 @@ function useFinanceRefresh(...reads: ReadonlyArray<"approvals" | "entries" | "en
 }
 
 function useDecisionChrome(host: EntryDecisionHost, refresh: () => Promise<void>) {
-  const { t } = useTranslation();
   return {
     surface: host.surface,
     back: host.back,
-    submittingLabel: t("finance.approvals.submitting"),
-    cancelLabel: t("finance.approvals.cancel"),
     onReload: async () => {
       await refresh();
       host.onDismiss();
@@ -76,6 +75,7 @@ function useDecisionChrome(host: EntryDecisionHost, refresh: () => Promise<void>
 
 export function ApproveEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const refresh = useFinanceRefresh("approvals", "entries", "entry");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
@@ -105,9 +105,9 @@ export function ApproveEntryForm(host: EntryDecisionHost) {
   return (
     <CommandForm
       {...chrome}
-      title={t("finance.approvals.approveTitle")}
+      title={label("approve-entry")}
       error={submission.error}
-      submitLabel={t("finance.approvals.approve")}
+      command="approve-entry"
       ready
       submitting={submission.submitting}
       onSubmit={() => void submit()}
@@ -175,7 +175,7 @@ export function EntryDecisionButtons({
   onApproved?: (() => void) | undefined;
   onReject: () => void;
 }) {
-  const { t } = useTranslation();
+  const label = useCommandLabel();
   const { approve, submitting } = useApproveEntry(client);
 
   return (
@@ -183,15 +183,13 @@ export function EntryDecisionButtons({
       <Button
         type="button"
         variant="destructive"
-        className="min-h-11"
         disabled={submitting}
         onClick={onReject}
       >
-        {t("finance.approvals.reject")}
+        {label("reject-entry")}
       </Button>
       <Button
         type="button"
-        className="min-h-11"
         disabled={submitting}
         onClick={() =>
           void approve(entry).then((approved) => {
@@ -199,7 +197,7 @@ export function EntryDecisionButtons({
           })
         }
       >
-        {submitting ? t("finance.approvals.submitting") : t("finance.approvals.approve")}
+        {label("approve-entry", submitting ? "submitting" : "label")}
       </Button>
     </div>
   );
@@ -207,6 +205,7 @@ export function EntryDecisionButtons({
 
 export function RejectEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const refresh = useFinanceRefresh("approvals", "entries", "entry");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
@@ -239,22 +238,21 @@ export function RejectEntryForm(host: EntryDecisionHost) {
   return (
     <CommandForm
       {...chrome}
-      title={t("finance.approvals.rejectTitle")}
+      title={label("reject-entry")}
       error={submission.error}
-      submitLabel={t("finance.approvals.reject")}
+      command="reject-entry"
+      tone="destructive"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="reason">{t("finance.approvals.reasonLabel")}</Label>
-        <Textarea
-          id="reason"
-          placeholder={t("finance.approvals.reasonPlaceholder")}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-        />
-      </div>
+      <ReasonField
+        id="reason"
+        label={t("finance.approvals.reasonLabel")}
+        placeholder={t("finance.approvals.reasonPlaceholder")}
+        value={reason}
+        onChange={setReason}
+      />
     </CommandForm>
   );
 }
@@ -272,6 +270,7 @@ export function ReverseEntryForm({
   onReversed?: ((reversalEntryId: string) => void) | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const refresh = useFinanceRefresh("entry", "entries");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
@@ -306,24 +305,21 @@ export function ReverseEntryForm({
   return (
     <CommandForm
       {...chrome}
-      title={t("finance.entries.reversal.title")}
+      title={label("reverse-entry")}
       error={submission.error}
-      submitLabel={t("finance.entries.reversal.submit")}
-      submittingLabel={t("finance.entries.reversal.submitting")}
-      cancelLabel={t("finance.entries.reversal.cancel")}
+      command="reverse-entry"
+      tone="destructive"
       ready={ready}
       submitting={submission.submitting}
       onSubmit={() => void submit()}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="reason">{t("finance.entries.reversal.reasonLabel")}</Label>
-        <Textarea
-          id="reason"
-          placeholder={t("finance.entries.reversal.reasonPlaceholder")}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-        />
-      </div>
+      <ReasonField
+        id="reason"
+        label={t("finance.entries.reversal.reasonLabel")}
+        placeholder={t("finance.entries.reversal.reasonPlaceholder")}
+        value={reason}
+        onChange={setReason}
+      />
     </CommandForm>
   );
 }
