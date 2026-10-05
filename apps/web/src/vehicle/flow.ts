@@ -631,7 +631,10 @@ export function attentionStep(
       return may.renewDocuments(viewer) ? go("renew-document") : { kind: "none" };
     case "ENTRY_AWAITING_REVIEW":
       if (!may.approveEntries(viewer)) return { kind: "none" };
-      return maker ? locked("review-entry", { key: "youRecordedIt" }) : go("review-entry");
+      if (maker) return locked("review-entry", { key: "youRecordedIt" });
+      return item.params.directionDecides === true
+        ? locked("review-entry", { key: "directionDecides" })
+        : go("review-entry");
     case "ENTRY_EVIDENCE_MISSING":
       return mayAttachTo(item.params.recordedBy, viewer) ? go("attach-evidence") : { kind: "none" };
   }

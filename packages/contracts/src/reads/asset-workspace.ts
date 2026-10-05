@@ -210,6 +210,12 @@ export const assetAttentionItem = z.object({
       hasCompletedWorkOrder: z.boolean(),
       categoryLabelFr: z.string(),
       categoryLabelEn: z.string(),
+      /**
+       * ENTRY_AWAITING_REVIEW only: the approval chain keeps the viewer's role
+       * from deciding this entry, so Direction decides (ADR-0009). The same
+       * rule as `directionDecides` on the approvals queue and entry detail.
+       */
+      directionDecides: z.boolean(),
     })
     .partial(),
 });

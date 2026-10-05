@@ -170,6 +170,16 @@ describe("default approval chain", () => {
 
         const detail = await read(token, `/v1/finance/entries/${aboveBandEntryIds[0]}`);
         expect(detail).toMatchObject({ directionDecides: aboveBand });
+
+        // The vehicle's to-do flags the same entries (#393).
+        const attention = (await read(token, `/v1/assets/${assetId}/attention`)) as {
+          items: Array<{ code: string; subject: { id: string }; params: { directionDecides?: boolean } }>;
+        };
+        const review = (id: string) =>
+          attention.items.find((item) => item.code === "ENTRY_AWAITING_REVIEW" && item.subject.id === id)
+            ?.params.directionDecides;
+        expect([...belowBandEntryIds, ...financeBandEntryIds].map(review)).toEqual([false, false, false, false, false, false]);
+        expect(aboveBandEntryIds.map(review)).toEqual([aboveBand, aboveBand, aboveBand, aboveBand]);
       }
     });
 

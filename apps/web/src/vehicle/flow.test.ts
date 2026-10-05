@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Role, WorkOrderStatus } from "@routiq/contracts";
 import {
+  attentionStep,
   buildTodos,
   completionSignedOff,
   daysSince,
@@ -403,6 +404,17 @@ describe("to-dos from the attention read", () => {
     ]);
     expect(approver.map((todo) => todo.who)).toEqual(["finance", "recorder", "workshop"]);
     expect(approver[0]?.record).toEqual({ kind: "entry", id: ENTRY_ID });
+  });
+
+  it("locks the review, and leaves it out of the to-do count, above Finance's band (#393)", () => {
+    const above = attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true } });
+    const within = attention("ENTRY_AWAITING_REVIEW");
+    expect(token(attentionStep(above, viewer("FINANCE"), vehicle))).toBe(
+      "locked:review-entry:directionDecides",
+    );
+    expect(token(attentionStep(within, viewer("FINANCE"), vehicle))).toBe("go:review-entry");
+    expect(tabMarkers([above], vehicle, viewer("FINANCE")).todoCount).toBe(0);
+    expect(tabMarkers([within], vehicle, viewer("FINANCE")).todoCount).toBe(1);
   });
 
   it("offers a driver the missing receipt only on an entry they recorded", () => {
