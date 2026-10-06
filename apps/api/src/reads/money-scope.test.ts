@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedWorkspace } from "../test/seed.js";
+import { plantWorkOrderRevenue, seedWorkspace } from "../test/seed.js";
 
 /**
  * Each role reads only the money its scope allows (#264, roles-and-access.md
@@ -365,6 +365,29 @@ describe("money read scope, role by read", () => {
       } else {
         expect({ role, status: response.status }).toEqual({ role, status: 200 });
       }
+    }
+  });
+
+  it("keeps revenue that names a work order out of the workshop's scope (#444)", async () => {
+    const template = randomUUID();
+    await api.ok(actors.DIRECTOR.token, "record-revenue", {
+      entryId: template,
+      branchCode: "DLA",
+      categoryCode: "FREIGHT_REVENUE",
+      economicDate: "2026-08-12",
+      amountMinor: 30_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truckId, amountMinor: 30_000 }],
+    });
+    const revenue = await plantWorkOrderRevenue(ctx.db, { revenueEntryId: template, workOrderId });
+    const cases: Array<[Role, string, number]> = [
+      ["TECHNICIAN", revenue, 404],
+      ["TECHNICIAN", entry.workOrder, 200],
+      ["DIRECTOR", revenue, 200],
+    ];
+    for (const [role, entryId, status] of cases) {
+      const response = await api.get(actors[role].token, `/v1/history/financial_entry/${entryId}`);
+      expect({ role, entryId, status: response.status }).toEqual({ role, entryId, status });
     }
   });
 

@@ -21,7 +21,7 @@ import {
 } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { plantWorkOrderRevenue, seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { and, eq } from "drizzle-orm";
 import { serializeMinor } from "./serialize-minor.js";
 
@@ -1745,5 +1745,29 @@ describe("finance entry fields for the vehicle workspace", () => {
       assetLinks: null,
       submittedByPrincipalId: driver.principalId,
     });
+  });
+
+  it("links revenue that names a work order to no work order (#444)", async () => {
+    const template = randomUUID();
+    await api.ok(admin.token, "record-revenue", {
+      entryId: template,
+      branchCode: "DLA",
+      categoryCode: "FREIGHT_REVENUE",
+      economicDate: "2026-08-22",
+      amountMinor: 30_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truckA, amountMinor: 30_000 }],
+    });
+    const revenue = await plantWorkOrderRevenue(ctx.db, { revenueEntryId: template, workOrderId });
+    const noWorkOrder = { workOrderId: null, workOrderAssetId: null };
+
+    const onA = (await entries(`?assetId=${truckA}`)).find((entry) => entry.id === revenue);
+    expect({ assetLinks: onA?.assetLinks, links: onA?.links }).toMatchObject({
+      assetLinks: { workOrderId: null },
+      links: noWorkOrder,
+    });
+    const detail = await api.get(admin.token, `/v1/finance/entries/${revenue}`);
+    expect(detail.status).toBe(200);
+    expect(financialEntryDetail.parse(detail.body).links).toMatchObject(noWorkOrder);
   });
 });

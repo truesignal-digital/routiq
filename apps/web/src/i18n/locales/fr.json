@@ -486,8 +486,8 @@
         "asset": "Actif",
         "postingAmount": "Montant",
         "reversalChain": "Chaîne d'extournement",
-        "reversesEntry": "Extourne l'écriture",
-        "reversedByEntry": "Extournée par l'écriture",
+        "reversesEntry": "Extourne l'écriture {number}",
+        "reversedByEntry": "Extournée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
@@ -530,7 +530,6 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
-        "actions": "Actions",
         "branch": "Agence",
         "submittedAt": "Soumis le"
       },
@@ -1881,6 +1880,13 @@
       "label": "Modifier l'écriture",
       "submit": "Enregistrer les modifications",
       "submitting": "Enregistrement…"
+    },
+    "acknowledge-approval-rules": {
+      "label": "Confirmer la lecture des règles d'approbation",
+      "short": "Règles lues",
+      "submit": "J'ai compris",
+      "submitting": "Enregistrement…",
+      "dismiss": "Plus tard"
     }
   },
   "vehicle": {
@@ -2545,6 +2551,24 @@
         "searchPlaceholder": "Rechercher, ex. plein, renouveler, valider",
         "noMatch": "Aucune action ne correspond à « {query} »."
       }
+    }
+  },
+  "approvalRules": {
+    "notice": {
+      "title": "Les règles d'approbation ont changé",
+      "changedBy": "{name} les a modifiées le {date}.",
+      "changedByRoutiq": "ROUTIQ les a mises à jour le {date}.",
+      "failed": "Votre confirmation n'a pas pu être enregistrée. Réessayez."
+    },
+    "chain": {
+      "record-expense": "Vos dépenses",
+      "record-revenue": "Vos recettes"
+    },
+    "step": "{bound, select, upTo {Jusqu'à {amount}} above {Au-delà de {amount}} other {Tout montant}} : {outcome, select, POSTS_DIRECTLY {enregistrée directement} FINANCE_APPROVES {la Finance approuve} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction approuve} DIRECTION_APPROVES {la Direction approuve} other {attend une approbation}}",
+    "hint": {
+      "posts": "Vos saisies sont enregistrées directement, quel que soit le montant.",
+      "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
+      "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
     }
   }
 }

@@ -486,8 +486,8 @@
         "asset": "Asset",
         "postingAmount": "Amount",
         "reversalChain": "Reversal chain",
-        "reversesEntry": "Reverses entry",
-        "reversedByEntry": "Reversed by entry",
+        "reversesEntry": "Reverses entry {number}",
+        "reversedByEntry": "Reversed by entry {number}",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
         "breadcrumb": "Detail",
@@ -530,7 +530,6 @@
       "retry": "Try again",
       "empty": "No entries awaiting approval.",
       "columns": {
-        "actions": "Actions",
         "branch": "Branch",
         "submittedAt": "Submitted"
       },
@@ -1881,6 +1880,13 @@
       "label": "Edit entry",
       "submit": "Save changes",
       "submitting": "Saving…"
+    },
+    "acknowledge-approval-rules": {
+      "label": "Confirm you read the approval rules",
+      "short": "Rules read",
+      "submit": "Got it",
+      "submitting": "Saving…",
+      "dismiss": "Later"
     }
   },
   "vehicle": {
@@ -2545,6 +2551,24 @@
         "searchPlaceholder": "Search, e.g. fuel, renew, sign off",
         "noMatch": "No action matches “{query}”."
       }
+    }
+  },
+  "approvalRules": {
+    "notice": {
+      "title": "The approval rules have changed",
+      "changedBy": "{name} changed them on {date}.",
+      "changedByRoutiq": "ROUTIQ updated them on {date}.",
+      "failed": "Your confirmation could not be saved. Try again."
+    },
+    "chain": {
+      "record-expense": "Your expenses",
+      "record-revenue": "Your revenue"
+    },
+    "step": "{bound, select, upTo {Up to {amount}} above {Above {amount}} other {Any amount}}: {outcome, select, POSTS_DIRECTLY {posts directly} FINANCE_APPROVES {Finance approves} FINANCE_PEER_APPROVES {another Finance member or Direction approves} DIRECTION_APPROVES {Direction approves} other {waits for approval}}",
+    "hint": {
+      "posts": "Your entries post directly at any amount.",
+      "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}.",
+      "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}."
     }
   }
 }

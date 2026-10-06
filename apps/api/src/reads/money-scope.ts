@@ -9,7 +9,8 @@ import type { TenantTx } from "../db/tenant.js";
  * `financial_entries` row: its branch scope, then its money scope
  * (`MONEY_READ_SCOPE`). The ledger and the counter read every entry of their
  * branches; a driver only the entries they recorded; the workshop only entries
- * whose every line is a work-order cost. Which reads serve entries at all is
+ * whose every line is a work-order cost: an expense naming an order. Revenue
+ * that named one before #432 refused it is no cost. Which reads serve entries at all is
  * the read's own role gate; this decides which rows.
  */
 export function readableEntrySql(auth: AuthContext): SQL {
@@ -32,7 +33,7 @@ export function readableEntrySql(auth: AuthContext): SQL {
       select 1 from ${financialPostings}
       where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
         and ${financialPostings.financialEntryId} = ${financialEntries.id}
-        and ${financialPostings.workOrderId} is null
+        and (${financialPostings.workOrderId} is null or ${financialPostings.direction} <> 'EXPENSE')
     )`);
   }
   return and(...conditions)!;
