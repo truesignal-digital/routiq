@@ -440,6 +440,46 @@ describe("FinanceEntriesScreen", () => {
     ]);
   });
 
+  it("never offers Reverse on a reversal or an already-reversed entry (#130)", async () => {
+    const actual = await vi.importActual<typeof import("../finance/permissions.js")>(
+      "../finance/permissions.js",
+    );
+    vi.mocked(canReverseEntry).mockImplementation((_role, row) =>
+      actual.canReverseEntry("FINANCE", row),
+    );
+    const original = mockUseEntriesValue.data;
+    mockUseEntriesValue.data = {
+      pages: [
+        {
+          entries: [
+            {
+              ...entry,
+              id: "00000000-0000-4000-8000-000000000011",
+              entryNumber: "FIN-002",
+              amountMinor: -1000,
+              reversesEntryId: entry.id,
+            },
+            { ...entry, status: "REVERSED", reversesEntryId: null },
+          ],
+        },
+      ],
+    };
+    try {
+      const user = userEvent.setup();
+      render(<FinanceEntriesScreen />);
+      for (const button of screen.getAllByRole("button", { name: "dataTable.actions" })) {
+        await user.click(button);
+        expect(
+          (await screen.findAllByRole("menuitem")).map((item) => item.textContent),
+        ).toEqual(["finance.entries.viewer.fullScreen"]);
+        await user.keyboard("{Escape}");
+        await waitFor(() => expect(screen.queryAllByRole("menuitem")).toEqual([]));
+      }
+    } finally {
+      mockUseEntriesValue.data = original;
+    }
+  });
+
   it("sends a reversal to the detail route with the dialog already open", async () => {
     vi.mocked(canReverseEntry).mockReturnValue(true);
     const user = userEvent.setup();

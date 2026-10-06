@@ -363,9 +363,7 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
     }
   }
   if (
-    entry.status === "POSTED" &&
-    entry.reversesEntryId === null &&
-    canReverseEntry(viewer.role, entry.status) &&
+    canReverseEntry(viewer.role, entry) &&
     viewer.enabledModules.includes("FINANCE")
   ) {
     offered.push({ step: { key: "reverse-entry", record } });

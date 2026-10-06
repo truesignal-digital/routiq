@@ -191,6 +191,37 @@ describe("reverse-entry.v1", () => {
     });
   });
 
+  it("A reversal cannot itself be reversed (#130)", async () => {
+    const { originalEntryId, reversalEntryId, response } =
+      await recordAndReverse(60_000, "duplicate");
+    expect(response.statusCode).toBe(200);
+
+    const attempt = await postCommand(
+      approverToken,
+      "reverse-entry",
+      {
+        reversalEntryId: randomUUID(),
+        originalEntryId: reversalEntryId,
+        reason: "undo the reversal",
+      },
+      { expectedVersion: 1 },
+    );
+
+    expect(attempt.statusCode).toBe(409);
+    expect(attempt.json()).toMatchObject({
+      error: {
+        code: "ENTRY_IS_REVERSAL",
+        metadata: { originalEntryId: reversalEntryId, reversesEntryId: originalEntryId },
+      },
+    });
+    const [original, reversal] = await Promise.all([
+      selectEntry(originalEntryId),
+      selectEntry(reversalEntryId),
+    ]);
+    expect(original).toMatchObject({ status: "REVERSED", rowVersion: 2 });
+    expect(reversal).toMatchObject({ status: "POSTED", rowVersion: 1 });
+  });
+
   it("Cannot reverse SUBMITTED or REJECTED", async () => {
     const submitterRules = await db
       .select()
