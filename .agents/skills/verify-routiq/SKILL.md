@@ -78,6 +78,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `switch-user` | sign out, sign in as the cashier, role from `GET /v1/me` | no |
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
+| `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
 | `direction-note` | as Direction: write a note on VH001 → it waits in Now → To do; `--role driver` after it: the note is in the To do, Mark as seen → it leaves, the note says "Seen by" (#98) | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
@@ -86,6 +87,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
 | `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
 | `trips` | trips list → a closed trip's detail | no |
+| `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | More → Branches, Users, People against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |

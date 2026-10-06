@@ -220,7 +220,7 @@ describe("the status sentence and the step beside it, per role", () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: inRepair, locale: "fr-CM" });
     const block = within(await sentence());
     expect(block.getByText(/« Brake pressure warning on the Kekem descent »/)).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /En ce moment/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Vue d'ensemble/ })).toBeTruthy();
   });
 
   it("says an expired document by its date, never as a legal verdict", async () => {

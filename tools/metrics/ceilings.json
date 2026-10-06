@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 562627,
+    "ceiling": 562867,
     "raises": [
       {
         "date": "2026-10-06",
@@ -29,7 +29,19 @@
       {
         "date": "2026-10-06",
         "from": 561383,
-        "to": 562627,
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561678,
+        "to": 562867,
         "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
       }
     ]
@@ -46,7 +58,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 562627,
+    "ceiling": 562867,
     "raises": [
       {
         "date": "2026-10-06",
@@ -75,7 +87,19 @@
       {
         "date": "2026-10-06",
         "from": 561383,
-        "to": 562627,
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561678,
+        "to": 562867,
         "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
       }
     ]

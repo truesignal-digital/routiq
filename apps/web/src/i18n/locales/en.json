@@ -170,7 +170,7 @@
     "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
     "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the problem.",
     "SAFETY_ISSUE_OPEN": "Another safety-critical problem is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
-    "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
+    "CUSTODIAN_INELIGIBLE": "This member cannot be the assigned driver of this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
     "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
@@ -183,7 +183,7 @@
         "registered": "Asset registered",
         "commissioned": "Asset commissioned",
         "assigned": "Asset assigned",
-        "custodianChanged": "Custodian changed"
+        "custodianChanged": "Assigned driver changed"
       }
     },
     "eyebrow": "Operational fleet",
@@ -297,7 +297,7 @@
       "open": "Open asset record",
       "commissionHint": "Puts the asset into service. Its operating history starts counting from here.",
       "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them.",
-      "custodianHint": "Names who answers for the asset day to day."
+      "custodianHint": "Names the person who regularly drives the asset."
     },
     "columns": {
       "asset": "Asset",
@@ -1441,7 +1441,7 @@
       "model": "model",
       "lifecycleStatus": "lifecycle status",
       "commissionedAt": "commissioned",
-      "custodianMembershipId": "custodian",
+      "custodianMembershipId": "assigned driver",
       "membershipId": "member",
       "personCode": "staff number",
       "displayName": "name",
@@ -1644,9 +1644,9 @@
       "submitting": "Transferring…",
       "short": "Transfer",
       "custodian": {
-        "label": "Change custodian",
-        "short": "Custodian",
-        "submit": "Change custodian"
+        "label": "Change assigned driver",
+        "short": "Assigned driver",
+        "submit": "Change assigned driver"
       }
     },
     "register-person": {
@@ -1969,13 +1969,13 @@
         "hint": "Add at least one file."
       },
       "custodian": {
-        "label": "New custodian",
+        "label": "New assigned driver",
         "choose": "Choose a member",
-        "none": "Nobody (clear the custodian)",
+        "none": "Nobody (clear the assigned driver)",
         "current": "Current: {name}.",
         "currentNone": "Currently nobody.",
-        "hint": "Only workspace members whose branches cover this vehicle can hold it. A driver without a login is not offered.",
-        "empty": "No member can hold this vehicle yet."
+        "hint": "Only workspace members whose branches cover this vehicle can be its assigned driver. A driver without a login is not offered.",
+        "empty": "No member can be this vehicle's assigned driver yet."
       }
     },
     "page": {
@@ -1988,7 +1988,7 @@
     },
     "tabs": {
       "label": "Vehicle sections",
-      "now": "Now",
+      "now": "Overview",
       "maintenance": "Maintenance",
       "money": "Money",
       "trips": "Activities",
@@ -2004,7 +2004,7 @@
       "moreActions": "More actions"
     },
     "facts": {
-      "custodian": "Custodian {name}",
+      "custodian": "Assigned driver {name}",
       "nobody": "none",
       "reading": "{readingType, select, HOURS {Hour meter} other {Odometer}} {value}, {ago}",
       "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
@@ -2025,7 +2025,7 @@
       "lifecycleSince": "{status} since {date}",
       "homeBranch": "Home branch",
       "homeBranchValue": "{branch}, administrative home",
-      "custodian": "Custodian",
+      "custodian": "Assigned driver",
       "custodianSince": "{name} since {date}",
       "custodianInactive": "Access deactivated",
       "nobodyAssigned": "Nobody assigned",
@@ -2396,7 +2396,7 @@
       "event": {
         "asset-registered": "Vehicle registered",
         "asset-commissioned": "Put into service",
-        "asset-assigned": "{change, select, branch {Moved to branch {branch}} custodian {Custodian changed to {custodian}} cleared {Custodian removed} other {Assignment changed}}",
+        "asset-assigned": "{change, select, branch {Moved to branch {branch}} custodian {Assigned driver changed to {custodian}} cleared {Assigned driver removed} other {Assignment changed}}",
         "activity-created": "Activity {number} started",
         "activity-closed": "Activity {number} closed",
         "activity-reopened": "Activity {number} reopened",
@@ -2578,7 +2578,7 @@
         "description": "Opens the sheet with this vehicle as the main vehicle."
       },
       "change-custodian": {
-        "description": "Who answers for the vehicle day to day. Not the same as who drives each activity."
+        "description": "The person who regularly drives the vehicle. Each activity can still name another driver."
       },
       "transfer-branch": {
         "description": "Moves the vehicle's home branch for good. Past records stay with the branch that made them."

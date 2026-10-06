@@ -1195,7 +1195,7 @@ try {
       noteId: ids.vh003HandoverNote,
       entityType: "asset",
       entityId: ids.vh003,
-      body: "Custodian handover checked: tools and spare wheel on board",
+      body: "Assigned driver handover checked: tools and spare wheel on board",
     },
     { clientOccurredAt: at(-1, "09:05") },
   );
