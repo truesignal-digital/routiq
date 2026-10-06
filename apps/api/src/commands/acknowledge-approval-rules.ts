@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { approvalRuleAcknowledgements, approvalRuleChanges } from "../db/schema.js";
 import {
   appendAuditEvent,
+  appendNoChangeAuditEvent,
   CommandError,
   registerCommand,
   type CommandDefinition,
@@ -53,7 +54,8 @@ export const acknowledgeApprovalRules: CommandDefinition<AcknowledgeApprovalRule
       .returning({ id: approvalRuleAcknowledgements.id });
     if (!row) {
       // Already acknowledged, from another tab or device: the end state is
-      // the one asked for, so it succeeds with the first row and audits nothing.
+      // the one asked for, so it succeeds with the first row. The change's
+      // history gains no second acknowledgement.
       const [existing] = await tx
         .select({ id: approvalRuleAcknowledgements.id })
         .from(approvalRuleAcknowledgements)
@@ -65,6 +67,7 @@ export const acknowledgeApprovalRules: CommandDefinition<AcknowledgeApprovalRule
           ),
         );
       if (!existing) throw new Error("approval_rule_acknowledgements conflict without a row");
+      await appendNoChangeAuditEvent(tx, ctx, envelope, { changeId: change.id, acknowledgementId: existing.id });
       return { recordId: existing.id, rowVersion: 1 };
     }
 
