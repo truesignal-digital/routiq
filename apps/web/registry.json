@@ -960,6 +960,19 @@
       ]
     },
     {
+      "name": "record-number",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/record-number.tsx",
+          "type": "registry:file",
+          "target": "components/record-number.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
       "name": "command-form",
       "type": "registry:component",
       "files": [
