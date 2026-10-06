@@ -107,7 +107,7 @@ async function asTeam(ctx: DriveContext): Promise<void> {
   await settle(ctx);
   await shot("mark-seen", {
     caption: "Mark as seen tells Direction the note was read",
-    highlight: form.getByRole("button", { name: t("Marquer comme vu", "Mark as seen") }),
+    highlight: form.getByText(t("Indique à la Direction", "Tells Direction"), { exact: false }),
   });
   await form.getByRole("button", { name: t("Marquer comme vu", "Mark as seen") }).click();
   await page.getByText(t("Marquée comme vue", "Marked as seen")).first().waitFor();
