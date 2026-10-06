@@ -18,7 +18,7 @@ A user opens a truck from the trucks list and works from one page: what needs do
 
 - Sidebar "Camions" / "Trucks" → row button with the truck code (for example "VH003").
 - Trucks list row "⋯" ("Actions") → "Ouvrir la fiche" / "Open asset record".
-- Tabs in the navigation "Sections du véhicule" / "Vehicle sections": "En ce moment"/"Now", "Maintenance", "Argent"/"Money", "Trajets"/"Trips", "Documents", "Historique"/"History", "Détails"/"Details".
+- Tabs in the navigation "Sections du véhicule" / "Vehicle sections": "Vue d'ensemble"/"Overview", "Maintenance", "Argent"/"Money", "Trajets"/"Trips", "Documents", "Historique"/"History", "Détails"/"Details".
 
 ## Driving it with pnpm verify
 
@@ -36,7 +36,7 @@ Preconditions:
 ## Gotchas
 
 - Tab names carry hidden counters ("6 choses à faire", "Vous attend"), so match them with a prefix regex, not an exact name.
-- There is no "Overview" tab yet; "Now" is the overview (#90).
+- The first tab is "Overview" / "Vue d'ensemble" at `/assets/$assetId` (#90). Its To do block comes first, open by default, and collapses to its count; the choice is kept per browser.
 - Record panels are dialogs. After an action that opens one, close it with Escape before reaching for the tab underneath, and scope locators with `getByRole("dialog", { name })`.
 - `patrice` sees "Ce véhicule n'existe pas ou n'est pas dans vos agences." for every seeded truck (YDE scope).
 - The Money tab defaults to the current month; seeded July entries need `?period=2026-07`.

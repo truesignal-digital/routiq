@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 562362,
+    "ceiling": 562528,
     "raises": [
       {
         "date": "2026-10-06",
@@ -29,8 +29,20 @@
       {
         "date": "2026-10-06",
         "from": 561383,
-        "to": 562362,
-        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, about 0.9 kB gzip; under 5 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561678,
+        "to": 562528,
+        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +850 B gzip measured on top of develop after #90; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
       }
     ]
   },
@@ -46,7 +58,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 562362,
+    "ceiling": 562528,
     "raises": [
       {
         "date": "2026-10-06",
@@ -75,8 +87,20 @@
       {
         "date": "2026-10-06",
         "from": 561383,
-        "to": 562362,
-        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, about 0.9 kB gzip; under 5 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561678,
+        "to": 562528,
+        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +850 B gzip measured on top of develop after #90; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
       }
     ]
   }
