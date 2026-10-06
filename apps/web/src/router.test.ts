@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import { sessionStore } from "./auth/store.js";
@@ -15,6 +16,7 @@ async function land(path: string): Promise<string> {
   sessionStore.save({ ...identity, token: "router-test-token", expiresAt: "2099-01-01T00:00:00Z" });
   const router = createRouter({
     routeTree: applicationRouter.routeTree,
+    context: { queryClient: new QueryClient() },
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   await router.load();

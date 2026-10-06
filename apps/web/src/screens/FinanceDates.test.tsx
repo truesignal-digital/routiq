@@ -147,6 +147,7 @@ it.each(viewers)("preserves financial dates through list, drawer, detail and fil
   const router = createRouter({
     routeTree: applicationRouter.routeTree,
     history: createMemoryHistory({ initialEntries: ["/finance/entries"] }),
+    context: { queryClient: client },
   });
   render(
     <QueryClientProvider client={client}>

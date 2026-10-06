@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { PoweredByRoutiq, RoutiqLogo, useCompanyLogo } from "@/components/brand/routiq-logo";
+import { PoweredByRoutiq, useCompanyLogo } from "@/components/brand/routiq-logo";
 import {
   Sidebar,
   SidebarContent,
@@ -8,7 +8,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useMeContext } from "../auth/me.js";
 import { NameMenu } from "./NameMenu.js";
+import { SidebarBrand } from "./SidebarBrand.js";
 import { NavCountDot, NavCountLink } from "./NavCount.js";
 import { activeSection, visibleSectionGroups } from "./sections.js";
 import { useNavCounts } from "./useNavCounts.js";
@@ -27,9 +27,8 @@ const MENU_BUTTON = "min-h-11 md:min-h-8";
 export function AppSidebar() {
   const { t } = useTranslation();
   const me = useMeContext();
-  const { isMobile, setOpenMobile, state } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const companyLogo = useCompanyLogo();
-  const railOnly = state === "collapsed" && !isMobile;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const groups = visibleSectionGroups(me?.role, me?.enabledModules);
   const counts = useNavCounts();
@@ -46,24 +45,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="group-data-[collapsible=icon]:p-1!"
-              onClick={closeOnMobile}
-              render={<Link to="/" />}
-            >
-              <RoutiqLogo
-                markClassName="size-8! group-data-[collapsible=icon]:size-6!"
-                markTitle={railOnly ? t("brand.mark") : undefined}
-                wordmarkClassName="text-base group-data-[collapsible=icon]:hidden"
-              />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+      <SidebarBrand onClick={closeOnMobile} />
 
       <SidebarContent>
         <nav aria-label={t("shell.navLabel")}>
