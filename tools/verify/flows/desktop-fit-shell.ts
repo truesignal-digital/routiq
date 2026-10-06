@@ -144,7 +144,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
           if (reasons.length > 0) {
             failures.push(`${where}: ${reasons.join("; ")}`);
             log(`OVERFLOW ${where}: ${reasons.join("; ")}`);
-            await shot(`overflow-${account.username}-${lang}-${viewport.width}-${route}`);
+            await shot(`overflow-${account.username}-${lang}-${viewport.width}-${route}`, { caption: `${route} as ${account.username} (${lang}) at ${viewport.width} px: the list stays inside the screen` });
           } else {
             log(`ok ${where}: ${tables} table(s)`);
           }
