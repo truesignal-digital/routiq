@@ -129,6 +129,17 @@ With `--before`, both runs play side by side, synced at each shot (`reel-compare
 
 Before uploading, open `reel-sheet.png` and pull a few frames out of the mp4 (`ffmpeg -ss 5 -i reel.mp4 -frames:v 1 check.png`) to check the captions match what's on screen. Needs `ffmpeg` on the machine.
 
+## Observe
+
+Drives send real telemetry, and every command lands in the ledger, so a slot is a small field:
+
+```bash
+pnpm observe report --slot N            # ledger, refusals, write lag, approval wait, client errors, devices, journeys, vitals, server routes
+pnpm observe report --slot N --json     # the same for scripts
+```
+
+Use it to read a change's effect on journeys (`command:<name>`, `route:<template>`, `app:usable`) and on server time, and to check a drive caused no client errors. Lab percentiles from a handful of drives are anecdotes; say n when you quote them.
+
 ## Cleanup
 
 ```bash

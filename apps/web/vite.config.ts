@@ -1,10 +1,24 @@
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
 
+function appVersion(): string {
+  if (process.env.ROUTIQ_VERSION) return process.env.ROUTIQ_VERSION;
+  try {
+    const cwd = fileURLToPath(new URL(".", import.meta.url));
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || "dev";
+  } catch {
+    return "dev";
+  }
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    __ROUTIQ_VERSION__: JSON.stringify(appVersion()),
+  },
   // /assets/* is the app's truck routes; built files must not share it (#124).
   build: { assetsDir: "static" },
   resolve: {

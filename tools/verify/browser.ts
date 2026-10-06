@@ -281,6 +281,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
   const frames: Frame[] = [];
   let shotIndex = 0;
   let cast: Cast | undefined;
+  let openPage: Page | undefined;
   let browser: Browser | undefined;
   let context: BrowserContext | undefined;
   let ok = true;
@@ -298,6 +299,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
     });
     await context.addInitScript(LAYOUT_SHIFT_PROBE);
     const page = await context.newPage();
+    openPage = page;
     const rec = record(page);
     const shot = async (label: string, shotOptions: ShotOptions = {}) => {
       shotIndex += 1;
@@ -445,6 +447,10 @@ export async function drive(slot: number, targets: readonly string[], options: D
       say("FAIL  --strict: console errors present");
     }
   } finally {
+    // Close the tab the way a user does, so the app's pagehide handler sends
+    // its last telemetry batch, and give that keepalive request time to land.
+    await openPage?.close({ runBeforeUnload: true }).catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 600));
     await context?.close();
     await browser?.close();
   }
