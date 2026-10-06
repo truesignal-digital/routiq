@@ -175,6 +175,18 @@ export function monthBounds(month: string): { from: string; to: string } {
 }
 
 /**
+ * A line carrying a value in `column`. A work order's lines are its expense
+ * lines: revenue that named an order before #432 refused it links to none.
+ */
+function attributedSql(
+  column: typeof financialPostings.activityId | typeof financialPostings.workOrderId,
+): SQL {
+  return column === financialPostings.workOrderId
+    ? sql`${column} is not null and ${financialPostings.direction} = 'EXPENSE'`
+    : sql`${column} is not null`;
+}
+
+/**
  * The vehicle's lines of the outer entry, first by line number, carrying a
  * value in `column` — the attribution the Money tab links an entry to.
  */
@@ -187,7 +199,7 @@ function firstAssetLineSql(
     where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
       and ${financialPostings.financialEntryId} = ${financialEntries.id}
       and ${financialPostings.assetId} = ${assetId}
-      and ${column} is not null
+      and ${attributedSql(column)}
     order by ${financialPostings.lineNo}
     limit 1
   )`;
@@ -204,7 +216,7 @@ function firstLineSql(
     select ${column} from ${financialPostings}
     where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
       and ${financialPostings.financialEntryId} = ${financialEntries.id}
-      and ${column} is not null
+      and ${attributedSql(column)}
     order by ${financialPostings.lineNo}
     limit 1
   )`;
