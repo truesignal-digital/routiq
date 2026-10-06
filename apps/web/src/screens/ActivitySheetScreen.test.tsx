@@ -290,7 +290,7 @@ describe("activity sheet capture", () => {
     const user = userEvent.setup({ delay: 1 });
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "Haulage job" }));
+    await user.click(screen.getByRole("tab", { name: "Trucking" }));
     await fillMinimalSheet(user);
     await user.type(screen.getByLabelText("Cargo"), "Bagged cement");
     await user.type(screen.getByLabelText("Weight (kg)"), "28000");
@@ -394,7 +394,7 @@ describe("activity sheet capture", () => {
 
       expect(screen.queryByRole("tablist")).toBeNull();
       expect(screen.queryByRole("tab", { name: "Passenger transport" })).toBeNull();
-      expect(screen.queryByRole("tab", { name: "Haulage job" })).toBeNull();
+      expect(screen.queryByRole("tab", { name: "Trucking" })).toBeNull();
 
       // Haulage is what TRUCKING means, so its fields are the ones on screen.
       await waitFor(() => expect(screen.queryByLabelText("Cargo")).not.toBeNull());
@@ -420,7 +420,7 @@ describe("activity sheet capture", () => {
       renderScreen({ ...clerk, enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"] });
 
       expect(screen.getByRole("tab", { name: "Passenger transport" })).not.toBeNull();
-      expect(screen.getByRole("tab", { name: "Haulage job" })).not.toBeNull();
+      expect(screen.getByRole("tab", { name: "Trucking" })).not.toBeNull();
     });
   });
 
@@ -486,7 +486,7 @@ describe("activity sheet capture", () => {
     await fillMinimalSheet(user);
     await user.type(screen.getByLabelText("Seats sold"), "54");
 
-    await user.click(screen.getByRole("tab", { name: "Haulage job" }));
+    await user.click(screen.getByRole("tab", { name: "Trucking" }));
     await waitFor(() => expect(screen.queryByLabelText("Seats sold")).toBeNull());
     await user.type(screen.getByLabelText("Cargo"), "Bagged cement");
 
@@ -504,7 +504,7 @@ describe("activity sheet capture", () => {
     // Seats belong to the journey alone, and were cleared on the way out.
     expect((screen.getByLabelText("Seats sold") as HTMLInputElement).value).toBe("");
 
-    await user.click(screen.getByRole("tab", { name: "Haulage job" }));
+    await user.click(screen.getByRole("tab", { name: "Trucking" }));
     await waitFor(() =>
       expect((screen.getByLabelText("Cargo") as HTMLInputElement).value).toBe(""),
     );

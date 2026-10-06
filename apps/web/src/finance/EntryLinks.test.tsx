@@ -71,7 +71,7 @@ describe("entry links", () => {
   it("links the trip by its number", () => {
     render(<EntryLinks links={{ ...none, activityId: TRIP_ID, activityNumber: "DLA-2026-00042" }} />);
 
-    const link = screen.getByRole("link", { name: "Trip DLA-2026-00042" });
+    const link = screen.getByRole("link", { name: "Activity DLA-2026-00042" });
     expect(link.getAttribute("href")).toBe(`/activities/${TRIP_ID}`);
   });
 
