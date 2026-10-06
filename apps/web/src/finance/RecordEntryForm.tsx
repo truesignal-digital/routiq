@@ -13,6 +13,7 @@ import {
 } from "@/components/command-form.js";
 import { MoneyInput } from "@/components/money-input.js";
 import { RuleHint } from "../approval-rules/RuleHint.js";
+import { RecordText } from "@/components/record-number";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
   Form,
@@ -336,7 +337,7 @@ export function RecordEntryForm({
   }
 
   const title = editing !== undefined
-    ? t("finance.edit.title", { number: editing.entryNumber })
+    ? <RecordText text={t("finance.edit.title", { number: editing.entryNumber })} numbers={[editing.entryNumber]} />
     : !lockDirection
     ? t("finance.record.title")
     : label(direction === "EXPENSE" ? "record-expense" : "record-revenue");

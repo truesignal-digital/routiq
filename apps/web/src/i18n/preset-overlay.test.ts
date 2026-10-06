@@ -115,9 +115,8 @@ describe("trip noun in the base catalog", () => {
   }
 
   // The test above can't see a base string that slides back to "trip" once
-  // every preset overlays it, yet a mixed fleet reads the base. The trip's own
-  // sections therefore stay neutral in the base catalog, overlaid or not.
-  const NEUTRAL_SECTIONS = ["activities.", "vehicle."];
+  // every preset overlays it, yet a mixed fleet reads the base. The base
+  // catalog therefore stays neutral, overlaid or not.
   // ICU select and plural case keys (`trip {Back to the activity}`) are code,
   // not words on screen; a placeholder (`Trip {number}`) is not a case key.
   const withoutCaseKeys = (message: string) => message.replace(/\b\w+\s*\{(?!\s*\w+\s*[,}])/g, "{");
@@ -128,13 +127,27 @@ describe("trip noun in the base catalog", () => {
     expect(TRIP_NOUN.test(withoutCaseKeys("{count, plural, one {# trip} other {# trips}}"))).toBe(true);
   });
 
+  const tripNounOffenders = (catalog: Record<string, unknown>) =>
+    flattenKeys(catalog)
+      .filter((key) => TRIP_NOUN.test(withoutCaseKeys(String(at(catalog, key)))))
+      .map((key) => `${key}: ${String(at(catalog, key))}`);
+
+  it("checks every section of the catalog, not only the trip's own (#442)", () => {
+    const catalog = {
+      finance: { entries: { detail: { tripLink: "Trip {number}" } } },
+      history: { event: { started: "Trip started" } },
+      vehicle: { money: { forTrip: "For trip {ref}" } },
+    };
+    expect(tripNounOffenders(catalog)).toEqual([
+      "finance.entries.detail.tripLink: Trip {number}",
+      "history.event.started: Trip started",
+      "vehicle.money.forTrip: For trip {ref}",
+    ]);
+  });
+
   for (const locale of LOCALES) {
-    it(`${locale}: activity and vehicle strings in the base catalog never name the trip`, () => {
-      const offenders = flattenKeys(BASE[locale])
-        .filter((key) => NEUTRAL_SECTIONS.some((section) => key.startsWith(section)))
-        .filter((key) => TRIP_NOUN.test(withoutCaseKeys(String(at(BASE[locale], key)))))
-        .map((key) => `${key}: ${String(at(BASE[locale], key))}`);
-      expect(offenders).toEqual([]);
+    it(`${locale}: no string in the base catalog names the trip`, () => {
+      expect(tripNounOffenders(BASE[locale])).toEqual([]);
     });
   }
 
