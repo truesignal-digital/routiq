@@ -255,12 +255,12 @@ function sectionTitles(): string[] {
   );
 }
 
-function renderScreen() {
+function renderScreen(me: MeContext = manager) {
   return render(
     createElement(
       QueryClientProvider,
       { client: new QueryClient() },
-      createElement(MeCtx.Provider, { value: manager }, createElement(ActivityDetailScreen)),
+      createElement(MeCtx.Provider, { value: me }, createElement(ActivityDetailScreen)),
     ),
   );
 }
@@ -389,4 +389,41 @@ describe("activity detail — a reader the server keeps the ledger from (#103)",
     expect(screen.queryByRole("link", { name: /FIN-2026-0001/ })).toBeNull();
     expect(screen.getByText("Legs", { selector: "dt" })).toBeTruthy();
   });
+});
+
+/**
+ * #408: the money card says whose entries it lists from the reader's entries
+ * scope. The counter reads its branches' entries, not only its own.
+ */
+describe("activity detail — whose entries the money card lists (#408)", () => {
+  const sentences = {
+    en: {
+      own: "Only the entries you recorded on this activity.",
+      branch: "Only the entries of your branches on this activity.",
+    },
+    "fr-CM": {
+      own: "Seules les écritures que vous avez saisies sur cette activité.",
+      branch: "Seules les écritures de vos agences sur cette activité.",
+    },
+  } as const;
+
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  for (const locale of ["en", "fr-CM"] as const) {
+    it(`tells the driver and the cashier apart on the same trip (${locale})`, async () => {
+      await i18n.changeLanguage(locale);
+      const { own, branch } = sentences[locale];
+
+      const driver = renderScreen({ ...manager, role: "DRIVER" });
+      expect(screen.getByText(own)).toBeTruthy();
+      expect(screen.queryByText(branch)).toBeNull();
+      driver.unmount();
+
+      renderScreen({ ...manager, role: "CASHIER" });
+      expect(screen.getByText(branch)).toBeTruthy();
+      expect(screen.queryByText(own)).toBeNull();
+    });
+  }
 });

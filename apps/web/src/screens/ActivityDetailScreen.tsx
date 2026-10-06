@@ -12,7 +12,7 @@ import { ActivityTimeline } from "@/activities/detail/ActivityTimeline.js";
 import { canViewActivities } from "@/activities/permissions.js";
 import { useActivity } from "@/activities/useActivities.js";
 import { useMeContext } from "@/auth/me.js";
-import { canReadFinance } from "@/finance/permissions.js";
+import { canReadFinance, entriesScope } from "@/finance/permissions.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -140,7 +140,11 @@ export function ActivityDetailScreen() {
         {/* Null for roles that read no entries, or with FINANCE off (#103). A
             driver's list is their own entries only (#264). */}
         {activity.financialEntries !== null && (
-          <ActivityMoney entries={activity.financialEntries} totals={tripTotals} />
+          <ActivityMoney
+            entries={activity.financialEntries}
+            totals={tripTotals}
+            scope={entriesScope(me?.role)}
+          />
         )}
       </div>
 

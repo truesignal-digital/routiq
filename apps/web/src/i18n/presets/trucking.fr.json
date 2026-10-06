@@ -90,6 +90,10 @@
       "loading": "Chargement du trajet…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce trajet ont été corrigés."
+      },
+      "moneySummary": {
+        "ownOnly": "Seules les écritures que vous avez saisies sur ce trajet.",
+        "branchOnly": "Seules les écritures de vos agences sur ce trajet."
       }
     },
     "actions": {
