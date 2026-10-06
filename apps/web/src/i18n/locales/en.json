@@ -1943,12 +1943,10 @@
     },
     "change-issue-severity": {
       "label": "Mark as safety-critical",
-      "short": "Safety-critical",
       "submit": "Mark as safety-critical",
       "submitting": "Saving…",
       "lower": {
         "label": "Remove the safety-critical mark",
-        "short": "Not critical",
         "submit": "Remove the mark",
         "dismiss": "Keep the mark"
       }

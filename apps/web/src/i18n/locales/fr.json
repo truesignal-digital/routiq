@@ -1943,12 +1943,10 @@
     },
     "change-issue-severity": {
       "label": "Marquer critique pour la sécurité",
-      "short": "Critique",
       "submit": "Marquer critique",
       "submitting": "Enregistrement…",
       "lower": {
         "label": "Retirer la mention critique",
-        "short": "Pas critique",
         "submit": "Retirer la mention",
         "dismiss": "Garder la mention"
       }
