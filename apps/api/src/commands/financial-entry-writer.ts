@@ -239,7 +239,10 @@ export async function writeFinancialEntry(
 export async function resolveEntryReferences(
   tx: Tx,
   ctx: CommandContext,
-  request: Pick<FinancialEntryFacts, "categoryCode" | "categoryKind" | "categoryRefType" | "postings">,
+  request: Pick<
+    FinancialEntryFacts,
+    "direction" | "categoryCode" | "categoryKind" | "categoryRefType" | "postings"
+  >,
 ): Promise<EntryCategory> {
   const categoryMatches = await tx
     .select({
@@ -350,6 +353,11 @@ export async function resolveEntryReferences(
     ),
   ];
   if (requestedWorkOrderIds.length > 0) {
+    if (request.direction === "REVENUE") {
+      throw new CommandError(422, "WORK_ORDER_COST_ONLY", {
+        workOrderId: requestedWorkOrderIds[0],
+      });
+    }
     const workOrderRows = await tx
       .select({
         id: workOrders.id,

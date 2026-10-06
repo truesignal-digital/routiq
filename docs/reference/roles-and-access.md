@@ -74,7 +74,7 @@ person held before.
 | Trips | Schedule calendar *(planned)* | ✓ | ✓ | — | — | — | V own |
 | Trips | Driver page and performance *(planned)* | ✓ | ✓ | — | — | — | V own |
 | Money | Record an expense (fuel, tolls, parts) | ✓ | ✓ | ✓ not on work orders | ✓ not on work orders | S on work orders | S not on work orders |
-| Money | Record revenue | ✓ | ✓ | ✓ | ✓ | — | — |
+| Money | Record revenue (never on a work order) | ✓ | ✓ | ✓ | ✓ | — | — |
 | Money | Attach a receipt or photo | ✓ | ✓ | ✓ | ✓ | ✓ own | ✓ own |
 | Money | Approve or reject an entry | A | — | A | — | — | — |
 | Money | Reverse a posted entry | ✓ | — | ✓ | — | — | — |
