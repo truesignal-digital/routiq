@@ -22,6 +22,7 @@ export * from "./reads/artifacts.js";
 export * from "./reads/documents.js";
 export * from "./reads/activities.js";
 export * from "./reads/history.js";
+export * from "./reads/history-fields.js";
 export * from "./commands/record-financial-entry.js";
 export * from "./commands/approve-entry.js";
 export * from "./commands/reverse-entry.js";
