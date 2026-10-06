@@ -122,6 +122,7 @@
     "MODULE_DISABLED": "This module is not enabled for your workspace.",
     "UNIQUE_CONSTRAINT_VIOLATION": "An identical record already exists.",
     "COMMAND_FAILED": "The action failed. Retry; if it persists, contact your administrator.",
+    "AUDIT_EVENT_MISSING": "The action failed. Retry; if it persists, contact your administrator.",
     "EXPECTED_VERSION_REQUIRED": "Cannot save: record version missing. Refresh the page.",
     "VERSION_CONFLICT": "Someone else modified this record. Refresh, then reapply your changes.",
     "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
@@ -1332,7 +1333,10 @@
       "empty": "No detailed changes",
       "none": "—",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "lines": "{count, plural, one {# line} other {# lines}}, {total}",
+      "linesCount": "{count, plural, one {# line} other {# lines}}",
+      "unavailable": "Not available"
     },
     "event": {
       "activity-created": "Activity created",
@@ -1495,6 +1499,7 @@
       "passengerCount": "passenger count",
       "commandType": "command",
       "branch": "branch",
+      "branches": "branches",
       "defaultCurrency": "default currency",
       "defaultLocale": "default language",
       "disabledModules": "disabled modules",
@@ -1535,7 +1540,48 @@
       "dismissedAt": "dismissed",
       "dismissReason": "dismissal reason",
       "defaultSafetyCritical": "safety-critical by default",
-      "postings": "posting lines"
+      "postings": "posting lines",
+      "artifactIds": "files",
+      "body": "note"
+    },
+    "code": {
+      "entryDirection": {
+        "EXPENSE": "Expense",
+        "REVENUE": "Revenue"
+      },
+      "estimateStatus": {
+        "ACTUAL": "Actual amount",
+        "ESTIMATED": "Estimate"
+      },
+      "periodStatus": {
+        "OPEN": "Open",
+        "LOCKED": "Locked"
+      },
+      "costOutcome": {
+        "LINES": "Costs posted as lines",
+        "NO_COST": "No cost",
+        "INVOICE_PENDING": "Invoice not received yet"
+      },
+      "module": {
+        "CORE": "Core",
+        "ASSETS": "Fleet",
+        "DOCUMENTS": "Documents",
+        "FINANCE": "Finance",
+        "ACTIVITIES": "Activities",
+        "MAINTENANCE": "Maintenance"
+      },
+      "categoryKind": {
+        "ASSET_CLASS": "Asset class",
+        "ACTIVITY_TYPE": "Activity type",
+        "REVENUE_CATEGORY": "Revenue category",
+        "EXPENSE_CATEGORY": "Expense category",
+        "DOCUMENT_TYPE": "Document type",
+        "ISSUE_TYPE": "Problem type"
+      },
+      "evidencePolicy": {
+        "RECEIPT_EXPECTED": "Receipt expected",
+        "NO_RECEIPT_EXPECTED": "No receipt expected"
+      }
     }
   },
   "dateField": {

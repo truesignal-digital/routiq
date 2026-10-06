@@ -164,7 +164,8 @@ export function useNote(noteId: string) {
         signal,
         "NOTE",
       );
-      const body = diff.changes.find((change) => change.field === "body")?.after;
+      const change = diff.changes.find((item) => item.field === "body");
+      const body = change?.kind === "VALUE" ? change.after : null;
       return {
         body: typeof body === "string" ? body : "",
         occurredAt: added.occurredAt,

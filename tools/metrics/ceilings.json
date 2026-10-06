@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 559360,
+    "ceiling": 561051,
     "raises": [
       {
         "date": "2026-10-06",
@@ -13,6 +13,12 @@
         "from": 559239,
         "to": 559360,
         "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559360,
+        "to": 561051,
+        "reason": "Record history in words (#110, #119): fr/en labels for every code set a change can name, the code-label map and the diff kinds, about 1.7 kB gzip"
       }
     ]
   },
@@ -28,7 +34,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 559360,
+    "ceiling": 561051,
     "raises": [
       {
         "date": "2026-10-06",
@@ -41,6 +47,12 @@
         "from": 559239,
         "to": 559360,
         "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559360,
+        "to": 561051,
+        "reason": "Record history in words (#110, #119): fr/en labels for every code set a change can name, the code-label map and the diff kinds, about 1.7 kB gzip"
       }
     ]
   }

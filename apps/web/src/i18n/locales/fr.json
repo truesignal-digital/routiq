@@ -122,6 +122,7 @@
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
     "COMMAND_FAILED": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
+    "AUDIT_EVENT_MISSING": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
     "EXPECTED_VERSION_REQUIRED": "Impossible d'enregistrer : version de l'enregistrement manquante. Actualisez la page.",
     "VERSION_CONFLICT": "Cet enregistrement a été modifié par quelqu'un d'autre. Actualisez puis réappliquez vos changements.",
     "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
@@ -1332,7 +1333,10 @@
       "empty": "Aucun changement détaillé",
       "none": "—",
       "yes": "Oui",
-      "no": "Non"
+      "no": "Non",
+      "lines": "{count, plural, one {# ligne} other {# lignes}}, {total}",
+      "linesCount": "{count, plural, one {# ligne} other {# lignes}}",
+      "unavailable": "Non disponible"
     },
     "event": {
       "activity-created": "Activité créée",
@@ -1495,6 +1499,7 @@
       "passengerCount": "nombre de passagers",
       "commandType": "commande",
       "branch": "agence",
+      "branches": "agences",
       "defaultCurrency": "devise par défaut",
       "defaultLocale": "langue par défaut",
       "disabledModules": "modules désactivés",
@@ -1535,7 +1540,48 @@
       "dismissedAt": "classement sans suite",
       "dismissReason": "motif du classement",
       "defaultSafetyCritical": "critique pour la sécurité par défaut",
-      "postings": "lignes d'imputation"
+      "postings": "lignes d'imputation",
+      "artifactIds": "fichiers",
+      "body": "note"
+    },
+    "code": {
+      "entryDirection": {
+        "EXPENSE": "Dépense",
+        "REVENUE": "Recette"
+      },
+      "estimateStatus": {
+        "ACTUAL": "Montant réel",
+        "ESTIMATED": "Estimation"
+      },
+      "periodStatus": {
+        "OPEN": "Ouverte",
+        "LOCKED": "Verrouillée"
+      },
+      "costOutcome": {
+        "LINES": "Coûts saisis en lignes",
+        "NO_COST": "Aucun coût",
+        "INVOICE_PENDING": "Facture pas encore reçue"
+      },
+      "module": {
+        "CORE": "Socle",
+        "ASSETS": "Parc",
+        "DOCUMENTS": "Documents",
+        "FINANCE": "Finances",
+        "ACTIVITIES": "Activités",
+        "MAINTENANCE": "Maintenance"
+      },
+      "categoryKind": {
+        "ASSET_CLASS": "Classe d'actif",
+        "ACTIVITY_TYPE": "Type d'activité",
+        "REVENUE_CATEGORY": "Catégorie de recette",
+        "EXPENSE_CATEGORY": "Catégorie de dépense",
+        "DOCUMENT_TYPE": "Type de document",
+        "ISSUE_TYPE": "Type de problème"
+      },
+      "evidencePolicy": {
+        "RECEIPT_EXPECTED": "Justificatif attendu",
+        "NO_RECEIPT_EXPECTED": "Pas de justificatif attendu"
+      }
     }
   },
   "dateField": {

@@ -288,6 +288,13 @@
       "when": 1791282207774,
       "tag": "0040_observability",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791309018120,
+      "tag": "0041_audit_events_command_index",
+      "breakpoints": true
     }
   ]
 }
