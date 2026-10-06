@@ -46,8 +46,8 @@ export interface CommandFormCopy {
 }
 
 type CommandFormChrome =
-  | { surface: "page"; title?: string | undefined }
-  | { surface: "dialog" | "sheet" | "panel"; title: string }
+  | { surface: "page"; title?: ReactNode }
+  | { surface: "dialog" | "sheet" | "panel"; title: ReactNode }
 
 export type CommandFormProps = CommandFormChrome & {
   description?: string | undefined
