@@ -22,6 +22,32 @@ import { isSectionActive, visibleSections } from "./sections.js";
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
 const MENU_BUTTON = "min-h-11 md:min-h-8";
 
+/** The logo row; ShellPending draws the same one while the member loads. */
+export function SidebarBrand({ onClick }: { onClick?: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <SidebarHeader>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            size="lg"
+            className="group-data-[collapsible=icon]:p-1.5!"
+            onClick={onClick}
+            render={<Link to="/" />}
+          >
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <Truck className="size-5" strokeWidth={1.8} aria-hidden />
+            </span>
+            <span className="font-heading text-base font-semibold tracking-tight">
+              {t("app.name")}
+            </span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarHeader>
+  );
+}
+
 export function AppSidebar() {
   const { t } = useTranslation();
   const me = useMeContext();
@@ -44,25 +70,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="group-data-[collapsible=icon]:p-1.5!"
-              onClick={closeOnMobile}
-              render={<Link to="/" />}
-            >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
-                <Truck className="size-5" strokeWidth={1.8} aria-hidden />
-              </span>
-              <span className="font-heading text-base font-semibold tracking-tight">
-                {t("app.name")}
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+      <SidebarBrand onClick={closeOnMobile} />
 
       <SidebarContent>
         <nav aria-label={t("shell.navLabel")}>

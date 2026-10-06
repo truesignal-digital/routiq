@@ -1,5 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   createRoute,
   createRouter,
   lazyRouteComponent,
@@ -10,6 +11,9 @@ import { financialEntryFilters, VEHICLE_HISTORY_KINDS } from "@routiq/contracts"
 import { sessionStore } from "./auth/store.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
+import { queryClient } from "./lib/query-client.js";
+import { loadShell } from "./shell/shell-loader.js";
+import { ShellPending } from "./shell/ShellPending.js";
 
 /**
  * Every screen but sign-in loads on demand, so the first page a phone opens
@@ -42,7 +46,12 @@ const MoneyTab = lazyRouteComponent(() => import("./vehicle/tabs/MoneyTab.js"), 
 const NowTab = lazyRouteComponent(() => import("./vehicle/tabs/NowTab.js"), "NowTab");
 const TripsTab = lazyRouteComponent(() => import("./vehicle/tabs/TripsTab.js"), "TripsTab");
 
-const rootRoute = createRootRoute();
+/** What every route's loader receives: the one Query cache the screens read too. */
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+const rootRoute = createRootRouteWithContext<RouterContext>()();
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -62,6 +71,12 @@ const appRoute = createRoute({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
+  loader: ({ context, location }) => loadShell(context.queryClient, location.href),
+  // The frame shows at once, sized like the shell, so the shell replaces it
+  // without moving anything (#495); waiting on a timer would leave a blank page.
+  pendingComponent: ShellPending,
+  pendingMs: 0,
+  pendingMinMs: 0,
   component: AppShell,
 });
 
@@ -283,7 +298,7 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ routeTree, context: { queryClient } });
 
 /**
  * While someone types their PIN, fetch the shell and Home, so signing in does

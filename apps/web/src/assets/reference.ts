@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { sessionStore, useActiveSession } from "../auth/store.js";
 
 export interface AssetRegistrationReference {
@@ -21,10 +21,14 @@ export async function fetchAssetRegistrationReference(
 }
 
 export function useAssetRegistrationReference() {
-  const session = useActiveSession();
-  return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "reference", "asset-registration"],
-    enabled: session !== undefined,
+  return useQuery(assetRegistrationReferenceQueryOptions(useActiveSession()?.workspaceSlug));
+}
+
+/** Also loaded by the shell before it draws: the header's branch switcher lists these branches (#495). */
+export function assetRegistrationReferenceQueryOptions(workspaceSlug: string | undefined) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "reference", "asset-registration"] as const,
+    enabled: workspaceSlug !== undefined,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");

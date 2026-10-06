@@ -95,7 +95,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
   sessionStore.save({ ...identity, token: "disposable-executive-token", expiresAt: "2099-01-01T00:00:00Z" });
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createRouter({ routeTree: applicationRouter.routeTree, history });
+  const router = createRouter({ routeTree: applicationRouter.routeTree, history, context: { queryClient: client } });
   // Initial navigation is asynchronous. Flush its React updates before starting
   // DOM query deadlines; the cold CI render can exceed findBy's default wait.
   await act(async () => {
