@@ -80,6 +80,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `edit-details` | Details → Edit details → make and model saved | yes |
 | `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
+| `camera-capture` | `--viewport 390x844`: VH001 → Report a problem → Take photo beside Choose file, a 3–8 MB camera JPEG uploads and is stored under 1 MB; at desktop size: drop zone only (#95) | phone run: yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
 | `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
 | `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
