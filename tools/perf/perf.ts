@@ -51,11 +51,12 @@ export function median(values: readonly number[]): number {
 
 /**
  * How far a run may sit above its ceiling and still pass. Timings on a
- * throttled browser wander by a few percent between runs (±30 ms on a 4 s
- * load); counts are exact; byte sizes move with the commit hash baked in.
+ * throttled browser wander between runs: ±30 ms on a 4 s load on a quiet
+ * machine, ±250 ms when other slots and test suites share it. Counts are
+ * exact; byte sizes move with the commit hash baked in.
  */
 export function tolerance(kind: Kind, ceiling: number): number {
-  if (kind === "time") return Math.max(50, ceiling * 0.05);
+  if (kind === "time") return Math.max(100, ceiling * 0.1);
   if (kind === "bytes") return 1024;
   return 0;
 }

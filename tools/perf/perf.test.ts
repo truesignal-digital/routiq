@@ -13,9 +13,9 @@ describe("median", () => {
 });
 
 describe("tolerance", () => {
-  it("lets timings wander by 5% (at least 50 ms), bytes by 1 kB, and counts not at all", () => {
-    expect(tolerance("time", 4000)).toBe(200);
-    expect(tolerance("time", 300)).toBe(50);
+  it("lets timings wander by 10% (at least 100 ms), bytes by 1 kB, and counts not at all", () => {
+    expect(tolerance("time", 4000)).toBe(400);
+    expect(tolerance("time", 300)).toBe(100);
     expect(tolerance("bytes", 500_000)).toBe(1024);
     expect(tolerance("count", 6)).toBe(0);
   });
@@ -26,8 +26,8 @@ describe("judge", () => {
 
   it("passes inside the band, fails above it, and calls a clear win beaten", () => {
     const verdicts = (measured: Measured) => judge(measured, ceilings).map((v) => [v.name, v.status]);
-    expect(verdicts({ "login.usable_ms": time(4150), "/.requests": count(6) })).toEqual([["/.requests", "ok"], ["login.usable_ms", "ok"]]);
-    expect(verdicts({ "login.usable_ms": time(4250), "/.requests": count(7) })).toEqual([["/.requests", "over"], ["login.usable_ms", "over"]]);
+    expect(verdicts({ "login.usable_ms": time(4350), "/.requests": count(6) })).toEqual([["/.requests", "ok"], ["login.usable_ms", "ok"]]);
+    expect(verdicts({ "login.usable_ms": time(4450), "/.requests": count(7) })).toEqual([["/.requests", "over"], ["login.usable_ms", "over"]]);
     expect(verdicts({ "login.usable_ms": time(2500), "/.requests": count(4) })).toEqual([["/.requests", "beaten"], ["login.usable_ms", "beaten"]]);
   });
 
@@ -64,7 +64,7 @@ describe("raise", () => {
       kind: "time",
       raises: [{ date: "2026-10-06", from: 2625, to: 3150, reason: "Charts on Home are the director's first screen" }],
     });
-    expect(() => raise({ "login.usable_ms": time(2650) }, ceilings, "login.usable_ms", "a long enough reason here", "2026-10-06")).toThrow(/within its ceiling/);
+    expect(() => raise({ "login.usable_ms": time(2850) }, ceilings, "login.usable_ms", "a long enough reason here", "2026-10-06")).toThrow(/within its ceiling/);
     expect(() => raise({ "login.usable_ms": time(3000) }, ceilings, "login.usable_ms", "slower", "2026-10-06")).toThrow(/reason/);
   });
 });

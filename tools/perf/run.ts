@@ -20,7 +20,11 @@ interface OneRun {
   values: Record<string, number>;
 }
 
-/** No API request in flight for a second, and at least a second since the call: a screen with no requests still gets time to render and report. */
+/**
+ * Nothing in flight for a second (API calls and code chunks alike), and at
+ * least a second since the call: a screen whose code is still downloading, or
+ * that makes no requests, still gets time to render and report.
+ */
 async function settle(page: Page, inflight: () => number, lastActivity: () => number): Promise<void> {
   const since = Date.now();
   const deadline = since + 45_000;
@@ -54,18 +58,18 @@ async function measureOnce(state: SlotState, db: pg.Client, assetId: string): Pr
     let apiRequests = 0;
     let scriptBytes = 0;
     const isApi = (url: string) => new URL(url).pathname.startsWith("/v1/") && !url.includes("/v1/telemetry");
+    // Telemetry beacons are the measurement itself, not the screen's work.
+    const counts = (url: string) => !url.includes("/v1/telemetry");
     page.on("request", (req) => {
-      if (isApi(req.url())) {
-        inflight += 1;
-        apiRequests += 1;
-        lastActivity = Date.now();
-      }
+      if (!counts(req.url())) return;
+      inflight += 1;
+      lastActivity = Date.now();
+      if (isApi(req.url())) apiRequests += 1;
     });
     const done = (url: string) => {
-      if (isApi(url)) {
-        inflight = Math.max(0, inflight - 1);
-        lastActivity = Date.now();
-      }
+      if (!counts(url)) return;
+      inflight = Math.max(0, inflight - 1);
+      lastActivity = Date.now();
     };
     page.on("requestfinished", (req) => {
       done(req.url());
@@ -155,6 +159,9 @@ export async function measure(state: SlotState, runs: number, log: (line: string
     const asset = await db.query<{ id: string }>(`select id from assets order by asset_code limit 1`);
     const assetId = asset.rows[0]?.id;
     if (assetId === undefined) throw new Error("the slot has no vehicles; reseed it");
+    // One unrecorded run first: a freshly started API compiles and fills its caches on the first requests.
+    await measureOnce(state, db, assetId);
+    log("warm-up run done");
     const since = Date.now();
     const all: OneRun[] = [];
     for (let i = 1; i <= runs; i += 1) {
