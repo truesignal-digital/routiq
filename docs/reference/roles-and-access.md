@@ -47,6 +47,10 @@ person held before.
   own entry, so a Finance member's own entry goes to Direction (or another
   Finance member). Only Direction's own entries post at any amount (#412).
   Both bands are tenant data: Direction moves them in the approval settings.
+  When Direction moves a band, everyone else whose own entries it moves sees
+  a notice in the app on their next screen, with their new chain, until they
+  dismiss it. The amount field of the expense and revenue forms states the
+  rule too (#422).
 - **V** view only. **Own** only their own records. **—** no access.
 - **Planned** rows are not built yet. The roles are fixed now so training does
   not change when they ship.

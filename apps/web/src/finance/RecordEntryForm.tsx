@@ -12,6 +12,7 @@ import {
   type CommandSurface,
 } from "@/components/command-form.js";
 import { MoneyInput } from "@/components/money-input.js";
+import { RuleHint } from "../approval-rules/RuleHint.js";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
   Form,
@@ -503,6 +504,9 @@ export function RecordEntryForm({
                   placeholder={t("finance.record.amountPlaceholder")}
                 />
               </FormControl>
+              {editing === undefined && (
+                <RuleHint commandType={direction === "EXPENSE" ? "record-expense" : "record-revenue"} />
+              )}
               <FormMessage />
             </FormItem>
           )}

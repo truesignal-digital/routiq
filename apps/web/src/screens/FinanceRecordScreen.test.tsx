@@ -70,6 +70,10 @@ vi.mock("../finance/FinanceNav.js", () => ({
   FinanceNav: () => null,
 }));
 
+vi.mock("../approval-rules/useApprovalChain.js", () => ({
+  useApprovalChain: () => ({ data: undefined }),
+}));
+
 const recorder: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
   principalId: "00000000-0000-4000-8000-000000000002",

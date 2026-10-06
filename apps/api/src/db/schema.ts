@@ -1148,3 +1148,59 @@ export const notes = pgTable(
     index("notes_ws_entity_created_idx").on(t.workspaceId, t.entityType, t.entityId, t.createdAt),
   ],
 );
+
+/**
+ * A change to the entry approval chain that members must be told about (#422).
+ * Written by `update-approval-threshold` beside its audit event, and once per
+ * workspace by migration 0039 for the release that changed the chain (0038):
+ * a migration cannot write a command receipt or an audit event, so that row
+ * carries no `created_by_command_id` and names no member. Append-only.
+ * `affected_roles` are the roles whose own entries the change moved.
+ */
+export const approvalRuleChanges = pgTable(
+  "approval_rule_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    affectedRoles: text("affected_roles", { enum: ROLES }).array().notNull(),
+    createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("approval_rule_changes_ws_id_uq").on(t.workspaceId, t.id),
+    index("approval_rule_changes_ws_changed_idx").on(t.workspaceId, t.changedAt),
+  ],
+);
+
+/**
+ * A member's acknowledgement of one approval-rule change, written by
+ * `acknowledge-approval-rules`. Append-only; one per member and change.
+ */
+export const approvalRuleAcknowledgements = pgTable(
+  "approval_rule_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    changeId: uuid("change_id")
+      .notNull()
+      .references(() => approvalRuleChanges.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("approval_rule_acknowledgements_ws_member_change_uq").on(
+      t.workspaceId,
+      t.membershipId,
+      t.changeId,
+    ),
+  ],
+);
