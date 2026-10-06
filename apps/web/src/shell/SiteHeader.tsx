@@ -39,12 +39,14 @@ export function SiteHeader() {
   return (
     // One accent for "a branch is in force", the same whichever branch it is:
     // per-branch colours stop scaling past a handful and would be a colour-only
-    // signal. The branch's name in the pill is what identifies it.
+    // signal. The branch's name in the pill is what identifies it. The tint is
+    // a background image over the opaque colour: a translucent background
+    // colour would replace it and let scrolled content show through (#57).
     <header
       data-branch-scoped={scoped ? "true" : undefined}
       className={cn(
         "sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4",
-        scoped && "border-b-2 border-b-primary bg-primary/5",
+        scoped && "border-b-2 border-b-primary bg-linear-to-b from-primary/5 to-primary/5",
       )}
     >
       <SidebarTrigger
