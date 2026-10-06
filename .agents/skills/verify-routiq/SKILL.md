@@ -88,6 +88,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | More → Branches, Users, People against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
+| `no-shift` | at 390 × 844 and 1280 × 800, with every API read held 1.5 s: reload Home, tap each sidebar row, open a vehicle; fails on any layout shift in a named region (sidebar, header, notice, page), naming region and phase (#494) | no |
 
 A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label, { caption, highlight })`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. `caption` is one English sentence saying what the frame proves; `highlight` is a locator the shot outlines, and the reel zooms into it. Copy a flow as a starting point; `approve-from-panel` uses both. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
 

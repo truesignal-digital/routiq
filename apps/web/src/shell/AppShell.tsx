@@ -54,7 +54,9 @@ export function AppShell() {
                 <SiteHeader />
                 <BranchScopeAnnouncer />
                 <ApprovalRulesNotice />
-                <div className="flex min-w-0 flex-1 flex-col">
+                {/* data-shift-region names the parts `flow:no-shift` and
+                    `pnpm perf` hold still once drawn (#494). */}
+                <div data-shift-region="page" className="flex min-w-0 flex-1 flex-col">
                   <Outlet />
                 </div>
               </RecordCrumbProvider>

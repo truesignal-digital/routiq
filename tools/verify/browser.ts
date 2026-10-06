@@ -5,6 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Locator, type Page } 
 import { DEMO_WORKSPACE, resolveAccount, type DemoAccount } from "./accounts.js";
 import { startCast, type Cast } from "./cast.js";
 import type { DriveOptions, Lang } from "./args.js";
+import { SHIFT_PROBE } from "./shifts.js";
 import { REPO_ROOT } from "./slot.js";
 import { newRunDir, requireState, type SlotState } from "./stack.js";
 
@@ -134,19 +135,9 @@ async function waitQuiet(page: Page, rec: Recorder): Promise<void> {
   await page.waitForTimeout(150);
 }
 
-/** Collects layout shifts in every document the context loads; read back by readPageMetrics. */
-const LAYOUT_SHIFT_PROBE = `(() => {
-  const shifts = (window.__routiqShifts = []);
-  try {
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) if (!entry.hadRecentInput) shifts.push(entry.value);
-    }).observe({ type: "layout-shift", buffered: true });
-  } catch {}
-})();`;
-
 async function readPageMetrics(page: Page): Promise<{ layoutShifts: number; cumulativeLayoutShift: number; domNodes: number }> {
   return page.evaluate(() => {
-    const shifts = ((window as unknown as { __routiqShifts?: number[] }).__routiqShifts ?? []).filter((value) => value > 0);
+    const shifts = ((window as unknown as { __routiqShifts?: Array<{ value: number }> }).__routiqShifts ?? []).map((shift) => shift.value);
     const cls = shifts.reduce((sum, value) => sum + value, 0);
     return { layoutShifts: shifts.length, cumulativeLayoutShift: Math.round(cls * 10_000) / 10_000, domNodes: document.getElementsByTagName("*").length };
   });
@@ -297,7 +288,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
       colorScheme: "light",
       ...(options.video ? { recordVideo: { dir: evidenceDir, size: options.viewport } } : {}),
     });
-    await context.addInitScript(LAYOUT_SHIFT_PROBE);
+    await context.addInitScript(SHIFT_PROBE);
     const page = await context.newPage();
     openPage = page;
     const rec = record(page);

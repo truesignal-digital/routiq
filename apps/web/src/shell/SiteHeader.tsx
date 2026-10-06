@@ -41,6 +41,7 @@ export function SiteHeader() {
     // per-branch colours stop scaling past a handful and would be a colour-only
     // signal. The branch's name in the pill is what identifies it.
     <header
+      data-shift-region="header"
       data-branch-scoped={scoped ? "true" : undefined}
       className={cn(
         "sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4",
