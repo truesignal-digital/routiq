@@ -288,7 +288,8 @@ describe("SiteHeader with a branch in force (#57)", () => {
     expect(classes.filter((name) => translucentBackground.test(name))).toEqual([]);
     // The branch-in-force signal: the primary rule along the bottom, and the tint.
     expect(classes).toContain("border-b-primary");
-    expect(classes.some((name) => name.startsWith("from-primary/"))).toBe(true);
+    expect(classes).toContain("before:bg-primary/5");
+    expect(classes).toContain("before:-z-10");
   });
 
   it("keeps the plain opaque header when every branch is shown", () => {
