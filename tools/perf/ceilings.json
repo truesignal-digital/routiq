@@ -63,10 +63,6 @@
     "ceiling": 1,
     "kind": "count"
   },
-  "api.p95_ms": {
-    "ceiling": 212,
-    "kind": "time"
-  },
   "login.js_bytes": {
     "ceiling": 560822,
     "kind": "bytes"
