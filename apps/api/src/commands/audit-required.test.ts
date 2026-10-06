@@ -133,7 +133,12 @@ registerCommand<AssetPayload>({
   },
 });
 
-const provisionPayload = z.strictObject({ workspaceId: z.uuid(), branchId: z.uuid(), slug: z.string() });
+// Shaped like provision-workspace's own payload: the new workspace is a nested
+// target, never a top-level `workspaceId` (#152 refuses that key at the boundary).
+const provisionPayload = z.strictObject({
+  workspace: z.strictObject({ id: z.uuid(), slug: z.string() }),
+  branchId: z.uuid(),
+});
 type ProvisionPayload = z.infer<typeof provisionPayload>;
 
 function provisionCommand(name: string, audited: boolean) {
@@ -143,8 +148,8 @@ function provisionCommand(name: string, audited: boolean) {
     version: 1,
     payloadSchema: provisionPayload,
     resolveWorkspace: async (tx, _ctx, _envelope, payload) => {
-      await tx.insert(workspaces).values({ id: payload.workspaceId, slug: payload.slug, name: payload.slug });
-      return payload.workspaceId;
+      await tx.insert(workspaces).values({ id: payload.workspace.id, slug: payload.workspace.slug, name: payload.workspace.slug });
+      return payload.workspace.id;
     },
     execute: async (tx, ctx, envelope, payload, workspaceId) => {
       await tx.insert(branches).values({ id: payload.branchId, workspaceId, code: "DLA", name: "Douala" });
@@ -234,7 +239,7 @@ describe("a successful command must leave an audit event (#153)", () => {
       name,
       version: 1,
       envelope: { commandId: randomUUID(), idempotencyKey: `idem-${randomUUID()}`, origin: "API" },
-      payload: { workspaceId, branchId: randomUUID(), slug: `ws-${workspaceId.slice(0, 8)}` },
+      payload: { workspace: { id: workspaceId, slug: `ws-${workspaceId.slice(0, 8)}` }, branchId: randomUUID() },
     };
   }
 
@@ -352,7 +357,7 @@ describe("a successful command must leave an audit event (#153)", () => {
       const result = await dispatchCommand(platform, operator, body, log);
 
       expect(result).toEqual({ status: 500, body: { error: { code: "AUDIT_EVENT_MISSING" } } });
-      expect(await db.select().from(workspaces).where(eq(workspaces.id, body.payload.workspaceId))).toHaveLength(0);
+      expect(await db.select().from(workspaces).where(eq(workspaces.id, body.payload.workspace.id))).toHaveLength(0);
       expect(await db.select().from(branches).where(eq(branches.id, body.payload.branchId))).toHaveLength(0);
       const { executed, failures } = await receiptsFor(body.envelope.commandId);
       expect(executed).toHaveLength(0);
