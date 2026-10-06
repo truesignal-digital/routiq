@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import { queryOptions, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { BranchScope, MeResponse } from "@routiq/contracts";
 import { endSession } from "./sign-out.js";
+import { REFERENCE_STALE_MS } from "../lib/query-defaults.js";
 import type { Identity } from "./session.js";
 import { sessionStore, useActiveSession } from "./store.js";
 
@@ -33,6 +34,7 @@ export function meQueryOptions(queryClient: QueryClient, session: Identity | und
     queryKey: ["ws", session?.workspaceSlug, "me"] as const,
     enabled: session !== undefined,
     retry: false,
+    staleTime: REFERENCE_STALE_MS,
     queryFn: async ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");

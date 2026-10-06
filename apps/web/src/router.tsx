@@ -20,8 +20,6 @@ import { PANEL_PATTERN } from "./vehicle/model.js";
 import { queryClient } from "./lib/query-client.js";
 import { ScreenError, ScreenPending, SectionError, SectionPending } from "./shell/RoutePending.js";
 import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
-import { loadShell } from "./shell/shell-loader.js";
-import { ShellPending } from "./shell/ShellPending.js";
 
 /**
  * Every screen but sign-in loads on demand, so the first page a phone opens
@@ -45,6 +43,8 @@ const ActivitySheetScreen = lazyScreen(() => import("./screens/ActivitySheetScre
 const FinanceEntryDetailScreen = lazyScreen(() => import("./screens/FinanceEntryDetailScreen.js"), "FinanceEntryDetailScreen");
 const FinancePeriodsScreen = lazyScreen(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
 const AppShell = lazyScreen(() => import("./shell/AppShell.js"), "AppShell");
+// On demand like the shell: the sign-in page carries neither (#495).
+const ShellPending = lazyScreen(() => import("./shell/ShellPending.js"), "ShellPending");
 const VehicleWorkspaceScreen = lazyScreen(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
 const DetailsTab = lazyScreen(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
 const DocumentsTab = lazyScreen(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
@@ -79,7 +79,8 @@ const appRoute = createRoute({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
-  loader: ({ context, location }) => loadShell(context.queryClient, location.href),
+  loader: ({ context, location }) =>
+    import("./shell/shell-loader.js").then(({ loadShell }) => loadShell(context.queryClient, location.href)),
   // The frame shows at once, sized like the shell, so the shell replaces it
   // without moving anything (#495); waiting on a timer would leave a blank page.
   pendingComponent: ShellPending,
@@ -388,6 +389,9 @@ export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
 
 export function preloadAfterSignIn(): void {
   for (const screen of AFTER_SIGN_IN) void screen.preload();
+  // The shell's frame and loader are not screens, but sign-in waits on them too.
+  void ShellPending.preload();
+  void import("./shell/shell-loader.js").catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */

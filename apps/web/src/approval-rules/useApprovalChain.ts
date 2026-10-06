@@ -82,11 +82,16 @@ export function useApprovalChain() {
   return useQuery(approvalChainQueryOptions(useActiveSession()?.workspaceSlug));
 }
 
-/** Also loaded by the shell before it draws, so the rules notice is there at first paint or not at all (#495). */
+/**
+ * Also loaded by the shell before it draws, so the rules notice is there at
+ * first paint or not at all (#495). Fresh for a minute, so the shell does not
+ * ask again for what its loader just fetched; a new screen still rechecks it.
+ */
 export function approvalChainQueryOptions(workspaceSlug: string | undefined) {
   return queryOptions({
     queryKey: approvalChainKey(workspaceSlug),
     enabled: workspaceSlug !== undefined,
+    staleTime: 60_000,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
