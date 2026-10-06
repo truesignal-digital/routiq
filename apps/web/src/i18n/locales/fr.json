@@ -486,8 +486,8 @@
         "asset": "Actif",
         "postingAmount": "Montant",
         "reversalChain": "Chaîne d'extournement",
-        "reversesEntry": "Extourne l'écriture",
-        "reversedByEntry": "Extournée par l'écriture",
+        "reversesEntry": "Extourne l'écriture {number}",
+        "reversedByEntry": "Extournée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
@@ -530,7 +530,6 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
-        "actions": "Actions",
         "branch": "Agence",
         "submittedAt": "Soumis le"
       },

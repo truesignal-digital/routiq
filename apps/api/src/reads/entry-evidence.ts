@@ -1,6 +1,6 @@
 import type { EntryEvidenceFile } from "@routiq/contracts";
 import { REFERENCE_PAYMENT_METHODS } from "@routiq/domain";
-import { and, asc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import {
   auditEvents,
   categories,
@@ -81,7 +81,7 @@ export function entryEvidenceMissingSql(): SQL {
 /**
  * Whether any line of the entry is NOT a work-order cost. The workshop's reach
  * into an entry — attaching its paperwork, downloading it — stops at entries
- * whose every line carries a work order.
+ * whose every line is an expense naming a work order (`readableEntrySql`).
  */
 export async function hasPostingWithoutWorkOrder(
   tx: TenantTx,
@@ -95,7 +95,7 @@ export async function hasPostingWithoutWorkOrder(
       and(
         eq(financialPostings.workspaceId, workspaceId),
         eq(financialPostings.financialEntryId, entryId),
-        isNull(financialPostings.workOrderId),
+        or(isNull(financialPostings.workOrderId), ne(financialPostings.direction, "EXPENSE")),
       ),
     )
     .limit(1);

@@ -7,10 +7,10 @@ import {
 } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { auditEvents, branches, sourceArtifacts } from "../db/schema.js";
+import { auditEvents, branches, financialEntries, sourceArtifacts } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { plantWorkOrderRevenue, seedAsset, seedWorkspace } from "../test/seed.js";
 
 describe("attach-evidence.v1", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -336,6 +336,43 @@ describe("attach-evidence.v1", () => {
     });
     const repair = await expense(mechanic, { workOrderId });
     expect((await attach(mechanic, repair.entryId, [await artifact()])).status).toBe(200);
+  });
+
+  it("refuses the TECHNICIAN revenue that names a work order (#444)", async () => {
+    const workOrderId = randomUUID();
+    await api.ok(mechanic.token, "create-work-order", {
+      workOrderId,
+      assetId,
+      description: "Courroie",
+      expectedCostMinor: 0,
+    });
+    const repair = await expense(mechanic, { workOrderId });
+    const [recorded] = await ctx.db
+      .select({ commandId: financialEntries.createdByCommandId })
+      .from(financialEntries)
+      .where(eq(financialEntries.id, repair.entryId));
+    const template = randomUUID();
+    await api.ok(admin.token, "record-revenue", {
+      entryId: template,
+      branchCode: "DLA",
+      categoryCode: "FREIGHT_REVENUE",
+      economicDate: "2026-08-12",
+      amountMinor: 30_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId, amountMinor: 30_000 }],
+    });
+    const revenue = await plantWorkOrderRevenue(ctx.db, {
+      revenueEntryId: template,
+      workOrderId,
+      createdByCommandId: recorded!.commandId,
+    });
+
+    const refused = await attach(mechanic, revenue, [await artifact()]);
+    expect({ status: refused.status, error: refused.body.error }).toMatchObject({
+      status: 403,
+      error: { code: "ROLE_FORBIDDEN", metadata: { reason: "WORK_ORDER_REQUIRED" } },
+    });
+    expect((await detail(revenue)).evidence.artifactCount).toBe(0);
   });
 
   /** docs/reference/roles-and-access.md: Technicien and Chauffeur attach to their own entries only. */
