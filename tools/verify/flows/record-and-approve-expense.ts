@@ -14,7 +14,7 @@ interface HistoryItem {
  * Run: pnpm verify drive flow:record-and-approve-expense --role cashier --lang en
  */
 const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => {
-  const counterparty = `Port handling ${Date.now()}`;
+  const counterparty = `Port handling ${Date.now().toString(36).slice(-4).toUpperCase()}`;
   // A table row on desktop, a card on a phone; the innermost match is the item itself.
   const itemWith = (text: string) =>
     page.getByRole("row").or(page.locator("div.rounded-xl.border")).filter({ hasText: text }).last();
@@ -25,15 +25,21 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.getByRole("option", { name: t("Chargement", "Loading") }).click();
   await page.getByLabel(t("Montant (FCFA)", "Amount (FCFA)")).fill("150000");
   await page.getByLabel(t("Tiers (optionnel)", "Counterparty (optional)")).fill(counterparty);
+  // The fills scroll the page; the still and the screencast must agree on where the amount sits.
+  const amount = page.getByLabel(t("Montant (FCFA)", "Amount (FCFA)"));
+  await amount.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
   await shot("expense-form", {
     caption: "The cashier records a 150,000 FCFA loading expense, above the 100,000 approval threshold",
-    highlight: page.getByRole("button", { name: t("Enregistrer la dépense", "Record the expense") }),
+    highlight: amount,
   });
   await page.getByRole("button", { name: t("Enregistrer la dépense", "Record the expense") }).click();
   await page.waitForURL((url) => url.pathname === "/finance/entries");
   const recorded = itemWith(counterparty);
   await recorded.waitFor();
+  await recorded.scrollIntoViewIfNeeded();
   await quiet();
+  await page.waitForTimeout(600);
 
   const submitted = await apiGet("/v1/finance/entries?status=SUBMITTED");
   const entries = (submitted.body as { entries?: Array<{ id: string; entryNumber: string; counterpartyName?: string | null }> }).entries ?? [];
@@ -43,7 +49,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   if (!afterRecord.includes("financial_entry.submitted")) throw new Error(`history of ${entry.entryNumber} after recording: ${afterRecord.join(", ")}`);
   log(`api cross-check: ${entry.entryNumber} SUBMITTED, history ${afterRecord.join(", ")}`);
   await shot("expense-sent", {
-    caption: `Saved as ${entry.entryNumber}, awaiting review; its history holds the submit event`,
+    caption: `Saved as ${entry.entryNumber}, awaiting Finance's review`,
     highlight: recorded,
   });
 
@@ -57,6 +63,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
+  await shot("finance-signed-in", { caption: "The cashier signs out and Finance signs in" });
 
   await nav("/finance/approvals");
   await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
@@ -68,6 +75,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await row.getByRole("button", { name: "Actions" }).click();
   await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
+  await row.waitFor({ state: "detached" });
   await quiet();
 
   const after = await apiGet(`/v1/finance/entries/${entry.id}`);
@@ -76,7 +84,18 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   const afterApprove = await historyOf(entry.id);
   if (!afterApprove.includes("financial_entry.approved")) throw new Error(`history of ${entry.entryNumber} after approval: ${afterApprove.join(", ")}`);
   log(`api cross-check: ${entry.entryNumber} POSTED, history ${afterApprove.join(", ")}`);
-  await shot("approved", { caption: `Approved: ${entry.entryNumber} is posted, and its history holds the approval event too` });
+  await shot("approved", { caption: `Approved: ${entry.entryNumber} leaves the queue` });
+
+  await nav(`/finance/entries/${entry.id}`);
+  await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
+  await page.getByRole("button", { name: t("Historique", "History"), exact: true }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("listitem").first().waitFor();
+  await quiet();
+  await shot("history", {
+    caption: `${entry.entryNumber} is posted; its history records both commands, submit and approve`,
+    highlight: sheet.getByRole("list").first(),
+  });
 
   async function historyOf(entryId: string): Promise<string[]> {
     const history = await apiGet(`/v1/history/financial_entry/${entryId}`);
