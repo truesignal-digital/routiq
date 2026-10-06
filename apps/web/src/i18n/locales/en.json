@@ -2515,9 +2515,9 @@
       "photoNumber": "Photo {number}",
       "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again.",
       "directionNoteEyebrow": "Note from Direction",
-      "notSeenYet": "Nobody has marked it as seen yet. It stays in the vehicle's To-do until someone does.",
+      "notSeenYet": "Nobody has marked it as seen yet. It stays in the vehicle's To do list until someone does.",
       "seenBy": "Seen by {name} on {date}",
-      "acknowledgeHint": "Tells Direction you have read this note. It leaves the To-do; your name and the time stay on the note."
+      "acknowledgeHint": "Tells Direction you have read this note. It leaves the To do list; your name and the time stay on the note."
     },
     "rows": {
       "actionsFor": "Actions for {record}"
