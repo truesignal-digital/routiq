@@ -1,5 +1,6 @@
 import { migrationIntegrity, migrationsBehindBase } from "./migrations.js";
 import { isTestFile, matchFile, matchLines, type SourceFile, type Violation } from "./scan.js";
+import { unsafeSqlConstruction } from "./sql.js";
 
 /**
  * A rule is a mistake that must not spread. Ids match the rule table in
@@ -376,5 +377,11 @@ export const RULES: readonly Rule[] = [
     name: "flow-shots-captioned",
     fix: 'Give the shot a caption: shot("label", { caption: "One English sentence: what this frame proves" }), and a highlight locator where something changed. Reels show the caption under the frame; without it a reviewer sees only the label.',
     check: linesMatching(/\bshot\(\s*(["'`])[^"'`]*\1\s*\)/, (path) => path.startsWith("tools/verify/flows/") && path.endsWith(".ts")),
+  },
+  {
+    id: "S1",
+    name: "sql-from-bound-values",
+    fix: "Build SQL with the drizzle sql`...` template, which binds every ${value} as a parameter, or pg's query(text, [values]) with $1, $2 placeholders. Never put a value into SQL text with ${}, + or .join(), and never pass anything but a string literal to sql.raw. A dynamic table or column name goes through sql.identifier() (or pg.escapeIdentifier()) after it is checked against an allowlist. Limits and details: tools/guards/sql.ts.",
+    check: (files) => files.filter((file) => isProductionSource(file.path)).flatMap(unsafeSqlConstruction),
   },
 ];
