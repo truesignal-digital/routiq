@@ -13,13 +13,19 @@ Commands
   doctor [--slot N]            PASS/FAIL health checks; exits 1 on any failure
   status                       list slots that are up in this checkout
   login [--role R] [--lang en] log in through the UI and screenshot the landing page
-  drive <target...> [--role R] [--lang en] [--video] [--viewport 1440x900] [--strict] [--headed]
+  drive <target...> [--role R] [--lang en] [--reel] [--throttle phone] [--video] [--viewport 1440x900] [--strict] [--headed]
                                target: a route (/finance/entries), a flow (flow:<name> from
                                tools/verify/flows/) or a script file exporting a DriveScript
   ui <target...>               same as drive
   api <METHOD> <path> [--role R] [--json '{...}' | --json @file.json]
                                call the slot API as a seeded account; prints JSON
   db "<select ...>"            read-only SQL against the slot database
+                               --reel records the screen and writes reel.mp4 when it ends
+  reel [run-dir] [--before run-dir] [--title "..."]
+                               replay a --reel drive as a short captioned reel.mp4 plus
+                               reel-sheet.png; with --before, both runs play side by side,
+                               synced at each shot, and the end card compares their counts.
+                               Without run-dir: the newest drive run.
   logs [api|web|seed|all]      tail the slot's process logs
   down [--slot N]              stop this slot's processes; remove only routiq-verify-N
                                containers and volumes. Evidence stays.
@@ -63,6 +69,16 @@ async function main(command: Command): Promise<boolean> {
       return callApi(command.slot, command.method, command.path, command.role, command.body);
     case "db":
       return db(command.slot, command.sql);
+    case "reel": {
+      const path = await import("node:path");
+      const { buildReel, latestDriveRun } = await import("./reel.js");
+      const initCwd = process.env["INIT_CWD"] ?? process.cwd();
+      const after = command.after === undefined ? latestDriveRun() : path.resolve(initCwd, command.after);
+      const before = command.before === undefined ? undefined : path.resolve(initCwd, command.before);
+      const out = await buildReel(after, before, { title: command.title });
+      process.stdout.write(`reel: ${out.mp4} (${out.seconds} s)\nsheet: ${out.sheet}\n`);
+      return true;
+    }
   }
 }
 
