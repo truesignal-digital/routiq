@@ -984,6 +984,32 @@ describe("DataTable", () => {
       expect(items).toEqual(["Full name", "Email address", "Identifier"]);
     });
 
+    it("keeps a long action label on one line instead of squeezing it to the ⋯ button's width", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          rowActions={() => [
+            { key: "reverse", label: "Contre-passer l'écriture", onSelect: vi.fn() },
+          ]}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+      const item = await screen.findByRole("menuitem", {
+        name: "Contre-passer l'écriture",
+      });
+      const popup = item.closest<HTMLElement>('[data-slot="dropdown-menu-content"]');
+
+      // jsdom has no layout, so the guard pins the classes that decide wrapping.
+      expect(popup?.className).not.toContain("w-(--anchor-width)");
+      expect(popup?.className).toContain("w-max");
+      expect(popup?.className).toContain("max-w-");
+      expect(within(item).getByText("Contre-passer l'écriture").className).toContain(
+        "truncate",
+      );
+    });
+
     it("puts the menu in the mobile card corner", () => {
       mockDesktop(false);
       render(
