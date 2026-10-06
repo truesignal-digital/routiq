@@ -39,7 +39,12 @@ async function outline(message: Locator, otherwise?: Locator): Promise<{ highlig
     () => true,
     () => false,
   );
-  if (shown) return { highlight: message.locator("xpath=ancestor::*[@data-slot='form-item'][1]") };
+  if (shown) {
+    const field = message.locator("xpath=ancestor::*[@data-slot='form-item'][1]");
+    // Clear of the sticky breadcrumb, so the field's label shows.
+    await field.evaluate((element) => element.scrollIntoView({ block: "center" }));
+    return { highlight: field };
+  }
   return otherwise !== undefined && (await otherwise.count()) > 0 ? { highlight: otherwise } : {};
 }
 
