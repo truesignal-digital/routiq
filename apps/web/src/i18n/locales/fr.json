@@ -134,6 +134,7 @@
     "POSTINGS_SUM_MISMATCH": "Le total des lignes ne correspond pas au montant de l'écriture.",
     "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
     "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
+    "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une contre-passation et ne peut pas être contre-passée. Pour l'annuler, enregistrez à nouveau l'écriture d'origine.",
     "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
     "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
     "ACTIVITY_CLOSE_BLOCKED": "Impossible de clôturer : il manque les dates réelles ou au moins un engin affecté.",
@@ -401,6 +402,7 @@
         "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
         "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
         "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été contre-passée.",
+        "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une contre-passation et ne peut pas être contre-passée. Pour l'annuler, enregistrez à nouveau l'écriture d'origine.",
         "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible."
       }
     },

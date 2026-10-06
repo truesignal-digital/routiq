@@ -478,6 +478,7 @@ describe("an entry's steps", () => {
 
   it("asks no receipt of a reversal and offers reverse on posted entries only", () => {
     expect(keys(entry({ status: "POSTED", reversesEntryId: "00000000-0000-4000-8000-0000000000ef" }), "FINANCE")).toEqual([]);
+    expect(keys(entry({ status: "REVERSED", evidence: { state: "SUPPLIED" } }), "FINANCE")).toEqual([]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "FINANCE")).toEqual(["reverse-entry"]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "DIRECTOR")).toEqual(["reverse-entry"]);
     expect(keys(entry({ status: "POSTED", recordedBy: actor(ME_ID) }), "DRIVER")).toEqual(["attach-evidence"]);

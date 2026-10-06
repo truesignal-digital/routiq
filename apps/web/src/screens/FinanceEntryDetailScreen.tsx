@@ -60,7 +60,7 @@ function FinanceEntryDetailContent() {
   const queryClient = useQueryClient();
   const session = useActiveSession();
 
-  const canReverse = canReverseEntry(me?.role, entryQuery.data?.status);
+  const canReverse = canReverseEntry(me?.role, entryQuery.data);
   // role-config: an approver decides while the entry waits, never on their own
   // entry (the maker guard the server also enforces), and never above their
   // approval band, where the Director decides.

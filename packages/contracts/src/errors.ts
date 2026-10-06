@@ -61,6 +61,11 @@ export const COMMAND_ERROR_CODES = [
    */
   "OWN_RECORDS_ONLY",
   "ENTRY_ALREADY_REVERSED",
+  /**
+   * Reversing an entry that is itself a reversal (#130). Reversal is one level
+   * only; a mistaken reversal is undone by recording the entry again.
+   */
+  "ENTRY_IS_REVERSAL",
   "PERIOD_LOCKED",
   "CATEGORY_KIND_MISMATCH",
   "ACTIVITY_CLOSE_BLOCKED",
