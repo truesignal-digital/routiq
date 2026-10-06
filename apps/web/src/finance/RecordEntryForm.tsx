@@ -383,11 +383,9 @@ export function RecordEntryForm({
                     if (value !== "EXPENSE" && value !== "REVENUE") return;
                     field.onChange(value);
                     // Expense and revenue draw from different category lists, so
-                    // the old pick cannot survive the flip.
-                    form.setValue("categoryCode", "", {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
+                    // the old pick cannot survive the flip. Clearing is not the
+                    // user leaving the field empty, so it raises no error (#449).
+                    form.setValue("categoryCode", "", { shouldDirty: true });
                   }}
                 >
                   <TabsList className="w-full">

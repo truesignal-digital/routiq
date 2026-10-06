@@ -237,6 +237,46 @@ describe("RecordEntryForm opened from a vehicle", () => {
   });
 });
 
+describe("RecordEntryForm switching between expense and revenue (#449)", () => {
+  function openRecord() {
+    inPanel(
+      <RecordEntryForm
+        surface="panel"
+        defaultBranchCode="DLA"
+        client={recordingClient(posted)}
+        onRecorded={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    return screen.getByRole("dialog");
+  }
+
+  it("does not flag an untouched category when the direction flips", async () => {
+    const panel = openRecord();
+
+    await userEvent.click(within(panel).getByRole("tab", { name: "Revenue" }));
+
+    expect(within(panel).getByRole("tab", { name: "Revenue" }).getAttribute("aria-selected"))
+      .toBe("true");
+    expect(within(panel).queryByText(/This field is required/)).toBeNull();
+  });
+
+  it("clears a picked category on the flip without calling the empty field an error", async () => {
+    const panel = openRecord();
+    await userEvent.click(within(panel).getByLabelText("Category"));
+    await userEvent.click(await screen.findByRole("option", { name: "Fuel" }));
+    expect(within(panel).getByLabelText("Category").textContent).toContain("Fuel");
+
+    await userEvent.click(within(panel).getByRole("tab", { name: "Revenue" }));
+
+    expect(within(panel).getByLabelText("Category").textContent).not.toContain("Fuel");
+    expect(within(panel).queryByText(/This field is required/)).toBeNull();
+    expect(
+      within(panel).getByRole("button", { name: "Record the revenue" }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+});
+
 describe("entry decisions on a record panel", () => {
   const entry = { id: ENTRY_ID, rowVersion: 3 };
 
