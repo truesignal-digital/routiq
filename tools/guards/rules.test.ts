@@ -327,6 +327,18 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],
   },
+  {
+    id: "S1",
+    bad: [
+      file("apps/api/src/reads/assets.ts", "await tx.execute(sql.raw(`select * from assets where asset_code = '${code}'`));"),
+      file("apps/api/scripts/x.ts", 'await pool.query("select * from notes where body like \'%" + request.query.q + "%\'");'),
+    ],
+    good: [
+      file("apps/api/src/reads/assets.ts", "await tx.execute(sql`select * from assets where asset_code = ${code}`);"),
+      file("apps/api/scripts/x.ts", 'await pool.query("select * from notes where id = $1", [id]);'),
+      file("apps/api/src/reads/x.test.ts", "await ctx.db.execute(sql.raw(migrationSql));"),
+    ],
+  },
 ];
 
 describe("every rule", () => {

@@ -170,7 +170,7 @@
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
     "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le problème.",
     "SAFETY_ISSUE_OPEN": "Un autre problème critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
-    "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
+    "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être le chauffeur attitré de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
     "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
@@ -181,7 +181,7 @@
         "registered": "Actif enregistré",
         "commissioned": "Actif mis en service",
         "assigned": "Actif affecté",
-        "custodianChanged": "Responsable modifié"
+        "custodianChanged": "Chauffeur attitré modifié"
       }
     },
     "eyebrow": "Parc opérationnel",
@@ -295,7 +295,7 @@
       "open": "Ouvrir la fiche",
       "commissionHint": "Met l'actif en service. Son historique d'exploitation démarre ici.",
       "assignHint": "Rattache l'actif à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies.",
-      "custodianHint": "Désigne qui répond de l'actif au quotidien."
+      "custodianHint": "Désigne la personne qui conduit habituellement l'actif."
     },
     "columns": {
       "asset": "Actif",
@@ -1438,7 +1438,7 @@
       "model": "modèle",
       "lifecycleStatus": "statut du cycle de vie",
       "commissionedAt": "mise en service",
-      "custodianMembershipId": "responsable",
+      "custodianMembershipId": "chauffeur attitré",
       "membershipId": "membre",
       "personCode": "code personne",
       "displayName": "nom",
@@ -1641,9 +1641,9 @@
       "submitting": "Changement…",
       "short": "Agence",
       "custodian": {
-        "label": "Changer de responsable",
-        "short": "Responsable",
-        "submit": "Changer de responsable"
+        "label": "Changer de chauffeur attitré",
+        "short": "Chauffeur attitré",
+        "submit": "Changer de chauffeur attitré"
       }
     },
     "register-person": {
@@ -1961,13 +1961,13 @@
         "hint": "Ajoutez au moins un fichier."
       },
       "custodian": {
-        "label": "Nouveau responsable",
+        "label": "Nouveau chauffeur attitré",
         "choose": "Choisir un membre",
-        "none": "Personne (retirer le responsable)",
+        "none": "Personne (retirer le chauffeur attitré)",
         "current": "Actuel : {name}.",
         "currentNone": "Actuellement personne.",
-        "hint": "Seuls les membres dont les agences couvrent ce véhicule peuvent en être responsables. Un chauffeur sans compte n'est pas proposé.",
-        "empty": "Aucun membre ne peut encore en être responsable."
+        "hint": "Seuls les membres dont les agences couvrent ce véhicule peuvent en être le chauffeur attitré. Un chauffeur sans compte n'est pas proposé.",
+        "empty": "Aucun membre ne peut encore en être le chauffeur attitré."
       }
     },
     "page": {
@@ -1996,7 +1996,7 @@
       "moreActions": "Plus d'actions"
     },
     "facts": {
-      "custodian": "Responsable {name}",
+      "custodian": "Chauffeur attitré {name}",
       "nobody": "aucun",
       "reading": "{readingType, select, HOURS {Horamètre} other {Compteur}} {value}, {ago}",
       "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
@@ -2017,7 +2017,7 @@
       "lifecycleSince": "{status} depuis le {date}",
       "homeBranch": "Agence de rattachement",
       "homeBranchValue": "{branch}, rattachement administratif",
-      "custodian": "Responsable",
+      "custodian": "Chauffeur attitré",
       "custodianSince": "{name} depuis le {date}",
       "custodianInactive": "Accès désactivé",
       "nobodyAssigned": "Personne",
@@ -2382,7 +2382,7 @@
       "event": {
         "asset-registered": "Véhicule enregistré",
         "asset-commissioned": "Mis en service",
-        "asset-assigned": "{change, select, branch {Rattaché à l'agence {branch}} custodian {Nouveau responsable : {custodian}} cleared {Responsable retiré} other {Affectation modifiée}}",
+        "asset-assigned": "{change, select, branch {Rattaché à l'agence {branch}} custodian {Nouveau chauffeur attitré : {custodian}} cleared {Chauffeur attitré retiré} other {Affectation modifiée}}",
         "activity-created": "Activité {number} démarrée",
         "activity-closed": "Activité {number} clôturée",
         "activity-reopened": "Activité {number} rouverte",
@@ -2558,7 +2558,7 @@
         "description": "Ouvre la feuille de route avec ce véhicule comme véhicule principal."
       },
       "change-custodian": {
-        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque activité."
+        "description": "La personne qui conduit habituellement le véhicule. Chaque activité peut avoir un autre chauffeur."
       },
       "transfer-branch": {
         "description": "Change durablement l'agence de rattachement. Les écritures passées restent à l'agence qui les a saisies."

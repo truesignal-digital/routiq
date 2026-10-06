@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561646,
+    "ceiling": 561479,
     "raises": [
       {
         "date": "2026-10-06",
@@ -29,8 +29,8 @@
       {
         "date": "2026-10-06",
         "from": 561383,
-        "to": 561646,
-        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +183 B gzip; this raise also takes in about 80 B of develop drift that sat inside the noise band"
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
       }
     ]
   },
@@ -46,7 +46,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561646,
+    "ceiling": 561479,
     "raises": [
       {
         "date": "2026-10-06",
@@ -75,8 +75,8 @@
       {
         "date": "2026-10-06",
         "from": 561383,
-        "to": 561646,
-        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +183 B gzip; this raise also takes in about 80 B of develop drift that sat inside the noise band"
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
       }
     ]
   }

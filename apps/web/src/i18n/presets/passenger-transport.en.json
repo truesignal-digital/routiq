@@ -205,7 +205,7 @@
     },
     "actions": {
       "change-custodian": {
-        "description": "Who answers for the vehicle day to day. Not the same as who drives each trip."
+        "description": "The person who regularly drives the vehicle. Each trip can still name another driver."
       }
     }
   },

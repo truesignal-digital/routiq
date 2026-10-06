@@ -205,7 +205,7 @@
     },
     "actions": {
       "change-custodian": {
-        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque voyage."
+        "description": "La personne qui conduit habituellement le véhicule. Chaque voyage peut avoir un autre chauffeur."
       }
     }
   },

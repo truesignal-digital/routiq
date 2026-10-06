@@ -18,7 +18,7 @@ const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 async function createIsolatedDatabase(suiteUrl: string) {
   const name = `isolated_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
   const adminPool = new pg.Pool({ connectionString: suiteUrl });
-  await adminPool.query(`CREATE DATABASE ${name}`);
+  await adminPool.query(`CREATE DATABASE ${pg.escapeIdentifier(name)}`);
   const url = new URL(suiteUrl);
   url.pathname = `/${name}`;
   const migrationPool = new pg.Pool({ connectionString: url.toString() });
@@ -30,7 +30,7 @@ async function createIsolatedDatabase(suiteUrl: string) {
   return {
     url: url.toString(),
     async drop() {
-      await adminPool.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+      await adminPool.query(`DROP DATABASE IF EXISTS ${pg.escapeIdentifier(name)} WITH (FORCE)`);
       await adminPool.end();
     },
   };
