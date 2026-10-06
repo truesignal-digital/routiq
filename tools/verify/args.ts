@@ -11,6 +11,10 @@ export interface DriveOptions {
   role: string;
   lang: Lang;
   video: boolean;
+  /** Record a screencast and build reel.mp4 when the drive ends. */
+  reel: boolean;
+  /** "phone": a low-end Android over slow 4G (CPU 4x slower, 150 ms RTT, 1.6 Mbps down). */
+  throttle: "none" | "phone";
   strict: boolean;
   headed: boolean;
   viewport: Viewport;
@@ -26,26 +30,28 @@ export type Command =
   | { name: "login"; slot: number; options: DriveOptions }
   | { name: "drive"; slot: number; targets: string[]; options: DriveOptions }
   | { name: "api"; slot: number; method: string; path: string; role: string; body: string | undefined }
-  | { name: "db"; slot: number; sql: string };
+  | { name: "db"; slot: number; sql: string }
+  | { name: "reel"; after: string | undefined; before: string | undefined; title: string | undefined };
 
 const BOOLEAN_FLAGS: Record<string, readonly string[]> = {
   up: ["reseed"],
-  login: ["video", "strict", "headed"],
-  drive: ["video", "strict", "headed"],
+  login: ["video", "reel", "strict", "headed"],
+  drive: ["video", "reel", "strict", "headed"],
 };
 const VALUE_FLAGS: Record<string, readonly string[]> = {
   up: ["slot"],
   down: ["slot"],
   doctor: ["slot"],
   logs: ["slot"],
-  login: ["slot", "role", "lang", "viewport"],
-  drive: ["slot", "role", "lang", "viewport"],
+  login: ["slot", "role", "lang", "viewport", "throttle"],
+  drive: ["slot", "role", "lang", "viewport", "throttle"],
   api: ["slot", "role", "json"],
   db: ["slot"],
+  reel: ["before", "title"],
   status: [],
 };
 
-export const COMMAND_NAMES = ["up", "doctor", "status", "login", "drive", "ui", "api", "db", "logs", "down"] as const;
+export const COMMAND_NAMES = ["up", "doctor", "status", "login", "drive", "ui", "api", "db", "logs", "down", "reel"] as const;
 
 interface Parsed {
   positionals: string[];
@@ -99,6 +105,12 @@ export function parseViewport(raw: string | undefined): Viewport {
   return { width: Number(match[1]), height: Number(match[2]) };
 }
 
+function parseThrottle(raw: string | undefined): DriveOptions["throttle"] {
+  if (raw === undefined || raw === "none") return "none";
+  if (raw === "phone") return "phone";
+  throw new Error(`--throttle must be phone or none, got "${raw}"`);
+}
+
 function parseLang(raw: string | undefined): Lang {
   if (raw === undefined || raw === "fr") return "fr";
   if (raw === "en") return "en";
@@ -110,6 +122,8 @@ function driveOptions(parsed: Parsed): DriveOptions {
     role: parsed.values.get("role") ?? "director",
     lang: parseLang(parsed.values.get("lang")),
     video: parsed.flags.has("video"),
+    reel: parsed.flags.has("reel"),
+    throttle: parseThrottle(parsed.values.get("throttle")),
     strict: parsed.flags.has("strict"),
     headed: parsed.flags.has("headed"),
     viewport: parseViewport(parsed.values.get("viewport")),
@@ -165,6 +179,10 @@ export function parseArgs(argv: readonly string[], env: Readonly<Record<string, 
     case "db": {
       if (parsed.positionals.length !== 1) throw new Error('db takes one quoted query: pnpm verify db "select ..."');
       return { name, slot: slot(), sql: parsed.positionals[0] ?? "" };
+    }
+    case "reel": {
+      if (parsed.positionals.length > 1) throw new Error("reel takes at most one run directory (the after run)");
+      return { name, after: parsed.positionals[0], before: parsed.values.get("before"), title: parsed.values.get("title") };
     }
     default:
       throw new Error(`unknown command "${first}"`);
