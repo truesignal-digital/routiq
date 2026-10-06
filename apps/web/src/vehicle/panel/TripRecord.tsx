@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import type { ActivityDetail } from "@routiq/contracts";
+import type { ActivityDetail, MoneyReadScope } from "@routiq/contracts";
 import { useActivity } from "@/activities/useActivities.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
+import { entriesScope } from "@/finance/permissions.js";
 import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
@@ -20,7 +21,7 @@ export function TripRecord({ id, form }: { id: string; form: PanelForm | undefin
 
 function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
-  const { asset, panel, gates, can, pinnedLabel, refresh } = useVehicle();
+  const { asset, panel, gates, can, pinnedLabel, refresh, viewer } = useVehicle();
   const query = useActivity(id);
   const host = useFormHost(t("vehicle.panel.tripTitle"));
   const locale = i18n.language;
@@ -84,7 +85,7 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
           <Note>{t("vehicle.trips.gapsNote", { count: trip.completenessCodes.length })}</Note>
         )}
         {gates.entries && trip.financialEntries !== null && (
-          <TripMoney entries={trip.financialEntries} ownOnly={!gates.money} />
+          <TripMoney entries={trip.financialEntries} scope={entriesScope(viewer.role)} />
         )}
         <DetailSection title={t("vehicle.trips.odometer")}>
           {readings.length === 0 ? (
@@ -122,14 +123,20 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
 
 /**
  * The trip's own entries, whole amounts: a trip can carry costs for several
- * vehicles. Outside the ledger the server sends only the reader's own (#264).
+ * vehicles. The server sends the reader's slice: a driver's own, the
+ * counter's branches (#264, #408).
  */
+const EMPTY_MONEY: Partial<Record<MoneyReadScope, string>> = {
+  OWN_ENTRIES: "vehicle.trips.noOwnMoney",
+  BRANCH_ENTRIES: "vehicle.trips.noBranchMoney",
+};
+
 function TripMoney({
   entries,
-  ownOnly,
+  scope,
 }: {
   entries: NonNullable<ActivityDetail["financialEntries"]>;
-  ownOnly: boolean;
+  scope: MoneyReadScope | undefined;
 }) {
   const { t, i18n } = useTranslation();
   const { panel } = useVehicle();
@@ -140,7 +147,7 @@ function TripMoney({
     >
       {entries.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          {t(ownOnly ? "vehicle.trips.noOwnMoney" : "vehicle.trips.noMoney")}
+          {t((scope && EMPTY_MONEY[scope]) ?? "vehicle.trips.noMoney")}
         </p>
       ) : (
         <ul className="divide-y rounded-lg border">

@@ -1,4 +1,4 @@
-import { ledgerEntryStatuses, type ActivityDetail } from "@routiq/contracts";
+import { ledgerEntryStatuses, type ActivityDetail, type MoneyReadScope } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
@@ -46,13 +46,15 @@ export function netToneClass(minor: number): string {
 export interface ActivityMoneyProps {
   entries: readonly Entry[];
   /**
-   * Whether `entries` is the trip's whole money. False for a driver, who reads
-   * only the entries they recorded (#264): no net is summed over a part.
+   * Whether `entries` is the trip's whole money. False outside the ledger
+   * (#264): no net is summed over a part.
    */
   totals: boolean;
+  /** Which slice of the trip's entries the server sent, to say so (#408). */
+  scope: MoneyReadScope | undefined;
 }
 
-export function ActivityMoney({ entries, totals }: ActivityMoneyProps) {
+export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
@@ -99,9 +101,13 @@ export function ActivityMoney({ entries, totals }: ActivityMoneyProps) {
           ))}
         </ul>
 
-        {!totals && (
+        {(scope === "OWN_ENTRIES" || scope === "BRANCH_ENTRIES") && (
           <p className="mt-3 text-muted-foreground text-xs">
-            {t("activities.detail.moneySummary.ownOnly")}
+            {t(
+              scope === "OWN_ENTRIES"
+                ? "activities.detail.moneySummary.ownOnly"
+                : "activities.detail.moneySummary.branchOnly",
+            )}
           </p>
         )}
 
