@@ -2071,6 +2071,7 @@
         "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
         "doNotDrive": "Do not drive it until a manager releases it to service."
       },
+      "repairedLead": "Repair done — waiting for release to service.",
       "available": {
         "lead": "Available.",
         "sinceAndTrip": "In service since {since}; last activity {lastTrip}.",
