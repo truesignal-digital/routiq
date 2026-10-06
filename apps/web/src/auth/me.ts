@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type {
   BranchScope,
   ModuleCode,
@@ -8,6 +8,7 @@ import type {
   TemplateCode,
 } from "@routiq/contracts";
 import { endSession } from "./sign-out.js";
+import type { Identity } from "./session.js";
 import { sessionStore, useActiveSession } from "./store.js";
 
 export interface MeContext {
@@ -40,11 +41,15 @@ export async function fetchMe(
   return (await response.json()) as MeContext;
 }
 
-export function useMe() {
-  const session = useActiveSession();
-  const queryClient = useQueryClient();
-  return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "me"],
+/**
+ * The signed-in member, read by the shell's loader before the shell draws
+ * (#495) and by `useMe` after. A dead token means the session is over: it is
+ * dropped with every read made under it, so the route guard re-prompts the
+ * PIN instead of rendering a broken shell.
+ */
+export function meQueryOptions(queryClient: QueryClient, session: Identity | undefined) {
+  return queryOptions({
+    queryKey: ["ws", session?.workspaceSlug, "me"] as const,
     enabled: session !== undefined,
     retry: false,
     queryFn: async ({ signal }) => {
@@ -53,9 +58,6 @@ export function useMe() {
       try {
         return await fetchMe(token, signal);
       } catch (error) {
-        // A dead token means the session is over: drop it, and every read
-        // made under it, so the route guard re-prompts the PIN instead of
-        // rendering a broken shell.
         if (error instanceof Error && error.message === "AUTH_REQUIRED" && session) {
           endSession(queryClient, session);
         }
@@ -63,6 +65,12 @@ export function useMe() {
       }
     },
   });
+}
+
+export function useMe() {
+  const session = useActiveSession();
+  const queryClient = useQueryClient();
+  return useQuery(meQueryOptions(queryClient, session));
 }
 
 export const MeCtx = createContext<MeContext | undefined>(undefined);
