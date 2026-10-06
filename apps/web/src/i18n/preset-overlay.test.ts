@@ -100,17 +100,32 @@ describe("preset overlays", () => {
 // noun. A base string that names the trip itself shows one fleet the other's word.
 const TRIP_NOUN = /\b(trajets?|voyages?|trips?|journeys?)\b/i;
 
-describe("trip noun in the base activities catalog", () => {
+describe("trip noun in the base catalog", () => {
   for (const locale of LOCALES) {
-    it(`${locale}: every activities.* string naming the trip is overlaid by every preset`, () => {
+    it(`${locale}: every base string naming the trip is overlaid by every preset`, () => {
       const offenders = flattenKeys(BASE[locale])
-        .filter((key) => key.startsWith("activities."))
         .filter((key) => TRIP_NOUN.test(String(at(BASE[locale], key))))
         .flatMap((key) =>
           TEMPLATE_CODES.filter(
             (preset) => at(PRESET_VOCABULARIES[preset][locale], key) === undefined,
           ).map((preset) => `${key} (${preset})`),
         );
+      expect(offenders).toEqual([]);
+    });
+  }
+
+  // French has a word per fleet, so an overlay copied from the other preset
+  // shows up as the other fleet's noun.
+  const FOREIGN_TRIP_NOUN: Record<TemplateCode, RegExp> = {
+    TRUCKING: /\bvoyages?\b/i,
+    PASSENGER_TRANSPORT: /\btrajets?\b/i,
+  };
+  for (const preset of TEMPLATE_CODES) {
+    it(`fr: the ${preset} overlay never names the other fleet's trip`, () => {
+      const overlay = PRESET_VOCABULARIES[preset].fr;
+      const offenders = flattenKeys(overlay).filter((key) =>
+        FOREIGN_TRIP_NOUN[preset].test(String(at(overlay, key))),
+      );
       expect(offenders).toEqual([]);
     });
   }
@@ -170,13 +185,14 @@ describe("applyPresetVocabulary", () => {
     for (const lng of LOCALES) {
       for (const key of [
         "activities.record.subtitle",
-        "activities.record.journeyTab",
+        "assets.form.templates.PASSENGER_TRANSPORT",
+        "assets.form.templates.TRUCKING",
         "activities.record.entries.attributeHint",
       ]) {
         expect(instance.t(key, { lng }), `${key} ${lng}`).not.toMatch(TRIP_NOUN);
       }
     }
-    expect(instance.t("activities.record.journeyTab", { lng: "fr" })).toBe(
+    expect(instance.t("assets.form.templates.PASSENGER_TRANSPORT", { lng: "fr" })).toBe(
       "Transport de voyageurs",
     );
 
@@ -190,6 +206,42 @@ describe("applyPresetVocabulary", () => {
         "rather than the trip",
       );
     }
+  });
+
+  it("names the trip in each fleet's own word in the vehicle workspace", () => {
+    const instance = freshInstance();
+    const trip = (lng: "fr" | "en") => ({
+      tab: instance.t("vehicle.tabs.trips", { lng }),
+      description: instance.t("vehicle.trips.description", { lng }),
+      row: instance.t("vehicle.trips.tripNumber", { number: 12, lng }),
+      open: instance.t("vehicle.trips.openFull", { lng }),
+    });
+
+    expect(trip("fr")).toEqual({
+      tab: "Activités",
+      description: "Activités avec ce véhicule",
+      row: "Activité 12",
+      open: "Ouvrir l'activité complète",
+    });
+    expect(trip("en").row).toBe("Activity 12");
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(trip("fr")).toEqual({
+      tab: "Trajets",
+      description: "Trajets avec ce camion",
+      row: "Trajet 12",
+      open: "Ouvrir le trajet complet",
+    });
+    expect(trip("en").row).toBe("Trip 12");
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(trip("fr")).toEqual({
+      tab: "Voyages",
+      description: "Voyages avec ce véhicule",
+      row: "Voyage 12",
+      open: "Ouvrir le voyage complet",
+    });
+    expect(trip("en").row).toBe("Trip 12");
   });
 
   it("keeps the branch-empty hint in each fleet's own word for a vehicle", () => {

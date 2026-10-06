@@ -47,6 +47,7 @@ import { canRecordActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
 import {
   pendingChildrenCount,
+  SHEET_TEMPLATE_PRESET,
   sheetTemplatesFor,
   toHaulageSheetPayload,
   toJourneySheetPayload,
@@ -457,12 +458,11 @@ function SheetForm({
                     className="w-full"
                     aria-label={t("activities.record.templateLegend")}
                   >
-                    <TabsTrigger value="journey">
-                      {t("activities.record.journeyTab")}
-                    </TabsTrigger>
-                    <TabsTrigger value="haulage">
-                      {t("activities.record.haulageTab")}
-                    </TabsTrigger>
+                    {templates.map((template) => (
+                      <TabsTrigger key={template} value={template}>
+                        {t(`assets.form.templates.${SHEET_TEMPLATE_PRESET[template]}`)}
+                      </TabsTrigger>
+                    ))}
                   </TabsList>
                 </Tabs>
               </FormItem>

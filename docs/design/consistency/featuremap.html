@@ -92,12 +92,12 @@
 
           <tr class="area"><td colspan="4">Vehicles</td></tr>
           <tr><td>Register, commission, assign, edit details</td><td><span class="st ex">Built</span></td><td><code>register-asset</code>, <code>commission-asset</code>, <code>assign-asset</code>, <code>update-asset-details</code> · <code>/assets</code>, <code>/assets/new</code></td><td>—</td></tr>
-          <tr><td>Vehicle workspace (7 tabs, record panel, actions)</td><td><span class="st ex">Built</span></td><td><code>/assets/$assetId/*</code></td><td>The model for every record</td></tr>
+          <tr><td>Vehicle workspace (7 tabs, record panel, actions)</td><td><span class="st ex">Built</span></td><td><code>/assets/$assetId/*</code> · names the trip in the preset's word (Trajet / Voyage, Activité for a mixed fleet) (#421)</td><td>The model for every record</td></tr>
           <tr><td>Readings, notes, documents (add / renew)</td><td><span class="st ex">Built</span></td><td><code>record-meter-reading</code>, <code>add-note</code>, <code>add-or-renew-document</code></td><td>Date fields (audit)</td></tr>
           <tr><td>Release to service</td><td><span class="st ex">Built</span></td><td><code>release-asset-to-service</code></td><td>—</td></tr>
 
           <tr class="area"><td colspan="4">Trips / Journeys</td></tr>
-          <tr><td>Record a trip sheet (haulage / journey)</td><td><span class="st ex">Built</span></td><td><code>record-haulage-job-sheet</code>, <code>record-journey-sheet</code> · <code>/activities/record</code> · names the trip in the preset's word; a mixed fleet picks Transport de voyageurs / de marchandises (#420)</td><td>Phone steps (decided)</td></tr>
+          <tr><td>Record a trip sheet (haulage / journey)</td><td><span class="st ex">Built</span></td><td><code>record-haulage-job-sheet</code>, <code>record-journey-sheet</code> · <code>/activities/record</code> · names the trip in the preset's word; a mixed fleet picks Transport de voyageurs / de marchandises, tabs labelled from the template picker (#420, #421)</td><td>Phone steps (decided)</td></tr>
           <tr><td>Legs, substitute vehicle, close, reopen</td><td><span class="st ex">Built</span></td><td><code>record-movement-leg</code>, <code>substitute-asset</code>, <code>close-activity</code>, <code>reopen-activity</code></td><td>—</td></tr>
           <tr><td>Create a single trip</td><td><span class="st be">Backend only</span></td><td><code>create-activity</code>; screens use the sheet commands instead</td><td>Becomes "start a planned trip"</td></tr>
           <tr><td>Planned trips, Book a trip, Planning tab (day / week / month)</td><td><span class="st ds">Designed</span></td><td>Statuses today: <code>OPEN</code>, <code>CLOSED</code>; <code>startedAt</code> required</td><td><a href="scheduling.html">scheduling.html</a> · needs ADR</td></tr>

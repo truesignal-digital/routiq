@@ -474,7 +474,7 @@
         "counterparty": "Counterparty",
         "linkedTo": "Linked to",
         "workOrderLink": "Work order {ref}",
-        "tripLink": "Trip {number}",
+        "tripLink": "Activity {number}",
         "paymentMethod": "Payment method",
         "description": "Description",
         "paymentReference": "Payment reference",
@@ -841,8 +841,6 @@
     "record": {
       "subtitle": "Work down the paper sheet from top to bottom. Anything it does not say can stay empty.",
       "templateLegend": "Sheet type",
-      "journeyTab": "Passenger transport",
-      "haulageTab": "Haulage job",
       "sections": {
         "references": "References",
         "vehicle": "Vehicle and meters",
@@ -1338,7 +1336,7 @@
       "activity-created": "Activity created",
       "activity-closed": "Activity closed",
       "activity-reopened": "Activity reopened",
-      "activity-sheet_recorded": "Trip sheet recorded",
+      "activity-sheet_recorded": "Sheet recorded",
       "activity-asset_substituted": "Asset substituted",
       "movement_leg-recorded": "Leg recorded",
       "meter_reading-recorded": "Meter reading recorded",
@@ -2020,10 +2018,10 @@
       },
       "available": {
         "lead": "Available.",
-        "sinceAndTrip": "In service since {since}; last trip {lastTrip}.",
-        "sinceNoTrips": "In service since {since}; no trips yet.",
-        "lastTripOnly": "Last trip {lastTrip}.",
-        "noTrips": "No trips yet."
+        "sinceAndTrip": "In service since {since}; last activity {lastTrip}.",
+        "sinceNoTrips": "In service since {since}; no activities yet.",
+        "lastTripOnly": "Last activity {lastTrip}.",
+        "noTrips": "No activities yet."
       },
       "notAssessed": {
         "lead": "Availability not assessed.",
@@ -2217,7 +2215,7 @@
         "missing": "Missing receipt"
       },
       "noEntries": "No entries match this filter.",
-      "forTrip": "for trip {number}",
+      "forTrip": "for activity {number}",
       "forWorkOrder": "for work order {ref}",
       "ofEntry": "of a {amount} entry",
       "lifetime": "Lifetime, all posted entries since registration: revenue {revenue} · expenses {expenses} · net {net}. Recorded figures, not cash paid or profit."
@@ -2242,7 +2240,7 @@
       "loading": "Loading…",
       "loadFailed": "We couldn't load the activities.",
       "route": "{from} → {to}",
-      "tripNumber": "Trip {number}",
+      "tripNumber": "Activity {number}",
       "km": "{value, number} km",
       "startedAt": "Started {time}",
       "endedAt": "Ended {time}",
@@ -2255,14 +2253,14 @@
       "distanceUnknown": "Known when closed",
       "gapsNote": "Closed with {count, plural, one {# gap} other {# gaps}}. Reports show the gaps; they never fill them in.",
       "linkedMoney": "Linked money",
-      "wholeTrip": "Whole-trip amounts",
-      "noMoney": "No entries linked to this trip yet.",
-      "noOwnMoney": "You have not recorded any entry on this trip.",
-      "noBranchMoney": "No entry from your branches on this trip yet.",
+      "wholeTrip": "Whole-activity amounts",
+      "noMoney": "No entries linked to this activity yet.",
+      "noOwnMoney": "You have not recorded any entry on this activity.",
+      "noBranchMoney": "No entry from your branches on this activity yet.",
       "odometer": "Odometer",
       "noReadings": "No start or end reading for this vehicle.",
       "readingLine": "{source} · {date}",
-      "openFull": "Open the full trip"
+      "openFull": "Open the full activity"
     },
     "documents": {
       "title": "Documents",
@@ -2298,8 +2296,8 @@
       "supersededBecause": "Corrected: {reason}",
       "delta": "{delta, number, ::sign-always} {readingType, select, HOURS {h} other {km}}",
       "source": {
-        "ACTIVITY_START": "Trip start",
-        "ACTIVITY_END": "Trip end",
+        "ACTIVITY_START": "Activity start",
+        "ACTIVITY_END": "Activity end",
         "SUBSTITUTION": "Substitution",
         "MANUAL": "Manual reading",
         "WORK_ORDER": "Workshop"
@@ -2329,12 +2327,12 @@
         "asset-registered": "Vehicle registered",
         "asset-commissioned": "Put into service",
         "asset-assigned": "{change, select, branch {Moved to branch {branch}} custodian {Custodian changed to {custodian}} cleared {Custodian removed} other {Assignment changed}}",
-        "activity-created": "Trip {number} started",
-        "activity-closed": "Trip {number} closed",
-        "activity-reopened": "Trip {number} reopened",
-        "activity-sheet_recorded": "Trip sheet {number} recorded",
-        "activity-asset_substituted": "Vehicle substituted on trip {number}",
-        "movement_leg-recorded": "Leg recorded on trip {number}",
+        "activity-created": "Activity {number} started",
+        "activity-closed": "Activity {number} closed",
+        "activity-reopened": "Activity {number} reopened",
+        "activity-sheet_recorded": "Sheet {number} recorded",
+        "activity-asset_substituted": "Vehicle substituted on activity {number}",
+        "movement_leg-recorded": "Leg recorded on activity {number}",
         "meter_reading-recorded": "{readingType, select, HOURS {Hour meter {value, number} h} other {Odometer {value, number} km}}",
         "meter_reading-corrected": "{readingType, select, HOURS {Hour meter corrected to {value, number} h} other {Odometer corrected to {value, number} km}}",
         "document-added": "{type} added",
@@ -2372,15 +2370,15 @@
       "notFound": "Not available",
       "notFoundHint": "This record does not exist, is outside your branches, or is not something your role reads.",
       "retry": "Try again",
-      "backTo": "{kind, select, work_order {Back to work order {ref}} issue {Back to problem {ref}} entry {Back to the entry} trip {Back to the trip} document {Back to the document} note {Back to the note} other {Back to the readings}}",
+      "backTo": "{kind, select, work_order {Back to work order {ref}} issue {Back to problem {ref}} entry {Back to the entry} trip {Back to the activity} document {Back to the document} note {Back to the note} other {Back to the readings}}",
       "workOrderTitle": "Work order {ref}",
       "workOrderEyebrow": "Work order {ref}",
       "issueTitle": "Problem {ref}",
       "issueEyebrow": "Problem {ref}",
       "entryTitle": "Entry",
       "entryEyebrow": "{direction, select, REVENUE {Revenue {number}} other {Expense {number}}}",
-      "tripTitle": "Trip",
-      "tripEyebrow": "Trip {number} · {type}",
+      "tripTitle": "Activity",
+      "tripEyebrow": "Activity {number} · {type}",
       "documentTitle": "Document",
       "documentEyebrow": "Document",
       "noteEyebrow": "Note",
@@ -2501,10 +2499,10 @@
         "description": "Ends the grounding once the repair is completed. After a safety-critical problem, whoever vouched for the repair cannot release."
       },
       "start-trip": {
-        "description": "Opens the trip sheet with this vehicle as the main vehicle."
+        "description": "Opens the sheet with this vehicle as the main vehicle."
       },
       "change-custodian": {
-        "description": "Who answers for the vehicle day to day. Not the same as who drives each trip."
+        "description": "Who answers for the vehicle day to day. Not the same as who drives each activity."
       },
       "transfer-branch": {
         "description": "Moves the vehicle's home branch for good. Past records stay with the branch that made them."
