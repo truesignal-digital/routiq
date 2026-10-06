@@ -117,7 +117,8 @@
         "button"
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -473,7 +474,8 @@
       ],
       "dependencies": [
         "@base-ui/react",
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -511,7 +513,8 @@
       "dependencies": [
         "@base-ui/react",
         "class-variance-authority",
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -849,7 +852,8 @@
       "registryDependencies": [],
       "dependencies": [
         "@base-ui/react",
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {

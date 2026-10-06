@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { cn } from "@/lib/utils"
 
@@ -13,7 +14,6 @@ export interface CalendarDateRange {
 
 interface CalendarBaseProps
   extends Omit<React.ComponentProps<"div">, "onSelect"> {
-  locale?: "en" | "fr"
   defaultMonth?: Date
   /** Days that cannot be picked, such as those after today. */
   disabled?: (date: Date) => boolean
@@ -52,7 +52,6 @@ function isBetween(date: Date, from: Date | undefined, to: Date | undefined) {
 function Calendar(calendarProps: CalendarProps) {
   const {
     className,
-    locale = "en",
     defaultMonth,
     disabled,
     mode: _mode,
@@ -71,8 +70,10 @@ function Calendar(calendarProps: CalendarProps) {
     const shown = defaultMonth ?? selected?.from ?? new Date()
     return new Date(shown.getFullYear(), shown.getMonth(), 1)
   })
-  const intlLocale = locale === "fr" ? "fr-FR" : "en-US"
-  const weekStartsOn = locale === "fr" ? 1 : 0
+  const { t, i18n } = useTranslation()
+  const french = (i18n.resolvedLanguage ?? i18n.language).startsWith("fr")
+  const intlLocale = french ? "fr-FR" : "en-US"
+  const weekStartsOn = french ? 1 : 0
   const monthLabel = new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     year: "numeric",
@@ -135,7 +136,7 @@ function Calendar(calendarProps: CalendarProps) {
             // A purchase date can be years back: a year at a time, not 60 clicks.
             <ButtonPrimitive
               type="button"
-              aria-label={locale === "fr" ? "Année précédente" : "Previous year"}
+              aria-label={t("calendar.previousYear")}
               className={navClass}
               onClick={() => shiftMonths(-12)}
             >
@@ -144,7 +145,7 @@ function Calendar(calendarProps: CalendarProps) {
           )}
           <ButtonPrimitive
             type="button"
-            aria-label={locale === "fr" ? "Mois précédent" : "Previous month"}
+            aria-label={t("calendar.previousMonth")}
             className={navClass}
             onClick={() => shiftMonths(-1)}
           >
@@ -157,7 +158,7 @@ function Calendar(calendarProps: CalendarProps) {
         <div className="flex">
           <ButtonPrimitive
             type="button"
-            aria-label={locale === "fr" ? "Mois suivant" : "Next month"}
+            aria-label={t("calendar.nextMonth")}
             className={navClass}
             onClick={() => shiftMonths(1)}
           >
@@ -166,7 +167,7 @@ function Calendar(calendarProps: CalendarProps) {
           {calendarProps.mode === "single" && (
             <ButtonPrimitive
               type="button"
-              aria-label={locale === "fr" ? "Année suivante" : "Next year"}
+              aria-label={t("calendar.nextYear")}
               className={navClass}
               onClick={() => shiftMonths(12)}
             >

@@ -166,7 +166,6 @@ function DateCalendarField({
 }: DateFieldProps & { kind: Kind }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.resolvedLanguage ?? i18n.language
-  const calendarLocale = locale.startsWith("fr") ? "fr" : "en"
   const problemId = useId()
   const timeId = useId()
 
@@ -329,7 +328,6 @@ function DateCalendarField({
             </div>
             <Calendar
               mode="single"
-              locale={calendarLocale}
               disabled={outside}
               {...(selected === undefined ? {} : { selected })}
               onSelect={(day) => pickDay(day, kind === "date")}

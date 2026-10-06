@@ -98,7 +98,6 @@ function DateRangePicker({
           mode="range"
           selected={selected}
           onSelect={changeRange}
-          locale={locale}
         />
       </PopoverContent>
     </Popover>
