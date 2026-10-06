@@ -1332,7 +1332,9 @@
       "empty": "No detailed changes",
       "none": "—",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "lines": "{count, plural, one {# line} other {# lines}}, {total}",
+      "linesCount": "{count, plural, one {# line} other {# lines}}"
     },
     "event": {
       "activity-created": "Activity created",
@@ -1535,7 +1537,48 @@
       "dismissedAt": "dismissed",
       "dismissReason": "dismissal reason",
       "defaultSafetyCritical": "safety-critical by default",
-      "postings": "posting lines"
+      "postings": "posting lines",
+      "artifactIds": "files",
+      "body": "note"
+    },
+    "code": {
+      "entryDirection": {
+        "EXPENSE": "Expense",
+        "REVENUE": "Revenue"
+      },
+      "estimateStatus": {
+        "ACTUAL": "Actual amount",
+        "ESTIMATED": "Estimate"
+      },
+      "periodStatus": {
+        "OPEN": "Open",
+        "LOCKED": "Locked"
+      },
+      "costOutcome": {
+        "LINES": "Costs posted as lines",
+        "NO_COST": "No cost",
+        "INVOICE_PENDING": "Invoice not received yet"
+      },
+      "module": {
+        "CORE": "Core",
+        "ASSETS": "Fleet",
+        "DOCUMENTS": "Documents",
+        "FINANCE": "Finance",
+        "ACTIVITIES": "Activities",
+        "MAINTENANCE": "Maintenance"
+      },
+      "categoryKind": {
+        "ASSET_CLASS": "Asset class",
+        "ACTIVITY_TYPE": "Activity type",
+        "REVENUE_CATEGORY": "Revenue category",
+        "EXPENSE_CATEGORY": "Expense category",
+        "DOCUMENT_TYPE": "Document type",
+        "ISSUE_TYPE": "Problem type"
+      },
+      "evidencePolicy": {
+        "RECEIPT_EXPECTED": "Receipt expected",
+        "NO_RECEIPT_EXPECTED": "No receipt expected"
+      }
     }
   },
   "dateField": {

@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import {
   activityDetail,
+  HISTORY_CODE_SETS,
   HISTORY_ENTITY_TYPES,
   HISTORY_STATE_KEYS,
   historyEventDiff,
   historyListResponse,
   type HistoryItem,
 } from "@routiq/contracts";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import { auditEvents, branches, categories, commands, principals } from "../db/schema.js";
@@ -466,9 +467,11 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(response.statusCode).toBe(200);
 
       const diff = historyEventDiff.parse(response.json());
+      // A code with the set that words it, never a bare enum value (#110).
       expect(diff.changes).toContainEqual({
         field: "status",
-        kind: "VALUE",
+        kind: "CODE",
+        codeSet: "workOrderStatus",
         before: "APPROVED",
         after: "COMPLETED",
       });
@@ -746,6 +749,131 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       );
     });
 
+    it("names the entry's category and branch and sums its lines instead of showing ids and JSON (#119)", async () => {
+      const response = await eventDiff(plainEntryId, approverToken);
+      expect(response.statusCode).toBe(200);
+      const { changes } = historyEventDiff.parse(response.json());
+
+      const [fuel] = await ctx.db
+        .select({ labelFr: categories.labelFr, labelEn: categories.labelEn })
+        .from(categories)
+        .where(and(eq(categories.workspaceId, workspaceId), eq(categories.code, "FUEL")));
+      const [douala] = await ctx.db
+        .select({ name: branches.name })
+        .from(branches)
+        .where(and(eq(branches.workspaceId, workspaceId), eq(branches.code, "DLA")));
+      expect(changes).toContainEqual({
+        field: "categoryId",
+        kind: "NAME",
+        before: null,
+        after: { fr: fuel!.labelFr, en: fuel!.labelEn || fuel!.labelFr },
+      });
+      expect(changes).toContainEqual({
+        field: "branchId",
+        kind: "NAME",
+        before: null,
+        after: { fr: douala!.name, en: douala!.name },
+      });
+      expect(changes).toContainEqual({
+        field: "postings",
+        kind: "LINES",
+        before: null,
+        after: { count: 1, totalMinor: 30_000 },
+      });
+      expect(changes).toContainEqual({
+        field: "paymentMethod",
+        kind: "CODE",
+        codeSet: "paymentMethod",
+        before: null,
+        after: "CASH",
+      });
+    });
+
+    it("drops an id that names nothing in this workspace rather than showing it", async () => {
+      // An entity of its own, so the seeded entries' timelines stay as the commands wrote them.
+      const entryId = randomUUID();
+      const [event] = await ctx.db
+        .insert(auditEvents)
+        .values({
+          workspaceId,
+          commandId: (await ctx.db
+            .select({ commandId: auditEvents.commandId })
+            .from(auditEvents)
+            .where(eq(auditEvents.entityId, plainEntryId))
+            .limit(1))[0]!.commandId,
+          eventType: "financial_entry.updated",
+          actorPrincipalId: adminPrincipalId,
+          entityType: "financial_entry",
+          entityId: entryId,
+          beforeState: { categoryId: randomUUID(), description: "Gasoil" },
+          afterState: { categoryId: randomUUID(), description: "Gasoil Douala" },
+        })
+        .returning({ id: auditEvents.id });
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/history/financial_entry/${entryId}/${event!.id}`,
+        headers: { authorization: `Bearer ${approverToken}` },
+      });
+      const { changes } = historyEventDiff.parse(response.json());
+      expect(changes.map((change) => change.field)).toEqual(["description"]);
+    });
+
+    /**
+     * The guard for #110 and #119: walk every event the real commands wrote on
+     * these records and fail on any displayed value that looks like a uuid, a
+     * bare enum code or JSON, or a code outside the set that words it.
+     */
+    it("serves no raw id, bare code or JSON in any real event's diff", async () => {
+      const records: Array<[string, string]> = [
+        ["activity", activityId],
+        ["work_order", workOrderId],
+        ["operational_issue", issueId],
+        ["asset_availability_interval", availabilityIntervalId],
+        ["financial_entry", plainEntryId],
+        ["financial_entry", repairEntryId],
+        ["asset", maintenanceAssetId],
+      ];
+      const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const ENUM_CODE = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$|^[A-Z]{4,}$/;
+      let checked = 0;
+      for (const [entityType, entityId] of records) {
+        const { items } = historyListResponse.parse((await history(entityType, entityId)).json());
+        expect(items.length, entityType).toBeGreaterThan(0);
+        for (const item of items) {
+          const response = await ctx.app.inject({
+            method: "GET",
+            url: `/v1/history/${entityType}/${entityId}/${item.eventId}`,
+            headers: { authorization: `Bearer ${token}` },
+          });
+          const { changes } = historyEventDiff.parse(response.json());
+          for (const change of changes) {
+            const where = `${entityType} ${item.eventType} ${change.field}`;
+            checked += 1;
+            if (change.kind === "VALUE") {
+              for (const value of [change.before, change.after]) {
+                if (typeof value !== "string") continue;
+                expect(value, where).not.toMatch(UUID);
+                expect(value, where).not.toMatch(ENUM_CODE);
+                expect(value, where).not.toMatch(/^[[{]/);
+              }
+            }
+            if (change.kind === "CODE" || change.kind === "CODES") {
+              const known: readonly string[] = HISTORY_CODE_SETS[change.codeSet];
+              for (const value of [change.before, change.after].flat()) {
+                if (value !== null) expect(known, where).toContain(value);
+              }
+            }
+            if (change.kind === "NAME" || change.kind === "NAMES") {
+              for (const name of [change.before, change.after].flat()) {
+                if (name !== null) expect(name.fr, where).not.toMatch(UUID);
+              }
+            }
+          }
+        }
+      }
+      expect(checked).toBeGreaterThan(20);
+    });
+
     it("serves a ledger reader any entry", async () => {
       const timeline = await history("financial_entry", plainEntryId, "", approverToken);
       expect(timeline.statusCode).toBe(200);
@@ -826,7 +954,8 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(body.eventId).toBe(eventId);
       expect(body.changes).toContainEqual({
         field: "status",
-        kind: "VALUE",
+        kind: "CODE",
+        codeSet: "activityStatus",
         before: "CLOSED",
         after: "OPEN",
       });
@@ -881,12 +1010,33 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         },
       });
 
-      const body = historyEventDiff.parse(
-        (await diff("activity", activityId, eventId)).json(),
-      );
-      const crew = body.changes.find((change) => change.field === "crew");
-      expect(crew?.after).toEqual([
+      const raw = await diff("activity", activityId, eventId);
+      expect(raw.statusCode).toBe(200);
+      expect(raw.body).not.toContain("argon2id");
+      expect(raw.body).not.toContain("rq_live_secret");
+      // The projection itself drops them, before any display shaping.
+      const [crew] = await ctx.db
+        .select({ afterState: auditEvents.afterState })
+        .from(auditEvents)
+        .where(eq(auditEvents.id, eventId));
+      expect(diffStates("activity", null, crew?.afterState).find((change) => change.field === "crew")?.after).toEqual([
         { personId: "11111111-1111-4111-8111-111111111111", role: "DRIVER" },
+      ]);
+    });
+
+    it("names the crew by the people on it, not by their ids", async () => {
+      const eventId = await seedEvent({
+        entityType: "activity",
+        entityId: activityId,
+        eventType: "activity.crewed",
+        afterState: {
+          crew: [{ personId: "11111111-1111-4111-8111-111111111111", displayName: "Abdoulaye Sanda", role: "DRIVER" }],
+        },
+      });
+
+      const body = historyEventDiff.parse((await diff("activity", activityId, eventId)).json());
+      expect(body.changes).toEqual([
+        { field: "crew", kind: "NAMES", before: null, after: [{ fr: "Abdoulaye Sanda", en: "Abdoulaye Sanda" }] },
       ]);
     });
 
@@ -942,17 +1092,17 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         entityType: "meter_reading",
         entityId: readingId,
         eventType: "meter_reading.recorded",
-        afterState: { readingType: "ODOMETER", value: 411_125, source: "FIELD" },
+        afterState: { readingType: "ODOMETER", value: 411_125, source: "MANUAL" },
       });
 
       const body = historyEventDiff.parse(
         (await diff("meter_reading", readingId, eventId)).json(),
       );
       expect(body.changes).toEqual([
-        { field: "readingType", kind: "VALUE", before: null, after: "ODOMETER" },
+        { field: "readingType", kind: "CODE", codeSet: "readingType", before: null, after: "ODOMETER" },
         // An odometer is not money, whatever the digits look like.
         { field: "value", kind: "VALUE", before: null, after: 411_125 },
-        { field: "source", kind: "VALUE", before: null, after: "FIELD" },
+        { field: "source", kind: "CODE", codeSet: "readingSource", before: null, after: "MANUAL" },
       ]);
     });
 

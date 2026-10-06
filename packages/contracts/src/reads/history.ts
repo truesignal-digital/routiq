@@ -128,6 +128,12 @@ export const historyListResponse = listResponse(historyItem);
  * `workspaceId`, `rowVersion`, `*ByCommandId`) are left out on purpose: they are
  * in every snapshot, they say nothing to an operator, and omitting them keeps
  * the payload small on 2G. The diff renders in the order listed here.
+ *
+ * Every key also needs a display shape in `HISTORY_FIELD_SHAPES`
+ * (`history-fields.ts`), and the type checker holds the two lists together.
+ * A key that cannot be shown as words — a segment or reading id, a template's
+ * custom-field bag, a place id next to the typed place — stays off this list
+ * (#110, #119).
  */
 export const HISTORY_STATE_KEYS = {
   activity: [
@@ -135,7 +141,6 @@ export const HISTORY_STATE_KEYS = {
     "completeness",
     "completenessCodes",
     "activityNumber",
-    "activityTypeCode",
     "activityTypeId",
     "branchId",
     "startedAt",
@@ -146,20 +151,14 @@ export const HISTORY_STATE_KEYS = {
     "description",
     "note",
     "reason",
-    "customValues",
     "crew",
     "segments",
     "segmentIds",
     "legIds",
     "readingIds",
-    "entries",
     "role",
-    "outgoingSegmentId",
     "outgoingAssetId",
     "outgoingEndedAt",
-    "outgoingReadingId",
-    "incomingReadingId",
-    "newSegmentId",
     "substituteAssetId",
     "templateCode",
     "templateVersion",
@@ -258,26 +257,21 @@ export const HISTORY_STATE_KEYS = {
     "source",
     "assetId",
     "activityId",
-    "supersedesReadingId",
     "supersedeReason",
   ],
   movement_leg: [
     "legNo",
-    "segmentId",
     "activityId",
     "originText",
-    "originPlaceId",
     "destinationText",
-    "destinationPlaceId",
     "departedAt",
     "arrivedAt",
     "distanceKm",
     "loadState",
     "passengerCount",
-    "customValues",
   ],
   /** A note is its body and what it annotates; it never changes after `note.added`. */
-  note: ["entityType", "entityId", "body"],
+  note: ["body"],
   /**
    * A signalement's report is never edited; what moves is its status, once —
    * resolved (on the spot or by a completed work order) or dismissed. The
@@ -333,7 +327,6 @@ export const HISTORY_STATE_KEYS = {
     "cancelReason",
     "cancelledAt",
     "approvalNote",
-    "availabilityIntervalId",
     "releasedAt",
     "releaseNote",
     "overrideReason",
@@ -352,7 +345,6 @@ export const HISTORY_STATE_KEYS = {
     "branch",
     "enabledPresets",
     "disabledModules",
-    "packs",
   ],
   workspace_module: ["moduleCode", "enabled", "updatedAt"],
   workspace_template: ["presetCode", "enabled"],
@@ -374,25 +366,18 @@ export const HISTORY_MONEY_STATE_KEYS = [
 export const historyValueKinds = ["MONEY", "VALUE"] as const;
 export const historyValueKind = z.enum(historyValueKinds);
 
+/**
+ * One allowlisted key that moved, as recorded. Not for display as it stands:
+ * the record history diff serves `historyDiffChange` (`history-fields.ts`);
+ * this raw pair feeds readers that word the change themselves, such as the
+ * vehicle History tab's details-edit lines.
+ */
 export const historyFieldChange = z.object({
   field: z.string(),
-  /** MONEY pairs the value with the diff's `currency`; VALUE renders as it came. */
+  /** MONEY pairs the value with a currency; VALUE is the snapshot's own JSON. */
   kind: historyValueKind,
   before: z.json(),
   after: z.json(),
-});
-
-/**
- * What a single event changed — the only shape `before_state`/`after_state` are
- * ever served through. The list item already carries who, when and through which
- * command, so the diff repeats none of it: on 2G the expansion pays for the
- * changes alone.
- */
-export const historyEventDiff = z.object({
-  eventId: z.uuid(),
-  /** For MONEY changes: the state's own currency, else the workspace default. */
-  currency: z.string().length(3),
-  changes: z.array(historyFieldChange),
 });
 
 export type HistoryListQuery = z.infer<typeof historyListQuery>;
@@ -401,4 +386,3 @@ export type HistoryItem = z.infer<typeof historyItem>;
 export type HistoryListResponse = z.infer<typeof historyListResponse>;
 export type HistoryValueKind = z.infer<typeof historyValueKind>;
 export type HistoryFieldChange = z.infer<typeof historyFieldChange>;
-export type HistoryEventDiff = z.infer<typeof historyEventDiff>;
