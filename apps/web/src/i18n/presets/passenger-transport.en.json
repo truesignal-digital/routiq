@@ -57,7 +57,8 @@
     },
     "entries": {
       "detail": {
-        "asset": "Vehicle"
+        "asset": "Vehicle",
+        "tripLink": "Trip {number}"
       },
       "filters": {
         "asset": "Vehicle"
@@ -160,11 +161,51 @@
       "title": "Trips",
       "description": "Trips with this vehicle",
       "descriptionWithKm": "Trips with this vehicle · {km, number} km recorded",
-      "empty": "No trips yet. Start one when the vehicle leaves the depot."
+      "empty": "No trips yet. Start one when the vehicle leaves the depot.",
+      "tripNumber": "Trip {number}",
+      "wholeTrip": "Whole-trip amounts",
+      "noMoney": "No entries linked to this trip yet.",
+      "noOwnMoney": "You have not recorded any entry on this trip.",
+      "noBranchMoney": "No entry from your branches on this trip yet.",
+      "openFull": "Open the full trip"
     },
     "history": {
       "filters": {
         "TRIPS": "Trips"
+      },
+      "event": {
+        "activity-created": "Trip {number} started",
+        "activity-closed": "Trip {number} closed",
+        "activity-reopened": "Trip {number} reopened",
+        "activity-asset_substituted": "Vehicle substituted on trip {number}",
+        "movement_leg-recorded": "Leg recorded on trip {number}"
+      }
+    },
+    "status": {
+      "available": {
+        "sinceAndTrip": "In service since {since}; last trip {lastTrip}.",
+        "sinceNoTrips": "In service since {since}; no trips yet.",
+        "lastTripOnly": "Last trip {lastTrip}.",
+        "noTrips": "No trips yet."
+      }
+    },
+    "money": {
+      "forTrip": "for trip {number}"
+    },
+    "readings": {
+      "source": {
+        "ACTIVITY_START": "Trip start",
+        "ACTIVITY_END": "Trip end"
+      }
+    },
+    "panel": {
+      "backTo": "{kind, select, work_order {Back to work order {ref}} issue {Back to problem {ref}} entry {Back to the entry} trip {Back to the trip} document {Back to the document} note {Back to the note} other {Back to the readings}}",
+      "tripTitle": "Trip",
+      "tripEyebrow": "Trip {number} · {type}"
+    },
+    "actions": {
+      "change-custodian": {
+        "description": "Who answers for the vehicle day to day. Not the same as who drives each trip."
       }
     }
   },
