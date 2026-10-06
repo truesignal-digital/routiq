@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   useAssetRegistrationReference: vi.fn(),
   useCategories: vi.fn(),
   useAssets: vi.fn(),
+  useApprovalChain: vi.fn(),
 }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
@@ -29,6 +30,9 @@ vi.mock("../assets/reference.js", () => ({
 }));
 vi.mock("../documents/useCategories.js", () => ({ useCategories: mocks.useCategories }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: mocks.useAssets }));
+vi.mock("../approval-rules/useApprovalChain.js", () => ({
+  useApprovalChain: mocks.useApprovalChain,
+}));
 
 const ASSET_ID = "00000000-0000-4000-8000-000000000030";
 const WORK_ORDER_ID = "00000000-0000-4000-8000-000000000040";
@@ -81,6 +85,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.useApprovalChain.mockReturnValue({ data: undefined });
   sessionStore.save({
     ...sessionIdentity,
     token: "token",
@@ -274,6 +279,57 @@ describe("RecordEntryForm switching between expense and revenue (#449)", () => {
     expect(
       within(panel).getByRole("button", { name: "Record the revenue" }).hasAttribute("disabled"),
     ).toBe(true);
+  });
+});
+
+describe("RecordEntryForm states the approval rule beside the amount (#422)", () => {
+  const steps = (upTo: number) => [
+    { upToMinor: upTo, outcome: "POSTS_DIRECTLY" },
+    { upToMinor: 1_000_000, outcome: "FINANCE_APPROVES" },
+    { upToMinor: null, outcome: "DIRECTION_APPROVES" },
+  ];
+
+  it("names the band above which this entry waits, per direction", async () => {
+    mocks.useApprovalChain.mockReturnValue({
+      data: {
+        currency: "XAF",
+        chains: [
+          { commandType: "record-expense", steps: steps(150_000) },
+          { commandType: "record-revenue", steps: steps(100_000) },
+        ],
+        notice: null,
+      },
+    });
+    inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
+    expect(screen.getByText("Above FCFA 150,000, this entry waits for Finance.")).toBeTruthy();
+
+    inPanel(
+      <RecordEntryForm
+        surface="panel"
+        initialDirection="REVENUE"
+        lockDirection
+        pinnedAssetId={ASSET_ID}
+        onRecorded={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+  });
+
+  it("tells Direction its entries post at any amount", () => {
+    mocks.useApprovalChain.mockReturnValue({
+      data: {
+        currency: "XAF",
+        chains: [{ commandType: "record-expense", steps: [{ upToMinor: null, outcome: "POSTS_DIRECTLY" }] }],
+        notice: null,
+      },
+    });
+    inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
+    expect(screen.getByText("Your entries post directly at any amount.")).toBeTruthy();
+  });
+
+  it("says nothing while the rules are unknown", () => {
+    inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
+    expect(screen.queryByText(/this entry waits/)).toBeNull();
   });
 });
 

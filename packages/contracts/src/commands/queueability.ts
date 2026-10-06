@@ -122,6 +122,12 @@ export const COMMAND_QUEUEABILITY = {
    * rejected and records it again.
    */
   "update-pending-entry": false,
+  /*
+   * Says "I have read the rules as they stand now". Replayed later, it could
+   * acknowledge a change the member never saw; the notice is a server read
+   * anyway, so dismissing it online costs nothing.
+   */
+  "acknowledge-approval-rules": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

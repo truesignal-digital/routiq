@@ -291,7 +291,21 @@ describe("seed-demo --reset on a populated database (#128)", () => {
     owner = new pg.Client({ connectionString: inject("databaseUrl") });
     await owner.connect();
     // The suite above leaves the demo seeded, posted lines included.
-    countsBefore = await counts(await workspaceId());
+    // A rules change a member acknowledged (#422) holds FKs into commands
+    // and memberships, which the reset deletes after it.
+    const id = await workspaceId();
+    await owner.query(
+      `with cmd as (select id from commands where workspace_id = $1 limit 1),
+            member as (select id from memberships where workspace_id = $1 limit 1),
+            change as (
+              insert into approval_rule_changes (workspace_id, affected_roles, created_by_command_id)
+              select $1, array['FINANCE'], cmd.id from cmd returning id
+            )
+       insert into approval_rule_acknowledgements (workspace_id, change_id, membership_id, created_by_command_id)
+       select $1, change.id, member.id, cmd.id from change, member, cmd`,
+      [id],
+    );
+    countsBefore = await counts(id);
     reset = await runSeed("--reset");
     countsAfter = await counts(await workspaceId());
   }, 200_000);
