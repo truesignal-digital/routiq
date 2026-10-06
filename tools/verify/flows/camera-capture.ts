@@ -71,7 +71,7 @@ async function onPhone(ctx: DriveContext, assetId: string): Promise<void> {
   const takePhoto = dialog.getByRole("button", { name: t("Prendre une photo", "Take photo") });
   const chooseFile = dialog.getByRole("button", { name: t("Choisir un fichier", "Choose file") });
   const missing = () => {
-    throw new Error("the photo field offers no Take photo beside Choose file on a phone");
+    throw new Error("no Take photo on the phone");
   };
   await takePhoto.waitFor({ timeout: 5_000 }).catch(missing);
   await takePhoto.scrollIntoViewIfNeeded();
@@ -105,8 +105,6 @@ async function onPhone(ctx: DriveContext, assetId: string): Promise<void> {
   await dialog.getByRole("button", { name: t("Signaler le problème", "Report the problem") }).click();
   await page.getByText(t("Problème signalé", "Problem reported")).first().waitFor();
   await quiet();
-  await settle(ctx);
-  await shot("reported", { caption: "The problem is reported with its photo" });
 
   const issues = await apiGet(`/v1/issues?assetId=${assetId}`);
   const issue = ((issues.body as { items?: Array<{ id: string; description: string }> }).items ?? []).find(
@@ -120,6 +118,24 @@ async function onPhone(ctx: DriveContext, assetId: string): Promise<void> {
     throw new Error(`stored files: ${JSON.stringify(files)}`);
   }
   log(`api cross-check: problem ${issue.id.slice(0, 8)} has 1 photo, ${file.mimeType}, ${file.sizeBytes} B (from ${photo.length} B)`);
+
+  // The stored size is the server's word, shown beside the problem it belongs to.
+  await page
+    .getByRole("navigation", { name: t("Sections du véhicule", "Vehicle sections") })
+    .getByRole("tab", { name: /^Maintenance/ })
+    .click();
+  await page.waitForURL((url) => url.pathname.endsWith("/maintenance"));
+  await quiet();
+  await page.getByRole("button", { name: DESCRIPTION }).first().click();
+  const panel = page.getByRole("dialog", { name: DESCRIPTION });
+  const photos = panel.getByText(t("Photos", "Photos"), { exact: true }).last();
+  await photos.waitFor();
+  await settle(ctx);
+  const kilobytes = Math.round(file.sizeBytes / 1_000);
+  await shot("stored-photo", {
+    caption: `Reported with its photo, stored as a ${kilobytes} KB JPEG (the camera's was ${megabytes.toFixed(1)} MB)`,
+    highlight: photos.locator(".."),
+  });
 }
 
 async function onDesktop(ctx: DriveContext): Promise<void> {
