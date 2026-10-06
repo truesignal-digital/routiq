@@ -91,6 +91,23 @@ export function canReadWorkOrderCosts(role: Role): boolean {
   return MONEY_READ_SCOPE[role] !== "OWN_ENTRIES";
 }
 
+/**
+ * Who books parts and labour onto a work order (roles-and-access.md, "Add
+ * parts and labour to a work order"): the workshop and the managers. Finance,
+ * the Cashier (#414) and the driver (#410) record their own expenses, never on
+ * a work order. The server refuses their lines that name one; the web does not
+ * offer it.
+ */
+export const WORK_ORDER_COST_ROLES = [
+  "DIRECTOR",
+  "ADMIN",
+  "TECHNICIAN",
+] as const satisfies readonly Role[];
+
+export function canBookWorkOrderCost(role: Role): boolean {
+  return (WORK_ORDER_COST_ROLES as readonly Role[]).includes(role);
+}
+
 /** The roles whose scope is LEDGER. The web's `canReadFinance` mirrors it. */
 export const LEDGER_READER_ROLES = [
   "DIRECTOR",
