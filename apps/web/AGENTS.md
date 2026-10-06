@@ -27,7 +27,9 @@ Read this with the root [`AGENTS.md`](../../AGENTS.md). Each row names the one w
 
 ## Walkthrough videos
 
-Every feature PR links a walkthrough video (see the definition of done in the root `AGENTS.md`). When you record one:
+Every feature PR links a walkthrough video (see the definition of done in the root `AGENTS.md`); the default is a reel from the feature's flow (guard V1 makes every `shot()` carry a caption).
+
+When you record one:
 
 - Switch the app to English first (More → Language) and write captions in English. The choice is stored per device (`localStorage["routiq-language"]`, #127), so it survives reloads; a fresh browser context starts in French.
 - Match buttons by exact name. "Reverse", for example, also matches the "Reverses entry #…" link.
