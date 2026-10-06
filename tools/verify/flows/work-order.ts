@@ -35,11 +35,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const description = dialog.getByLabel("Description");
   if ((await description.inputValue()) === "") await description.fill("Refit the rear mudguard bracket");
   await dialog.getByLabel(t("Coût prévu", "Expected cost")).fill("60000");
-  await shot("new-work-order");
+  await shot("new-work-order", { caption: "A work order is created from the reported problem" });
   await dialog.getByRole("button", { name: t("Créer l'ordre de travail", "Create the work order") }).click();
   await page.getByText(t("Ordre de travail ouvert", "Work order opened")).first().waitFor();
   await quiet();
-  await shot("work-order-opened");
+  await shot("work-order-opened", { caption: "The work order is open" });
 
   const orders = await apiGet(`/v1/work-orders?assetId=${asset.id}`);
   const order = ((orders.body as { items?: Array<{ id: string; status: string; issue: { id: string } | null }> }).items ?? []).find((o) => o.issue?.id === issue.id);
@@ -57,11 +57,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   dialog = page.getByRole("dialog");
   await dialog.getByLabel(t("Compte rendu", "Work summary")).fill("Bracket replaced, mudguard refitted");
   await dialog.getByLabel(t("Combien a coûté la réparation ?", "How much did the repair cost?")).fill("55000");
-  await shot("complete-with-cost");
+  await shot("complete-with-cost", { caption: "Completing asks for the cost: 55,000 XAF" });
   await dialog.getByRole("button", { name: t("Terminer les travaux", "Complete work") }).click();
   await page.getByText(new RegExp(`^${t("Travaux terminés", "Work completed")}`)).first().waitFor();
   await quiet();
-  await shot("work-order-completed");
+  await shot("work-order-completed", { caption: "The work order is completed with its cost booked" });
 
   const after = await apiGet(`/v1/work-orders/${order.id}`);
   const done = after.body as { status?: string; actualCostMinor?: number | null; costOutcome?: string | null };

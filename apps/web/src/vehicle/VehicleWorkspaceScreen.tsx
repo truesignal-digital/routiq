@@ -132,6 +132,7 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
     me,
     viewer,
     attention,
+    attentionStatus: attentionQuery.status,
     facts,
     gates,
     can: (key) => actionPermitted(actionDef(key), viewer),
