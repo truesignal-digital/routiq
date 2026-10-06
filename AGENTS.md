@@ -26,6 +26,7 @@ pnpm typecheck                    # all packages (tsc --noEmit)
 pnpm lint                         # repo guards (tools/guards); see "Guards and the ratchet"
 pnpm lint:tighten                 # lower guard baselines after you remove violations
 pnpm verify --help                # run and drive the real app on an isolated slot, with evidence (skill: verify-routiq)
+pnpm metrics                      # first-load size against its ceilings (after a web build)
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
 pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file
@@ -109,11 +110,13 @@ The UI consistency system and the product direction live in [`docs/design/consis
 2. Writes go through `registerCommand`; reads check module, role and branch scope.
 3. The UI follows the paved paths in `apps/web/AGENTS.md`.
 4. `pnpm typecheck`, `pnpm lint` and `pnpm test` pass, and no guard baseline went up.
-5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions.
+5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions. The default is a reel: `pnpm verify drive flow:<name> --reel`, plus `pnpm verify reel --before <base run>` when behaviour changed (skill: verify-routiq). A long narrated walkthrough only when the owner asks.
 6. Before requesting merge, a reviewer using a different model from the author runs `.agents/skills/code-review/SKILL.md` against the linked issue and exact current PR head. The report records author/reviewer models, base/head SHAs, one verdict per acceptance line, file:line evidence, and reproduction steps for blockers. Link the report in the PR body. Missing spec or unverified acceptance prevents approval. Runtime reports, including Sentry intake reports, must first be triaged into reproducible behavior and explicit acceptance criteria; telemetry and a review video alone do not approve a fix.
 7. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
 
 ## Guards and the ratchet
+
+First-load size is ratcheted the same way: `pnpm metrics` in CI, `pnpm metrics tighten` to lock a gain in, and `pnpm metrics raise <metric> --reason "..."` when growth is worth it (a hand-edited ceiling fails).
 
 `pnpm lint` runs the rules in `tools/guards/rules.ts`. Each rule names a mistake that must not spread and says what to do instead. Known violations are counted per file in `tools/guards/baselines.json`, and those counts may only go down:
 
@@ -153,3 +156,7 @@ Default five roles, label string = role name (`needs-triage`, `needs-info`, `rea
 ### Domain docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`. Use the glossary's terms; don't drift to the synonyms it lists under _Avoid_.
+
+### Standing briefs
+
+An outcome an agent owns over many sessions, in `docs/agents/briefs/`. A session takes one only when the owner names it: [`speed-and-evidence.md`](docs/agents/briefs/speed-and-evidence.md).
