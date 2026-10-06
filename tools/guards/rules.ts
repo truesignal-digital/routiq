@@ -366,6 +366,12 @@ export const RULES: readonly Rule[] = [
     check: linesMatching(/prototypes?\/|Prototype/, (path) => path === "apps/web/src/router.tsx"),
   },
   {
+    id: "W1",
+    name: "commands-through-the-client",
+    fix: "Send commands with the command client (apps/web/src/commands/client.ts). It is the one place that tracks their status and times the command:<name> journey (ADR-0011); a direct fetch to /v1/commands is invisible to both.",
+    check: linesMatching(/["'`]\/v1\/commands/, (path) => isWebProduction(path) && !path.includes("/test/") && path !== "apps/web/src/commands/client.ts"),
+  },
+  {
     id: "V1",
     name: "flow-shots-captioned",
     fix: 'Give the shot a caption: shot("label", { caption: "One English sentence: what this frame proves" }), and a highlight locator where something changed. Reels show the caption under the frame; without it a reviewer sees only the label.',

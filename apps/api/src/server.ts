@@ -55,6 +55,7 @@ import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
 import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
+import { registerTelemetryRoutes } from "./observability/telemetry.js";
 
 export interface ServerDeps {
   db: Db;
@@ -99,11 +100,19 @@ export function buildServer({
     commandPayloadHmacKey();
   });
 
+  // The web app reads this to split a journey into server and client time (ADR-0011).
+  app.addHook("onSend", async (_req, reply, payload) => {
+    reply.header("server-timing", `app;dur=${reply.elapsedTime.toFixed(1)}`);
+    return payload;
+  });
+
   app.addHook("onResponse", (req, reply, done) => {
     req.log.info({
       event: "request.completed",
       method: req.method,
       url: req.url,
+      // The route template groups timings: /v1/finance/entries/:id, not one line per entry.
+      route: req.routeOptions.url,
       statusCode: reply.statusCode,
       durationMs: reply.elapsedTime,
     });
@@ -116,6 +125,7 @@ export function buildServer({
   });
 
   registerAuthRoutes(app, authDb);
+  registerTelemetryRoutes(app, db, authDb, identity);
   registerCommandRoutes(app, db, requireAuth);
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);

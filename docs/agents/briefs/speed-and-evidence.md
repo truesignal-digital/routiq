@@ -23,7 +23,7 @@ The goal is for you to run this loop on your own. Today the owner approves every
 3. Finance opens an entry from the approvals queue and decides it.
 4. The director opens Home.
 
-For each journey, measure first, before changing anything: the baseline goes in the PR or issue, then the target. `pnpm verify drive ... --throttle phone` measures it in the lab. The numbers that may gate CI are deterministic ones: first-load bytes (`pnpm metrics`), API requests, layout shifts, console errors, guard counts. Timings on a throttled phone stay in the lab until you have shown they track what users feel.
+For each journey, measure first, before changing anything: the baseline goes in the PR or issue, then the target. `pnpm observe report` shows what the field says (journey p75s, errors, refusals, devices); `pnpm verify drive ... --throttle phone` reproduces it in the lab. The numbers that may gate CI are deterministic ones: first-load bytes (`pnpm metrics`), API requests, layout shifts, console errors, guard counts. Timings on a throttled phone stay in the lab until you have shown they track what users feel.
 
 ## The loop
 
