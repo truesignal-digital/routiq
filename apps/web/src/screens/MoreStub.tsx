@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Building2, ChevronRight, ShieldUser, Users } from "lucide-react";
+import { Building2, ChevronRight, Settings, ShieldUser, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -11,6 +11,7 @@ import { useActiveSession } from "@/auth/store.js";
 import { canViewActivities } from "@/activities/permissions.js";
 import { canAdministerBranches } from "@/branches/permissions.js";
 import { canAdministerMembers } from "@/members/permissions.js";
+import { canManageCompanySettings } from "@/settings/permissions.js";
 import { chooseLanguage } from "@/i18n/language.js";
 
 const languages = [
@@ -39,7 +40,8 @@ export function MoreStub() {
           trusts is the admin's question alone. */}
       {(canViewActivities(me?.enabledModules) ||
         canAdministerMembers(me?.role) ||
-        canAdministerBranches(me?.role)) && (
+        canAdministerBranches(me?.role) ||
+        canManageCompanySettings(me?.role, me?.enabledModules)) && (
         <div className="mt-6">
           <h2 className="text-sm font-medium">{t("more.manage")}</h2>
           <nav className="mt-2 overflow-hidden rounded-xl border">
@@ -70,6 +72,16 @@ export function MoreStub() {
               >
                 <Building2 className="size-4 text-muted-foreground" aria-hidden />
                 {t("more.branches")}
+                <ChevronRight className="ml-auto size-4 text-muted-foreground" aria-hidden />
+              </Link>
+            )}
+            {canManageCompanySettings(me?.role, me?.enabledModules) && (
+              <Link
+                to="/more/company"
+                className="flex min-h-11 items-center gap-3 border-t px-4 py-3 text-sm first:border-t-0 hover:bg-muted"
+              >
+                <Settings className="size-4 text-muted-foreground" aria-hidden />
+                {t("more.companySettings")}
                 <ChevronRight className="ml-auto size-4 text-muted-foreground" aria-hidden />
               </Link>
             )}
