@@ -4,6 +4,7 @@ import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts"
 import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
 import { ApproveEntryForm, RejectEntryForm, ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
+import { RecordText } from "@/components/record-number";
 import { SheetTitle } from "@/components/ui/sheet";
 import { useEntry } from "@/finance/useEntry.js";
 import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
@@ -73,7 +74,9 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
         if (entry.postings.length !== 1) {
           return (
             <div className="space-y-3 p-4 pr-12">
-              <SheetTitle>{t("finance.edit.title", { number: entry.entryNumber })}</SheetTitle>
+              <SheetTitle>
+                <RecordText text={t("finance.edit.title", { number: entry.entryNumber })} numbers={[entry.entryNumber]} />
+              </SheetTitle>
               <Note>{t("vehicle.panel.splitEntryNotEditable")}</Note>
             </div>
           );
@@ -116,7 +119,12 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.entryEyebrow", { direction: entry.direction, number: entry.entryNumber })}
+        eyebrow={
+          <RecordText
+            text={t("vehicle.panel.entryEyebrow", { direction: entry.direction, number: entry.entryNumber })}
+            numbers={[entry.entryNumber]}
+          />
+        }
         title={
           <span className="flex items-baseline justify-between gap-3">
             <span>{localizedLabel(entry.category, locale)}</span>

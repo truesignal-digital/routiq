@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { ActivityDetail, MoneyReadScope } from "@routiq/contracts";
 import { useActivity } from "@/activities/useActivities.js";
+import { RecordText } from "@/components/record-number";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import { entriesScope } from "@/finance/permissions.js";
 import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
@@ -61,10 +62,15 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.tripEyebrow", {
-          number: trip.activityNumber,
-          type: localizedLabel(trip.activityType, locale),
-        })}
+        eyebrow={
+          <RecordText
+            text={t("vehicle.panel.tripEyebrow", {
+              number: trip.activityNumber,
+              type: localizedLabel(trip.activityType, locale),
+            })}
+            numbers={[trip.activityNumber]}
+          />
+        }
         title={tripRoute(trip, t) ?? localizedLabel(trip.activityType, locale)}
         meta={<TripStatusBadge trip={trip} />}
       />

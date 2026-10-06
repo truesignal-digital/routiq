@@ -137,6 +137,11 @@ export const COMMAND_ERROR_CODES = [
    */
   "WORK_ORDER_NOT_OPEN",
   /**
+   * A revenue line naming a work order (#432). A work order collects what a
+   * repair cost; money coming in is never one of its lines, whoever records it.
+   */
+  "WORK_ORDER_COST_ONLY",
+  /**
    * A close that says its cost is in the books (`costOutcome: LINES`) when the
    * order has no cost recorded and the close carries none (#81). Closing is
    * where money is declared; "no cost" is its own explicit choice.

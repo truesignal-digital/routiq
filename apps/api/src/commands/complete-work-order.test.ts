@@ -495,6 +495,84 @@ describe("complete-work-order.v2", () => {
     });
   });
 
+  /**
+   * Revenue that named a work order before #432 refused it. record-revenue no
+   * longer writes one and postings are append-only, so the row is a copy of a
+   * real revenue entry with the order on its line. The order's cost reads and
+   * the close's checks count expense lines only, so it inflates nothing.
+   */
+  describe("revenue on a work order is not its cost (#432)", () => {
+    async function plantRevenue(workOrderId: string, amountMinor: number): Promise<string> {
+      const templateId = randomUUID();
+      await api.ok(admin.token, "record-revenue", {
+        entryId: templateId,
+        branchCode: "DLA",
+        categoryCode: "FREIGHT_REVENUE",
+        economicDate: "2026-09-29",
+        amountMinor,
+        paymentMethod: "CASH",
+        postings: [{ assetId: truck, amountMinor }],
+      });
+      const [entry] = await db
+        .select()
+        .from(financialEntries)
+        .where(eq(financialEntries.id, templateId));
+      const [posting] = await db
+        .select()
+        .from(financialPostings)
+        .where(eq(financialPostings.financialEntryId, templateId));
+      const entryId = randomUUID();
+      await db.transaction(async (tx) => {
+        await tx
+          .insert(financialEntries)
+          .values({ ...entry!, id: entryId, entryNumber: `${entry!.entryNumber}-432` });
+        await tx
+          .insert(financialPostings)
+          .values({ ...posting!, id: randomUUID(), financialEntryId: entryId, workOrderId });
+      });
+      return entryId;
+    }
+
+    it("leaves revenue out of the cost lines and the actual cost", async () => {
+      const workOrderId = await openWorkOrder();
+      const cost = await recordCost(workOrderId, 60_000);
+      const revenue = await plantRevenue(workOrderId, 20_000);
+      const reversalEntryId = randomUUID();
+      await api.ok(
+        approver.token,
+        "reverse-entry",
+        { originalEntryId: revenue, reversalEntryId, reason: "Imputée par erreur" },
+        { expectedVersion: 1 },
+      );
+
+      expect((await detail(boris.token, workOrderId)).costLines!.map((l) => l.entryId)).toEqual([
+        cost,
+      ]);
+      expect((await close(boris, workOrderId, { costOutcome: "LINES" })).status).toBe(200);
+      const read = await detail(boris.token, workOrderId);
+      expect(read.actualCostMinor).toBe(60_000);
+      expect(read.costLines!.map((l) => l.entryId)).toEqual([cost]);
+    });
+
+    it("lets NO_COST close an order whose only line is revenue", async () => {
+      const workOrderId = await openWorkOrder();
+      await plantRevenue(workOrderId, 20_000);
+      const response = await close(boris, workOrderId, { costOutcome: "NO_COST" });
+      expect(response.status).toBe(200);
+      const read = await detail(boris.token, workOrderId);
+      expect(read.actualCostMinor).toBe(0);
+      expect(read.costLines).toEqual([]);
+    });
+
+    it("refuses LINES when the only line is revenue", async () => {
+      const workOrderId = await openWorkOrder();
+      await plantRevenue(workOrderId, 20_000);
+      const response = await close(boris, workOrderId, { costOutcome: "LINES" });
+      expect(response.status).toBe(422);
+      expect(response.body.error?.code).toBe("WORK_ORDER_COST_MISSING");
+    });
+  });
+
   describe("v1 compatibility", () => {
     it("stores a v1 typed amount as a declaration only, never as cost", async () => {
       const workOrderId = await openWorkOrder();

@@ -30,6 +30,8 @@ export interface EventView {
   icon: LucideIcon;
   tone: EventTone;
   title: string;
+  /** The record number the title names, to keep whole when the title wraps. */
+  titleNumber: string | null;
   detail: string | null;
   /** The record the event is about, when the panel can show it to this viewer. */
   record: PanelRef | null;
@@ -76,6 +78,7 @@ export function describeEvent(
                 : Receipt,
         tone: item.eventType === "financial_entry.rejected" ? "warning" : "neutral",
         title: title({ count: typeof p["artifactCount"] === "number" ? p["artifactCount"] : 1 }),
+        titleNumber: null,
         detail: [text(p["entryNumber"]), label(p["categoryLabelFr"], p["categoryLabelEn"]) || null]
           .filter((part): part is string => part !== null)
           .join(" · ") || null,
@@ -87,6 +90,7 @@ export function describeEvent(
         icon: FileText,
         tone: "neutral",
         title: title({ type: label(p["documentTypeLabelFr"], p["documentTypeLabelEn"]) }),
+        titleNumber: null,
         detail: text(p["documentNumber"]),
         record: gates.documents ? { kind: "document", id: subject.id } : null,
       };
@@ -95,6 +99,7 @@ export function describeEvent(
         icon: Route,
         tone: "neutral",
         title: title({ number: subject.number ?? "" }),
+        titleNumber: subject.number,
         detail: text(p["customerName"]),
         record: gates.trips ? { kind: "trip", id: subject.id } : null,
       };
@@ -104,6 +109,7 @@ export function describeEvent(
         icon: Route,
         tone: "neutral",
         title: title({ number: subject.number ?? "" }),
+        titleNumber: subject.number,
         detail:
           text(p["originName"]) !== null && text(p["destinationName"]) !== null
             ? t("vehicle.trips.route", { from: p["originName"], to: p["destinationName"] })
@@ -118,6 +124,7 @@ export function describeEvent(
           readingType: p["readingType"] ?? "ODOMETER",
           value: typeof p["value"] === "number" ? p["value"] : 0,
         }),
+        titleNumber: null,
         detail: text(p["source"]) === null ? null : t(`vehicle.readings.source.${String(p["source"])}`),
         record: gates.trips ? { kind: "readings" } : null,
       };
@@ -126,6 +133,7 @@ export function describeEvent(
         icon: TriangleAlert,
         tone: item.eventType === "operational_issue.reported" && p["safetyCritical"] === true ? "critical" : "neutral",
         title: title(),
+        titleNumber: null,
         detail: text(p["description"]),
         record: gates.maintenance ? { kind: "issue", id: subject.id } : null,
       };
@@ -134,6 +142,7 @@ export function describeEvent(
         icon: item.eventType === "work_order.asset_released" ? ShieldCheck : Wrench,
         tone: item.eventType === "work_order.asset_released" ? "success" : "neutral",
         title: title(),
+        titleNumber: null,
         detail: text(p["description"]),
         record: gates.maintenance ? { kind: "work_order", id: subject.id } : null,
       };
@@ -143,6 +152,7 @@ export function describeEvent(
         icon: opened ? ShieldAlert : ShieldCheck,
         tone: opened ? "critical" : "success",
         title: title(),
+        titleNumber: null,
         detail: text(p["issueDescription"]),
         record: null,
       };
@@ -152,6 +162,7 @@ export function describeEvent(
         icon: StickyNote,
         tone: "neutral",
         title: title(),
+        titleNumber: null,
         detail: text(p["body"]),
         record: { kind: "note", id: subject.id },
       };
@@ -173,17 +184,18 @@ export function describeEvent(
           icon: UserRound,
           tone: "neutral",
           title: title({ change, branch: branch ?? "", custodian: custodian ?? "" }),
+          titleNumber: null,
           detail: null,
           record: null,
         };
       }
       if (item.eventType === "asset.details_updated") {
-        return { icon: Pencil, tone: "neutral", title: title(), detail: detailChangeLines(item, t, locale), record: null };
+        return { icon: Pencil, tone: "neutral", title: title(), titleNumber: null, detail: detailChangeLines(item, t, locale), record: null };
       }
-      return { icon: Flag, tone: "neutral", title: title(), detail: null, record: null };
+      return { icon: Flag, tone: "neutral", title: title(), titleNumber: null, detail: null, record: null };
     }
     default:
-      return { icon: Flag, tone: "neutral", title: title(), detail: null, record: null };
+      return { icon: Flag, tone: "neutral", title: title(), titleNumber: null, detail: null, record: null };
   }
 }
 

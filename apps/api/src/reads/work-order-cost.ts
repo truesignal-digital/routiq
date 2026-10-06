@@ -3,8 +3,8 @@ import { financialEntries, financialPostings, workOrders } from "../db/schema.js
 
 /**
  * A work order's actual cost (#81): the sum of its non-rejected cost lines —
- * POSTED, SUBMITTED and both halves of a reversal, signed so a reversal pair
- * nets to zero. Derived on every read, never stored, so the order and the books
+ * expense postings, POSTED, SUBMITTED and both halves of a reversal, signed so
+ * a reversal pair nets to zero. Revenue naming the order (#432) is no cost. Derived on every read, never stored, so the order and the books
  * cannot disagree. NULL until the work is declared complete: an open order has
  * costs so far, not a cost.
  *
@@ -22,6 +22,7 @@ export function workOrderActualCostSql(): SQL<string | null> {
       and ${financialEntries.id} = ${financialPostings.financialEntryId}
     where ${financialPostings.workspaceId} = ${workOrders.workspaceId}
       and ${financialPostings.workOrderId} = ${workOrders.id}
+      and ${financialPostings.direction} = 'EXPENSE'
       and ${financialEntries.status} in ('POSTED', 'REVERSED', 'SUBMITTED')
   ) end`;
 }

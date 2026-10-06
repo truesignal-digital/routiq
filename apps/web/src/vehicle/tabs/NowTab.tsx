@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ChevronRight, CircleCheck, TriangleAlert } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
+import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -332,7 +333,9 @@ function CompactEvent({ item }: { item: VehicleHistoryItem }) {
         <Icon className="size-3.5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm leading-snug">{view.title}</span>
+        <span className="block text-sm leading-snug">
+          <RecordText text={view.title} numbers={[view.titleNumber]} />
+        </span>
         <span className="mt-0.5 block text-xs text-muted-foreground">
           {t("vehicle.now.recent.meta", { name: actor, date: formatDateTime(item.occurredAt, i18n.language) })}
         </span>
