@@ -28,7 +28,12 @@ const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
   stopWatching();
   const startWhenQuiet = () => {
     if (queryClient.isFetching() > 0) window.setTimeout(startWhenQuiet, 250);
-    else void preloadScreens();
+    // The rows this member can tap first, data included; then the rest's code.
+    else
+      void import("./shell/preload-sidebar.js")
+        .then(({ preloadSidebarScreens }) => preloadSidebarScreens(router, queryClient))
+        .catch(() => undefined)
+        .then(preloadScreens);
   };
   window.setTimeout(startWhenQuiet, 250);
 });
