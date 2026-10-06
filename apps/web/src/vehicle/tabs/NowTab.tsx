@@ -61,13 +61,14 @@ function TodoCard({
   return (
     <Card className="gap-0 py-0" aria-busy={status === "pending" ? true : undefined}>
       <CardHead
+        className={open ? undefined : "border-b-0"}
         title={
           <button
             type="button"
             onClick={toggle}
             aria-expanded={open}
             aria-controls={open ? bodyId : undefined}
-            className="-mx-1 flex items-center gap-2 rounded-sm px-1 text-left focus-visible:outline-2 focus-visible:outline-ring"
+            className="-mx-1 -my-3 flex items-center gap-2 rounded-sm px-1 py-3 text-left focus-visible:outline-2 focus-visible:outline-ring"
           >
             <Chevron className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             {t("vehicle.now.todo.title")}

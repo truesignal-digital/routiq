@@ -16,6 +16,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   const sections = page.getByRole("navigation", { name: t("Sections du véhicule", "Vehicle sections") });
   const overview = sections.getByRole("tab", { name: new RegExp(`^${t("Vue d'ensemble", "Overview")}`) });
+  await overview.waitFor({ timeout: 10_000 }).catch(() => {
+    throw new Error(`the first tab is not called "${t("Vue d'ensemble", "Overview")}"`);
+  });
   if ((await overview.getAttribute("aria-selected")) !== "true") throw new Error("Overview is not the selected tab");
   await shot("overview", { caption: "VH003 opens on the Overview tab, at the same address as before", highlight: overview });
 
@@ -29,7 +32,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("todo-open", { caption: "To do is the first block and starts open", highlight: firstCard });
 
   await toggle.click();
-  const collapsed = (await toggle.innerText()).trim();
+  const collapsed = (await toggle.innerText()).replace(/\s+/g, " ").trim();
   if ((await toggle.getAttribute("aria-expanded")) !== "false" || !/\d+$/.test(collapsed)) {
     throw new Error(`collapse failed: "${collapsed}"`);
   }
