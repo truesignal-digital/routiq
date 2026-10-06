@@ -14,6 +14,9 @@ import { openSidebar, type DriveScript, type DriveContext } from "../browser.js"
  */
 const DESCRIPTION = "Brakes squeal and pull to the left";
 
+/** Lets the screencast paint what just opened before a shot holds the frame. */
+const settle = (ctx: DriveContext) => ctx.page.waitForTimeout(700);
+
 type IssueItem = { id: string; status: string; safetyCritical: boolean; description: string };
 
 async function openVehicle(ctx: DriveContext): Promise<string> {
@@ -63,6 +66,7 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   let dialog = page.getByRole("dialog", { name: t("Signaler un problème", "Report a problem") });
   await dialog.waitFor();
   await dialog.getByLabel("Description").fill(DESCRIPTION);
+  await settle(ctx);
   await shot("report-unticked", {
     caption: "The driver reports a brake problem and forgets to tick safety-critical",
     highlight: dialog.getByRole("checkbox", { name: t("Critique pour la sécurité", "Safety-critical") }),
@@ -77,6 +81,10 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   await panel.waitFor();
   await quiet();
   const mark = panel.getByRole("button", { name: t("Marquer critique pour la sécurité", "Mark as safety-critical") });
+  await mark.waitFor({ timeout: 5_000 }).catch(() => {
+    throw new Error("the problem offers no Mark as safety-critical action");
+  });
+  await settle(ctx);
   await shot("problem-open", {
     caption: "On the problem, the driver now has Mark as safety-critical",
     highlight: mark,
@@ -85,6 +93,7 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   await mark.click();
   dialog = page.getByRole("dialog", { name: t("Marquer critique pour la sécurité", "Mark as safety-critical") });
   await dialog.waitFor();
+  await settle(ctx);
   await shot("mark-form", {
     caption: "The form says the vehicle is grounded as soon as it is saved",
     highlight: dialog.getByRole("button", { name: t("Marquer critique", "Mark as safety-critical") }),
@@ -92,6 +101,7 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   await dialog.getByRole("button", { name: t("Marquer critique", "Mark as safety-critical") }).click();
   await page.getByText(t("Marqué critique pour la sécurité.", "Marked as safety-critical.")).first().waitFor();
   await quiet();
+  await settle(ctx);
   await shot("marked", {
     caption: "The problem is now safety-critical and the vehicle is grounded",
     highlight: page.getByRole("dialog", { name: DESCRIPTION }),
@@ -104,6 +114,7 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   await openTab(ctx, "Historique", "History", "/history");
   const raised = page.getByText(t("Problème marqué critique pour la sécurité", "Problem marked safety-critical")).first();
   await raised.waitFor();
+  await settle(ctx);
   await shot("history", {
     caption: "History shows who marked it, then the grounding it caused",
     highlight: raised,
@@ -129,6 +140,8 @@ async function asManager(ctx: DriveContext): Promise<void> {
   await panel.waitFor();
   await quiet();
   const lower = panel.getByRole("button", { name: t("Retirer la mention critique", "Remove the safety-critical mark") });
+  await lower.waitFor();
+  await settle(ctx);
   await shot("manager-problem", {
     caption: "An Administrator may take the safety-critical mark off",
     highlight: lower,
@@ -137,6 +150,7 @@ async function asManager(ctx: DriveContext): Promise<void> {
   const dialog = page.getByRole("dialog", { name: t("Retirer la mention critique", "Remove the safety-critical mark") });
   await dialog.waitFor();
   await dialog.getByRole("textbox").fill(t("Vu au garage : bruit de plaquettes seulement", "Checked at the garage: pad noise only"));
+  await settle(ctx);
   await shot("lower-form", {
     caption: "Taking the mark off needs a reason and leaves the vehicle grounded",
     highlight: dialog,
@@ -144,9 +158,19 @@ async function asManager(ctx: DriveContext): Promise<void> {
   await dialog.getByRole("button", { name: t("Retirer la mention", "Remove the mark") }).click();
   await page.getByText(t("Mention critique retirée", "Safety-critical mark removed")).first().waitFor();
   await quiet();
+  await settle(ctx);
   await shot("lowered", {
-    caption: "The mark is off, and the vehicle is still grounded until a release",
+    caption: "The mark is off; the chronology shows who took it off",
     highlight: page.getByRole("dialog", { name: DESCRIPTION }),
+  });
+  for (let i = 0; i < 3 && (await page.getByRole("dialog").count()) > 0; i += 1) {
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+  }
+  await settle(ctx);
+  await shot("still-grounded", {
+    caption: "The vehicle is still grounded: only a release puts it back on the road",
+    highlight: page.getByText(t("Immobilisé", "Grounded"), { exact: false }).first(),
   });
 
   const after = await theProblem(ctx, assetId);
