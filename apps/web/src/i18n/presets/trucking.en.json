@@ -110,7 +110,8 @@
       "chooseAsset": "Choose a truck",
       "entries": {
         "attributeLabel": "Charge to this trip",
-        "rowAttribute": "Charge line {position} to this trip"
+        "rowAttribute": "Charge line {position} to this trip",
+        "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
       }
     }
   },

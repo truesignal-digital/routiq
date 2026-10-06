@@ -838,9 +838,9 @@
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
     },
     "record": {
-      "subtitle": "Work down the paper trip sheet. Anything it does not say can stay empty.",
+      "subtitle": "Work down the paper sheet from top to bottom. Anything it does not say can stay empty.",
       "templateLegend": "Sheet type",
-      "journeyTab": "Journey",
+      "journeyTab": "Passenger transport",
       "haulageTab": "Haulage job",
       "sections": {
         "references": "References",
@@ -972,7 +972,7 @@
         "personLabel": "Person (optional)",
         "choosePerson": "No person",
         "attributeLabel": "Charge to this activity",
-        "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet.",
+        "attributeHint": "Clear this when the money belongs to the asset rather than the activity: a repair stays off the sheet.",
         "rowAttribute": "Charge line {position} to this activity",
         "rowDirection": "Direction of line {position}",
         "rowCategory": "Category of line {position}",

@@ -108,7 +108,8 @@
       "chooseAsset": "Choisir un véhicule",
       "entries": {
         "attributeLabel": "Imputer à ce voyage",
-        "rowAttribute": "Imputer la ligne {position} à ce voyage"
+        "rowAttribute": "Imputer la ligne {position} à ce voyage",
+        "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche."
       }
     }
   },
