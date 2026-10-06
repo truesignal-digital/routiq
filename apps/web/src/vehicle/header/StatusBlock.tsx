@@ -6,6 +6,7 @@ import {
   Ban,
   CircleQuestionMark,
   FileExclamationPoint,
+  Hourglass,
   Lock,
   ShieldAlert,
   ShieldCheck,
@@ -21,7 +22,7 @@ import { recordReference, type PanelRef, type RoleStep } from "../model.js";
 import { LinkButton, useLockText, useStepLabel, withNodes } from "../parts.js";
 import { STEP_ICONS } from "../steps.js";
 
-type Tone = "critical" | "success" | "neutral";
+type Tone = "critical" | "waiting" | "success" | "neutral";
 
 const REPORT_MAX = 140;
 
@@ -62,12 +63,15 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
 
   switch (situation.kind) {
     case "grounded":
-      tone = "critical";
-      Icon = ShieldAlert;
-      lead = t("vehicle.status.grounded.lead", {
-        days: situation.days,
-        report: truncate(situation.report),
-      });
+      // Amber, not red, once the repair is done and only the release is left (#92).
+      tone = situation.repaired ? "waiting" : "critical";
+      Icon = situation.repaired ? Hourglass : ShieldAlert;
+      lead = situation.repaired
+        ? t("vehicle.status.repairedLead")
+        : t("vehicle.status.grounded.lead", {
+            days: situation.days,
+            report: truncate(situation.report),
+          });
       follow = withNodes(
         (slots) => t(`vehicle.status.grounded.${situation.phase}`, slots),
         {
@@ -136,9 +140,11 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
   return (
     <div
       role="status"
+      data-tone={tone}
       className={cn(
         "flex flex-col gap-3 rounded-xl border px-4 py-3 md:flex-row md:items-start md:gap-8",
         tone === "critical" && "border-destructive/25 bg-destructive/[0.04] dark:bg-destructive/10",
+        tone === "waiting" && "border-transparent bg-warning/10 ring-1 ring-warning/30",
         tone === "success" && "border-success/25 bg-success/[0.05] dark:bg-success/10",
         tone === "neutral" && "bg-muted/40",
       )}
@@ -148,6 +154,7 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
           className={cn(
             "mt-0.5 size-5 shrink-0 md:mt-1",
             tone === "critical" && "text-destructive",
+            tone === "waiting" && "text-warning-foreground",
             tone === "success" && "text-success-foreground",
             tone === "neutral" && "text-muted-foreground",
           )}
