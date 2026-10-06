@@ -103,6 +103,16 @@ describe("locale catalogs", () => {
       }
     }
   });
+
+  // One word per concept (#458): a recorded expense or revenue is an "entry"
+  // in English and an « écriture » in French, on the button, the form and the toast.
+  it("calls a financial record an entry, never a transaction", () => {
+    for (const catalog of [en, fr, truckingEn, truckingFr, passengerEn, passengerFr]) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        expect(visibleWords(value), key).not.toMatch(/\btransactions?\b/i);
+      }
+    }
+  });
 });
 
 const COMMANDS = Object.keys(COMMAND_QUEUEABILITY);

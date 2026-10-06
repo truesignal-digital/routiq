@@ -210,7 +210,7 @@ function FinanceEntriesContent() {
             className={buttonVariants({ size: "desktop-sm" })}
           >
             <Plus aria-hidden />
-            {t("finance.entries.recordAction")}
+            {t("finance.record.title")}
           </Link>
         )}
       </FinanceToolbar>

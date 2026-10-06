@@ -62,9 +62,9 @@ describe("command notifications", () => {
     expect(mocks.add).toHaveBeenCalledOnce();
     expect(mocks.add).toHaveBeenCalledWith({
       type: "success",
-      title: "Transaction recorded and posted",
+      title: "Entry recorded and posted",
       description:
-        "This transaction was posted to a previous accounting period.\n" +
+        "This entry was posted to a previous accounting period.\n" +
         "Missing evidence: this category requires supporting documentation or a photo.",
     });
   });
@@ -99,9 +99,9 @@ describe("command notifications", () => {
       type: "success",
       // The domain still names the outcome: where a record landed does not
       // cancel what happened to it, so the caller's line joins the warnings.
-      title: "Transaction recorded and posted",
+      title: "Entry recorded and posted",
       description:
-        "This transaction was posted to a previous accounting period.\n" +
+        "This entry was posted to a previous accounting period.\n" +
         "Saved in Yaoundé",
       actionProps: { children: "View", onClick },
     });
