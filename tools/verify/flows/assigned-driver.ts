@@ -22,7 +22,10 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await quiet();
   // The facts line is hidden below md; on a phone the Details tab carries it.
   const facts = page.getByText(new RegExp(`^${label} `)).first();
-  if (await facts.isVisible()) {
+  if ((page.viewportSize()?.width ?? 1440) >= 768) {
+    await facts.waitFor({ timeout: 10_000 }).catch(() => {
+      throw new Error(`the vehicle header never says "${label}"`);
+    });
     await shot("header", { caption: "The vehicle header names the assigned driver", highlight: facts });
   } else {
     await shot("header", { caption: "The vehicle opens; on a phone the assigned driver sits in Details" });
@@ -33,6 +36,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   else await page.getByRole("toolbar", { name: t("Actions rapides", "Quick actions") }).getByRole("button", { name: t("Plus", "More"), exact: true }).click();
   const all = page.getByRole("dialog", { name: t("Toutes les actions", "All actions") });
   const action = all.getByRole("button", { name: new RegExp(t("Changer de chauffeur attitré", "Change assigned driver")) });
+  await action.scrollIntoViewIfNeeded();
+  // Let the sheet's scroll settle so the reel's beat shows the highlighted row.
+  await page.waitForTimeout(600);
   await shot("all-actions", { caption: "All actions offers Change assigned driver", highlight: action });
   await action.click();
 
@@ -47,6 +53,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const pick = names.find((n) => n.trim() !== nobody && n.trim() !== current.custodian?.displayName);
   if (pick === undefined) throw new Error(`no other member to pick among ${JSON.stringify(names)}`);
   await options.filter({ hasText: pick.trim() }).first().click();
+  await page.getByRole("listbox").waitFor({ state: "hidden" });
+  await page.waitForTimeout(600);
   await shot("picked", {
     caption: `${pick.trim()} is picked as the new assigned driver`,
     highlight: form.getByLabel(t("Nouveau chauffeur attitré", "New assigned driver"), { exact: true }),
