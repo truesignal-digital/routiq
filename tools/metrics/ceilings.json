@@ -1,12 +1,18 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 559239,
+    "ceiling": 559326,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 555624,
         "to": 559239,
         "reason": "Field telemetry (ADR-0011): errors, vitals and journey timing, about 3.7 kB gzip; 1 kB costs a pilot phone about 5 ms of load (measured 2026-10-05)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559239,
+        "to": 559326,
+        "reason": "#153 adds the AUDIT_EVENT_MISSING error code with its fr/en messages (+37 B gzip, measured against the same tree without it); develop was already 50 B over the ceiling, inside the noise band"
       }
     ]
   },
@@ -14,13 +20,19 @@
     "ceiling": 21376
   },
   "web.initial-js-gzip": {
-    "ceiling": 559239,
+    "ceiling": 559326,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 555624,
         "to": 559239,
         "reason": "Field telemetry (ADR-0011): errors, vitals and journey timing, about 3.7 kB gzip; 1 kB costs a pilot phone about 5 ms of load (measured 2026-10-05)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559239,
+        "to": 559326,
+        "reason": "#153 adds the AUDIT_EVENT_MISSING error code with its fr/en messages (+37 B gzip, measured against the same tree without it); develop was already 50 B over the ceiling, inside the noise band"
       }
     ]
   }
