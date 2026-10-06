@@ -215,6 +215,60 @@ describe("the Details card's edit mode", () => {
     expect(field("Plate").getAttribute("aria-invalid")).toBe("true");
   });
 
+  it("saves another field of a vehicle register-asset v1 let in with values the card refuses (#122)", async () => {
+    const { recorded, user } = await startEditing({
+      role: "ADMIN",
+      // v1 took a 60-character chassis number, a model year up to 2100 and an
+      // amount without a date; none of them is touched below.
+      asset: asset({
+        chassisNumber: "WDB9634031L123456-REMORQUE-2009",
+        modelYear: 2100,
+        acquisitionDate: null,
+        acquisitionAmountMinor: 45_000_000,
+      }),
+    });
+    await user.clear(field("Make"));
+    await user.type(field("Make"), "MAN");
+    await user.click(screen.getByRole("button", { name: "Save details" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, manufacturer: "MAN" });
+  });
+
+  it("holds a changed chassis number to the rule even where the old one broke it", async () => {
+    const { recorded, user } = await startEditing({
+      role: "ADMIN",
+      asset: asset({ chassisNumber: "WDB9634031L123456-REMORQUE-2009" }),
+    });
+    await user.type(field("Chassis number"), "X");
+    await user.click(screen.getByRole("button", { name: "Save details" }));
+    expect(await screen.findByText("The chassis number is too long (17 characters at most).")).toBeTruthy();
+    expect(recorded.commands).toEqual([]);
+  });
+
+  it("fr-CM: says the chassis and plate rules in Register a vehicle's words", async () => {
+    const recorded = await openVehicle(DETAILS, {
+      role: "ADMIN",
+      locale: "fr-CM",
+      command: () => ({ status: 409, body: { error: { code: "DUPLICATE_REGISTRATION_NUMBER" } } }),
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Modifier les informations" }));
+    const chassis = screen.getByRole("textbox", { name: "N° de châssis" });
+    await user.type(chassis, "99");
+    await user.click(screen.getByRole("button", { name: "Enregistrer les informations" }));
+    expect(await screen.findByText("Le numéro de châssis est trop long (17 caractères au plus).")).toBeTruthy();
+    expect(recorded.commands).toEqual([]);
+
+    await user.clear(chassis);
+    await user.type(chassis, "WDB9634031L123456");
+    const plate = screen.getByRole("textbox", { name: "Immatriculation" });
+    await user.clear(plate);
+    await user.type(plate, "CE 777 AA");
+    await user.click(screen.getByRole("button", { name: "Enregistrer les informations" }));
+    expect(await screen.findByText("Un autre véhicule a déjà cette immatriculation.")).toBeTruthy();
+  });
+
   it("shows the amount the same way in the card and in the field", async () => {
     await openVehicle(DETAILS, { role: "ADMIN" });
     const user = userEvent.setup();

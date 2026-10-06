@@ -102,6 +102,7 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
     path: "branchCode",
     commands: [
       "register-asset.v1",
+      "register-asset.v2",
       "assign-asset.v1",
       "record-expense.v1",
       "record-revenue.v1",
@@ -185,6 +186,7 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
 /** Commands with an asset in their payload that legitimately skip the dispatcher's terminal-status check. */
 const ASSET_GUARD_EXEMPT: Record<string, string> = {
   "register-asset.v1": "creates the asset; there is no status to check yet",
+  "register-asset.v2": "creates the asset; there is no status to check yet",
   "commission-asset.v1": "the transition itself accepts only REGISTERED assets (asset-lifecycle.ts)",
   "record-journey-sheet.v1": "multi-asset; sheet-writer.ts refuses every terminal asset the sheet touches",
   "record-haulage-job-sheet.v1": "multi-asset; sheet-writer.ts refuses every terminal asset the sheet touches",
