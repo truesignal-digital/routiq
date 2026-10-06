@@ -6,26 +6,35 @@ Latest run: 2026-10-06T17:33:32.923Z on 63528fc, 7 runs each. Runs recorded: 1.
 
 | Metric | First recorded | Previous | Today | Change since first | Best | Ceiling |
 |---|---|---|---|---|---|---|
-| `/.ready_ms` | 755 ms (2026-10-06) | – | 755 ms | 0% | 755 ms | 793 ms |
+| `/.ready_ms` | 755 ms (2026-10-06) | – | 755 ms | 0% | 755 ms | 670 ms |
 | `/.requests` | 6 (2026-10-06) | – | 6 | 0% | 6 | 6 |
+| `/.shifts` | – (–) | – | – | – | – | 2 |
 | `/activities.ready_ms` | 294 ms (2026-10-06) | – | 294 ms | 0% | 294 ms | 309 ms |
 | `/activities.requests` | 4 (2026-10-06) | – | 4 | 0% | 4 | 4 |
+| `/activities.shifts` | – (–) | – | – | – | – | 0 |
 | `/assets.ready_ms` | 319 ms (2026-10-06) | – | 319 ms | 0% | 319 ms | 336 ms |
 | `/assets.requests` | 4 (2026-10-06) | – | 4 | 0% | 4 | 4 |
+| `/assets.shifts` | – (–) | – | – | – | – | 0 |
 | `/assets/:id.ready_ms` | 474 ms (2026-10-06) | – | 474 ms | 0% | 474 ms | 498 ms |
 | `/assets/:id.requests` | 6 (2026-10-06) | – | 6 | 0% | 6 | 6 |
+| `/assets/:id.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/approvals.ready_ms` | 272 ms (2026-10-06) | – | 272 ms | 0% | 272 ms | 286 ms |
 | `/finance/approvals.requests` | 3 (2026-10-06) | – | 3 | 0% | 3 | 3 |
+| `/finance/approvals.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/entries.ready_ms` | 346 ms (2026-10-06) | – | 346 ms | 0% | 346 ms | 363 ms |
 | `/finance/entries.requests` | 4 (2026-10-06) | – | 4 | 0% | 4 | 4 |
+| `/finance/entries.shifts` | – (–) | – | – | – | – | 0 |
 | `/maintenance.ready_ms` | 262 ms (2026-10-06) | – | 262 ms | 0% | 262 ms | 275 ms |
 | `/maintenance.requests` | 4 (2026-10-06) | – | 4 | 0% | 4 | 4 |
+| `/maintenance.shifts` | – (–) | – | – | – | – | 0 |
 | `/more.ready_ms` | 207 ms (2026-10-06) | – | 207 ms | 0% | 207 ms | 218 ms |
 | `/more.requests` | 1 (2026-10-06) | – | 1 | 0% | 1 | 1 |
-| `api.p95_ms` | 202 ms (2026-10-06) | – | 202 ms | 0% | 202 ms | 212 ms |
-| `login.js_bytes` | 547.7 kB (2026-10-06) | – | 547.7 kB | 0% | 547.7 kB | 547.7 kB |
-| `login.lcp_ms` | 3988 ms (2026-10-06) | – | 3988 ms | 0% | 3988 ms | 4188 ms |
-| `login.usable_ms` | 4003 ms (2026-10-06) | – | 4003 ms | 0% | 4003 ms | 4204 ms |
+| `/more.shifts` | – (–) | – | – | – | – | 0 |
+| `api.p95_ms` | 202 ms (2026-10-06) | – | 202 ms | 0% | 202 ms | – |
+| `login.js_bytes` | 547.7 kB (2026-10-06) | – | 547.7 kB | 0% | 547.7 kB | 240.9 kB |
+| `login.lcp_ms` | 3988 ms (2026-10-06) | – | 3988 ms | 0% | 3988 ms | 2147 ms |
+| `login.usable_ms` | 4003 ms (2026-10-06) | – | 4003 ms | 0% | 4003 ms | 2167 ms |
+| `reload.shifts` | – (–) | – | – | – | – | 2 |
 
 ## Ceilings raised
 
