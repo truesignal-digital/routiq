@@ -12,6 +12,7 @@ import { sessionStore } from "./auth/store.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { queryClient } from "./lib/query-client.js";
+import { RoutePending } from "./shell/RoutePending.js";
 
 /**
  * Every screen but sign-in loads on demand, so the first page a phone opens
@@ -53,6 +54,9 @@ export interface RouterContext {
 
 const rootRoute = createRootRouteWithContext<RouterContext>()();
 
+// Each screen's loader starts its first view's reads (routes/*.loader.ts,
+// #496), loaded on demand like the screen itself.
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -84,12 +88,14 @@ const appRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
+  loader: (args) => import("./routes/home.loader.js").then((load) => load.home(args)),
   component: DashboardScreen,
 });
 
 const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
+  loader: (args) => import("./routes/assets.loader.js").then((load) => load.assets(args)),
   component: AssetsStub,
 });
 
@@ -116,12 +122,14 @@ const assetDetailRoute = createRoute({
       .optional()
       .catch(undefined),
   }),
+  loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicle(args)),
   component: VehicleWorkspaceScreen,
 });
 
 const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
+  loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicleNow(args)),
   component: NowTab,
 });
 
@@ -181,12 +189,15 @@ const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
   validateSearch: financialEntryFilters.omit({ branchId: true }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => import("./routes/finance.loader.js").then((load) => load.financeEntries(args)),
   component: FinanceEntriesScreen,
 });
 
 const activitiesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities",
+  loader: (args) => import("./routes/activities.loader.js").then((load) => load.activities(args)),
   component: ActivitiesScreen,
 });
 
@@ -213,6 +224,7 @@ const activityDetailRoute = createRoute({
 const maintenanceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/maintenance",
+  loader: (args) => import("./routes/maintenance.loader.js").then((load) => load.maintenance(args)),
   component: MaintenanceScreen,
 });
 
@@ -232,6 +244,8 @@ const financeApprovalsRoute = createRoute({
   // widened; without it the queue presets itself to the shell's agency, which
   // is exactly the narrowing that line is reporting around.
   validateSearch: z.object({ branch: z.literal("all").optional() }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => import("./routes/finance.loader.js").then((load) => load.financeApprovals(args)),
   component: FinanceApprovalsScreen,
 });
 
@@ -299,7 +313,14 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree, context: { queryClient } });
+export const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  // The Query cache decides what is fresh (lib/query-client.ts); the router
+  // never keeps loader results of its own.
+  defaultPreloadStaleTime: 0,
+  defaultPendingComponent: RoutePending,
+});
 
 /**
  * While someone types their PIN, fetch the shell and Home, so signing in does
@@ -310,6 +331,7 @@ export function preloadAfterSignIn(): void {
   void ShellPending.preload?.();
   void import("./shell/shell-loader.js").catch(() => undefined);
   void DashboardScreen.preload?.();
+  void import("./routes/home.loader.js").catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
