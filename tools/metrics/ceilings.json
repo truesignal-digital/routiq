@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561202,
+    "ceiling": 561678,
     "raises": [
       {
         "date": "2026-10-06",
@@ -23,8 +23,20 @@
       {
         "date": "2026-10-06",
         "from": 561051,
-        "to": 561202,
-        "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block (derivation from ASSET_AWAITING_RELEASE, tone, fr/en lead), +151 B gzip; shrunk from +245 B by reusing the existing release sentences and existing warning classes"
+        "to": 561383,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561383,
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
       }
     ]
   },
@@ -40,7 +52,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561202,
+    "ceiling": 561678,
     "raises": [
       {
         "date": "2026-10-06",
@@ -63,8 +75,20 @@
       {
         "date": "2026-10-06",
         "from": 561051,
-        "to": 561202,
-        "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block (derivation from ASSET_AWAITING_RELEASE, tone, fr/en lead), +151 B gzip; shrunk from +245 B by reusing the existing release sentences and existing warning classes"
+        "to": 561383,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561383,
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
       }
     ]
   }

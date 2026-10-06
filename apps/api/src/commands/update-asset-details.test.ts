@@ -209,6 +209,17 @@ describe("update-asset-details.v1", () => {
     expect((await row(id)).registrationNumber).toBe("CE 100 AA");
   });
 
+  it("lets a vehicle keep a plate it already shares, sent back as it is or re-spaced (#122)", async () => {
+    // register-asset v1 never checked, so two vehicles may already carry one plate.
+    await truck({ registrationNumber: "CE 888 AA" });
+    const id = await truck({ registrationNumber: "CE 888 AA" });
+    const same = await edit(boris, id, { registrationNumber: "CE 888 AA", model: "Actros" });
+    expect(same.status).toBe(200);
+    const respaced = await edit(boris, id, { registrationNumber: "ce-888-aa" });
+    expect(respaced.status).toBe(200);
+    expect((await row(id)).registrationNumber).toBe("ce-888-aa");
+  });
+
   it("refuses an acquisition date in the future, and an amount without a date", async () => {
     const id = await truck();
     const future = await edit(boris, id, { acquisitionDate: "2999-01-01" });
