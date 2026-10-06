@@ -195,6 +195,16 @@ export const COMMAND_ERROR_CODES = [
    * the vehicle's branch after the move).
    */
   "CUSTODIAN_INELIGIBLE",
+  /**
+   * Acknowledging a note that is not Direction's (#98). Only Direction's notes
+   * wait in the To-do for someone to say they saw them.
+   */
+  "NOTE_NOT_FROM_DIRECTION",
+  /**
+   * Direction acknowledging its own note (#98). The note waits for the team;
+   * its author saying "seen" would take it out of the To-do unread.
+   */
+  "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

@@ -103,6 +103,18 @@ describe("routiq_app grants", () => {
     expect(rls.rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
   });
 
+  it("note acknowledgements are append-only for the runtime role, behind forced RLS (#98)", async () => {
+    const grants = await grantsByTable();
+    const privs = grants.get("note_acknowledgements");
+    expect([...(privs ?? [])].sort()).toEqual(["INSERT", "SELECT"]);
+
+    const rls = await ctx.db.execute(sql`
+      select relrowsecurity, relforcerowsecurity from pg_class
+      where relname = 'note_acknowledgements' and relnamespace = 'public'::regnamespace
+    `);
+    expect(rls.rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
+  });
+
   it("maintenance rows keep the intended append-only runtime grants", async () => {
     const grants = await grantsByTable();
 

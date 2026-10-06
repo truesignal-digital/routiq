@@ -128,6 +128,12 @@ export const COMMAND_QUEUEABILITY = {
    * anyway, so dismissing it online costs nothing.
    */
   "acknowledge-approval-rules": false,
+  /*
+   * "I have seen Direction's note" said against the note as it stands, like
+   * the rules notice. The To-do is a server read, so it costs nothing to
+   * acknowledge online.
+   */
+  "acknowledge-note": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

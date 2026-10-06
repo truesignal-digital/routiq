@@ -173,7 +173,9 @@
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
-    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
+    "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen."
   },
   "assets": {
     "notify": {
@@ -1390,7 +1392,8 @@
       "work_order-closure_approved": "Closure validated",
       "asset_availability-opened": "Asset grounded",
       "asset_availability-closed": "Grounding lifted",
-      "financial_entry-updated": "Entry edited"
+      "financial_entry-updated": "Entry edited",
+      "note-acknowledged": "Note marked as seen"
     },
     "field": {
       "status": "status",
@@ -1933,6 +1936,11 @@
       "submit": "Got it",
       "submitting": "Saving…",
       "dismiss": "Later"
+    },
+    "acknowledge-note": {
+      "label": "Mark as seen",
+      "submit": "Mark as seen",
+      "submitting": "Saving…"
     }
   },
   "vehicle": {
@@ -2128,7 +2136,8 @@
       "workshop": "The workshop",
       "manager": "A manager",
       "operations": "Operations",
-      "recorder": "Whoever recorded it"
+      "recorder": "Whoever recorded it",
+      "team": "The team"
     },
     "now": {
       "todo": {
@@ -2200,6 +2209,11 @@
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Receipt missing",
         "detail": "{ref} · {amount}, recorded by {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note from Direction · {name} · {when}",
+        "badge": "Note from Direction"
       }
     },
     "maintenance": {
@@ -2417,7 +2431,8 @@
         "asset_availability-closed": "Grounding lifted",
         "note-added": "Note added",
         "financial_entry-updated": "Entry edited before review",
-        "asset-details_updated": "Details edited"
+        "asset-details_updated": "Details edited",
+        "note-acknowledged": "Note marked as seen"
       },
       "change": "{field}: {before} → {after}"
     },
@@ -2498,7 +2513,11 @@
         "documentRenewal": "Waiting on operations to renew it."
       },
       "photoNumber": "Photo {number}",
-      "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again."
+      "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again.",
+      "directionNoteEyebrow": "Note from Direction",
+      "notSeenYet": "Nobody has marked it as seen yet. It stays in the vehicle's To-do until someone does.",
+      "seenBy": "Seen by {name} on {date}",
+      "acknowledgeHint": "Tells Direction you have read this note. It leaves the To-do; your name and the time stay on the note."
     },
     "rows": {
       "actionsFor": "Actions for {record}"
@@ -2511,7 +2530,8 @@
       "success": {
         "noteAdded": "Note added",
         "evidenceAttached": "Receipt attached",
-        "detailsSaved": "Vehicle details saved."
+        "detailsSaved": "Vehicle details saved.",
+        "noteAcknowledged": "Marked as seen"
       },
       "info": {
         "nothingToSave": "Nothing to save: no changes."

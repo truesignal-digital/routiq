@@ -15,6 +15,8 @@ import {
   grounded,
   groundingWorkOrder,
   issueDetail,
+  NOTE_ID,
+  noteDetail,
   workOrderDetail,
   workOrderRow,
 } from "./test/fixtures.js";
@@ -417,5 +419,49 @@ describe("the author's own pending entry (#85)", () => {
     });
     const panel = await screen.findByRole("dialog", { name: /Fuel/ });
     expect(within(panel).queryByRole("button", { name: "Edit entry" })).toBeNull();
+  });
+});
+
+describe("a note from Direction on its record (#98)", () => {
+  const path = `/assets/${ASSET_ID}/history?panel=note:${NOTE_ID}`;
+
+  it("offers Mark as seen to anyone but its author", async () => {
+    const recorded = await openVehicle(path, { role: "TECHNICIAN", notes: [noteDetail()] });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
+    expect(within(panel).getByText("Note from Direction")).toBeTruthy();
+    expect(within(panel).getByText(/Nobody has marked it as seen yet/)).toBeTruthy();
+    await user.click(within(panel).getByRole("button", { name: "Mark as seen" }));
+    const form = await screen.findByRole("dialog", { name: "Mark as seen" });
+    await user.click(within(form).getByRole("button", { name: "Mark as seen" }));
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.body.payload).toEqual({ noteId: NOTE_ID });
+  });
+
+  it("offers nothing to its author", async () => {
+    await openVehicle(path, { role: "DIRECTOR", notes: [noteDetail({ author: actor(ME_ID, "Émilienne") })] });
+    const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
+    expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
+  });
+
+  it.each([
+    ["en", "Seen by Boris on "],
+    ["fr-CM", "Vu par Boris le "],
+  ] as const)("says who saw it once acknowledged (%s)", async (locale, seen) => {
+    await openVehicle(path, {
+      role: "DRIVER",
+      locale,
+      notes: [noteDetail({ acknowledgement: { by: actor(OTHER_ID, "Boris"), at: "2026-09-24T09:00:00.000Z" } })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Émilienne/ });
+    expect(within(panel).getByText((text) => text.startsWith(seen))).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: /seen|vu/i })).toBeNull();
+  });
+
+  it("offers nothing on a note that is not Direction's", async () => {
+    await openVehicle(path, { role: "DRIVER", notes: [noteDetail({ authorRole: "ADMIN" })] });
+    const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
+    expect(within(panel).queryByText("Note from Direction")).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
   });
 });

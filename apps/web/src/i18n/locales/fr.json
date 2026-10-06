@@ -173,7 +173,9 @@
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
-    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
+    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur.",
+    "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue."
   },
   "assets": {
     "notify": {
@@ -1390,7 +1392,8 @@
       "work_order-closure_approved": "Clôture validée",
       "asset_availability-opened": "Actif immobilisé",
       "asset_availability-closed": "Immobilisation levée",
-      "financial_entry-updated": "Écriture modifiée"
+      "financial_entry-updated": "Écriture modifiée",
+      "note-acknowledged": "Note marquée comme vue"
     },
     "field": {
       "status": "statut",
@@ -1933,6 +1936,11 @@
       "submit": "J'ai compris",
       "submitting": "Enregistrement…",
       "dismiss": "Plus tard"
+    },
+    "acknowledge-note": {
+      "label": "Marquer comme vu",
+      "submit": "Marquer comme vu",
+      "submitting": "Enregistrement…"
     }
   },
   "vehicle": {
@@ -2128,7 +2136,8 @@
       "workshop": "L'atelier",
       "manager": "Un responsable",
       "operations": "L'exploitation",
-      "recorder": "L'auteur de la saisie"
+      "recorder": "L'auteur de la saisie",
+      "team": "L'équipe"
     },
     "now": {
       "todo": {
@@ -2200,6 +2209,11 @@
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Reçu manquant",
         "detail": "{ref} · {amount}, saisie par {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note de la Direction · {name} · {when}",
+        "badge": "Note de la Direction"
       }
     },
     "maintenance": {
@@ -2417,7 +2431,8 @@
         "asset_availability-closed": "Immobilisation levée",
         "note-added": "Note ajoutée",
         "financial_entry-updated": "Écriture modifiée avant examen",
-        "asset-details_updated": "Informations modifiées"
+        "asset-details_updated": "Informations modifiées",
+        "note-acknowledged": "Note marquée comme vue"
       },
       "change": "{field} : {before} → {after}"
     },
@@ -2498,7 +2513,11 @@
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
       "photoNumber": "Photo {number}",
-      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau."
+      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau.",
+      "directionNoteEyebrow": "Note de la Direction",
+      "notSeenYet": "Personne ne l'a encore marquée comme vue. Elle reste dans la liste « À faire » du véhicule jusque-là.",
+      "seenBy": "Vu par {name} le {date}",
+      "acknowledgeHint": "Indique à la Direction que vous avez lu cette note. Elle quitte la liste « À faire » ; votre nom et l'heure restent sur la note."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"
@@ -2511,7 +2530,8 @@
       "success": {
         "noteAdded": "Note ajoutée",
         "evidenceAttached": "Reçu joint",
-        "detailsSaved": "Informations du véhicule enregistrées."
+        "detailsSaved": "Informations du véhicule enregistrées.",
+        "noteAcknowledged": "Marquée comme vue"
       },
       "info": {
         "nothingToSave": "Rien à enregistrer : aucun changement."

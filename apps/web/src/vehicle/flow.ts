@@ -536,7 +536,7 @@ export function situationOf(
 // Attention: the to-do list
 
 /** Who an item is waiting on, when it is not the viewer. */
-export type WaitingOn = "workshop" | "finance" | "manager" | "operations" | "recorder";
+export type WaitingOn = "workshop" | "finance" | "manager" | "operations" | "recorder" | "team";
 
 export interface Todo {
   item: AssetAttentionItem;
@@ -556,6 +556,8 @@ const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   DOCUMENT_EXPIRING: "operations",
   ENTRY_AWAITING_REVIEW: "finance",
   ENTRY_EVIDENCE_MISSING: "recorder",
+  // Direction's own note waits for anyone on the vehicle to say they saw it.
+  DIRECTION_NOTE: "team",
 };
 
 export function attentionRecord(
@@ -572,6 +574,8 @@ export function attentionRecord(
       return { kind: "document", id };
     case "financial_entry":
       return { kind: "entry", id };
+    case "note":
+      return { kind: "note", id };
     case "asset_availability_interval":
       return groundingRecord(asset);
   }
@@ -635,6 +639,9 @@ export function attentionStep(
         : go("review-entry");
     case "ENTRY_EVIDENCE_MISSING":
       return mayAttachTo(item.params.recordedBy, viewer) ? go("attach-evidence") : { kind: "none" };
+    case "DIRECTION_NOTE":
+      // Everyone who sees the vehicle may say they saw it, but not its author.
+      return maker ? { kind: "none" } : go("acknowledge-note");
   }
 }
 

@@ -69,6 +69,7 @@ describe("add-note.v1", () => {
       entityId: assetId,
       assetId,
       authorMembershipId: driver.membershipId,
+      authorRole: "DRIVER",
       body: "Rétroviseur droit fissuré",
       createdByCommandId: result.commandId,
     });
@@ -82,8 +83,13 @@ describe("add-note.v1", () => {
       entityType: "note",
       entityId: payload.noteId,
       actorPrincipalId: driver.principalId,
-      afterState: { entityType: "asset", entityId: assetId, body: "Rétroviseur droit fissuré" },
-      changedFields: ["entityType", "entityId", "body"],
+      afterState: {
+        entityType: "asset",
+        entityId: assetId,
+        authorRole: "DRIVER",
+        body: "Rétroviseur droit fissuré",
+      },
+      changedFields: ["entityType", "entityId", "authorRole", "body"],
     });
   });
 
