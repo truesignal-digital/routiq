@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 559326,
+    "ceiling": 559360,
     "raises": [
       {
         "date": "2026-10-06",
@@ -11,8 +11,8 @@
       {
         "date": "2026-10-06",
         "from": 559239,
-        "to": 559326,
-        "reason": "#153 adds the AUDIT_EVENT_MISSING error code with its fr/en messages (+37 B gzip, measured against the same tree without it); develop was already 50 B over the ceiling, inside the noise band"
+        "to": 559360,
+        "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
       }
     ]
   },
@@ -20,7 +20,7 @@
     "ceiling": 21376
   },
   "web.initial-js-gzip": {
-    "ceiling": 559326,
+    "ceiling": 559360,
     "raises": [
       {
         "date": "2026-10-06",
@@ -31,8 +31,8 @@
       {
         "date": "2026-10-06",
         "from": 559239,
-        "to": 559326,
-        "reason": "#153 adds the AUDIT_EVENT_MISSING error code with its fr/en messages (+37 B gzip, measured against the same tree without it); develop was already 50 B over the ceiling, inside the noise band"
+        "to": 559360,
+        "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
       }
     ]
   }

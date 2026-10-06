@@ -2092,7 +2092,8 @@
         "descriptionBesides": "En plus de la réparation ci-dessus, ce qui vous attend sur ce véhicule.",
         "emptyTitle": "Rien ne vous attend pour l'instant.",
         "emptyTitleBesides": "Rien d'autre ne vous attend sur ce véhicule.",
-        "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter."
+        "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter.",
+        "loadFailed": "Impossible de charger ce qui vous attend sur ce véhicule."
       },
       "month": {
         "description": "Part de ce véhicule",
