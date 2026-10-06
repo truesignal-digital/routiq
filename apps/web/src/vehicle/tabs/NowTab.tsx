@@ -21,12 +21,16 @@ import { EVENT_TONE_CLASS } from "./HistoryTab.js";
 
 /** What needs someone on this vehicle, this month's money, and the latest events. */
 export function NowTab() {
-  const { asset, viewer, attention, gates } = useVehicle();
+  const { asset, viewer, attention, attentionStatus, gates } = useVehicle();
   const todos = buildTodos(attention, asset, viewer);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-      <TodoCard todos={todos} besidesHeader={groundingStep(asset, viewer).step.kind === "go"} />
+      <TodoCard
+        todos={todos}
+        status={attentionStatus}
+        besidesHeader={groundingStep(asset, viewer).step.kind === "go"}
+      />
       <div className="space-y-6">
         {gates.money && <MonthCard />}
         <RecentCard />
@@ -35,12 +39,20 @@ export function NowTab() {
   );
 }
 
-function TodoCard({ todos, besidesHeader }: { todos: Todo[]; besidesHeader: boolean }) {
+function TodoCard({
+  todos,
+  status,
+  besidesHeader,
+}: {
+  todos: Todo[];
+  status: "pending" | "error" | "success";
+  besidesHeader: boolean;
+}) {
   const { t } = useTranslation();
   const mine = todos.filter((todo) => todo.step.kind === "go");
   const others = todos.filter((todo) => todo.step.kind !== "go");
   return (
-    <Card className="gap-0 py-0">
+    <Card className="gap-0 py-0" aria-busy={status === "pending" ? true : undefined}>
       <CardHead
         title={
           <>
@@ -51,7 +63,14 @@ function TodoCard({ todos, besidesHeader }: { todos: Todo[]; besidesHeader: bool
           besidesHeader ? t("vehicle.now.todo.descriptionBesides") : t("vehicle.now.todo.description")
         }
       />
-      {mine.length === 0 ? (
+      {status === "pending" ? (
+        <div className="space-y-2 p-4">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ) : status === "error" ? (
+        <p className="px-4 py-5 text-sm text-muted-foreground">{t("vehicle.now.todo.loadFailed")}</p>
+      ) : mine.length === 0 ? (
         <div className="flex items-start gap-3 px-4 py-5">
           <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden />
           <div>

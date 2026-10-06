@@ -47,7 +47,9 @@ export function AppShell() {
         <TooltipProvider>
           <SidebarProvider>
             <AppSidebar />
-            <SidebarInset>
+            {/* A flex item beside the sidebar: without min-w-0 a wide table's
+                min-content width widens the whole page (#450). */}
+            <SidebarInset className="min-w-0">
               <RecordCrumbProvider>
                 <SiteHeader />
                 <BranchScopeAnnouncer />

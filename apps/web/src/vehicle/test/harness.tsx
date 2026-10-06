@@ -53,6 +53,10 @@ export interface VehicleScenario {
    */
   defaultRetries?: boolean;
   attention?: AssetAttentionItem[];
+  /** HTTP status for the attention read, when it should fail. */
+  attentionStatus?: number;
+  /** The attention read answers only once this settles, to see the page while it loads. */
+  attentionHeld?: Promise<unknown>;
   finance?: (periodCode: string | null) => AssetFinanceResponse;
   history?: VehicleHistoryItem[];
   historyNextCursor?: string | null;
@@ -166,6 +170,10 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
         : json({ error: { code: "REFERENCE_NOT_FOUND" } }, scenario.assetStatus);
     }
     if (p === `/v1/assets/${ASSET_ID}/attention`) {
+      await scenario.attentionHeld;
+      if (scenario.attentionStatus !== undefined) {
+        return json({ error: { code: "INTERNAL" } }, scenario.attentionStatus);
+      }
       return json({ assetId: ASSET_ID, businessDate: "2026-09-25", items: scenario.attention ?? [] });
     }
     if (p === `/v1/assets/${ASSET_ID}/finance`) {

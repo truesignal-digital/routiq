@@ -1,5 +1,6 @@
 import type { ApiErrorCode, CommandResult, CommandSubmission } from "@routiq/contracts";
 import { extractApiError } from "../lib/api-error.js";
+import { startJourney } from "../telemetry/index.js";
 import type { CommandStatusStore } from "./store.js";
 
 /** Codes a submit can fail with: the contracts registry, the client-side
@@ -38,6 +39,7 @@ export function createCommandClient({
     async submit(submission) {
       const { commandId } = submission.envelope;
       store.markSubmitting(commandId);
+      const journey = startJourney("command", submission.name);
 
       let response: Response;
       try {
@@ -59,10 +61,13 @@ export function createCommandClient({
         );
       } catch {
         store.markRejected(commandId, "NETWORK_ERROR");
+        journey.end("offline");
         return { ok: false, code: "NETWORK_ERROR" };
       }
 
       const body: unknown = await response.json().catch(() => undefined);
+      // Ends after the store update below has had two frames to paint.
+      journey.end(response.ok ? "ok" : "error", response);
 
       if (response.ok && isCommandResult(body)) {
         store.markCommitted(commandId, body);

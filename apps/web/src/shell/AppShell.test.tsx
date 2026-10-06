@@ -168,6 +168,15 @@ describe("AppShell (sidebar frame)", () => {
     expect(inset?.querySelector("header")).not.toBeNull();
   });
 
+  it("lets the inset shrink below its content, so a wide table scrolls in its card instead of widening the page (#450)", async () => {
+    await renderShell("/assets");
+
+    // The inset is a flex item beside the sidebar; at the default
+    // `min-width: auto` it grows to the widest table's min-content width.
+    const inset = document.querySelector("[data-slot='sidebar-inset']");
+    expect(inset?.classList.contains("min-w-0")).toBe(true);
+  });
+
   it("has no bottom navigation left", async () => {
     await renderShell("/assets");
 

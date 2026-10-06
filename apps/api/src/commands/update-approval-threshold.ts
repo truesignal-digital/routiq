@@ -161,7 +161,11 @@ const updateApprovalThresholdCommand: CommandDefinition<
       },
       changedFields: ["amountMaxMinor", "rowVersion"],
     });
-    await recordApprovalRuleChange(tx, ctx, envelope.commandId, payload.commandType);
+    // Setting a band to where it already is moves no one's chain, so no
+    // member is told about it.
+    if (rulesToUpdate.some((rule) => rule.amountMaxMinor !== newAmountMaxMinor)) {
+      await recordApprovalRuleChange(tx, ctx, envelope.commandId, payload.commandType);
+    }
 
     return {
       recordId: rulesToUpdate[0]!.id,

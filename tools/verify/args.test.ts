@@ -20,7 +20,7 @@ describe("parseArgs", () => {
       name: "drive",
       slot: 1,
       targets: ["/assets", "/finance/entries"],
-      options: { role: "manager", lang: "en", video: true, strict: false, headed: false, viewport: { width: 1440, height: 900 } },
+      options: { role: "manager", lang: "en", video: true, reel: false, throttle: "none", strict: false, headed: false, viewport: { width: 1440, height: 900 } },
     });
   });
 

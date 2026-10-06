@@ -52,10 +52,20 @@ export const acknowledgeApprovalRules: CommandDefinition<AcknowledgeApprovalRule
       .onConflictDoNothing()
       .returning({ id: approvalRuleAcknowledgements.id });
     if (!row) {
-      throw new CommandError(409, "INVALID_STATE_TRANSITION", {
-        from: "ACKNOWLEDGED",
-        to: "ACKNOWLEDGED",
-      });
+      // Already acknowledged, from another tab or device: the end state is
+      // the one asked for, so it succeeds with the first row and audits nothing.
+      const [existing] = await tx
+        .select({ id: approvalRuleAcknowledgements.id })
+        .from(approvalRuleAcknowledgements)
+        .where(
+          and(
+            eq(approvalRuleAcknowledgements.workspaceId, ctx.workspaceId),
+            eq(approvalRuleAcknowledgements.changeId, change.id),
+            eq(approvalRuleAcknowledgements.membershipId, ctx.membershipId),
+          ),
+        );
+      if (!existing) throw new Error("approval_rule_acknowledgements conflict without a row");
+      return { recordId: existing.id, rowVersion: 1 };
     }
 
     await appendAuditEvent(tx, ctx, envelope, {
