@@ -82,6 +82,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
 | `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
 | `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
+| `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
 | `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
 | `trips` | trips list → a closed trip's detail | no |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |

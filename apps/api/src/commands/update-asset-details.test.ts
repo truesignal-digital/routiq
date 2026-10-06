@@ -236,10 +236,23 @@ describe("update-asset-details.v1", () => {
     expect(cleared.status).toBe(200);
     expect((await row(id)).chassisNumber).toBeNull();
 
+    const assetTrail = await ctx.db.select().from(auditEvents).where(eq(auditEvents.entityId, id));
     const same = await edit(boris, id, { model: "Actros" });
     expect(same.status).toBe(200);
     expect(same.body.rowVersion).toBe(2);
     expect(await detailEvents(id)).toHaveLength(1);
+    // The no-op is audited on its own command (#153), not on the asset's history.
+    expect(await ctx.db.select().from(auditEvents).where(eq(auditEvents.entityId, id))).toHaveLength(assetTrail.length);
+    const noOpCommandId = same.body.commandId ?? "";
+    const noOp = await ctx.db.select().from(auditEvents).where(eq(auditEvents.commandId, noOpCommandId));
+    expect(noOp).toEqual([
+      expect.objectContaining({
+        eventType: "command.no_change",
+        entityType: "command",
+        entityId: noOpCommandId,
+        afterState: { assetId: id, rowVersion: 2 },
+      }),
+    ]);
   });
 
   it("takes the acquisition amount only where the books are kept", async () => {
