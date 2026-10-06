@@ -266,6 +266,14 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "W1",
+    bad: [file("apps/web/src/finance/ApproveButton.tsx", 'await fetch(`/v1/commands/approve-entry`, { method: "POST" });')],
+    good: [
+      file("apps/web/src/commands/client.ts", "const response = await fetch(`/v1/commands/${submission.name}`, init);"),
+      file("apps/web/src/vehicle/test/harness.tsx", 'if (p.startsWith("/v1/commands/")) {'),
+    ],
+  },
+  {
     id: "V1",
     bad: [file("tools/verify/flows/trips.ts", 'await shot("trips-list");')],
     good: [
