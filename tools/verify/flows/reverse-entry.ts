@@ -19,12 +19,12 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.getByRole("button", { name: t("Contre-passer l'écriture", "Reverse entry"), exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(t("Motif du contre-passage", "Reason for reversal")).fill("Verification run: duplicate fuel receipt");
-  await shot("reverse-dialog");
+  await shot("reverse-dialog", { caption: "Reverse asks for a reason before anything changes" });
   await dialog.getByRole("button", { name: t("Contre-passer l'écriture", "Reverse entry"), exact: true }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/finance/entries/") && !url.pathname.endsWith(entry.id), { timeout: 15_000 });
   await page.getByRole("button", { name: `${t("Extourne l'écriture", "Reverses entry")} #${entry.entryNumber}` }).waitFor();
   await quiet();
-  await shot("reversal-entry");
+  await shot("reversal-entry", { caption: "The reversal is a new entry that links back to the original" });
 
   const original = await apiGet(`/v1/finance/entries/${entry.id}`);
   const body = original.body as { status?: string; reversedByEntryId?: string | null };
