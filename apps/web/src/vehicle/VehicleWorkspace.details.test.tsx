@@ -306,3 +306,45 @@ describe("History", () => {
     expect(screen.getByText("Boris")).toBeTruthy();
   });
 });
+
+// #91, ADR-0010: the person who regularly drives the vehicle is its assigned
+// driver on every surface; "custodian" stays an internal name.
+describe("the assigned driver", () => {
+  it.each([
+    ["en", "Assigned driver", "Assigned driver changed to Awa", "Assigned driver removed"],
+    ["fr-CM", "Chauffeur attitré", "Nouveau chauffeur attitré : Awa", "Chauffeur attitré retiré"],
+  ] as const)("reads as the assigned driver in the header, Details and History (%s)", async (locale, label, changed, removed) => {
+    const assigned = (params: Record<string, string | null>, eventId: string) =>
+      historyItem({
+        eventId,
+        eventType: "asset.assigned",
+        kind: "LIFECYCLE",
+        subject: { entityType: "asset", id: ASSET_ID, number: null },
+        params,
+      });
+    await openVehicle(DETAILS, {
+      role: "ADMIN",
+      locale,
+      history: [
+        assigned({ custodianDisplayName: "Awa", previousCustodianDisplayName: "Sali" }, "00000000-0000-4000-8000-0000000000e1"),
+        assigned({ custodianDisplayName: null, previousCustodianDisplayName: "Awa" }, "00000000-0000-4000-8000-0000000000e2"),
+      ],
+    });
+    expect(await screen.findByText(label, { selector: "dt" })).toBeTruthy();
+    expect(document.body.textContent).toContain(`${label} Sali`);
+    expect(document.body.textContent).not.toMatch(/custodian|gardien|responsable/i);
+    cleanup();
+    await closeVehicle();
+
+    await openVehicle(`/assets/${ASSET_ID}/history`, {
+      role: "ADMIN",
+      locale,
+      history: [
+        assigned({ custodianDisplayName: "Awa", previousCustodianDisplayName: "Sali" }, "00000000-0000-4000-8000-0000000000e1"),
+        assigned({ custodianDisplayName: null, previousCustodianDisplayName: "Awa" }, "00000000-0000-4000-8000-0000000000e2"),
+      ],
+    });
+    expect(await screen.findByText(changed)).toBeTruthy();
+    expect(screen.getByText(removed)).toBeTruthy();
+  });
+});
