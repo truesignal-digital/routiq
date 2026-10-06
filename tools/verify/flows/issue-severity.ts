@@ -96,7 +96,7 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   await settle(ctx);
   await shot("mark-form", {
     caption: "The form says the vehicle is grounded as soon as it is saved",
-    highlight: dialog.getByRole("button", { name: t("Marquer critique", "Mark as safety-critical") }),
+    highlight: dialog.getByText(t("immobilisé dès l'enregistrement", "grounded as soon as you save"), { exact: false }),
   });
   await dialog.getByRole("button", { name: t("Marquer critique", "Mark as safety-critical") }).click();
   await page.getByText(t("Marqué critique pour la sécurité.", "Marked as safety-critical.")).first().waitFor();
@@ -116,7 +116,7 @@ async function asDriver(ctx: DriveContext): Promise<void> {
   await raised.waitFor();
   await settle(ctx);
   await shot("history", {
-    caption: "History shows who marked it, then the grounding it caused",
+    caption: "History shows who marked it and the grounding it caused",
     highlight: raised,
   });
 
