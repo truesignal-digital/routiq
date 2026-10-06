@@ -995,6 +995,23 @@
         "lucide-react",
         "react-i18next"
       ]
+    },
+    {
+      "name": "page-skeletons",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/page-skeletons.tsx",
+          "type": "registry:file",
+          "target": "components/page-skeletons.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "skeleton"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
     }
   ]
 }
