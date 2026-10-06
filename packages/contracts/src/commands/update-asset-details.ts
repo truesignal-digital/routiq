@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { commandEnvelope, moneyMinor } from "../envelope.js";
+import { assetIdentityFields } from "./asset-identity.js";
 
 /** The oldest model year a vehicle may carry. */
 export const MODEL_YEAR_MIN = 1950;
@@ -9,17 +10,15 @@ export function latestModelYear(now: Date = new Date()): number {
   return now.getUTCFullYear() + 1;
 }
 
-/** A VIN is 17 characters; nothing longer is a chassis number. */
-export const CHASSIS_NUMBER_MAX_LENGTH = 17;
-
 /**
  * The descriptive fields of a vehicle, one rule each, shared by the command and
  * by the Details card's edit mode so a value the card accepts is a value the
- * server accepts. Text is trimmed before its length is checked; clearing a
+ * server accepts. The plate and chassis number are register-asset's own rules
+ * (`asset-identity.ts`). Text is trimmed before its length is checked; clearing a
  * field is `null`, never an empty string.
  */
 export const assetDetailFields = {
-  registrationNumber: z.string().trim().min(1).max(40),
+  registrationNumber: assetIdentityFields.registrationNumber,
   manufacturer: z.string().trim().min(1).max(80),
   model: z.string().trim().min(1).max(80),
   modelYear: z
@@ -27,7 +26,7 @@ export const assetDetailFields = {
     .int()
     .min(MODEL_YEAR_MIN)
     .refine((year) => year <= latestModelYear(), { error: "MODEL_YEAR_TOO_LATE" }),
-  chassisNumber: z.string().trim().min(1).max(CHASSIS_NUMBER_MAX_LENGTH),
+  chassisNumber: assetIdentityFields.chassisNumber,
   /** Not in the future: the server checks that against the workspace's business date. */
   acquisitionDate: z.iso.date(),
   acquisitionAmountMinor: moneyMinor.nonnegative(),

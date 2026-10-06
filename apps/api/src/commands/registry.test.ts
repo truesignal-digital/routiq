@@ -88,6 +88,7 @@ describe("command registry conventions", () => {
 /** Commands with an asset in their payload that legitimately skip the dispatcher's terminal-status check. */
 const ASSET_GUARD_EXEMPT: Record<string, string> = {
   "register-asset.v1": "creates the asset; there is no status to check yet",
+  "register-asset.v2": "creates the asset; there is no status to check yet",
   "commission-asset.v1": "the transition itself accepts only REGISTERED assets (asset-lifecycle.ts)",
   "record-journey-sheet.v1": "multi-asset; sheet-writer.ts refuses every terminal asset the sheet touches",
   "record-haulage-job-sheet.v1": "multi-asset; sheet-writer.ts refuses every terminal asset the sheet touches",

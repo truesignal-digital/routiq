@@ -1,6 +1,6 @@
 import {
   assetDetailFields,
-  CHASSIS_NUMBER_MAX_LENGTH,
+  assetIdentityProblem,
   latestModelYear,
   MODEL_YEAR_MIN,
   TEMPLATE_FIELDS,
@@ -32,6 +32,7 @@ export type DetailsProblem =
   | "dateInFuture"
   | "amountWhole"
   | "amountNeedsDate"
+  | "plateTooLong"
   | "chassisTooLong"
   | "notANumber"
   | "invalid";
@@ -87,6 +88,8 @@ export function todayIso(now: Date = new Date()): string {
 }
 
 interface CheckContext {
+  /** What the card opened with: a field still holding it is not re-checked. */
+  initial: DetailsFormValues;
   locale: string;
   templateCode: string;
   /** Whether this reader sees, and so may set, the acquisition amount. */
@@ -94,9 +97,23 @@ interface CheckContext {
   today: string;
 }
 
+/** The text a field holds, so two snapshots of the card can be compared. */
+function fieldText(values: DetailsFormValues, field: DetailsFieldName): string {
+  return field.startsWith("customValues.")
+    ? (values.customValues[field.slice("customValues.".length)] ?? "")
+    : values[field as Exclude<DetailsFieldName, `customValues.${string}`>];
+}
+
+const untouched = (values: DetailsFormValues, initial: DetailsFormValues, field: DetailsFieldName) =>
+  fieldText(values, field) === fieldText(initial, field);
+
 /**
  * The same rules `update-asset-details` applies, asked of the contract's own
  * field schemas, each problem pinned to the field that has to change.
+ *
+ * Only fields the person changed are checked, as the server checks only the
+ * fields that travel: a vehicle register-asset v1 let in with a longer chassis
+ * number, or an amount without a date, still saves a new plate (#122).
  */
 export function detailsProblems(
   values: DetailsFormValues,
@@ -104,14 +121,16 @@ export function detailsProblems(
 ): Array<{ field: DetailsFieldName; problem: DetailsProblem }> {
   const problems: Array<{ field: DetailsFieldName; problem: DetailsProblem }> = [];
   const checkText = (
-    field: "registrationNumber" | "manufacturer" | "model",
+    field: "manufacturer" | "model",
   ) => {
     const value = trimmedOrNull(values[field]);
     if (value !== null && !assetDetailFields[field].safeParse(value).success) {
       problems.push({ field, problem: "invalid" });
     }
   };
-  checkText("registrationNumber");
+  if (assetIdentityProblem("registrationNumber", values.registrationNumber) !== undefined) {
+    problems.push({ field: "registrationNumber", problem: "plateTooLong" });
+  }
   checkText("manufacturer");
   checkText("model");
 
@@ -120,8 +139,7 @@ export function detailsProblems(
     problems.push({ field: "modelYear", problem: "yearRange" });
   }
 
-  const chassis = trimmedOrNull(values.chassisNumber);
-  if (chassis !== null && !assetDetailFields.chassisNumber.safeParse(chassis).success) {
+  if (assetIdentityProblem("chassisNumber", values.chassisNumber) !== undefined) {
     problems.push({ field: "chassisNumber", problem: "chassisTooLong" });
   }
 
@@ -147,14 +165,19 @@ export function detailsProblems(
       problems.push({ field: `customValues.${field.key}`, problem: "invalid" });
     }
   }
-  return problems;
+  const changed = (field: DetailsFieldName) => !untouched(values, context.initial, field);
+  return problems.filter(({ field, problem }) =>
+    problem === "amountNeedsDate"
+      ? changed("acquisitionDate") || changed("acquisitionAmount")
+      : changed(field),
+  );
 }
 
 type Changes = Omit<UpdateAssetDetailsPayload, "assetId">;
 
 /**
  * Only what moved, as the command wants it: a cleared field is `null`, an
- * untouched one is absent. Undefined when nothing moved. Assumes the values
+ * untouched one (still the text the card opened with) is absent. Undefined when nothing moved. Assumes the values
  * passed `detailsProblems`.
  */
 export function changedDetails(
@@ -162,16 +185,18 @@ export function changedDetails(
   asset: AssetDetail,
   context: { locale: string; money: boolean },
 ): Changes | undefined {
+  const initial = formValuesOf(asset, context.locale);
+  const changed = (field: DetailsFieldName) => !untouched(values, initial, field);
   const changes: Changes = {};
   for (const field of ["registrationNumber", "manufacturer", "model", "chassisNumber"] as const) {
     const next = trimmedOrNull(values[field]);
-    if (next !== asset[field]) changes[field] = next;
+    if (changed(field) && next !== asset[field]) changes[field] = next;
   }
   const year = values.modelYear.trim() === "" ? null : Number(values.modelYear.trim());
-  if (year !== asset.modelYear) changes.modelYear = year;
+  if (changed("modelYear") && year !== asset.modelYear) changes.modelYear = year;
   const date = values.acquisitionDate === "" ? null : values.acquisitionDate;
-  if (date !== asset.acquisitionDate) changes.acquisitionDate = date;
-  if (context.money) {
+  if (changed("acquisitionDate") && date !== asset.acquisitionDate) changes.acquisitionDate = date;
+  if (context.money && changed("acquisitionAmount")) {
     const amount = parseWholeAmount(values.acquisitionAmount, context.locale);
     const next = amount.kind === "amount" ? amount.minor : null;
     if (next !== asset.acquisitionAmountMinor) changes.acquisitionAmountMinor = next;
@@ -182,7 +207,7 @@ export function changedDetails(
     const raw = values.customValues[field.key] ?? "";
     const next = raw.trim() === "" ? null : field.type === "number" ? (parseSpecNumber(raw) ?? null) : raw.trim();
     const before = asset.customValues[field.key] ?? null;
-    if (next !== before) customValues[field.key] = next;
+    if (changed(`customValues.${field.key}`) && next !== before) customValues[field.key] = next;
   }
   if (Object.keys(customValues).length > 0) changes.customValues = customValues;
 
@@ -190,4 +215,3 @@ export function changedDetails(
 }
 
 export const YEAR_BOUNDS = { min: MODEL_YEAR_MIN, max: () => latestModelYear() };
-export { CHASSIS_NUMBER_MAX_LENGTH };

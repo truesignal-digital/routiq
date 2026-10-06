@@ -1,15 +1,17 @@
 import {
   canReadLedger,
+  plateKey,
   TEMPLATE_FIELDS,
   updateAssetDetailsPayload,
   type TemplateCode,
   type UpdateAssetDetailsPayload,
 } from "@routiq/contracts";
 import { isDeepStrictEqual } from "node:util";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { assets, workspaces } from "../db/schema.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { currentBusinessDate } from "../reads/business-date.js";
+import { assertPlateFree } from "./asset-identity.js";
 import { assetBranchIds } from "./branch-authorization.js";
 import {
   appendAuditEvent,
@@ -48,9 +50,6 @@ const COLUMN_FIELDS = [
   "acquisitionDate",
   "acquisitionAmountMinor",
 ] as const;
-
-/** `LT 482 AB`, `lt482ab` and `LT-482-AB` are one plate. */
-const plateKey = (plate: string) => plate.replace(/[\s-]/g, "").toUpperCase();
 
 function validationFailed(field: string, reason: string): CommandError {
   return new CommandError(400, "VALIDATION_FAILED", {
@@ -146,21 +145,16 @@ export const updateAssetDetails: CommandDefinition<UpdateAssetDetailsPayload> = 
       throw validationFailed("acquisitionDate", "REQUIRED_WITH_AMOUNT");
     }
 
-    if (payload.registrationNumber !== undefined && payload.registrationNumber !== null) {
-      const [taken] = await tx
-        .select({ id: assets.id })
-        .from(assets)
-        .where(
-          and(
-            eq(assets.workspaceId, ctx.workspaceId),
-            ne(assets.id, current.id),
-            sql`upper(regexp_replace(${assets.registrationNumber}, '[[:space:]-]', '', 'g')) = ${plateKey(payload.registrationNumber)}`,
-          ),
-        )
-        .limit(1);
-      if (taken) {
-        throw new CommandError(409, "DUPLICATE_REGISTRATION_NUMBER", { assetId: taken.id });
-      }
+    // Only a new plate is a new claim on it. The one already on the vehicle,
+    // sent back as it is or re-spaced, passes even where register-asset v1
+    // let a second vehicle in under it (#122).
+    if (
+      payload.registrationNumber !== undefined &&
+      payload.registrationNumber !== null &&
+      (current.registrationNumber === null ||
+        plateKey(payload.registrationNumber) !== plateKey(current.registrationNumber))
+    ) {
+      await assertPlateFree(tx, ctx, payload.registrationNumber, current.id);
     }
 
     let customValues = current.customValues;

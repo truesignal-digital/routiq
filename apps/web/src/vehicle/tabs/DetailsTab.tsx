@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { IDENTITY_MAX_LENGTH } from "@/assets/identity.js";
 import { assetDetailQueryKey } from "@/assets/useAssetDetail.js";
 import { useActiveSession } from "@/auth/store.js";
 import { applyTemplateFieldMetadata } from "@/commands/field-errors";
@@ -31,7 +32,6 @@ import { createCommandIntent } from "../../commands/intent.js";
 import { useVehicle } from "../context.js";
 import {
   changedDetails,
-  CHASSIS_NUMBER_MAX_LENGTH,
   detailsProblems,
   editableSpecifications,
   formValuesOf,
@@ -306,7 +306,8 @@ const PROBLEM_KEY: Record<DetailsProblem, string> = {
   dateInFuture: "vehicle.details.edit.errors.dateInFuture",
   amountWhole: "vehicle.details.edit.errors.amountWhole",
   amountNeedsDate: "vehicle.details.edit.errors.amountNeedsDate",
-  chassisTooLong: "vehicle.details.edit.errors.chassisTooLong",
+  plateTooLong: "assets.identity.plateTooLong",
+  chassisTooLong: "assets.identity.chassisTooLong",
   notANumber: "vehicle.details.edit.errors.notANumber",
   invalid: "form.errors.invalid",
 };
@@ -355,11 +356,19 @@ function DetailsEditCard({
   const problemMessage = (problem: DetailsProblem) =>
     t(PROBLEM_KEY[problem], {
       min: YEAR_BOUNDS.min,
-      max: problem === "chassisTooLong" ? CHASSIS_NUMBER_MAX_LENGTH : YEAR_BOUNDS.max(),
+      max:
+        problem === "plateTooLong"
+          ? IDENTITY_MAX_LENGTH.registrationNumber
+          : problem === "chassisTooLong"
+            ? IDENTITY_MAX_LENGTH.chassisNumber
+            : YEAR_BOUNDS.max(),
     });
+  // What the card opened with: a field still holding it is neither checked nor sent.
+  const [initial] = useState(() => formValuesOf(asset, locale));
 
   const schema = formShape.superRefine((values, ctx) => {
     const problems = detailsProblems(values, {
+      initial,
       locale,
       templateCode: asset.templateCode,
       money: gates.money,
@@ -372,7 +381,7 @@ function DetailsEditCard({
 
   const form = useForm<DetailsFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: formValuesOf(asset, locale),
+    defaultValues: initial,
   });
   const hasErrors = Object.keys(form.formState.errors).length > 0;
 
@@ -477,7 +486,9 @@ function DetailsEditCard({
             <section className="grid content-start gap-3 p-4 md:grid-cols-[minmax(7.5rem,auto)_1fr] md:gap-x-4">
               <h3 className="text-xs font-medium text-muted-foreground md:col-span-2">{t("vehicle.details.vehicle")}</h3>
               <StaticRow label={t("vehicle.details.fleetCode")} value={asset.assetCode} />
-              {textField("registrationNumber", t("vehicle.details.plate"), { maxLength: 40 })}
+              {textField("registrationNumber", t("vehicle.details.plate"), {
+                maxLength: IDENTITY_MAX_LENGTH.registrationNumber,
+              })}
               {textField("manufacturer", t("vehicle.details.edit.make"), { maxLength: 80 })}
               {textField("model", t("vehicle.details.edit.model"), { maxLength: 80 })}
               {textField("modelYear", t("vehicle.details.year"), { numeric: true })}

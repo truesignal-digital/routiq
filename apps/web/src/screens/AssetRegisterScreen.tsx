@@ -13,13 +13,15 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   registerAssetPayload,
   templateFieldIssues,
+  type AssetIdentityField,
   TEMPLATE_CODES,
   TEMPLATE_FIELDS,
 } from "@routiq/contracts";
-import type { z } from "zod";
+import { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
 import { formatMoney, localizedLabel } from "@/lib/format";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -48,9 +50,34 @@ import { createCommandIntent } from "@/commands/intent";
 import { FileUpload } from "@/components/ui/file-upload";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { IDENTITY_MAX_LENGTH, identityMessage } from "@/assets/identity.js";
 
-type FormInput = z.input<typeof registerAssetPayload>;
-type FormOutput = z.output<typeof registerAssetPayload>;
+/**
+ * The plate and chassis number are held to the contract's rule in the Details
+ * edit's words (`identityMessage`), not the payload schema's generic length
+ * message: same rule, same sentence on both forms (#122). Checked on the field
+ * itself so the message shows before the required fields are filled.
+ */
+function identityField(field: AssetIdentityField, t: TFunction) {
+  return z
+    .string()
+    .optional()
+    .superRefine((value, ctx) => {
+      const message = identityMessage(field, value ?? "", t);
+      if (message !== undefined) ctx.addIssue({ code: "custom", message });
+    })
+    .transform((value) => (value === undefined || value.trim() === "" ? undefined : value.trim()));
+}
+
+function registerAssetForm(t: TFunction) {
+  return registerAssetPayload.extend({
+    registrationNumber: identityField("registrationNumber", t),
+    chassisNumber: identityField("chassisNumber", t),
+  });
+}
+
+type FormInput = z.input<ReturnType<typeof registerAssetForm>>;
+type FormOutput = z.output<ReturnType<typeof registerAssetForm>>;
 
 const CAPACITY_UNITS = ["KG", "TONNE", "M3", "SEAT"] as const;
 
@@ -63,7 +90,7 @@ export function AssetRegisterScreen() {
   const reference = useAssetRegistrationReference();
 
   const [assetId] = useState(() => crypto.randomUUID());
-  const intentRef = useRef(createCommandIntent<FormOutput>(commandClient, "register-asset", 1));
+  const intentRef = useRef(createCommandIntent<FormOutput>(commandClient, "register-asset", 2));
   const [activeCommandId, setActiveCommandId] = useState<string>();
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [errorCode, setErrorCode] = useState<string>();
@@ -78,7 +105,7 @@ export function AssetRegisterScreen() {
 
   const formSchema = useMemo(
     () =>
-      registerAssetPayload.superRefine((data, ctx) => {
+      registerAssetForm(t).superRefine((data, ctx) => {
         for (const issue of templateFieldIssues(data.templateCode, data.customValues)) {
           ctx.addIssue({
             code: "custom",
@@ -143,6 +170,8 @@ export function AssetRegisterScreen() {
         applyValidationMetadata(result.metadata, t, setFieldError);
       } else if (result.code === "DUPLICATE_ASSET_CODE") {
         setFieldError("assetCode", t("errors.DUPLICATE_ASSET_CODE"));
+      } else if (result.code === "DUPLICATE_REGISTRATION_NUMBER") {
+        setFieldError("registrationNumber", t("errors.DUPLICATE_REGISTRATION_NUMBER"));
       }
       setErrorCode(result.code);
       return;
@@ -279,6 +308,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.registrationNumber")}</FormLabel>
                   <FormControl>
                     <Input
+                      maxLength={IDENTITY_MAX_LENGTH.registrationNumber}
                       {...textFieldProps(field)}
                     />
                   </FormControl>
