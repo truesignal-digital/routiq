@@ -530,7 +530,6 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
-        "actions": "Actions",
         "branch": "Agence",
         "submittedAt": "Soumis le"
       },
