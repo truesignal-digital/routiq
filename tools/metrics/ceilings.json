@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 559360,
+    "ceiling": 559802,
     "raises": [
       {
         "date": "2026-10-06",
@@ -13,6 +13,12 @@
         "from": 559239,
         "to": 559360,
         "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559360,
+        "to": 559802,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -20,7 +26,7 @@
     "ceiling": 21376
   },
   "web.initial-js-gzip": {
-    "ceiling": 559360,
+    "ceiling": 559802,
     "raises": [
       {
         "date": "2026-10-06",
@@ -33,6 +39,12 @@
         "from": 559239,
         "to": 559360,
         "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559360,
+        "to": 559802,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
