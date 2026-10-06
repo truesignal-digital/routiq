@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561051,
+    "ceiling": 561234,
     "raises": [
       {
         "date": "2026-10-06",
@@ -19,6 +19,12 @@
         "from": 559360,
         "to": 561051,
         "reason": "Record history in words (#110, #119): fr/en labels for every code set a change can name, the code-label map and the diff kinds, about 1.7 kB gzip"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561051,
+        "to": 561234,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +183 B gzip; shrunk from +217 B by reusing the Button primitive and dropping the second chevron icon and useId"
       }
     ]
   },
@@ -26,7 +32,7 @@
     "ceiling": 21376
   },
   "web.initial-js-gzip": {
-    "ceiling": 561051,
+    "ceiling": 561234,
     "raises": [
       {
         "date": "2026-10-06",
@@ -45,6 +51,12 @@
         "from": 559360,
         "to": 561051,
         "reason": "Record history in words (#110, #119): fr/en labels for every code set a change can name, the code-label map and the diff kinds, about 1.7 kB gzip"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561051,
+        "to": 561234,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +183 B gzip; shrunk from +217 B by reusing the Button primitive and dropping the second chevron icon and useId"
       }
     ]
   }

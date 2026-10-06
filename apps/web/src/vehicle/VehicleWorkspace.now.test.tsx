@@ -63,7 +63,7 @@ describe("the To do card while its read is in flight (#148)", () => {
 // collapsible to its count, the choice kept per browser.
 describe("the Overview tab and its To do section (#90)", () => {
   const scenario = { role: "FINANCE" as const, attention: [attention("ENTRY_AWAITING_REVIEW")] };
-  const toggle = () => screen.getByRole("button", { name: /^To do/ });
+  const toggle = () => screen.getByRole("button", { name: "To do" });
 
   it.each([
     ["en", "Overview", /^To do/],
@@ -87,7 +87,7 @@ describe("the Overview tab and its To do section (#90)", () => {
     await user.click(toggle());
     expect(toggle().getAttribute("aria-expanded")).toBe("false");
     expect(within(card).queryByText(/awaiting review$/)).toBeNull();
-    expect(toggle().textContent).toMatch(/To do\s*1$/);
+    expect(within(card).getByRole("heading", { level: 2 }).textContent).toMatch(/To do\s*1$/);
     expect(localStorage.getItem("routiq-vehicle-todo")).toBe("collapsed");
 
     cleanup();

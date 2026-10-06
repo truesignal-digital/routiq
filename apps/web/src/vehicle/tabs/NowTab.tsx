@@ -1,7 +1,7 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ChevronDown, ChevronRight, CircleCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleCheck, TriangleAlert } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
@@ -50,37 +50,40 @@ function TodoCard({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(readTodoOpen);
-  const bodyId = useId();
   const mine = todos.filter((todo) => todo.step.kind === "go");
   const others = todos.filter((todo) => todo.step.kind !== "go");
   const toggle = () => {
     setOpen(!open);
     writeTodoOpen(!open);
   };
-  const Chevron = open ? ChevronDown : ChevronRight;
   return (
     <Card className="gap-0 py-0" aria-busy={status === "pending" ? true : undefined}>
       <CardHead
-        className={open ? undefined : "border-b-0"}
+        className={open ? undefined : "border-transparent"}
         title={
-          <button
-            type="button"
-            onClick={toggle}
-            aria-expanded={open}
-            aria-controls={open ? bodyId : undefined}
-            className="-mx-1 -my-3 flex items-center gap-2 rounded-sm px-1 py-3 text-left focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <Chevron className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <>
             {t("vehicle.now.todo.title")}
             {(mine.length > 0 || (!open && status === "success")) && <Count>{mine.length}</Count>}
-          </button>
+          </>
+        }
+        aside={
+          <Button
+            variant="ghost"
+            size="desktop-icon-sm"
+            className="-my-1"
+            aria-label={t("vehicle.now.todo.title")}
+            aria-expanded={open}
+            onClick={toggle}
+          >
+            <ChevronRight className={cn("transition-transform", open && "rotate-90")} aria-hidden />
+          </Button>
         }
         description={
           besidesHeader ? t("vehicle.now.todo.descriptionBesides") : t("vehicle.now.todo.description")
         }
       />
       {open && (
-        <div id={bodyId}>
+        <>
           {status === "pending" ? (
             <div className="space-y-2 p-4">
               <Skeleton className="h-8 w-full" />
@@ -106,7 +109,7 @@ function TodoCard({
             </ul>
           )}
           {others.length > 0 && <WaitingOnOthers todos={others} />}
-        </div>
+        </>
       )}
     </Card>
   );

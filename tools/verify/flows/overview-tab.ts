@@ -23,28 +23,32 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("overview", { caption: "VH003 opens on the Overview tab, at the same address as before", highlight: overview });
 
   const title = t("À faire", "To do");
-  const toggle = page.getByRole("button", { name: new RegExp(`^${title}`) });
+  const toggle = page.getByRole("button", { name: title, exact: true });
+  const heading = page.getByRole("heading", { level: 2, name: new RegExp(`^${title}`) });
   const firstCard = page.locator("main [data-slot=card]").first();
-  if (!(await firstCard.getByRole("button", { name: new RegExp(`^${title}`) }).isVisible())) {
+  if (!(await firstCard.getByRole("heading", { level: 2, name: new RegExp(`^${title}`) }).isVisible())) {
     throw new Error("To do is not the first block of Overview");
   }
   if ((await toggle.getAttribute("aria-expanded")) !== "true") throw new Error("To do is not open on first visit");
   await shot("todo-open", { caption: "To do is the first block and starts open", highlight: firstCard });
 
   await toggle.click();
-  const collapsed = (await toggle.innerText()).replace(/\s+/g, " ").trim();
+  // Let the paint settle so the reel's beat shows the new state.
+  await page.waitForTimeout(600);
+  const collapsed = (await heading.innerText()).replace(/\s+/g, " ").trim();
   if ((await toggle.getAttribute("aria-expanded")) !== "false" || !/\d+$/.test(collapsed)) {
     throw new Error(`collapse failed: "${collapsed}"`);
   }
-  await shot("todo-collapsed", { caption: "Collapsed, To do keeps its count", highlight: toggle });
+  await shot("todo-collapsed", { caption: "Collapsed, To do keeps its count", highlight: firstCard });
 
   await page.reload();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
   await quiet();
   if ((await toggle.getAttribute("aria-expanded")) !== "false") throw new Error("the collapsed choice was not remembered");
-  await shot("todo-remembered", { caption: "After a reload this browser still shows To do collapsed", highlight: toggle });
+  await shot("todo-remembered", { caption: "After a reload this browser still shows To do collapsed", highlight: firstCard });
 
   await toggle.click();
+  await page.waitForTimeout(600);
   if ((await toggle.getAttribute("aria-expanded")) !== "true") throw new Error("To do did not reopen");
   await shot("todo-reopened", { caption: "One tap opens it again", highlight: firstCard });
 
