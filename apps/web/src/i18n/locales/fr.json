@@ -122,6 +122,7 @@
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
     "COMMAND_FAILED": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
+    "AUDIT_EVENT_MISSING": "Rien n'a été enregistré : l'entrée d'historique de l'action n'a pas pu être écrite. Réessayez ; si le problème persiste, contactez votre administrateur.",
     "EXPECTED_VERSION_REQUIRED": "Impossible d'enregistrer : version de l'enregistrement manquante. Actualisez la page.",
     "VERSION_CONFLICT": "Cet enregistrement a été modifié par quelqu'un d'autre. Actualisez puis réappliquez vos changements.",
     "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",

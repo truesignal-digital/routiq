@@ -37,6 +37,12 @@ export const COMMAND_ERROR_CODES = [
   "DUPLICATE_REGISTRATION_NUMBER",
   "UNIQUE_CONSTRAINT_VIOLATION",
   "COMMAND_FAILED",
+  /**
+   * A command whose handler returned success without writing an audit event
+   * for itself (#153). The dispatcher rolls the whole command back; nothing it
+   * wrote is kept. A server bug, never the caller's.
+   */
+  "AUDIT_EVENT_MISSING",
   "EXPECTED_VERSION_REQUIRED",
   "VERSION_CONFLICT",
   "INVALID_STATE_TRANSITION",

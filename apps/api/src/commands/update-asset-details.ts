@@ -194,8 +194,16 @@ export const updateAssetDetails: CommandDefinition<UpdateAssetDetailsPayload> = 
     }
     if (!isDeepStrictEqual(customValues, current.customValues)) changes.customValues = customValues;
 
-    // Everything asked for is already so: nothing to write, nothing to audit.
+    // Everything asked for is already so: the asset is not written and its
+    // history gains no line. The command still ran, and every committed command
+    // leaves an audit event (#153), so the event is filed against the command.
     if (Object.keys(changes).length === 0) {
+      await appendAuditEvent(tx, ctx, envelope, {
+        eventType: "command.no_change",
+        entityType: "command",
+        entityId: envelope.commandId,
+        afterState: { assetId: current.id, rowVersion: current.rowVersion },
+      });
       return { recordId: current.id, rowVersion: current.rowVersion };
     }
 

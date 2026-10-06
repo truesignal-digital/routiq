@@ -105,7 +105,9 @@ export interface CommandExecuteResult {
  *   5. A decision command (`approve-*`, `reject-*`) declares `maker`, and gets
  *      a row in maker-checker.test.ts.
  * The dispatcher supplies auth, module check, idempotency, approval evaluation,
- * receipt, audit atomicity; execute() owns only references, invariants, writes.
+ * receipt, audit atomicity; execute() owns only references, invariants, writes,
+ * and at least one appendAuditEvent for its command id. A success without one
+ * is refused AUDIT_EVENT_MISSING and rolled back (#153), no-ops included.
  */
 export interface CommandDefinition<P> {
   scope?: "workspace";
@@ -578,6 +580,7 @@ export async function dispatchCommand(
           parsedPayload.data,
           approval,
         );
+        await requireAuditEvent(tx, "WORKSPACE", ctx.workspaceId, outer.data.envelope.commandId);
         const outcome: CommandOutcome = {
           commandId: outer.data.envelope.commandId,
           recordId: result.recordId,
@@ -616,9 +619,20 @@ export async function dispatchCommand(
       throw error;
     }
   } catch (error) {
+    // A server bug, not a business rejection: log it and send it to Sentry.
+    const reportFailure = (failure: unknown) => {
+      log?.error({ err: failure, event: "command.failed" });
+      reportUnexpectedFailure(failure, {
+        commandId: outer.data.envelope.commandId,
+        workspaceId: isOperatorContext(ctx) ? "" : ctx.workspaceId,
+        commandType: outer.data.name,
+        origin: outer.data.envelope.origin,
+      });
+    };
     let commandError: CommandError;
     if (error instanceof CommandError) {
       commandError = error;
+      if (error.code === "AUDIT_EVENT_MISSING") reportFailure(error);
     } else {
       const violation = uniqueViolation(error);
       if (violation) {
@@ -644,13 +658,7 @@ export async function dispatchCommand(
                 },
               );
       } else {
-        log?.error({ err: error, event: "command.failed" });
-        reportUnexpectedFailure(error, {
-          commandId: outer.data.envelope.commandId,
-          workspaceId: isOperatorContext(ctx) ? "" : ctx.workspaceId,
-          commandType: outer.data.name,
-          origin: outer.data.envelope.origin,
-        });
+        reportFailure(error);
         commandError = new CommandError(500, "COMMAND_FAILED");
       }
     }
@@ -763,6 +771,7 @@ async function dispatchPlatform(
         parsedPayload.data,
         workspaceId,
       );
+      await requireAuditEvent(tx, "PLATFORM", workspaceId, request.envelope.commandId);
       const outcome: CommandOutcome = {
         commandId: request.envelope.commandId,
         recordId: result.recordId,
@@ -794,6 +803,34 @@ async function dispatchPlatform(
     }
     throw error;
   }
+}
+
+/**
+ * Receipt, business rows and audit event commit together (§5), and that must
+ * not depend on every handler remembering its `append*AuditEvent` call. Runs
+ * after `execute`, inside its transaction: a success that left no event for
+ * this command id, in this workspace and on this trail, throws, and the throw
+ * rolls back the receipt and everything `execute` wrote (#153). An event filed
+ * by another command, or on the other scope's trail, does not count.
+ */
+async function requireAuditEvent(
+  tx: Tx,
+  scope: "WORKSPACE" | "PLATFORM",
+  workspaceId: string,
+  commandId: string,
+): Promise<void> {
+  const [event] = await tx
+    .select({ id: auditEvents.id })
+    .from(auditEvents)
+    .where(
+      and(
+        eq(auditEvents.workspaceId, workspaceId),
+        eq(auditEvents.commandId, commandId),
+        eq(auditEvents.scope, scope),
+      ),
+    )
+    .limit(1);
+  if (event === undefined) throw new CommandError(500, "AUDIT_EVENT_MISSING");
 }
 
 function isPlatformDb(db: Db | PlatformDb): db is PlatformDb {
