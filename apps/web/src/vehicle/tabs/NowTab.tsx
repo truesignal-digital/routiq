@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ChevronRight, CircleCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, CircleCheck, TriangleAlert } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { useAssetFinance, useAssetHistory } from "../useVehicle.js";
 import { tabPath } from "../VehicleTabsNav.js";
 import { EVENT_TONE_CLASS } from "./HistoryTab.js";
 
-/** What needs someone on this vehicle, this month's money, and the latest events. */
+/** The Overview tab: what needs someone on this vehicle, this month's money, and the latest events. */
 export function NowTab() {
   const { asset, viewer, attention, attentionStatus, gates } = useVehicle();
   const todos = buildTodos(attention, asset, viewer);
@@ -49,47 +49,85 @@ function TodoCard({
   besidesHeader: boolean;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(readTodoOpen);
+  const bodyId = useId();
   const mine = todos.filter((todo) => todo.step.kind === "go");
   const others = todos.filter((todo) => todo.step.kind !== "go");
+  const toggle = () => {
+    setOpen(!open);
+    writeTodoOpen(!open);
+  };
+  const Chevron = open ? ChevronDown : ChevronRight;
   return (
     <Card className="gap-0 py-0" aria-busy={status === "pending" ? true : undefined}>
       <CardHead
         title={
-          <>
-            {t("vehicle.now.todo.title")} {mine.length > 0 && <Count>{mine.length}</Count>}
-          </>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            aria-controls={open ? bodyId : undefined}
+            className="-mx-1 flex items-center gap-2 rounded-sm px-1 text-left focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <Chevron className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            {t("vehicle.now.todo.title")}
+            {(mine.length > 0 || (!open && status === "success")) && <Count>{mine.length}</Count>}
+          </button>
         }
         description={
           besidesHeader ? t("vehicle.now.todo.descriptionBesides") : t("vehicle.now.todo.description")
         }
       />
-      {status === "pending" ? (
-        <div className="space-y-2 p-4">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
+      {open && (
+        <div id={bodyId}>
+          {status === "pending" ? (
+            <div className="space-y-2 p-4">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : status === "error" ? (
+            <p className="px-4 py-5 text-sm text-muted-foreground">{t("vehicle.now.todo.loadFailed")}</p>
+          ) : mine.length === 0 ? (
+            <div className="flex items-start gap-3 px-4 py-5">
+              <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden />
+              <div>
+                <p className="text-sm font-medium">
+                  {besidesHeader ? t("vehicle.now.todo.emptyTitleBesides") : t("vehicle.now.todo.emptyTitle")}
+                </p>
+                <p className="text-sm text-muted-foreground">{t("vehicle.now.todo.emptyHint")}</p>
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y">
+              {mine.map((todo) => (
+                <TodoRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
+              ))}
+            </ul>
+          )}
+          {others.length > 0 && <WaitingOnOthers todos={others} />}
         </div>
-      ) : status === "error" ? (
-        <p className="px-4 py-5 text-sm text-muted-foreground">{t("vehicle.now.todo.loadFailed")}</p>
-      ) : mine.length === 0 ? (
-        <div className="flex items-start gap-3 px-4 py-5">
-          <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden />
-          <div>
-            <p className="text-sm font-medium">
-              {besidesHeader ? t("vehicle.now.todo.emptyTitleBesides") : t("vehicle.now.todo.emptyTitle")}
-            </p>
-            <p className="text-sm text-muted-foreground">{t("vehicle.now.todo.emptyHint")}</p>
-          </div>
-        </div>
-      ) : (
-        <ul className="divide-y">
-          {mine.map((todo) => (
-            <TodoRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
-          ))}
-        </ul>
       )}
-      {others.length > 0 && <WaitingOnOthers todos={others} />}
     </Card>
   );
+}
+
+/** Whether To do is open is a device preference; storage throws in private-mode browsers. */
+const TODO_STORAGE_KEY = "routiq-vehicle-todo";
+
+function readTodoOpen(): boolean {
+  try {
+    return localStorage.getItem(TODO_STORAGE_KEY) !== "collapsed";
+  } catch {
+    return true;
+  }
+}
+
+function writeTodoOpen(open: boolean): void {
+  try {
+    localStorage.setItem(TODO_STORAGE_KEY, open ? "expanded" : "collapsed");
+  } catch {
+    // The choice then lasts for this visit only.
+  }
 }
 
 function useWhoLabel() {
