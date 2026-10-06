@@ -44,7 +44,8 @@ function banded(
  * inside the same band as a driver; FINANCE on documents. The decisions follow
  * the ADR-0009 chain (migration 0037): work orders go to the branch's
  * Administrateur, entries to Finance up to 1 000 000 XAF, and anything above
- * it to Direction.
+ * it to Direction. The chain covers Finance's and the Administrateur's own
+ * entries too (#412, migration 0038): only Direction's post at any amount.
  */
 function defaultApprovalRules(): ApprovalRuleDefault[] {
   const DIRECTOR_ADMIN = ["DIRECTOR", "ADMIN"] as const;
@@ -99,11 +100,12 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       DIRECTOR_ADMIN,
     ),
 
-    // Money in: the field and counter roles record inside the band, the roles
-    // that keep the books at any amount.
+    // Money in: every role that records posts inside the band; above it the
+    // entry waits for the chain below. Direction alone posts at any amount,
+    // since no one is above it (#412; migration 0038).
     ...banded(["record-expense"], ["DRIVER", "ADMIN", "FINANCE", "DIRECTOR", "TECHNICIAN", "CASHIER"], RECORDING_BAND),
     ...banded(["record-revenue"], ["ADMIN", "FINANCE", "DIRECTOR", "CASHIER"], RECORDING_BAND),
-    ...wildcard(["record-expense", "record-revenue"], ["FINANCE", "ADMIN", "DIRECTOR"]),
+    ...wildcard(["record-expense", "record-revenue"], ["DIRECTOR"]),
 
     // Finance decides an entry up to its own band, Direction at any amount.
     // DIRECTOR holds the band too: wherever the band matches it is the more

@@ -25,14 +25,14 @@ const UNBANDED_BY_DEFAULT = new Set(["create-work-order", "complete-work-order"]
 /**
  * The first threshold on a work-order command turns its unbounded defaults into
  * a band of the same shape record-expense ships with: every maker role
- * auto-approves up to the threshold, and the roles that approve work orders
- * (DIRECTOR, ADMIN) keep their unbounded rule beside a new band so their own
- * orders never wait on an approver. Bounding their only rule instead would
- * invert it — the band is the more specific rule, so it wins wherever it
- * matches, and an approver would auto-approve large orders while queueing
- * small ones.
+ * auto-approves up to the threshold, and Direction keeps its unbounded rule
+ * beside a new band, since no one is above it. The Administrateur's own orders
+ * above the band wait like everyone else's (#412). Bounding Direction's only
+ * rule instead would invert it — the band is the more specific rule, so it wins
+ * wherever it matches, and Direction would auto-approve large orders while
+ * queueing small ones.
  */
-const KEEPS_UNBOUNDED: ReadonlySet<string> = new Set(["DIRECTOR", "ADMIN"]);
+const KEEPS_UNBOUNDED: ReadonlySet<string> = new Set(["DIRECTOR"]);
 
 async function bandUnboundedDefaults(
   tx: Tx,

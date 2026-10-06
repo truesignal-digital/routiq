@@ -94,12 +94,12 @@ it(
         [workspaceId],
       );
       // 0012's bands and unbounded approver rules and 0027's workshop band,
-      // put through 0036's role map: what a new workspace gets, six roles
-      // banded and FINANCE, ADMIN and DIRECTOR unbounded.
+      // put through 0036's role map and 0038's chain: what a new workspace
+      // gets, six roles banded and DIRECTOR alone unbounded.
       expect(rules.rows).toHaveLength(
         corePack.approvalRules.filter((rule) => rule.commandType === "record-expense").length,
       );
-      expect(rules.rows).toHaveLength(9);
+      expect(rules.rows).toHaveLength(7);
 
       const [constraint] = (
         await upgradePool.query<{ convalidated: boolean }>(
