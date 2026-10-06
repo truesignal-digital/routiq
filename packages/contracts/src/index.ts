@@ -63,3 +63,4 @@ export * from "./reads/asset-workspace.js";
 export * from "./commands/acknowledge-approval-rules.js";
 export * from "./reads/approval-chain.js";
 export * from "./telemetry.js";
+export * from "./client-scope.js";
