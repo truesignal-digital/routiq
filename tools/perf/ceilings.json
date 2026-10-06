@@ -23,6 +23,10 @@
       }
     ]
   },
+  "/.shifts": {
+    "ceiling": 2,
+    "kind": "count"
+  },
   "/activities.ready_ms": {
     "ceiling": 309,
     "kind": "time"
@@ -39,12 +43,20 @@
       }
     ]
   },
+  "/activities.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/assets.ready_ms": {
     "ceiling": 336,
     "kind": "time"
   },
   "/assets.requests": {
     "ceiling": 4,
+    "kind": "count"
+  },
+  "/assets.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "/assets/:id.ready_ms": {
@@ -55,6 +67,10 @@
     "ceiling": 2,
     "kind": "count"
   },
+  "/assets/:id.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/finance/approvals.ready_ms": {
     "ceiling": 286,
     "kind": "time"
@@ -63,12 +79,20 @@
     "ceiling": 1,
     "kind": "count"
   },
+  "/finance/approvals.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/finance/entries.ready_ms": {
     "ceiling": 363,
     "kind": "time"
   },
   "/finance/entries.requests": {
     "ceiling": 4,
+    "kind": "count"
+  },
+  "/finance/entries.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "/maintenance.ready_ms": {
@@ -87,6 +111,10 @@
       }
     ]
   },
+  "/maintenance.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/more.ready_ms": {
     "ceiling": 218,
     "kind": "time"
@@ -97,6 +125,10 @@
   },
   "/my-settings.requests": {
     "ceiling": 1,
+    "kind": "count"
+  },
+  "/my-settings.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "login.js_bytes": {
@@ -110,5 +142,9 @@
   "login.usable_ms": {
     "ceiling": 2648,
     "kind": "time"
+  },
+  "reload.shifts": {
+    "ceiling": 2,
+    "kind": "count"
   }
 }

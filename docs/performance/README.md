@@ -8,25 +8,34 @@ Latest run: 2026-10-09T01:45:57.486Z on abd53810, 7 runs each. Runs recorded: 3.
 |---|---|---|---|---|---|---|
 | `/.ready_ms` | 755 ms (2026-10-06) | 1032 ms | 1139 ms | +51% | 755 ms | 1197 ms |
 | `/.requests` | 6 (2026-10-06) | 7 | 7 | +17% | 6 | 7 |
+| `/.shifts` | – (–) | – | – | – | – | 2 |
 | `/activities.ready_ms` | 294 ms (2026-10-06) | 344 ms | 340 ms | +16% | 294 ms | 309 ms |
 | `/activities.requests` | 4 (2026-10-06) | 5 | 5 | +25% | 4 | 5 |
+| `/activities.shifts` | – (–) | – | – | – | – | 0 |
 | `/assets.ready_ms` | 319 ms (2026-10-06) | 371 ms | 428 ms | +34% | 319 ms | 336 ms |
 | `/assets.requests` | 4 (2026-10-06) | 4 | 4 | 0% | 4 | 4 |
+| `/assets.shifts` | – (–) | – | – | – | – | 0 |
 | `/assets/:id.ready_ms` | 474 ms (2026-10-06) | 249 ms | 268 ms | −43% | 249 ms | 282 ms |
 | `/assets/:id.requests` | 6 (2026-10-06) | 2 | 2 | −67% | 2 | 2 |
+| `/assets/:id.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/approvals.ready_ms` | 272 ms (2026-10-06) | – | – | – | 272 ms | 286 ms |
 | `/finance/approvals.requests` | 3 (2026-10-06) | 1 | 1 | −67% | 1 | 1 |
+| `/finance/approvals.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/entries.ready_ms` | 346 ms (2026-10-06) | 455 ms | 371 ms | +7% | 346 ms | 363 ms |
 | `/finance/entries.requests` | 4 (2026-10-06) | 4 | 4 | 0% | 4 | 4 |
+| `/finance/entries.shifts` | – (–) | – | – | – | – | 0 |
 | `/maintenance.ready_ms` | 262 ms (2026-10-06) | – | – | – | 262 ms | 275 ms |
 | `/maintenance.requests` | 4 (2026-10-06) | 5 | 5 | +25% | 4 | 5 |
+| `/maintenance.shifts` | – (–) | – | – | – | – | 0 |
 | `/more.ready_ms` | 207 ms (2026-10-06) | – | – | – | 207 ms | 218 ms |
 | `/more.requests` | 1 (2026-10-06) | – | – | – | 1 | 1 |
 | `/my-settings.requests` | 1 (2026-10-09) | 1 | 1 | 0% | 1 | 1 |
+| `/my-settings.shifts` | – (–) | – | – | – | – | 0 |
 | `api.p95_ms` | 202 ms (2026-10-06) | 642 ms | 544 ms | +170% | 202 ms | – |
 | `login.js_bytes` | 547.7 kB (2026-10-06) | 571.6 kB | 275.1 kB | −50% | 275.1 kB | 275.1 kB |
 | `login.lcp_ms` | 3988 ms (2026-10-06) | 4220 ms | 2468 ms | −38% | 2468 ms | 2592 ms |
 | `login.usable_ms` | 4003 ms (2026-10-06) | 4230 ms | 2522 ms | −37% | 2522 ms | 2648 ms |
+| `reload.shifts` | – (–) | – | – | – | – | 2 |
 
 ## Ceilings raised
 
