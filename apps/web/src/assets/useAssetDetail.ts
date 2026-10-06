@@ -1,6 +1,7 @@
 import type { AssetDetail } from "@routiq/contracts";
-import { useQuery } from "@tanstack/react-query";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 import { retryUnlessNotFound } from "../lib/query-retry.js";
 
 export async function fetchAssetDetail(
@@ -24,18 +25,17 @@ export function assetDetailQueryKey(workspaceSlug: string | undefined, assetId: 
 
 export function useAssetDetail(assetId: string) {
   const session = useActiveSession();
+  return useQuery(assetDetailQueryOptions(session?.workspaceSlug, assetId));
+}
 
-  return useQuery<AssetDetail>({
+export function assetDetailQueryOptions(workspaceSlug: string | undefined, assetId: string) {
+  return queryOptions<AssetDetail>({
     // Shares the `["ws", slug, "asset", id]` prefix with this asset's
     // documents, so a write to either can invalidate the pair.
-    queryKey: assetDetailQueryKey(session?.workspaceSlug, assetId),
+    queryKey: assetDetailQueryKey(workspaceSlug, assetId),
     // A vehicle outside the caller's scope is a 404: show that at once.
     retry: retryUnlessNotFound,
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchAssetDetail(token, assetId, signal);
-    },
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchAssetDetail(token, assetId, signal)),
   });
 }

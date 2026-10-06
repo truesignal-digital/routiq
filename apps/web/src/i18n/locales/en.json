@@ -585,6 +585,7 @@
     }
   },
   "common": {
+    "loading": "Loading…",
     "close": "Close"
   },
   "dataTable": {

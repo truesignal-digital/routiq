@@ -585,6 +585,7 @@
     }
   },
   "common": {
+    "loading": "Chargement…",
     "close": "Fermer"
   },
   "dataTable": {

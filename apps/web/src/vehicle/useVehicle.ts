@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AssetAttentionResponse,
   AssetFinanceResponse,
@@ -47,22 +47,31 @@ function withQuery(path: string, params: Record<string, string | undefined>): st
 /** What needs someone on this vehicle, as facts the client turns into to-dos. */
 export function useAssetAttention(assetId: string, enabled = true) {
   const session = useActiveSession();
-  return useQuery<AssetAttentionResponse>({
-    queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "attention"],
+  const options = assetAttentionQueryOptions(session?.workspaceSlug, assetId);
+  return useQuery({ ...options, enabled: session !== undefined && enabled });
+}
+
+export function assetAttentionQueryOptions(workspaceSlug: string | undefined, assetId: string) {
+  return queryOptions<AssetAttentionResponse>({
+    queryKey: [...vehicleQueryKey(workspaceSlug, assetId), "attention"],
     retry: retryUnlessNotFound,
-    enabled: session !== undefined && enabled,
-    queryFn: ({ signal }) =>
-      getJson(`/v1/assets/${assetId}/attention`, signal, "ATTENTION"),
+    enabled: workspaceSlug !== undefined,
+    queryFn: ({ signal }) => getJson(`/v1/assets/${assetId}/attention`, signal, "ATTENTION"),
   });
 }
 
 /** One month of this vehicle's money. Only ever enabled for finance readers. */
 export function useAssetFinance(assetId: string, periodCode: string | undefined, enabled: boolean) {
   const session = useActiveSession();
-  return useQuery<AssetFinanceResponse>({
-    queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "finance", periodCode ?? "current"],
+  const options = assetFinanceQueryOptions(session?.workspaceSlug, assetId, periodCode);
+  return useQuery({ ...options, enabled: session !== undefined && enabled });
+}
+
+export function assetFinanceQueryOptions(workspaceSlug: string | undefined, assetId: string, periodCode: string | undefined) {
+  return queryOptions<AssetFinanceResponse>({
+    queryKey: [...vehicleQueryKey(workspaceSlug, assetId), "finance", periodCode ?? "current"],
     retry: retryUnlessNotFound,
-    enabled: session !== undefined && enabled,
+    enabled: workspaceSlug !== undefined,
     queryFn: ({ signal }) =>
       getJson(withQuery(`/v1/assets/${assetId}/finance`, { periodCode }), signal, "ASSET_FINANCE"),
   });
@@ -79,19 +88,25 @@ export function useAssetHistory(
   enabled = true,
 ) {
   const session = useActiveSession();
-  return useInfiniteQuery<VehicleHistoryResponse>({
-    queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "history", kind ?? "ALL", limit],
+  const options = assetHistoryQueryOptions(session?.workspaceSlug, assetId, kind, limit);
+  return useInfiniteQuery({ ...options, enabled: session !== undefined && enabled });
+}
+
+export function assetHistoryQueryOptions(
+  workspaceSlug: string | undefined,
+  assetId: string,
+  kind: VehicleHistoryKind | undefined,
+  limit: number,
+) {
+  return infiniteQueryOptions({
+    queryKey: [...vehicleQueryKey(workspaceSlug, assetId), "history", kind ?? "ALL", limit],
     retry: retryUnlessNotFound,
-    enabled: session !== undefined && enabled,
+    enabled: workspaceSlug !== undefined,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: VehicleHistoryResponse) => last.nextCursor ?? undefined,
     queryFn: ({ signal, pageParam }) =>
-      getJson(
-        withQuery(`/v1/assets/${assetId}/history`, {
-          kind,
-          limit: String(limit),
-          cursor: pageParam as string | undefined,
-        }),
+      getJson<VehicleHistoryResponse>(
+        withQuery(`/v1/assets/${assetId}/history`, { kind, limit: String(limit), cursor: pageParam }),
         signal,
         "HISTORY",
       ),

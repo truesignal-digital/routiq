@@ -9,6 +9,7 @@ import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { router as applicationRouter } from "../router.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
+import { QUERY_DEFAULTS } from "../lib/query-defaults.js";
 
 const identity = { username: "executive-test", workspaceSlug: "executive-test" };
 const branchId = "00000000-0000-4000-8000-000000000020";
@@ -93,9 +94,9 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
   });
   await i18n.changeLanguage(options.locale ?? "en");
   sessionStore.save({ ...identity, token: "disposable-executive-token", expiresAt: "2099-01-01T00:00:00Z" });
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { ...QUERY_DEFAULTS, retry: false } } });
   const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createRouter({ routeTree: applicationRouter.routeTree, history, context: { queryClient: client } });
+  const router = createRouter({ ...applicationRouter.options, history, context: { queryClient: client } });
   // Initial navigation is asynchronous. Flush its React updates before starting
   // DOM query deadlines; the cold CI render can exceed findBy's default wait.
   await act(async () => {
@@ -146,7 +147,7 @@ it.each(viewers)("shows loading without a false denial or money decisions ($loca
   const pending = new Promise<void>((resolve) => { release = resolve; });
   const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending });
   await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries")).toBe(true));
-  expect(screen.getByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
+  expect(await screen.findByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
   expect(screen.queryByRole("tab", { name: viewer.periods })).toBeNull();
   await act(async () => { release(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
