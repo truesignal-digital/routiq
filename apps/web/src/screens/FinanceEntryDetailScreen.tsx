@@ -205,7 +205,7 @@ function FinanceEntryDetailContent() {
 
           {recordAgainOpen && (
             <RecordEntryForm
-              surface="dialog"
+              surface="sheet"
               recordAgainFrom={entryQuery.data}
               onRecorded={(outcome) => {
                 setRecordAgainOpen(false);
