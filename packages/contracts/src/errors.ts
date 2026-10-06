@@ -15,6 +15,11 @@ export const VALIDATION_ERROR_CODES = ["VALIDATION_FAILED"] as const;
 
 export type ValidationErrorCode = (typeof VALIDATION_ERROR_CODES)[number];
 
+/** A sender past its per-minute telemetry allowance (`POST /v1/telemetry`, ADR-0011). */
+export const TELEMETRY_ERROR_CODES = ["RATE_LIMITED"] as const;
+
+export type TelemetryErrorCode = (typeof TELEMETRY_ERROR_CODES)[number];
+
 export const COMMAND_ERROR_CODES = [
   "COMMAND_NOT_FOUND",
   "ROLE_FORBIDDEN",
