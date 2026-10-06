@@ -2,6 +2,7 @@ import { updateApprovalThresholdPayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { approvalRules } from "../db/schema.js";
+import { recordApprovalRuleChange } from "./approval-rule-changes.js";
 import {
   appendAuditEvent,
   CommandError,
@@ -125,6 +126,7 @@ const updateApprovalThresholdCommand: CommandDefinition<
         },
         changedFields: ["amountMaxMinor", "rowVersion"],
       });
+      await recordApprovalRuleChange(tx, ctx, envelope.commandId, payload.commandType);
       return { recordId: first.id, rowVersion: first.rowVersion };
     }
 
@@ -159,6 +161,7 @@ const updateApprovalThresholdCommand: CommandDefinition<
       },
       changedFields: ["amountMaxMinor", "rowVersion"],
     });
+    await recordApprovalRuleChange(tx, ctx, envelope.commandId, payload.commandType);
 
     return {
       recordId: rulesToUpdate[0]!.id,

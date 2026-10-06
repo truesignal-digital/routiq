@@ -21,7 +21,9 @@ import { createTestApp } from "../test/fixture.js";
  * attach-evidence backfill alone, in the same shape, and 0035 (#84, first
  * numbered 0032) the update-asset-details one. 0034 (#85, first numbered 0032)
  * replaces its functions, drops each trigger before creating it, and backfills
- * update-pending-entry's rules with NOT EXISTS.
+ * update-pending-entry's rules with NOT EXISTS. 0039 (#422) guards its tables,
+ * constraints and policies, and inserts its rules and its release row with NOT
+ * EXISTS: another branch wanted the same number, so it may yet be renumbered.
  *
  * The file's own database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -36,6 +38,7 @@ const MIGRATIONS = [
   "0029_attach_evidence_command_defaults",
   "0034_edit_pending_entry",
   "0035_update_asset_details_command_defaults",
+  "0039_approval_rule_notice",
 ];
 
 function statementsOf(migration: string): string[] {
