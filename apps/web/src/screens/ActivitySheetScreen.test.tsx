@@ -379,7 +379,7 @@ describe("activity sheet capture", () => {
 
     expect(screen.queryByRole("button", { name: "Record sheet" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Record and close" })).toBeNull();
-    expect(screen.queryByRole("tab", { name: "Journey" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Passenger transport" })).toBeNull();
   });
 
   /**
@@ -393,7 +393,7 @@ describe("activity sheet capture", () => {
       renderScreen({ ...clerk, enabledPresets: ["TRUCKING"] });
 
       expect(screen.queryByRole("tablist")).toBeNull();
-      expect(screen.queryByRole("tab", { name: "Journey" })).toBeNull();
+      expect(screen.queryByRole("tab", { name: "Passenger transport" })).toBeNull();
       expect(screen.queryByRole("tab", { name: "Haulage job" })).toBeNull();
 
       // Haulage is what TRUCKING means, so its fields are the ones on screen.
@@ -419,7 +419,7 @@ describe("activity sheet capture", () => {
     it("keeps the switcher for a workspace running both", () => {
       renderScreen({ ...clerk, enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"] });
 
-      expect(screen.getByRole("tab", { name: "Journey" })).not.toBeNull();
+      expect(screen.getByRole("tab", { name: "Passenger transport" })).not.toBeNull();
       expect(screen.getByRole("tab", { name: "Haulage job" })).not.toBeNull();
     });
   });
@@ -490,7 +490,7 @@ describe("activity sheet capture", () => {
     await waitFor(() => expect(screen.queryByLabelText("Seats sold")).toBeNull());
     await user.type(screen.getByLabelText("Cargo"), "Bagged cement");
 
-    await user.click(screen.getByRole("tab", { name: "Journey" }));
+    await user.click(screen.getByRole("tab", { name: "Passenger transport" }));
 
     // The vehicle and its times came off the same paper sheet either way.
     await waitFor(() =>

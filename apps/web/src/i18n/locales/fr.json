@@ -841,7 +841,7 @@
     "record": {
       "subtitle": "Reprenez la feuille de route papier de haut en bas. Tout ce qui n'y figure pas peut rester vide.",
       "templateLegend": "Type de fiche",
-      "journeyTab": "Voyage",
+      "journeyTab": "Transport de voyageurs",
       "haulageTab": "Transport de marchandises",
       "sections": {
         "references": "Références",
@@ -973,7 +973,7 @@
         "personLabel": "Personne concernée (facultatif)",
         "choosePerson": "Aucune personne",
         "attributeLabel": "Imputer à cette activité",
-        "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche.",
+        "attributeHint": "Décochez si la somme revient à l'engin et non à l'activité : une réparation reste hors de la fiche.",
         "rowAttribute": "Imputer la ligne {position} à cette activité",
         "rowDirection": "Sens de la ligne {position}",
         "rowCategory": "Catégorie de la ligne {position}",

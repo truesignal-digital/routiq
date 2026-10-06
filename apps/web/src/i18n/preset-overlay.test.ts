@@ -96,6 +96,26 @@ describe("preset overlays", () => {
   }
 });
 
+// The base catalog says "activité"/"activity"; each preset brings its own trip
+// noun. A base string that names the trip itself shows one fleet the other's word.
+const TRIP_NOUN = /\b(trajets?|voyages?|trips?|journeys?)\b/i;
+
+describe("trip noun in the base activities catalog", () => {
+  for (const locale of LOCALES) {
+    it(`${locale}: every activities.* string naming the trip is overlaid by every preset`, () => {
+      const offenders = flattenKeys(BASE[locale])
+        .filter((key) => key.startsWith("activities."))
+        .filter((key) => TRIP_NOUN.test(String(at(BASE[locale], key))))
+        .flatMap((key) =>
+          TEMPLATE_CODES.filter(
+            (preset) => at(PRESET_VOCABULARIES[preset][locale], key) === undefined,
+          ).map((preset) => `${key} (${preset})`),
+        );
+      expect(offenders).toEqual([]);
+    });
+  }
+});
+
 describe("presetVocabularyFor", () => {
   it("returns nothing while /v1/me is loading", () => {
     expect(presetVocabularyFor(undefined)).toBeUndefined();
@@ -139,6 +159,36 @@ describe("applyPresetVocabulary", () => {
       expect(instance.t("activities.detail.moneySummary.ownOnly", { lng: "fr" }), preset).toContain(word);
       expect(instance.t("activities.detail.moneySummary.branchOnly", { lng: "fr" }), preset).toContain(word);
       expect(instance.t("activities.detail.moneySummary.ownOnly", { lng: "en" }), preset).toContain("this trip");
+    }
+  });
+
+  it("names the trip in each fleet's own word on the trip sheet", () => {
+    const instance = freshInstance();
+
+    // A mixed fleet sees the sheet-type tabs and the base words, so neither
+    // may borrow one preset's trip noun.
+    for (const lng of LOCALES) {
+      for (const key of [
+        "activities.record.subtitle",
+        "activities.record.journeyTab",
+        "activities.record.entries.attributeHint",
+      ]) {
+        expect(instance.t(key, { lng }), `${key} ${lng}`).not.toMatch(TRIP_NOUN);
+      }
+    }
+    expect(instance.t("activities.record.journeyTab", { lng: "fr" })).toBe(
+      "Transport de voyageurs",
+    );
+
+    for (const [preset, word] of [
+      ["TRUCKING", "non au trajet"],
+      ["PASSENGER_TRANSPORT", "non au voyage"],
+    ] as const) {
+      applyPresetVocabulary(instance, preset);
+      expect(instance.t("activities.record.entries.attributeHint", { lng: "fr" }), preset).toContain(word);
+      expect(instance.t("activities.record.entries.attributeHint", { lng: "en" }), preset).toContain(
+        "rather than the trip",
+      );
     }
   });
 
