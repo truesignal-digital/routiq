@@ -326,6 +326,26 @@ export async function appendAuditEvent(
   await writeAuditEvent(tx, "WORKSPACE", ctx.workspaceId, ctx.principalId, envelope, event);
 }
 
+/**
+ * A command that succeeds without changing anything (the end state was already
+ * the one asked for) still ran, and every committed command leaves an audit
+ * event (#153). The event is filed against the command itself, so the record's
+ * own history gains no line for a change that did not happen.
+ */
+export async function appendNoChangeAuditEvent(
+  tx: Tx,
+  ctx: CommandContext,
+  envelope: CommandEnvelope,
+  afterState: Record<string, unknown>,
+): Promise<void> {
+  await appendAuditEvent(tx, ctx, envelope, {
+    eventType: "command.no_change",
+    entityType: "command",
+    entityId: envelope.commandId,
+    afterState,
+  });
+}
+
 /** Same append-only trail, for an actor who is not a member of the workspace it lands in. */
 export async function appendPlatformAuditEvent(
   tx: Tx,
