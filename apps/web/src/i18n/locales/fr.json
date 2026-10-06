@@ -742,8 +742,8 @@
         "postedOnly": "comptabilisé seulement",
         "pending": "En attente d'approbation",
         "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat.",
-        "ownOnly": "Seules les écritures que vous avez saisies sur ce trajet.",
-        "branchOnly": "Seules les écritures de vos agences sur ce trajet."
+        "ownOnly": "Seules les écritures que vous avez saisies sur cette activité.",
+        "branchOnly": "Seules les écritures de vos agences sur cette activité."
       }
     },
     "actions": {

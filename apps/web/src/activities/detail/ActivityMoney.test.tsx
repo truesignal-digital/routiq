@@ -113,7 +113,7 @@ describe("activity money card", () => {
 
     expect(screen.getByRole("link", { name: /FIN-2026-0001/ })).toBeDefined();
     expect(screen.queryByText("Net")).toBeNull();
-    expect(screen.getByText("Only the entries you recorded on this trip.")).toBeDefined();
+    expect(screen.getByText("Only the entries you recorded on this activity.")).toBeDefined();
   });
 
   it("links each line to its finance entry", () => {

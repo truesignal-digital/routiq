@@ -398,12 +398,12 @@ describe("activity detail — a reader the server keeps the ledger from (#103)",
 describe("activity detail — whose entries the money card lists (#408)", () => {
   const sentences = {
     en: {
-      own: "Only the entries you recorded on this trip.",
-      branch: "Only the entries of your branches on this trip.",
+      own: "Only the entries you recorded on this activity.",
+      branch: "Only the entries of your branches on this activity.",
     },
     "fr-CM": {
-      own: "Seules les écritures que vous avez saisies sur ce trajet.",
-      branch: "Seules les écritures de vos agences sur ce trajet.",
+      own: "Seules les écritures que vous avez saisies sur cette activité.",
+      branch: "Seules les écritures de vos agences sur cette activité.",
     },
   } as const;
 
