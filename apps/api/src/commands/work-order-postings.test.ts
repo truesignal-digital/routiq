@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
 import {
+  approvalRules,
   branches,
   financialEntries,
   financialPostings,
@@ -35,6 +36,7 @@ describe("work-order cost attribution", () => {
   let yaoundeAssetId: string;
   let workOrderId: string;
   let otherWorkspaceWorkOrderId: string;
+  let doualaBranchId: string;
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -42,6 +44,7 @@ describe("work-order cost attribution", () => {
 
     const seeded = await seedWorkspace(db);
     workspaceId = seeded.workspace.id;
+    doualaBranchId = seeded.branch.id;
     const [yaounde] = await db
       .insert(branches)
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
@@ -544,6 +547,96 @@ describe("work-order cost attribution", () => {
         error: { code: "ROLE_FORBIDDEN", metadata: { reason: "WORK_ORDER_COST_FORBIDDEN" } },
       });
       expect(await postingsOf(entryId)).toMatchObject([{ workOrderId: null }]);
+    });
+  });
+
+  describe("a work order collects costs only (#432)", () => {
+    it("refuses revenue naming a work order from the managers, and writes nothing", async () => {
+      for (const [role, token] of [
+        ["DIRECTOR", directorToken],
+        ["ADMIN", adminToken],
+      ] as const) {
+        for (const postings of [
+          [{ assetId, workOrderId, amountMinor: 20_000 }],
+          [
+            { assetId, amountMinor: 10_000 },
+            { workOrderId, amountMinor: 10_000 },
+          ],
+        ]) {
+          const { response, entryId } = await recordRepairExpense(
+            postings,
+            20_000,
+            token,
+            "record-revenue",
+          );
+          expect(response.statusCode, role).toBe(422);
+          expect(response.json(), role).toMatchObject({
+            error: { code: "WORK_ORDER_COST_ONLY", metadata: { workOrderId } },
+          });
+          expect(
+            await db.select().from(financialEntries).where(eq(financialEntries.id, entryId)),
+            role,
+          ).toHaveLength(0);
+        }
+      }
+    });
+
+    it("still takes the managers' revenue on the vehicle", async () => {
+      for (const [role, token] of [
+        ["DIRECTOR", directorToken],
+        ["ADMIN", adminToken],
+      ] as const) {
+        const { response } = await recordRepairExpense(
+          [{ assetId, amountMinor: 20_000 }],
+          20_000,
+          token,
+          "record-revenue",
+        );
+        expect(response.statusCode, role).toBe(200);
+      }
+    });
+
+    it("refuses moving a pending revenue onto a work order", async () => {
+      const [rule] = await db
+        .insert(approvalRules)
+        .values({
+          workspaceId,
+          commandType: "record-revenue",
+          categoryCode: "FREIGHT_REVENUE",
+          branchId: doualaBranchId,
+          amountMinMinor: 0n,
+          amountMaxMinor: 1_000_000n,
+          requiredRole: "DIRECTOR",
+          createdByCommandId: null,
+        })
+        .returning({ id: approvalRules.id });
+      try {
+        const { response, entryId } = await recordRepairExpense(
+          [{ assetId, amountMinor: 30_000 }],
+          30_000,
+          adminToken,
+          "record-revenue",
+        );
+        expect(response.json()).toMatchObject({ recordStatus: "SUBMITTED" });
+        const edit = await post(
+          adminToken,
+          "update-pending-entry",
+          {
+            entryId,
+            categoryCode: "FREIGHT_REVENUE",
+            economicDate: "2026-08-12",
+            amountMinor: 30_000,
+            paymentMethod: "CASH",
+            postings: [{ assetId, workOrderId, amountMinor: 30_000 }],
+          },
+          { expectedVersion: 1 },
+        );
+        expect(edit.statusCode).toBe(422);
+        expect(edit.json()).toMatchObject({ error: { code: "WORK_ORDER_COST_ONLY" } });
+        expect(await postingsOf(entryId)).toMatchObject([{ workOrderId: null }]);
+      } finally {
+        await db.delete(approvalRules).where(eq(approvalRules.id, rule!.id));
+      }
     });
   });
 

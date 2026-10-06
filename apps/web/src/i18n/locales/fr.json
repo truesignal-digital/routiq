@@ -161,6 +161,7 @@
     "WORK_ORDER_NOT_COMPLETED": "Aucun ordre de travail terminé ne répond au problème qui a immobilisé cet actif. Terminez les travaux avant la remise en service.",
     "WORK_ORDER_ISSUE_MISMATCH": "Cet ordre de travail ne répond pas au problème qui a immobilisé l'actif.",
     "WORK_ORDER_NOT_OPEN": "Cet ordre de travail n'est pas en cours : un coût ne peut y être imputé qu'une fois l'ordre approuvé, et tant qu'il n'est ni terminé, ni rejeté, ni annulé.",
+    "WORK_ORDER_COST_ONLY": "Un ordre de travail ne reçoit que des coûts. Enregistrez cette recette sur le véhicule, sans ordre de travail.",
     "WORK_ORDER_COST_MISSING": "Indiquez le coût de la réparation, ou choisissez « Aucun coût » ou « Facture pas encore reçue ».",
     "WORK_ORDER_HAS_COSTS": "Des coûts ont déjà été enregistrés sur cet ordre de travail. Rouvrez le formulaire pour les voir.",
     "HUMAN_PRINCIPAL_REQUIRED": "Cette action doit être faite par une personne, pas par une intégration ni un agent automatique.",

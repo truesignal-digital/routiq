@@ -438,10 +438,12 @@ export function registerMaintenanceReadRoutes(
 
           // A cost line is a financial record: its entry's branch is read
           // against the actor's scope, whatever branch the truck is in now.
-          // REJECTED spend was refused and is not a cost of this repair.
+          // REJECTED spend was refused and is not a cost of this repair, nor
+          // is revenue that named the order before #432 refused it.
           const costConditions: SQL[] = [
             eq(financialPostings.workspaceId, auth.workspaceId),
             eq(financialPostings.workOrderId, workOrderId),
+            eq(financialPostings.direction, "EXPENSE"),
             inArray(financialEntries.status, ["POSTED", "REVERSED", "SUBMITTED"]),
           ];
           if (auth.branchScope !== "ALL") {
