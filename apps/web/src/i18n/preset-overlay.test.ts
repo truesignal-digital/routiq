@@ -114,6 +114,30 @@ describe("trip noun in the base catalog", () => {
     });
   }
 
+  // The test above can't see a base string that slides back to "trip" once
+  // every preset overlays it, yet a mixed fleet reads the base. The trip's own
+  // sections therefore stay neutral in the base catalog, overlaid or not.
+  const NEUTRAL_SECTIONS = ["activities.", "vehicle."];
+  // ICU select and plural case keys (`trip {Back to the activity}`) are code,
+  // not words on screen; a placeholder (`Trip {number}`) is not a case key.
+  const withoutCaseKeys = (message: string) => message.replace(/\b\w+\s*\{(?!\s*\w+\s*[,}])/g, "{");
+
+  it("ignores ICU case keys but not a noun before a placeholder", () => {
+    expect(TRIP_NOUN.test(withoutCaseKeys("{kind, select, trip {Back to the activity} other {Back}}"))).toBe(false);
+    expect(TRIP_NOUN.test(withoutCaseKeys("Trip {number} · {type}"))).toBe(true);
+    expect(TRIP_NOUN.test(withoutCaseKeys("{count, plural, one {# trip} other {# trips}}"))).toBe(true);
+  });
+
+  for (const locale of LOCALES) {
+    it(`${locale}: activity and vehicle strings in the base catalog never name the trip`, () => {
+      const offenders = flattenKeys(BASE[locale])
+        .filter((key) => NEUTRAL_SECTIONS.some((section) => key.startsWith(section)))
+        .filter((key) => TRIP_NOUN.test(withoutCaseKeys(String(at(BASE[locale], key)))))
+        .map((key) => `${key}: ${String(at(BASE[locale], key))}`);
+      expect(offenders).toEqual([]);
+    });
+  }
+
   // French has a word per fleet, so an overlay copied from the other preset
   // shows up as the other fleet's noun.
   const FOREIGN_TRIP_NOUN: Record<TemplateCode, RegExp> = {
