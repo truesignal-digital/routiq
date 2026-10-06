@@ -29,7 +29,15 @@
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21376
+    "ceiling": 21493,
+    "raises": [
+      {
+        "date": "2026-10-06",
+        "from": 21376,
+        "to": 21493,
+        "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      }
+    ]
   },
   "web.initial-js-gzip": {
     "ceiling": 561383,

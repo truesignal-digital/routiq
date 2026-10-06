@@ -15,6 +15,7 @@ import { assertPlateFree } from "./asset-identity.js";
 import { assetBranchIds } from "./branch-authorization.js";
 import {
   appendAuditEvent,
+  appendNoChangeAuditEvent,
   CommandError,
   registerCommand,
   type CommandDefinition,
@@ -188,8 +189,9 @@ export const updateAssetDetails: CommandDefinition<UpdateAssetDetailsPayload> = 
     }
     if (!isDeepStrictEqual(customValues, current.customValues)) changes.customValues = customValues;
 
-    // Everything asked for is already so: nothing to write, nothing to audit.
+    // Everything asked for is already so: the asset is not written.
     if (Object.keys(changes).length === 0) {
+      await appendNoChangeAuditEvent(tx, ctx, envelope, { assetId: current.id, rowVersion: current.rowVersion });
       return { recordId: current.id, rowVersion: current.rowVersion };
     }
 
