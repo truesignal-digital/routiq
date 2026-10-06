@@ -27,6 +27,8 @@ describe("work-order cost attribution", () => {
   let approverToken: string;
   let maintenanceToken: string;
   let driverToken: string;
+  let cashierToken: string;
+  let directorToken: string;
   let doualaManagerToken: string;
   let assetId: string;
   let otherAssetId: string;
@@ -46,7 +48,7 @@ describe("work-order cost attribution", () => {
       .returning();
 
     const session = async (
-      role: "ADMIN" | "FINANCE" | "TECHNICIAN" | "DRIVER",
+      role: "DIRECTOR" | "ADMIN" | "FINANCE" | "CASHIER" | "TECHNICIAN" | "DRIVER",
       scope: { allBranches: true } | { branchIds: string[] },
     ) => {
       const member = await seedMember(db, { workspaceId, role, ...scope });
@@ -58,6 +60,8 @@ describe("work-order cost attribution", () => {
     approverToken = await session("FINANCE", { allBranches: true });
     maintenanceToken = await session("TECHNICIAN", { allBranches: true });
     driverToken = await session("DRIVER", { allBranches: true });
+    cashierToken = await session("CASHIER", { allBranches: true });
+    directorToken = await session("DIRECTOR", { allBranches: true });
     doualaManagerToken = await session("ADMIN", {
       branchIds: [seeded.branch.id],
     });
@@ -448,6 +452,98 @@ describe("work-order cost attribution", () => {
         driverToken,
       );
       expect(response.statusCode).toBe(200);
+    });
+  });
+
+  describe("Finance and the Cashier book no cost on a work order (#414)", () => {
+    const moneyRoles = () => [
+      ["FINANCE", approverToken],
+      ["CASHIER", cashierToken],
+    ] as const;
+
+    it.each(["record-expense", "record-revenue"])(
+      "refuses %s from either with a line that names a work order, and writes nothing",
+      async (command) => {
+        for (const [role, token] of moneyRoles()) {
+          for (const postings of [
+            [{ assetId, workOrderId, amountMinor: 10_000 }],
+            [
+              { assetId, amountMinor: 5_000 },
+              { assetId, workOrderId, amountMinor: 5_000 },
+            ],
+          ]) {
+            const { response, entryId } = await recordRepairExpense(
+              postings,
+              10_000,
+              token,
+              command,
+            );
+            expect(response.statusCode, role).toBe(403);
+            expect(response.json(), role).toMatchObject({
+              error: { code: "ROLE_FORBIDDEN", metadata: { reason: "WORK_ORDER_COST_FORBIDDEN" } },
+            });
+            expect(
+              await db.select().from(financialEntries).where(eq(financialEntries.id, entryId)),
+            ).toHaveLength(0);
+          }
+        }
+      },
+    );
+
+    it("still takes their expenses on the vehicle", async () => {
+      for (const [role, token] of moneyRoles()) {
+        const { response } = await recordRepairExpense(
+          [{ assetId, amountMinor: 10_000 }],
+          10_000,
+          token,
+        );
+        expect(response.statusCode, role).toBe(200);
+      }
+    });
+
+    it("still takes the cost from the workshop and the managers", async () => {
+      for (const [role, token] of [
+        ["DIRECTOR", directorToken],
+        ["ADMIN", adminToken],
+        ["TECHNICIAN", maintenanceToken],
+      ] as const) {
+        const { response, entryId } = await recordRepairExpense(
+          [{ assetId, workOrderId, amountMinor: 10_000 }],
+          10_000,
+          token,
+        );
+        expect(response.statusCode, role).toBe(200);
+        expect(await postingsOf(entryId), role).toMatchObject([{ workOrderId }]);
+      }
+    });
+
+    // Finance's own entries post at any amount under the default rules, so the
+    // Cashier's, above the recording band, is the one left pending.
+    it("refuses moving a pending entry of the Cashier's onto a work order", async () => {
+      const { response, entryId } = await recordRepairExpense(
+        [{ assetId, amountMinor: 150_000 }],
+        150_000,
+        cashierToken,
+      );
+      expect(response.json()).toMatchObject({ recordStatus: "SUBMITTED" });
+      const edit = await post(
+        cashierToken,
+        "update-pending-entry",
+        {
+          entryId,
+          categoryCode: "REPAIRS",
+          economicDate: "2026-08-12",
+          amountMinor: 150_000,
+          paymentMethod: "CASH",
+          postings: [{ assetId, workOrderId, amountMinor: 150_000 }],
+        },
+        { expectedVersion: 1 },
+      );
+      expect(edit.statusCode).toBe(403);
+      expect(edit.json()).toMatchObject({
+        error: { code: "ROLE_FORBIDDEN", metadata: { reason: "WORK_ORDER_COST_FORBIDDEN" } },
+      });
+      expect(await postingsOf(entryId)).toMatchObject([{ workOrderId: null }]);
     });
   });
 
