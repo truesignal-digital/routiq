@@ -76,7 +76,7 @@ person held before.
 | Trips | Start, pause and end a trip on the phone *(planned)* | — | V | — | — | — | ✓ own |
 | Trips | Schedule calendar *(planned)* | ✓ | ✓ | — | — | — | V own |
 | Trips | Driver page and performance *(planned)* | ✓ | ✓ | — | — | — | V own |
-| Money | Record an expense (fuel, tolls, parts) | ✓ | ✓ | ✓ | ✓ | S on work orders | S |
+| Money | Record an expense (fuel, tolls, parts) | ✓ | ✓ | ✓ not on work orders | ✓ not on work orders | S on work orders | S not on work orders |
 | Money | Record revenue | ✓ | ✓ | ✓ | ✓ | — | — |
 | Money | Attach a receipt or photo | ✓ | ✓ | ✓ | ✓ | ✓ own | ✓ own |
 | Money | Approve or reject an entry | A | — | A | — | — | — |

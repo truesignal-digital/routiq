@@ -1,4 +1,5 @@
 import {
+  canBookWorkOrderCost,
   canReadEntries,
   canReadLedger,
   moneyReadScope,
@@ -126,18 +127,17 @@ export function canAttachEvidence(
 }
 
 /**
- * A cost booked against an approved work order. The workshop records expenses
- * only this way (the handler refuses its expenses without a work order), so
- * this is record-expense's list plus TECHNICIAN, minus DRIVER, whose lines the
- * handler refuses when they name a work order.
+ * A cost booked against an approved work order: the server's own list
+ * (`canBookWorkOrderCost`), with the books switched on.
  */
 export function canAddWorkOrderCost(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
-  if (role === "DRIVER") return false;
-  return canRecordFinance(role, enabledModules) || (
-    (enabledModules?.includes("FINANCE") ?? false) && role === "TECHNICIAN"
+  return (
+    (enabledModules?.includes("FINANCE") ?? false) &&
+    role !== undefined &&
+    canBookWorkOrderCost(role)
   );
 }
 

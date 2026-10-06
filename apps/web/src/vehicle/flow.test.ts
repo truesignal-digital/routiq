@@ -143,9 +143,13 @@ describe("a work order's next step, per role", () => {
     const keys = (role: Role) =>
       workOrderSteps(approved, viewer(role)).offered.map((offered) => offered.step.key);
     expect(keys("TECHNICIAN")).toEqual(["complete-work-order", "add-cost", "cancel-work-order"]);
-    // Roles reference, "Add parts and labour to a work order": Chauffeur — (#410).
+    // Roles reference, "Add parts and labour to a work order": Finance,
+    // Caissier and Chauffeur — (#410, #414).
     expect(keys("DRIVER")).toEqual([]);
-    expect(keys("CASHIER")).toEqual(["add-cost"]);
+    expect(keys("CASHIER")).toEqual([]);
+    expect(keys("FINANCE")).toEqual([]);
+    expect(keys("ADMIN")).toContain("add-cost");
+    expect(keys("DIRECTOR")).toContain("add-cost");
     const submitted = groundingWorkOrder("SUBMITTED");
     expect(workOrderSteps(submitted, viewer("ADMIN")).offered.map((o) => o.step.key)).toContain(
       "approve-work-order",
