@@ -38,11 +38,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     mimeType: "image/png",
     buffer: receipt,
   });
-  await shot("receipt-chosen");
+  await shot("receipt-chosen", { caption: "A receipt image is chosen for the entry" });
   await dialog.getByRole("button", { name: t("Joindre le reçu", "Attach the receipt"), exact: true }).click();
   await dialog.waitFor({ state: "hidden", timeout: 20_000 });
   await quiet();
-  await shot("receipt-attached");
+  await shot("receipt-attached", { caption: "The receipt is uploaded and the entry shows its evidence as supplied" });
 
   const after = await apiGet(`/v1/finance/entries/${entry.id}`);
   const evidence = (after.body as { evidence?: { state?: string; artifactCount?: number } }).evidence;

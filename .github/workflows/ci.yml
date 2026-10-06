@@ -85,6 +85,10 @@ jobs:
 
       - run: pnpm --filter @routiq/web build
 
+      # First-load size ceilings from tools/metrics; they may only go down
+      # unless a raise is recorded with its reason.
+      - run: pnpm metrics
+
       # §6a guard 4: docker-compose.yml is the distribution artifact. Cheap
       # validity check only — the full cold-start boot is a nightly job.
       - name: Validate docker-compose.yml

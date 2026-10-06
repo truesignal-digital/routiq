@@ -266,6 +266,14 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "V1",
+    bad: [file("tools/verify/flows/trips.ts", 'await shot("trips-list");')],
+    good: [
+      file("tools/verify/flows/trips.ts", 'await shot("trips-list", { caption: "Trips list" });'),
+      file("tools/verify/browser.ts", 'await shot("home");'),
+    ],
+  },
+  {
     id: "P1",
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],

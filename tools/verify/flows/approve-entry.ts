@@ -24,14 +24,14 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await page.getByRole("navigation", { name: t("Sections financières", "Finance sections") }).getByRole("tab", { name: new RegExp(`^${t("Approbations", "Approvals")}`) }).click();
   await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
   await quiet();
-  await shot("approvals-queue");
+  await shot("approvals-queue", { caption: `Approvals queue: ${entry.entryNumber} waits for this role's decision` });
 
   await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
   // Approve is one tap: the menu item sends the command, no dialog first.
   await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await quiet();
-  await shot("approved");
+  await shot("approved", { caption: `Approved in one tap from the row menu: ${entry.entryNumber} is posted` });
 
   const after = await apiGet(`/v1/finance/entries/${entry.id}`);
   const status = (after.body as { status?: string }).status;

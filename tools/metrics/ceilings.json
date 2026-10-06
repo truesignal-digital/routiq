@@ -1,0 +1,11 @@
+{
+  "web.all-js-gzip": {
+    "ceiling": 555624
+  },
+  "web.initial-css-gzip": {
+    "ceiling": 21376
+  },
+  "web.initial-js-gzip": {
+    "ceiling": 555624
+  }
+}
