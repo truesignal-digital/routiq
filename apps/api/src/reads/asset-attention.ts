@@ -3,6 +3,7 @@ import {
   ATTENTION_ITEM_LIMIT,
   canReadDocuments,
   canReadLedger,
+  canReadWorkOrderCosts,
   DOCUMENT_EXPIRING_WINDOW_DAYS,
   type AssetAttentionItem,
   type AttentionSeverity,
@@ -233,6 +234,7 @@ async function maintenanceItems(
     });
   }
 
+  const costsVisible = canReadWorkOrderCosts(auth.role);
   for (const order of orders) {
     const subject = {
       entityType: "work_order" as const,
@@ -240,15 +242,19 @@ async function maintenanceItems(
       number: null,
       rowVersion: order.rowVersion,
     };
-    const costs = {
-      ...(order.expectedCostMinor === null
-        ? {}
-        : { expectedCostMinor: serializeMinor(order.expectedCostMinor) }),
-      ...(order.actualCostMinor === null
-        ? {}
-        : { actualCostMinor: serializeMinor(BigInt(order.actualCostMinor)) }),
-      currency: order.currency,
-    };
+    // Absent for a caller who may not read work-order costs (#390): the
+    // sentence without an amount, never a zero.
+    const costs = !costsVisible
+      ? {}
+      : {
+          ...(order.expectedCostMinor === null
+            ? {}
+            : { expectedCostMinor: serializeMinor(order.expectedCostMinor) }),
+          ...(order.actualCostMinor === null
+            ? {}
+            : { actualCostMinor: serializeMinor(BigInt(order.actualCostMinor)) }),
+          currency: order.currency,
+        };
     if (order.status === "SUBMITTED") {
       const maker = creators.get(order.createdByCommandId)?.principalId;
       items.push({

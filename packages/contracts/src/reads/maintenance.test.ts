@@ -243,7 +243,7 @@ describe("work order detail contract", () => {
       ...detail,
       costLines: [{ ...detail.costLines[0]!, amountMinor: -58_000 }],
     };
-    expect(workOrderDetail.parse(reversed).costLines[0]?.amountMinor).toBe(
+    expect(workOrderDetail.parse(reversed).costLines?.[0]?.amountMinor).toBe(
       -58_000,
     );
   });
@@ -270,6 +270,18 @@ describe("work order detail contract", () => {
         costLines: [{ ...detail.costLines[0]!, entryStatus: "REJECTED" }],
       }).success,
     ).toBe(false);
+  });
+
+  it("withholds every amount from a reader without work-order costs (#390)", () => {
+    const withheld = {
+      ...detail,
+      expectedCostMinor: null,
+      actualCostMinor: null,
+      declaredCostMinor: null,
+      costLines: null,
+      pendingCostLines: null,
+    };
+    expect(workOrderDetail.parse(withheld)).toEqual(withheld);
   });
 
   it("rejects a detail missing its chronologie", () => {

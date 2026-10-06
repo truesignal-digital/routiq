@@ -237,7 +237,7 @@ describe("complete-work-order.v2", () => {
       expect(read.actualCostMinor).toBe(50_000);
       expect(read.costOutcome).toBe("LINES");
       expect(read.declaredCostMinor).toBeNull();
-      expect(read.costLines.map((costLine) => costLine.entryId)).toEqual([repair.entryId]);
+      expect(read.costLines!.map((costLine) => costLine.entryId)).toEqual([repair.entryId]);
     });
 
     it("records zero cost explicitly with NO_COST", async () => {
@@ -302,7 +302,7 @@ describe("complete-work-order.v2", () => {
       expect(response.status).toBe(200);
       const read = await detail(boris.token, workOrderId);
       expect(read.actualCostMinor).toBe(85_000);
-      expect(read.costLines.find((costLine) => costLine.entryId === labour.entryId)).toMatchObject({
+      expect(read.costLines!.find((costLine) => costLine.entryId === labour.entryId)).toMatchObject({
         description: "Main d'œuvre",
         amountMinor: 25_000,
       });
@@ -458,7 +458,7 @@ describe("complete-work-order.v2", () => {
       const read = await detail(boris.token, workOrderId);
       // A pending line is still a cost of the repair; only a rejected one is not.
       expect(read.actualCostMinor).toBe(190_000);
-      expect(read.pendingCostLines.map((costLine) => costLine.entryId)).toEqual([large.entryId]);
+      expect(read.pendingCostLines!.map((costLine) => costLine.entryId)).toEqual([large.entryId]);
 
       await api.ok(approver.token, "reject-entry", { entryId: large.entryId, reason: "Devis" }, {
         expectedVersion: 1,

@@ -8,7 +8,7 @@ import {
   toCompletionCost,
 } from "./close-cost.js";
 
-type Line = WorkOrderDetail["costLines"][number];
+type Line = NonNullable<WorkOrderDetail["costLines"]>[number];
 
 const line = (entryId: string, amountMinor: number, entryStatus: Line["entryStatus"] = "POSTED"): Line => ({
   postingId: `${entryId}-p`,

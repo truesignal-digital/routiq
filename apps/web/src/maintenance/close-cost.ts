@@ -52,7 +52,7 @@ export interface RecordedCost {
 export function recordedCost(
   detail: Pick<WorkOrderDetail, "costLines" | "pendingCostLines">,
 ): RecordedCost {
-  const lines = [...detail.costLines, ...detail.pendingCostLines];
+  const lines = [...(detail.costLines ?? []), ...(detail.pendingCostLines ?? [])];
   return {
     totalMinor: lines.reduce((sum, line) => sum + line.amountMinor, 0),
     count: lines.filter((line) => line.entryStatus !== "REVERSED" && line.amountMinor > 0)

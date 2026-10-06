@@ -168,7 +168,7 @@ function MaintenanceSection() {
 
 function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
   const { t, i18n } = useTranslation();
-  const { asset, viewer, panel } = useVehicle();
+  const { asset, viewer, panel, gates } = useVehicle();
   const locale = i18n.language;
   const active = isActiveWorkOrder(wo.status);
   const steps = workOrderSteps(wo, viewer, groundingFacts(asset));
@@ -223,22 +223,26 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       }
       aside={
         <>
-          <div className={cn(!active && "text-muted-foreground")}>
-            {closedWithoutCost !== null
-              ? closedWithoutCost
-              : wo.actualCostMinor !== null
-                ? money(wo.actualCostMinor)
-                : wo.expectedCostMinor !== null
-                  ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
-                  : t("vehicle.maintenance.noEstimate")}
-            {over && wo.expectedCostMinor !== null && wo.actualCostMinor !== null && (
-              <span className="ml-1 text-xs font-medium text-warning-foreground">
-                {t("vehicle.maintenance.overBudget", {
-                  percent: Math.round(((wo.actualCostMinor - wo.expectedCostMinor) / wo.expectedCostMinor) * 100),
-                })}
-              </span>
-            )}
-          </div>
+          {/* Without work-order costs (#390) the amounts never came: no line,
+              rather than a "No estimate" that would not be true. */}
+          {gates.workOrderCosts && (
+            <div className={cn(!active && "text-muted-foreground")}>
+              {closedWithoutCost !== null
+                ? closedWithoutCost
+                : wo.actualCostMinor !== null
+                  ? money(wo.actualCostMinor)
+                  : wo.expectedCostMinor !== null
+                    ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
+                    : t("vehicle.maintenance.noEstimate")}
+              {over && wo.expectedCostMinor !== null && wo.actualCostMinor !== null && (
+                <span className="ml-1 text-xs font-medium text-warning-foreground">
+                  {t("vehicle.maintenance.overBudget", {
+                    percent: Math.round(((wo.actualCostMinor - wo.expectedCostMinor) / wo.expectedCostMinor) * 100),
+                  })}
+                </span>
+              )}
+            </div>
+          )}
           <div className="text-xs text-muted-foreground">
             {wo.completedAt !== null
               ? t("vehicle.maintenance.doneOn", { date: formatDate(wo.completedAt, locale) })

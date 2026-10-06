@@ -11,6 +11,8 @@ export interface VehicleGates {
   money: boolean;
   /** Entries one by one, as the server scopes them (a driver's own, #264). */
   entries: boolean;
+  /** A work order's estimate, actual cost and cost lines (everyone but the driver, #390). */
+  workOrderCosts: boolean;
   trips: boolean;
   documents: boolean;
 }
