@@ -70,10 +70,12 @@ async function onPhone(ctx: DriveContext, assetId: string): Promise<void> {
   const dialog = page.getByRole("dialog", { name: t("Signaler un problème", "Report a problem") });
   const takePhoto = dialog.getByRole("button", { name: t("Prendre une photo", "Take photo") });
   const chooseFile = dialog.getByRole("button", { name: t("Choisir un fichier", "Choose file") });
-  await takePhoto.scrollIntoViewIfNeeded();
-  if (!(await takePhoto.isVisible()) || !(await chooseFile.isVisible())) {
+  const missing = () => {
     throw new Error("the photo field offers no Take photo beside Choose file on a phone");
-  }
+  };
+  await takePhoto.waitFor({ timeout: 5_000 }).catch(missing);
+  await takePhoto.scrollIntoViewIfNeeded();
+  if (!(await takePhoto.isVisible()) || !(await chooseFile.isVisible())) missing();
   const camera = dialog.locator('input[type="file"][capture]');
   const accept = await camera.getAttribute("accept");
   const capture = await camera.getAttribute("capture");
