@@ -2136,7 +2136,8 @@
         "descriptionBesides": "Besides the repair above, what needs you on this vehicle.",
         "emptyTitle": "Nothing needs you right now.",
         "emptyTitleBesides": "Nothing else needs you on this vehicle.",
-        "emptyHint": "When something does, it shows up here with one button to handle it."
+        "emptyHint": "When something does, it shows up here with one button to handle it.",
+        "loadFailed": "We couldn't load what needs you on this vehicle."
       },
       "month": {
         "description": "This vehicle's share",
