@@ -220,6 +220,15 @@ describe("approval rules notice (#422)", () => {
         ),
       );
     expect(events).toHaveLength(1);
+    // The second command still committed, so it is audited against itself (#153).
+    const secondCommandId = second.body.commandId ?? "";
+    const secondEvents = await ctx.db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.commandId, secondCommandId));
+    expect(secondEvents).toEqual([
+      expect.objectContaining({ eventType: "command.no_change", entityType: "command", entityId: secondCommandId }),
+    ]);
     expect((await chainOf(t.FINANCE)).notice).toBeNull();
   });
 

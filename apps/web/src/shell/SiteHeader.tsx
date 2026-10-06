@@ -39,12 +39,17 @@ export function SiteHeader() {
   return (
     // One accent for "a branch is in force", the same whichever branch it is:
     // per-branch colours stop scaling past a handful and would be a colour-only
-    // signal. The branch's name in the pill is what identifies it.
+    // signal. The branch's name in the pill is what identifies it. The tint is
+    // a layer under the controls over the opaque colour: a translucent
+    // background colour would replace it and let scrolled content show
+    // through (#57). The sticky z-10 header is the stacking context that keeps
+    // the -z-10 layer above its own background.
     <header
       data-branch-scoped={scoped ? "true" : undefined}
       className={cn(
         "sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4",
-        scoped && "border-b-2 border-b-primary bg-primary/5",
+        scoped &&
+          "border-b-2 border-b-primary before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-primary/5",
       )}
     >
       <SidebarTrigger
