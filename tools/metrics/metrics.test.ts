@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { handRaised, initialAssets, judge, measureWebBuild, raise, tighten, type Ceilings, type Values } from "./metrics.js";
+import { NOISE_BYTES, handRaised, initialAssets, judge, measureWebBuild, raise, tighten, type Ceilings, type Values } from "./metrics.js";
 
 const values = (over: Partial<Values> = {}): Values => ({
   "web.initial-js-gzip": 100,
@@ -41,15 +41,21 @@ describe("measureWebBuild", () => {
 });
 
 describe("judge", () => {
-  const ceilings: Ceilings = { "web.initial-js-gzip": { ceiling: 100 }, "web.all-js-gzip": { ceiling: 310 } };
+  const ceilings: Ceilings = { "web.initial-js-gzip": { ceiling: 100_000 }, "web.all-js-gzip": { ceiling: 302_000 } };
+  const at = (over: Partial<Values>) => values({ "web.initial-js-gzip": 100_000, "web.all-js-gzip": 300_000, ...over });
 
-  it("passes at the ceiling, fails above it, asks to tighten below it, and reports unset ones", () => {
-    expect(judge(values(), ceilings).map((v) => [v.id, v.status])).toEqual([
+  it("passes at the ceiling, fails above it, asks to tighten well below it, and reports unset ones", () => {
+    expect(judge(at({}), ceilings).map((v) => [v.id, v.status])).toEqual([
       ["web.initial-js-gzip", "ok"],
       ["web.initial-css-gzip", "unset"],
       ["web.all-js-gzip", "stale"],
     ]);
-    expect(judge(values({ "web.initial-js-gzip": 101 }), ceilings)[0]?.status).toBe("over");
+    expect(judge(at({ "web.initial-js-gzip": 100_000 + NOISE_BYTES + 1 }), ceilings)[0]?.status).toBe("over");
+  });
+
+  it("treats a few bytes of commit-hash jitter either way as at the ceiling", () => {
+    expect(judge(at({ "web.initial-js-gzip": 100_003 }), ceilings)[0]?.status).toBe("ok");
+    expect(judge(at({ "web.initial-js-gzip": 99_990 }), ceilings)[0]?.status).toBe("ok");
   });
 });
 
@@ -65,33 +71,33 @@ describe("tighten", () => {
 });
 
 describe("handRaised", () => {
-  const base: Ceilings = { "web.initial-js-gzip": { ceiling: 100 } };
+  const base: Ceilings = { "web.initial-js-gzip": { ceiling: 100_000 } };
 
   it("flags a ceiling edited upward by hand", () => {
-    expect(handRaised({ "web.initial-js-gzip": { ceiling: 120 } }, base)).toEqual(["web.initial-js-gzip"]);
+    expect(handRaised({ "web.initial-js-gzip": { ceiling: 120_000 } }, base)).toEqual(["web.initial-js-gzip"]);
   });
 
   it("accepts a raise that pnpm metrics raise recorded, a lowered ceiling, and a new one", () => {
-    const raised = raise(values({ "web.initial-js-gzip": 120 }), base, "web.initial-js-gzip", "Charts on Home are the director's first screen", "2026-10-05");
+    const raised = raise(values({ "web.initial-js-gzip": 120_000 }), base, "web.initial-js-gzip", "Charts on Home are the director's first screen", "2026-10-05");
     expect(handRaised(raised, base)).toEqual([]);
-    expect(handRaised({ "web.initial-js-gzip": { ceiling: 90 } }, base)).toEqual([]);
+    expect(handRaised({ "web.initial-js-gzip": { ceiling: 90_000 } }, base)).toEqual([]);
     expect(handRaised({ "web.all-js-gzip": { ceiling: 999 } }, base)).toEqual([]);
   });
 });
 
 describe("raise", () => {
-  const ceilings: Ceilings = { "web.initial-js-gzip": { ceiling: 100 } };
+  const ceilings: Ceilings = { "web.initial-js-gzip": { ceiling: 100_000 } };
 
   it("records the reason next to the new ceiling", () => {
-    const next = raise(values({ "web.initial-js-gzip": 130 }), ceilings, "web.initial-js-gzip", "Charts on Home are the director's first screen", "2026-10-05");
+    const next = raise(values({ "web.initial-js-gzip": 130_000 }), ceilings, "web.initial-js-gzip", "Charts on Home are the director's first screen", "2026-10-05");
     expect(next["web.initial-js-gzip"]).toEqual({
-      ceiling: 130,
-      raises: [{ date: "2026-10-05", from: 100, to: 130, reason: "Charts on Home are the director's first screen" }],
+      ceiling: 130_000,
+      raises: [{ date: "2026-10-05", from: 100_000, to: 130_000, reason: "Charts on Home are the director's first screen" }],
     });
   });
 
   it("refuses without a real reason or without growth", () => {
-    expect(() => raise(values({ "web.initial-js-gzip": 130 }), ceilings, "web.initial-js-gzip", "needed", "2026-10-05")).toThrow(/reason/);
+    expect(() => raise(values({ "web.initial-js-gzip": 130_000 }), ceilings, "web.initial-js-gzip", "needed", "2026-10-05")).toThrow(/reason/);
     expect(() => raise(values(), ceilings, "web.initial-js-gzip", "a long enough reason here", "2026-10-05")).toThrow(/nothing to raise/);
   });
 });

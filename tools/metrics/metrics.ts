@@ -68,6 +68,16 @@ export function measureWebBuild(dist: string): Values {
   };
 }
 
+/**
+ * The build bakes the commit hash in, so gzip size moves by a few bytes from
+ * commit to commit with no code change. Inside this band a build is at its
+ * ceiling; a real change is far larger (1 kB is about 5 ms on a pilot phone).
+ */
+export const NOISE_BYTES = 64;
+
+/** A drop this large asks for `pnpm metrics tighten`; smaller ones are left until the next tighten. */
+export const TIGHTEN_BYTES = 1024;
+
 export type Verdict =
   | { id: MetricId; status: "unset"; value: number }
   | { id: MetricId; status: "ok"; value: number; ceiling: number }
@@ -79,8 +89,8 @@ export function judge(values: Values, ceilings: Ceilings): Verdict[] {
     const value = values[id];
     const ceiling = ceilings[id]?.ceiling;
     if (ceiling === undefined) return { id, status: "unset", value };
-    if (value > ceiling) return { id, status: "over", value, ceiling };
-    if (value < ceiling) return { id, status: "stale", value, ceiling };
+    if (value > ceiling + NOISE_BYTES) return { id, status: "over", value, ceiling };
+    if (value < ceiling - TIGHTEN_BYTES) return { id, status: "stale", value, ceiling };
     return { id, status: "ok", value, ceiling };
   });
 }
@@ -113,7 +123,7 @@ export function raise(values: Values, ceilings: Ceilings, id: MetricId, reason: 
   if (reason.trim().length < 15) throw new Error("--reason must say why the growth is worth it (15 characters or more)");
   const current = ceilings[id];
   if (current === undefined) throw new Error(`${id} has no ceiling yet; run pnpm metrics tighten`);
-  if (values[id] <= current.ceiling) throw new Error(`${id} is ${values[id]}, within its ceiling ${current.ceiling}; nothing to raise`);
+  if (values[id] <= current.ceiling + NOISE_BYTES) throw new Error(`${id} is ${values[id]}, within its ceiling ${current.ceiling} (+${NOISE_BYTES} B noise); nothing to raise`);
   const entry: Raise = { date, from: current.ceiling, to: values[id], reason: reason.trim() };
   return { ...ceilings, [id]: { ceiling: values[id], raises: [...(current.raises ?? []), entry] } };
 }
