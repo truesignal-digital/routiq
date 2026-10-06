@@ -156,7 +156,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
           ];
           failures.push(`${where}: ${reasons.join("; ")}`);
           log(`OVERFLOW ${where}: ${reasons.join("; ")}`);
-          await shot(`overflow-${account.username}-${lang}-${route}`);
+          await shot(`overflow-${account.username}-${lang}-${route}`, { caption: `${route} as ${account.username} (${lang}) at phone width: nothing scrolls sideways` });
         } else {
           log(`ok ${where}: ${scrollWidth} px`);
         }

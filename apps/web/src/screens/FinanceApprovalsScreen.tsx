@@ -112,7 +112,7 @@ export function FinanceApprovalsScreen() {
         enableSorting: true,
         meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="whitespace-nowrap tabular-nums">
             {row.original.entryNumber}
           </span>
         ),
@@ -181,8 +181,9 @@ export function FinanceApprovalsScreen() {
         id: "category",
         header: t("finance.entries.detail.category"),
         meta: { mobile: "primary", label: t("finance.entries.detail.category") },
-        cell: ({ row }) =>
-          localizedLabel(row.original.category),
+        cell: ({ row }) => (
+          <span className="whitespace-normal">{localizedLabel(row.original.category)}</span>
+        ),
       },
       {
         id: "amount",
@@ -194,7 +195,7 @@ export function FinanceApprovalsScreen() {
         meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
         cell: ({ row }) => (
           <span className="flex flex-col">
-            <span className="whitespace-nowrap font-mono font-semibold">
+            <span className="font-semibold whitespace-nowrap tabular-nums">
               {formatMoney(row.original.amountMinor, {
                 currency: row.original.currency,
                 sign: { context: "record" },
@@ -213,7 +214,9 @@ export function FinanceApprovalsScreen() {
           mobile: "secondary",
           label: t("finance.entries.detail.counterparty"),
         },
-        cell: ({ row }) => row.original.counterpartyName ?? "—",
+        cell: ({ row }) => (
+          <span className="whitespace-normal">{row.original.counterpartyName ?? "—"}</span>
+        ),
       },
     ],
     [branchOptions, i18n.resolvedLanguage, me?.principalId, t],
