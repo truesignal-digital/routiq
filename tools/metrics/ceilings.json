@@ -1,12 +1,18 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 559239,
+    "ceiling": 559360,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 555624,
         "to": 559239,
         "reason": "Field telemetry (ADR-0011): errors, vitals and journey timing, about 3.7 kB gzip; 1 kB costs a pilot phone about 5 ms of load (measured 2026-10-05)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559239,
+        "to": 559360,
+        "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
       }
     ]
   },
@@ -14,13 +20,19 @@
     "ceiling": 21376
   },
   "web.initial-js-gzip": {
-    "ceiling": 559239,
+    "ceiling": 559360,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 555624,
         "to": 559239,
         "reason": "Field telemetry (ADR-0011): errors, vitals and journey timing, about 3.7 kB gzip; 1 kB costs a pilot phone about 5 ms of load (measured 2026-10-05)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559239,
+        "to": 559360,
+        "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
       }
     ]
   }
