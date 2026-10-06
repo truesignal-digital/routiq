@@ -175,10 +175,6 @@
     "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
   },
   "assets": {
-    "identity": {
-      "plateTooLong": "L'immatriculation est trop longue ({max} caractères au plus).",
-      "chassisTooLong": "Le numéro de châssis est trop long ({max} caractères au plus)."
-    },
     "notify": {
       "success": {
         "registered": "Actif enregistré",
@@ -2009,6 +2005,7 @@
           "dateInFuture": "La date d'acquisition ne peut pas être dans le futur.",
           "amountWhole": "Saisissez le montant en francs, sans décimales.",
           "amountNeedsDate": "Ajoutez la date d'acquisition pour saisir un montant.",
+          "chassisTooLong": "Le numéro de châssis est trop long ({max} caractères au plus).",
           "notANumber": "Saisissez un nombre.",
           "fixFields": "Corrigez les champs en rouge, puis enregistrez de nouveau."
         }

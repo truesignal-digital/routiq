@@ -47,12 +47,12 @@ export const registerAssetCommand = z.object({
  * queued envelope still posting v1 keeps working; what it lets in, the Details
  * edit never re-checks unless that field itself is changed.
  */
-export const registerAssetV1Payload = registerAssetShape({
+export const registerAssetV1Payload = /* @__PURE__ */ registerAssetShape({
   registrationNumber: z.string().max(40),
   chassisNumber: z.string().max(60),
 });
 
-export const registerAssetV1Command = z.object({
+export const registerAssetV1Command = /* @__PURE__ */ z.object({
   name: z.literal("register-asset"),
   version: z.literal(1),
   envelope: commandEnvelope,

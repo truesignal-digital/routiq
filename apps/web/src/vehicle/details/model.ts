@@ -1,6 +1,6 @@
 import {
   assetDetailFields,
-  assetIdentityProblem,
+  CHASSIS_NUMBER_MAX_LENGTH,
   latestModelYear,
   MODEL_YEAR_MIN,
   TEMPLATE_FIELDS,
@@ -32,7 +32,6 @@ export type DetailsProblem =
   | "dateInFuture"
   | "amountWhole"
   | "amountNeedsDate"
-  | "plateTooLong"
   | "chassisTooLong"
   | "notANumber"
   | "invalid";
@@ -97,15 +96,14 @@ interface CheckContext {
   today: string;
 }
 
-/** The text a field holds, so two snapshots of the card can be compared. */
-function fieldText(values: DetailsFormValues, field: DetailsFieldName): string {
-  return field.startsWith("customValues.")
-    ? (values.customValues[field.slice("customValues.".length)] ?? "")
+const textOf = (values: DetailsFormValues, field: DetailsFieldName) =>
+  field.startsWith("customValues.")
+    ? values.customValues[field.slice("customValues.".length)]
     : values[field as Exclude<DetailsFieldName, `customValues.${string}`>];
-}
 
-const untouched = (values: DetailsFormValues, initial: DetailsFormValues, field: DetailsFieldName) =>
-  fieldText(values, field) === fieldText(initial, field);
+/** Whether a field holds other text than the card opened with. */
+const changedFrom = (initial: DetailsFormValues, values: DetailsFormValues) => (field: DetailsFieldName) =>
+  textOf(values, field) !== textOf(initial, field);
 
 /**
  * The same rules `update-asset-details` applies, asked of the contract's own
@@ -121,16 +119,14 @@ export function detailsProblems(
 ): Array<{ field: DetailsFieldName; problem: DetailsProblem }> {
   const problems: Array<{ field: DetailsFieldName; problem: DetailsProblem }> = [];
   const checkText = (
-    field: "manufacturer" | "model",
+    field: "registrationNumber" | "manufacturer" | "model",
   ) => {
     const value = trimmedOrNull(values[field]);
     if (value !== null && !assetDetailFields[field].safeParse(value).success) {
       problems.push({ field, problem: "invalid" });
     }
   };
-  if (assetIdentityProblem("registrationNumber", values.registrationNumber) !== undefined) {
-    problems.push({ field: "registrationNumber", problem: "plateTooLong" });
-  }
+  checkText("registrationNumber");
   checkText("manufacturer");
   checkText("model");
 
@@ -139,7 +135,8 @@ export function detailsProblems(
     problems.push({ field: "modelYear", problem: "yearRange" });
   }
 
-  if (assetIdentityProblem("chassisNumber", values.chassisNumber) !== undefined) {
+  const chassis = trimmedOrNull(values.chassisNumber);
+  if (chassis !== null && !assetDetailFields.chassisNumber.safeParse(chassis).success) {
     problems.push({ field: "chassisNumber", problem: "chassisTooLong" });
   }
 
@@ -165,7 +162,7 @@ export function detailsProblems(
       problems.push({ field: `customValues.${field.key}`, problem: "invalid" });
     }
   }
-  const changed = (field: DetailsFieldName) => !untouched(values, context.initial, field);
+  const changed = changedFrom(context.initial, values);
   return problems.filter(({ field, problem }) =>
     problem === "amountNeedsDate"
       ? changed("acquisitionDate") || changed("acquisitionAmount")
@@ -177,16 +174,15 @@ type Changes = Omit<UpdateAssetDetailsPayload, "assetId">;
 
 /**
  * Only what moved, as the command wants it: a cleared field is `null`, an
- * untouched one (still the text the card opened with) is absent. Undefined when nothing moved. Assumes the values
- * passed `detailsProblems`.
+ * untouched one (still the text the card opened with) is absent. Undefined
+ * when nothing moved. Assumes the values passed `detailsProblems`.
  */
 export function changedDetails(
   values: DetailsFormValues,
   asset: AssetDetail,
   context: { locale: string; money: boolean },
 ): Changes | undefined {
-  const initial = formValuesOf(asset, context.locale);
-  const changed = (field: DetailsFieldName) => !untouched(values, initial, field);
+  const changed = changedFrom(formValuesOf(asset, context.locale), values);
   const changes: Changes = {};
   for (const field of ["registrationNumber", "manufacturer", "model", "chassisNumber"] as const) {
     const next = trimmedOrNull(values[field]);
@@ -215,3 +211,4 @@ export function changedDetails(
 }
 
 export const YEAR_BOUNDS = { min: MODEL_YEAR_MIN, max: () => latestModelYear() };
+export { CHASSIS_NUMBER_MAX_LENGTH };

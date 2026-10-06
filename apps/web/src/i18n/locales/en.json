@@ -175,10 +175,6 @@
     "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
   },
   "assets": {
-    "identity": {
-      "plateTooLong": "The plate is too long ({max} characters at most).",
-      "chassisTooLong": "The chassis number is too long ({max} characters at most)."
-    },
     "notify": {
       "success": {
         "registered": "Asset registered",
@@ -2009,6 +2005,7 @@
           "dateInFuture": "The acquisition date can't be in the future.",
           "amountWhole": "Enter the amount in whole francs, without decimals.",
           "amountNeedsDate": "Add the acquisition date to record an amount.",
+          "chassisTooLong": "The chassis number is too long ({max} characters at most).",
           "notANumber": "Enter a number.",
           "fixFields": "Fix the fields in red, then save again."
         }

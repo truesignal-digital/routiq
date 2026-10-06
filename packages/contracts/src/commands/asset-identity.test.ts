@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assetIdentityProblem,
+  assetIdentityFields,
   CHASSIS_NUMBER_MAX_LENGTH,
   plateKey,
   REGISTRATION_NUMBER_MAX_LENGTH,
@@ -14,14 +14,15 @@ describe("asset identity rules", () => {
   });
 
   it("finds a value too long only past the limit, after trimming", () => {
-    expect(assetIdentityProblem("chassisNumber", "W".repeat(CHASSIS_NUMBER_MAX_LENGTH))).toBeUndefined();
-    expect(assetIdentityProblem("chassisNumber", ` ${"W".repeat(CHASSIS_NUMBER_MAX_LENGTH)} `)).toBeUndefined();
-    expect(assetIdentityProblem("chassisNumber", "W".repeat(CHASSIS_NUMBER_MAX_LENGTH + 1))).toBe("tooLong");
-    expect(assetIdentityProblem("registrationNumber", "P".repeat(REGISTRATION_NUMBER_MAX_LENGTH + 1))).toBe("tooLong");
+    const { chassisNumber, registrationNumber } = assetIdentityFields;
+    expect(chassisNumber.safeParse("W".repeat(CHASSIS_NUMBER_MAX_LENGTH)).success).toBe(true);
+    expect(chassisNumber.safeParse(` ${"W".repeat(CHASSIS_NUMBER_MAX_LENGTH)} `).success).toBe(true);
+    expect(chassisNumber.safeParse("W".repeat(CHASSIS_NUMBER_MAX_LENGTH + 1)).success).toBe(false);
+    expect(registrationNumber.safeParse("P".repeat(REGISTRATION_NUMBER_MAX_LENGTH + 1)).success).toBe(false);
   });
 
-  it("treats an empty value as not recorded, not as a problem", () => {
-    expect(assetIdentityProblem("registrationNumber", "")).toBeUndefined();
-    expect(assetIdentityProblem("chassisNumber", "   ")).toBeUndefined();
+  it("refuses a blank value: an empty field is no plate at all, sent as nothing", () => {
+    expect(assetIdentityFields.registrationNumber.safeParse("   ").success).toBe(false);
+    expect(assetIdentityFields.chassisNumber.safeParse("").success).toBe(false);
   });
 });

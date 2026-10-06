@@ -11,9 +11,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  assetIdentityFields,
+  CHASSIS_NUMBER_MAX_LENGTH,
+  REGISTRATION_NUMBER_MAX_LENGTH,
   registerAssetPayload,
   templateFieldIssues,
-  type AssetIdentityField,
   TEMPLATE_CODES,
   TEMPLATE_FIELDS,
 } from "@routiq/contracts";
@@ -50,29 +52,32 @@ import { createCommandIntent } from "@/commands/intent";
 import { FileUpload } from "@/components/ui/file-upload";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { ErrorBanner } from "@/components/error-banner.js";
-import { IDENTITY_MAX_LENGTH, identityMessage } from "@/assets/identity.js";
 
 /**
- * The plate and chassis number are held to the contract's rule in the Details
- * edit's words (`identityMessage`), not the payload schema's generic length
- * message: same rule, same sentence on both forms (#122). Checked on the field
- * itself so the message shows before the required fields are filled.
+ * The plate and chassis number follow the contract's rule in the Details edit's
+ * words, so both forms refuse the same value with the same sentence (#122). A
+ * blank one is none at all. Checked on the field itself so the message shows
+ * before the required fields are filled.
  */
-function identityField(field: AssetIdentityField, t: TFunction) {
+function identityField(field: keyof typeof assetIdentityFields, message: () => string) {
   return z
     .string()
     .optional()
-    .superRefine((value, ctx) => {
-      const message = identityMessage(field, value ?? "", t);
-      if (message !== undefined) ctx.addIssue({ code: "custom", message });
-    })
-    .transform((value) => (value === undefined || value.trim() === "" ? undefined : value.trim()));
+    .transform((value, ctx) => {
+      const text = value?.trim() || undefined;
+      if (text !== undefined && !assetIdentityFields[field].safeParse(text).success) {
+        ctx.addIssue({ code: "custom", message: message() });
+      }
+      return text;
+    });
 }
 
 function registerAssetForm(t: TFunction) {
   return registerAssetPayload.extend({
-    registrationNumber: identityField("registrationNumber", t),
-    chassisNumber: identityField("chassisNumber", t),
+    registrationNumber: identityField("registrationNumber", () => t("form.errors.invalid")),
+    chassisNumber: identityField("chassisNumber", () =>
+      t("vehicle.details.edit.errors.chassisTooLong", { max: CHASSIS_NUMBER_MAX_LENGTH }),
+    ),
   });
 }
 
@@ -308,7 +313,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.registrationNumber")}</FormLabel>
                   <FormControl>
                     <Input
-                      maxLength={IDENTITY_MAX_LENGTH.registrationNumber}
+                      maxLength={REGISTRATION_NUMBER_MAX_LENGTH}
                       {...textFieldProps(field)}
                     />
                   </FormControl>

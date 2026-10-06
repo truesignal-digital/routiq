@@ -21,25 +21,10 @@ export const assetIdentityFields = {
   chassisNumber: z.string().trim().min(1).max(CHASSIS_NUMBER_MAX_LENGTH),
 } as const;
 
-export type AssetIdentityField = keyof typeof assetIdentityFields;
-
 /**
  * `LT 482 AB`, `lt482ab` and `LT-482-AB` are one plate. The API compares
  * stored plates the same way in SQL; change both together.
  */
 export function plateKey(plate: string): string {
   return plate.replace(/[\s-]/g, "").toUpperCase();
-}
-
-/**
- * Why a typed value breaks the field's rule, for a form to word; undefined when
- * it passes. An empty value is no problem here: both fields are optional, and
- * an empty field means "not recorded".
- */
-export function assetIdentityProblem(
-  field: AssetIdentityField,
-  value: string,
-): "tooLong" | undefined {
-  if (value.trim() === "") return undefined;
-  return assetIdentityFields[field].safeParse(value).success ? undefined : "tooLong";
 }
