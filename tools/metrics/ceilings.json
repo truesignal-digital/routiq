@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561383,
+    "ceiling": 562627,
     "raises": [
       {
         "date": "2026-10-06",
@@ -25,6 +25,12 @@
         "from": 561051,
         "to": 561383,
         "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561383,
+        "to": 562627,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
       }
     ]
   },
@@ -40,7 +46,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561383,
+    "ceiling": 562627,
     "raises": [
       {
         "date": "2026-10-06",
@@ -65,6 +71,12 @@
         "from": 561051,
         "to": 561383,
         "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561383,
+        "to": 562627,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
       }
     ]
   }
