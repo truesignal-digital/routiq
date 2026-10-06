@@ -102,6 +102,7 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
     path: "branchCode",
     commands: [
       "register-asset.v1",
+      "register-asset.v2",
       "assign-asset.v1",
       "record-expense.v1",
       "record-revenue.v1",
