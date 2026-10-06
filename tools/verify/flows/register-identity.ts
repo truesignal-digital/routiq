@@ -19,7 +19,7 @@ async function openRegisterForm({ page, nav, t, quiet }: DriveContext, code: str
   await nav("/assets/new");
   await page.getByLabel(t("Code du camion", "Truck code"), { exact: true }).fill(code);
   await page.getByRole("combobox", { name: t("Classe d'actif", "Asset class") }).click();
-  await page.getByRole("option").first().click();
+  await page.getByRole("option", { name: t("Camion", "Truck"), exact: true }).click();
   // The shell's branch switcher carries the same name.
   const branch = page.locator("form").getByRole("combobox", { name: t("Agence", "Branch") });
   if ((await branch.textContent())?.includes(t("Choisir", "Choose")) ?? true) {
@@ -29,13 +29,18 @@ async function openRegisterForm({ page, nav, t, quiet }: DriveContext, code: str
   await quiet();
 }
 
-/** Outline the message when it shows; a build without the rule never shows it, and its run goes on. */
-async function ifShown(locator: Locator): Promise<{ highlight?: Locator }> {
-  const shown = await locator.waitFor({ timeout: 3000 }).then(
+/**
+ * Outline the field holding the message when it shows. A build without the
+ * rule registers the truck instead; outline its row in the trucks list then,
+ * so a before run shows what got in.
+ */
+async function outline(message: Locator, otherwise?: Locator): Promise<{ highlight?: Locator }> {
+  const shown = await message.waitFor({ timeout: 3000 }).then(
     () => true,
     () => false,
   );
-  return shown ? { highlight: locator } : {};
+  if (shown) return { highlight: message.locator("xpath=ancestor::*[@data-slot='form-item'][1]") };
+  return otherwise !== undefined && (await otherwise.count()) > 0 ? { highlight: otherwise } : {};
 }
 
 async function submit({ page, t, quiet }: DriveContext) {
@@ -59,7 +64,10 @@ const flow: DriveScript = async (ctx) => {
   await submit(ctx);
   await shot("long-chassis-refused", {
     caption: "Register a truck refuses it with the Details edit's sentence: 17 characters at most",
-    ...(await ifShown(page.getByText(t("Le numéro de châssis est trop long", "The chassis number is too long")).first())),
+    ...(await outline(
+      page.getByText(t("Le numéro de châssis est trop long", "The chassis number is too long")).first(),
+      page.getByRole("row", { name: new RegExp(`CH-${suffix}`) }),
+    )),
   });
 
   await openRegisterForm(ctx, `PL-${suffix}`);
@@ -71,7 +79,10 @@ const flow: DriveScript = async (ctx) => {
   await submit(ctx);
   await shot("duplicate-plate-refused", {
     caption: "The server refuses a plate another truck carries, and the form says so on the plate field",
-    ...(await ifShown(page.getByText(t("Un autre véhicule a déjà cette immatriculation.", "Another vehicle already has this plate.")).first())),
+    ...(await outline(
+      page.getByText(t("Un autre véhicule a déjà cette immatriculation.", "Another vehicle already has this plate.")).first(),
+      page.getByRole("row", { name: new RegExp(`PL-${suffix}`) }),
+    )),
   });
 
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
@@ -89,7 +100,7 @@ const flow: DriveScript = async (ctx) => {
   await page.getByRole("button", { name: t("Enregistrer les informations", "Save details"), exact: true }).click();
   await shot("details-same-words", {
     caption: "The Details edit refuses the same chassis number in the same words",
-    ...(await ifShown(page.getByText(t("Le numéro de châssis est trop long", "The chassis number is too long")).first())),
+    ...(await outline(page.getByText(t("Le numéro de châssis est trop long", "The chassis number is too long")).first())),
   });
 
   const { status, body } = await apiGet("/v1/assets?search=482");
