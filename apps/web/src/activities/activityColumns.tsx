@@ -34,7 +34,7 @@ function buildColumns(
       enableSorting: true,
       meta: { mobile: "primary", label: t("activities.columns.activityNumber") },
       cell: ({ row }) => (
-        <span className="font-mono whitespace-nowrap">{row.original.activityNumber}</span>
+        <span className="whitespace-nowrap tabular-nums">{row.original.activityNumber}</span>
       ),
     },
     status: {
@@ -47,7 +47,9 @@ function buildColumns(
       id: "activityType",
       header: t("activities.columns.activityType"),
       meta: { mobile: "secondary", label: t("activities.columns.activityType") },
-      cell: ({ row }) => localizedLabel(row.original.activityType, locale),
+      cell: ({ row }) => (
+        <span className="whitespace-normal">{localizedLabel(row.original.activityType, locale)}</span>
+      ),
     },
     startedAt: {
       accessorKey: "startedAt",
@@ -70,7 +72,7 @@ function buildColumns(
       header: t("activities.columns.primaryAsset"),
       meta: { mobile: "secondary", label: t("activities.columns.primaryAsset") },
       cell: ({ row }) => (
-        <span className="font-mono whitespace-nowrap">
+        <span className="whitespace-nowrap tabular-nums">
           {row.original.primaryAssetCode ?? "—"}
         </span>
       ),
@@ -79,7 +81,9 @@ function buildColumns(
       accessorKey: "customerName",
       header: t("activities.columns.customer"),
       meta: { mobile: "hidden", label: t("activities.columns.customer") },
-      cell: ({ row }) => row.original.customerName ?? "—",
+      cell: ({ row }) => (
+        <span className="whitespace-normal">{row.original.customerName ?? "—"}</span>
+      ),
     },
     legCount: {
       accessorKey: "legCount",
