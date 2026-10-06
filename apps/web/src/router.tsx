@@ -61,6 +61,9 @@ export interface RouterContext {
 
 const rootRoute = createRootRouteWithContext<RouterContext>()();
 
+// Each screen's loader starts its first view's reads (routes/*.loader.ts,
+// #496), loaded on demand like the screen itself.
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -92,6 +95,7 @@ const appRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
+  loader: (args) => import("./routes/home.loader.js").then((load) => load.home(args)),
   component: DashboardScreen,
 });
 
@@ -103,6 +107,8 @@ const assetsRoute = createRoute({
   validateSearch: z.object({
     status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => import("./routes/assets.loader.js").then((load) => load.assets(args)),
   component: AssetsStub,
 });
 
@@ -129,12 +135,14 @@ const assetDetailRoute = createRoute({
       .optional()
       .catch(undefined),
   }),
+  loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicle(args)),
   component: VehicleWorkspaceScreen,
 });
 
 const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
+  loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicleNow(args)),
   component: NowTab,
   pendingComponent: SectionPending,
   errorComponent: SectionError,
@@ -215,6 +223,8 @@ const financeEntriesRoute = createRoute({
     view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
     branch: z.literal("all").optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => import("./routes/finance.loader.js").then((load) => load.financeEntries(args)),
   component: FinanceEntriesScreen,
 });
 
@@ -227,6 +237,8 @@ const activitiesRoute = createRoute({
     from: z.iso.date().optional().catch(undefined),
     to: z.iso.date().optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => import("./routes/activities.loader.js").then((load) => load.activities(args)),
   component: ActivitiesScreen,
 });
 
@@ -258,6 +270,8 @@ const maintenanceRoute = createRoute({
     status: workOrderStatus.optional().catch(undefined),
     issueStatus: issueStatus.optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => import("./routes/maintenance.loader.js").then((load) => load.maintenance(args)),
   component: MaintenanceScreen,
 });
 
@@ -374,6 +388,9 @@ export const router = createRouter({
   context: { queryClient },
   defaultPendingComponent: ScreenPending,
   defaultErrorComponent: ScreenError,
+  // The Query cache decides what is fresh (lib/query-client.ts); the router
+  // never keeps loader results of its own.
+  defaultPreloadStaleTime: 0,
 });
 
 // Every navigation is a fresh chance to fetch a screen whose code failed before.
@@ -392,6 +409,7 @@ export function preloadAfterSignIn(): void {
   // The shell's frame and loader are not screens, but sign-in waits on them too.
   void ShellPending.preload();
   void import("./shell/shell-loader.js").catch(() => undefined);
+  void import("./routes/home.loader.js").catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */

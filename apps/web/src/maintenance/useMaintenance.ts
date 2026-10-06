@@ -1,4 +1,5 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { queryOptions, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { authed, listQueryOptions } from "../lib/list-query.js";
 import type {
   IssueListResponse,
   IssueStatus,
@@ -47,20 +48,12 @@ export async function fetchWorkOrders(
 /** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
 export function useWorkOrders(callerParams: UseWorkOrdersParams = {}) {
   const session = useActiveSession();
-  const params = useBranchScopedParams(callerParams);
+  return useInfiniteQuery(workOrdersQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams)));
+}
 
-  return useInfiniteQuery<WorkOrderListResponse>({
-    queryKey: [...maintenanceQueryKey(session?.workspaceSlug), "work-orders", params],
-    enabled: session !== undefined,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage: WorkOrderListResponse) => lastPage.nextCursor ?? undefined,
-    queryFn: ({ signal, pageParam }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      const cursor = pageParam as string | undefined;
-      return fetchWorkOrders(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
-    },
-  });
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function workOrdersQueryOptions(workspaceSlug: string | undefined, params: UseWorkOrdersParams) {
+  return listQueryOptions([...maintenanceQueryKey(workspaceSlug), "work-orders", params], workspaceSlug, params, fetchWorkOrders);
 }
 
 export async function fetchWorkOrder(
@@ -132,24 +125,19 @@ export async function fetchIssues(
 /** Branch-scoped, like the work-order queue: both resolve branch through the asset. */
 export function useIssues(callerParams: UseIssuesParams = {}) {
   const session = useActiveSession();
-  const { safetyCritical, ...rest } = callerParams;
-  const params = useBranchScopedParams({
-    ...rest,
-    ...(safetyCritical === undefined ? {} : { safetyCritical: String(safetyCritical) }),
-  });
+  return useInfiniteQuery(issuesQueryOptions(session?.workspaceSlug, useBranchScopedParams(issueListParams(callerParams))));
+}
 
-  return useInfiniteQuery<IssueListResponse>({
-    queryKey: [...maintenanceQueryKey(session?.workspaceSlug), "issues", params],
-    enabled: session !== undefined,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage: IssueListResponse) => lastPage.nextCursor ?? undefined,
-    queryFn: ({ signal, pageParam }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      const cursor = pageParam as string | undefined;
-      return fetchIssues(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
-    },
-  });
+/** The read takes `safetyCritical` as a string. */
+export function issueListParams({ safetyCritical, ...rest }: UseIssuesParams): IssueQueryParams {
+  return { ...rest, ...(safetyCritical === undefined ? {} : { safetyCritical: String(safetyCritical) }) };
+}
+
+type IssueQueryParams = Omit<UseIssuesParams, "safetyCritical"> & { safetyCritical?: string; branchId?: string };
+
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function issuesQueryOptions(workspaceSlug: string | undefined, params: IssueQueryParams) {
+  return listQueryOptions([...maintenanceQueryKey(workspaceSlug), "issues", params], workspaceSlug, params, fetchIssues);
 }
 
 function isMaintenanceSummary(value: unknown): value is MaintenanceSummary {
@@ -187,15 +175,14 @@ export async function fetchMaintenanceSummary(
  */
 export function useMaintenanceSummary() {
   const session = useActiveSession();
-  const params = useBranchScopedParams({});
+  return useQuery(maintenanceSummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams({})));
+}
 
-  return useQuery<MaintenanceSummary>({
-    queryKey: [...maintenanceQueryKey(session?.workspaceSlug), "summary", params],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchMaintenanceSummary(token, params, signal);
-    },
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function maintenanceSummaryQueryOptions(workspaceSlug: string | undefined, params: { branchId?: string }) {
+  return queryOptions<MaintenanceSummary>({
+    queryKey: [...maintenanceQueryKey(workspaceSlug), "summary", params],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchMaintenanceSummary(token, params, signal)),
   });
 }

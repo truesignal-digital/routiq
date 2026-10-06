@@ -322,15 +322,23 @@ describe("AppShell (sidebar frame)", () => {
     expect(live?.textContent).toBe("You are viewing: Yaoundé");
   });
 
-  it("asks for the approval rules again on every new screen (#422)", async () => {
+  it("asks for the approval rules again on a new screen once the last answer is a minute old (#422, #496)", async () => {
+    const { APPROVAL_CHAIN_RECHECK_MS } = await import("../approval-rules/useApprovalChain.js");
     const router = await renderShell("/assets");
     const invalidate = vi.spyOn(client, "invalidateQueries");
     await router.navigate({ to: "/finance/entries" });
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({
-        queryKey: ["ws", session.workspaceSlug, "approval-chain"],
-      }),
-    );
+    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    const filters = invalidate.mock.calls.at(-1)?.[0];
+    expect(filters?.queryKey).toEqual(["ws", session.workspaceSlug, "approval-chain"]);
+    const answeredAt = (updatedAt: number) => {
+      const queryKey = ["approval-chain-age", updatedAt];
+      client.setQueryData(queryKey, {}, { updatedAt });
+      const query = client.getQueryCache().find({ queryKey });
+      if (query === undefined) throw new Error("query not cached");
+      return query;
+    };
+    expect(filters?.predicate?.(answeredAt(Date.now() - 5_000))).toBe(false);
+    expect(filters?.predicate?.(answeredAt(Date.now() - APPROVAL_CHAIN_RECHECK_MS))).toBe(true);
   });
 
   it("puts the approval-rules notice in the page's own column, once (#467)", async () => {

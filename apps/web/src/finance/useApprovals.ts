@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useActiveSession } from "../auth/store.js";
+import { listQueryOptions } from "../lib/list-query.js";
 import type { PendingApprovalsResponse } from "@routiq/contracts";
 
 export async function fetchApprovals(
@@ -40,19 +41,15 @@ export interface UseApprovalsParams {
  */
 export function useApprovals(enabled = true, params: UseApprovalsParams = {}) {
   const session = useActiveSession();
-
-  return useInfiniteQuery<PendingApprovalsResponse>({
-    queryKey: ["ws", session?.workspaceSlug, "finance", "approvals", params],
+  return useInfiniteQuery({
+    ...approvalsQueryOptions(session?.workspaceSlug, params),
     enabled: enabled && session !== undefined,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    queryFn: ({ signal, pageParam }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      const cursor = pageParam as string | undefined;
-      return fetchApprovals(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
-    },
   });
+}
+
+/** Not branch-scoped: a decision queue names its own branch filter. */
+export function approvalsQueryOptions(workspaceSlug: string | undefined, params: UseApprovalsParams) {
+  return listQueryOptions(["ws", workspaceSlug, "finance", "approvals", params], workspaceSlug, params, fetchApprovals);
 }
 
 /** The whole queue's size, which every page reports. */

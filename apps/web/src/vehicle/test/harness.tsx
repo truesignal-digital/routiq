@@ -25,6 +25,7 @@ import { sessionStore } from "../../auth/store.js";
 import { i18n } from "../../i18n/index.js";
 import { router as applicationRouter } from "../../router.js";
 import { ALL_MODULES, ASSET_ID, BRANCH_ID, asset as assetFixture, finance as financeFixture, me } from "./fixtures.js";
+import { QUERY_DEFAULTS } from "../../lib/query-defaults.js";
 
 export const identity = { username: "vehicle-test", workspaceSlug: "vehicle-test" };
 
@@ -247,10 +248,12 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
   sessionStore.save({ ...identity, token: "vehicle-test-token", expiresAt: "2099-01-01T00:00:00Z" });
   // Reads that set their own `retry` still retry here, but without the backoff.
   const client = new QueryClient({
-    defaultOptions: { queries: scenario.defaultRetries === true ? {} : { retry: false, retryDelay: 0 } },
+    defaultOptions: {
+      queries: { ...QUERY_DEFAULTS, ...(scenario.defaultRetries === true ? {} : { retry: false, retryDelay: 0 }) },
+    },
   });
   const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createRouter({ routeTree: applicationRouter.routeTree, history, context: { queryClient: client } });
+  const router: typeof applicationRouter = createRouter({ ...applicationRouter.options, history, context: { queryClient: client } });
   await act(async () => {
     render(
       <QueryClientProvider client={client}>

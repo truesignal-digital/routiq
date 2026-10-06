@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useActiveSession } from "../auth/store.js";
+import { listQueryOptions } from "../lib/list-query.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
 import type { FinancialEntryListResponse } from "@routiq/contracts";
 
@@ -59,18 +60,10 @@ export interface UseEntriesParams {
 /** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
 export function useEntries(params: UseEntriesParams = {}) {
   const session = useActiveSession();
-  const query = useBranchScopedParams(params);
+  return useInfiniteQuery(entriesQueryOptions(session?.workspaceSlug, useBranchScopedParams(params)));
+}
 
-  return useInfiniteQuery<FinancialEntryListResponse>({
-    queryKey: ["ws", session?.workspaceSlug, "finance", "entries", query],
-    enabled: session !== undefined,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage: FinancialEntryListResponse) => lastPage.nextCursor ?? undefined,
-    queryFn: ({ signal, pageParam }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      const cursor = pageParam as string | undefined;
-      return fetchFinanceEntries(token, { ...query, ...(cursor ? { cursor } : {}) }, signal);
-    },
-  });
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function entriesQueryOptions(workspaceSlug: string | undefined, params: UseEntriesParams) {
+  return listQueryOptions(["ws", workspaceSlug, "finance", "entries", params], workspaceSlug, params, fetchFinanceEntries);
 }
