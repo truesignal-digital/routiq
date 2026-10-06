@@ -79,6 +79,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
+| `direction-note` | as Direction: write a note on VH001 → it waits in Now → To do; `--role driver` after it: the note is in the To do, Mark as seen → it leaves, the note says "Seen by" (#98) | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
 | `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
 | `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
