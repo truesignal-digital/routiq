@@ -12,6 +12,7 @@
     "lint:tighten": "pnpm --filter @routiq/tools tighten",
     "verify": "pnpm --silent --filter @routiq/tools verify",
     "metrics": "pnpm --silent --filter @routiq/tools metrics",
+    "observe": "pnpm --silent --filter @routiq/tools observe",
     "db:generate": "pnpm --filter @routiq/api db:generate",
     "db:migrate": "pnpm --filter @routiq/api db:migrate"
   },

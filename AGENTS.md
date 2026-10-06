@@ -26,6 +26,7 @@ pnpm typecheck                    # all packages (tsc --noEmit)
 pnpm lint                         # repo guards (tools/guards); see "Guards and the ratchet"
 pnpm lint:tighten                 # lower guard baselines after you remove violations
 pnpm verify --help                # run and drive the real app on an isolated slot, with evidence (skill: verify-routiq)
+pnpm observe report               # what happened in the field: command ledger + web telemetry (ADR-0011), read-only
 pnpm metrics                      # first-load size against its ceilings (after a web build)
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
@@ -113,6 +114,10 @@ The UI consistency system and the product direction live in [`docs/design/consis
 5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions. The default is a reel: `pnpm verify drive flow:<name> --reel`, plus `pnpm verify reel --before <base run>` when behaviour changed (skill: verify-routiq). A long narrated walkthrough only when the owner asks.
 6. Before requesting merge, a reviewer using a different model from the author runs `.agents/skills/code-review/SKILL.md` against the linked issue and exact current PR head. The report records author/reviewer models, base/head SHAs, one verdict per acceptance line, file:line evidence, and reproduction steps for blockers. Link the report in the PR body. Missing spec or unverified acceptance prevents approval. Runtime reports, including Sentry intake reports, must first be triaged into reproducible behavior and explicit acceptance criteria; telemetry and a review video alone do not approve a fix.
 7. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
+
+## Observability
+
+`pnpm observe report` reads the command ledger (every write: outcome, failure code, user and server time, `duration_ms`) and field telemetry (`telemetry.events`: errors, devices, vitals, journeys; ADR-0011). Prove performance in the lab (`pnpm verify ... --throttle phone`); use the field for errors, refusals and real devices.
 
 ## Guards and the ratchet
 
