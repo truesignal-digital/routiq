@@ -148,6 +148,20 @@ describe("applyPresetVocabulary", () => {
     expect(instance.t("activities.columns.primaryAsset")).toBe("Véhicule principal");
   });
 
+  it("names the trip in each fleet's own word in the money card's scope sentences", () => {
+    const instance = freshInstance();
+
+    for (const [preset, word] of [
+      ["TRUCKING", "ce trajet"],
+      ["PASSENGER_TRANSPORT", "ce voyage"],
+    ] as const) {
+      applyPresetVocabulary(instance, presetVocabularyFor([preset]));
+      expect(instance.t("activities.detail.moneySummary.ownOnly", { lng: "fr" }), preset).toContain(word);
+      expect(instance.t("activities.detail.moneySummary.branchOnly", { lng: "fr" }), preset).toContain(word);
+      expect(instance.t("activities.detail.moneySummary.ownOnly", { lng: "en" }), preset).toContain("this trip");
+    }
+  });
+
   it("names the trip in each fleet's own word on the trip sheet", () => {
     const instance = freshInstance();
 

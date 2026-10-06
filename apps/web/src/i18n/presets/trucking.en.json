@@ -90,6 +90,10 @@
       "loading": "Loading trip…",
       "readings": {
         "allSuperseded": "Every reading on this trip has been corrected."
+      },
+      "moneySummary": {
+        "ownOnly": "Only the entries you recorded on this trip.",
+        "branchOnly": "Only the entries of your branches on this trip."
       }
     },
     "actions": {

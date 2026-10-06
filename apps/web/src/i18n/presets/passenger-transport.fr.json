@@ -88,6 +88,10 @@
       "loading": "Chargement du voyage…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
+      },
+      "moneySummary": {
+        "ownOnly": "Seules les écritures que vous avez saisies sur ce voyage.",
+        "branchOnly": "Seules les écritures de vos agences sur ce voyage."
       }
     },
     "actions": {

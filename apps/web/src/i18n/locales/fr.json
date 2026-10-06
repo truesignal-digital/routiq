@@ -742,7 +742,8 @@
         "postedOnly": "comptabilisé seulement",
         "pending": "En attente d'approbation",
         "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat.",
-        "ownOnly": "Seules les écritures que vous avez saisies sur ce voyage."
+        "ownOnly": "Seules les écritures que vous avez saisies sur cette activité.",
+        "branchOnly": "Seules les écritures de vos agences sur cette activité."
       }
     },
     "actions": {
@@ -2250,7 +2251,8 @@
       "linkedMoney": "Argent lié",
       "wholeTrip": "Montants du trajet entier",
       "noMoney": "Aucune écriture liée à ce trajet.",
-      "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce voyage.",
+      "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce trajet.",
+      "noBranchMoney": "Aucune écriture de vos agences sur ce trajet pour l'instant.",
       "odometer": "Compteur",
       "noReadings": "Aucun relevé de départ ou d'arrivée pour ce véhicule.",
       "readingLine": "{source} · {date}",

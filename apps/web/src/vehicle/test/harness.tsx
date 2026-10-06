@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/rea
 import { act, render } from "@testing-library/react";
 import { vi } from "vitest";
 import type {
+  ActivityDetail,
   ActivityListItem,
   AssetAttentionItem,
   AssetDetail,
@@ -62,6 +63,7 @@ export interface VehicleScenario {
   entries?: FinancialEntryListItem[];
   entryDetails?: FinancialEntryDetail[];
   trips?: ActivityListItem[];
+  tripDetails?: ActivityDetail[];
   documents?: AssetDocumentRead[];
   /** What a command answers; defaults to a committed result. */
   command?: (name: string, body: CommandBody) => { status: number; body: unknown };
@@ -200,6 +202,10 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
       return detail === undefined ? json({ error: { code: "REFERENCE_NOT_FOUND" } }, 404) : json(detail);
     }
     if (p === "/v1/activities") return json({ items: scenario.trips ?? [], nextCursor: null });
+    if (p.startsWith("/v1/activities/")) {
+      const detail = byId(scenario.tripDetails, last);
+      return detail === undefined ? json({ error: { code: "REFERENCE_NOT_FOUND" } }, 404) : json(detail);
+    }
     if (p === "/v1/categories") {
       const kind = url.searchParams.get("kind");
       const categories =

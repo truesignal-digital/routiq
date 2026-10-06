@@ -742,7 +742,8 @@
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
         "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
-        "ownOnly": "Only the entries you recorded on this trip."
+        "ownOnly": "Only the entries you recorded on this activity.",
+        "branchOnly": "Only the entries of your branches on this activity."
       }
     },
     "actions": {
@@ -2251,6 +2252,7 @@
       "wholeTrip": "Whole-trip amounts",
       "noMoney": "No entries linked to this trip yet.",
       "noOwnMoney": "You have not recorded any entry on this trip.",
+      "noBranchMoney": "No entry from your branches on this trip yet.",
       "odometer": "Odometer",
       "noReadings": "No start or end reading for this vehicle.",
       "readingLine": "{source} · {date}",
