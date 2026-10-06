@@ -1,4 +1,5 @@
 import {
+  clientAuthorityKeyPaths,
   commandEnvelope,
   type CommandEnvelope,
   type CommandErrorCode,
@@ -382,6 +383,20 @@ export async function dispatchCommand(
   log?: CommandLog,
 ): Promise<{ status: number; body: CommandOutcome | ErrorBody }> {
   const started = performance.now();
+  /**
+   * Workspace, actor and branch scope come from `ctx` alone (#152). A request
+   * that tries to name them, at any depth of its envelope or payload, is
+   * refused here, before any schema runs: an open schema would strip the key
+   * and carry on, and the caller would never learn its field was ignored.
+   */
+  const smuggled = clientAuthorityKeyPaths(body);
+  if (smuggled.length > 0) {
+    return commandErrorResponse(
+      new CommandError(400, "VALIDATION_FAILED", {
+        issues: smuggled.map((path) => ({ code: "unrecognized_keys", path })),
+      }),
+    );
+  }
   const outer = commandRequest.safeParse(body);
   if (!outer.success) {
     return commandErrorResponse(
