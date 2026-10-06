@@ -262,8 +262,8 @@ function FinanceEntriesContent() {
                   }),
               },
               // role-config: reversal is an approver's call, and only on a
-              // posted entry — the same gate the detail screen applies.
-              ...(canReverseEntry(me?.role, entry.status)
+              // posted original — the same gate the detail screen applies.
+              ...(canReverseEntry(me?.role, entry)
                 ? [
                     {
                       key: "reverse",

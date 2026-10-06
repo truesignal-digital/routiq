@@ -134,6 +134,7 @@
     "POSTINGS_SUM_MISMATCH": "The posting lines do not add up to the entry amount.",
     "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
     "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
+    "ENTRY_IS_REVERSAL": "This entry is itself a reversal and cannot be reversed. To undo it, record the original entry again.",
     "PERIOD_LOCKED": "This period is locked. No postings are possible.",
     "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense).",
     "ACTIVITY_CLOSE_BLOCKED": "Cannot close: the actual dates or at least one assigned asset are missing.",
@@ -402,6 +403,7 @@
         "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
         "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
         "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
+        "ENTRY_IS_REVERSAL": "This entry is itself a reversal and cannot be reversed. To undo it, record the original entry again.",
         "PERIOD_LOCKED": "This period is locked. No postings are possible."
       }
     },
@@ -484,8 +486,8 @@
         "asset": "Asset",
         "postingAmount": "Amount",
         "reversalChain": "Reversal chain",
-        "reversesEntry": "Reverses entry",
-        "reversedByEntry": "Reversed by entry",
+        "reversesEntry": "Reverses entry {number}",
+        "reversedByEntry": "Reversed by entry {number}",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
         "breadcrumb": "Detail",

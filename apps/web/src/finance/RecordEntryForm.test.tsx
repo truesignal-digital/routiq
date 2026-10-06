@@ -386,6 +386,12 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     return screen.getByRole("dialog", { name: "Edit entry DLA-2026-00012" });
   }
 
+  it("keeps the entry number in the title on one line (#442)", () => {
+    const panel = openEdit(recordingClient(submitted));
+    const numbers = [...panel.querySelectorAll("[data-slot='sheet-title'] [data-record-number]")];
+    expect(numbers.map((node) => node.textContent)).toEqual(["DLA-2026-00012"]);
+  });
+
   it("opens pre-filled with what the author recorded", () => {
     const panel = openEdit(recordingClient(submitted));
 

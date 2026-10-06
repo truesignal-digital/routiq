@@ -1,6 +1,7 @@
-import { useEntry } from "./useEntry.js";
-import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
+import { RecordText } from "@/components/record-number";
+import { useEntry } from "./useEntry.js";
 
 interface ReversalLinkProps {
   entryId: string;
@@ -12,13 +13,11 @@ export function ReversalLink({ entryId, type }: ReversalLinkProps) {
   const navigate = useNavigate();
   const entryQuery = useEntry(entryId);
 
-  const label =
+  const number = entryQuery.data?.entryNumber ?? "…";
+  const text =
     type === "reverses"
-      ? t("finance.entries.detail.reversesEntry")
-      : t("finance.entries.detail.reversedByEntry");
-
-  const displayText =
-    entryQuery.data?.entryNumber ?? "…";
+      ? t("finance.entries.detail.reversesEntry", { number })
+      : t("finance.entries.detail.reversedByEntry", { number });
 
   return (
     <button
@@ -31,7 +30,7 @@ export function ReversalLink({ entryId, type }: ReversalLinkProps) {
       }
       className="block text-left text-sm text-primary hover:underline"
     >
-      {label} #{displayText}
+      <RecordText text={text} numbers={[entryQuery.data?.entryNumber]} />
     </button>
   );
 }

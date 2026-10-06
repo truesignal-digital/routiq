@@ -79,12 +79,27 @@ export function canRecordRevenue(
 /** Approving, rejecting and reversing entries, and locking a period: Direction and Finance. */
 const ENTRY_DECIDERS: readonly Role[] = ["DIRECTOR", "FINANCE"];
 
-/** Reverse is only offered on a POSTED entry, to approver roles (maker guard lives server-side). */
+/** The entry facts that decide whether it can still be reversed. */
+export interface ReversibleEntry {
+  status: string;
+  reversesEntryId: string | null;
+}
+
+/**
+ * Reverse is offered to approver roles on a POSTED original only: never on an
+ * entry already reversed, and never on a reversal itself (#130, one level
+ * only). The server refuses both too; the maker guard lives server-side.
+ */
 export function canReverseEntry(
   role: Role | undefined,
-  entryStatus: string | undefined,
+  entry: ReversibleEntry | undefined,
 ): boolean {
-  return entryStatus === "POSTED" && role !== undefined && ENTRY_DECIDERS.includes(role);
+  return (
+    entry?.status === "POSTED" &&
+    entry.reversesEntryId === null &&
+    role !== undefined &&
+    ENTRY_DECIDERS.includes(role)
+  );
 }
 
 export function canApproveEntries(

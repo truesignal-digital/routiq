@@ -213,14 +213,14 @@ describe("FinanceEntries - Pagination", () => {
 describe("FinanceEntries - Reversal permissions", () => {
   it("reversal action is hidden for non-approver roles and non-POSTED entries", () => {
     for (const role of ["DIRECTOR", "FINANCE"] as const) {
-      expect(canReverseEntry(role, "POSTED")).toBe(true);
-      expect(canReverseEntry(role, "SUBMITTED")).toBe(false);
-      expect(canReverseEntry(role, "REVERSED")).toBe(false);
+      expect(canReverseEntry(role, { status: "POSTED", reversesEntryId: null })).toBe(true);
+      expect(canReverseEntry(role, { status: "SUBMITTED", reversesEntryId: null })).toBe(false);
+      expect(canReverseEntry(role, { status: "REVERSED", reversesEntryId: null })).toBe(false);
     }
     for (const role of ["ADMIN", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
-      expect(canReverseEntry(role, "POSTED")).toBe(false);
+      expect(canReverseEntry(role, { status: "POSTED", reversesEntryId: null })).toBe(false);
     }
-    expect(canReverseEntry(undefined, "POSTED")).toBe(false);
+    expect(canReverseEntry(undefined, { status: "POSTED", reversesEntryId: null })).toBe(false);
   });
 
   it("reversal reason is required and bounded per the contract", () => {
