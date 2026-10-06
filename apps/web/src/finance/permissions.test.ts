@@ -16,7 +16,7 @@ const FINANCE_ON = ["CORE", "FINANCE"] as const;
 describe("finance decisions, per role (ADR-0009)", () => {
   const decides = (role: Role) => ({
     approve: canApproveEntries(role, FINANCE_ON),
-    reverse: canReverseEntry(role, "POSTED"),
+    reverse: canReverseEntry(role, { status: "POSTED", reversesEntryId: null }),
     lock: canManagePeriods(role, FINANCE_ON),
     reopen: canReopenPeriod(role, FINANCE_ON),
     expense: canRecordFinance(role, FINANCE_ON),
@@ -36,7 +36,20 @@ describe("finance decisions, per role (ADR-0009)", () => {
   });
 
   it("offers reverse on posted entries only", () => {
-    expect(canReverseEntry("FINANCE", "SUBMITTED")).toBe(false);
+    expect(canReverseEntry("FINANCE", { status: "SUBMITTED", reversesEntryId: null })).toBe(false);
+  });
+
+  it("offers reverse on a posted original, never on a reversal or a reversed entry (#130)", () => {
+    const original = { status: "POSTED", reversesEntryId: null } as const;
+    expect(canReverseEntry("FINANCE", original)).toBe(true);
+    expect(canReverseEntry("FINANCE", { status: "REVERSED", reversesEntryId: null })).toBe(false);
+    expect(
+      canReverseEntry("FINANCE", {
+        status: "POSTED",
+        reversesEntryId: "00000000-0000-4000-8000-000000000010",
+      }),
+    ).toBe(false);
+    expect(canReverseEntry("FINANCE", undefined)).toBe(false);
   });
 });
 

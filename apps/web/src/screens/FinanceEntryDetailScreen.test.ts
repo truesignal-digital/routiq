@@ -198,6 +198,42 @@ describe("finance entry reversal dialog", () => {
   });
 });
 
+describe("Reverse is one level only (#130)", () => {
+  function showingEntry(overrides: Record<string, unknown>) {
+    const current = mocks.useEntry();
+    mocks.useEntry.mockReturnValue({ ...current, data: { ...current.data, ...overrides } });
+  }
+
+  afterEach(() => {
+    searchParams.current = {};
+  });
+
+  it("offers Reverse on a posted original", () => {
+    renderScreen();
+    expect(screen.getByRole("button", { name: "Reverse entry" })).toBeTruthy();
+  });
+
+  it("offers no Reverse on a reversal, even when the link asks for the dialog", () => {
+    showingEntry({
+      amountMinor: -1000,
+      reversesEntryId: "00000000-0000-4000-8000-000000000099",
+    });
+    searchParams.current = { reverse: true };
+    renderScreen();
+    expect(screen.queryByRole("button", { name: "Reverse entry" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers no Reverse on an entry already reversed", () => {
+    showingEntry({
+      status: "REVERSED",
+      reversedByEntryId: "00000000-0000-4000-8000-000000000099",
+    });
+    renderScreen();
+    expect(screen.queryByRole("button", { name: "Reverse entry" })).toBeNull();
+  });
+});
+
 describe("finance entry detail enums", () => {
   it("renders status, payment method and category translated, never as raw codes", () => {
     renderScreen();
