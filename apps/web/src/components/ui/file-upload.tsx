@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, Image as ImageIcon, Upload, X } from "lucide-react";
+import { Camera, Check, FileText, Image as ImageIcon, Upload, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { downscaleImage, uploadArtifact } from "../../artifacts/upload.js";
 import { sessionStore } from "../../auth/store.js";
 import { errorMessage } from "../../lib/error-message.js";
 import { cn } from "../../lib/utils.js";
+import { Button } from "@/components/ui/button";
 
 type UploadState =
   | { kind: "uploading" }
@@ -38,6 +39,7 @@ export function FileUpload({
 }: FileUploadProps) {
   const { t, i18n } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const previewUrlsRef = useRef(new Set<string>());
   const onChangeRef = useRef(onChange);
   const onUploadingChangeRef = useRef(onUploadingChange);
@@ -160,10 +162,39 @@ export function FileUpload({
           event.currentTarget.value = "";
         }}
       />
+      {/* `capture` opens the rear camera directly, but on Android it also hides
+          the gallery, so the phone gets it as a second input beside the picker
+          (#95). Camera photos (3–8 MB) go through `downscaleImage` like any
+          image over 1 MB, well inside the 25 MB presign limit. */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(event) => {
+          if (event.currentTarget.files !== null) addFiles(event.currentTarget.files);
+          event.currentTarget.value = "";
+        }}
+      />
+      {/* A phone: one tap to the camera, one to the files. A desktop (wide
+          screen with a mouse) keeps the drop zone and its picker only. */}
+      <div className="grid grid-cols-2 gap-2 desktop:hidden">
+        <Button type="button" variant="outline" onClick={() => cameraRef.current?.click()}>
+          <Camera aria-hidden />
+          {t("fileUpload.takePhoto")}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+          <Upload aria-hidden />
+          {t("fileUpload.chooseFile")}
+        </Button>
+      </div>
       <button
         type="button"
         className={cn(
-          "group flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-5 text-center transition-colors",
+          "group hidden min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-5 text-center transition-colors desktop:flex",
           dragging
             ? "border-primary bg-primary/10 text-primary"
             : "border-border bg-muted/30 text-muted-foreground hover:border-primary/60 hover:bg-primary/[0.04]",

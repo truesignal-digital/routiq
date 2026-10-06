@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561479,
+    "ceiling": 561728,
     "raises": [
       {
         "date": "2026-10-06",
@@ -31,6 +31,12 @@
         "from": 561383,
         "to": 561479,
         "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561728,
+        "reason": "#95: Take photo and Choose file on phones, fr/en strings (+249 B gzip)"
       }
     ]
   },
@@ -46,7 +52,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561479,
+    "ceiling": 561728,
     "raises": [
       {
         "date": "2026-10-06",
@@ -77,6 +83,12 @@
         "from": 561383,
         "to": 561479,
         "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561728,
+        "reason": "#95: Take photo and Choose file on phones, fr/en strings (+249 B gzip)"
       }
     ]
   }

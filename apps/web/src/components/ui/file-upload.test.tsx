@@ -94,4 +94,60 @@ describe("FileUpload", () => {
       }),
     ).toBeTruthy();
   });
+
+  describe("on a phone (#95)", () => {
+    it("offers Take photo, which opens the rear camera, beside Choose file", async () => {
+      const user = userEvent.setup();
+      const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+      const { container } = render(
+        <FileUpload accept="image/jpeg,image/png,application/pdf" onChange={vi.fn()} uploadImpl={vi.fn()} />,
+      );
+
+      const camera = container.querySelector<HTMLInputElement>("input[capture]");
+      expect(camera?.accept).toBe("image/*");
+      expect(camera?.getAttribute("capture")).toBe("environment");
+      const picker = screen.getByLabelText("Drop files here or click to choose") as HTMLInputElement;
+      expect(picker.hasAttribute("capture")).toBe(false);
+      expect(picker.accept).toBe("image/jpeg,image/png,application/pdf");
+
+      await user.click(screen.getByRole("button", { name: "Take photo" }));
+      expect(click.mock.contexts.at(-1)).toBe(camera);
+      await user.click(screen.getByRole("button", { name: "Choose file" }));
+      expect(click.mock.contexts.at(-1)).toBe(picker);
+    });
+
+    it("uploads the photo the camera returns", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      const uploadImpl = vi.fn<typeof uploadArtifact>().mockResolvedValue({
+        ok: true,
+        artifact: { id: ARTIFACT_ID, sha256: "abc", sizeBytes: 5 },
+      });
+      const { container } = render(<FileUpload onChange={onChange} uploadImpl={uploadImpl} />);
+      const camera = container.querySelector<HTMLInputElement>("input[capture]")!;
+
+      await user.upload(camera, new File(["photo"], "IMG_0042.jpg", { type: "image/jpeg" }));
+
+      expect(screen.getByText("IMG_0042.jpg")).toBeTruthy();
+      await waitFor(() => expect(onChange).toHaveBeenLastCalledWith([ARTIFACT_ID]));
+      expect(uploadImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the camera off a desktop: the two buttons hide there, the drop zone shows", () => {
+      render(<FileUpload onChange={vi.fn()} uploadImpl={vi.fn()} />);
+      const phoneRow = screen.getByRole("button", { name: "Take photo" }).parentElement;
+      expect(phoneRow?.className).toContain("desktop:hidden");
+      const dropzone = screen.getByRole("button", { name: "Drop files here or click to choose" });
+      expect(dropzone.className).toMatch(/(^| )hidden( |$)/);
+      expect(dropzone.className).toContain("desktop:flex");
+    });
+
+    it("says it in French", async () => {
+      await i18n.changeLanguage("fr-CM");
+      render(<FileUpload onChange={vi.fn()} uploadImpl={vi.fn()} />);
+      expect(screen.getByRole("button", { name: "Prendre une photo" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Choisir un fichier" })).toBeTruthy();
+      await i18n.changeLanguage("en");
+    });
+  });
 });

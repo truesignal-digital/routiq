@@ -342,7 +342,9 @@
       "megabytes": "MB"
     },
     "add": "Add a photo or document",
-    "retry": "Retry"
+    "retry": "Retry",
+    "takePhoto": "Take photo",
+    "chooseFile": "Choose file"
   },
   "documents": {
     "notify": {
