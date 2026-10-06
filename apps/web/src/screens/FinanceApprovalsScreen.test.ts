@@ -267,6 +267,40 @@ describe("finance approval command routing", () => {
     expect(screen.getByText("The Director decides")).toBeTruthy();
   });
 
+  it("says who decides under the row's status, beside a single Actions column (#437)", () => {
+    const blocked = [
+      { ...approvalEntries[0]!, submittedByPrincipalId: approver.principalId },
+      { ...approvalEntries[1]!, directionDecides: true },
+    ];
+    mocks.useApprovals.mockReturnValue({
+      data: { pages: [{ entries: blocked, nextCursor: null, total: blocked.length }] },
+      isPending: false,
+      isError: false,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    renderScreen(createElement(FinanceApprovalsScreen));
+
+    // The ⋯ column is the only one headed Actions; the note is not an action.
+    expect(screen.getAllByRole("columnheader", { name: "Actions" })).toHaveLength(1);
+    const headers = screen.getAllByRole("columnheader");
+    const statusColumn = headers.indexOf(screen.getByRole("columnheader", { name: "Status" }));
+    for (const [entryNumber, note] of [
+      ["FIN-001", "Your submission — another approver must decide"],
+      ["FIN-002", "The Director decides"],
+    ] as const) {
+      const row = screen.getByRole("row", { name: new RegExp(entryNumber) });
+      const statusCell = within(row).getAllByRole("cell")[statusColumn]!;
+      const noteText = within(statusCell).getByText(note);
+      // Table cells never wrap; the note must, or it widens the table past a
+      // 1440 screen.
+      expect(noteText.className).toContain("whitespace-normal");
+    }
+  });
+
   it("sends the chosen order to the queue read", async () => {
     const user = userEvent.setup();
     renderScreen(createElement(FinanceApprovalsScreen));

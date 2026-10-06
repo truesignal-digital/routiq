@@ -528,7 +528,6 @@
       "retry": "Try again",
       "empty": "No entries awaiting approval.",
       "columns": {
-        "actions": "Actions",
         "branch": "Branch",
         "submittedAt": "Submitted"
       },
