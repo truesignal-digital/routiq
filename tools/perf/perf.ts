@@ -26,6 +26,8 @@ export interface Run {
   profile: string;
   runs: number;
   metrics: Measured;
+  /** Metrics some runs did not produce; a run with any is not trustworthy and is never recorded. */
+  incomplete?: string[];
 }
 
 export interface Raise {

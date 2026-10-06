@@ -1,6 +1,6 @@
 {
   "/.ready_ms": {
-    "ceiling": 874,
+    "ceiling": 793,
     "kind": "time"
   },
   "/.requests": {
@@ -8,7 +8,7 @@
     "kind": "count"
   },
   "/activities.ready_ms": {
-    "ceiling": 313,
+    "ceiling": 309,
     "kind": "time"
   },
   "/activities.requests": {
@@ -16,7 +16,7 @@
     "kind": "count"
   },
   "/assets.ready_ms": {
-    "ceiling": 349,
+    "ceiling": 336,
     "kind": "time"
   },
   "/assets.requests": {
@@ -24,7 +24,7 @@
     "kind": "count"
   },
   "/assets/:id.ready_ms": {
-    "ceiling": 530,
+    "ceiling": 498,
     "kind": "time"
   },
   "/assets/:id.requests": {
@@ -32,7 +32,7 @@
     "kind": "count"
   },
   "/finance/approvals.ready_ms": {
-    "ceiling": 300,
+    "ceiling": 286,
     "kind": "time"
   },
   "/finance/approvals.requests": {
@@ -40,7 +40,7 @@
     "kind": "count"
   },
   "/finance/entries.ready_ms": {
-    "ceiling": 385,
+    "ceiling": 363,
     "kind": "time"
   },
   "/finance/entries.requests": {
@@ -48,7 +48,7 @@
     "kind": "count"
   },
   "/maintenance.ready_ms": {
-    "ceiling": 277,
+    "ceiling": 275,
     "kind": "time"
   },
   "/maintenance.requests": {
@@ -56,7 +56,7 @@
     "kind": "count"
   },
   "/more.ready_ms": {
-    "ceiling": 219,
+    "ceiling": 218,
     "kind": "time"
   },
   "/more.requests": {
@@ -64,19 +64,19 @@
     "kind": "count"
   },
   "api.p95_ms": {
-    "ceiling": 186,
+    "ceiling": 212,
     "kind": "time"
   },
   "login.js_bytes": {
-    "ceiling": 560818,
+    "ceiling": 560822,
     "kind": "bytes"
   },
   "login.lcp_ms": {
-    "ceiling": 4234,
+    "ceiling": 4188,
     "kind": "time"
   },
   "login.usable_ms": {
-    "ceiling": 4249,
+    "ceiling": 4204,
     "kind": "time"
   }
 }

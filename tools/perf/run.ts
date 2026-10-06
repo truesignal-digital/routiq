@@ -176,13 +176,15 @@ export async function measure(state: SlotState, runs: number, log: (line: string
     }
     const names = [...new Set(all.flatMap((one) => Object.keys(one.values)))];
     const metrics: Measured = {};
+    const incomplete: string[] = [];
     for (const name of names) {
       const samples = all.flatMap((one) => (one.values[name] === undefined ? [] : [one.values[name] as number]));
+      if (samples.length < runs) incomplete.push(`${name} (${samples.length} of ${runs} runs)`);
       metrics[name] = { value: median(samples), samples, kind: kindOf(name) };
     }
     const p95 = apiP95(state.logs.api, since);
     if (p95 !== undefined) metrics["api.p95_ms"] = { value: p95, samples: [p95], kind: "time" };
-    return { at: new Date().toISOString(), commit: state.commit, profile: PROFILE, runs, metrics };
+    return { at: new Date().toISOString(), commit: state.commit, profile: PROFILE, runs, metrics, ...(incomplete.length > 0 ? { incomplete } : {}) };
   } finally {
     await db.end();
   }

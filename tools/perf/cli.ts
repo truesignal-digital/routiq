@@ -58,8 +58,17 @@ async function main(): Promise<number> {
     mkdirSync(path.dirname(LAST), { recursive: true });
     writeFileSync(LAST, `${JSON.stringify(run, null, 2)}\n`);
     let failed = false;
+    // A metric that stops being measured would otherwise pass forever: a renamed journey, telemetry off, a dropped batch.
+    let trustworthy = true;
+    for (const name of run.incomplete ?? []) {
+      failed = true;
+      trustworthy = false;
+      process.stdout.write(`GAPS  ${name}: some runs did not produce it\n`);
+    }
     for (const v of judge(run.metrics, readCeilings())) {
       if (v.status === "missing") {
+        failed = true;
+        trustworthy = false;
         process.stdout.write(`GONE  ${v.name}: not measured this run (ceiling ${fmt(v.name, v.ceiling)})\n`);
         continue;
       }
@@ -71,7 +80,9 @@ async function main(): Promise<number> {
       const word = { ok: "OK   ", over: "OVER ", beaten: "BEAT " }[v.status];
       process.stdout.write(`${word} ${v.name}: ${fmt(v.name, v.value)} (ceiling ${fmt(v.name, v.ceiling)})\n`);
     }
-    if (args.includes("--record")) {
+    if (args.includes("--record") && !trustworthy) {
+      process.stdout.write("not recorded: the run is missing data (GONE or GAPS above)\n");
+    } else if (args.includes("--record")) {
       mkdirSync(path.dirname(HISTORY_PATH), { recursive: true });
       appendFileSync(HISTORY_PATH, `${JSON.stringify(run)}\n`);
       writeFileSync(README_PATH, renderReadme(readHistory(), readCeilings()));
