@@ -32,7 +32,7 @@ pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test fil
 pnpm db:generate                  # drizzle-kit generate (from apps/api/src/db/schema.ts)
 pnpm db:migrate                   # drizzle-kit migrate
 docker compose up -d              # Postgres 17 on localhost:5435
-docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev)
+docker compose -p routiq-appliance --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev); its own volumes, not the dev database
 ```
 
 - Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
