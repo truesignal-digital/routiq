@@ -8,7 +8,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, log, apiGet }) => {
   await nav("/");
   await page.getByRole("heading", { level: 1, name: t("Accueil", "Home") }).waitFor();
   await page.locator('[data-slot="kpi-card"]').first().waitFor();
-  await shot("home");
+  await shot("home", { caption: "Home: each card matches what the dashboard read returns" });
 
   const cards = await page.locator('[data-slot="kpi-card"]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-kpi")));
   log(`kpi cards shown: ${cards.join(", ")}`);
