@@ -100,7 +100,6 @@ function DatePicker({
       <PopoverContent align="start" className="w-auto p-0">
         <Calendar
           mode="single"
-          locale={locale}
           {...(selected === undefined ? {} : { selected })}
           {...(last === undefined ? {} : { disabled: (day: Date) => day > last })}
           onSelect={(day) => {

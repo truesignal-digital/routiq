@@ -329,7 +329,7 @@
   },
   "fileUpload": {
     "dropzone": "Déposez les fichiers ici ou cliquez pour choisir",
-    "remove": "Retirer",
+    "removeFile": "Retirer {name}",
     "uploading": "Téléversement…",
     "error": "Échec du téléversement : {message}",
     "fileSize": "{value} {unit}",
@@ -1550,6 +1550,12 @@
     "invalidDateTime": "Date et heure non reconnues. Écrivez-les ainsi : {example}",
     "tooEarly": "Au plus tôt le {min}.",
     "tooLate": "Au plus tard le {max}."
+  },
+  "calendar": {
+    "previousYear": "Année précédente",
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "nextYear": "Année suivante"
   },
   "datePicker": {
     "placeholder": "Choisir une date",
