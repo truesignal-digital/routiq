@@ -1334,7 +1334,8 @@
       "yes": "Yes",
       "no": "No",
       "lines": "{count, plural, one {# line} other {# lines}}, {total}",
-      "linesCount": "{count, plural, one {# line} other {# lines}}"
+      "linesCount": "{count, plural, one {# line} other {# lines}}",
+      "unavailable": "Not available"
     },
     "event": {
       "activity-created": "Activity created",
@@ -1497,6 +1498,7 @@
       "passengerCount": "passenger count",
       "commandType": "command",
       "branch": "branch",
+      "branches": "branches",
       "defaultCurrency": "default currency",
       "defaultLocale": "default language",
       "disabledModules": "disabled modules",

@@ -42,7 +42,7 @@ describe("presentChanges", () => {
     ]);
   });
 
-  it("tags a code with its set, and drops one the set does not know", async () => {
+  it("tags a code with its set, and says one the set does not know is not available", async () => {
     const changes = await presentChanges(
       noDatabase,
       "ws",
@@ -56,10 +56,11 @@ describe("presentChanges", () => {
     );
     expect(changes).toEqual([
       { field: "status", kind: "CODE", codeSet: "workOrderStatus", before: "APPROVED", after: "COMPLETED" },
+      { field: "costOutcome", kind: "UNAVAILABLE" },
     ]);
   });
 
-  it("drops an object or a uuid under a plain-value key rather than printing it", async () => {
+  it("says an object or a uuid under a plain-value key is not available rather than printing it", async () => {
     const changes = await presentChanges(
       noDatabase,
       "ws",
@@ -71,7 +72,37 @@ describe("presentChanges", () => {
       ),
       { showMoney: true },
     );
-    expect(changes).toEqual([{ field: "cancelReason", kind: "VALUE", before: null, after: "Doublon" }]);
+    expect(changes).toEqual([
+      { field: "description", kind: "UNAVAILABLE" },
+      { field: "summary", kind: "UNAVAILABLE" },
+      { field: "cancelReason", kind: "VALUE", before: null, after: "Doublon" },
+    ]);
+    expect(JSON.stringify(changes)).not.toContain("3f2a1c4e");
+  });
+
+  it("leaves out money the reader may not see, which is a permission rather than a value it cannot show", async () => {
+    const changes = await presentChanges(
+      noDatabase,
+      "ws",
+      "work_order",
+      diffStates("work_order", { actualCostMinor: null }, { actualCostMinor: { not: "money" }, summary: "Fait" }),
+      { showMoney: false },
+    );
+    expect(changes).toEqual([{ field: "summary", kind: "VALUE", before: null, after: "Fait" }]);
+  });
+
+  it("reads money a writer stored as a bigint's decimal string, as the threshold and work-order writers do", async () => {
+    const changes = await presentChanges(
+      noDatabase,
+      "ws",
+      "work_order",
+      diffStates("work_order", { declaredCostMinor: "325000" }, { declaredCostMinor: null, expectedCostMinor: "12.5" }),
+      { showMoney: true },
+    );
+    expect(changes).toEqual([
+      { field: "expectedCostMinor", kind: "UNAVAILABLE" },
+      { field: "declaredCostMinor", kind: "MONEY", before: 325_000, after: null },
+    ]);
   });
 
   it("never shows the vehicle's specification bag, which only the vehicle History tab words", async () => {

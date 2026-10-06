@@ -20,6 +20,7 @@ import {
   financialEntries,
   memberships,
   operationalIssues,
+  persons,
   postingPeriods,
   principals,
   workOrders,
@@ -31,8 +32,9 @@ import type { TenantTx } from "../db/tenant.js";
  * sheet can show (#110, #119): codes tagged with the set that words them, ids
  * resolved to names, posting lines summarised. Whatever does not fit its
  * field's shape — an unknown code, an id that names nothing in this
- * workspace, an object where a plain value belongs — is dropped rather than
- * shown raw.
+ * workspace, an object where a plain value belongs — is served as
+ * `UNAVAILABLE` rather than shown raw or left out: the reader still sees that
+ * the field changed. Only money the reader may not see is left out.
  */
 
 const isUuid = (value: string) => z.uuid().safeParse(value).success;
@@ -104,6 +106,14 @@ const LOOKUPS: Record<HistoryNameSource, Lookup> = {
         .where(and(eq(memberships.workspaceId, ws), inArray(memberships.id, ids))),
     (row) => plain(row.displayName),
   ),
+  person: byId(
+    (tx, ws, ids) =>
+      tx
+        .select({ id: persons.id, displayName: persons.displayName })
+        .from(persons)
+        .where(and(eq(persons.workspaceId, ws), inArray(persons.id, ids))),
+    (row) => plain(row.displayName),
+  ),
   asset: byId(
     (tx, ws, ids) =>
       tx
@@ -165,7 +175,7 @@ const LOOKUPS: Record<HistoryNameSource, Lookup> = {
   ),
 };
 
-/** `undefined` means "cannot be shown": the whole change is dropped. */
+/** `undefined` means "cannot be shown": the change is served as `UNAVAILABLE`. */
 type Side<T> = T | null | undefined;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -194,6 +204,21 @@ function codes(codeSet: HistoryCodeSet, value: unknown): Side<string[]> {
   return value as string[];
 }
 
+/**
+ * Minor units as the writers store them: a number, or the decimal string a
+ * bigint column serialises to (`update-approval-threshold`, the before side of
+ * `work-orders`). XAF amounts sit far inside the safe integer range.
+ */
+function minor(value: unknown): Side<number> {
+  if (value === null) return null;
+  if (typeof value === "number") return Number.isSafeInteger(value) ? value : undefined;
+  if (typeof value === "string" && /^-?\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
 function count(value: unknown): Side<number> {
   if (value === null) return null;
   if (!Array.isArray(value)) return undefined;
@@ -206,44 +231,43 @@ function lines(value: unknown, showMoney: boolean): Side<{ count: number; totalM
   if (!Array.isArray(value)) return undefined;
   let total = 0;
   for (const line of value) {
-    if (!isRecord(line) || typeof line["amountMinor"] !== "number") return undefined;
-    total += line["amountMinor"];
+    const amount = isRecord(line) ? minor(line["amountMinor"]) : undefined;
+    if (amount === undefined || amount === null) return undefined;
+    total += amount;
   }
   return { count: value.length, totalMinor: showMoney ? total : null };
 }
 
-function crew(value: unknown): Side<HistoryName[]> {
-  if (value === null) return null;
-  if (!Array.isArray(value)) return undefined;
-  const names: HistoryName[] = [];
-  for (const member of value) {
-    if (!isRecord(member) || typeof member["displayName"] !== "string") return undefined;
-    names.push(plain(member["displayName"]));
-  }
-  return names;
-}
-
-function inlineName(value: unknown): Side<HistoryName> {
-  if (value === null) return null;
-  return isRecord(value) && typeof value["name"] === "string" ? plain(value["name"]) : undefined;
-}
-
-/** The asset ids a field refers to, for the lookups to batch. */
-function segmentAssetIds(value: unknown): string[] {
+/**
+ * The ids a list of records points at through one key: a crew member's
+ * `personId` (`create-activity`, `sheet-writer`), a segment's `assetId`.
+ */
+function listedIds(value: unknown, key: string): string[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap((segment) =>
-    isRecord(segment) && typeof segment["assetId"] === "string" ? [segment["assetId"]] : [],
-  );
+  return value.flatMap((item) => (isRecord(item) && typeof item[key] === "string" ? [item[key]] : []));
 }
 
-function segmentAssets(value: unknown, names: Map<string, HistoryName>): Side<HistoryName[]> {
+/** Each item's id under `key`, by name; one item that names nothing makes the list unavailable. */
+function listedNames(value: unknown, key: string, names: Map<string, HistoryName>): Side<HistoryName[]> {
   if (value === null) return null;
   if (!Array.isArray(value)) return undefined;
   const result: HistoryName[] = [];
-  for (const segment of value) {
-    const name = isRecord(segment) && typeof segment["assetId"] === "string" ? names.get(segment["assetId"]) : undefined;
+  for (const item of value) {
+    const id = isRecord(item) ? item[key] : undefined;
+    const name = typeof id === "string" ? names.get(id) : undefined;
     if (name === undefined) return undefined;
     result.push(name);
+  }
+  return result;
+}
+
+function inlineNames(value: unknown): Side<HistoryName[]> {
+  if (value === null) return null;
+  if (!Array.isArray(value)) return undefined;
+  const result: HistoryName[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || typeof item["name"] !== "string") return undefined;
+    result.push(plain(item["name"]));
   }
   return result;
 }
@@ -278,7 +302,9 @@ export async function presentChanges(
   for (const change of changes) {
     const shape = shapeOf(entityType, change.field);
     if (shape === "SEGMENT_ASSETS") {
-      for (const side of [change.before, change.after]) for (const id of segmentAssetIds(side)) want("asset", id);
+      for (const side of [change.before, change.after]) for (const id of listedIds(side, "assetId")) want("asset", id);
+    } else if (shape === "CREW") {
+      for (const side of [change.before, change.after]) for (const id of listedIds(side, "personId")) want("person", id);
     } else if (typeof shape === "object" && "name" in shape) {
       want(shape.name, change.before);
       want(shape.name, change.after);
@@ -304,13 +330,13 @@ export async function presentChanges(
       return from === undefined || to === undefined ? undefined : { before: from, after: to };
     };
 
-    let change: HistoryDiffChange | undefined;
+    let change: Exclude<HistoryDiffChange, { kind: "UNAVAILABLE" }> | undefined;
     if (shape === "VALUE") {
       const sides = both(scalar);
       if (sides) change = { field, kind: "VALUE", ...sides };
     } else if (shape === "MONEY") {
       if (!showMoney) continue;
-      const sides = both((value) => (value === null ? null : typeof value === "number" ? value : undefined));
+      const sides = both(minor);
       if (sides) change = { field, kind: "MONEY", ...sides };
     } else if (shape === "COUNT") {
       const sides = both(count);
@@ -319,15 +345,16 @@ export async function presentChanges(
       const sides = both((value) => lines(value, showMoney));
       if (sides) change = { field, kind: "LINES", ...sides };
     } else if (shape === "CREW") {
-      const sides = both(crew);
+      const personNames = names.get("person") ?? new Map<string, HistoryName>();
+      const sides = both((value) => listedNames(value, "personId", personNames));
       if (sides) change = { field, kind: "NAMES", ...sides };
     } else if (shape === "SEGMENT_ASSETS") {
       const assetNames = names.get("asset") ?? new Map<string, HistoryName>();
-      const sides = both((value) => segmentAssets(value, assetNames));
+      const sides = both((value) => listedNames(value, "assetId", assetNames));
       if (sides) change = { field, kind: "NAMES", ...sides };
-    } else if (shape === "INLINE_NAME") {
-      const sides = both(inlineName);
-      if (sides) change = { field, kind: "NAME", ...sides };
+    } else if (shape === "INLINE_NAMES") {
+      const sides = both(inlineNames);
+      if (sides) change = { field, kind: "NAMES", ...sides };
     } else if ("code" in shape) {
       const sides = both((value) => code(shape.code, value));
       if (sides) change = { field, kind: "CODE", codeSet: shape.code, ...sides };
@@ -339,7 +366,8 @@ export async function presentChanges(
       const sides = both((value) => named(source, value));
       if (sides) change = { field, kind: "NAME", ...sides };
     }
-    if (change !== undefined && !(isNothing(change.before) && isNothing(change.after))) presented.push(change);
+    if (change === undefined) presented.push({ field, kind: "UNAVAILABLE" });
+    else if (!(isNothing(change.before) && isNothing(change.after))) presented.push(change);
   }
   return presented;
 }

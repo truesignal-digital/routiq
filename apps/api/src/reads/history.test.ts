@@ -27,6 +27,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
   let issueId: string;
   let workOrderId: string;
   let availabilityIntervalId: string;
+  let driverId: string;
 
   async function command(
     name: string,
@@ -108,7 +109,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
     ).token;
 
     const assetId = await seedAsset(ctx.app, token, { assetCode: "HIST-TRUCK" });
-    const driverId = randomUUID();
+    driverId = randomUUID();
     await command("register-person", {
       personId: driverId,
       displayName: "Abdoulaye Sanda",
@@ -517,9 +518,9 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       expect(fields).toContain("releaseNote");
       // Bookkeeping: the command that closed it is provenance, not history.
       expect(fields).not.toContain("closedByCommandId");
-      expect(
-        diff.changes.find((change) => change.field === "releaseNote")?.after,
-      ).toBe("Essai routier concluant");
+      expect(diff.changes).toContainEqual(
+        expect.objectContaining({ field: "releaseNote", after: "Essai routier concluant" }),
+      );
     });
   });
 
@@ -789,7 +790,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       });
     });
 
-    it("drops an id that names nothing in this workspace rather than showing it", async () => {
+    it("says a change whose id names nothing in this workspace is not available, never showing the id", async () => {
       // An entity of its own, so the seeded entries' timelines stay as the commands wrote them.
       const entryId = randomUUID();
       const [event] = await ctx.db
@@ -815,7 +816,10 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         headers: { authorization: `Bearer ${approverToken}` },
       });
       const { changes } = historyEventDiff.parse(response.json());
-      expect(changes.map((change) => change.field)).toEqual(["description"]);
+      expect(changes).toEqual([
+        { field: "categoryId", kind: "UNAVAILABLE" },
+        { field: "description", kind: "VALUE", before: "Gasoil", after: "Gasoil Douala" },
+      ]);
     });
 
     /**
@@ -849,6 +853,9 @@ describe("GET /v1/history/:entityType/:entityId", () => {
           for (const change of changes) {
             const where = `${entityType} ${item.eventType} ${change.field}`;
             checked += 1;
+            // A real command's value always fits its field's shape: a placeholder
+            // here means the shape and the writer have drifted apart.
+            expect(change.kind, where).not.toBe("UNAVAILABLE");
             if (change.kind === "VALUE") {
               for (const value of [change.before, change.after]) {
                 if (typeof value !== "string") continue;
@@ -997,10 +1004,11 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       const eventId = await seedEvent({
         entityType: "activity",
         entityId: activityId,
-        eventType: "activity.crewed",
+        eventType: "activity.created",
         afterState: {
           crew: [
             {
+              activityPersonId: "22222222-2222-4222-8222-222222222222",
               personId: "11111111-1111-4111-8111-111111111111",
               role: "DRIVER",
               pinHash: "argon2id$v=19$m=65536",
@@ -1020,24 +1028,90 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         .from(auditEvents)
         .where(eq(auditEvents.id, eventId));
       expect(diffStates("activity", null, crew?.afterState).find((change) => change.field === "crew")?.after).toEqual([
-        { personId: "11111111-1111-4111-8111-111111111111", role: "DRIVER" },
+        {
+          activityPersonId: "22222222-2222-4222-8222-222222222222",
+          personId: "11111111-1111-4111-8111-111111111111",
+          role: "DRIVER",
+        },
       ]);
     });
 
-    it("names the crew by the people on it, not by their ids", async () => {
+    /**
+     * Both trip writers store the crew as the command's payload —
+     * `{ activityPersonId, personId, role }`, no name — so these drive the real
+     * commands rather than seed a snapshot: a test that hands the read a
+     * `displayName` certifies a shape nothing writes.
+     */
+    it("names the crew of a recorded trip sheet by the people on it, not by their ids", async () => {
+      const eventId = await eventIdOf("activity.sheet_recorded");
+      const body = historyEventDiff.parse((await diff("activity", activityId, eventId)).json());
+      expect(body.changes).toContainEqual({
+        field: "crew",
+        kind: "NAMES",
+        before: null,
+        after: [{ fr: "Abdoulaye Sanda", en: "Abdoulaye Sanda" }],
+      });
+    });
+
+    it("names the crew and the vehicle of a trip opened with create-activity", async () => {
+      const tripAssetId = await seedAsset(ctx.app, token, { assetCode: "HIST-CREW-TRUCK" });
+      const conductorId = randomUUID();
+      await command("register-person", {
+        personId: conductorId,
+        displayName: "Mireille Ekotto",
+        branchCode: "DLA",
+        defaultRole: "CONDUCTOR",
+      });
+      const tripId = randomUUID();
+      await command("create-activity", {
+        activityId: tripId,
+        branchCode: "DLA",
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: tripAssetId,
+        startedAt: "2026-07-12T06:00:00Z",
+        crew: [
+          { activityPersonId: randomUUID(), personId: driverId, role: "DRIVER" },
+          { activityPersonId: randomUUID(), personId: conductorId, role: "CONDUCTOR" },
+        ],
+      });
+      const { items } = historyListResponse.parse((await history("activity", tripId)).json());
+      const created = items.find((item) => item.eventType === "activity.created");
+      if (!created) throw new Error("create-activity wrote no activity.created event");
+
+      const body = historyEventDiff.parse((await diff("activity", tripId, created.eventId)).json());
+      expect(body.changes).toContainEqual({
+        field: "crew",
+        kind: "NAMES",
+        before: null,
+        after: [
+          { fr: "Abdoulaye Sanda", en: "Abdoulaye Sanda" },
+          { fr: "Mireille Ekotto", en: "Mireille Ekotto" },
+        ],
+      });
+      expect(body.changes).toContainEqual({
+        field: "segments",
+        kind: "NAMES",
+        before: null,
+        after: [{ fr: "HIST-CREW-TRUCK", en: "HIST-CREW-TRUCK" }],
+      });
+      expect(body.changes.map((change) => change.kind)).not.toContain("UNAVAILABLE");
+    });
+
+    it("says a crew member who names nobody in this workspace is not available, rather than dropping the change", async () => {
+      // An entity of its own, so the real-event guard never walks a hand-made snapshot.
+      const entityId = randomUUID();
       const eventId = await seedEvent({
         entityType: "activity",
-        entityId: activityId,
-        eventType: "activity.crewed",
+        entityId,
+        eventType: "activity.created",
         afterState: {
-          crew: [{ personId: "11111111-1111-4111-8111-111111111111", displayName: "Abdoulaye Sanda", role: "DRIVER" }],
+          crew: [{ activityPersonId: randomUUID(), personId: randomUUID(), role: "DRIVER" }],
         },
       });
-
-      const body = historyEventDiff.parse((await diff("activity", activityId, eventId)).json());
-      expect(body.changes).toEqual([
-        { field: "crew", kind: "NAMES", before: null, after: [{ fr: "Abdoulaye Sanda", en: "Abdoulaye Sanda" }] },
-      ]);
+      const body = historyEventDiff.parse((await diff("activity", entityId, eventId)).json());
+      expect(body.changes).toEqual([{ field: "crew", kind: "UNAVAILABLE" }]);
     });
 
     it("hands money back as minor units with the record's own currency", async () => {

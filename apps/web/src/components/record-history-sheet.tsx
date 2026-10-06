@@ -468,17 +468,25 @@ function HistoryDiff({
           <dt className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
             {t(`history.field.${change.field}`, { defaultValue: change.field })}
           </dt>
-          <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
-            <span className="text-muted-foreground">
-              {formatChangeValue(change, "before", currency, locale, t)}
-            </span>
-            <span aria-hidden className="text-muted-foreground/60">
-              →
-            </span>
-            <span className="font-medium">
-              {formatChangeValue(change, "after", currency, locale, t)}
-            </span>
-          </dd>
+          {/* The field changed, but its value cannot be shown: say so rather
+              than hide the change or invent a before/after. */}
+          {change.kind === "UNAVAILABLE" ? (
+            <dd className="text-xs italic text-muted-foreground">
+              {t("history.diff.unavailable")}
+            </dd>
+          ) : (
+            <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
+              <span className="text-muted-foreground">
+                {formatChangeValue(change, "before", currency, locale, t)}
+              </span>
+              <span aria-hidden className="text-muted-foreground/60">
+                →
+              </span>
+              <span className="font-medium">
+                {formatChangeValue(change, "after", currency, locale, t)}
+              </span>
+            </dd>
+          )}
         </div>
       ))}
     </dl>
@@ -498,7 +506,7 @@ const ISO_DATE_TIME =
  * a timeline starts lying.
  */
 function formatChangeValue(
-  change: HistoryDiffChange,
+  change: Exclude<HistoryDiffChange, { kind: "UNAVAILABLE" }>,
   side: "before" | "after",
   currency: string,
   locale: string,

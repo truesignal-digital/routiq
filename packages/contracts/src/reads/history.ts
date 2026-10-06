@@ -342,7 +342,7 @@ export const HISTORY_STATE_KEYS = {
     "defaultCurrency",
     "defaultLocale",
     "timezone",
-    "branch",
+    "branches",
     "enabledPresets",
     "disabledModules",
   ],

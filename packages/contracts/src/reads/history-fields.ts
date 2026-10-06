@@ -59,7 +59,8 @@ export const historyCodeSet = z.enum(
 /**
  * Records an id (or a category code) in a snapshot can point at. The read
  * resolves each to the name the app shows for that record, inside the caller's
- * workspace; an id that resolves to nothing is dropped, never shown.
+ * workspace; an id that resolves to nothing is shown as unavailable, never as
+ * the id.
  */
 export const HISTORY_NAME_SOURCES = [
   "branch",
@@ -68,6 +69,7 @@ export const HISTORY_NAME_SOURCES = [
   "documentType",
   "issueType",
   "member",
+  "person",
   "asset",
   "activity",
   "entry",
@@ -86,9 +88,11 @@ export type HistoryNameSource = (typeof HISTORY_NAME_SOURCES)[number];
  *   the rest of the money for roles that may not read it.
  * - `{ code }` / `{ codes }`: one code, or a list of codes, from a closed set.
  * - `{ name }`: an id resolved server-side to the record's name.
- * - `CREW`: the crew list, by the people's names.
+ * - `CREW`: the crew list as the trip commands store it (`personId` per
+ *   member), by the people's names.
  * - `SEGMENT_ASSETS`: the job's vehicles, by their names.
- * - `INLINE_NAME`: an object snapshot that carries its own `name`.
+ * - `INLINE_NAMES`: a list of object snapshots that each carry their own
+ *   `name`, as `workspace.provisioned` records its branches.
  * - `COUNT`: a list of ids, counted.
  * - `LINES`: posting lines, counted and totalled (the total is money).
  * - `HIDDEN`: allowlisted for another reader that labels it itself (the
@@ -96,14 +100,17 @@ export type HistoryNameSource = (typeof HISTORY_NAME_SOURCES)[number];
  *   shown in the sheet.
  *
  * Anything that cannot be shown one of these ways is left off the allowlist:
- * raw ids, codes and JSON never reach the screen (apps/web/AGENTS.md).
+ * raw ids, codes and JSON never reach the screen (apps/web/AGENTS.md). A
+ * stored value that does not fit its key's shape, or an id that names nothing
+ * the reader can see, is served as `UNAVAILABLE`: the change stays visible,
+ * its value is withheld.
  */
 export type HistoryFieldShape =
   | "VALUE"
   | "MONEY"
   | "CREW"
   | "SEGMENT_ASSETS"
-  | "INLINE_NAME"
+  | "INLINE_NAMES"
   | "COUNT"
   | "LINES"
   | "HIDDEN"
@@ -305,7 +312,7 @@ export const HISTORY_FIELD_SHAPES: FieldShapes = {
     defaultCurrency: "VALUE",
     defaultLocale: "VALUE",
     timezone: "VALUE",
-    branch: "INLINE_NAME",
+    branches: "INLINE_NAMES",
     enabledPresets: { codes: "template" },
     disabledModules: { codes: "module" },
   },
@@ -340,6 +347,9 @@ const pair = <T extends z.ZodType>(value: T) => ({ before: value.nullable(), aft
 /**
  * One changed field, ready to display. The kind tells the client how to word
  * it; nothing here is a raw id, an unlabelled code or a JSON blob.
+ * `UNAVAILABLE` says the field changed but its value cannot be shown (it does
+ * not fit the field's shape, or names nothing in this workspace), so history
+ * never hides that a change happened.
  */
 export const historyDiffChange = z.discriminatedUnion("kind", [
   z.object({ field: z.string(), kind: z.literal("VALUE"), before: historyScalar, after: historyScalar }),
@@ -350,6 +360,7 @@ export const historyDiffChange = z.discriminatedUnion("kind", [
   z.object({ field: z.string(), kind: z.literal("NAMES"), ...pair(z.array(historyName)) }),
   z.object({ field: z.string(), kind: z.literal("COUNT"), ...pair(z.number().int().nonnegative()) }),
   z.object({ field: z.string(), kind: z.literal("LINES"), ...pair(historyLines) }),
+  z.object({ field: z.string(), kind: z.literal("UNAVAILABLE") }),
 ]);
 
 /**

@@ -1334,7 +1334,8 @@
       "yes": "Oui",
       "no": "Non",
       "lines": "{count, plural, one {# ligne} other {# lignes}}, {total}",
-      "linesCount": "{count, plural, one {# ligne} other {# lignes}}"
+      "linesCount": "{count, plural, one {# ligne} other {# lignes}}",
+      "unavailable": "Non disponible"
     },
     "event": {
       "activity-created": "Activité créée",
@@ -1497,6 +1498,7 @@
       "passengerCount": "nombre de passagers",
       "commandType": "commande",
       "branch": "agence",
+      "branches": "agences",
       "defaultCurrency": "devise par défaut",
       "defaultLocale": "langue par défaut",
       "disabledModules": "modules désactivés",

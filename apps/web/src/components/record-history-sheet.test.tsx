@@ -9,7 +9,7 @@ import {
   type HistoryItem,
 } from "@routiq/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import {
@@ -456,6 +456,32 @@ describe("record history diff", () => {
     expect(screen.getByText("2 lines, FCFA 45,000")).toBeTruthy();
   });
 
+  it("says a change it cannot show is not available, rather than hiding it or inventing a value", async () => {
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([
+      { field: "crew", kind: "UNAVAILABLE" },
+      { field: "description", kind: "VALUE", before: null, after: "Vidange" },
+    ]);
+    await expandRow();
+
+    const crew = screen.getByText("crew").closest("div");
+    expect(crew?.textContent).toContain("Not available");
+    expect(crew?.textContent).not.toContain("→");
+    expect(document.querySelectorAll("dd")).toHaveLength(2);
+  });
+
+  it("words the placeholder in French too", async () => {
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([{ field: "categoryId", kind: "UNAVAILABLE" }]);
+    await expandRow();
+    try {
+      await act(() => i18n.changeLanguage("fr-CM"));
+      expect(await screen.findByText("Non disponible")).toBeTruthy();
+    } finally {
+      await act(() => i18n.changeLanguage("en"));
+    }
+  });
+
   it("counts the lines without a total when the reader may not see money", async () => {
     stubDiff([
       { field: "postings", kind: "LINES", before: null, after: { count: 3, totalMinor: null } },
@@ -564,7 +590,7 @@ describe("record history sheet shows no raw values", () => {
     if (shape === "COUNT") return [{ field, kind: "COUNT", before: 1, after: 2 }];
     if (shape === "LINES") return [{ field, kind: "LINES", before: null, after: { count: 2, totalMinor: 45_000 } }];
     if (shape === "CREW" || shape === "SEGMENT_ASSETS") return [{ field, kind: "NAMES", before: [], after: [name] }];
-    if (shape === "INLINE_NAME") return [{ field, kind: "NAME", before: null, after: name }];
+    if (shape === "INLINE_NAMES") return [{ field, kind: "NAMES", before: null, after: [name] }];
     if ("name" in shape) return [{ field, kind: "NAME", before: null, after: name }];
     const codeSet: HistoryCodeSet = "code" in shape ? shape.code : shape.codes;
     const codes = [...HISTORY_CODE_SETS[codeSet]];
