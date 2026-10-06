@@ -40,9 +40,36 @@ export function withNodes(
   const slots = Object.fromEntries(Object.keys(nodes).map((name) => [name, `⁣${name}⁣`]));
   const text = render(slots);
   const parts = text.split(/⁣([a-zA-Z]+)⁣/);
-  return parts.map((part, index) =>
-    index % 2 === 1 ? <Fragment key={index}>{nodes[part] ?? part}</Fragment> : part,
-  );
+  // A browser may break between plain text and an inline button, so "(" could
+  // end one line and the link start the next (#435). Punctuation touching a
+  // node joins it in one run that never breaks; the sentence stays as written.
+  const out: ReactNode[] = [];
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index] ?? "";
+    if (index % 2 === 0) {
+      out.push(part);
+      continue;
+    }
+    const before = String(out.pop() ?? "");
+    const after = parts[index + 1] ?? "";
+    const lead = /\S*$/.exec(before)?.[0] ?? "";
+    const trail = /^\S*/.exec(after)?.[0] ?? "";
+    const node = nodes[part] ?? part;
+    out.push(before.slice(0, before.length - lead.length));
+    out.push(
+      lead === "" && trail === "" ? (
+        <Fragment key={index}>{node}</Fragment>
+      ) : (
+        <span key={index} className="whitespace-nowrap">
+          {lead}
+          {node}
+          {trail}
+        </span>
+      ),
+    );
+    parts[index + 1] = after.slice(trail.length);
+  }
+  return out;
 }
 
 export function Sep() {
