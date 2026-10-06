@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { router } from "./router.js";
+import { preloadAfterSignIn, preloadScreens, router } from "./router.js";
 import { sessionStore } from "./auth/store.js";
 import { reportError, startTelemetry } from "./telemetry/index.js";
 import { initTheme } from "./lib/theme.js";
@@ -16,6 +16,23 @@ initTheme();
 const queryClient = new QueryClient();
 
 startTelemetry({ getToken: () => sessionStore.getToken(), queryClient, router });
+
+if (!sessionStore.getActive()) {
+  // After the login screen has loaded, so its own download comes first.
+  window.addEventListener("load", () => setTimeout(preloadAfterSignIn, 0), { once: true });
+}
+
+// After the first signed-in screen has rendered and its data has arrived, so
+// other screens' code never competes with it for a slow connection.
+const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
+  if (toLocation.pathname === "/login") return;
+  stopWatching();
+  const startWhenQuiet = () => {
+    if (queryClient.isFetching() > 0) window.setTimeout(startWhenQuiet, 250);
+    else void preloadScreens();
+  };
+  window.setTimeout(startWhenQuiet, 250);
+});
 
 const root = document.getElementById("root");
 if (!root) throw new Error("missing #root element");

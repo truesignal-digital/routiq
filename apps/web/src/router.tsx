@@ -2,38 +2,45 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
 import { financialEntryFilters, VEHICLE_HISTORY_KINDS } from "@routiq/contracts";
 import { sessionStore } from "./auth/store.js";
-import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
-import { AssetsStub } from "./screens/AssetsStub.js";
-import { BranchesScreen } from "./screens/BranchesScreen.js";
-import { DashboardScreen } from "./screens/DashboardScreen.js";
-import { LoginScreen } from "./screens/LoginScreen.js";
-import { MoreStub } from "./screens/MoreStub.js";
-import { PersonsScreen } from "./screens/PersonsScreen.js";
-import { UsersScreen } from "./screens/UsersScreen.js";
-import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
-import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
-import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
-import { MaintenanceScreen } from "./screens/MaintenanceScreen.js";
-import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
-import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
-import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
-import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
-import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
-import { AppShell } from "./shell/AppShell.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
-import { VehicleWorkspaceScreen } from "./vehicle/VehicleWorkspaceScreen.js";
-import { DetailsTab } from "./vehicle/tabs/DetailsTab.js";
-import { DocumentsTab } from "./vehicle/tabs/DocumentsTab.js";
-import { HistoryTab } from "./vehicle/tabs/HistoryTab.js";
-import { MaintenanceTab } from "./vehicle/tabs/MaintenanceTab.js";
-import { MoneyTab } from "./vehicle/tabs/MoneyTab.js";
-import { NowTab } from "./vehicle/tabs/NowTab.js";
-import { TripsTab } from "./vehicle/tabs/TripsTab.js";
+import { LoginScreen } from "./screens/LoginScreen.js";
+
+/**
+ * Every screen but sign-in loads on demand, so the first page a phone opens
+ * carries only the login screen (#480). Route definitions stay here: redirects
+ * and search validation run before a screen's code arrives.
+ */
+const AssetRegisterScreen = lazyRouteComponent(() => import("./screens/AssetRegisterScreen.js"), "AssetRegisterScreen");
+const AssetsStub = lazyRouteComponent(() => import("./screens/AssetsStub.js"), "AssetsStub");
+const BranchesScreen = lazyRouteComponent(() => import("./screens/BranchesScreen.js"), "BranchesScreen");
+const DashboardScreen = lazyRouteComponent(() => import("./screens/DashboardScreen.js"), "DashboardScreen");
+const MoreStub = lazyRouteComponent(() => import("./screens/MoreStub.js"), "MoreStub");
+const PersonsScreen = lazyRouteComponent(() => import("./screens/PersonsScreen.js"), "PersonsScreen");
+const UsersScreen = lazyRouteComponent(() => import("./screens/UsersScreen.js"), "UsersScreen");
+const FinanceRecordScreen = lazyRouteComponent(() => import("./screens/FinanceRecordScreen.js"), "FinanceRecordScreen");
+const FinanceEntriesScreen = lazyRouteComponent(() => import("./screens/FinanceEntriesScreen.js"), "FinanceEntriesScreen");
+const ActivitiesScreen = lazyRouteComponent(() => import("./screens/ActivitiesScreen.js"), "ActivitiesScreen");
+const MaintenanceScreen = lazyRouteComponent(() => import("./screens/MaintenanceScreen.js"), "MaintenanceScreen");
+const ActivityDetailScreen = lazyRouteComponent(() => import("./screens/ActivityDetailScreen.js"), "ActivityDetailScreen");
+const ActivitySheetScreen = lazyRouteComponent(() => import("./screens/ActivitySheetScreen.js"), "ActivitySheetScreen");
+const FinanceEntryDetailScreen = lazyRouteComponent(() => import("./screens/FinanceEntryDetailScreen.js"), "FinanceEntryDetailScreen");
+const FinanceApprovalsScreen = lazyRouteComponent(() => import("./screens/FinanceApprovalsScreen.js"), "FinanceApprovalsScreen");
+const FinancePeriodsScreen = lazyRouteComponent(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
+const AppShell = lazyRouteComponent(() => import("./shell/AppShell.js"), "AppShell");
+const VehicleWorkspaceScreen = lazyRouteComponent(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
+const DetailsTab = lazyRouteComponent(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
+const DocumentsTab = lazyRouteComponent(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
+const HistoryTab = lazyRouteComponent(() => import("./vehicle/tabs/HistoryTab.js"), "HistoryTab");
+const MaintenanceTab = lazyRouteComponent(() => import("./vehicle/tabs/MaintenanceTab.js"), "MaintenanceTab");
+const MoneyTab = lazyRouteComponent(() => import("./vehicle/tabs/MoneyTab.js"), "MoneyTab");
+const NowTab = lazyRouteComponent(() => import("./vehicle/tabs/NowTab.js"), "NowTab");
+const TripsTab = lazyRouteComponent(() => import("./vehicle/tabs/TripsTab.js"), "TripsTab");
 
 const rootRoute = createRootRoute();
 
@@ -277,6 +284,52 @@ const routeTree = rootRoute.addChildren([
 ]);
 
 export const router = createRouter({ routeTree });
+
+/**
+ * While someone types their PIN, fetch the shell and Home, so signing in does
+ * not wait on another download over a slow network.
+ */
+export function preloadAfterSignIn(): void {
+  void AppShell.preload?.();
+  void DashboardScreen.preload?.();
+}
+
+/** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
+const SCREENS_BY_USE = [
+  AssetsStub,
+  VehicleWorkspaceScreen,
+  NowTab,
+  ActivitiesScreen,
+  FinanceEntriesScreen,
+  FinanceApprovalsScreen,
+  MaintenanceScreen,
+  MoreStub,
+  ActivityDetailScreen,
+  FinanceEntryDetailScreen,
+  MaintenanceTab,
+  MoneyTab,
+  TripsTab,
+  DocumentsTab,
+  HistoryTab,
+  DetailsTab,
+  FinanceRecordScreen,
+  ActivitySheetScreen,
+  AssetRegisterScreen,
+  FinancePeriodsScreen,
+  PersonsScreen,
+  UsersScreen,
+  BranchesScreen,
+];
+
+/**
+ * Once the first screen after sign-in has settled, fetch the other screens'
+ * code one at a time, so moving around later does not wait on a download.
+ */
+export async function preloadScreens(): Promise<void> {
+  for (const screen of SCREENS_BY_USE) {
+    await screen.preload?.()?.catch(() => undefined);
+  }
+}
 
 declare module "@tanstack/react-router" {
   interface Register {
