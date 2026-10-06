@@ -365,4 +365,10 @@ export const RULES: readonly Rule[] = [
     fix: "Prototypes stay on their own branch; production routes never mount them.",
     check: linesMatching(/prototypes?\/|Prototype/, (path) => path === "apps/web/src/router.tsx"),
   },
+  {
+    id: "V1",
+    name: "flow-shots-captioned",
+    fix: 'Give the shot a caption: shot("label", { caption: "One English sentence: what this frame proves" }), and a highlight locator where something changed. Reels show the caption under the frame; without it a reviewer sees only the label.',
+    check: linesMatching(/\bshot\(\s*(["'`])[^"'`]*\1\s*\)/, (path) => path.startsWith("tools/verify/flows/") && path.endsWith(".ts")),
+  },
 ];

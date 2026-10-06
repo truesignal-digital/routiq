@@ -20,11 +20,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await page.getByRole("button", { name: t("Modifier les informations", "Edit details"), exact: true }).click();
   await page.getByLabel(t("Marque", "Make"), { exact: true }).fill("Mercedes-Benz");
   await page.getByLabel(t("Modèle", "Model"), { exact: true }).fill("Actros 2640");
-  await shot("details-editing");
+  await shot("details-editing", { caption: "Edit details: the make and model fields are open for change" });
   await page.getByRole("button", { name: t("Enregistrer les informations", "Save details"), exact: true }).click();
   await page.getByRole("button", { name: t("Modifier les informations", "Edit details"), exact: true }).waitFor();
   await quiet();
-  await shot("details-saved");
+  await shot("details-saved", { caption: "The new make and model are saved and shown on the vehicle" });
 
   const { status, body } = await apiGet(`/v1/assets/${assetId ?? ""}`);
   const asset = body as { manufacturer?: string | null; model?: string | null; rowVersion?: number };
