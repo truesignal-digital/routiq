@@ -90,6 +90,7 @@ vi.mock("../auth/me.js", () => ({
 }));
 
 vi.mock("../finance/permissions.js", () => ({
+  canReadFinance: vi.fn(() => true),
   canReadFinanceEntries: vi.fn(() => true),
   canRecordFinance: vi.fn(() => true),
   canReverseEntry: vi.fn(() => false),
@@ -192,6 +193,7 @@ vi.mock("../finance/useEntry.js", () => ({
 vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
 
 import {
+  canReadFinance,
   canReadFinanceEntries,
   canRecordFinance,
   canReverseEntry,
@@ -228,6 +230,7 @@ beforeEach(() => {
   // otherwise follow the next one.
   vi.mocked(canRecordFinance).mockReturnValue(true);
   vi.mocked(canReadFinanceEntries).mockReturnValue(true);
+  vi.mocked(canReadFinance).mockReturnValue(true);
   vi.mocked(canReverseEntry).mockReturnValue(false);
   vi.mocked(entriesScope).mockReturnValue("LEDGER");
   mockDesktop();
@@ -322,6 +325,41 @@ describe("FinanceEntriesScreen", () => {
         { status: "POSTED", sort: DEFAULT_SORT },
       ]),
     );
+  });
+
+  it("lets a ledger reader switch to every line in the books (#427)", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+    // One line per event is the default: the read is asked for nothing else.
+    expect(issuedQueries).toEqual([{ sort: DEFAULT_SORT }]);
+
+    await user.click(screen.getByRole("checkbox", { name: "finance.entries.events.booksView" }));
+    const call = navigate.mock.calls.at(-1)?.[0] as { search: (previous: object) => object };
+    expect(call.search({ status: "LEDGER" })).toEqual({ status: "LEDGER", view: "books" });
+    cleanup();
+
+    Object.assign(emptySearch, { view: "books" });
+    try {
+      render(<FinanceEntriesScreen />);
+      expect(issuedQueries.at(-1)).toEqual({ view: "books", sort: DEFAULT_SORT });
+      expect(
+        screen.getByRole("checkbox", { name: "finance.entries.events.booksView" }).getAttribute("aria-checked"),
+      ).toBe("true");
+    } finally {
+      delete (emptySearch as { view?: string }).view;
+    }
+  });
+
+  it("keeps the books view from roles outside the ledger", () => {
+    vi.mocked(canReadFinance).mockReturnValue(false);
+    Object.assign(emptySearch, { view: "books" });
+    try {
+      render(<FinanceEntriesScreen />);
+      expect(screen.queryByRole("checkbox", { name: "finance.entries.events.booksView" })).toBeNull();
+      expect(issuedQueries.at(-1)).toEqual({ sort: DEFAULT_SORT });
+    } finally {
+      delete (emptySearch as { view?: string }).view;
+    }
   });
 
   it("offers the view menu and the record action in the toolbar row", () => {

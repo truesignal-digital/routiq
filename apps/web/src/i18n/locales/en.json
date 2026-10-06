@@ -521,6 +521,21 @@
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
         "assetOption": "{code} — {name}"
+      },
+      "events": {
+        "cancelledIn": "Cancelled in {month}",
+        "cancellationBadge": "Cancellation",
+        "cancellationOf": "Cancellation of entry {number} ({month})",
+        "cancellationOfEntry": "Cancellation of entry {number}",
+        "showCancellation": "Show cancellation",
+        "hideCancellation": "Hide cancellation",
+        "cancellationEntry": "Cancellation entry {number}",
+        "cancelledByOn": "Cancelled by {name} on {date}",
+        "cancelledOn": "Cancelled on {date}",
+        "reason": "Reason: {reason}",
+        "countsZero": "Counts as 0 in the totals",
+        "countsHere": "Still counts in {month}: the cancellation subtracts in {cancelMonth}",
+        "booksView": "Show every line in the books"
       }
     },
     "approvals": {
@@ -2213,7 +2228,7 @@
       "revenueLegend": "Revenue",
       "monthBar": "{month}: expenses {expenses}, revenue {revenue}",
       "entries": "Entries",
-      "entriesHint": "Nothing is edited: a correction is a reversal, and both stay listed.",
+      "entriesHint": "Nothing is edited: a cancellation in the same month folds under its entry; one from a later month is listed in that month.",
       "filterLabel": "Show entries",
       "filters": {
         "posted": "Posted",
