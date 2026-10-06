@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 562344,
+    "ceiling": 561383,
     "raises": [
       {
         "date": "2026-10-06",
@@ -23,16 +23,24 @@
       {
         "date": "2026-10-06",
         "from": 561051,
-        "to": 562344,
-        "reason": "#96: change-issue-severity form, steps and fr/en strings (+1.3 kB gzip); the locales ship in the first load"
+        "to": 561383,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21376
+    "ceiling": 21493,
+    "raises": [
+      {
+        "date": "2026-10-06",
+        "from": 21376,
+        "to": 21493,
+        "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      }
+    ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 562344,
+    "ceiling": 561383,
     "raises": [
       {
         "date": "2026-10-06",
@@ -55,8 +63,8 @@
       {
         "date": "2026-10-06",
         "from": 561051,
-        "to": 562344,
-        "reason": "#96: change-issue-severity form, steps and fr/en strings (+1.3 kB gzip); the locales ship in the first load"
+        "to": 561383,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
