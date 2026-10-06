@@ -51,7 +51,7 @@ pnpm verify api POST /v1/commands/approve-entry --role finance --json @body.json
 pnpm verify db "select entry_number, status from financial_entries order by 1"
 ```
 
-Options for `login` and `drive`: `--role` (default `director`), `--lang fr|en` (default `fr`), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
+Options for `login` and `drive`: `--role` (default `director`), `--lang fr|en` (default `fr`), `--reel` (records the screen and builds `reel.mp4`, see Reel), `--throttle phone` (CPU 4x slower and slow 4G: 150 ms RTT, 1.6 Mbps down, like the pilot users' phones; applied after sign-in, because the dev server's unbundled cold load says nothing about a built app's), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
 
 Every drive logs in through the real form (Workspace `transports-ngwa`, Username, PIN code, "Se connecter"). Seeded accounts, from `apps/api/scripts/seed-demo.ts`:
 
@@ -88,7 +88,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `settings` | More → Branches, Users, People against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
 
-A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label)`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. Copy a flow as a starting point. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
+A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label, { caption, highlight })`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. `caption` is one English sentence saying what the frame proves; `highlight` is a locator the shot outlines, and the reel zooms into it. Copy a flow as a starting point; `approve-from-panel` uses both. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
 
 `api` prints the status and pretty JSON and never prints the token. Commands take `{ "version": 1, "envelope": { "commandId": "<uuid>", "idempotencyKey": "<unique>", "origin": "HUMAN_UI", "expectedVersion": <n> }, "payload": { ... } }`. Quote paths with `?` in zsh: `pnpm verify api GET '/v1/finance/entries?status=POSTED'`.
 
@@ -99,9 +99,11 @@ A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `to
 Each `drive`, `login` and `api` run writes a new directory, printed on stdout: `.verify/<UTC time>-<command>-s<slot>/`.
 
 - `NN-<label>.png`: full-page screenshots, one per route or `shot()`; `failed-<step>.png` when a step fails.
+- `frames/NN-<label>.png`: the same moment at viewport size, for the contact sheet.
+- `cast/` with `--reel`: every painted frame as a JPEG and `index.json` with their times.
 - `console-errors.txt`: `console.error` and uncaught errors, message plus first app frame.
 - `failed-requests.txt`: responses with status 400 or higher and network failures. Requests the app cancels itself (`net::ERR_ABORTED` on navigation) are counted on stdout, not listed.
-- `summary.json`: slot, commit, account, language, each step with PASS/FAIL and URL, counts.
+- `summary.json`: slot, commit, account, language, each step with PASS/FAIL and URL, the shots with their captions, times and highlight boxes, and `metrics`: API requests, console errors, failed requests, layout shifts and CLS since the last full load, DOM nodes at the end.
 - `drive.webm` with `--video`.
 - `request.json` and `response.json` for `api`.
 - `up` writes `api.log`, `web.log`, `seed.log` and `compose.log` to its own run directory.
@@ -112,7 +114,31 @@ Proof standards:
 - Capture the action and the resulting state, not only the final screen.
 - Cross-check side effects with a read: `apiGet` inside the flow, or `pnpm verify api GET ...` and `pnpm verify db "select ..."` after. A toast is not proof.
 - Open the screenshots you cite. Report console errors and failed requests even when the drive passes.
-- For walkthrough videos (English UI, English captions) use the `review-video` kit against a slot's web URL; `--video` here is raw evidence, not a walkthrough.
+- For PR evidence build a reel (below). The long narrated walkthrough (the `review-video` kit) is only for when the owner asks; `--video` here is raw evidence, not a walkthrough.
+
+## Reel
+
+```bash
+pnpm verify drive flow:approve-from-panel --role finance --lang en --reel   # records the screen, writes reel.mp4 at the end
+pnpm verify reel .verify/<after-run> --before /path/to/base-checkout/.verify/<before-run> --title "What changed (#NN)"
+```
+
+A reel is the PR evidence: a 1080p mp4 of the real flow, usually 10 to 25 seconds, plus `reel-sheet.png`, a contact sheet of every shot. `--reel` records every frame the page paints (Chrome screencast, `cast/` in the run directory) and marks each `shot()` as a beat. The reel replays the recording in the app's own fonts and colours (read from `apps/web/src/styles.css`): it plays up to each shot, holds there while the caption shows and the camera eases into the highlight, then moves on, and it ends on the run's counts. Idle stretches longer than 0.6 s play at 0.6 s; the clock above each pane always shows real seconds.
+
+With `--before`, both runs play side by side, synced at each shot (`reel-compare.mp4`), and the end card shows each count before and after. A before run that failed stops at the first screen it never reached, with the reason in red ("Stopped at 31.2 s: couldn't click within 30 s"), and its counts are shown without a win/loss verdict. To get a before run: `git worktree add --detach <dir> origin/develop`, `pnpm install` there, `pnpm verify up --slot <other>` from it, then drive the same flow file by its absolute path from that checkout with `--reel`. The base checkout's `tools/verify` must already record casts; for an older base, copy this checkout's `tools/verify/*.ts` over it first. Remove the extra worktree and `down` its slot afterwards.
+
+Before uploading, open `reel-sheet.png` and pull a few frames out of the mp4 (`ffmpeg -ss 5 -i reel.mp4 -frames:v 1 check.png`) to check the captions match what's on screen. Needs `ffmpeg` on the machine.
+
+## Observe
+
+Drives send real telemetry, and every command lands in the ledger, so a slot is a small field:
+
+```bash
+pnpm observe report --slot N            # ledger, refusals, write lag, approval wait, client errors, devices, journeys, vitals, server routes
+pnpm observe report --slot N --json     # the same for scripts
+```
+
+Use it to read a change's effect on journeys (`command:<name>`, `route:<template>`, `app:usable`) and on server time, and to check a drive caused no client errors. Lab percentiles from a handful of drives are anecdotes; say n when you quote them.
 
 ## Cleanup
 

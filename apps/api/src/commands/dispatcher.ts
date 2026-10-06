@@ -381,6 +381,7 @@ export async function dispatchCommand(
   body: unknown,
   log?: CommandLog,
 ): Promise<{ status: number; body: CommandOutcome | ErrorBody }> {
+  const started = performance.now();
   const outer = commandRequest.safeParse(body);
   if (!outer.success) {
     return commandErrorResponse(
@@ -429,7 +430,7 @@ export async function dispatchCommand(
           actorScope: "workspace",
         });
       }
-      return await dispatchPlatform(requirePlatformDb(db), ctx, definition, outer.data);
+      return await dispatchPlatform(requirePlatformDb(db), ctx, definition, outer.data, started);
     }
     if (isOperatorContext(ctx)) {
       throw new CommandError(403, "COMMAND_SCOPE_FORBIDDEN", {
@@ -588,7 +589,10 @@ export async function dispatchCommand(
           idempotentReplay: false,
         };
 
-        await tx.update(commands).set({ result: outcome }).where(eq(commands.id, outcome.commandId));
+        await tx
+          .update(commands)
+          .set({ result: outcome, durationMs: elapsedMs(started) })
+          .where(eq(commands.id, outcome.commandId));
 
         return { status: 200, body: outcome };
       });
@@ -664,6 +668,7 @@ export async function dispatchCommand(
         { ...outer.data, payload: receiptPayload, payloadHash: payloadFingerprint },
         commandError,
         log,
+        elapsedMs(started),
       );
     }
     return commandErrorResponse(commandError);
@@ -682,6 +687,7 @@ async function dispatchPlatform(
   ctx: OperatorContext,
   definition: PlatformCommandDefinition<unknown>,
   request: { name: string; version: number; envelope: CommandEnvelope; payload: unknown },
+  started: number,
 ): Promise<{ status: number; body: CommandOutcome | ErrorBody }> {
   const parsedPayload = definition.payloadSchema.safeParse(request.payload);
   if (!parsedPayload.success) {
@@ -773,7 +779,10 @@ async function dispatchPlatform(
         idempotentReplay: false,
       };
 
-      await tx.update(commands).set({ result: outcome }).where(eq(commands.id, outcome.commandId));
+      await tx
+        .update(commands)
+        .set({ result: outcome, durationMs: elapsedMs(started) })
+        .where(eq(commands.id, outcome.commandId));
 
       return { status: 200, body: outcome };
     });
@@ -833,7 +842,8 @@ async function recordFailureReceipt(
     payloadHash: string;
   },
   commandError: CommandError,
-  log?: CommandLog,
+  log: CommandLog | undefined,
+  durationMs: number,
 ): Promise<void> {
   try {
     await inWorkspace(db, ctx.workspaceId, async (tx) => {
@@ -854,11 +864,16 @@ async function recordFailureReceipt(
         payloadHash: request.payloadHash,
         result: null,
         failureCode: commandError.code,
+        durationMs,
       });
     });
   } catch (receiptError) {
     log?.error({ err: receiptError, event: "command.failure_receipt_failed" });
   }
+}
+
+function elapsedMs(started: number): number {
+  return Math.round(performance.now() - started);
 }
 
 /** §5.3 optimistic concurrency: mutations of existing rows must carry expectedVersion. */
