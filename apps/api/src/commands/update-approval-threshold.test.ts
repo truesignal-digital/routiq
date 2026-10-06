@@ -230,9 +230,9 @@ describe("update-approval-threshold.v1", () => {
 /**
  * #47 spec finding: work-order thresholds must be reachable through the tenant
  * configuration path, not only by inserting rules. Their catalog defaults are
- * unbounded, so the first threshold turns them into a band — DIRECTOR and ADMIN,
- * who approve work orders, keep an unbounded rule beside their band, the way
- * record-expense ships.
+ * unbounded, so the first threshold turns them into a band. Only DIRECTOR keeps
+ * an unbounded rule beside its band, the way record-expense ships (#412): an
+ * Administrateur's own order above the band waits like the workshop's.
  */
 describe("update-approval-threshold.v1 for the work-order pair", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -322,7 +322,6 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
       .sort();
     expect(rules).toEqual([
       "ADMIN:200000",
-      "ADMIN:∞",
       "DIRECTOR:200000",
       "DIRECTOR:∞",
       "TECHNICIAN:200000",
@@ -330,10 +329,10 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
 
     expect(await createStatus(mechanicToken, 150_000)).toBe("APPROVED");
     expect(await createStatus(mechanicToken, 500_000)).toBe("SUBMITTED");
-    // The roles that approve work orders are not queued behind one another at
-    // either end of the band.
+    // Direction alone posts above the band; the Administrateur's order waits
+    // for another approver (#412).
     expect(await createStatus(managerToken, 150_000)).toBe("APPROVED");
-    expect(await createStatus(managerToken, 500_000)).toBe("APPROVED");
+    expect(await createStatus(managerToken, 500_000)).toBe("SUBMITTED");
     expect(await createStatus(adminToken, 150_000)).toBe("APPROVED");
     expect(await createStatus(adminToken, 500_000)).toBe("APPROVED");
   });
@@ -344,7 +343,7 @@ describe("update-approval-threshold.v1 for the work-order pair", () => {
       amountMaxMinor: 600_000,
     });
     expect(response.statusCode).toBe(200);
-    expect(await rulesFor("create-work-order")).toHaveLength(5);
+    expect(await rulesFor("create-work-order")).toHaveLength(4);
     expect(await createStatus(mechanicToken, 500_000)).toBe("APPROVED");
     expect(await createStatus(mechanicToken, 700_000)).toBe("SUBMITTED");
   });

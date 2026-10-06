@@ -6,6 +6,7 @@ import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contr
 import { FilterChips } from "@/components/filter-chips";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -502,7 +503,10 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
                 className="font-normal text-muted-foreground"
                 onClick={() => panel.openRecord({ kind: "trip", id: links.activityId ?? "" })}
               >
-                {t("vehicle.money.forTrip", { number: links.activityNumber ?? "" })}
+                <RecordText
+                  text={t("vehicle.money.forTrip", { number: links.activityNumber ?? "" })}
+                  numbers={[links.activityNumber]}
+                />
               </LinkButton>
             </>
           )}

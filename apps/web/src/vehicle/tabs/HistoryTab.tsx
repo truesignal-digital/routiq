@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Clock } from "lucide-react";
 import type { VehicleHistoryItem, VehicleHistoryKind } from "@routiq/contracts";
 import { FilterChips } from "@/components/filter-chips";
+import { RecordText } from "@/components/record-number";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -150,7 +151,9 @@ function EventRow({ item }: { item: VehicleHistoryItem }) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <p className="font-medium leading-snug">{view.title}</p>
+          <p className="font-medium leading-snug">
+            <RecordText text={view.title} numbers={[view.titleNumber]} />
+          </p>
           {item.amountMinor !== null && gates.entries && (
             <span className={cn("shrink-0 text-sm tabular-nums", item.amountMinor < 0 && "text-muted-foreground")}>
               {formatMoney(item.amountMinor, {

@@ -4,7 +4,7 @@ import {
   assetBranchIds,
   branchIdsByCode,
 } from "./branch-authorization.js";
-import type { Role } from "@routiq/contracts";
+import { canBookWorkOrderCost, type Role } from "@routiq/contracts";
 import {
   CommandError,
   registerCommand,
@@ -29,8 +29,8 @@ interface FinancialEntryCommandConfig {
  * The workshop records what a repair cost, and nothing else: a TECHNICIAN
  * member's expense is accepted only when every line is attributed to a work
  * order, which the writer then holds to APPROVED status and branch scope.
- * A DRIVER is the opposite: parts and labour are not theirs to book (ADR-0009),
- * so no line of theirs may name a work order.
+ * Parts and labour are not the other roles' to book (`canBookWorkOrderCost`),
+ * so no line of a DRIVER, FINANCE or CASHIER member may name a work order.
  */
 export function requireWorkOrderAttribution(
   role: Role,
@@ -38,7 +38,7 @@ export function requireWorkOrderAttribution(
   command: string,
 ): void {
   if (
-    role === "DRIVER" &&
+    !canBookWorkOrderCost(role) &&
     payload.postings.some((posting) => posting.workOrderId !== undefined)
   ) {
     throw new CommandError(403, "ROLE_FORBIDDEN", {

@@ -1,6 +1,7 @@
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { RecordText } from "@/components/record-number";
 import { recordReference } from "@/vehicle/model.js";
 
 const LINK_CLASS =
@@ -31,7 +32,7 @@ export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }
       )}
       {hasTrip && (
         <Link to="/activities/$activityId" params={{ activityId }} className={LINK_CLASS}>
-          {t("finance.entries.detail.tripLink", { number: activityNumber })}
+          <RecordText text={t("finance.entries.detail.tripLink", { number: activityNumber })} numbers={[activityNumber]} />
         </Link>
       )}
     </span>

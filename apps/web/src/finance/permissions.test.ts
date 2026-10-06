@@ -40,17 +40,23 @@ describe("finance decisions, per role (ADR-0009)", () => {
   });
 });
 
-describe("a cost on a work order (#410)", () => {
-  it("is the workshop's and the managers', never the driver's", () => {
-    const allowed = ROLES.filter((role) => canAddWorkOrderCost(role, FINANCE_ON));
-    expect(allowed).not.toContain("DRIVER");
-    expect(allowed).toContain("TECHNICIAN");
-    expect(allowed).toContain("DIRECTOR");
-    expect(allowed).toContain("ADMIN");
+describe("a cost on a work order (#410, #414)", () => {
+  it("is the workshop's and the managers', never Finance's, the Cashier's or the driver's", () => {
+    expect(ROLES.filter((role) => canAddWorkOrderCost(role, FINANCE_ON))).toEqual([
+      "DIRECTOR",
+      "ADMIN",
+      "TECHNICIAN",
+    ]);
   });
 
-  it("leaves the driver's own expenses alone", () => {
-    expect(canRecordFinance("DRIVER", FINANCE_ON)).toBe(true);
+  it("is nobody's with the books switched off", () => {
+    expect(ROLES.filter((role) => canAddWorkOrderCost(role, ["CORE", "MAINTENANCE"]))).toEqual([]);
+  });
+
+  it("leaves Finance's, the Cashier's and the driver's own expenses alone", () => {
+    for (const role of ["FINANCE", "CASHIER", "DRIVER"] as const) {
+      expect(canRecordFinance(role, FINANCE_ON)).toBe(true);
+    }
   });
 });
 

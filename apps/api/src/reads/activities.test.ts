@@ -419,7 +419,8 @@ describe("activity, person and place reads", () => {
         categoryLabelFr: "Recettes de fret",
         categoryLabelEn: "Freight revenue",
         amountMinor: 1_850_000,
-        status: "POSTED",
+        // #412: an Administrateur's own entry above the recording band waits.
+        status: "SUBMITTED",
       }),
     ]);
   });

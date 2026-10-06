@@ -267,6 +267,13 @@
       "when": 1791161560104,
       "tag": "0037_entry_decision_chain",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791248318714,
+      "tag": "0038_chain_covers_finance_admin",
+      "breakpoints": true
     }
   ]
 }

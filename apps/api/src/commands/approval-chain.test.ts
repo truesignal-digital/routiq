@@ -130,6 +130,122 @@ describe("default approval chain", () => {
     return { status: response.statusCode, code: response.json()?.error?.code as string | undefined };
   }
 
+  /**
+   * #412 (owner decision 2026-10-05): the chain covers the roles that keep the
+   * books. Finance's and the Administrateur's own entries above the recording
+   * band wait like everyone else's; only Direction's post at any amount.
+   */
+  describe("the deciders' own entries", () => {
+    const AMOUNTS = [99_999, RECORDING_BAND, RECORDING_BAND + 1, FINANCE_BAND, FINANCE_BAND + 1] as const;
+
+    async function record(
+      token: string,
+      name: "record-expense" | "record-revenue",
+      amountMinor: number,
+    ): Promise<{ entryId: string; recordStatus: string }> {
+      const entryId = randomUUID();
+      const response = await post(token, name, {
+        entryId,
+        branchCode: "DLA",
+        categoryCode: name === "record-expense" ? "FUEL" : "FREIGHT_REVENUE",
+        economicDate: `${currentPeriodCode(new Date(), "Africa/Douala")}-15`,
+        amountMinor,
+        paymentMethod: "MOMO",
+        paymentReference: `MOMO-${randomUUID()}`,
+        postings: [{ assetId, amountMinor }],
+      });
+      expect(response.statusCode, `${name} ${amountMinor}`).toBe(200);
+      return { entryId, recordStatus: (response.json() as { recordStatus: string }).recordStatus };
+    }
+
+    it("posts Direction's own entries at any amount", async () => {
+      for (const name of ["record-expense", "record-revenue"] as const) {
+        const statuses = [];
+        for (const amount of AMOUNTS) statuses.push((await record(tokens.director, name, amount)).recordStatus);
+        expect(statuses, name).toEqual(["POSTED", "POSTED", "POSTED", "POSTED", "POSTED"]);
+      }
+    });
+
+    it("holds Finance's and the Administrateur's own entries above the recording band", async () => {
+      for (const token of [tokens.finance, tokens.adminDla]) {
+        for (const name of ["record-expense", "record-revenue"] as const) {
+          const statuses = [];
+          for (const amount of AMOUNTS) statuses.push((await record(token, name, amount)).recordStatus);
+          expect(statuses, name).toEqual(["POSTED", "POSTED", "SUBMITTED", "SUBMITTED", "SUBMITTED"]);
+        }
+      }
+    });
+
+    it("sends Finance's own entry to Direction: the maker never decides it", async () => {
+      for (const amount of [RECORDING_BAND + 1, FINANCE_BAND, FINANCE_BAND + 1]) {
+        const { entryId } = await record(tokens.finance, "record-expense", amount);
+        expect(await decideEntry(tokens.finance, "approve-entry", entryId)).toEqual({
+          status: 403,
+          code: "MAKER_CANNOT_APPROVE",
+        });
+        expect((await decideEntry(tokens.director, "approve-entry", entryId)).status).toBe(200);
+      }
+    });
+
+    it("sends the Administrateur's own entry to Finance up to its band, then to Direction", async () => {
+      const withinFinance = await record(tokens.adminDla, "record-expense", FINANCE_BAND);
+      const aboveFinance = await record(tokens.adminDla, "record-expense", FINANCE_BAND + 1);
+      expect(await decideEntry(tokens.adminDla, "approve-entry", withinFinance.entryId)).toEqual({
+        status: 403,
+        code: "ROLE_FORBIDDEN",
+      });
+
+      const read = async (token: string, url: string) =>
+        (await ctx.app.inject({ method: "GET", url, headers: { authorization: `Bearer ${token}` } })).json();
+      for (const [token, aboveBand] of [
+        [tokens.finance, true],
+        [tokens.director, false],
+      ] as const) {
+        const queue = (await read(token, "/v1/finance/approvals?limit=100")) as {
+          entries: Array<{ id: string; directionDecides: boolean }>;
+        };
+        const flag = (id: string) => queue.entries.find((entry) => entry.id === id)?.directionDecides;
+        expect([flag(withinFinance.entryId), flag(aboveFinance.entryId)]).toEqual([false, aboveBand]);
+
+        const attention = (await read(token, `/v1/assets/${assetId}/attention`)) as {
+          items: Array<{ code: string; subject: { id: string }; params: { directionDecides?: boolean } }>;
+        };
+        const review = (id: string) =>
+          attention.items.find((item) => item.code === "ENTRY_AWAITING_REVIEW" && item.subject.id === id)
+            ?.params.directionDecides;
+        expect([review(withinFinance.entryId), review(aboveFinance.entryId)]).toEqual([false, aboveBand]);
+      }
+
+      expect((await decideEntry(tokens.finance, "approve-entry", withinFinance.entryId)).status).toBe(200);
+      expect(await decideEntry(tokens.finance, "approve-entry", aboveFinance.entryId)).toEqual({
+        status: 403,
+        code: "APPROVAL_REQUIRED",
+      });
+      expect((await decideEntry(tokens.director, "approve-entry", aboveFinance.entryId)).status).toBe(200);
+    });
+
+    it("moves Finance's and the Administrateur's recording band with everyone else's", async () => {
+      const moveTo = async (amountMaxMinor: number) => {
+        for (const commandType of ["record-expense", "record-revenue"]) {
+          const response = await post(tokens.director, "update-approval-threshold", { commandType, amountMaxMinor });
+          expect(response.statusCode).toBe(200);
+        }
+      };
+      await moveTo(150_000);
+      try {
+        for (const token of [tokens.finance, tokens.adminDla]) {
+          for (const name of ["record-expense", "record-revenue"] as const) {
+            expect((await record(token, name, 150_000)).recordStatus).toBe("POSTED");
+            expect((await record(token, name, 150_001)).recordStatus).toBe("SUBMITTED");
+          }
+        }
+        expect((await record(tokens.director, "record-expense", 5_000_000)).recordStatus).toBe("POSTED");
+      } finally {
+        await moveTo(RECORDING_BAND);
+      }
+    });
+  });
+
   describe("money entries", () => {
     let belowBandEntryIds: string[];
     let financeBandEntryIds: string[];
