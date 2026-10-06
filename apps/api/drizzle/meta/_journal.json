@@ -281,6 +281,13 @@
       "when": 1791251554003,
       "tag": "0039_approval_rule_notice",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791282548202,
+      "tag": "0040_cancellation_reason",
+      "breakpoints": true
     }
   ]
 }

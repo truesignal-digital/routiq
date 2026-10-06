@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROFITABILITY_LAYERS } from "../commands/categories.js";
+import { cancellationReasonCode } from "../commands/reverse-entry.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
 
@@ -148,6 +149,13 @@ export const financialEntryDetail = financialEntryListItem.extend({
   sourceReference: z.string().nullable(),
   rejectedReason: z.string().nullable(),
   reversedByEntryId: z.uuid().nullable(),
+  /**
+   * Why the entry was cancelled (#426): on a cancellation, its own reason; on
+   * the entry it cancelled, the same one. Null on an entry never cancelled.
+   */
+  cancellation: z
+    .object({ reasonCode: cancellationReasonCode, reasonText: z.string().nullable() })
+    .nullable(),
   postings: z.array(financialPosting),
   /** The files counted by `evidence.artifactCount`, oldest first. */
   evidenceFiles: z.array(entryEvidenceFile),

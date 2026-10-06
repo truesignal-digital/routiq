@@ -1,4 +1,5 @@
 import {
+  CANCELLATION_REASON_CODES,
   CATEGORY_KINDS,
   EVIDENCE_POLICIES,
   MODULE_CODES,
@@ -574,6 +575,12 @@ export const financialEntries = pgTable(
     }).notNull(),
     rejectedReason: text("rejected_reason"),
     reversesEntryId: uuid("reverses_entry_id").references((): AnyPgColumn => financialEntries.id),
+    /**
+     * On a reversal row only, set once at insert: why the entry was cancelled
+     * (#426). Text is the person's words, required for OTHER.
+     */
+    reversalReasonCode: text("reversal_reason_code", { enum: CANCELLATION_REASON_CODES }),
+    reversalReasonText: text("reversal_reason_text"),
     postedAt: timestamp("posted_at", { withTimezone: true }),
     rowVersion: integer("row_version").notNull().default(1),
     createdByCommandId: uuid("created_by_command_id")

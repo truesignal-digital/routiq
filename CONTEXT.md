@@ -76,6 +76,10 @@ _Avoid_: comment thread, description, edit
 What saving "Modifier" does to approved or posted money, a meter reading or stock. One command reverses the original and records the replacement, so the original stays. Lists show the current value with a "corrigé" badge; history shows the old value struck through. A changed amount goes back for approval. Users never choose between an edit and a correction; the **Edit Level** decides (ADR-0008).
 _Avoid_: edit (for approved money), reversal (in the interface), void, overwrite
 
+**Cancellation (of an entry)**:
+Taking a posted entry out of the books because it should not be there. Underneath it is a reversal: the `reverse-entry` command adds a second entry whose signed postings subtract the first, and the original's status becomes `REVERSED`. The interface says **Annuler l'écriture** / **Cancel entry**: the original reads **Annulée** / **Cancelled**, and the new row reads **Annulation de l'écriture {number}** / **Cancellation of entry {number}**. The reason is one of four: entered twice, didn't happen, wrong details (to record again), or other with the person's own words (#426). A cancellation is never cancelled; to undo one, record the entry again.
+_Avoid_: reverse, extourne, contre-passation (in the interface), delete, void
+
 **Edit Level**:
 Which of four things "Modifier" does, decided by the record, never by the user (ADR-0008). **Plain edit**: descriptive details (plate, make and model, chassis, a phone number) change in place with an audit event. **Free until decided**: the author changes their own pending record in place until someone approves or rejects it. **Correction**: approved money, readings and stock. **Locked**: in a locked period, the correction posts to the open period as a late posting.
 _Avoid_: edit mode, correction mode (users see one action)

@@ -33,6 +33,7 @@ const entry: FinancialEntryDetail = {
   rejectedReason: null,
   reversesEntryId: null,
   reversedByEntryId: null,
+  cancellation: null,
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,

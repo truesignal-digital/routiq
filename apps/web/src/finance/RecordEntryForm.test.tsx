@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   recordExpensePayload,
+  reverseEntryPayload,
   updatePendingEntryPayload,
   type FinancialEntryDetail,
 } from "@routiq/contracts";
@@ -368,28 +369,90 @@ describe("entry decisions on a record panel", () => {
     expect(submit.disabled).toBe(false);
   });
 
-  it("reverses with one reversal id per opening and hands it to the host", async () => {
+  function openCancel(client: CommandClient, extra: { onReversed?: (id: string, code: string) => void; onRecordAgain?: () => void } = {}) {
+    inPanel(<ReverseEntryForm surface="panel" entry={entry} client={client} onDismiss={vi.fn()} {...extra} />);
+    return screen.getByRole("dialog", { name: "Cancel entry" });
+  }
+
+  it("asks for a reason from the short list, with Cancel entry last and destructive (#426)", async () => {
+    const panel = openCancel(recordingClient(posted));
+    const reasons = within(panel).getByRole("radiogroup", { name: "Why cancel this entry?" });
+    expect(within(reasons).getAllByRole("radio").map((radio) => radio.getAttribute("aria-label") ?? radio.closest("label")?.textContent)).toEqual([
+      "Entered twice",
+      "Didn't happen",
+      "Wrong details, to record again",
+      "Other",
+    ]);
+    const submit = within(panel).getByRole("button", { name: "Cancel entry" }) as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+    expect(submit.getAttribute("data-variant") ?? submit.className).toMatch(/destructive/);
+    expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Keep entry", "Cancel entry"]);
+    // The text field is for Other only.
+    expect(within(panel).queryByRole("textbox")).toBeNull();
+  });
+
+  it("sends the exact v2 payload for a listed reason, one cancellation id per opening", async () => {
     const client = recordingClient(posted);
     const onReversed = vi.fn();
-    inPanel(
-      <ReverseEntryForm
-        surface="panel"
-        entry={entry}
-        client={client}
-        onReversed={onReversed}
-        onDismiss={vi.fn()}
-      />,
-    );
+    const panel = openCancel(client, { onReversed });
 
-    await userEvent.type(screen.getByRole("textbox", { name: "Reason for reversal" }), "Wrong truck");
-    await userEvent.click(screen.getByRole("button", { name: "Reverse entry" }));
+    await userEvent.click(within(panel).getByRole("radio", { name: "Entered twice" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Cancel entry" }));
 
     await waitFor(() => expect(onReversed).toHaveBeenCalledOnce());
-    const payload = client.seen[0]!.payload as { reversalEntryId: string; originalEntryId: string };
-    expect(client.seen[0]!.name).toBe("reverse-entry");
-    expect(payload.originalEntryId).toBe(ENTRY_ID);
-    expect(onReversed).toHaveBeenCalledWith(payload.reversalEntryId);
-    expect(client.seen[0]!.envelope.expectedVersion).toBe(3);
+    const sent = client.seen[0] as Seen & { version: number };
+    expect(sent.name).toBe("reverse-entry");
+    expect(sent.version).toBe(2);
+    const payload = sent.payload as { reversalEntryId: string };
+    expect(sent.payload).toEqual({
+      reversalEntryId: payload.reversalEntryId,
+      originalEntryId: ENTRY_ID,
+      reasonCode: "ENTERED_TWICE",
+    });
+    expect(reverseEntryPayload.safeParse(sent.payload).success).toBe(true);
+    expect(onReversed).toHaveBeenCalledWith(payload.reversalEntryId, "ENTERED_TWICE");
+    expect(sent.envelope.expectedVersion).toBe(3);
+  });
+
+  it("requires words for Other and sends them trimmed", async () => {
+    const client = recordingClient(posted);
+    const panel = openCancel(client, { onReversed: vi.fn() });
+    const submit = within(panel).getByRole("button", { name: "Cancel entry" }) as HTMLButtonElement;
+
+    await userEvent.click(within(panel).getByRole("radio", { name: "Other" }));
+    const text = within(panel).getByRole("textbox", { name: "Say why" });
+    expect(text.getAttribute("aria-required")).toBe("true");
+    expect(submit.disabled).toBe(true);
+    await userEvent.type(text, "  Card refunded  ");
+    expect(submit.disabled).toBe(false);
+    await userEvent.click(submit);
+
+    await waitFor(() => expect(client.seen).toHaveLength(1));
+    expect(client.seen[0]!.payload).toMatchObject({ reasonCode: "OTHER", reasonText: "Card refunded" });
+  });
+
+  it("offers Record again after a cancellation for wrong details", async () => {
+    const onRecordAgain = vi.fn();
+    const panel = openCancel(recordingClient(posted), { onRecordAgain });
+
+    await userEvent.click(within(panel).getByRole("radio", { name: "Wrong details, to record again" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Cancel entry" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Record again" }));
+    expect(onRecordAgain).toHaveBeenCalledOnce();
+  });
+
+  it("closes straight away for the other reasons", async () => {
+    const onRecordAgain = vi.fn();
+    const onDismiss = vi.fn();
+    inPanel(
+      <ReverseEntryForm surface="panel" entry={entry} client={recordingClient(posted)} onDismiss={onDismiss} onRecordAgain={onRecordAgain} />,
+    );
+    await userEvent.click(screen.getByRole("radio", { name: "Didn't happen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel entry" }));
+    await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
   });
 });
 
@@ -425,6 +488,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     sourceReference: null,
     rejectedReason: null,
     reversedByEntryId: null,
+    cancellation: null,
     postings: [
       {
         lineNo: 1,
@@ -481,6 +545,49 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     );
     return screen.getByRole("dialog", { name: "Edit entry DLA-2026-00012" });
   }
+
+  it("records again from a cancelled entry: pre-filled, a new entry through the normal record command (#426)", async () => {
+    const client = recordingClient(posted);
+    const onRecorded = vi.fn();
+    const cancelled: FinancialEntryDetail = { ...pending, status: "REVERSED", postedAt: "2026-09-12T08:00:00.000Z" };
+    inPanel(
+      <RecordEntryForm surface="panel" recordAgainFrom={cancelled} client={client} onRecorded={onRecorded} onDismiss={vi.fn()} />,
+    );
+    const panel = screen.getByRole("dialog", { name: "Record expense" });
+
+    const amount = within(panel).getByLabelText("Amount (FCFA)") as HTMLInputElement;
+    expect(amount.value).toMatch(/^45\s?000$/);
+    expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
+    expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
+    expect((within(panel).getByLabelText("Description (optional)") as HTMLTextAreaElement).value).toBe(
+      "Plaquettes de frein",
+    );
+    await waitFor(() => expect(within(panel).getByLabelText("Branch").textContent).toContain("Douala"));
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "40000");
+    await userEvent.click(within(panel).getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() => expect(onRecorded).toHaveBeenCalledOnce());
+    const sent = client.seen[0] as Seen & { version: number };
+    expect(sent.name).toBe("record-expense");
+    const payload = recordExpensePayload.parse(sent.payload);
+    expect(payload.entryId).not.toBe(ENTRY_ID);
+    expect(payload).toMatchObject({
+      branchCode: "DLA",
+      categoryCode: "REPAIRS",
+      economicDate: "2026-09-12",
+      amountMinor: 40_000,
+      paymentMethod: "MOMO",
+      counterpartyName: "Garage Tchinda",
+      description: "Plaquettes de frein",
+      paymentReference: "MP-778",
+    });
+    expect(payload.postings).toEqual([
+      expect.objectContaining({ assetId: ASSET_ID, workOrderId: WORK_ORDER_ID, amountMinor: 40_000 }),
+    ]);
+  });
 
   it("keeps the entry number in the title on one line (#442)", () => {
     const panel = openEdit(recordingClient(submitted));

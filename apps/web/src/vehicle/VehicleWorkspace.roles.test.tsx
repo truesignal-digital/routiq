@@ -297,7 +297,7 @@ describe("header, phone bar and all-actions sheet, per role", () => {
   const bar: Record<Role, string[]> = {
     DIRECTOR: ["Expense", "Problem", "Trip", "More"],
     ADMIN: ["Expense", "Problem", "Trip", "More"],
-    FINANCE: ["Expense", "Reverse", "More"],
+    FINANCE: ["Expense", "Cancel entry", "More"],
     CASHIER: ["Expense", "Revenue", "Note", "More"],
     TECHNICIAN: ["Work order", "Problem", "Note", "More"],
     DRIVER: ["Fuel", "Problem", "Odometer", "More"],

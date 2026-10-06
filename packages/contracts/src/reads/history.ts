@@ -111,6 +111,11 @@ export const historyItem = z.object({
    * `after_state` themselves stay out of the list — it has to stay light on 2G.
    */
   note: z.string().nullable(),
+  /**
+   * A reason picked from a list (`reasonCode`, #426), for the client to put in
+   * words; the free text, when there is any, stays in `note`.
+   */
+  noteCode: z.string().nullable(),
 });
 
 export const historyListResponse = listResponse(historyItem);
@@ -245,6 +250,7 @@ export const HISTORY_STATE_KEYS = {
     "postings",
     "approvalNote",
     "rejectedReason",
+    "reasonCode",
     "reason",
     "reversesEntryId",
     "reversedByEntryId",

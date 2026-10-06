@@ -1,10 +1,13 @@
 import { z } from "zod";
+import { CANCELLATION_REASON_CODES } from "@routiq/contracts";
 import { parseWholeAmount } from "../lib/format.js";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
   updatePendingEntryPayload,
   PeriodRead,
+  CancellationReasonCode,
+  ReverseEntryPayload,
 } from "@routiq/contracts";
 
 type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
@@ -121,9 +124,19 @@ export function toUpdatePendingEntryPayload(
   };
 }
 
-/** Mirrors reverse-entry.v1 contract: reason z.string().min(1).max(500). */
-export function validateReversalReason(reason: string): boolean {
-  return reason.trim().length > 0 && reason.length <= 500;
+/**
+ * The reason part of a reverse-entry.v2 payload, or undefined while the form
+ * can't send one: no reason picked yet, or Other without words (1-500).
+ */
+export function cancellationPayload(
+  reasonCode: CancellationReasonCode | undefined,
+  reasonText: string,
+): Pick<ReverseEntryPayload, "reasonCode" | "reasonText"> | undefined {
+  if (reasonCode === undefined) return undefined;
+  if (reasonCode !== "OTHER") return { reasonCode };
+  const trimmed = reasonText.trim();
+  if (trimmed.length === 0 || trimmed.length > 500) return undefined;
+  return { reasonCode, reasonText: trimmed };
 }
 
 /**
@@ -189,4 +202,22 @@ export function mergeImplicitCurrentPeriod(
 export function validateReopenReason(reason: string): boolean {
   const trimmed = reason.trim();
   return trimmed.length > 0 && trimmed.length <= 500;
+}
+
+/**
+ * A cancellation's reason in words (#426): the listed reason, or for Other the
+ * person's own words. A code this build doesn't know shows as Other.
+ */
+export function cancellationReasonWords(
+  cancellation: { reasonCode: string; reasonText: string | null },
+  t: (key: string) => string,
+): string {
+  if (cancellation.reasonCode === "OTHER" || !isCancellationReasonCode(cancellation.reasonCode)) {
+    return cancellation.reasonText ?? t("reasonCodes.OTHER");
+  }
+  return t(`reasonCodes.${cancellation.reasonCode}`);
+}
+
+function isCancellationReasonCode(code: string): code is CancellationReasonCode {
+  return (CANCELLATION_REASON_CODES as readonly string[]).includes(code);
 }

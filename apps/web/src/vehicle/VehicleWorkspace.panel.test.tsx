@@ -419,3 +419,63 @@ describe("the author's own pending entry (#85)", () => {
     expect(within(panel).queryByRole("button", { name: "Edit entry" })).toBeNull();
   });
 });
+
+describe("Cancel entry from the vehicle panel (#426)", () => {
+  const posted = () =>
+    entryDetail({
+      status: "POSTED",
+      evidence: { state: "SUPPLIED", artifactCount: 1 },
+      rowVersion: 2,
+    });
+
+  it("cancels for wrong details, then records again pre-filled through record-expense", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FINANCE",
+      entryDetails: [posted()],
+    });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+    await user.click(within(panel).getByRole("button", { name: "Cancel entry" }));
+
+    const form = await screen.findByRole("dialog", { name: "Cancel entry" });
+    await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
+    await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.name).toBe("reverse-entry");
+    expect(recorded.commands[0]?.body.version).toBe(2);
+    expect(recorded.commands[0]?.body.payload).toEqual({
+      reversalEntryId: expect.any(String),
+      originalEntryId: ENTRY_ID,
+      reasonCode: "WRONG_DETAILS",
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Record again" }));
+    const again = await screen.findByRole("dialog", { name: "Record expense" });
+    const amount = within(again).getByLabelText("Amount (FCFA)") as HTMLInputElement;
+    expect(amount.value).toMatch(/^310\s?000$/);
+    await user.clear(amount);
+    await user.type(amount, "300000");
+    await user.click(within(again).getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(2));
+    expect(recorded.commands[1]?.name).toBe("record-expense");
+    expect(recorded.commands[1]?.body.payload).toMatchObject({ amountMinor: 300_000 });
+    expect(recorded.commands[1]?.body.payload).not.toMatchObject({ entryId: ENTRY_ID });
+  });
+
+  it("shows a cancelled entry's reason in words", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FINANCE",
+      entryDetails: [
+        entryDetail({
+          status: "REVERSED",
+          cancellation: { reasonCode: "OTHER", reasonText: "Carte carburant remboursée" },
+        }),
+      ],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+    expect(within(panel).getByText("Carte carburant remboursée")).toBeTruthy();
+    expect(within(panel).getByText("Cancelled")).toBeTruthy();
+  });
+});

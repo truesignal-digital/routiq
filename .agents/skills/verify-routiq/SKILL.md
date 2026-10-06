@@ -82,7 +82,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
 | `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
 | `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
-| `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
+| `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | More → Branches, Users, People against their reads | no |

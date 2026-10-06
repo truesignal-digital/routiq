@@ -310,6 +310,8 @@ export const vehicleHistoryItem = z.object({
   params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
   /** The event's own reason, as the record history lifts it. */
   note: z.string().nullable(),
+  /** The event's listed reason code, as the record history lifts it. */
+  noteCode: z.string().nullable(),
   /**
    * What an edit of the vehicle's details changed (`asset.details_updated`),
    * before and after, in allowlist order. Money fields reach only the roles

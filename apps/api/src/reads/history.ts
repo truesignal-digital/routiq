@@ -81,17 +81,28 @@ const occurredAtColumn: KeysetColumn = {
  */
 const NOTE_STATE_KEYS = ["reason"] as const;
 
+/** A reason picked from a list (#426): a code the client words, never shown raw. */
+const NOTE_CODE_STATE_KEYS = ["reasonCode"] as const;
+
 /**
  * The first allowlisted key holding a JSON string. The `jsonb_typeof` guard
  * matters: `->>` would happily serialise an object into the note line.
  */
-export function noteSql(): SQL<string | null> {
-  const candidates = NOTE_STATE_KEYS.map(
+function firstStringSql(keys: readonly string[]): SQL<string | null> {
+  const candidates = keys.map(
     (key) =>
       sql`case when jsonb_typeof(${auditEvents.afterState} -> ${key}::text) = 'string'
                then ${auditEvents.afterState} ->> ${key}::text end`,
   );
   return sql<string | null>`coalesce(${sql.join(candidates, sql`, `)}, null)`;
+}
+
+export function noteSql(): SQL<string | null> {
+  return firstStringSql(NOTE_STATE_KEYS);
+}
+
+export function noteCodeSql(): SQL<string | null> {
+  return firstStringSql(NOTE_CODE_STATE_KEYS);
 }
 
 /**
@@ -432,6 +443,7 @@ export function registerHistoryReadRoutes(
               clientOccurredAt: commands.clientOccurredAt,
               changedFields: auditEvents.changedFields,
               note: noteSql(),
+              noteCode: noteCodeSql(),
             })
             .from(auditEvents)
             .innerJoin(
@@ -489,6 +501,7 @@ export function registerHistoryReadRoutes(
           },
           changedFields: row.changedFields ?? [],
           note: row.note,
+          noteCode: row.noteCode,
         }));
 
         let nextCursor: string | null = null;
