@@ -19,7 +19,7 @@ import { useAssetFinance, useAssetHistory } from "../useVehicle.js";
 import { tabPath } from "../VehicleTabsNav.js";
 import { EVENT_TONE_CLASS } from "./HistoryTab.js";
 
-/** What needs someone on this vehicle, this month's money, and the latest events. */
+/** The Overview tab: what needs someone on this vehicle, this month's money, and the latest events. */
 export function NowTab() {
   const { asset, viewer, attention, attentionStatus, gates } = useVehicle();
   const todos = buildTodos(attention, asset, viewer);
@@ -49,47 +49,89 @@ function TodoCard({
   besidesHeader: boolean;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(readTodoOpen);
   const mine = todos.filter((todo) => todo.step.kind === "go");
   const others = todos.filter((todo) => todo.step.kind !== "go");
+  const toggle = () => {
+    setOpen(!open);
+    writeTodoOpen(!open);
+  };
   return (
     <Card className="gap-0 py-0" aria-busy={status === "pending" ? true : undefined}>
       <CardHead
+        className={open ? undefined : "border-transparent"}
         title={
           <>
-            {t("vehicle.now.todo.title")} {mine.length > 0 && <Count>{mine.length}</Count>}
+            {t("vehicle.now.todo.title")}
+            {(mine.length > 0 || (!open && status === "success")) && <Count>{mine.length}</Count>}
           </>
+        }
+        aside={
+          <Button
+            variant="ghost"
+            size="desktop-icon-sm"
+            className="-my-1"
+            aria-label={t("vehicle.now.todo.title")}
+            aria-expanded={open}
+            onClick={toggle}
+          >
+            <ChevronRight className={cn("transition-transform", open && "rotate-90")} aria-hidden />
+          </Button>
         }
         description={
           besidesHeader ? t("vehicle.now.todo.descriptionBesides") : t("vehicle.now.todo.description")
         }
       />
-      {status === "pending" ? (
-        <div className="space-y-2 p-4">
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-        </div>
-      ) : status === "error" ? (
-        <p className="px-4 py-5 text-sm text-muted-foreground">{t("vehicle.now.todo.loadFailed")}</p>
-      ) : mine.length === 0 ? (
-        <div className="flex items-start gap-3 px-4 py-5">
-          <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden />
-          <div>
-            <p className="text-sm font-medium">
-              {besidesHeader ? t("vehicle.now.todo.emptyTitleBesides") : t("vehicle.now.todo.emptyTitle")}
-            </p>
-            <p className="text-sm text-muted-foreground">{t("vehicle.now.todo.emptyHint")}</p>
-          </div>
-        </div>
-      ) : (
-        <ul className="divide-y">
-          {mine.map((todo) => (
-            <TodoRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
-          ))}
-        </ul>
+      {open && (
+        <>
+          {status === "pending" ? (
+            <div className="space-y-2 p-4">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : status === "error" ? (
+            <p className="px-4 py-5 text-sm text-muted-foreground">{t("vehicle.now.todo.loadFailed")}</p>
+          ) : mine.length === 0 ? (
+            <div className="flex items-start gap-3 px-4 py-5">
+              <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden />
+              <div>
+                <p className="text-sm font-medium">
+                  {besidesHeader ? t("vehicle.now.todo.emptyTitleBesides") : t("vehicle.now.todo.emptyTitle")}
+                </p>
+                <p className="text-sm text-muted-foreground">{t("vehicle.now.todo.emptyHint")}</p>
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y">
+              {mine.map((todo) => (
+                <TodoRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
+              ))}
+            </ul>
+          )}
+          {others.length > 0 && <WaitingOnOthers todos={others} />}
+        </>
       )}
-      {others.length > 0 && <WaitingOnOthers todos={others} />}
     </Card>
   );
+}
+
+/** Whether To do is open is a device preference; storage throws in private-mode browsers. */
+const TODO_STORAGE_KEY = "routiq-vehicle-todo";
+
+function readTodoOpen(): boolean {
+  try {
+    return localStorage.getItem(TODO_STORAGE_KEY) !== "collapsed";
+  } catch {
+    return true;
+  }
+}
+
+function writeTodoOpen(open: boolean): void {
+  try {
+    localStorage.setItem(TODO_STORAGE_KEY, open ? "expanded" : "collapsed");
+  } catch {
+    // The choice then lasts for this visit only.
+  }
 }
 
 function useWhoLabel() {
