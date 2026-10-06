@@ -2,11 +2,14 @@ import type { PrincipalType, Role } from "@routiq/contracts";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { hashPin } from "../auth/pin.js";
+import { eq } from "drizzle-orm";
 import {
   approvalRules,
   branches,
   categories,
   credentials,
+  financialEntries,
+  financialPostings,
   memberships,
   principals,
   workspaces,
@@ -120,4 +123,45 @@ export async function seedAsset(
     throw new Error(`asset seed failed: ${response.statusCode} ${response.body}`);
   }
   return assetId;
+}
+
+/**
+ * Revenue naming a work order, as record-revenue could write it before #432
+ * refused it. No command writes one now and postings are append-only, so the
+ * row is a copy of a real revenue entry with the order on its lines, optionally
+ * under another recording call.
+ */
+export async function plantWorkOrderRevenue(
+  db: Db,
+  opts: { revenueEntryId: string; workOrderId: string; createdByCommandId?: string },
+): Promise<string> {
+  const [entry] = await db
+    .select()
+    .from(financialEntries)
+    .where(eq(financialEntries.id, opts.revenueEntryId));
+  if (!entry || entry.direction !== "REVENUE") throw new Error("plant needs a revenue entry");
+  const postings = await db
+    .select()
+    .from(financialPostings)
+    .where(eq(financialPostings.financialEntryId, entry.id));
+  const entryId = randomUUID();
+  const createdByCommandId = opts.createdByCommandId ?? entry.createdByCommandId;
+  await db.transaction(async (tx) => {
+    await tx.insert(financialEntries).values({
+      ...entry,
+      id: entryId,
+      entryNumber: `${entry.entryNumber}-${entryId.slice(0, 4)}`,
+      createdByCommandId,
+    });
+    await tx.insert(financialPostings).values(
+      postings.map((posting) => ({
+        ...posting,
+        id: randomUUID(),
+        financialEntryId: entryId,
+        workOrderId: opts.workOrderId,
+        createdByCommandId,
+      })),
+    );
+  });
+  return entryId;
 }
