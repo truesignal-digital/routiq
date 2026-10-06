@@ -11,7 +11,11 @@ import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
  * Run: pnpm verify drive flow:repaired-awaiting-release --role technician --lang en
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
-  const status = page.locator("[role=status][data-tone]").first();
+  // The header's status block, not a toast: it opens with one of these leads.
+  const status = page
+    .locator("[role=status]")
+    .filter({ hasText: /^(Grounded|Repair done|Available|Immobilisé|Réparation terminée|Disponible)/ })
+    .first();
   const repairedLead = t("Réparation terminée — en attente de remise en service.", "Repair done — waiting for release to service.");
   const release = t("Remettre en service", "Release to service");
 
@@ -21,25 +25,31 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
     await quiet();
   };
-  const tone = async () => (await status.getAttribute("data-tone")) ?? "none";
+  // develop before #92 has no data-tone; "unknown" lets a before run reach the completion.
+  const tone = async () => (await status.getAttribute("data-tone")) ?? "unknown";
   const settle = () => page.waitForTimeout(600);
 
   await openVh003();
   const assetId = /\/assets\/([0-9a-f-]{36})/.exec(page.url())?.[1] ?? "";
-  if ((await tone()) !== "critical") throw new Error(`VH003 should start red, got ${await tone()}`);
+  if (!["critical", "unknown"].includes(await tone())) throw new Error(`VH003 should start red, got ${await tone()}`);
   await shot("grounded", { caption: "The brake repair is in progress: VH003 is red, grounded", highlight: status });
 
   await status.getByRole("button", { name: t("Terminer les travaux", "Complete work"), exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog").last();
   await dialog.waitFor();
   await dialog.getByLabel(t("Compte rendu", "Work summary")).fill("Brake lines bled, pressure sensor replaced");
   const noCost = dialog.getByRole("radio", { name: new RegExp(t("Aucun coût", "No cost"), "i") });
   if ((await noCost.count()) > 0) await noCost.first().check();
   await dialog.getByRole("button", { name: t("Terminer les travaux", "Complete work"), exact: true }).click();
-  await dialog.waitFor({ state: "hidden" });
+  await page.getByText(new RegExp(`^${t("Travaux terminés", "Work completed")}`)).first().waitFor();
   await quiet();
-  await page.getByText(repairedLead, { exact: true }).waitFor({ timeout: 15_000 }).catch(async () => {
-    throw new Error(`after completion the header never says "${repairedLead}" (tone ${await tone()})`);
+  // Completing leaves the work order's record panel open over the header.
+  for (let i = 0; i < 3 && (await page.getByRole("dialog").count()) > 0; i += 1) {
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+  }
+  await page.getByText(repairedLead, { exact: true }).waitFor({ timeout: 15_000 }).catch(() => {
+    throw new Error("the header stays red after the repair");
   });
   await settle();
   if ((await tone()) !== "waiting") throw new Error(`expected amber, got ${await tone()}`);
@@ -59,13 +69,17 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("repaired-admin", { caption: "The Administrateur sees the same amber state with Release to service", highlight: releaseButton });
 
   await releaseButton.click();
-  const form = page.getByRole("dialog");
+  const form = page.getByRole("dialog").last();
   await form.waitFor();
+  await settle();
   await shot("release-form", { caption: "Releasing asks the Administrateur to confirm" });
   await form.getByRole("button", { name: release, exact: true }).click();
-  await form.waitFor({ state: "hidden" });
   await quiet();
   await page.getByText(t("Disponible.", "Available."), { exact: true }).waitFor({ timeout: 15_000 });
+  for (let i = 0; i < 3 && (await page.getByRole("dialog").count()) > 0; i += 1) {
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+  }
   await settle();
   if ((await tone()) !== "success") throw new Error(`expected green after release, got ${await tone()}`);
   await shot("released", { caption: "Released to service: VH003 is green, available", highlight: status });
@@ -78,7 +92,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
 async function signInAs(page: Page, role: string) {
   const account = resolveAccount(role);
-  await page.getByRole("button", { name: /^(Se déconnecter|Sign out)$/ }).first().click();
+  // On a phone Sign out sits in the menu sheet, outside its navigation landmark.
+  await openSidebar(page);
+  await page.getByRole("button", { name: /^(Se déconnecter|Sign out)$/ }).filter({ visible: true }).first().click();
   await page.waitForURL((url) => url.pathname === "/login");
   await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);

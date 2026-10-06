@@ -82,6 +82,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
 | `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
 | `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
+| `repaired-awaiting-release` | as the technician: VH003 red → Complete work → amber "Repair done — waiting for release to service", no release button; as the Administrateur: amber with Release to service → release → green (#92) | yes |
 | `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
 | `trips` | trips list → a closed trip's detail | no |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
