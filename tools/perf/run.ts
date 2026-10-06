@@ -10,7 +10,10 @@ import { median, type Measured, type Run } from "./perf.js";
 /** The screens a run opens after sign-in, in order. `:asset` becomes the first vehicle in the list. */
 export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/finance/approvals", "/maintenance", "/more"] as const;
 
-export const PROFILE = `phone: CPU ${PHONE_PROFILE.cpuSlowdown}x, ${PHONE_PROFILE.latencyMs} ms RTT, ${PHONE_PROFILE.downloadKbps} kbps down, 390x844, fr`;
+/** How long a run stays on Home after sign-in before opening the next screen. */
+export const HOME_DWELL_MS = 3_000;
+
+export const PROFILE = `phone: CPU ${PHONE_PROFILE.cpuSlowdown}x, ${PHONE_PROFILE.latencyMs} ms RTT, ${PHONE_PROFILE.downloadKbps} kbps down, 390x844, fr, ${HOME_DWELL_MS / 1000} s on Home`;
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 export const template = (route: string) => route.replace(UUID, ":id");
@@ -90,6 +93,8 @@ async function measureOnce(state: SlotState, db: pg.Client, assetId: string): Pr
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60_000 });
     await settle(page, () => inflight, () => lastActivity);
     values["/.requests"] = apiRequests - beforeHome;
+    // A user reads Home for a few seconds before moving on; whatever the app does in that time counts.
+    await page.waitForTimeout(HOME_DWELL_MS);
 
     for (const screen of SCREENS) {
       const route = screen.replace(":asset", assetId);
