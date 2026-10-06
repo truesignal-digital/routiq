@@ -1003,7 +1003,7 @@ function RowActionsMenu<TData>({
             onClick={() => action.onSelect(row)}
           >
             {action.icon && <action.icon aria-hidden />}
-            {action.label}
+            <span className="min-w-0 truncate">{action.label}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
