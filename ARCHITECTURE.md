@@ -264,6 +264,7 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | AddOrRenewDocument | Auto (DIRECTOR, ADMIN, FINANCE) |
 | AddNote | Auto; every role. Append-only; v1 annotates assets only, refused on SOLD/RETIRED/WRITTEN_OFF |
 | AttachEvidence | Auto; RecordExpense's roles without its amount band (a file changes no amount). Links uploaded files to an existing entry without editing it; refused on rejected entries and reversals; TECHNICIAN only on entries whose every posting names a work order |
+| AcknowledgeApprovalRules | Auto; every role, each for their own membership. When UpdateApprovalThreshold moves an entry band (`record-expense`, `record-revenue`, `approve-entry`), the change is noted for the roles it moves, all but DIRECTOR. Each member who joined before it sees one in-app notice for the latest such change, with their own chain, until they acknowledge it (#422). Work-order bands note nothing. Not queued offline |
 | DisposeAsset | **Always approval (DIRECTOR or FINANCE)** |
 | LockPeriod / ReopenPeriod | Lock: FINANCE or DIRECTOR. Reopen: DIRECTOR + mandatory reason |
 | CorrectOrVoidRecord | Same or stricter than the original record |

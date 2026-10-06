@@ -120,10 +120,32 @@ export function FinanceApprovalsScreen() {
       {
         accessorKey: "status",
         header: t("finance.entries.detail.status"),
+        // A row that offers no decision says who makes it here, so hiding the
+        // column would leave an empty ⋯ unexplained.
+        enableHiding: false,
         meta: { mobile: "primary", label: t("finance.entries.detail.status") },
-        cell: ({ row }) => (
-          <EntryStatusBadge status={row.original.status} />
-        ),
+        cell: ({ row }) => {
+          const decider = isOwnSubmission(
+            row.original.submittedByPrincipalId,
+            me?.principalId,
+          )
+            ? t("finance.approvals.makerGuard")
+            : row.original.directionDecides
+              ? t("finance.approvals.directionDecides")
+              : null;
+          return (
+            <span className="flex flex-col items-start gap-1">
+              <EntryStatusBadge status={row.original.status} />
+              {/* Wraps at the badge's width: its own column pushed the table
+                  past a 1440 screen (#437). */}
+              {decider !== null && (
+                <span className="max-w-64 text-xs font-normal whitespace-normal text-muted-foreground">
+                  {decider}
+                </span>
+              )}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "economicDate",
@@ -192,28 +214,6 @@ export function FinanceApprovalsScreen() {
           label: t("finance.entries.detail.counterparty"),
         },
         cell: ({ row }) => row.original.counterpartyName ?? "—",
-      },
-      {
-        id: "guard",
-        header: t("finance.approvals.columns.actions"),
-        enableSorting: false,
-        // The decisions moved to the row's ⋯ menu; this column only explains
-        // the rows that offer none.
-        enableHiding: false,
-        meta: {
-          mobile: "primary",
-          label: t("finance.approvals.columns.actions"),
-        },
-        cell: ({ row }) =>
-          isOwnSubmission(row.original.submittedByPrincipalId, me?.principalId) ? (
-            <StatusBadge tone="warning">
-              {t("finance.approvals.makerGuard")}
-            </StatusBadge>
-          ) : row.original.directionDecides ? (
-            <StatusBadge tone="neutral">
-              {t("finance.approvals.directionDecides")}
-            </StatusBadge>
-          ) : null,
       },
     ],
     [branchOptions, i18n.resolvedLanguage, me?.principalId, t],

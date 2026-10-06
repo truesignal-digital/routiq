@@ -150,6 +150,12 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       ["attach-evidence", "update-pending-entry", "add-note"],
       ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     ),
+
+    // Reading a notice is no decision: every member acknowledges their own (#422).
+    ...wildcard(
+      ["acknowledge-approval-rules"],
+      ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
+    ),
   ];
 }
 
