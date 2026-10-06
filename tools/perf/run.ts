@@ -3,12 +3,21 @@ import pg from "pg";
 import { chromium, type Page } from "playwright-core";
 import { DEMO_WORKSPACE, resolveAccount } from "../verify/accounts.js";
 import { PHONE_PROFILE } from "../verify/browser.js";
+import { named, pageNow, readShifts, SHIFT_PROBE } from "../verify/shifts.js";
+import { tapMySettings, tapText, tapTo } from "../verify/tap.js";
 import { slotPorts } from "../verify/slot.js";
 import type { SlotState } from "../verify/stack.js";
 import { median, type Measured, type Run } from "./perf.js";
 
-/** The screens a run opens after sign-in, in order. `:asset` becomes the first vehicle in the list. */
+/**
+ * The screens a run opens after sign-in, in order, each by a tap: its sidebar
+ * row, or a link on the screen or on Home (#494). `:asset` is the first vehicle
+ * in the list, tapped from /assets; My settings opens from the name menu.
+ */
 export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/finance/approvals", "/maintenance", "/my-settings"] as const;
+
+/** Screens whose link redirects: the tap lands on another path (#314). */
+const LANDS_ON: Partial<Record<(typeof SCREENS)[number], string>> = { "/finance/approvals": "/finance/entries" };
 
 /** How long a run stays on Home after sign-in before opening the next screen. */
 export const HOME_DWELL_MS = 3_000;
@@ -40,25 +49,26 @@ async function settle(page: Page, inflight: () => number, lastActivity: () => nu
 /** A run on a saturated machine can hang in the browser; past this it counts as a run that produced nothing. */
 const RUN_TIMEOUT_MS = 180_000;
 
-async function measureOnce(state: SlotState, db: pg.Client, assetId: string): Promise<OneRun> {
+async function measureOnce(state: SlotState, db: pg.Client, asset: Vehicle): Promise<OneRun> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<OneRun>((resolve) => {
     timer = setTimeout(() => resolve({ values: {} }), RUN_TIMEOUT_MS);
   });
   try {
-    return await Promise.race([measureOnceUnbounded(state, db, assetId), timeout]);
+    return await Promise.race([measureOnceUnbounded(state, db, asset), timeout]);
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function measureOnceUnbounded(state: SlotState, db: pg.Client, assetId: string): Promise<OneRun> {
+async function measureOnceUnbounded(state: SlotState, db: pg.Client, asset: Vehicle): Promise<OneRun> {
   const account = resolveAccount("director");
   const browser = await chromium.launch();
   const values: Record<string, number> = {};
   const started = new Date();
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "fr-FR", timezoneId: "Africa/Douala", colorScheme: "light" });
+    await context.addInitScript(SHIFT_PROBE);
     const page = await context.newPage();
     const cdp = await context.newCDPSession(page);
     await cdp.send("Network.enable");
@@ -108,22 +118,29 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, assetId: st
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60_000 });
     await settle(page, () => inflight, () => lastActivity);
     values["/.requests"] = apiRequests - beforeHome;
+    // Moves in the shell or on Home once drawn, from the sign-in tap on.
+    values["/.shifts"] = named(await readShifts(page)).length;
     // A user reads Home for a few seconds before moving on; whatever the app does in that time counts.
     await page.waitForTimeout(HOME_DWELL_MS);
 
     for (const screen of SCREENS) {
-      const route = screen.replace(":asset", assetId);
+      const key = template(screen.replace(":asset", "00000000-0000-0000-0000-000000000000"));
       const before = apiRequests;
-      // A fresh router key, as a link click would give: the router reports a render only when the key changes.
-      await page.evaluate((to) => {
-        const previous = (window.history.state ?? {}) as { __TSR_index?: number };
-        const key = Math.random().toString(36).slice(2, 10);
-        window.history.pushState({ key, __TSR_key: key, __TSR_index: (previous.__TSR_index ?? 0) + 1 }, "", to);
-        window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
-      }, route);
+      const start = await pageNow(page);
+      if (screen === "/assets/:asset") await tapText(page, asset.code);
+      else if (screen === "/my-settings") await tapMySettings(page);
+      else await tapTo(page, screen, LANDS_ON[screen]);
       await settle(page, () => inflight, () => lastActivity);
-      values[`${template(screen.replace(":asset", "00000000-0000-0000-0000-000000000000"))}.requests`] = apiRequests - before;
+      values[`${key}.requests`] = apiRequests - before;
+      values[`${key}.shifts`] = named(await readShifts(page, start)).length;
     }
+
+    // A refresh on Home: the shell and Home are drawn again from nothing.
+    await tapTo(page, "/");
+    await settle(page, () => inflight, () => lastActivity);
+    await page.reload({ waitUntil: "commit" });
+    await settle(page, () => inflight, () => lastActivity);
+    values["reload.shifts"] = named(await readShifts(page)).length;
 
     // Close the tab like a user so the app sends its last telemetry batch (vitals, journeys).
     await page.close({ runBeforeUnload: true });
@@ -142,7 +159,8 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, assetId: st
   for (const event of events) {
     if (event.kind === "vital" && event.name === "LCP" && values["login.lcp_ms"] === undefined) values["login.lcp_ms"] = event.value;
     if (event.kind !== "journey") continue;
-    if (event.name === "app:usable") values["login.usable_ms"] = event.value;
+    // The sign-in load, not the reload at the end of the run.
+    if (event.name === "app:usable") values["login.usable_ms"] ??= event.value;
     else if (event.name.startsWith("route:")) {
       const key = `${event.name.slice("route:".length)}.ready_ms`;
       // The first visit to a screen in a run is the one measured.
@@ -169,25 +187,29 @@ function apiP95(logFile: string, since: number): number | undefined {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
 }
 
-const kindOf = (name: string) => (name.endsWith("_bytes") ? "bytes" : name.endsWith(".requests") ? "count" : "time");
+const kindOf = (name: string) => (name.endsWith("_bytes") ? "bytes" : name.endsWith(".requests") || name.endsWith(".shifts") ? "count" : "time");
+
+interface Vehicle {
+  id: string;
+  code: string;
+}
 
 interface Target {
   state: SlotState;
   db: pg.Client;
-  assetId: string;
+  asset: Vehicle;
 }
 
 async function open(state: SlotState): Promise<Target> {
   if (state.web !== "built") throw new Error(`slot ${state.slot} serves the dev server; perf needs a built app: pnpm verify down --slot ${state.slot} && pnpm verify up --slot ${state.slot} --built`);
   const db = new pg.Client({ connectionString: `postgres://routiq:routiq@127.0.0.1:${slotPorts(state.slot).postgres}/routiq_dev` });
   await db.connect();
-  const asset = await db.query<{ id: string }>(`select id from assets order by asset_code limit 1`);
-  const assetId = asset.rows[0]?.id;
-  if (assetId === undefined) {
+  const row = (await db.query<{ id: string; code: string }>(`select id, asset_code as code from assets order by asset_code limit 1`)).rows[0];
+  if (row === undefined) {
     await db.end();
     throw new Error(`slot ${state.slot} has no vehicles; reseed it`);
   }
-  return { state, db, assetId };
+  return { state, db, asset: row };
 }
 
 function summarise(target: Target, all: OneRun[], runs: number, since: number): Run {
@@ -208,12 +230,12 @@ export async function measure(state: SlotState, runs: number, log: (line: string
   const target = await open(state);
   try {
     // One unrecorded run first: a freshly started API compiles and fills its caches on the first requests.
-    await measureOnce(state, target.db, target.assetId);
+    await measureOnce(state, target.db, target.asset);
     log("warm-up run done");
     const since = Date.now();
     const all: OneRun[] = [];
     for (let i = 1; i <= runs; i += 1) {
-      const one = await measureOnce(state, target.db, target.assetId);
+      const one = await measureOnce(state, target.db, target.asset);
       all.push(one);
       log(`run ${i}/${runs}: login ${Math.round(one.values["login.usable_ms"] ?? Number.NaN)} ms, home ${Math.round(one.values["/.ready_ms"] ?? Number.NaN)} ms`);
     }
@@ -232,16 +254,16 @@ export async function compare(before: SlotState, after: SlotState, runs: number,
   const a = await open(before);
   const b = await open(after);
   try {
-    await measureOnce(before, a.db, a.assetId);
-    await measureOnce(after, b.db, b.assetId);
+    await measureOnce(before, a.db, a.asset);
+    await measureOnce(after, b.db, b.asset);
     log("warm-up runs done");
     const since = Date.now();
     const runsA: OneRun[] = [];
     const runsB: OneRun[] = [];
     for (let i = 1; i <= runs; i += 1) {
       const order = i % 2 === 1 ? ([a, runsA, b, runsB] as const) : ([b, runsB, a, runsA] as const);
-      order[1].push(await measureOnce(order[0].state, order[0].db, order[0].assetId));
-      order[3].push(await measureOnce(order[2].state, order[2].db, order[2].assetId));
+      order[1].push(await measureOnce(order[0].state, order[0].db, order[0].asset));
+      order[3].push(await measureOnce(order[2].state, order[2].db, order[2].asset));
       log(`pair ${i}/${runs}: login ${Math.round(runsA.at(-1)?.values["login.usable_ms"] ?? Number.NaN)} → ${Math.round(runsB.at(-1)?.values["login.usable_ms"] ?? Number.NaN)} ms`);
     }
     return { before: summarise(a, runsA, runs, since), after: summarise(b, runsB, runs, since) };

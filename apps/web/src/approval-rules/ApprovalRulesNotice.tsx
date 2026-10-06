@@ -55,7 +55,7 @@ export function ApprovalRulesNotice({ client = commandClient }: { client?: Comma
   const date = formatDayLong(notice.changedAt);
 
   return (
-    <div className="mb-6">
+    <div data-shift-region="notice" className="mb-6">
       <Alert role="status" aria-live="polite" data-slot="approval-rules-notice">
         <Scale aria-hidden />
         <AlertTitle>{t("approvalRules.notice.title")}</AlertTitle>
