@@ -40,10 +40,13 @@ person held before.
 - **S** submits it, and it may go to review under the approval bands.
 - **A** approves or rejects. The default chain: work orders → Administrateur,
   money → Finance up to 1 000 000 XAF, above that → Direction (owner,
-  2026-10-05). Entries up to the recording band (100 000 XAF) post without
-  review; Finance decides the ones above it up to 1 000 000 XAF; Direction
-  decides above 1 000 000 XAF and may decide anything. Both bands are tenant
-  data: Direction moves them in the approval settings.
+  2026-10-05). Anyone's entry up to the recording band (100 000 XAF) posts
+  without review, Finance's and the Administrateur's included; above it, it
+  waits. Finance decides the ones above it up to 1 000 000 XAF; Direction
+  decides above 1 000 000 XAF and may decide anything. No one decides their
+  own entry, so a Finance member's own entry goes to Direction (or another
+  Finance member). Only Direction's own entries post at any amount (#412).
+  Both bands are tenant data: Direction moves them in the approval settings.
 - **V** view only. **Own** only their own records. **—** no access.
 - **Planned** rows are not built yet. The roles are fixed now so training does
   not change when they ship.

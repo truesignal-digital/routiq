@@ -247,7 +247,7 @@ describe("record-expense.v1", () => {
     expect(postings[0]?.postingPeriodId).toBeNull();
   });
 
-  it("lets a finance approver auto-post above threshold under the catalog wildcard", async () => {
+  it("holds Finance's own expense above the recording band for review (#412)", async () => {
     const entryId = randomUUID();
     const response = await postCommand(approverToken, "record-expense", {
       entryId,
@@ -263,7 +263,7 @@ describe("record-expense.v1", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       recordId: entryId,
-      recordStatus: "POSTED",
+      recordStatus: "SUBMITTED",
       warnings: [],
     });
   });
