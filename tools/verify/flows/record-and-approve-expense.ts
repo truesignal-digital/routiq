@@ -60,16 +60,24 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(finance.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(finance.pin);
+  await page.waitForTimeout(400);
+  await shot("finance-sign-in", {
+    caption: `The cashier signs out; Finance (${finance.username}) signs in`,
+    highlight: page.getByLabel(/^(Nom d'utilisateur|Username)$/),
+  });
   await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
-  await shot("finance-signed-in", { caption: "The cashier signs out and Finance signs in" });
 
   await nav("/finance/approvals");
   await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
   const row = itemWith(entry.entryNumber);
   await row.waitFor();
   await quiet();
+  // The screencast only sends a frame when something paints; hovering the row
+  // paints the loaded table so the beat doesn't show the loading skeleton.
+  await row.hover();
+  await page.waitForTimeout(1000);
   await shot("approvals-queue", { caption: `Signed in as Finance: ${entry.entryNumber} is in the approvals queue`, highlight: row });
 
   await row.getByRole("button", { name: "Actions" }).click();
