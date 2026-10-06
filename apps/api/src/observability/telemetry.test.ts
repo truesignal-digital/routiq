@@ -83,13 +83,34 @@ describe("POST /v1/telemetry", () => {
     expect(await denied(ctx.runtimeDb.execute(sql`select message from telemetry.events limit 1`))).toMatch(/permission denied/);
     expect(await denied(ctx.runtimeDb.execute(sql`update telemetry.events set role = 'DIRECTOR'`))).toMatch(/permission denied/);
   });
+});
 
-  it("prunes events past retention with the runtime role", async () => {
+// Its own database: every test app prunes at boot, so on the shared one another
+// file starting up can delete this test's expired row before its own prune runs.
+describe("telemetry retention", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+
+  beforeAll(async () => {
+    ctx = await createTestApp({ isolated: true });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  it("prunes events past retention with the runtime role, and keeps recent ones", async () => {
+    const workspaceId = (await seedWorkspace(ctx.db)).workspace.id;
+    const finance = await seedActor(ctx.db, { workspaceId, role: "FINANCE" });
     const old = event();
-    await post({ events: [old] }, finance.token);
+    const recent = event();
+    for (const sent of [old, recent]) {
+      const res = await ctx.app.inject({ method: "POST", url: "/v1/telemetry", payload: { events: [sent] }, headers: { authorization: `Bearer ${finance.token}` } });
+      expect(res.statusCode).toBe(202);
+    }
     await ctx.db.execute(sql`update telemetry.events set received_at = now() - interval '91 days' where session_id = ${old.sessionId}`);
-    expect(await pruneTelemetry(ctx.runtimeDb)).toBeGreaterThanOrEqual(1);
-    expect(await rowsFor(old.sessionId)).toHaveLength(0);
+    expect(await pruneTelemetry(ctx.runtimeDb)).toBe(1);
+    const left = (await ctx.db.execute(sql`select session_id from telemetry.events`)).rows as Array<{ session_id: string }>;
+    expect(left.map((row) => row.session_id)).toEqual([recent.sessionId]);
   });
 });
 
