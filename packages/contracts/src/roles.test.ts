@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ADMIN_GRANTABLE_ROLES,
+  canBookWorkOrderCost,
   canReadEntries,
   canReadLedger,
   canReadWorkOrderCosts,
@@ -78,5 +79,9 @@ describe("role registry", () => {
       "CASHIER",
       "TECHNICIAN",
     ]);
+  });
+
+  it("lets only the workshop and the managers book cost on a work order (#410, #414)", () => {
+    expect(ROLES.filter(canBookWorkOrderCost)).toEqual(["DIRECTOR", "ADMIN", "TECHNICIAN"]);
   });
 });
