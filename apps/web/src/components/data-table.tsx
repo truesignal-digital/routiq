@@ -585,7 +585,9 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                           type="button"
                           variant="ghost"
                           size="desktop-sm"
-                          className="-ml-2.5"
+                          // A long label wraps rather than pushing the row
+                          // actions out of the card (#436).
+                          className="-ml-2.5 h-auto min-h-11 text-left whitespace-normal desktop:h-auto desktop:min-h-8 desktop:py-1"
                           onClick={header.column.getToggleSortingHandler()}
                         >
                           {flexRender(

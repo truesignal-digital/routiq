@@ -26,6 +26,7 @@ Preconditions:
 
 - **List, drawer, detail.** Run `pnpm verify drive flow:finance-entry --role finance --lang en`. It reads the newest POSTED entry from `GET /v1/finance/entries?status=POSTED`, clicks "Finance", waits for the "Entries" heading, clicks the button named with the entry number, screenshots the drawer, clicks "Open full screen" inside the dialog, and waits for `/finance/entries/<id>` with the heading "Entry detail". The cross-check reads the same entry back.
 - **Reverse.** Run `pnpm verify drive flow:reverse-entry --role finance --lang en`. It opens a POSTED entry's detail, clicks `getByRole("button", { name: "Reverse", exact: true })`, fills "Reason for reversal", clicks the dialog's "Reverse", waits for the app to move to the new entry (about 1.5 s), and finds the button "Reverses entry #<original>". The cross-check reads the original as `REVERSED` with `reversedByEntryId` set.
+- **Fits the card on desktop.** Run `pnpm verify drive flow:desktop-fit`. At 1440 and 1280 px, fr and en, the list must not scroll inside its card and every row's ⋯ must sit inside it (#436). Below 1440 px the list starts without Posting date; "Affichage" / "View" brings it back.
 - **Plain routes.** `pnpm verify ui /finance/entries --role director` screenshots the list in French.
 - **Proof.** `01-entries-list.png`, `02-entry-drawer.png`, `03-entry-detail.png`; for reversal `01-reverse-dialog.png`, `02-reversal-entry.png`.
 

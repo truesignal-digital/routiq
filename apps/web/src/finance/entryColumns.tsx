@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
 import { EntryLinks } from "@/finance/EntryLinks.js";
@@ -38,7 +38,7 @@ function buildColumns(
       enableSorting: true,
       meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
       cell: ({ row }) => (
-        <span className="font-mono whitespace-nowrap">{row.original.entryNumber}</span>
+        <span className="whitespace-nowrap tabular-nums">{row.original.entryNumber}</span>
       ),
     },
     status: {
@@ -76,7 +76,9 @@ function buildColumns(
       id: "category",
       header: t("finance.entries.detail.category"),
       meta: { mobile: "primary", label: t("finance.entries.detail.category") },
-      cell: ({ row }) => localizedLabel(row.original.category),
+      cell: ({ row }) => (
+        <span className="whitespace-normal">{localizedLabel(row.original.category)}</span>
+      ),
     },
     amount: {
       id: "amount",
@@ -88,7 +90,7 @@ function buildColumns(
       enableSorting: true,
       meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
       cell: ({ row }) => (
-        <span className="text-right font-mono font-semibold whitespace-nowrap">
+        <span className="text-right font-semibold whitespace-nowrap tabular-nums">
           {formatMoney(row.original.amountMinor, {
             currency: row.original.currency,
             sign: { context: "ledger", direction: row.original.direction },
@@ -103,13 +105,19 @@ function buildColumns(
         mobile: "secondary",
         label: t("finance.entries.detail.counterparty"),
       },
-      cell: ({ row }) => row.original.counterpartyName ?? "—",
+      cell: ({ row }) => (
+        <span className="whitespace-normal">{row.original.counterpartyName ?? "—"}</span>
+      ),
     },
     linkedTo: {
       id: "linkedTo",
       header: t("finance.entries.detail.linkedTo"),
       meta: { mobile: "secondary", label: t("finance.entries.detail.linkedTo") },
-      cell: ({ row }) => <EntryLinks links={row.original.links} />,
+      cell: ({ row }) => (
+        <span className="whitespace-normal">
+          <EntryLinks links={row.original.links} />
+        </span>
+      ),
     },
   };
 }
@@ -129,4 +137,30 @@ export function useFinanceEntryColumns(
     // `t` is stable across a language change, so the language itself is the dep
     // that rebuilds the localized headers and cells.
   }, [ids, i18n.resolvedLanguage, t]);
+}
+
+/**
+ * The full entries list needs about 1050 px in French, which a 1440 px screen
+ * with the sidebar open has and a 1280 px one does not (#436). Below that the
+ * list starts without Posting date — the entry and its detail still carry it,
+ * and the view menu brings it back — so the row actions stay on screen.
+ */
+const ROOMY_SCREEN_QUERY = "(min-width: 1440px)";
+const ROOMY_VISIBILITY: VisibilityState = {};
+const NARROW_VISIBILITY: VisibilityState = { postedAt: false };
+
+function subscribeRoomy(onChange: () => void): () => void {
+  const query = window.matchMedia(ROOMY_SCREEN_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** Column visibility for the entries list until the operator picks their own. */
+export function useEntryListDefaultVisibility(): VisibilityState {
+  const roomy = useSyncExternalStore(
+    subscribeRoomy,
+    () => window.matchMedia(ROOMY_SCREEN_QUERY).matches,
+    () => true,
+  );
+  return roomy ? ROOMY_VISIBILITY : NARROW_VISIBILITY;
 }

@@ -29,6 +29,7 @@ import {
 } from "@/finance/permissions.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
+  useEntryListDefaultVisibility,
   useFinanceEntryColumns,
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
@@ -102,7 +103,9 @@ function FinanceEntriesContent() {
     });
   };
   // Owned here so the view menu can sit in the toolbar row beside the tabs.
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const defaultVisibility = useEntryListDefaultVisibility();
+  const [chosenVisibility, setColumnVisibility] = useState<VisibilityState>();
+  const columnVisibility = chosenVisibility ?? defaultVisibility;
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
   const sort = toSortParam(sorting);

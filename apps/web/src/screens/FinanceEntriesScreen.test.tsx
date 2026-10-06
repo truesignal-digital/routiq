@@ -205,12 +205,12 @@ const DEBOUNCE_MS = 300;
 const DEFAULT_SORT = "postedAt:desc";
 
 /** jsdom never matches a width query; the table needs a nudge to render desktop. */
-function mockDesktop() {
+function mockDesktop(matches: (query: string) => boolean = () => true) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: true,
+      matches: matches(query),
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -393,6 +393,35 @@ describe("FinanceEntriesScreen", () => {
     );
     expect(items).not.toContain("finance.entries.detail.entryNumber");
     expect(items).toContain("finance.entries.detail.category");
+  });
+
+  it("shows every column, posting date included, on a 1440 px screen (#436)", () => {
+    render(<FinanceEntriesScreen />);
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.postingDate/ }),
+    ).toBeTruthy();
+  });
+
+  it("drops posting date first on a narrower screen, and the view menu brings it back (#436)", async () => {
+    mockDesktop((query) => !query.includes("1440px"));
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    expect(
+      screen.queryByRole("columnheader", { name: /finance\.entries\.detail\.postingDate/ }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.date/ }),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "dataTable.view" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "finance.entries.detail.postingDate" }),
+    );
+
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.postingDate/ }),
+    ).toBeTruthy();
   });
 
   it("names the work order an entry belongs to and links to it (#87)", () => {
