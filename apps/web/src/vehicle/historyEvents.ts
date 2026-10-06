@@ -11,6 +11,7 @@ import {
   Route,
   ShieldAlert,
   ShieldCheck,
+  ShieldOff,
   StickyNote,
   TriangleAlert,
   Undo2,
@@ -128,15 +129,22 @@ export function describeEvent(
         detail: text(p["source"]) === null ? null : t(`vehicle.readings.source.${String(p["source"])}`),
         record: gates.trips ? { kind: "readings" } : null,
       };
-    case "operational_issue":
+    case "operational_issue": {
+      // `safetyCritical` is the mark as this event left it (#96).
+      const raised = item.eventType === "operational_issue.severity_raised";
+      const lowered = item.eventType === "operational_issue.severity_lowered";
       return {
-        icon: TriangleAlert,
-        tone: item.eventType === "operational_issue.reported" && p["safetyCritical"] === true ? "critical" : "neutral",
+        icon: raised ? ShieldAlert : lowered ? ShieldOff : TriangleAlert,
+        tone:
+          raised || (item.eventType === "operational_issue.reported" && p["safetyCritical"] === true)
+            ? "critical"
+            : "neutral",
         title: title(),
         titleNumber: null,
         detail: text(p["description"]),
         record: gates.maintenance ? { kind: "issue", id: subject.id } : null,
       };
+    }
     case "work_order":
       return {
         icon: item.eventType === "work_order.asset_released" ? ShieldCheck : Wrench,

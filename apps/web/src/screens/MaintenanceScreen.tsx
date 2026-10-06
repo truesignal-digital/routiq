@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { CircleCheck, CircleSlash, ClipboardList, FileWarning, Wrench } from "lucide-react";
+import {
+  CircleCheck,
+  CircleSlash,
+  ClipboardList,
+  FileWarning,
+  ShieldAlert,
+  ShieldOff,
+  Wrench,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { IssueListItem, IssueStatus, WorkOrderStatus } from "@routiq/contracts";
 import { issueStatuses, workOrderStatuses } from "@routiq/contracts";
@@ -18,6 +26,7 @@ import {
   CompleteWorkOrderDialog,
   CreateWorkOrderDialog,
   IssueDecisionDialog,
+  IssueSeverityDialog,
   ReleaseAssetDialog,
   ReportIssueDialog,
   WorkOrderDecisionDialog,
@@ -26,7 +35,9 @@ import {
 import {
   canApproveWorkOrders,
   canDismissIssues,
+  canLowerIssueSeverity,
   canManageWorkOrders,
+  canRaiseIssueSeverity,
   canReleaseAssets,
   canReportIssues,
   canResolveIssues,
@@ -92,6 +103,8 @@ export function MaintenanceScreen() {
   const canReport = canReportIssues(me?.role, me?.enabledModules);
   const canResolve = canResolveIssues(me?.role, me?.enabledModules);
   const canDismiss = canDismissIssues(me?.role, me?.enabledModules);
+  const canRaise = canRaiseIssueSeverity(me?.role, me?.enabledModules);
+  const canLower = canLowerIssueSeverity(me?.role, me?.enabledModules);
 
   const [status, setStatus] = useState<WorkOrderFilter>("ALL");
   const [issueStatus, setIssueStatus] = useState<IssueFilter>("ALL");
@@ -142,6 +155,23 @@ export function MaintenanceScreen() {
         icon: CircleSlash,
         destructive: true,
         onSelect: () => setDialog({ kind: "decide-issue", decision: "dismiss", issue }),
+      });
+    }
+    if (!issue.safetyCritical && canRaise) {
+      actions.push({
+        key: "raise-severity",
+        label: label("change-issue-severity"),
+        icon: ShieldAlert,
+        onSelect: () => setDialog({ kind: "issue-severity", raise: true, issue }),
+      });
+    }
+    if (issue.safetyCritical && canLower) {
+      actions.push({
+        key: "lower-severity",
+        label: label({ command: "change-issue-severity", intent: "lower" }),
+        icon: ShieldOff,
+        destructive: true,
+        onSelect: () => setDialog({ kind: "issue-severity", raise: false, issue }),
       });
     }
     return actions;
@@ -349,6 +379,9 @@ export function MaintenanceScreen() {
           decision={dialog.decision}
           onDismiss={dismiss}
         />
+      )}
+      {dialog.kind === "issue-severity" && (
+        <IssueSeverityDialog issue={dialog.issue} raise={dialog.raise} onDismiss={dismiss} />
       )}
       {dialog.kind === "release" && (
         <ReleaseAssetDialog workOrder={dialog.workOrder} onDismiss={dismiss} />

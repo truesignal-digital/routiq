@@ -17,7 +17,9 @@ import {
 import {
   canApproveWorkOrders,
   canDismissIssues,
+  canLowerIssueSeverity,
   canManageWorkOrders,
+  canRaiseIssueSeverity,
   canReleaseAssets,
   canResolveIssues,
 } from "../maintenance/permissions.js";
@@ -89,6 +91,8 @@ const may = {
   release: (v: Viewer) => canReleaseAssets(v.role, v.enabledModules),
   resolveIssues: (v: Viewer) => canResolveIssues(v.role, v.enabledModules),
   dismissIssues: (v: Viewer) => canDismissIssues(v.role, v.enabledModules),
+  raiseSeverity: (v: Viewer) => canRaiseIssueSeverity(v.role, v.enabledModules),
+  lowerSeverity: (v: Viewer) => canLowerIssueSeverity(v.role, v.enabledModules),
   addCost: (v: Viewer) => canAddWorkOrderCost(v.role, v.enabledModules),
   approveEntries: (v: Viewer) => canApproveEntries(v.role, v.enabledModules),
   attachEvidence: (v: Viewer) => canAttachEvidence(v.role, v.enabledModules),
@@ -277,6 +281,7 @@ export function workOrderWaiting(
 export interface IssueFacts {
   id: string;
   status: "OPEN" | "RESOLVED" | "DISMISSED";
+  safetyCritical: boolean;
   /** A work order still in the flow answers it, so it is not "unplanned". */
   planned: boolean;
 }
@@ -299,6 +304,13 @@ export function issueSteps(
     }
     if (may.resolveIssues(viewer)) offered.push({ step: { key: "resolve-issue", record } });
     if (may.dismissIssues(viewer)) offered.push({ step: { key: "dismiss-issue", record } });
+    // The mark can be added by whoever reports, taken off by the managers (#96).
+    if (!issue.safetyCritical && may.raiseSeverity(viewer)) {
+      offered.push({ step: { key: "raise-severity", record } });
+    }
+    if (issue.safetyCritical && may.lowerSeverity(viewer)) {
+      offered.push({ step: { key: "lower-severity", record } });
+    }
   } else if (
     isGroundingIssue &&
     grounding !== undefined &&
@@ -399,7 +411,11 @@ export function groundingStep(
   }
   const issue = facts.grounded.issue;
   return {
-    step: issueSteps({ id: issue.id, status: issue.status, planned: false }, viewer, facts).primary,
+    step: issueSteps(
+      { id: issue.id, status: issue.status, safetyCritical: issue.safetyCritical, planned: false },
+      viewer,
+      facts,
+    ).primary,
     record: { kind: "issue", id: issue.id },
   };
 }

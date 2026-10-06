@@ -4,6 +4,7 @@ import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 import {
   CreateWorkOrderForm,
   IssueDecisionForm,
+  IssueSeverityForm,
   ReleaseForm,
 } from "@/maintenance/MaintenanceDialogs.js";
 import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
@@ -33,7 +34,11 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
 
   const grounding = groundingFacts(asset);
   const planned = issue.workOrders.some((wo) => isActiveWorkOrder(wo.status));
-  const steps = issueSteps({ id: issue.id, status: issue.status, planned }, viewer, grounding);
+  const steps = issueSteps(
+    { id: issue.id, status: issue.status, safetyCritical: issue.safetyCritical, planned },
+    viewer,
+    grounding,
+  );
 
   if (form !== undefined) {
     const common = { surface: "panel" as const, back: host.back, onDone: host.onDone, onDismiss: host.onDismiss };
@@ -51,6 +56,10 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
         return <IssueDecisionForm {...common} issue={issue} decision="resolve" />;
       case "dismiss-issue":
         return <IssueDecisionForm {...common} issue={issue} decision="dismiss" />;
+      case "raise-severity":
+        return <IssueSeverityForm {...common} issue={issue} raise />;
+      case "lower-severity":
+        return <IssueSeverityForm {...common} issue={issue} raise={false} />;
       case "release":
         return (
           <ReleaseForm {...common} subject={{ kind: "override", assetId: asset.id, issue }} />

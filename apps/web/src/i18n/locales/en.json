@@ -173,7 +173,8 @@
     "CUSTODIAN_INELIGIBLE": "This member cannot be responsible for this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
-    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
+    "ISSUE_SEVERITY_ALREADY_SET": "This problem is already marked that way. Refresh the page."
   },
   "assets": {
     "notify": {
@@ -1092,7 +1093,9 @@
       "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem.",
       "releaseSubject": "Work order {reference}",
       "resolveIssueHint": "The problem has been dealt with, for example fixed on the spot. Resolving does not lift a grounding: only a return to service does.",
-      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
+      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail.",
+      "raiseSeverityHint": "The vehicle is grounded as soon as you save, and stays grounded until a manager releases it to service.",
+      "lowerSeverityHint": "The vehicle stays grounded: releasing it to service is a separate step. The reason stays on the audit trail."
     },
     "close": {
       "hint": "Say what was done and what the repair cost.",
@@ -1150,7 +1153,9 @@
         "completionApproved": "Completion approved",
         "completionRejected": "Completion rejected",
         "workOrderCancelled": "Work order cancelled",
-        "assetReleased": "Asset returned to service"
+        "assetReleased": "Asset returned to service",
+        "severityRaised": "Marked as safety-critical. The vehicle is grounded.",
+        "severityLowered": "Safety-critical mark removed"
       }
     }
   },
@@ -1390,7 +1395,9 @@
       "work_order-closure_approved": "Closure validated",
       "asset_availability-opened": "Asset grounded",
       "asset_availability-closed": "Grounding lifted",
-      "financial_entry-updated": "Entry edited"
+      "financial_entry-updated": "Entry edited",
+      "operational_issue-severity_raised": "Marked safety-critical",
+      "operational_issue-severity_lowered": "Safety-critical mark removed"
     },
     "field": {
       "status": "status",
@@ -1933,6 +1940,18 @@
       "submit": "Got it",
       "submitting": "Saving…",
       "dismiss": "Later"
+    },
+    "change-issue-severity": {
+      "label": "Mark as safety-critical",
+      "short": "Safety-critical",
+      "submit": "Mark as safety-critical",
+      "submitting": "Saving…",
+      "lower": {
+        "label": "Remove the safety-critical mark",
+        "short": "Not critical",
+        "submit": "Remove the mark",
+        "dismiss": "Keep the mark"
+      }
     }
   },
   "vehicle": {
@@ -2417,7 +2436,9 @@
         "asset_availability-closed": "Grounding lifted",
         "note-added": "Note added",
         "financial_entry-updated": "Entry edited before review",
-        "asset-details_updated": "Details edited"
+        "asset-details_updated": "Details edited",
+        "operational_issue-severity_raised": "Problem marked safety-critical",
+        "operational_issue-severity_lowered": "Safety-critical mark removed from a problem"
       },
       "change": "{field}: {before} → {after}"
     },

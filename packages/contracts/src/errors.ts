@@ -195,6 +195,12 @@ export const COMMAND_ERROR_CODES = [
    * the vehicle's branch after the move).
    */
   "CUSTODIAN_INELIGIBLE",
+  /**
+   * A severity change that would change nothing (#96): marking safety-critical
+   * a problem already marked so, or taking the mark off one that has none. The
+   * caller's screen is stale.
+   */
+  "ISSUE_SEVERITY_ALREADY_SET",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

@@ -132,6 +132,9 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
     ...wildcard(["record-meter-reading"], ["TECHNICIAN"]),
 
     ...wildcard(["report-issue"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
+    // Whoever reports may mark a problem safety-critical later; the handler
+    // keeps taking the mark off to DIRECTOR and ADMIN (#96).
+    ...wildcard(["change-issue-severity"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
     ...wildcard(
       ["resolve-issue", "dismiss-issue", "create-work-order", "complete-work-order", "cancel-work-order"],
       ["DIRECTOR", "ADMIN", "TECHNICIAN"],

@@ -70,6 +70,8 @@ export type StepKey =
   | "reject-completion"
   | "resolve-issue"
   | "dismiss-issue"
+  | "raise-severity"
+  | "lower-severity"
   | "approve-entry"
   | "reject-entry"
   | "edit-entry"

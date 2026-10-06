@@ -988,7 +988,9 @@ export const operationalIssues = pgTable(
     /**
      * OPEN → RESOLVED | DISMISSED, once (#28). No triage state: what happens
      * next — a work order, a dismissal, nothing yet — is an attribute of the
-     * issue's surroundings, not a status. The report columns above never move.
+     * issue's surroundings, not a status. The report columns above never move,
+     * except `safety_critical`, which change-issue-severity sets while the
+     * issue is OPEN (#96); its audit events keep every earlier value.
      */
     status: text("status", { enum: ["OPEN", "RESOLVED", "DISMISSED"] })
       .notNull()

@@ -67,6 +67,8 @@ person held before.
 | Vehicles | Write a note | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Vehicles | Location (reported, not GPS) *(planned)* | V | ✓ | — | — | — | ✓ |
 | Maintenance | Report a problem | ✓ | ✓ | — | — | ✓ | ✓ |
+| Maintenance | Mark a reported problem safety-critical (grounds the vehicle) | ✓ | ✓ | — | — | ✓ | ✓ |
+| Maintenance | Take the safety-critical mark off a problem (never releases the vehicle) | ✓ | ✓ | — | — | — | — |
 | Maintenance | Create and run a work order | ✓ | ✓ | — | — | ✓ | — |
 | Maintenance | Add parts and labour to a work order | ✓ | ✓ | — | — | S | — |
 | Maintenance | Approve a work order and its completion | A | A | — | — | — | — |

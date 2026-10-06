@@ -173,7 +173,8 @@
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
-    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
+    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur.",
+    "ISSUE_SEVERITY_ALREADY_SET": "Ce problème est déjà marqué ainsi. Actualisez la page."
   },
   "assets": {
     "notify": {
@@ -1092,7 +1093,9 @@
       "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème.",
       "releaseSubject": "Ordre de travail {reference}",
       "resolveIssueHint": "Le problème a été traité, par exemple réparé sur place. La résolution ne lève pas l'immobilisation : seule la remise en service le fait.",
-      "dismissIssueHint": "Le problème n'aurait pas dû être signalé : erreur, doublon, rien constaté. Le motif reste au journal."
+      "dismissIssueHint": "Le problème n'aurait pas dû être signalé : erreur, doublon, rien constaté. Le motif reste au journal.",
+      "raiseSeverityHint": "Le véhicule est immobilisé dès l'enregistrement, jusqu'à ce qu'un responsable le remette en service.",
+      "lowerSeverityHint": "Le véhicule reste immobilisé : la remise en service est une étape à part. Le motif reste dans l'historique."
     },
     "close": {
       "hint": "Indiquez ce qui a été fait et ce que la réparation a coûté.",
@@ -1150,7 +1153,9 @@
         "completionApproved": "Fin des travaux validée",
         "completionRejected": "Fin des travaux refusée",
         "workOrderCancelled": "Ordre de travail annulé",
-        "assetReleased": "Actif remis en service"
+        "assetReleased": "Actif remis en service",
+        "severityRaised": "Marqué critique pour la sécurité. Le véhicule est immobilisé.",
+        "severityLowered": "Mention critique retirée"
       }
     }
   },
@@ -1390,7 +1395,9 @@
       "work_order-closure_approved": "Clôture validée",
       "asset_availability-opened": "Actif immobilisé",
       "asset_availability-closed": "Immobilisation levée",
-      "financial_entry-updated": "Écriture modifiée"
+      "financial_entry-updated": "Écriture modifiée",
+      "operational_issue-severity_raised": "Marqué critique pour la sécurité",
+      "operational_issue-severity_lowered": "Mention critique retirée"
     },
     "field": {
       "status": "statut",
@@ -1933,6 +1940,18 @@
       "submit": "J'ai compris",
       "submitting": "Enregistrement…",
       "dismiss": "Plus tard"
+    },
+    "change-issue-severity": {
+      "label": "Marquer critique pour la sécurité",
+      "short": "Critique",
+      "submit": "Marquer critique",
+      "submitting": "Enregistrement…",
+      "lower": {
+        "label": "Retirer la mention critique",
+        "short": "Pas critique",
+        "submit": "Retirer la mention",
+        "dismiss": "Garder la mention"
+      }
     }
   },
   "vehicle": {
@@ -2417,7 +2436,9 @@
         "asset_availability-closed": "Immobilisation levée",
         "note-added": "Note ajoutée",
         "financial_entry-updated": "Écriture modifiée avant examen",
-        "asset-details_updated": "Informations modifiées"
+        "asset-details_updated": "Informations modifiées",
+        "operational_issue-severity_raised": "Problème marqué critique pour la sécurité",
+        "operational_issue-severity_lowered": "Mention critique retirée d'un problème"
       },
       "change": "{field} : {before} → {after}"
     },

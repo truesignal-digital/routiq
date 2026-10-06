@@ -115,6 +115,14 @@ export const COMMAND_QUEUEABILITY = {
   "reject-work-order-completion": false,
   "dismiss-issue": false,
   /*
+   * Changing the mark on a report someone may be resolving or dismissing right
+   * now, quoted against the version on screen: raising grounds the vehicle
+   * and lowering overrules a report, so both are judged against the issue as
+   * it stands. A driver with no signal reports a new safety-critical problem
+   * instead, which is a fact and queues.
+   */
+  "change-issue-severity": false,
+  /*
    * Not a fact about the road but an edit to a record someone else is about to
    * judge. It is valid only while the entry is still pending, and an approver
    * may decide it at any moment; a replay an hour later would meet a conflict
