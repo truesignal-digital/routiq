@@ -288,6 +288,9 @@ export const auditEvents = pgTable(
       t.occurredAt.desc().nullsFirst(),
       t.id,
     ),
+    // The dispatcher's "every command writes its own audit event" check (#153)
+    // looks events up by command on every write; without this it scans the table.
+    index("audit_events_ws_command_idx").on(t.workspaceId, t.commandId),
   ],
 );
 
