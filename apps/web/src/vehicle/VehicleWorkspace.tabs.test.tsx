@@ -319,6 +319,53 @@ describe("History", () => {
     await user.click(screen.getByRole("radio", { name: "Money" }));
     await waitFor(() => expect(recorded.history.location.search).toContain("kind=MONEY"));
   });
+
+  // A phone wraps "Leg recorded on trip DLA-2026-" / "00003" at the hyphen
+  // unless the number is its own unbreakable run (#430).
+  const recordNumbers = (root: HTMLElement) =>
+    [...root.querySelectorAll("[data-record-number]")]
+      .filter((node) => node.classList.contains("whitespace-nowrap"))
+      .map((node) => node.textContent);
+
+  it.each(["en", "fr-CM"] as const)("%s: keeps trip numbers in event titles on one line (#430)", async (locale) => {
+    await openVehicle(`/assets/${ASSET_ID}/history?kind=TRIPS`, {
+      role: "ADMIN",
+      locale,
+      history: [
+        historyItem({
+          eventId: "00000000-0000-4000-8000-0000000000e1",
+          eventType: "movement_leg.recorded",
+          kind: "TRIPS",
+          subject: { entityType: "movement_leg", id: "00000000-0000-4000-8000-0000000000e2", number: "DLA-2026-00003" },
+          params: {},
+        }),
+        historyItem({
+          eventId: "00000000-0000-4000-8000-0000000000e3",
+          eventType: "activity.created",
+          kind: "TRIPS",
+          subject: { entityType: "activity", id: "00000000-0000-4000-8000-0000000000e4", number: "DLA-2026-00004" },
+          params: {},
+        }),
+      ],
+    });
+    const list = (await screen.findByText(/DLA-2026-00003/)).closest("ol");
+    if (list === null) throw new Error("no history list");
+    expect(recordNumbers(list)).toEqual(["DLA-2026-00003", "DLA-2026-00004"]);
+  });
+
+  it("keeps the trip number on one line in a Money row's trip link (#430)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09`, {
+      role: "FINANCE",
+      entries: [
+        entryRow({
+          status: "POSTED",
+          assetLinks: { activityId: "00000000-0000-4000-8000-0000000000e4", activityNumber: "DLA-2026-00004", workOrderId: null },
+        }),
+      ],
+    });
+    const link = await screen.findByRole("button", { name: "for trip DLA-2026-00004" });
+    expect(recordNumbers(link)).toEqual(["DLA-2026-00004"]);
+  });
 });
 
 describe("Maintenance and Trips", () => {
