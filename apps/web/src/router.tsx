@@ -12,8 +12,6 @@ import { sessionStore } from "./auth/store.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { queryClient } from "./lib/query-client.js";
-import { loadShell } from "./shell/shell-loader.js";
-import { ShellPending } from "./shell/ShellPending.js";
 
 /**
  * Every screen but sign-in loads on demand, so the first page a phone opens
@@ -37,6 +35,8 @@ const FinanceEntryDetailScreen = lazyRouteComponent(() => import("./screens/Fina
 const FinanceApprovalsScreen = lazyRouteComponent(() => import("./screens/FinanceApprovalsScreen.js"), "FinanceApprovalsScreen");
 const FinancePeriodsScreen = lazyRouteComponent(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
 const AppShell = lazyRouteComponent(() => import("./shell/AppShell.js"), "AppShell");
+// On demand like the shell: the sign-in page carries neither (#495).
+const ShellPending = lazyRouteComponent(() => import("./shell/ShellPending.js"), "ShellPending");
 const VehicleWorkspaceScreen = lazyRouteComponent(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
 const DetailsTab = lazyRouteComponent(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
 const DocumentsTab = lazyRouteComponent(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
@@ -71,7 +71,8 @@ const appRoute = createRoute({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
-  loader: ({ context, location }) => loadShell(context.queryClient, location.href),
+  loader: ({ context, location }) =>
+    import("./shell/shell-loader.js").then(({ loadShell }) => loadShell(context.queryClient, location.href)),
   // The frame shows at once, sized like the shell, so the shell replaces it
   // without moving anything (#495); waiting on a timer would leave a blank page.
   pendingComponent: ShellPending,
@@ -306,6 +307,8 @@ export const router = createRouter({ routeTree, context: { queryClient } });
  */
 export function preloadAfterSignIn(): void {
   void AppShell.preload?.();
+  void ShellPending.preload?.();
+  void import("./shell/shell-loader.js").catch(() => undefined);
   void DashboardScreen.preload?.();
 }
 

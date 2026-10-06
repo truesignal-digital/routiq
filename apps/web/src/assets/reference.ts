@@ -1,5 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { REFERENCE_STALE_MS } from "../lib/query-defaults.js";
 
 export interface AssetRegistrationReference {
   assetClasses: Array<{ code: string; labelFr: string; labelEn: string }>;
@@ -29,6 +30,7 @@ export function assetRegistrationReferenceQueryOptions(workspaceSlug: string | u
   return queryOptions({
     queryKey: ["ws", workspaceSlug, "reference", "asset-registration"] as const,
     enabled: workspaceSlug !== undefined,
+    staleTime: REFERENCE_STALE_MS,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
