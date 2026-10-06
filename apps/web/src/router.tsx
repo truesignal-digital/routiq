@@ -12,6 +12,14 @@ import { sessionStore } from "./auth/store.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { queryClient } from "./lib/query-client.js";
+import {
+  DecisionQueueSkeleton,
+  HomeSkeleton,
+  ModuleListSkeleton,
+  RecordWorkspaceSkeleton,
+  SettingsListSkeleton,
+  TabSkeleton,
+} from "./components/page-skeletons.js";
 import { RoutePending } from "./shell/RoutePending.js";
 
 /**
@@ -89,6 +97,7 @@ const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
   loader: (args) => import("./routes/home.loader.js").then((load) => load.home(args)),
+  pendingComponent: HomeSkeleton,
   component: DashboardScreen,
 });
 
@@ -96,12 +105,14 @@ const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
   loader: (args) => import("./routes/assets.loader.js").then((load) => load.assets(args)),
+  pendingComponent: ModuleListSkeleton,
   component: AssetsStub,
 });
 
 const assetsNewRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets/new",
+  pendingComponent: RoutePending,
   component: AssetRegisterScreen,
 });
 
@@ -123,6 +134,7 @@ const assetDetailRoute = createRoute({
       .catch(undefined),
   }),
   loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicle(args)),
+  pendingComponent: RecordWorkspaceSkeleton,
   component: VehicleWorkspaceScreen,
 });
 
@@ -130,12 +142,14 @@ const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
   loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicleNow(args)),
+  pendingComponent: TabSkeleton,
   component: NowTab,
 });
 
 const vehicleMaintenanceRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "maintenance",
+  pendingComponent: TabSkeleton,
   component: MaintenanceTab,
 });
 
@@ -147,12 +161,14 @@ const vehicleMoneyRoute = createRoute({
     direction: z.enum(["EXPENSE", "REVENUE"]).optional().catch(undefined),
     evidence: z.literal("missing").optional().catch(undefined),
   }),
+  pendingComponent: TabSkeleton,
   component: MoneyTab,
 });
 
 const vehicleTripsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "trips",
+  pendingComponent: TabSkeleton,
   component: TripsTab,
 });
 
@@ -161,6 +177,7 @@ const vehicleTripsRoute = createRoute({
 const vehicleDocumentsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "documents",
+  pendingComponent: TabSkeleton,
   component: DocumentsTab,
 });
 
@@ -170,18 +187,21 @@ const vehicleHistoryRoute = createRoute({
   validateSearch: z.object({
     kind: z.enum(VEHICLE_HISTORY_KINDS).optional().catch(undefined),
   }),
+  pendingComponent: TabSkeleton,
   component: HistoryTab,
 });
 
 const vehicleDetailsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "details",
+  pendingComponent: TabSkeleton,
   component: DetailsTab,
 });
 
 const financeRecordRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/record",
+  pendingComponent: RoutePending,
   component: FinanceRecordScreen,
 });
 
@@ -191,6 +211,7 @@ const financeEntriesRoute = createRoute({
   validateSearch: financialEntryFilters.omit({ branchId: true }),
   loaderDeps: ({ search }) => search,
   loader: (args) => import("./routes/finance.loader.js").then((load) => load.financeEntries(args)),
+  pendingComponent: ModuleListSkeleton,
   component: FinanceEntriesScreen,
 });
 
@@ -198,6 +219,7 @@ const activitiesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities",
   loader: (args) => import("./routes/activities.loader.js").then((load) => load.activities(args)),
+  pendingComponent: ModuleListSkeleton,
   component: ActivitiesScreen,
 });
 
@@ -210,12 +232,14 @@ const activityRecordRoute = createRoute({
     template: z.enum(["journey", "haulage"]).optional(),
     assetId: z.uuid().optional().catch(undefined),
   }),
+  pendingComponent: RoutePending,
   component: ActivitySheetScreen,
 });
 
 const activityDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/$activityId",
+  pendingComponent: RecordWorkspaceSkeleton,
   component: ActivityDetailScreen,
 });
 
@@ -225,6 +249,7 @@ const maintenanceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/maintenance",
   loader: (args) => import("./routes/maintenance.loader.js").then((load) => load.maintenance(args)),
+  pendingComponent: ModuleListSkeleton,
   component: MaintenanceScreen,
 });
 
@@ -234,6 +259,7 @@ const financeEntryDetailRoute = createRoute({
   // The entries list's ⋯ menu sends an operator straight into the reversal
   // dialog rather than carrying a second copy of it.
   validateSearch: z.object({ reverse: z.boolean().optional() }),
+  pendingComponent: RecordWorkspaceSkeleton,
   component: FinanceEntryDetailScreen,
 });
 
@@ -246,18 +272,21 @@ const financeApprovalsRoute = createRoute({
   validateSearch: z.object({ branch: z.literal("all").optional() }),
   loaderDeps: ({ search }) => search,
   loader: (args) => import("./routes/finance.loader.js").then((load) => load.financeApprovals(args)),
+  pendingComponent: DecisionQueueSkeleton,
   component: FinanceApprovalsScreen,
 });
 
 const financePeriodsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/periods",
+  pendingComponent: ModuleListSkeleton,
   component: FinancePeriodsScreen,
 });
 
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
+  pendingComponent: SettingsListSkeleton,
   component: MoreStub,
 });
 
@@ -265,18 +294,21 @@ const moreRoute = createRoute({
 const personsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/persons",
+  pendingComponent: SettingsListSkeleton,
   component: PersonsScreen,
 });
 
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/users",
+  pendingComponent: SettingsListSkeleton,
   component: UsersScreen,
 });
 
 const branchesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/branches",
+  pendingComponent: SettingsListSkeleton,
   component: BranchesScreen,
 });
 
@@ -324,6 +356,11 @@ export const router = createRouter({
   defaultPreload: "intent",
   defaultPreloadDelay: 50,
   defaultPendingComponent: RoutePending,
+  // A screen whose data takes longer than a second shows its page type's
+  // skeleton, then keeps it at least half a second so it never flashes. The
+  // owner rules on the timing (#498).
+  defaultPendingMs: 1_000,
+  defaultPendingMinMs: 500,
 });
 
 /**
