@@ -251,9 +251,10 @@ export async function workOrderAssetBranchId(
 }
 
 /**
- * What the ledger says this repair cost: every posting attributed to the order
- * whose entry is POSTED, REVERSED or still SUBMITTED, signed, so a reversal pair
- * nets to zero. REJECTED spend never happened. Pending lines are included on
+ * What the ledger says this repair cost: every expense posting attributed to
+ * the order whose entry is POSTED, REVERSED or still SUBMITTED, signed, so a
+ * reversal pair nets to zero. Revenue naming an order, written before #432
+ * refused it, is not a cost. REJECTED spend never happened. Pending lines are included on
  * purpose — the completion band is a ceiling, and a cost awaiting review is
  * still a cost the approver should see before the job closes.
  */
@@ -278,6 +279,7 @@ export async function workOrderLedgerTotal(
       and(
         eq(financialPostings.workspaceId, ctx.workspaceId),
         eq(financialPostings.workOrderId, workOrderId),
+        eq(financialPostings.direction, "EXPENSE"),
         inArray(financialEntries.status, ["POSTED", "REVERSED", "SUBMITTED"]),
       ),
     );
