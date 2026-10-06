@@ -10,6 +10,7 @@ describe("financial-core public registry", () => {
         "POSTINGS_SUM_MISMATCH",
         "MAKER_CANNOT_APPROVE",
         "ENTRY_ALREADY_REVERSED",
+        "ENTRY_IS_REVERSAL",
         "PERIOD_LOCKED",
         "CATEGORY_KIND_MISMATCH",
       ]),

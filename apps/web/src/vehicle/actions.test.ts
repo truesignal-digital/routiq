@@ -66,7 +66,7 @@ const HELPERS: Record<VehicleActionKey, Helper> = {
   "add-document": canManageDocuments,
   "renew-document": canManageDocuments,
   "review-entry": canApproveEntries,
-  "reverse-entry": (role, modules) => modules.includes("FINANCE") && canReverseEntry(role, "POSTED"),
+  "reverse-entry": (role, modules) => modules.includes("FINANCE") && canReverseEntry(role, { status: "POSTED", reversesEntryId: null }),
 };
 
 describe("the action catalogue", () => {

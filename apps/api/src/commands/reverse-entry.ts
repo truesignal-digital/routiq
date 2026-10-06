@@ -61,6 +61,14 @@ registerCommand<ReverseEntryPayload>({
 
     checkOptimisticVersion(envelope, original.rowVersion);
 
+    // One level only (#130): undoing a mistaken reversal means recording the
+    // entry again, never reversing the reversal.
+    if (original.reversesEntryId !== null) {
+      throw new CommandError(409, "ENTRY_IS_REVERSAL", {
+        originalEntryId: payload.originalEntryId,
+        reversesEntryId: original.reversesEntryId,
+      });
+    }
     if (original.status === "REVERSED") {
       throw new CommandError(409, "ENTRY_ALREADY_REVERSED", {
         originalEntryId: payload.originalEntryId,
