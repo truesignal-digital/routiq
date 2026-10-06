@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nextProvider } from "react-i18next";
@@ -294,6 +294,17 @@ describe("AppShell (sidebar frame)", () => {
 
     const live = document.querySelector("[aria-live='polite']");
     expect(live?.textContent).toBe("You are viewing: Yaoundé");
+  });
+
+  it("asks for the approval rules again on every new screen (#422)", async () => {
+    const router = await renderShell("/assets");
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    await router.navigate({ to: "/finance/entries" });
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["ws", session.workspaceSlug, "approval-chain"],
+      }),
+    );
   });
 
   it("logs out from the sidebar footer, forgetting every read made under the session", async () => {

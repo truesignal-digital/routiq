@@ -274,6 +274,13 @@
       "when": 1791248318714,
       "tag": "0038_chain_covers_finance_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791251554003,
+      "tag": "0039_approval_rule_notice",
+      "breakpoints": true
     }
   ]
 }

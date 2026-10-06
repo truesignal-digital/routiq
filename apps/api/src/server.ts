@@ -36,6 +36,7 @@ import "./commands/update-asset-details.js";
 import "./commands/add-note.js";
 import "./commands/attach-evidence.js";
 import "./commands/update-pending-entry.js";
+import "./commands/acknowledge-approval-rules.js";
 import { registerArtifactRoutes } from "./artifacts/routes.js";
 import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
@@ -52,6 +53,7 @@ import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
+import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
 
 export interface ServerDeps {
@@ -123,6 +125,7 @@ export function buildServer({
   registerBranchReadRoutes(app, db, requireAuth);
   registerHistoryReadRoutes(app, db, requireAuth);
   registerMaintenanceReadRoutes(app, db, requireAuth);
+  registerApprovalChainReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {

@@ -248,6 +248,12 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
       .delete(schema.notes)
       .where(eq(schema.notes.workspaceId, workspace.id));
     await tx
+      .delete(schema.approvalRuleAcknowledgements)
+      .where(eq(schema.approvalRuleAcknowledgements.workspaceId, workspace.id));
+    await tx
+      .delete(schema.approvalRuleChanges)
+      .where(eq(schema.approvalRuleChanges.workspaceId, workspace.id));
+    await tx
       .delete(schema.assetAvailabilityIntervals)
       .where(eq(schema.assetAvailabilityIntervals.workspaceId, workspace.id));
     await tx
