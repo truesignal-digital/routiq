@@ -193,7 +193,7 @@ describe("RecordEntryForm opened from a vehicle", () => {
     ]);
     expect(onRecorded).toHaveBeenCalledWith(posted.ok && posted.outcome, "DLA");
     expect(mocks.toastAdd).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Transaction recorded and posted" }),
+      expect.objectContaining({ type: "success", title: "Entry recorded and posted" }),
     );
   });
 
