@@ -13,8 +13,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   log(`api: ${entries.length} posted entries; opening ${entry.entryNumber}`);
 
   const sidebar = await openSidebar(page);
-  await sidebar.getByRole("link", { name: t("Finances", "Finance") }).click();
-  await page.getByRole("heading", { level: 1, name: t("Écritures comptables", "Entries") }).waitFor();
+  await sidebar.getByRole("link", { name: t("Argent", "Money") }).click();
+  await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
   await shot("entries-list", { caption: "Finance entries list" });
 

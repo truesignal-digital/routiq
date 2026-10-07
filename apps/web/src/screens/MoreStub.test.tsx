@@ -74,77 +74,12 @@ function renderMore(me: MeContext) {
 
 afterEach(cleanup);
 
-describe("MoreStub administration links", () => {
-  it("offers an admin the Users screen", async () => {
-    renderMore(membership("ADMIN", ["CORE", "ACTIVITIES"]));
-
-    const link = await screen.findByRole("link", { name: /Utilisateurs/ });
-    expect(link.getAttribute("href")).toBe("/more/users");
-  });
-
-  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
-    "leaves %s no Users entry",
-    async (role) => {
-    renderMore(membership(role, ["CORE", "ACTIVITIES"]));
-
-    await screen.findByRole("link", { name: /Personnel/ });
-    expect(screen.queryByRole("link", { name: /Utilisateurs/ })).toBeNull();
-    },
-  );
-
-  it("offers the Director the Users screen too", async () => {
-    renderMore(membership("DIRECTOR", ["CORE", "ACTIVITIES"]));
-    expect(await screen.findByRole("link", { name: /Utilisateurs/ })).toBeTruthy();
-  });
-
-  it("offers the Director the Branches screen", async () => {
+describe("MoreStub after the Company rows (#312)", () => {
+  it("keeps only personal settings: People, Users and Branches live in the sidebar", async () => {
     renderMore(membership("DIRECTOR", ["CORE", "ACTIVITIES"]));
 
-    const link = await screen.findByRole("link", { name: /Agences/ });
-    expect(link.getAttribute("href")).toBe("/more/branches");
-  });
-
-  it.each(["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
-    "leaves %s no Branches entry",
-    async (role) => {
-      renderMore(membership(role, ["CORE", "ACTIVITIES"]));
-
-      await screen.findByRole("link", { name: /Personnel/ });
-      expect(screen.queryByRole("link", { name: /Agences/ })).toBeNull();
-    },
-  );
-
-  it("offers the Director the Company settings, where the approval thresholds live (#354)", async () => {
-    renderMore(membership("DIRECTOR", ["CORE", "FINANCE"]));
-
-    const link = await screen.findByRole("link", { name: /Paramètres de l'entreprise/ });
-    expect(link.getAttribute("href")).toBe("/more/company");
-  });
-
-  it.each(["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
-    "leaves %s no Company settings entry",
-    async (role) => {
-      renderMore(membership(role, ["CORE", "ACTIVITIES", "FINANCE"]));
-
-      await screen.findByRole("link", { name: /Personnel/ });
-      expect(screen.queryByRole("link", { name: /Paramètres de l'entreprise/ })).toBeNull();
-    },
-  );
-
-  it("leaves no Company settings entry while the Finance module is off: nothing to set", async () => {
-    renderMore(membership("DIRECTOR", ["CORE", "ACTIVITIES"]));
-
-    await screen.findByRole("link", { name: /Agences/ });
-    expect(screen.queryByRole("link", { name: /Paramètres de l'entreprise/ })).toBeNull();
-  });
-
-  it("keeps the Users entry when the workspace bought no other module", async () => {
-    // CORE cannot be disabled, so member administration never disappears with
-    // a module the way Personnel does.
-    renderMore(membership("ADMIN", ["CORE"]));
-
-    expect(await screen.findByRole("link", { name: /Utilisateurs/ })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /Personnel/ })).toBeNull();
+    await screen.findByRole("button", { name: "English" });
+    expect(screen.queryAllByRole("link")).toEqual([]);
   });
 });
 

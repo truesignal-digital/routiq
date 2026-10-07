@@ -5,7 +5,8 @@ import { router } from "../router.js";
 import { breadcrumbTrail } from "./breadcrumbs.js";
 import { visibleSections } from "./sections.js";
 
-const SECTIONS = visibleSections([...MODULE_CODES]);
+// Direction sees every row, so every section root is one.
+const SECTIONS = visibleSections("DIRECTOR", [...MODULE_CODES]);
 const SECTION_ROOTS = new Set(SECTIONS.map((section) => section.to));
 
 /** Every page the shell frames, read from the route tree so a new route is covered by default. */
@@ -36,7 +37,7 @@ describe("every route has a breadcrumb trail", () => {
     const trail = breadcrumbTrail(SECTIONS, concrete(path));
 
     if (path === "/") {
-      expect(trail.map((crumb) => crumb.labelKey)).toEqual(["nav.home"]);
+      expect(trail.map((crumb) => crumb.labelKey)).toEqual(["home.title"]);
       return;
     }
 
