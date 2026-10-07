@@ -118,13 +118,16 @@ afterEach(() => {
 });
 
 describe("Edit on the finance entry detail", () => {
-  it("is offered to the author while the entry waits, and opens the pre-filled form", async () => {
+  it("is offered to the author while the entry waits, and opens the pre-filled form on the side panel", async () => {
     signedIn(AUTHOR_ID);
     showing(entry());
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Edit entry DLA-2026-00012" });
+    // Editing a fact opens the panel, never a centred dialog: the form is
+    // taller than a laptop window (#470).
+    expect(dialog.dataset.slot).toBe("sheet-content");
     expect((dialog.querySelector("input[name='amountInput']") as HTMLInputElement).value).toMatch(
       /^145\s?000$/,
     );

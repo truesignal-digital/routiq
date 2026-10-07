@@ -1,52 +1,133 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { Banknote, Building, House, Menu, Route, ShieldUser, Truck, UserRound, Wrench } from "lucide-react";
 import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 import { visibleFinanceSections } from "../finance/navigation.js";
 import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
-import { canAdministerBranches } from "../branches/permissions.js";
-import { canAdministerMembers } from "../members/permissions.js";
-import { activeSection, isSectionActive, visibleSections } from "./sections.js";
+import {
+  activeSection,
+  isSectionActive,
+  visibleSectionGroups,
+  visibleSections,
+} from "./sections.js";
 
-const ALL = visibleSections(["CORE", "ASSETS", "FINANCE", "MAINTENANCE"]);
+const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
+const ALL = visibleSections("DIRECTOR", EVERY);
 
 function activeKey(pathname: string): string | undefined {
   return activeSection(ALL, pathname)?.key;
 }
 
-describe("visibleSections (module gate)", () => {
-  it("disabled module removes its section entirely", () => {
-    const keys = visibleSections(["CORE"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "more"]);
+/** Rows per group, by key; `more` is the personal page #316 removes. */
+function sidebar(role: Role, modules: ModuleCode[] = EVERY) {
+  return Object.fromEntries(
+    visibleSectionGroups(role, modules).map((group) => [
+      group.key,
+      group.sections.map((section) => section.key).filter((key) => key !== "more"),
+    ]),
+  );
+}
+
+describe("each role's sidebar (#312)", () => {
+  // The table in #312, module gates on top.
+  const expected: Record<Role, Record<string, string[]>> = {
+    DIRECTOR: {
+      daily: ["home", "assets", "activities", "maintenance", "finances"],
+      company: ["persons", "users", "branches"],
+    },
+    ADMIN: {
+      daily: ["home", "assets", "activities", "maintenance", "finances"],
+      company: ["persons", "users"],
+    },
+    FINANCE: { daily: ["home", "assets", "activities", "finances"], company: ["persons"] },
+    CASHIER: { daily: ["home", "assets", "finances"] },
+    TECHNICIAN: { daily: ["home", "assets", "maintenance"] },
+    DRIVER: { daily: ["home", "assets", "activities"] },
+  };
+
+  it.each(ROLES)("%s", (role) => {
+    expect(sidebar(role)).toEqual(expected[role]);
   });
 
-  it("enabled module shows its section", () => {
-    const keys = visibleSections(["CORE", "ASSETS"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "assets", "more"]);
-  });
-
-  it("finance module shows the finances section", () => {
-    const keys = visibleSections(["CORE", "FINANCE"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "finances", "more"]);
-  });
-
-  it("maintenance module shows the maintenance section", () => {
-    const keys = visibleSections(["CORE", "MAINTENANCE"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "maintenance", "more"]);
-  });
-
-  it("without the maintenance module the workshop has no nav entry", () => {
-    const keys = visibleSections(["CORE", "ASSETS", "FINANCE"]).map((s) => s.key);
-    expect(keys).not.toContain("maintenance");
-  });
-
-  it("while membership is loading only module-less sections render", () => {
-    expect(visibleSections(undefined).map((s) => s.key)).toEqual(["home", "more"]);
-  });
-
-  it("home leads the nav and survives every module combination", () => {
-    for (const modules of [["CORE"], ["CORE", "ASSETS"], ["CORE", "FINANCE"]] as const) {
-      expect(visibleSections([...modules])[0]?.key).toBe("home");
+  it("drops Money for everyone when Finance is off", () => {
+    for (const role of ROLES) {
+      const modules = EVERY.filter((code) => code !== "FINANCE");
+      expect(sidebar(role, modules).daily, role).not.toContain("finances");
     }
-    expect(visibleSections(undefined)[0]?.key).toBe("home");
+  });
+
+  it("drops Maintenance for everyone when Maintenance is off", () => {
+    for (const role of ROLES) {
+      const modules = EVERY.filter((code) => code !== "MAINTENANCE");
+      expect(sidebar(role, modules).daily, role).not.toContain("maintenance");
+    }
+  });
+
+  it("leaves out a group with no rows rather than showing an empty heading", () => {
+    expect(visibleSectionGroups("DRIVER", EVERY).map((group) => group.key)).toEqual(["daily"]);
+  });
+
+  it("shows Money only where it never leads to a denial (#64)", () => {
+    for (const role of ROLES) {
+      if (!visibleSections(role, EVERY).some((section) => section.key === "finances")) continue;
+      expect(canReadFinanceEntries(role, EVERY), role).toBe(true);
+    }
+  });
+
+  it("keeps each role's finance tabs (ADR-0009)", () => {
+    const tabs = Object.fromEntries(
+      ROLES.map((role) => [role, visibleFinanceSections(role, EVERY).map((tab) => tab.key)]),
+    );
+    expect(tabs).toEqual({
+      DIRECTOR: ["entries", "approvals", "periods"],
+      ADMIN: ["entries"],
+      FINANCE: ["entries", "approvals", "periods"],
+      CASHIER: ["entries"],
+      TECHNICIAN: [],
+      DRIVER: ["entries"],
+    });
+  });
+
+  it("gives every role that records money a way to read it back", () => {
+    for (const role of ROLES) {
+      if (!canRecordFinance(role, EVERY)) continue;
+      expect(canReadFinanceEntries(role, EVERY), role).toBe(true);
+    }
+  });
+
+  it("while membership is loading shows only rows no module or role decides", () => {
+    expect(visibleSections(undefined, undefined).map((s) => s.key)).toEqual(["home", "more"]);
+  });
+
+  it("home leads the nav for every role and module combination", () => {
+    for (const role of ROLES) {
+      for (const modules of [["CORE"], ["CORE", "ASSETS"], EVERY] as ModuleCode[][]) {
+        expect(visibleSections(role, modules)[0]?.key).toBe("home");
+      }
+    }
+  });
+});
+
+describe("row label = page title (#312)", () => {
+  // The screen each row opens, and the source that renders its PageHeader.
+  const SCREENS: Record<string, string> = {
+    home: "screens/DashboardScreen.tsx",
+    assets: "screens/AssetsStub.tsx",
+    activities: "screens/ActivitiesScreen.tsx",
+    maintenance: "screens/MaintenanceScreen.tsx",
+    finances: "screens/FinanceEntriesScreen.tsx",
+    more: "screens/MoreStub.tsx",
+    persons: "screens/PersonsScreen.tsx",
+    users: "screens/UsersScreen.tsx",
+    branches: "screens/BranchesScreen.tsx",
+  };
+
+  it.each(ALL.map((section) => [section.key, section] as const))("%s", (key, section) => {
+    const screen = SCREENS[key];
+    expect(screen, `${key} needs an entry in SCREENS`).toBeDefined();
+    const source = readFileSync(join(import.meta.dirname, "..", screen ?? ""), "utf8");
+    expect(source).toContain(`title={t("${section.labelKey}")}`);
   });
 });
 
@@ -74,6 +155,12 @@ describe("isSectionActive (exact-or-child)", () => {
     expect(activeKey("/finance/approvals")).toBe("finances");
   });
 
+  it("a Company row owns its page, not the More page it sits under", () => {
+    expect(activeKey("/more/persons")).toBe("persons");
+    expect(activeKey("/more/users")).toBe("users");
+    expect(activeKey("/more/branches")).toBe("branches");
+  });
+
   it("never matches a route that merely shares a string prefix", () => {
     expect(activeKey("/assets-archive")).toBeUndefined();
     expect(activeKey("/financements")).toBeUndefined();
@@ -90,67 +177,37 @@ describe("isSectionActive (exact-or-child)", () => {
   });
 
   it("a hidden section cannot be the active one", () => {
-    expect(activeSection(visibleSections(["CORE"]), "/finance/entries")).toBeUndefined();
-  });
-});
-
-describe("navigation per role (ADR-0009)", () => {
-  const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
-
-  /** Shell sections (with where Finances leads), finance tabs, and the More admin links. */
-  const nav = (role: Role) => ({
-    sections: visibleSections(EVERY, role).map((s) => (s.key === "finances" ? `finances:${s.to}` : s.key)),
-    finance: visibleFinanceSections(role, EVERY).map((s) => s.key),
-    users: canAdministerMembers(role),
-    branches: canAdministerBranches(role),
+    expect(activeSection(visibleSections("DIRECTOR", ["CORE"]), "/finance/entries")).toBeUndefined();
   });
 
-  const ALL_SECTIONS = ["home", "assets", "activities", "maintenance", "finances:/finance/entries", "more"];
-  const expected: Record<Role, ReturnType<typeof nav>> = {
-    DIRECTOR: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: true, branches: true },
-    ADMIN: { sections: ALL_SECTIONS, finance: ["entries"], users: true, branches: false },
-    FINANCE: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: false, branches: false },
-    CASHIER: {
-      sections: ["home", "assets", "finances:/finance/entries", "more"],
-      finance: ["entries"],
-      users: false,
-      branches: false,
-    },
-    TECHNICIAN: {
-      sections: ["home", "assets", "activities", "maintenance", "more"],
-      finance: [],
-      users: false,
-      branches: false,
-    },
-    DRIVER: { sections: ALL_SECTIONS, finance: ["entries"], users: false, branches: false },
-  };
-
-  it.each(ROLES)("%s", (role) => {
-    expect(nav(role)).toEqual(expected[role]);
-  });
-
-  it("keeps the cashier's Finances entry lit across the finance subtree (#264)", () => {
-    const cashier = visibleSections(EVERY, "CASHIER");
+  it("keeps the cashier's Money row lit across the finance subtree (#264)", () => {
+    const cashier = visibleSections("CASHIER", EVERY);
     expect(activeSection(cashier, "/finance/entries")?.key).toBe("finances");
     expect(activeSection(cashier, "/finance/record")?.key).toBe("finances");
   });
+});
 
-  it("shows Finances exactly to the roles that read entries, so it never leads to a denial (#64)", () => {
-    const withFinance = ROLES.filter((role) =>
-      visibleSections(EVERY, role).some((section) => section.key === "finances"),
-    );
-    expect(withFinance).toEqual(ROLES.filter((role) => canReadFinanceEntries(role, EVERY)));
-    expect(withFinance).toContain("CASHIER");
-    expect(withFinance).not.toContain("TECHNICIAN");
-    for (const role of ROLES) {
-      expect(visibleSections(["CORE", "ASSETS"], role).some((s) => s.key === "finances"), role).toBe(false);
-    }
-  });
+describe("row icons follow the consistency kit", () => {
+  // kit.js ICONS name → the lucide icon drawing the same paths. Users has no
+  // kit icon yet; it merges into Personnel with #266.
+  const KIT = readFileSync(join(import.meta.dirname, "../../../../docs/design/consistency/kit.js"), "utf8");
+  const ICONS: Record<string, [kit: string | undefined, icon: unknown]> = {
+    home: ["home", House],
+    assets: ["truck", Truck],
+    activities: ["route", Route],
+    maintenance: ["wrench", Wrench],
+    finances: ["money", Banknote],
+    more: ["menu", Menu],
+    persons: ["user", UserRound],
+    users: [undefined, ShieldUser],
+    branches: ["building", Building],
+  };
 
-  it("gives every role that records money a Finances entry to read it back", () => {
-    for (const role of ROLES) {
-      if (!canRecordFinance(role, EVERY)) continue;
-      expect(canReadFinanceEntries(role, EVERY), role).toBe(true);
-    }
+  it.each(ALL.map((section) => [section.key, section] as const))("%s", (key, section) => {
+    const entry = ICONS[key];
+    expect(entry, `${key} needs a kit icon in this table`).toBeDefined();
+    const [kit, icon] = entry ?? [];
+    if (kit !== undefined) expect(KIT).toMatch(new RegExp(`^\\s+${kit}: '`, "m"));
+    expect(section.icon).toBe(icon);
   });
 });

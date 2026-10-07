@@ -73,6 +73,12 @@ export type CommandFormProps = CommandFormChrome & {
   /** Wording for the two replacing states, when the generic one is too vague. */
   conflict?: CommandFormCopy | undefined
   approval?: CommandFormCopy | undefined
+  /**
+   * Replaces the form once the command committed, when the host offers one
+   * follow-up (Record again after a cancellation, #426). Close comes first,
+   * the follow-up last.
+   */
+  done?: (CommandFormCopy & { action: { label: string; onClick: () => void } }) | undefined
   /** What "Refresh" does after a conflict. Defaults to dismissing the form. */
   onReload?: (() => void | Promise<void>) | undefined
   /**
@@ -113,7 +119,14 @@ export function CommandForm(props: CommandFormProps) {
   if (surface === "dialog") {
     return (
       <Dialog open onOpenChange={(open) => !open && onDismiss()}>
-        <DialogContent className={props.className}>
+        {/* The fields scroll between the title and the footer, so neither
+            leaves a window shorter than the form (#470). */}
+        <DialogContent
+          className={cn(
+            "grid-rows-[auto_minmax(0,1fr)] overflow-hidden",
+            props.className,
+          )}
+        >
           <DialogHeader>
             <DialogTitle>{props.title}</DialogTitle>
             {props.description !== undefined && (
@@ -198,6 +211,30 @@ function CommandFormBody(props: CommandFormProps) {
   // page has only the form to put it on.
   const bodyClassName =
     surface === "page" || surface === "panel" ? props.className : undefined
+
+  if (props.done !== undefined) {
+    const { done } = props
+    return (
+      <div className={cn(surfaceBodyClass(surface), bodyClassName)}>
+        <div className={cn(surface === "panel" || surface === "sheet" ? "p-4" : undefined)}>
+          <div role="status" className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success-foreground">
+            <p className="font-semibold">{done.title}</p>
+            <p className="mt-1">{done.body}</p>
+          </div>
+        </div>
+        <Footer surface={surface}>
+          {[
+            <Button key="close" type="button" variant="outline" className="flex-1 sm:flex-none" onClick={onDismiss}>
+              {t("commandForm.close")}
+            </Button>,
+            <Button key="action" type="button" className="flex-1 sm:flex-none" onClick={done.action.onClick}>
+              {done.action.label}
+            </Button>,
+          ]}
+        </Footer>
+      </div>
+    )
+  }
 
   if (outcome !== "form") {
     const copy =
@@ -297,9 +334,11 @@ function CommandFormBody(props: CommandFormProps) {
       onSubmit={handleSubmit}
     >
       <div
+        data-slot="command-form-body"
         className={cn(
           "flex flex-col gap-4",
           (surface === "panel" || surface === "sheet") && "p-4",
+          surface === "dialog" && "-mx-4 -my-1 min-h-0 overflow-y-auto px-4 py-1",
         )}
       >
         {surface === "page" && props.title !== undefined && (
@@ -387,7 +426,7 @@ function fieldLabel(form: HTMLFormElement | null, name: string): string | undefi
 function surfaceBodyClass(surface: CommandSurface): string {
   switch (surface) {
     case "dialog":
-      return "flex flex-col gap-4"
+      return "flex min-h-0 flex-col gap-4"
     case "page":
       return "flex flex-col gap-4 rounded-xl border border-border bg-card p-4"
     case "panel":

@@ -19,7 +19,7 @@
         "assigned": "Camion affecté"
       }
     },
-    "title": "Vos camions",
+    "title": "Camions",
     "subtitle": "Suivez chaque camion, de son enregistrement à sa mise hors service.",
     "searchLabel": "Rechercher dans les camions",
     "filterLabel": "Filtrer les camions",
