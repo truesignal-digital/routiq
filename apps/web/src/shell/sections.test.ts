@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { Banknote, Building, House, Menu, Route, ShieldUser, Truck, UserRound, Wrench } from "lucide-react";
 import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 import { visibleFinanceSections } from "../finance/navigation.js";
 import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
@@ -183,5 +184,30 @@ describe("isSectionActive (exact-or-child)", () => {
     const cashier = visibleSections("CASHIER", EVERY);
     expect(activeSection(cashier, "/finance/entries")?.key).toBe("finances");
     expect(activeSection(cashier, "/finance/record")?.key).toBe("finances");
+  });
+});
+
+describe("row icons follow the consistency kit", () => {
+  // kit.js ICONS name → the lucide icon drawing the same paths. Users has no
+  // kit icon yet; it merges into Personnel with #266.
+  const KIT = readFileSync(join(import.meta.dirname, "../../../../docs/design/consistency/kit.js"), "utf8");
+  const ICONS: Record<string, [kit: string | undefined, icon: unknown]> = {
+    home: ["home", House],
+    assets: ["truck", Truck],
+    activities: ["route", Route],
+    maintenance: ["wrench", Wrench],
+    finances: ["money", Banknote],
+    more: ["menu", Menu],
+    persons: ["user", UserRound],
+    users: [undefined, ShieldUser],
+    branches: ["building", Building],
+  };
+
+  it.each(ALL.map((section) => [section.key, section] as const))("%s", (key, section) => {
+    const entry = ICONS[key];
+    expect(entry, `${key} needs a kit icon in this table`).toBeDefined();
+    const [kit, icon] = entry ?? [];
+    if (kit !== undefined) expect(KIT).toMatch(new RegExp(`^\\s+${kit}: '`, "m"));
+    expect(section.icon).toBe(icon);
   });
 });
