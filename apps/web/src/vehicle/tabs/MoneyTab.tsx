@@ -17,7 +17,7 @@ import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
 import { recordReference } from "../model.js";
 import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
-import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
+import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
 import { TabAction } from "./MaintenanceTab.js";
@@ -203,7 +203,7 @@ function MoneySection() {
           <FilterChips
             label={t("vehicle.money.filterLabel")}
             options={[
-              { key: "posted", label: t("vehicle.money.filters.posted"), count: finance?.posted.entryCount },
+              { key: "posted", label: t("vehicle.money.filters.posted"), count: finance?.posted.eventCount },
               { key: "expenses", label: t("vehicle.money.filters.expenses") },
               { key: "revenue", label: t("vehicle.money.filters.revenue") },
               { key: "review", label: t("vehicle.money.filters.review"), count: finance?.pending.entryCount },
@@ -525,13 +525,13 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
       }
       status={
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 md:flex-col md:items-start">
-          <EntryStatusBadge status={entry.status} />
+          <EntryEventStatus entry={entry} />
           <EvidenceMark entry={entry} quiet />
         </span>
       }
       aside={
         <>
-          <div className={cn("font-medium", entry.status === "REVERSED" && "text-muted-foreground line-through")}>
+          <div className={cn("font-medium", foldedAmountClass(entry))}>
             {money(share, { context: "ledger", direction: entry.direction })}
           </div>
           {split && (

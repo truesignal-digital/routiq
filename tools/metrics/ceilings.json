@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 563062,
+    "ceiling": 569156,
     "raises": [
       {
         "date": "2026-10-06",
@@ -47,24 +47,60 @@
       {
         "date": "2026-10-07",
         "from": 561863,
-        "to": 563062,
-        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
+        "to": 562687,
+        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +824 B gzip measured on top of develop after #92; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562687,
+        "to": 564169,
+        "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 564245,
+        "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564245,
+        "to": 567875,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 567875,
+        "to": 569156,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop 0fafed81)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21493,
+    "ceiling": 21741,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 21376,
         "to": 21493,
         "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21493,
+        "to": 21571,
+        "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21571,
+        "to": 21741,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 563062,
+    "ceiling": 569156,
     "raises": [
       {
         "date": "2026-10-06",
@@ -111,8 +147,32 @@
       {
         "date": "2026-10-07",
         "from": 561863,
-        "to": 563062,
-        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
+        "to": 562687,
+        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +824 B gzip measured on top of develop after #92; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562687,
+        "to": 564169,
+        "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 564245,
+        "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564245,
+        "to": 567875,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 567875,
+        "to": 569156,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop 0fafed81)"
       }
     ]
   }

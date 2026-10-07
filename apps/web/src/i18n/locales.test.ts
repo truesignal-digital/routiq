@@ -104,6 +104,16 @@ describe("locale catalogs", () => {
     }
   });
 
+  // One word per concept (#458): a recorded expense or revenue is an "entry"
+  // in English and an « écriture » in French, on the button, the form and the toast.
+  it("calls a financial record an entry, never a transaction", () => {
+    for (const catalog of [en, fr, truckingEn, truckingFr, passengerEn, passengerFr]) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        expect(visibleWords(value), key).not.toMatch(/\btransactions?\b/i);
+      }
+    }
+  });
+
   // The person who regularly drives a vehicle is its "assigned driver", « chauffeur
   // attitré » (ADR-0010, #91). Keys and commands keep the internal name custodian.
   it("calls the custodian the assigned driver, never custodian, gardien or responsable", () => {

@@ -1,5 +1,5 @@
 {
-  "id": "2ac39c2d-4792-4276-bf56-8cf67f0fb6e2",
+  "id": "e59aa822-b5ed-4c4f-bf5d-a808dd6b8b6e",
   "prevId": "c2d859c0-fb97-4237-becc-6072294b648b",
   "version": "7",
   "dialect": "postgresql",
@@ -2670,6 +2670,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "reversal_reason_code": {
+          "name": "reversal_reason_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reversal_reason_text": {
+          "name": "reversal_reason_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "posted_at": {
           "name": "posted_at",
           "type": "timestamp with time zone",
@@ -3792,132 +3804,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.note_acknowledgements": {
-      "name": "note_acknowledgements",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "note_id": {
-          "name": "note_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "membership_id": {
-          "name": "membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by_command_id": {
-          "name": "created_by_command_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "note_acknowledgements_ws_note_uq": {
-          "name": "note_acknowledgements_ws_note_uq",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "note_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "note_acknowledgements_workspace_id_workspaces_id_fk": {
-          "name": "note_acknowledgements_workspace_id_workspaces_id_fk",
-          "tableFrom": "note_acknowledgements",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "note_acknowledgements_note_id_notes_id_fk": {
-          "name": "note_acknowledgements_note_id_notes_id_fk",
-          "tableFrom": "note_acknowledgements",
-          "tableTo": "notes",
-          "columnsFrom": [
-            "note_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "note_acknowledgements_membership_id_memberships_id_fk": {
-          "name": "note_acknowledgements_membership_id_memberships_id_fk",
-          "tableFrom": "note_acknowledgements",
-          "tableTo": "memberships",
-          "columnsFrom": [
-            "membership_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "note_acknowledgements_created_by_command_id_commands_id_fk": {
-          "name": "note_acknowledgements_created_by_command_id_commands_id_fk",
-          "tableFrom": "note_acknowledgements",
-          "tableTo": "commands",
-          "columnsFrom": [
-            "created_by_command_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.notes": {
       "name": "notes",
       "schema": "",
@@ -3955,12 +3841,6 @@
         "author_membership_id": {
           "name": "author_membership_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "author_role": {
-          "name": "author_role",
-          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -4014,27 +3894,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notes_ws_id_uq": {
-          "name": "notes_ws_id_uq",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
