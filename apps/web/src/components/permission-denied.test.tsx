@@ -21,8 +21,6 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children?: ReactNode }) => children,
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({ FinanceNav: () => null }));
-
 const pendingQuery = {
   data: undefined,
   isPending: true,
@@ -51,7 +49,6 @@ vi.mock("../documents/useDocuments.js", () => ({
   useAssetDocuments: () => pendingQuery,
 }));
 
-const { FinanceApprovalsScreen } = await import("../screens/FinanceApprovalsScreen.js");
 const { FinanceEntriesScreen } = await import("../screens/FinanceEntriesScreen.js");
 const { FinancePeriodsScreen } = await import("../screens/FinancePeriodsScreen.js");
 const { FinanceRecordScreen } = await import("../screens/FinanceRecordScreen.js");
@@ -59,14 +56,13 @@ const { FinanceRecordScreen } = await import("../screens/FinanceRecordScreen.js"
 const SCREENS = [
   ["record", FinanceRecordScreen],
   ["entries", FinanceEntriesScreen],
-  ["approvals", FinanceApprovalsScreen],
   ["periods", FinancePeriodsScreen],
 ] as const;
 
 /** Every screen a role can be shut out of, minus the two role-gated finance ones. */
 const MODULE_GATED = SCREENS;
 const ROLE_GATED = SCREENS.filter(([name]) =>
-  name === "approvals" || name === "periods",
+  name === "periods",
 );
 
 function me(overrides: Partial<MeContext>): MeContext {

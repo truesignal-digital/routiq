@@ -7,14 +7,13 @@ import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { BranchProvider } from "../shell/branch-context.js";
-import { FinanceApprovalsScreen } from "./FinanceApprovalsScreen.js";
+import { WaitingApprovals } from "./WaitingApprovals.js";
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
   useSearch: () => ({}),
   Link: ({ children }: { children?: unknown }) => children,
 }));
-vi.mock("../finance/FinanceNav.js", () => ({ FinanceNav: () => null }));
 // The shared client binds `fetch` when the module loads; this one reads it per
 // call, so the stub below answers the commands too.
 vi.mock("../commands/instance.js", async () => {
@@ -174,7 +173,7 @@ function renderScreen() {
     >
       <MeCtx.Provider value={approver}>
         <BranchProvider>
-          <FinanceApprovalsScreen />
+          <WaitingApprovals />
         </BranchProvider>
       </MeCtx.Provider>
     </QueryClientProvider>,
@@ -273,30 +272,20 @@ describe("approvals queue: the entry opens in the record panel", () => {
     );
   });
 
-  it("offers no decision on the approver's own submission", async () => {
+  it("leaves the approver's own submission out of the waiting view", async () => {
     stubServer([entry(FIN_001.id, "FIN-001", approver.principalId)]);
-    const user = userEvent.setup();
     renderScreen();
 
-    await user.click(await screen.findByRole("button", { name: "FIN-001" }));
-    const panel = await screen.findByRole("dialog");
-    expect(await within(panel).findByText("Plaquettes de frein")).toBeTruthy();
-
-    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
-    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
+    expect(await screen.findByText(/awaiting approval/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "FIN-001" })).toBeNull();
   });
 
-  it("offers no decision in the footer above the approver's band, where the Director decides (#262)", async () => {
+  it("leaves an entry above the approver's band out of the waiting view (#262)", async () => {
     stubServer([{ ...entry(FIN_001.id, "FIN-001"), directionDecides: true }]);
-    const user = userEvent.setup();
     renderScreen();
 
-    await user.click(await screen.findByRole("button", { name: "FIN-001" }));
-    const panel = await screen.findByRole("dialog");
-    expect(await within(panel).findByText("Plaquettes de frein")).toBeTruthy();
-
-    expect(within(panel).queryByRole("button", { name: "Approve entry" })).toBeNull();
-    expect(within(panel).queryByRole("button", { name: "Reject entry" })).toBeNull();
+    expect(await screen.findByText(/awaiting approval/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "FIN-001" })).toBeNull();
   });
 });
 

@@ -47,7 +47,6 @@ import {
   reopenPeriodPayload,
   type PeriodRead,
 } from "@routiq/contracts";
-import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
@@ -210,7 +209,8 @@ export function FinancePeriodsScreen() {
       <PageHeader
         title={t("finance.periods.title")}
       />
-      <FinanceToolbar>
+      <p className="mt-1 text-sm text-muted-foreground">{t("finance.periods.lead")}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         {!periodsQuery.isPending && !periodsQuery.isError && (
           <DataTableViewOptions
             columns={columns}
@@ -219,7 +219,7 @@ export function FinancePeriodsScreen() {
             primaryColumn={{ columnId: "periodCode" }}
           />
         )}
-      </FinanceToolbar>
+      </div>
 
       {periodsQuery.isPending ? (
         <LoadingState className="mt-6" label={t("finance.periods.loading")} />

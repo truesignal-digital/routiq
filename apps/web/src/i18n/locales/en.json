@@ -409,12 +409,32 @@
       }
     },
     "navigation": {
-      "label": "Finance sections",
       "record": "Record",
-      "entries": "Entries",
-      "approvals": "Approvals",
-      "periods": "Periods",
-      "approvalsBadge": "{count, plural, one {# pending approval} other {# pending approvals}}"
+      "entries": "Money",
+      "periods": "Accounting months"
+    },
+    "money": {
+      "title": "Money",
+      "lead": {
+        "both": "Every expense and revenue. {open} is open; {locked} is locked.",
+        "open": "Every expense and revenue. {open} is open.",
+        "none": "Every expense and revenue."
+      },
+      "tiles": {
+        "out": "Out in {month}",
+        "in": "In in {month}",
+        "waiting": "Waiting your approval",
+        "waitingHint": "{amount} · oldest {age}",
+        "missing": "Missing receipt",
+        "missingHint": "Oldest {date}"
+      },
+      "lens": {
+        "waiting": "Waiting approval",
+        "out": "Out this month",
+        "in": "In this month",
+        "missing": "Missing receipt",
+        "clear": "Clear filter: {name}"
+      }
     },
     "record": {
       "title": "Record a transaction",
@@ -457,7 +477,6 @@
       "ownScope": "Only the entries you recorded appear here.",
       "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
-      "recordAction": "Record an entry",
       "status": {
         "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
@@ -525,14 +544,14 @@
       }
     },
     "approvals": {
-      "title": "Approvals",
       "loading": "Loading…",
       "loadFailed": "We couldn't load approvals. Please retry.",
       "retry": "Try again",
       "empty": "No entries awaiting approval.",
       "columns": {
         "branch": "Branch",
-        "submittedAt": "Submitted"
+        "submittedAt": "Submitted",
+        "decision": "Decision"
       },
       "filters": {
         "branch": "Branch",
@@ -540,8 +559,6 @@
       },
       "branchEmpty": "Nothing awaiting approval for {branch}.",
       "outsideBranch": "{count, plural, one {+# pending in another branch} other {+# pending in other branches}}",
-      "makerGuard": "Your submission — another approver must decide",
-      "directionDecides": "The Director decides",
       "noteLabel": "Note",
       "optional": "(optional)",
       "notePlaceholder": "Add a note…",
@@ -550,10 +567,13 @@
       "approved": "Entry approved",
       "rejected": "Entry rejected",
       "warningsLabel": "Notices",
-      "done": "Close"
+      "done": "Close",
+      "noReceipt": "no receipt",
+      "decideRow": "{action} {number}"
     },
     "periods": {
-      "title": "Period management",
+      "title": "Accounting months",
+      "lead": "Each month takes entries until finance locks it. Late corrections go into the open month.",
       "columns": {
         "period": "Period",
         "status": "Status",

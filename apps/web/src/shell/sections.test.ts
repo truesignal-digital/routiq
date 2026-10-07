@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
-import { visibleFinanceSections } from "../finance/navigation.js";
-import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
+import { canManagePeriods, canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
 import { canAdministerBranches } from "../branches/permissions.js";
 import { canAdministerMembers } from "../members/permissions.js";
 import { activeSection, isSectionActive, visibleSections } from "./sections.js";
@@ -97,32 +96,32 @@ describe("isSectionActive (exact-or-child)", () => {
 describe("navigation per role (ADR-0009)", () => {
   const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
 
-  /** Shell sections (with where Finances leads), finance tabs, and the More admin links. */
+  /** Shell sections (with where Finances leads), Accounting months, and the More admin links. */
   const nav = (role: Role) => ({
     sections: visibleSections(EVERY, role).map((s) => (s.key === "finances" ? `finances:${s.to}` : s.key)),
-    finance: visibleFinanceSections(role, EVERY).map((s) => s.key),
+    accountingMonths: canManagePeriods(role, EVERY),
     users: canAdministerMembers(role),
     branches: canAdministerBranches(role),
   });
 
   const ALL_SECTIONS = ["home", "assets", "activities", "maintenance", "finances:/finance/entries", "more"];
   const expected: Record<Role, ReturnType<typeof nav>> = {
-    DIRECTOR: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: true, branches: true },
-    ADMIN: { sections: ALL_SECTIONS, finance: ["entries"], users: true, branches: false },
-    FINANCE: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: false, branches: false },
+    DIRECTOR: { sections: ALL_SECTIONS, accountingMonths: true, users: true, branches: true },
+    ADMIN: { sections: ALL_SECTIONS, accountingMonths: false, users: true, branches: false },
+    FINANCE: { sections: ALL_SECTIONS, accountingMonths: true, users: false, branches: false },
     CASHIER: {
       sections: ["home", "assets", "finances:/finance/entries", "more"],
-      finance: ["entries"],
+      accountingMonths: false,
       users: false,
       branches: false,
     },
     TECHNICIAN: {
       sections: ["home", "assets", "activities", "maintenance", "more"],
-      finance: [],
+      accountingMonths: false,
       users: false,
       branches: false,
     },
-    DRIVER: { sections: ALL_SECTIONS, finance: ["entries"], users: false, branches: false },
+    DRIVER: { sections: ALL_SECTIONS, accountingMonths: false, users: false, branches: false },
   };
 
   it.each(ROLES)("%s", (role) => {

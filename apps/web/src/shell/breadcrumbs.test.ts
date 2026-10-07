@@ -138,10 +138,6 @@ describe("breadcrumbTrail", () => {
   });
 
   it("covers the remaining finance pages", () => {
-    expect(trailAt("/finance/approvals").at(-1)).toEqual([
-      "finance.navigation.approvals",
-      undefined,
-    ]);
     expect(trailAt("/finance/periods").at(-1)).toEqual([
       "finance.navigation.periods",
       undefined,

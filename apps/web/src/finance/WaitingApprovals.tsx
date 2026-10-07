@@ -1,23 +1,18 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Building2, Check, ClipboardCheck, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Building2, ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import { useMeContext } from "@/auth/me.js";
 import {
   DataTable,
-  DataTableViewOptions,
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
-import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
-import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
-import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import {
   EntryDecisionButtons,
   RejectEntryForm,
@@ -46,9 +41,13 @@ const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
 /** The queue's fixed page size (apps/api/src/reads/finance.ts). */
 const APPROVALS_PAGE_SIZE = 100;
 
-export function FinanceApprovalsScreen() {
+/**
+ * The Money page's "Waiting your approval" view (#314): the entries this
+ * viewer may decide, oldest first, with Reject and Approve on each row. It
+ * replaced the separate Approvals page; `/finance/approvals` redirects here.
+ */
+export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?: boolean }) {
   const { t, i18n } = useTranslation();
-  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
@@ -62,9 +61,8 @@ export function FinanceApprovalsScreen() {
   // `?branch=all` arrives from an overflow line elsewhere in the app, which has
   // already told the operator how much sits outside the ambient agency: landing
   // them back on that same narrowing would answer the wrong question.
-  const { branch: arrivingWidened } = useSearch({ from: "/app/finance/approvals" });
   const [branchOverride, setBranchOverride] = useState<string | undefined>(
-    arrivingWidened === "all" ? "" : undefined,
+    arrivingWidened ? "" : undefined,
   );
   const { options: branchOptions } = useCurrentBranch();
   const ambientBranchId = useAmbientBranchId();
@@ -82,10 +80,24 @@ export function FinanceApprovalsScreen() {
   const pendingTotal = approvalsTotal(approvalsQuery.data);
   const pendingElsewhere = approvalsOutsideBranch(approvalsQuery.data);
   const [rejectDialog, setRejectDialog] = useState<RejectDialogState>({ open: false });
-  const { approve } = useApproveEntry();
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  const entries = approvalsQuery.data?.pages.flatMap((page) => page.entries) ?? [];
+  // role-config: deciding is an approver's call, never on your own submission
+  // (the maker guard the server also enforces), and never above the viewer's
+  // approval band, where the server would answer APPROVAL_REQUIRED. Those rows
+  // are not this viewer's work, so the view leaves them out; the entries list
+  // still shows them as waiting.
+  const canDecide = (entry: PendingApprovalItem) =>
+    canApprove &&
+    !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId) &&
+    !entry.directionDecides;
+
+  const entries = (approvalsQuery.data?.pages.flatMap((page) => page.entries) ?? []).filter(
+    canDecide,
+  );
+
+  const openReject = (entry: PendingApprovalItem) =>
+    setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -116,36 +128,6 @@ export function FinanceApprovalsScreen() {
             {row.original.entryNumber}
           </span>
         ),
-      },
-      {
-        accessorKey: "status",
-        header: t("finance.entries.detail.status"),
-        // A row that offers no decision says who makes it here, so hiding the
-        // column would leave an empty ⋯ unexplained.
-        enableHiding: false,
-        meta: { mobile: "primary", label: t("finance.entries.detail.status") },
-        cell: ({ row }) => {
-          const decider = isOwnSubmission(
-            row.original.submittedByPrincipalId,
-            me?.principalId,
-          )
-            ? t("finance.approvals.makerGuard")
-            : row.original.directionDecides
-              ? t("finance.approvals.directionDecides")
-              : null;
-          return (
-            <span className="flex flex-col items-start gap-1">
-              <EntryStatusBadge status={row.original.status} />
-              {/* Wraps at the badge's width: its own column pushed the table
-                  past a 1440 screen (#437). */}
-              {decider !== null && (
-                <span className="max-w-64 text-xs font-normal whitespace-normal text-muted-foreground">
-                  {decider}
-                </span>
-              )}
-            </span>
-          );
-        },
       },
       {
         accessorKey: "economicDate",
@@ -180,9 +162,20 @@ export function FinanceApprovalsScreen() {
       {
         id: "category",
         header: t("finance.entries.detail.category"),
-        meta: { mobile: "primary", label: t("finance.entries.detail.category") },
+        meta: { mobile: "secondary", label: t("finance.entries.detail.category") },
         cell: ({ row }) => (
-          <span className="whitespace-normal">{localizedLabel(row.original.category)}</span>
+          <span className="whitespace-normal">
+            {localizedLabel(row.original.category)}
+            {/* What is missing, said on the row, so the approver need not
+                open it to know. A reversal never needs paperwork. */}
+            {row.original.evidence?.state === "NOT_SUPPLIED" &&
+              row.original.reversesEntryId === null && (
+                <span data-slot="missing-receipt" className="text-destructive">
+                  {" · "}
+                  {t("finance.approvals.noReceipt")}
+                </span>
+              )}
+          </span>
         ),
       },
       {
@@ -218,68 +211,33 @@ export function FinanceApprovalsScreen() {
           <span className="whitespace-normal">{row.original.counterpartyName ?? "—"}</span>
         ),
       },
+      {
+        id: "decision",
+        header: () => <span className="sr-only">{t("finance.approvals.columns.decision")}</span>,
+        enableHiding: false,
+        enableSorting: false,
+        meta: { mobile: "primary", label: t("finance.approvals.columns.decision") },
+        cell: ({ row }) => (
+          <RowDecision entry={row.original} onReject={() => openReject(row.original)} />
+        ),
+      },
     ],
-    [branchOptions, i18n.resolvedLanguage, me?.principalId, t],
+    [branchOptions, i18n.resolvedLanguage, t],
   );
 
-  // role-config: deciding is an approver's call, never on your own submission
-  // (the maker guard the server also enforces), and never above the viewer's
-  // approval band, where the server would answer APPROVAL_REQUIRED.
-  const canDecide = (entry: PendingApprovalItem) =>
-    canApprove &&
-    !isOwnSubmission(entry.submittedByPrincipalId, me?.principalId) &&
-    !entry.directionDecides;
-
-  const openReject = (entry: PendingApprovalItem) =>
-    setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });
-
-  const rowActions = (entry: PendingApprovalItem) => {
-    if (!canDecide(entry)) return [];
-
-    return [
-      {
-        key: "approve",
-        label: label("approve-entry"),
-        icon: Check,
-        onSelect: () => void approve({ id: entry.id, rowVersion: entry.rowVersion }),
-      },
-      {
-        key: "reject",
-        label: label("reject-entry"),
-        icon: X,
-        destructive: true,
-        onSelect: () => openReject(entry),
-      },
-    ];
-  };
-
-  if (me !== undefined && !canApprove) {
+  if (approvalsQuery.isError) {
     return (
-      <PermissionDenied
-        width="wide"
-        title={t("finance.approvals.title")}
-        icon={<ClipboardCheck className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+      <ErrorState
+        className="mt-6"
+        message={t("finance.approvals.loadFailed")}
+        retryLabel={t("finance.approvals.retry")}
+        onRetry={() => void approvalsQuery.refetch()}
       />
     );
   }
 
   return (
-    <PageContainer width="wide">
-      <PageHeader
-        title={t("finance.approvals.title")}
-      />
-      <FinanceToolbar>
-        {!approvalsQuery.isError && (
-          <DataTableViewOptions
-            columns={columns}
-            value={columnVisibility}
-            onChange={setColumnVisibility}
-            primaryColumn={{ columnId: "entryNumber" }}
-          />
-        )}
-      </FinanceToolbar>
-
+    <>
       {branchName !== undefined && !approvalsQuery.isPending && (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
           <BranchScopeLine branch={branchName} count={pendingTotal} />
@@ -298,91 +256,81 @@ export function FinanceApprovalsScreen() {
         </div>
       )}
 
-      {approvalsQuery.isError ? (
-        <ErrorState
-          className="mt-6"
-          message={t("finance.approvals.loadFailed")}
-          retryLabel={t("finance.approvals.retry")}
-          onRetry={() => void approvalsQuery.refetch()}
-        />
-      ) : (
-        <div className="mt-6">
-          {/* Changing the branch filter starts a new query, so the queue reports
-              `isPending` again. The table renders through it: a full-page loader
-              would take the filter away from the approver mid-refinement. */}
-          <DataTable
-            columns={columns}
-            data={entries}
-            getRowId={(entry) => entry.id}
-            filters={filters}
-            filterValues={filterValues}
-            onFilterChange={(values) => setBranchOverride(values["branchId"] ?? "")}
-            columnVisibility={columnVisibility}
-            onColumnVisibilityChange={setColumnVisibility}
-            sorting={sorting}
-            onSortingChange={setSorting}
-            primaryColumn={{ columnId: "entryNumber" }}
-            rowActions={rowActions}
-            rowViewer={{
-              title: (entry) => entry.entryNumber,
-              description: (entry) =>
-                t("finance.entries.viewer.description", {
-                  date: formatDate(entry.economicDate),
+      <div className="mt-6">
+        {/* Changing the branch filter starts a new query, so the queue reports
+            `isPending` again. The table renders through it: a full-page loader
+            would take the filter away from the approver mid-refinement. */}
+        <DataTable
+          columns={columns}
+          data={entries}
+          getRowId={(entry) => entry.id}
+          filters={filters}
+          filterValues={filterValues}
+          onFilterChange={(values) => setBranchOverride(values["branchId"] ?? "")}
+          columnVisibility={columnVisibility}
+          onColumnVisibilityChange={setColumnVisibility}
+          sorting={sorting}
+          onSortingChange={setSorting}
+          primaryColumn={{ columnId: "entryNumber" }}
+          rowViewer={{
+            title: (entry) => entry.entryNumber,
+            description: (entry) =>
+              t("finance.entries.viewer.description", {
+                date: formatDate(entry.economicDate),
+              }),
+            render: (entry) => <EntrySummary entryId={entry.id} />,
+            fullScreen: {
+              label: t("finance.entries.viewer.fullScreen"),
+              onOpen: (entry) =>
+                void navigate({
+                  to: "/finance/entries/$entryId",
+                  params: { entryId: entry.id },
                 }),
-              render: (entry) => <EntrySummary entryId={entry.id} />,
-              fullScreen: {
-                label: t("finance.entries.viewer.fullScreen"),
-                onOpen: (entry) =>
-                  void navigate({
-                    to: "/finance/entries/$entryId",
-                    params: { entryId: entry.id },
-                  }),
-              },
-              actions: (entry, drawer) =>
-                canDecide(entry) ? (
-                  <EntryDecisionButtons
-                    entry={{ id: entry.id, rowVersion: entry.rowVersion }}
-                    onApproved={drawer.close}
-                    onReject={() => {
-                      drawer.close();
-                      openReject(entry);
-                    }}
-                  />
-                ) : null,
-            }}
-            loadMore={{
-              hasNextPage: approvalsQuery.hasNextPage,
-              isFetching: approvalsQuery.isFetchingNextPage,
-              onLoadMore: () => void approvalsQuery.fetchNextPage(),
-              pageSize: APPROVALS_PAGE_SIZE,
-            }}
-            emptyState={
-              approvalsQuery.isPending ? (
-                <LoadingState label={t("finance.approvals.loading")} />
-              ) : (
-                <EmptyState
-                  icon={<ClipboardCheck className="size-7" aria-hidden />}
-                  message={
-                    branchName === undefined
-                      ? t("finance.approvals.empty")
-                      : t("finance.approvals.branchEmpty", { branch: branchName })
-                  }
-                  action={
-                    // Nothing pending here says nothing about the other
-                    // branches, and the queue is where that has to be reachable.
-                    branchName === undefined
-                      ? undefined
-                      : {
-                          label: t("finance.approvals.filters.allBranches"),
-                          onClick: () => setBranchOverride(""),
-                        }
-                  }
+            },
+            actions: (entry, drawer) =>
+              canDecide(entry) ? (
+                <EntryDecisionButtons
+                  entry={{ id: entry.id, rowVersion: entry.rowVersion }}
+                  onApproved={drawer.close}
+                  onReject={() => {
+                    drawer.close();
+                    openReject(entry);
+                  }}
                 />
-              )
-            }
-          />
-        </div>
-      )}
+              ) : null,
+          }}
+          loadMore={{
+            hasNextPage: approvalsQuery.hasNextPage,
+            isFetching: approvalsQuery.isFetchingNextPage,
+            onLoadMore: () => void approvalsQuery.fetchNextPage(),
+            pageSize: APPROVALS_PAGE_SIZE,
+          }}
+          emptyState={
+            approvalsQuery.isPending ? (
+              <LoadingState label={t("finance.approvals.loading")} />
+            ) : (
+              <EmptyState
+                icon={<ClipboardCheck className="size-7" aria-hidden />}
+                message={
+                  branchName === undefined
+                    ? t("finance.approvals.empty")
+                    : t("finance.approvals.branchEmpty", { branch: branchName })
+                }
+                action={
+                  // Nothing pending here says nothing about the other
+                  // branches, and the queue is where that has to be reachable.
+                  branchName === undefined
+                    ? undefined
+                    : {
+                        label: t("finance.approvals.filters.allBranches"),
+                        onClick: () => setBranchOverride(""),
+                      }
+                }
+              />
+            )
+          }
+        />
+      </div>
 
       {rejectDialog.open && (
         <RejectEntryForm
@@ -391,6 +339,43 @@ export function FinanceApprovalsScreen() {
           onDismiss={() => setRejectDialog({ open: false })}
         />
       )}
-    </PageContainer>
+    </>
+  );
+}
+
+/** Reject opens the reason dialog; Approve commits on the spot and comes last. */
+function RowDecision({
+  entry,
+  onReject,
+}: {
+  entry: PendingApprovalItem;
+  onReject: () => void;
+}) {
+  const { t } = useTranslation();
+  const label = useCommandLabel();
+  const { approve, submitting } = useApproveEntry();
+
+  return (
+    <span className="flex items-center justify-end gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="desktop-sm"
+        disabled={submitting}
+        aria-label={t("finance.approvals.decideRow", { action: label("reject-entry"), number: entry.entryNumber })}
+        onClick={onReject}
+      >
+        {label("reject-entry")}
+      </Button>
+      <Button
+        type="button"
+        size="desktop-sm"
+        disabled={submitting}
+        aria-label={t("finance.approvals.decideRow", { action: label("approve-entry"), number: entry.entryNumber })}
+        onClick={() => void approve({ id: entry.id, rowVersion: entry.rowVersion })}
+      >
+        {label("approve-entry", submitting ? "submitting" : "label")}
+      </Button>
+    </span>
   );
 }

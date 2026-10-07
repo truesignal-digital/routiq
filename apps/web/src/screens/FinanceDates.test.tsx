@@ -80,6 +80,12 @@ function serveFinanceReadFixtures() {
       case "/v1/finance/approvals":
         body = { entries: [], nextCursor: null, total: 0, outsideBranchCount: 0 };
         break;
+      case "/v1/finance/summary":
+        body = {
+          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
+        };
+        break;
       case "/v1/finance/entries":
         ledgerRequests.push(url);
         body = { entries: [entry], nextCursor: null };

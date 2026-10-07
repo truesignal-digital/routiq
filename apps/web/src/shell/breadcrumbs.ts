@@ -47,10 +47,8 @@ const PAGE_TRAILS: readonly PageTrail[] = [
       { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
   },
-  {
-    pattern: "/finance/approvals",
-    trail: [{ labelKey: "finance.navigation.approvals" }],
-  },
+  // Redirects to the waiting view; named the same in case a frame renders first.
+  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },

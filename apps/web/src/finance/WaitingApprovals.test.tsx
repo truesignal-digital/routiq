@@ -8,7 +8,7 @@ import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { canApproveEntries } from "../finance/permissions.js";
 import { i18n } from "../i18n/index.js";
-import { FinanceApprovalsScreen } from "./FinanceApprovalsScreen.js";
+import { WaitingApprovals } from "./WaitingApprovals.js";
 
 const mocks = vi.hoisted(() => ({
   createCommandIntent: vi.fn(),
@@ -32,10 +32,6 @@ vi.mock("../commands/intent.js", () => ({
 vi.mock("../finance/useApprovals.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../finance/useApprovals.js")>()),
   useApprovals: mocks.useApprovals,
-}));
-
-vi.mock("../finance/FinanceNav.js", () => ({
-  FinanceNav: () => null,
 }));
 
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
@@ -157,14 +153,13 @@ function successfulIntentRecorder(submissionOrder: string[]) {
   );
 }
 
-/** Open a row's ⋯ menu and choose a decision. */
+/** Press a decision on a row: the buttons sit on the row itself (#314). */
 async function chooseRowAction(
   user: ReturnType<typeof userEvent.setup>,
   rowIndex: number,
   name: string,
 ) {
-  await user.click(screen.getAllByRole("button", { name: "Actions" })[rowIndex]!);
-  await user.click(await screen.findByRole("menuitem", { name }));
+  await user.click(screen.getAllByRole("button", { name: new RegExp(`^${name} FIN-`) })[rowIndex]!);
 }
 
 beforeAll(async () => {
@@ -197,9 +192,9 @@ describe("finance approval command routing", () => {
     const submissionOrder: string[] = [];
     successfulIntentRecorder(submissionOrder);
     const user = userEvent.setup();
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
-    // Approve is one tap: the menu item sends the command, no dialog first.
+    // Approve is one tap: the row's button sends the command, no dialog first.
     await chooseRowAction(user, 0, "Approve entry");
     await waitFor(() => expect(submissionOrder).toEqual(["approve-entry"]));
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -219,7 +214,7 @@ describe("finance approval command routing", () => {
     );
   });
 
-  it("withholds decisions on the approver's own submission, keeping the badge", () => {
+  it("leaves the approver's own submission out of their waiting view", () => {
     // role-config: the maker guard. FIN-002 was submitted by principal …031;
     // rewriting the first row's submitter makes FIN-001 the approver's own.
     const own = [
@@ -236,16 +231,15 @@ describe("finance approval command routing", () => {
       refetch: vi.fn(),
     });
 
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
-    // One menu, for the row that is not the approver's own.
-    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
-    expect(
-      screen.getByText("Your submission — another approver must decide"),
-    ).toBeTruthy();
+    expect(screen.queryByText("FIN-001")).toBeNull();
+    expect(screen.getByText("FIN-002")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /^Approve entry FIN-/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Reject entry FIN-/ })).toHaveLength(1);
   });
 
-  it("withholds decisions on an entry above the approver's band and says the Director decides", () => {
+  it("leaves an entry above the approver's band out of their waiting view", () => {
     // ADR-0009: Finance decides up to its band; the read flags the rest.
     const above = [
       { ...approvalEntries[0]!, directionDecides: true },
@@ -261,19 +255,19 @@ describe("finance approval command routing", () => {
       refetch: vi.fn(),
     });
 
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
-    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
-    expect(screen.getByText("The Director decides")).toBeTruthy();
+    expect(screen.queryByText("FIN-001")).toBeNull();
+    expect(screen.getAllByRole("button", { name: /^Approve entry FIN-/ })).toHaveLength(1);
   });
 
-  it("says who decides under the row's status, beside a single Actions column (#437)", () => {
-    const blocked = [
-      { ...approvalEntries[0]!, submittedByPrincipalId: approver.principalId },
-      { ...approvalEntries[1]!, directionDecides: true },
+  it("says on the row what is missing, so the approver need not open it", () => {
+    const rows = [
+      { ...approvalEntries[0]!, evidence: { state: "NOT_SUPPLIED", artifactCount: 0 }, reversesEntryId: null },
+      { ...approvalEntries[1]!, evidence: { state: "SUPPLIED", artifactCount: 1 }, reversesEntryId: null },
     ];
     mocks.useApprovals.mockReturnValue({
-      data: { pages: [{ entries: blocked, nextCursor: null, total: blocked.length }] },
+      data: { pages: [{ entries: rows, nextCursor: null, total: rows.length }] },
       isPending: false,
       isError: false,
       hasNextPage: false,
@@ -282,28 +276,15 @@ describe("finance approval command routing", () => {
       refetch: vi.fn(),
     });
 
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
-    // The ⋯ column is the only one headed Actions; the note is not an action.
-    expect(screen.getAllByRole("columnheader", { name: "Actions" })).toHaveLength(1);
-    const headers = screen.getAllByRole("columnheader");
-    const statusColumn = headers.indexOf(screen.getByRole("columnheader", { name: "Status" }));
-    for (const [entryNumber, note] of [
-      ["FIN-001", "Your submission — another approver must decide"],
-      ["FIN-002", "The Director decides"],
-    ] as const) {
-      const row = screen.getByRole("row", { name: new RegExp(entryNumber) });
-      const statusCell = within(row).getAllByRole("cell")[statusColumn]!;
-      const noteText = within(statusCell).getByText(note);
-      // Table cells never wrap; the note must, or it widens the table past a
-      // 1440 screen.
-      expect(noteText.className).toContain("whitespace-normal");
-    }
+    expect(within(screen.getByRole("row", { name: /FIN-001/ })).getByText(/no receipt/)).toBeTruthy();
+    expect(within(screen.getByRole("row", { name: /FIN-002/ })).queryByText(/no receipt/)).toBeNull();
   });
 
   it("sends the chosen order to the queue read", async () => {
     const user = userEvent.setup();
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
     await user.click(screen.getByRole("button", { name: /Amount/ }));
 
@@ -316,21 +297,22 @@ describe("finance approval command routing", () => {
     successfulIntentRecorder([]);
     const { client, keys } = recordingClient();
     const user = userEvent.setup();
-    renderScreen(createElement(FinanceApprovalsScreen), client);
+    renderScreen(createElement(WaitingApprovals), client);
 
     await chooseRowAction(user, 0, "Approve entry");
 
-    await waitFor(() => expect(keys.length).toBe(3));
+    await waitFor(() => expect(keys.length).toBe(4));
     expect(keys).toEqual([
       ["ws", "sotrafret", "finance", "approvals"],
       ["ws", "sotrafret", "finance", "entries"],
       ["ws", "sotrafret", "finance", "entry"],
+      ["ws", "sotrafret", "finance", "summary"],
     ]);
   });
 
   it("keeps reject submit disabled while the reason is empty", async () => {
     const user = userEvent.setup();
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
     await chooseRowAction(user, 0, "Reject entry");
 
@@ -342,7 +324,7 @@ describe("finance approval command routing", () => {
 
   it("closes on cancel without dispatching a command", async () => {
     const user = userEvent.setup();
-    renderScreen(createElement(FinanceApprovalsScreen));
+    renderScreen(createElement(WaitingApprovals));
 
     await chooseRowAction(user, 0, "Reject entry");
     const dialog = screen.getByRole("dialog", { name: "Reject entry" });

@@ -81,8 +81,9 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
-| `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
-| `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
+| `approve-entry` | Money → Waiting your approval → row Approve (one tap) → entry POSTED | yes |
+| `money-page` | Money: lead line, tiles = `GET /v1/finance/summary`, waiting tile → row Reject dialog / Approve, `/finance/approvals` redirect, Accounting months link (#314) | yes |
+| `approve-from-panel` | Money waiting view → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
 | `repaired-awaiting-release` | as the technician: VH003 red → Complete work → amber "Repair done — waiting for release to service", no release button; as the Administrateur: amber with Release to service → release → green (#92) | yes |
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
 | `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |

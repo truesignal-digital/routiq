@@ -69,8 +69,9 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
 
+  // The old queue link still lands on the Money page's waiting view (#314).
   await nav("/finance/approvals");
-  await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
+  await page.getByRole("heading", { level: 1, name: t("Finances", "Money") }).waitFor();
   const row = itemWith(entry.entryNumber);
   await row.waitFor();
   await quiet();
@@ -78,10 +79,9 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   // paints the loaded table so the beat doesn't show the loading skeleton.
   await row.hover();
   await page.waitForTimeout(1000);
-  await shot("approvals-queue", { caption: `Signed in as Finance: ${entry.entryNumber} is in the approvals queue`, highlight: row });
+  await shot("approvals-queue", { caption: `Signed in as Finance: ${entry.entryNumber} waits in the Money page's waiting view`, highlight: row });
 
-  await row.getByRole("button", { name: "Actions" }).click();
-  await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
+  await row.getByRole("button", { name: `${t("Approuver l'écriture", "Approve entry")} ${entry.entryNumber}`, exact: true }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await row.waitFor({ state: "detached" });
   await quiet();

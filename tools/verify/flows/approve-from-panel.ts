@@ -1,7 +1,7 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Finance → Approvals → open the oldest pending entry from its number, read it
+ * Money → "Waiting your approval" → open the oldest pending entry from its number, read it
  * in the record panel, approve from the panel footer, then read it back as
  * POSTED and gone from the queue. Mutates the slot; reset with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:approve-from-panel --role finance --lang en
@@ -14,11 +14,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   log(`api: ${pending.length} pending; opening ${entry.entryNumber}`);
 
   await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
-  await page.getByRole("navigation", { name: t("Sections financières", "Finance sections") }).getByRole("tab", { name: new RegExp(`^${t("Approbations", "Approvals")}`) }).click();
-  await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
+  await page.getByRole("heading", { level: 1, name: t("Finances", "Money") }).waitFor();
+  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true }).click();
   await quiet();
   await shot("approvals-queue", {
-    caption: `Approvals queue: ${entry.entryNumber} waits for a decision`,
+    caption: `The waiting view: ${entry.entryNumber} waits for a decision`,
     highlight: page.getByRole("row").filter({ hasText: entry.entryNumber }),
   });
 

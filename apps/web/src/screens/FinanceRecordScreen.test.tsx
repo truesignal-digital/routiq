@@ -66,10 +66,6 @@ vi.mock("../assets/useAssets.js", () => ({
   useAssets: mocks.useAssets,
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({
-  FinanceNav: () => null,
-}));
-
 vi.mock("../approval-rules/useApprovalChain.js", () => ({
   useApprovalChain: () => ({ data: undefined }),
 }));

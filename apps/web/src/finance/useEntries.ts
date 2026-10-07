@@ -9,6 +9,8 @@ export async function fetchFinanceEntries(
     status?: string;
     direction?: string;
     periodCode?: string;
+    economicMonth?: string;
+    evidence?: string;
     assetId?: string;
     branchId?: string;
     sort?: string;
@@ -21,6 +23,8 @@ export async function fetchFinanceEntries(
   if (params?.status) url.searchParams.append("status", params.status);
   if (params?.direction) url.searchParams.append("direction", params.direction);
   if (params?.periodCode) url.searchParams.append("periodCode", params.periodCode);
+  if (params?.economicMonth) url.searchParams.append("economicMonth", params.economicMonth);
+  if (params?.evidence) url.searchParams.append("evidence", params.evidence);
   if (params?.assetId) url.searchParams.append("assetId", params.assetId);
   if (params?.branchId) url.searchParams.append("branchId", params.branchId);
   if (params?.sort) url.searchParams.append("sort", params.sort);
@@ -38,6 +42,10 @@ export interface UseEntriesParams {
   status?: string;
   direction?: string;
   periodCode?: string;
+  /** `YYYY-MM` of the economic date: the Money page's month tiles. */
+  economicMonth?: string;
+  /** `MISSING`: entries still waiting for paperwork. */
+  evidence?: string;
   assetId?: string;
   branchId?: string;
   /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
