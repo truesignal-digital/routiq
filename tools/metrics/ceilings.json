@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 565675,
     "raises": [
       {
         "date": "2026-10-06",
@@ -43,6 +43,12 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 565675,
+        "reason": "#354: Company settings Approvals section (two bands, each role's chain in words, exceptions, last change, MoneyInput sheet), update-approval-threshold v2 contract and the shared band rule, about 3.8 kB gzip measured on top of develop b0ccefb; about 19 ms on a pilot phone at about 5 ms per kB until routes load on demand (#488)"
       }
     ]
   },
@@ -58,7 +64,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 565675,
     "raises": [
       {
         "date": "2026-10-06",
@@ -101,6 +107,12 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 565675,
+        "reason": "#354: Company settings Approvals section (two bands, each role's chain in words, exceptions, last change, MoneyInput sheet), update-approval-threshold v2 contract and the shared band rule, about 3.8 kB gzip measured on top of develop b0ccefb; about 19 ms on a pilot phone at about 5 ms per kB until routes load on demand (#488)"
       }
     ]
   }
