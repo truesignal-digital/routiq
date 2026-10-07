@@ -12,10 +12,15 @@ import { sessionStore } from "./auth/store.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { queryClient } from "./lib/query-client.js";
+// Static, unlike the shell: a skeleton must draw the moment a screen is
+// pending, and these add almost nothing the sign-in page does not carry.
 import {
   DecisionQueueSkeleton,
+  FleetListSkeleton,
   HomeSkeleton,
+  HubSkeleton,
   ModuleListSkeleton,
+  RecordSkeleton,
   RecordWorkspaceSkeleton,
   SettingsListSkeleton,
   TabSkeleton,
@@ -105,7 +110,7 @@ const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
   loader: (args) => import("./routes/assets.loader.js").then((load) => load.assets(args)),
-  pendingComponent: ModuleListSkeleton,
+  pendingComponent: FleetListSkeleton,
   component: AssetsStub,
 });
 
@@ -239,7 +244,7 @@ const activityRecordRoute = createRoute({
 const activityDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/$activityId",
-  pendingComponent: RecordWorkspaceSkeleton,
+  pendingComponent: RecordSkeleton,
   component: ActivityDetailScreen,
 });
 
@@ -259,7 +264,7 @@ const financeEntryDetailRoute = createRoute({
   // The entries list's ⋯ menu sends an operator straight into the reversal
   // dialog rather than carrying a second copy of it.
   validateSearch: z.object({ reverse: z.boolean().optional() }),
-  pendingComponent: RecordWorkspaceSkeleton,
+  pendingComponent: RecordSkeleton,
   component: FinanceEntryDetailScreen,
 });
 
@@ -279,14 +284,14 @@ const financeApprovalsRoute = createRoute({
 const financePeriodsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/periods",
-  pendingComponent: ModuleListSkeleton,
+  pendingComponent: SettingsListSkeleton,
   component: FinancePeriodsScreen,
 });
 
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
-  pendingComponent: SettingsListSkeleton,
+  pendingComponent: HubSkeleton,
   component: MoreStub,
 });
 
@@ -355,10 +360,9 @@ export const router = createRouter({
   // screen's code and data before the click (#497).
   defaultPreload: "intent",
   defaultPreloadDelay: 50,
-  defaultPendingComponent: RoutePending,
+  defaultPendingComponent: ModuleListSkeleton,
   // A screen whose data takes longer than a second shows its page type's
-  // skeleton, then keeps it at least half a second so it never flashes. The
-  // owner rules on the timing (#498).
+  // skeleton, then keeps it at least half a second so it never flashes (#498).
   defaultPendingMs: 1_000,
   defaultPendingMinMs: 500,
 });

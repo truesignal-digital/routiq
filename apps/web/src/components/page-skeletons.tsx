@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContainer, type PageContainerProps } from "@/components/page-container";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 /**
  * One loading skeleton per page type (docs/design/consistency/pages.html),
@@ -35,10 +34,11 @@ function Title() {
   return <Skeleton className="h-8 w-48 max-w-full" />;
 }
 
-function Tiles({ count }: { count: 3 | 4 }) {
+/** MetricStrip's three tiles: two columns on a phone, three beside each other above. */
+function StripTiles() {
   return (
-    <div className={cn("mt-6 grid grid-cols-2 gap-3 sm:gap-4", count === 3 ? "sm:grid-cols-3" : "sm:grid-cols-4")}>
-      {Array.from({ length: count }, (_, index) => (
+    <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+      {Array.from({ length: 3 }, (_, index) => (
         <Skeleton key={index} className="h-20 rounded-xl" />
       ))}
     </div>
@@ -71,12 +71,23 @@ function Toolbar() {
   return <Skeleton className="mt-6 h-11 w-full rounded-lg sm:w-56" />;
 }
 
-/** Trucks, Trips, Maintenance, Money: title, overview tiles, toolbar, rows. */
+/** Trips, Maintenance, Money, and the router's default: title, toolbar or tabs, rows. */
 export function ModuleListSkeleton() {
   return (
     <Frame>
       <Title />
-      <Tiles count={3} />
+      <Toolbar />
+      <Rows count={6} />
+    </Frame>
+  );
+}
+
+/** Trucks: the module list with its overview strip above the toolbar. */
+export function FleetListSkeleton() {
+  return (
+    <Frame>
+      <Title />
+      <StripTiles />
       <Toolbar />
       <Rows count={6} />
     </Frame>
@@ -93,6 +104,17 @@ export function RecordWorkspaceSkeleton() {
       <div className="mt-6">
         <TabBody />
       </div>
+    </Frame>
+  );
+}
+
+/** An entry or a trip on its own page: title, status line, then its fields. */
+export function RecordSkeleton() {
+  return (
+    <Frame width="default">
+      <Title />
+      <Skeleton className="mt-3 h-5 w-72 max-w-full" />
+      <Skeleton className="mt-6 h-64 rounded-xl" />
     </Frame>
   );
 }
@@ -126,23 +148,41 @@ export function DecisionQueueSkeleton() {
   );
 }
 
-/** Home: title, the four overview cards, then the chart or recent entries. */
+/** Home: title, the overview cards (one column on a phone, as SectionCards), then the chart or recent entries. */
 export function HomeSkeleton() {
   return (
     <Frame>
       <Title />
-      <Tiles count={4} />
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-28 rounded-xl" />
+        ))}
+      </div>
       <Skeleton className="mt-6 h-64 rounded-xl" />
     </Frame>
   );
 }
 
-/** People, Users, Branches: title and rows. */
+/** People, Users, Branches, accounting months: title and rows. */
 export function SettingsListSkeleton() {
   return (
     <Frame>
       <Title />
       <Rows count={5} />
+    </Frame>
+  );
+}
+
+/** More: a short page of links at the default width. */
+export function HubSkeleton() {
+  return (
+    <Frame width="default">
+      <Title />
+      <div className="mt-6 flex flex-col gap-3">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-14 rounded-xl" />
+        ))}
+      </div>
     </Frame>
   );
 }

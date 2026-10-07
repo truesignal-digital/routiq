@@ -1,20 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { i18n } from "../i18n/index.js";
-import {
-  DecisionQueueSkeleton,
-  HomeSkeleton,
-  ModuleListSkeleton,
-  RecordWorkspaceSkeleton,
-  SettingsListSkeleton,
-  TabSkeleton,
-} from "./page-skeletons.js";
+import * as skeletons from "./page-skeletons.js";
 
 afterEach(cleanup);
-
-const skeletons = { DecisionQueueSkeleton, HomeSkeleton, ModuleListSkeleton, RecordWorkspaceSkeleton, SettingsListSkeleton, TabSkeleton };
+afterAll(() => i18n.changeLanguage("fr-CM"));
 
 describe.each([
   ["fr-CM", "Chargement…"],
