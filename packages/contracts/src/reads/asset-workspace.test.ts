@@ -69,6 +69,7 @@ describe("asset workspace read contracts", () => {
       currency: null,
       params: { body: "Garé au dépôt" },
       note: null,
+      noteCode: null,
     };
     expect(vehicleHistoryItem.parse(history)).toEqual(history);
     expect(
@@ -89,6 +90,7 @@ describe("asset workspace read contracts", () => {
       currency: null,
       params: {},
       note: null,
+      noteCode: null,
       changes: [{ field: "registrationNumber", kind: "VALUE", before: "LT 123 AB", after: "LT 132 AB" }],
     };
     expect(vehicleHistoryItem.parse(edit)).toEqual(edit);

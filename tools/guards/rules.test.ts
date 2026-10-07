@@ -175,6 +175,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [REGISTRY, file("apps/web/src/components/page.tsx", ""), file("apps/web/src/components/page.test.tsx", "")],
   },
   {
+    id: "H17",
+    bad: [
+      file("apps/web/src/vehicle/forms/LogFuelForm.tsx", "export function LogFuelForm() {}"),
+      file("apps/web/src/vehicle/forms/LogFuelForm.test.tsx", 'import { render } from "@testing-library/react";'),
+      file("apps/web/src/members/AddMemberDialog.tsx", "export function AddMemberDialog() {}"),
+      file("apps/web/src/finance/EntryDecisionForms.tsx", "export function RejectEntryForm() {}"),
+    ],
+    good: [
+      file("apps/web/src/vehicle/forms/AddNoteForm.tsx", "export function AddNoteForm() {}"),
+      file("apps/web/src/vehicle/forms/AddNoteForm.test.tsx", 'import { describeCommandForm } from "../../test/form-harness.js";'),
+      file("apps/web/src/components/command-form.tsx", "export function CommandForm() {}"),
+      file("apps/web/src/vehicle/forms/useFormDraft.ts", ""),
+    ],
+  },
+  {
     id: "G1",
     bad: [file("apps/web/src/x.ts", "queryClient.setQueryData(key, next);")],
     good: [file("apps/web/src/x.ts", "queryClient.invalidateQueries({ queryKey: key });")],

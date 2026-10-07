@@ -383,6 +383,21 @@
       ]
     },
     {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/radio-group.tsx",
+          "type": "registry:file",
+          "target": "components/ui/radio-group.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react"
+      ]
+    },
+    {
       "name": "checkbox",
       "type": "registry:ui",
       "files": [
@@ -994,6 +1009,26 @@
       "dependencies": [
         "lucide-react",
         "react-i18next"
+      ]
+    },
+    {
+      "name": "use-command-form",
+      "type": "registry:hook",
+      "files": [
+        {
+          "path": "src/components/use-command-form.ts",
+          "type": "registry:file",
+          "target": "components/use-command-form.ts"
+        }
+      ],
+      "registryDependencies": [
+        "command-form"
+      ],
+      "dependencies": [
+        "@hookform/resolvers",
+        "react-hook-form",
+        "react-i18next",
+        "zod"
       ]
     }
   ]

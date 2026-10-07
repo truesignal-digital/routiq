@@ -37,6 +37,20 @@ import { cn } from "@/lib/utils.js";
  * file — so the label is a lookup with the raw code as its own fallback. i18next
  * reads "." as a key separator, hence the dashes.
  */
+/**
+ * The motif a line carries: a listed reason in words (#426), else the free
+ * text. An unknown code shows raw rather than being guessed at.
+ */
+export function historyNote(
+  item: Pick<HistoryItem, "note" | "noteCode">,
+  t: TFunction,
+): string | null {
+  if (item.noteCode !== null && item.noteCode !== "OTHER") {
+    return t(`reasonCodes.${item.noteCode}`, { defaultValue: item.note ?? item.noteCode });
+  }
+  return item.note !== null && item.note !== "" ? item.note : null;
+}
+
 export function historyEventLabelKey(eventType: string): string {
   return `history.event.${eventType.split(".").join("-")}`;
 }
@@ -319,7 +333,7 @@ function HistoryRow({
     ? t("history.actor.platform")
     : (item.actor.displayName ?? t("history.actor.unknown"));
   const changedFields = chipFields(item.changedFields);
-  const hasNote = item.note !== null && item.note !== "";
+  const note = historyNote(item, t);
 
   return (
     <li className="relative border-l border-border pb-5 pl-4 last:pb-0">
@@ -346,10 +360,10 @@ function HistoryRow({
               defaultValue: item.eventType,
             })}
           </span>
-          {hasNote && (
+          {note !== null && (
             <>
               {" — "}
-              <span className="italic text-muted-foreground">{item.note}</span>
+              <span className="italic text-muted-foreground">{note}</span>
             </>
           )}
         </p>

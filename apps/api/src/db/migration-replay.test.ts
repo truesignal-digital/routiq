@@ -24,6 +24,8 @@ import { createTestApp } from "../test/fixture.js";
  * update-pending-entry's rules with NOT EXISTS. 0039 (#422) guards its tables,
  * constraints and policies, and inserts its rules and its release row with NOT
  * EXISTS: another branch wanted the same number, so it may yet be renumbered.
+ * 0042 (#426, first numbered 0040) guards its columns and constraint, backfills
+ * only reversals still without a reason, and replaces its function.
  *
  * The file's own database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -39,6 +41,7 @@ const MIGRATIONS = [
   "0034_edit_pending_entry",
   "0035_update_asset_details_command_defaults",
   "0039_approval_rule_notice",
+  "0042_cancellation_reason",
 ];
 
 function statementsOf(migration: string): string[] {
