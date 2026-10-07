@@ -11,7 +11,11 @@ import { cn } from "@/lib/utils.js";
 export function NotRecorded({ onAdd, className }: { onAdd?: (() => void) | undefined; className?: string }) {
   const { t, i18n } = useTranslation();
   return (
-    <span data-slot="not-recorded" className={cn("font-normal text-muted-foreground", className)}>
+    <span
+      data-slot="not-recorded"
+      // Words, not a figure: the sans face even inside a monospace code cell.
+      className={cn("font-sans font-normal text-muted-foreground", className)}
+    >
       {notRecorded(i18n.language)}
       {onAdd !== undefined && (
         <button

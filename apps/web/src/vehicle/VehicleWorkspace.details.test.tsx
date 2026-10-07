@@ -292,13 +292,13 @@ describe("who may edit", () => {
     },
   );
 
-  it("says a missing plate is not recorded, and offers Add only to an editor (#306)", async () => {
+  it("says a missing plate is not recorded, with no Add for a reader (#306)", async () => {
     await openVehicle(DETAILS, { role: "DRIVER", asset: asset({ registrationNumber: null }) });
     expect((await screen.findByText("Plate")).nextElementSibling?.textContent).toBe("Not recorded");
     expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
-    cleanup();
-    await closeVehicle();
+  });
 
+  it("offers an editor an inline Add on a missing plate that opens the edit (#306)", async () => {
     await openVehicle(DETAILS, { role: "ADMIN", asset: asset({ registrationNumber: null }) });
     const user = userEvent.setup();
     const plate = (await screen.findByText("Plate")).nextElementSibling;
