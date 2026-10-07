@@ -348,8 +348,12 @@ export async function drive(slot: number, targets: readonly string[], options: D
       return file;
     };
     const nav = async (route: string) => {
+      // A fresh router key, as a link click gives: TanStack Router reports a render
+      // (and the app times a route:<template> journey) only when the key changes.
       await page.evaluate((to) => {
-        window.history.pushState({}, "", to);
+        const previous = (window.history.state ?? {}) as { __TSR_index?: number };
+        const key = Math.random().toString(36).slice(2, 10);
+        window.history.pushState({ key, __TSR_key: key, __TSR_index: (previous.__TSR_index ?? 0) + 1 }, "", to);
         window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
       }, route);
       await page.waitForURL((url) => `${url.pathname}${url.search}`.startsWith(route.split("#")[0] ?? route), { timeout: 10_000 });

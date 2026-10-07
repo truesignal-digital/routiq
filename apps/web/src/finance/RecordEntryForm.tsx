@@ -325,7 +325,7 @@ export function RecordEntryForm({
       return;
     }
 
-    // A transaction recorded into another agency would land off the list the
+    // An entry recorded into another agency would land off the list the
     // shell is showing, with nothing said about it.
     notifyCommandSuccess(
       "finance",
