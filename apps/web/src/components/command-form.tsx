@@ -113,7 +113,14 @@ export function CommandForm(props: CommandFormProps) {
   if (surface === "dialog") {
     return (
       <Dialog open onOpenChange={(open) => !open && onDismiss()}>
-        <DialogContent className={props.className}>
+        {/* The fields scroll between the title and the footer, so neither
+            leaves a window shorter than the form (#470). */}
+        <DialogContent
+          className={cn(
+            "grid-rows-[auto_minmax(0,1fr)] overflow-hidden",
+            props.className,
+          )}
+        >
           <DialogHeader>
             <DialogTitle>{props.title}</DialogTitle>
             {props.description !== undefined && (
@@ -297,9 +304,11 @@ function CommandFormBody(props: CommandFormProps) {
       onSubmit={handleSubmit}
     >
       <div
+        data-slot="command-form-body"
         className={cn(
           "flex flex-col gap-4",
           (surface === "panel" || surface === "sheet") && "p-4",
+          surface === "dialog" && "-mx-4 -my-1 min-h-0 overflow-y-auto px-4 py-1",
         )}
       >
         {surface === "page" && props.title !== undefined && (
@@ -387,7 +396,7 @@ function fieldLabel(form: HTMLFormElement | null, name: string): string | undefi
 function surfaceBodyClass(surface: CommandSurface): string {
   switch (surface) {
     case "dialog":
-      return "flex flex-col gap-4"
+      return "flex min-h-0 flex-col gap-4"
     case "page":
       return "flex flex-col gap-4 rounded-xl border border-border bg-card p-4"
     case "panel":

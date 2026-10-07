@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 564169,
+    "ceiling": 564245,
     "raises": [
       {
         "date": "2026-10-06",
@@ -55,22 +55,34 @@
         "from": 562687,
         "to": 564169,
         "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 564245,
+        "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21493,
+    "ceiling": 21571,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 21376,
         "to": 21493,
         "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21493,
+        "to": 21571,
+        "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 564169,
+    "ceiling": 564245,
     "raises": [
       {
         "date": "2026-10-06",
@@ -125,6 +137,12 @@
         "from": 562687,
         "to": 564169,
         "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 564245,
+        "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
       }
     ]
   }
