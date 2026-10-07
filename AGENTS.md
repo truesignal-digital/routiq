@@ -146,6 +146,7 @@ Each row is a mistake agents made at least twice here, paired with what now fail
 - Merge rule for humans and agents: merge only with green `ci` and evidence/ratchet checks when present, resolved blocking findings, and `review:approve` backed by a different-model report for the current base/head SHAs. Every acceptance line must PASS. `review:changes` blocks merge. Any new commit invalidates approval; remove stale approval before requesting another review. Re-fetch the live PR before merging and bind the merge to its reviewed head SHA. CodeRabbit summaries, skipped reviews and a green status alone are not independent acceptance review.
 - `.github/branch-protection.json` records the required GitHub settings for `main` and `develop`: a PR, current green `ci` and resolved conversations, including for administrators. GitHub requires no separate approving review or latest-push approval; independent review remains mandatory through the report/label rule above. Read back the live API settings before claiming protection. GitHub does not enforce model identity, report SHA or `review:approve`; the human or authorized agent merger checks them. See `docs/agents/review-workflow.md`.
 - Commit messages: short imperative subject; body only when the why isn't obvious.
+- Write PR bodies with the `pr` skill (`.agents/skills/pr/SKILL.md`).
 - Issues live in GitHub (`docs/agents/issue-tracker.md`). `.scratch/` is read-only history; add nothing there.
 
 ## Agent skills
