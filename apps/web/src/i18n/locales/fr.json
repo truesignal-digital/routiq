@@ -2,6 +2,10 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "Logo ROUTIQ",
+    "poweredBy": "propulsé par ROUTIQ"
+  },
   "nav": {
     "home": "Accueil",
     "assets": "Actifs",
