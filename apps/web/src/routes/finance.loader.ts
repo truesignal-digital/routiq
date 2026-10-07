@@ -5,7 +5,7 @@ import { entriesQueryOptions, type UseEntriesParams } from "../finance/useEntrie
 import { financeSummaryQueryOptions } from "../finance/useFinanceSummary.js";
 import { ambientBranchId } from "../shell/branch-context.js";
 import { scopedParams } from "../shell/branch-scope.js";
-import { scope, settle, type LoaderArgs } from "./scope.js";
+import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 
 interface MoneySearch {
   status?: string | undefined;
@@ -35,8 +35,8 @@ export async function financeEntries(args: LoaderArgs & { deps: MoneySearch }): 
   // An arrival already widened (`branch=all`) lists every branch; otherwise the shell's agency presets the queue.
   const queueBranch = args.deps.branch === "all" ? undefined : ambientBranchId(s.branch);
   await settle(
-    s.client.ensureQueryData(financeSummaryQueryOptions(s.slug, ambientBranchId(s.branch))),
-    s.client.ensureInfiniteQueryData(
+    ensure(s.client, financeSummaryQueryOptions(s.slug, ambientBranchId(s.branch))),
+    ensureList(s.client,
       entriesQueryOptions(
         s.slug,
         scopedParams<UseEntriesParams>(
@@ -54,9 +54,9 @@ export async function financeEntries(args: LoaderArgs & { deps: MoneySearch }): 
         ),
       ),
     ),
-    s.client.ensureInfiniteQueryData(assetsQueryOptions(s.slug, scopedParams({}, s.branch))),
+    ensureList(s.client, assetsQueryOptions(s.slug, scopedParams({}, s.branch))),
     waiting &&
-      s.client.ensureInfiniteQueryData(
+      ensureList(s.client,
         approvalsQueryOptions(s.slug, { ...(queueBranch === undefined ? {} : { branchId: queueBranch }), sort: "submittedAt:asc" }),
       ),
   );

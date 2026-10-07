@@ -322,23 +322,37 @@ describe("AppShell (sidebar frame)", () => {
     expect(live?.textContent).toBe("You are viewing: Yaoundé");
   });
 
-  it("asks for the approval rules again on a new screen once the last answer is a minute old (#422, #496)", async () => {
+  it("shows the approval-rules notice another member's change raised, on the next screen once a minute has passed (#422, #496)", async () => {
     const { APPROVAL_CHAIN_RECHECK_MS } = await import("../approval-rules/useApprovalChain.js");
-    const router = await renderShell("/assets");
-    const invalidate = vi.spyOn(client, "invalidateQueries");
-    await router.navigate({ to: "/finance/entries" });
-    await waitFor(() => expect(invalidate).toHaveBeenCalled());
-    const filters = invalidate.mock.calls.at(-1)?.[0];
-    expect(filters?.queryKey).toEqual(["ws", session.workspaceSlug, "approval-chain"]);
-    const answeredAt = (updatedAt: number) => {
-      const queryKey = ["approval-chain-age", updatedAt];
-      client.setQueryData(queryKey, {}, { updatedAt });
-      const query = client.getQueryCache().find({ queryKey });
-      if (query === undefined) throw new Error("query not cached");
-      return query;
-    };
-    expect(filters?.predicate?.(answeredAt(Date.now() - 5_000))).toBe(false);
-    expect(filters?.predicate?.(answeredAt(Date.now() - APPROVAL_CHAIN_RECHECK_MS))).toBe(true);
+    let notice: { changeId: string; changedAt: string; changedBy: string } | null = null;
+    const chainReads = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (new URL(String(input), "http://app.test").pathname !== "/v1/approval-chain") return new Response(null, { status: 404 });
+        chainReads();
+        return Response.json({ currency: "XAF", chains: [], notice });
+      }),
+    );
+    try {
+      const router = await renderShell("/assets");
+      await waitFor(() => expect(chainReads).toHaveBeenCalledTimes(1));
+
+      // Direction changes the rules; within the minute, moving screens asks nothing.
+      notice = { changeId: "change-1", changedAt: "2026-10-05T09:00:00.000Z", changedBy: "Mme Ngo" };
+      await router.navigate({ to: "/finance/entries" });
+      await screen.findByText("/finance/entries");
+      expect(chainReads).toHaveBeenCalledTimes(1);
+
+      // A minute later, the next screen asks again and the notice appears.
+      const key = ["ws", session.workspaceSlug, "approval-chain"];
+      client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - APPROVAL_CHAIN_RECHECK_MS });
+      await router.navigate({ to: "/assets" });
+      await waitFor(() => expect(document.querySelector("[data-slot='approval-rules-notice']")).not.toBeNull());
+      expect(chainReads).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("puts the approval-rules notice in the page's own column, once (#467)", async () => {

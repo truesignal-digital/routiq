@@ -2,7 +2,7 @@ import { activitiesQueryOptions, activitySummaryQueryOptions, type UseActivities
 import { assetsQueryOptions } from "../assets/useAssets.js";
 import { categoriesQueryOptions } from "../documents/useCategories.js";
 import { scopedParams } from "../shell/branch-scope.js";
-import { scope, settle, type LoaderArgs } from "./scope.js";
+import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 
 interface ActivitiesSearch {
   status?: string | undefined;
@@ -16,11 +16,11 @@ export async function activities(args: LoaderArgs & { deps: ActivitiesSearch }):
   const { client, slug, branch } = await scope(args);
   const { status, completeness, from, to } = args.deps;
   await settle(
-    client.ensureQueryData(categoriesQueryOptions(slug, "ACTIVITY_TYPE")),
+    ensure(client, categoriesQueryOptions(slug, "ACTIVITY_TYPE")),
     // The asset filter's options: the first page; the screen drains the rest.
-    client.ensureInfiniteQueryData(assetsQueryOptions(slug, scopedParams({}, branch))),
-    client.ensureQueryData(activitySummaryQueryOptions(slug, scopedParams({}, branch))),
-    client.ensureInfiniteQueryData(
+    ensureList(client, assetsQueryOptions(slug, scopedParams({}, branch))),
+    ensure(client, activitySummaryQueryOptions(slug, scopedParams({}, branch))),
+    ensureList(client,
       activitiesQueryOptions(
         slug,
         scopedParams<UseActivitiesParams>(

@@ -8,7 +8,7 @@ import {
   type UseWorkOrdersParams,
 } from "../maintenance/useMaintenance.js";
 import { scopedParams } from "../shell/branch-scope.js";
-import { scope, settle, type LoaderArgs } from "./scope.js";
+import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 
 interface MaintenanceSearch {
   status?: WorkOrderStatus | undefined;
@@ -20,12 +20,12 @@ export async function maintenance(args: LoaderArgs & { deps: MaintenanceSearch }
   const { client, slug, branch } = await scope(args);
   const { status, issueStatus } = args.deps;
   await settle(
-    client.ensureQueryData(maintenanceSummaryQueryOptions(slug, scopedParams({}, branch))),
-    client.ensureInfiniteQueryData(workOrdersQueryOptions(slug, scopedParams<UseWorkOrdersParams>(status === undefined ? {} : { status }, branch))),
-    client.ensureInfiniteQueryData(
+    ensure(client, maintenanceSummaryQueryOptions(slug, scopedParams({}, branch))),
+    ensureList(client, workOrdersQueryOptions(slug, scopedParams<UseWorkOrdersParams>(status === undefined ? {} : { status }, branch))),
+    ensureList(client,
       issuesQueryOptions(slug, scopedParams(issueListParams(issueStatus === undefined ? {} : { status: issueStatus }), branch)),
     ),
-    issueStatus !== undefined && client.ensureInfiniteQueryData(issuesQueryOptions(slug, scopedParams(issueListParams({}), branch))),
-    client.ensureQueryData(categoriesQueryOptions(slug, "ISSUE_TYPE")),
+    issueStatus !== undefined && ensureList(client, issuesQueryOptions(slug, scopedParams(issueListParams({}), branch))),
+    ensure(client, categoriesQueryOptions(slug, "ISSUE_TYPE")),
   );
 }
