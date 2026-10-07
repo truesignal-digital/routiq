@@ -13,9 +13,4 @@ export const REFERENCE_STALE_MS = 5 * 60_000;
 /** The app's read defaults; tests that build their own client use them too. */
 export const QUERY_DEFAULTS = {
   staleTime: FRESH_MS,
-  // A route loader made the first attempt, retries included; a screen
-  // mounting on its error shows it with a retry instead of asking again (a
-  // 404 vehicle is one request, not two). The next navigation's loader tries
-  // again.
-  retryOnMount: false,
 } as const;

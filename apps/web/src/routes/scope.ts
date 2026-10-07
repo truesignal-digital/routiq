@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { EnsureInfiniteQueryDataOptions, EnsureQueryDataOptions, QueryClient, QueryKey } from "@tanstack/react-query";
 import { assetRegistrationReferenceQueryOptions } from "../assets/reference.js";
 import { meQueryOptions, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
@@ -31,15 +31,39 @@ export async function scope({ context }: LoaderArgs): Promise<Scope> {
   const client = context.queryClient;
   const session = sessionStore.getActive();
   const slug = session?.workspaceSlug;
-  const [me, reference] = await Promise.all([
+  const reference = assetRegistrationReferenceQueryOptions(slug);
+  const [me, branches] = await Promise.all([
     client.ensureQueryData(meQueryOptions(client, session)).catch(() => undefined),
-    client.ensureQueryData(assetRegistrationReferenceQueryOptions(slug)).catch(() => undefined),
+    client.ensureQueryData({ ...reference, retry: retries(client, reference) }).catch(() => undefined),
   ]);
   const branch =
-    reference === undefined
+    branches === undefined
       ? ALL_BRANCHES
-      : resolveCurrentBranchId(readStoredBranch(slug), reference.branches, "ready");
+      : resolveCurrentBranchId(readStoredBranch(slug), branches.branches, "ready");
   return { client, slug, me, branch };
+}
+
+/**
+ * ensureQueryData alone tries once (fetchQuery's default); a loader makes the
+ * read's own attempts, or the client's default, as the screen's hook would.
+ */
+function retries<T extends { retry?: unknown }>(client: QueryClient, options: T): NonNullable<T["retry"]> {
+  // The client's default is typed for its own error type; the read's error type is no narrower.
+  return (options.retry ?? client.getDefaultOptions().queries?.retry ?? 3) as NonNullable<T["retry"]>;
+}
+
+export function ensure<TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
+  client: QueryClient,
+  options: EnsureQueryDataOptions<TQueryFnData, TError, TData, TQueryKey>,
+): Promise<unknown> {
+  return client.ensureQueryData({ ...options, retry: retries(client, options) });
+}
+
+export function ensureList<TQueryFnData, TError, TData, TQueryKey extends QueryKey, TPageParam>(
+  client: QueryClient,
+  options: EnsureInfiniteQueryDataOptions<TQueryFnData, TError, TData, TQueryKey, TPageParam>,
+): Promise<unknown> {
+  return client.ensureInfiniteQueryData({ ...options, retry: retries(client, options) });
 }
 
 export async function settle(...reads: Array<Promise<unknown> | false | undefined>): Promise<void> {

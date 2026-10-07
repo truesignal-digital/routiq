@@ -55,6 +55,8 @@ export function assetAttentionQueryOptions(workspaceSlug: string | undefined, as
   return queryOptions<AssetAttentionResponse>({
     queryKey: [...vehicleQueryKey(workspaceSlug, assetId), "attention"],
     retry: retryUnlessNotFound,
+    // Loaded by the route loader with these attempts; not repeated on mount (#496).
+    retryOnMount: false,
     enabled: workspaceSlug !== undefined,
     queryFn: ({ signal }) => getJson(`/v1/assets/${assetId}/attention`, signal, "ATTENTION"),
   });
@@ -71,6 +73,8 @@ export function assetFinanceQueryOptions(workspaceSlug: string | undefined, asse
   return queryOptions<AssetFinanceResponse>({
     queryKey: [...vehicleQueryKey(workspaceSlug, assetId), "finance", periodCode ?? "current"],
     retry: retryUnlessNotFound,
+    // Loaded by the route loader with these attempts; not repeated on mount (#496).
+    retryOnMount: false,
     enabled: workspaceSlug !== undefined,
     queryFn: ({ signal }) =>
       getJson(withQuery(`/v1/assets/${assetId}/finance`, { periodCode }), signal, "ASSET_FINANCE"),
@@ -101,6 +105,8 @@ export function assetHistoryQueryOptions(
   return infiniteQueryOptions({
     queryKey: [...vehicleQueryKey(workspaceSlug, assetId), "history", kind ?? "ALL", limit],
     retry: retryUnlessNotFound,
+    // Loaded by the route loader with these attempts; not repeated on mount (#496).
+    retryOnMount: false,
     enabled: workspaceSlug !== undefined,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: VehicleHistoryResponse) => last.nextCursor ?? undefined,
