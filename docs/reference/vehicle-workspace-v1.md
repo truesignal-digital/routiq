@@ -37,14 +37,14 @@ Each section is a route under `/assets/$assetId`, so the selected section, perio
 
 | Section | Shown when | Backed by |
 | --- | --- | --- |
-| Now (fr: “En ce moment”) | Always | Attention items, the selected month's money (ledger readers only) and the five latest history items. |
+| Overview (fr: “Vue d’ensemble”, was Now until #90) | Always | Attention items (To do first, collapsible), the selected month's money (ledger readers only) and the five latest history items. |
 | Maintenance | MAINTENANCE is on | `GET /v1/work-orders` and `GET /v1/issues` filtered to the vehicle; `GET /v1/issues/:issueId` for a direct link to one issue. A work order's estimate, actual cost and cost lines follow `canReadWorkOrderCosts` (every role but DRIVER, #390): null for a driver, in the list, the detail and the record history's MONEY changes. |
 | Money | FINANCE is on and the role reads the ledger | `GET /v1/assets/:assetId/finance` and `GET /v1/finance/entries` filtered to the vehicle. |
 | Trips | ACTIVITIES is on | `GET /v1/activities` filtered to the vehicle; each row now carries origin, destination, total distance and the first driver. |
 | Documents | DOCUMENTS is on | `GET /v1/assets/:assetId/documents`. |
 | History | Always | `GET /v1/assets/:assetId/history`. |
 
-- Now: the status of the vehicle in one sentence, what needs the reader next, what waits on others, and missing data made explicit.
+- Overview: the status of the vehicle in one sentence, what needs the reader next, what waits on others, and missing data made explicit.
 - Maintenance: reported issues and work orders, with each work order's chronology and cost lines.
 - Money: recorded vehicle expenses, pending review separately, category breakdown, contributing entries, evidence and history links, and permitted expense, review and correction actions.
 - Documents: reuse existing vehicle document records, renewal and supersession commands. A renewal creates a new version; do not replace old evidence.

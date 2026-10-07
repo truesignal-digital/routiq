@@ -1,26 +1,106 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 559239,
+    "ceiling": 561863,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 555624,
         "to": 559239,
         "reason": "Field telemetry (ADR-0011): errors, vitals and journey timing, about 3.7 kB gzip; 1 kB costs a pilot phone about 5 ms of load (measured 2026-10-05)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559239,
+        "to": 559360,
+        "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559360,
+        "to": 561051,
+        "reason": "Record history in words (#110, #119): fr/en labels for every code set a change can name, the code-label map and the diff kinds, about 1.7 kB gzip"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561051,
+        "to": 561383,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561383,
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561678,
+        "to": 561863,
+        "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21376
+    "ceiling": 21493,
+    "raises": [
+      {
+        "date": "2026-10-06",
+        "from": 21376,
+        "to": 21493,
+        "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      }
+    ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 559239,
+    "ceiling": 561863,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 555624,
         "to": 559239,
         "reason": "Field telemetry (ADR-0011): errors, vitals and journey timing, about 3.7 kB gzip; 1 kB costs a pilot phone about 5 ms of load (measured 2026-10-05)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559239,
+        "to": 559360,
+        "reason": "Vehicle To-do loading skeleton and load-failed line (#148), about 120 B gzip: under 1 ms on a pilot phone at about 5 ms per kB (2026-10-05 measurement)"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 559360,
+        "to": 561051,
+        "reason": "Record history in words (#110, #119): fr/en labels for every code set a change can name, the code-label map and the diff kinds, about 1.7 kB gzip"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561051,
+        "to": 561383,
+        "reason": "One set of plate and chassis rules for Register a truck and the Details edit (#122): register-asset v2 contract next to the frozen v1, the shared rule on both forms, and the Details edit leaving untouched fields alone; about 440 B gzip after trimming, under 3 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561383,
+        "to": 561479,
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561479,
+        "to": 561678,
+        "reason": "#90: collapsible To do on the vehicle Overview (toggle, open state, guarded localStorage read/write), +199 B gzip measured on top of develop after #91"
+      },
+      {
+        "date": "2026-10-06",
+        "from": 561678,
+        "to": 561863,
+        "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
       }
     ]
   }
