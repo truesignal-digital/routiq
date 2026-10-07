@@ -186,14 +186,14 @@ afterEach(() => {
 });
 
 describe("finance record form", () => {
-  // #458: the entries list's button and this page name the action the same way.
+  // #458: the entries list's button and this panel name the action the same way.
   it("is titled with the words of the button that opens it", async () => {
     renderScreen();
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Record an entry");
+    expect(screen.getByRole("dialog", { name: "Record an entry" })).toBeTruthy();
 
     await i18n.changeLanguage("fr-CM");
     try {
-      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Saisir une écriture");
+      expect(screen.getByRole("dialog", { name: "Saisir une écriture" })).toBeTruthy();
     } finally {
       await i18n.changeLanguage("en");
     }
@@ -361,7 +361,7 @@ describe("finance record form", () => {
     renderScreen();
 
     expect(screen.getByTestId("entries-list")).toBeTruthy();
-    const panel = screen.getByRole("dialog", { name: "Record a transaction" });
+    const panel = screen.getByRole("dialog", { name: "Record an entry" });
     expect(panel.getAttribute("data-slot")).toBe("sheet-content");
     expect(panel.className).toContain("sm:max-w-[440px]");
   });

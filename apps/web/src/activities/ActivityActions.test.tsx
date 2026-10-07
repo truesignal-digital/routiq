@@ -857,7 +857,7 @@ describe("mid-trip capture", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Transaction recorded",
+        title: "Entry recorded",
       }),
     );
   });
@@ -875,7 +875,7 @@ describe("mid-trip capture", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Transaction sent for approval",
+        title: "Entry sent for approval",
       }),
     );
   });
