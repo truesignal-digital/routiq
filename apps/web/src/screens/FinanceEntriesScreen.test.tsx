@@ -368,7 +368,7 @@ describe("FinanceEntriesScreen", () => {
     expect(screen.getByRole("button", { name: "dataTable.view" })).toBeTruthy();
 
     const action = screen.getByRole("link", {
-      name: /finance\.entries\.recordAction/,
+      name: /finance\.record\.title/,
     });
     expect(action.getAttribute("href")).toBe("/finance/record");
   });
@@ -378,7 +378,7 @@ describe("FinanceEntriesScreen", () => {
     render(<FinanceEntriesScreen />);
 
     expect(
-      screen.queryByRole("link", { name: /finance\.entries\.recordAction/ }),
+      screen.queryByRole("link", { name: /finance\.record\.title/ }),
     ).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
