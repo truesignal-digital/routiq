@@ -10,7 +10,12 @@ import { openSidebar, type DriveScript } from "../browser.js";
 const EXPECTED: Record<string, { daily: readonly [string, string][]; company: readonly [string, string][] }> = {
   DIRECTOR: {
     daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
-    company: [["Personnel", "People"], ["Utilisateurs", "Users"], ["Agences", "Branches"]],
+    company: [
+      ["Personnel", "People"],
+      ["Utilisateurs", "Users"],
+      ["Agences", "Branches"],
+      ["Paramètres de l'entreprise", "Company settings"],
+    ],
   },
   ADMIN: {
     daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],

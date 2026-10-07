@@ -5,6 +5,7 @@ import {
   Menu,
   Route,
   ShieldUser,
+  SlidersHorizontal,
   Truck,
   UserRound,
   Wrench,
@@ -15,6 +16,7 @@ import { canAdministerBranches } from "../branches/permissions.js";
 import { canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 import { canAdministerMembers } from "../members/permissions.js";
+import { canManageCompanySettings } from "../settings/permissions.js";
 
 /** The sidebar's groups, in order: the work of the day, then the company's own set-up. */
 export const SECTION_GROUPS = [
@@ -146,6 +148,16 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     to: "/more/branches",
     icon: Building,
     reads: canAdministerBranches,
+  },
+  {
+    key: "companySettings",
+    group: "company",
+    labelKey: "settings.title",
+    to: "/more/company",
+    icon: SlidersHorizontal,
+    module: "FINANCE",
+    // The approval chain is its only section so far (#354).
+    reads: canManageCompanySettings,
   },
 ];
 
