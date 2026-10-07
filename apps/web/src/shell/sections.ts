@@ -1,12 +1,12 @@
 import {
-  Building2,
-  DollarSign,
+  Banknote,
+  Building,
   House,
   Menu,
   Route,
   ShieldUser,
   Truck,
-  Users,
+  UserRound,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +36,7 @@ export interface ShellSection {
   to: string;
   /** Route subtree the section owns; defaults to `to` for single-route sections. */
   match?: string;
+  /** The consistency kit's icon for the place (`docs/design/consistency/kit.js`, ICONS). */
   icon: LucideIcon;
   /** Module that owns this section; sections without one are always visible. */
   module?: ModuleCode;
@@ -86,7 +87,7 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     labelKey: "finance.entries.title",
     to: "/finance/entries",
     match: "/finance",
-    icon: DollarSign,
+    icon: Banknote,
     module: "FINANCE",
     // A driver reads only the entries they recorded, on their truck and trips.
     reads: (role, enabledModules) =>
@@ -98,7 +99,7 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     group: "company",
     labelKey: "persons.title",
     to: "/more/persons",
-    icon: Users,
+    icon: UserRound,
     module: "ACTIVITIES",
     reads: onlyFor(["DIRECTOR", "ADMIN", "FINANCE"]),
   },
@@ -115,7 +116,7 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     group: "company",
     labelKey: "branches.title",
     to: "/more/branches",
-    icon: Building2,
+    icon: Building,
     reads: canAdministerBranches,
   },
 ];

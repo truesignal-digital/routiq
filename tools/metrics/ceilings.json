@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 562877,
+    "ceiling": 563006,
     "raises": [
       {
         "date": "2026-10-06",
@@ -55,6 +55,12 @@
         "from": 562687,
         "to": 562877,
         "reason": "Role-grouped sidebar (#312): section groups, role read predicates and Company rows"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562877,
+        "to": 563006,
+        "reason": "Role-grouped sidebar (#312): kit icons Banknote, UserRound, Building for Money, People, Branches"
       }
     ]
   },
@@ -70,7 +76,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 562877,
+    "ceiling": 563006,
     "raises": [
       {
         "date": "2026-10-06",
@@ -125,6 +131,12 @@
         "from": 562687,
         "to": 562877,
         "reason": "Role-grouped sidebar (#312): section groups, role read predicates and Company rows"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562877,
+        "to": 563006,
+        "reason": "Role-grouped sidebar (#312): kit icons Banknote, UserRound, Building for Money, People, Branches"
       }
     ]
   }
