@@ -10,6 +10,7 @@ import { sessionStore } from "./auth/store.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
 import { BranchesScreen } from "./screens/BranchesScreen.js";
+import { CompanySettingsScreen } from "./screens/CompanySettingsScreen.js";
 import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { MoreStub } from "./screens/MoreStub.js";
@@ -243,6 +244,12 @@ const branchesRoute = createRoute({
   component: BranchesScreen,
 });
 
+const companySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/company",
+  component: CompanySettingsScreen,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
@@ -273,6 +280,7 @@ const routeTree = rootRoute.addChildren([
     personsRoute,
     usersRoute,
     branchesRoute,
+    companySettingsRoute,
   ]),
 ]);
 
