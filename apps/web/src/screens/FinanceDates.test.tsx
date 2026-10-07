@@ -65,6 +65,8 @@ function serveFinanceReadFixtures() {
           principalId: "00000000-0000-4000-8000-000000000002",
           membershipId: "00000000-0000-4000-8000-000000000003",
           principalType: "HUMAN",
+          displayName: "Sali Ahmadou",
+          workspaceName: "Transports Ngwa",
           role: "ADMIN",
           branchScope: "ALL",
           enabledModules: ["CORE", "FINANCE"],

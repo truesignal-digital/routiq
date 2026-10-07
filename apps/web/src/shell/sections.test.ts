@@ -15,22 +15,22 @@ function activeKey(pathname: string): string | undefined {
 describe("visibleSections (module gate)", () => {
   it("disabled module removes its section entirely", () => {
     const keys = visibleSections(["CORE"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "more"]);
+    expect(keys).toEqual(["home"]);
   });
 
   it("enabled module shows its section", () => {
     const keys = visibleSections(["CORE", "ASSETS"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "assets", "more"]);
+    expect(keys).toEqual(["home", "assets"]);
   });
 
   it("finance module shows the finances section", () => {
     const keys = visibleSections(["CORE", "FINANCE"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "finances", "more"]);
+    expect(keys).toEqual(["home", "finances"]);
   });
 
   it("maintenance module shows the maintenance section", () => {
     const keys = visibleSections(["CORE", "MAINTENANCE"]).map((s) => s.key);
-    expect(keys).toEqual(["home", "maintenance", "more"]);
+    expect(keys).toEqual(["home", "maintenance"]);
   });
 
   it("without the maintenance module the workshop has no nav entry", () => {
@@ -39,7 +39,7 @@ describe("visibleSections (module gate)", () => {
   });
 
   it("while membership is loading only module-less sections render", () => {
-    expect(visibleSections(undefined).map((s) => s.key)).toEqual(["home", "more"]);
+    expect(visibleSections(undefined).map((s) => s.key)).toEqual(["home"]);
   });
 
   it("home leads the nav and survives every module combination", () => {
@@ -54,7 +54,6 @@ describe("isSectionActive (exact-or-child)", () => {
   it("matches the section's own route", () => {
     expect(activeKey("/assets")).toBe("assets");
     expect(activeKey("/maintenance")).toBe("maintenance");
-    expect(activeKey("/more")).toBe("more");
   });
 
   it("home owns the landing route only, never every route beneath it", () => {
@@ -97,7 +96,7 @@ describe("isSectionActive (exact-or-child)", () => {
 describe("navigation per role (ADR-0009)", () => {
   const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
 
-  /** Shell sections (with where Finances leads), finance tabs, and the More admin links. */
+  /** Shell sections (with where Finances leads), finance tabs, and the admin pages. */
   const nav = (role: Role) => ({
     sections: visibleSections(EVERY, role).map((s) => (s.key === "finances" ? `finances:${s.to}` : s.key)),
     finance: visibleFinanceSections(role, EVERY).map((s) => s.key),
@@ -105,19 +104,19 @@ describe("navigation per role (ADR-0009)", () => {
     branches: canAdministerBranches(role),
   });
 
-  const ALL_SECTIONS = ["home", "assets", "activities", "maintenance", "finances:/finance/entries", "more"];
+  const ALL_SECTIONS = ["home", "assets", "activities", "maintenance", "finances:/finance/entries"];
   const expected: Record<Role, ReturnType<typeof nav>> = {
     DIRECTOR: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: true, branches: true },
     ADMIN: { sections: ALL_SECTIONS, finance: ["entries"], users: true, branches: false },
     FINANCE: { sections: ALL_SECTIONS, finance: ["entries", "approvals", "periods"], users: false, branches: false },
     CASHIER: {
-      sections: ["home", "assets", "finances:/finance/entries", "more"],
+      sections: ["home", "assets", "finances:/finance/entries"],
       finance: ["entries"],
       users: false,
       branches: false,
     },
     TECHNICIAN: {
-      sections: ["home", "assets", "activities", "maintenance", "more"],
+      sections: ["home", "assets", "activities", "maintenance"],
       finance: [],
       users: false,
       branches: false,

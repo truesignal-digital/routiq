@@ -89,7 +89,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `trips` | trips list → a closed trip's detail | no |
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
-| `settings` | More → Branches, Users, People against their reads | no |
+| `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
 | `scoped-header` | Douala picked, light and dark, on Home scrolled under the header: header background opaque, `::before` tint at primary 5% covering it at z-index -10, controls win the hit test, header pixels unchanged by scrolling; then all branches: plain header (#57). Checks the run's `--lang` and `--viewport` | no |
 

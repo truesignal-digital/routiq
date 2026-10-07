@@ -1,7 +1,6 @@
 import {
   DollarSign,
   House,
-  Menu,
   Route,
   Truck,
   Wrench,
@@ -12,7 +11,7 @@ import { canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 
 export interface ShellSection {
-  key: "home" | "assets" | "activities" | "maintenance" | "finances" | "more";
+  key: "home" | "assets" | "activities" | "maintenance" | "finances";
   /** Where the nav entry navigates. */
   to: string;
   /** Route subtree the section owns; defaults to `to` for single-route sections. */
@@ -48,7 +47,6 @@ const ALL_SECTIONS: ShellSection[] = [
     icon: DollarSign,
     module: "FINANCE",
   },
-  { key: "more", to: "/more", icon: Menu },
 ];
 
 /**

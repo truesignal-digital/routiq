@@ -146,16 +146,15 @@ describe("breadcrumbTrail", () => {
       "finance.navigation.periods",
       undefined,
     ]);
-    expect(trailAt("/more")).toEqual([
+    expect(trailAt("/my-settings")).toEqual([
       ["nav.home", "/"],
-      ["nav.more", undefined],
+      ["mySettings.title", undefined],
     ]);
   });
 
-  it("puts the people admin page under Plus", () => {
+  it("puts the people admin page straight under Home now that More is gone", () => {
     expect(trailAt("/more/persons")).toEqual([
       ["nav.home", "/"],
-      ["nav.more", "/more"],
       ["persons.title", undefined],
     ]);
   });
@@ -168,7 +167,7 @@ describe("breadcrumbTrail", () => {
       "/finance/entries",
       "/finance/entries/abc",
       "/finance/record",
-      "/more",
+      "/my-settings",
     ]) {
       const trail = breadcrumbTrail(ALL, path);
       expect(trail.at(-1)?.to, path).toBeUndefined();

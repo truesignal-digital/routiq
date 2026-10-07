@@ -7,6 +7,10 @@ import { visibleSections } from "./sections.js";
 
 const SECTIONS = visibleSections([...MODULE_CODES]);
 const SECTION_ROOTS = new Set(SECTIONS.map((section) => section.to));
+/** Pages no sidebar section owns: the trail is Home › page. */
+const STANDALONE = new Set(["/my-settings", "/more/persons", "/more/users", "/more/branches"]);
+/** Routes that only redirect never draw a trail. */
+const REDIRECTS = new Set(["/more"]);
 
 /** Every page the shell frames, read from the route tree so a new route is covered by default. */
 function shellPaths(): string[] {
@@ -32,7 +36,7 @@ describe("every route has a breadcrumb trail", () => {
     expect(paths).not.toContain("/login");
   });
 
-  it.each(paths)("%s", (path) => {
+  it.each(paths.filter((path) => !REDIRECTS.has(path)))("%s", (path) => {
     const trail = breadcrumbTrail(SECTIONS, concrete(path));
 
     if (path === "/") {
@@ -42,6 +46,11 @@ describe("every route has a breadcrumb trail", () => {
 
     if (SECTION_ROOTS.has(path)) {
       expect(trail.length).toBeGreaterThanOrEqual(2);
+      return;
+    }
+
+    if (STANDALONE.has(path)) {
+      expect(trail.map((crumb) => crumb.to)).toEqual(["/", undefined]);
       return;
     }
 
