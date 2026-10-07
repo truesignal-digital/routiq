@@ -207,7 +207,7 @@ function Tile({
             <span
               data-slot="metric-value"
               className={cn(
-                "font-mono text-2xl leading-none tabular-nums break-words",
+                "font-heading text-2xl font-semibold leading-none tabular-nums break-words",
                 showValue ? TONE_VALUE[tone] : "text-muted-foreground",
               )}
             >
