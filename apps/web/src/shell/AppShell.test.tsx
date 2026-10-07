@@ -177,16 +177,17 @@ describe("AppShell (sidebar frame)", () => {
     expect(inset?.classList.contains("min-w-0")).toBe(true);
   });
 
-  it("has no bottom navigation left", async () => {
+  it("pins the bottom bar for phones only (#318)", async () => {
     await renderShell("/assets");
 
     const navs = screen.getAllByRole("navigation");
-    // The sidebar and the SiteHeader breadcrumb; nothing pinned to the bottom.
     expect(navs.map((nav) => nav.getAttribute("aria-label")).sort()).toEqual([
       "Breadcrumb",
       "Navigation",
+      "Shortcuts",
     ]);
-    expect(document.querySelector("nav.fixed")).toBeNull();
+    const bar = screen.getByRole("navigation", { name: "Shortcuts" });
+    expect(bar.classList.contains("md:hidden")).toBe(true);
   });
 
   it("shows one nav item per enabled module", async () => {
@@ -339,6 +340,16 @@ describe("AppShell (sidebar frame)", () => {
 
   describe("mobile", () => {
     beforeEach(() => setViewport(390));
+
+    it("opens the sidebar sheet from the bottom bar's Menu, which steps aside meanwhile (#318)", async () => {
+      await renderShell("/assets");
+
+      const bar = screen.getByRole("navigation", { name: "Shortcuts" });
+      await userEvent.click(within(bar).getByRole("button", { name: "Menu" }));
+
+      expect(await screen.findByRole("dialog", { name: "Navigation menu" })).toBeTruthy();
+      await waitFor(() => expect(screen.queryByRole("navigation", { name: "Shortcuts" })).toBeNull());
+    });
 
     it("keeps the nav behind the trigger until it is opened", async () => {
       await renderShell("/assets");

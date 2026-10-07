@@ -372,7 +372,7 @@ export function AssetsStub() {
         <Link
           to="/assets/new"
           aria-label={label("register-asset")}
-          className="fixed right-4 bottom-6 z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-lg transition active:scale-95 sm:hidden"
+          className="fixed right-4 bottom-[calc(var(--bottom-bar,0px)+1rem)] z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-lg transition active:scale-95 sm:hidden"
         >
           <Plus className="size-6" aria-hidden />
         </Link>

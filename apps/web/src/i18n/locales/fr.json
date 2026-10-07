@@ -64,6 +64,10 @@
       "daily": "Au quotidien",
       "company": "Entreprise"
     },
+    "bottomBar": {
+      "label": "Raccourcis",
+      "menu": "Menu"
+    },
     "branch": {
       "label": "Agence courante",
       "all": "Toutes mes agences",
