@@ -9,7 +9,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * (one approval); reset with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:money-page --role finance --lang en --reel
  */
-const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => {
+const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const summary = await apiGet("/v1/finance/summary");
   const body = summary.body as { waiting?: { count: number } | null; missingReceipt?: { count: number } };
   if (summary.status !== 200 || !body.waiting) throw new Error(`GET /v1/finance/summary → ${summary.status}, no waiting tile for this role`);
@@ -68,10 +68,17 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
   if (status !== "POSTED") throw new Error(`${entry.entryNumber} is ${status ?? after.status} after approval`);
   log(`api cross-check: ${entry.entryNumber} is now ${status}`);
 
-  await nav("/finance/approvals");
-  await page.waitForURL((url) => url.pathname === "/finance/entries" && url.searchParams.get("view") === "waiting");
+  // A full load of the old link, as a notification or bookmark would open it;
+  // `nav` waits for the URL it was given, which a redirect never reaches.
+  await page.goto(new URL("/finance/approvals", page.url()).href);
   await heading.waitFor();
+  await page.getByRole("button", { name: t("Retirer le filtre : En attente d’approbation", "Clear filter: Waiting approval") }).waitFor();
   await quiet();
+  const landed = new URL(page.url());
+  if (landed.pathname !== "/finance/entries" || landed.searchParams.get("view") !== "waiting") {
+    throw new Error(`/finance/approvals landed on ${landed.pathname}${landed.search}`);
+  }
+  log(`old link: /finance/approvals → ${landed.pathname}${landed.search}`);
   await shot("old-link", {
     caption: second === undefined
       ? "The old /finance/approvals link lands on the same waiting view"

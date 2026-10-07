@@ -69,8 +69,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
 
-  // The old queue link still lands on the Money page's waiting view (#314).
-  await nav("/finance/approvals");
+  await nav("/finance/entries?view=waiting");
   await page.getByRole("heading", { level: 1, name: t("Finances", "Money") }).waitFor();
   const row = itemWith(entry.entryNumber);
   await row.waitFor();
