@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 573396,
+    "ceiling": 574808,
     "raises": [
       {
         "date": "2026-10-06",
@@ -85,11 +85,17 @@
         "from": 571979,
         "to": 573396,
         "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574808,
+        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop efe23962)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21741,
+    "ceiling": 21816,
     "raises": [
       {
         "date": "2026-10-06",
@@ -108,11 +114,17 @@
         "from": 21571,
         "to": 21741,
         "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21741,
+        "to": 21816,
+        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop efe23962)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 573396,
+    "ceiling": 574808,
     "raises": [
       {
         "date": "2026-10-06",
@@ -197,6 +209,12 @@
         "from": 571979,
         "to": 573396,
         "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574808,
+        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop efe23962)"
       }
     ]
   }
