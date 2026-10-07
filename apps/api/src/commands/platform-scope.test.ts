@@ -21,7 +21,7 @@ registerPlatformCommand({
   name: "test-provision",
   version: 1,
   payloadSchema: z.strictObject({
-    workspaceId: z.uuid(),
+    newWorkspaceId: z.uuid(),
     branchId: z.uuid(),
     assetId: z.uuid(),
     slug: z.string().min(1),
@@ -29,8 +29,8 @@ registerPlatformCommand({
   resolveWorkspace: async (tx, _ctx, _envelope, payload) => {
     await tx
       .insert(workspaces)
-      .values({ id: payload.workspaceId, slug: payload.slug, name: payload.slug });
-    return payload.workspaceId;
+      .values({ id: payload.newWorkspaceId, slug: payload.slug, name: payload.slug });
+    return payload.newWorkspaceId;
   },
   execute: async (tx, ctx, envelope, payload, workspaceId) => {
     await tx
@@ -106,7 +106,7 @@ describe("platform command scope", () => {
         origin: "API",
       },
       payload: {
-        workspaceId,
+        newWorkspaceId: workspaceId,
         branchId: randomUUID(),
         assetId: randomUUID(),
         slug: overrides.slug ?? `ws-${workspaceId.slice(0, 8)}`,
@@ -172,7 +172,7 @@ describe("platform command scope", () => {
 
     expect(result.status).toBe(200);
     expect(result.body).toMatchObject({
-      recordId: body.payload.workspaceId,
+      recordId: body.payload.newWorkspaceId,
       idempotentReplay: false,
     });
 
@@ -183,7 +183,7 @@ describe("platform command scope", () => {
     expect(receipt).toMatchObject({
       scope: "PLATFORM",
       status: "EXECUTED",
-      workspaceId: body.payload.workspaceId,
+      workspaceId: body.payload.newWorkspaceId,
       initiatedByPrincipalId: operator.principalId,
       approvalOutcome: null,
       approvalRuleId: null,
@@ -197,7 +197,7 @@ describe("platform command scope", () => {
       .from(auditEvents)
       .where(eq(auditEvents.commandId, body.envelope.commandId));
     expect(event).toMatchObject({
-      workspaceId: body.payload.workspaceId,
+      workspaceId: body.payload.newWorkspaceId,
       actorPrincipalId: operator.principalId,
       eventType: "workspace.provisioned",
     });

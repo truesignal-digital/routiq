@@ -1,4 +1,5 @@
 import {
+  clientAuthorityKeyPaths,
   commandEnvelope,
   type CommandEnvelope,
   type CommandErrorCode,
@@ -105,7 +106,9 @@ export interface CommandExecuteResult {
  *   5. A decision command (`approve-*`, `reject-*`) declares `maker`, and gets
  *      a row in maker-checker.test.ts.
  * The dispatcher supplies auth, module check, idempotency, approval evaluation,
- * receipt, audit atomicity; execute() owns only references, invariants, writes.
+ * receipt, audit atomicity; execute() owns only references, invariants, writes,
+ * and at least one appendAuditEvent for its command id. A success without one
+ * is refused AUDIT_EVENT_MISSING and rolled back (#153), no-ops included.
  */
 export interface CommandDefinition<P> {
   scope?: "workspace";
@@ -324,6 +327,26 @@ export async function appendAuditEvent(
   await writeAuditEvent(tx, "WORKSPACE", ctx.workspaceId, ctx.principalId, envelope, event);
 }
 
+/**
+ * A command that succeeds without changing anything (the end state was already
+ * the one asked for) still ran, and every committed command leaves an audit
+ * event (#153). The event is filed against the command itself, so the record's
+ * own history gains no line for a change that did not happen.
+ */
+export async function appendNoChangeAuditEvent(
+  tx: Tx,
+  ctx: CommandContext,
+  envelope: CommandEnvelope,
+  afterState: Record<string, unknown>,
+): Promise<void> {
+  await appendAuditEvent(tx, ctx, envelope, {
+    eventType: "command.no_change",
+    entityType: "command",
+    entityId: envelope.commandId,
+    afterState,
+  });
+}
+
 /** Same append-only trail, for an actor who is not a member of the workspace it lands in. */
 export async function appendPlatformAuditEvent(
   tx: Tx,
@@ -382,6 +405,20 @@ export async function dispatchCommand(
   log?: CommandLog,
 ): Promise<{ status: number; body: CommandOutcome | ErrorBody }> {
   const started = performance.now();
+  /**
+   * Workspace, actor and branch scope come from `ctx` alone (#152). A request
+   * that tries to name them, at any depth of its envelope or payload, is
+   * refused here, before any schema runs: an open schema would strip the key
+   * and carry on, and the caller would never learn its field was ignored.
+   */
+  const smuggled = clientAuthorityKeyPaths(body);
+  if (smuggled.length > 0) {
+    return commandErrorResponse(
+      new CommandError(400, "VALIDATION_FAILED", {
+        issues: smuggled.map((path) => ({ code: "unrecognized_keys", path })),
+      }),
+    );
+  }
   const outer = commandRequest.safeParse(body);
   if (!outer.success) {
     return commandErrorResponse(
@@ -579,6 +616,7 @@ export async function dispatchCommand(
           parsedPayload.data,
           approval,
         );
+        await requireAuditEvent(tx, "WORKSPACE", ctx.workspaceId, outer.data.envelope.commandId);
         const outcome: CommandOutcome = {
           commandId: outer.data.envelope.commandId,
           recordId: result.recordId,
@@ -620,9 +658,20 @@ export async function dispatchCommand(
       throw error;
     }
   } catch (error) {
+    // A server bug, not a business rejection: log it and send it to Sentry.
+    const reportFailure = (failure: unknown) => {
+      log?.error({ err: failure, event: "command.failed" });
+      reportUnexpectedFailure(failure, {
+        commandId: outer.data.envelope.commandId,
+        workspaceId: isOperatorContext(ctx) ? "" : ctx.workspaceId,
+        commandType: outer.data.name,
+        origin: outer.data.envelope.origin,
+      });
+    };
     let commandError: CommandError;
     if (error instanceof CommandError) {
       commandError = error;
+      if (error.code === "AUDIT_EVENT_MISSING") reportFailure(error);
     } else {
       const violation = uniqueViolation(error);
       if (violation) {
@@ -648,13 +697,7 @@ export async function dispatchCommand(
                 },
               );
       } else {
-        log?.error({ err: error, event: "command.failed" });
-        reportUnexpectedFailure(error, {
-          commandId: outer.data.envelope.commandId,
-          workspaceId: isOperatorContext(ctx) ? "" : ctx.workspaceId,
-          commandType: outer.data.name,
-          origin: outer.data.envelope.origin,
-        });
+        reportFailure(error);
         commandError = new CommandError(500, "COMMAND_FAILED");
       }
     }
@@ -769,6 +812,7 @@ async function dispatchPlatform(
         parsedPayload.data,
         workspaceId,
       );
+      await requireAuditEvent(tx, "PLATFORM", workspaceId, request.envelope.commandId);
       const outcome: CommandOutcome = {
         commandId: request.envelope.commandId,
         recordId: result.recordId,
@@ -803,6 +847,34 @@ async function dispatchPlatform(
     }
     throw error;
   }
+}
+
+/**
+ * Receipt, business rows and audit event commit together (§5), and that must
+ * not depend on every handler remembering its `append*AuditEvent` call. Runs
+ * after `execute`, inside its transaction: a success that left no event for
+ * this command id, in this workspace and on this trail, throws, and the throw
+ * rolls back the receipt and everything `execute` wrote (#153). An event filed
+ * by another command, or on the other scope's trail, does not count.
+ */
+async function requireAuditEvent(
+  tx: Tx,
+  scope: "WORKSPACE" | "PLATFORM",
+  workspaceId: string,
+  commandId: string,
+): Promise<void> {
+  const [event] = await tx
+    .select({ id: auditEvents.id })
+    .from(auditEvents)
+    .where(
+      and(
+        eq(auditEvents.workspaceId, workspaceId),
+        eq(auditEvents.commandId, commandId),
+        eq(auditEvents.scope, scope),
+      ),
+    )
+    .limit(1);
+  if (event === undefined) throw new CommandError(500, "AUDIT_EVENT_MISSING");
 }
 
 function isPlatformDb(db: Db | PlatformDb): db is PlatformDb {

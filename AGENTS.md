@@ -34,7 +34,7 @@ pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test fil
 pnpm db:generate                  # drizzle-kit generate (from apps/api/src/db/schema.ts)
 pnpm db:migrate                   # drizzle-kit migrate
 docker compose up -d              # Postgres 17 on localhost:5435
-docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev)
+docker compose -p routiq-appliance --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev); its own volumes, not the dev database
 ```
 
 - Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
@@ -70,7 +70,7 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 
 Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/commands/contract-snapshots/`. `contract-snapshots.test.ts` fails when a version has no snapshot, when a snapshot has no handler, or when the current schema rejects a payload the stored one accepted (a removed field, a newly required field, a removed enum value, a type change, a tighter bound). Widening passes. After adding a command version or widening one, run `pnpm --filter @routiq/api contracts:snapshot` and commit the files it writes. Never write a snapshot by hand; the script refuses to rewrite a narrowed one.
 
-**Command envelope rules** (`packages/contracts/src/envelope.ts`): tenant, actor, and branch scope are NEVER accepted from the client — the server derives them from auth. Envelope carries `commandId`, `idempotencyKey` (workspace-scoped unique; exact retry returns original result, same key + different payload → 409), `origin`, optional `expectedVersion`, `sourceArtifactIds`.
+**Command envelope rules** (`packages/contracts/src/envelope.ts`): tenant, actor, and branch scope are NEVER accepted from the client — the server derives them from auth. The dispatcher refuses a request naming them anywhere in its body (`VALIDATION_FAILED`, `packages/contracts/src/client-scope.ts`), and an identity-shaped payload field that names a target (`branchId`, `principalId`, `branchScope`) needs an entry in `SCOPE_TARGETS` (`commands/registry.test.ts`) saying what it points at. Envelope carries `commandId`, `idempotencyKey` (workspace-scoped unique; exact retry returns original result, same key + different payload → 409), `origin`, optional `expectedVersion`, `sourceArtifactIds`.
 
 **Reads** are GET routes in `apps/api/src/reads/`, running inside `inWorkspace`. Every read must declare and check its gates itself: the module it belongs to, the roles allowed to see it, and the branch scope of the caller. Reads that skipped a gate caused #40, #58 and #59; a `defineRead` wrapper that makes the gates required is planned. List reads use `listQuery`/`listResponse` with keyset cursors from `reads/cursor.ts` (ADR-0003). Business days come from `reads/business-date.ts` (workspace time zone).
 
@@ -146,6 +146,7 @@ Each row is a mistake agents made at least twice here, paired with what now fail
 - Merge rule for humans and agents: merge only with green `ci` and evidence/ratchet checks when present, resolved blocking findings, and `review:approve` backed by a different-model report for the current base/head SHAs. Every acceptance line must PASS. `review:changes` blocks merge. Any new commit invalidates approval; remove stale approval before requesting another review. Re-fetch the live PR before merging and bind the merge to its reviewed head SHA. CodeRabbit summaries, skipped reviews and a green status alone are not independent acceptance review.
 - `.github/branch-protection.json` records the required GitHub settings for `main` and `develop`: a PR, current green `ci` and resolved conversations, including for administrators. GitHub requires no separate approving review or latest-push approval; independent review remains mandatory through the report/label rule above. Read back the live API settings before claiming protection. GitHub does not enforce model identity, report SHA or `review:approve`; the human or authorized agent merger checks them. See `docs/agents/review-workflow.md`.
 - Commit messages: short imperative subject; body only when the why isn't obvious.
+- Write PR bodies with the `pr` skill (`.agents/skills/pr/SKILL.md`).
 - Issues live in GitHub (`docs/agents/issue-tracker.md`). `.scratch/` is read-only history; add nothing there.
 
 ## Agent skills

@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
-import type { HistoryFieldChange, HistoryItem } from "@routiq/contracts";
+import {
+  HISTORY_CODE_SETS,
+  HISTORY_ENTITY_TYPES,
+  HISTORY_FIELD_SHAPES,
+  type HistoryCodeSet,
+  type HistoryDiffChange,
+  type HistoryFieldShape,
+  type HistoryItem,
+} from "@routiq/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import {
@@ -111,7 +119,7 @@ afterAll(async () => {
 });
 
 function stubDiff(
-  changes: HistoryFieldChange[],
+  changes: HistoryDiffChange[],
   { currency = "XAF" }: { currency?: string } = {},
 ) {
   mocks.useHistoryEvent.mockReturnValue({
@@ -409,13 +417,78 @@ describe("record history diff", () => {
     // No chips on this row: the same label would otherwise appear twice.
     stubHistory([event({ changedFields: [] })]);
     stubDiff([
-      { field: "status", kind: "VALUE", before: "OPEN", after: "CLOSED" },
+      { field: "description", kind: "VALUE", before: "Vidange", after: "Vidange et filtres" },
     ]);
     await expandRow();
 
-    const row = screen.getByText("status").closest("div");
-    expect(row?.textContent).toContain("OPEN");
-    expect(row?.textContent).toContain("CLOSED");
+    const row = screen.getByText("description").closest("div");
+    expect(row?.textContent).toContain("Vidange");
+    expect(row?.textContent).toContain("Vidange et filtres");
+  });
+
+  it("words a status with the badge's label, never the code (#110)", async () => {
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([
+      { field: "status", kind: "CODE", codeSet: "workOrderStatus", before: "APPROVED", after: "COMPLETED" },
+      { field: "costOutcome", kind: "CODE", codeSet: "costOutcome", before: null, after: "INVOICE_PENDING" },
+    ]);
+    await expandRow();
+
+    const status = screen.getByText("status").closest("div");
+    expect(status?.textContent).toContain(i18n.t("maintenance.workOrders.status.APPROVED"));
+    expect(status?.textContent).toContain(i18n.t("maintenance.workOrders.status.COMPLETED"));
+    expect(screen.getByText("Invoice not received yet")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/APPROVED|COMPLETED|INVOICE_PENDING/);
+  });
+
+  it("shows a category and a branch by name and the lines as a count and total (#119)", async () => {
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([
+      { field: "categoryId", kind: "NAME", before: null, after: { fr: "Carburant", en: "Fuel" } },
+      { field: "branchId", kind: "NAME", before: null, after: { fr: "Douala", en: "Douala" } },
+      { field: "postings", kind: "LINES", before: { count: 1, totalMinor: 30_000 }, after: { count: 2, totalMinor: 45_000 } },
+    ]);
+    await expandRow();
+
+    expect(screen.getByText("Fuel")).toBeTruthy();
+    expect(screen.getByText("Douala")).toBeTruthy();
+    expect(screen.getByText("1 line, FCFA 30,000")).toBeTruthy();
+    expect(screen.getByText("2 lines, FCFA 45,000")).toBeTruthy();
+  });
+
+  it("says a change it cannot show is not available, rather than hiding it or inventing a value", async () => {
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([
+      { field: "crew", kind: "UNAVAILABLE" },
+      { field: "description", kind: "VALUE", before: null, after: "Vidange" },
+    ]);
+    await expandRow();
+
+    const crew = screen.getByText("crew").closest("div");
+    expect(crew?.textContent).toContain("Not available");
+    expect(crew?.textContent).not.toContain("→");
+    expect(document.querySelectorAll("dd")).toHaveLength(2);
+  });
+
+  it("words the placeholder in French too", async () => {
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([{ field: "categoryId", kind: "UNAVAILABLE" }]);
+    await expandRow();
+    try {
+      await act(() => i18n.changeLanguage("fr-CM"));
+      expect(await screen.findByText("Non disponible")).toBeTruthy();
+    } finally {
+      await act(() => i18n.changeLanguage("en"));
+    }
+  });
+
+  it("counts the lines without a total when the reader may not see money", async () => {
+    stubDiff([
+      { field: "postings", kind: "LINES", before: null, after: { count: 3, totalMinor: null } },
+    ]);
+    await expandRow();
+
+    expect(screen.getByText("3 lines")).toBeTruthy();
   });
 
   it("labels a known field and falls back to the raw code for the rest", async () => {
@@ -484,5 +557,79 @@ describe("record history diff", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * The guard for #110 and #119: every field the history can show, in every
+ * shape the read sends, must reach the screen as words. A uuid, a bare enum
+ * code or a JSON dump anywhere in the change list fails it.
+ */
+describe("record history sheet shows no raw values", () => {
+  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const ENUM_CODE = /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b|^[A-Z]{4,}$/;
+  const JSONISH = /^[[{]|[{}"]/;
+  /** An i18n key printed because its label is missing. */
+  const MISSING_KEY = /^[a-z][\w-]*(?:\.[\w-]+)+$/;
+
+  function rawValues(): string[] {
+    return [...document.querySelectorAll("dd span")]
+      .map((span) => span.textContent ?? "")
+      .filter(
+        (text) =>
+          UUID.test(text) || ENUM_CODE.test(text) || JSONISH.test(text) || MISSING_KEY.test(text),
+      );
+  }
+
+  const name = { fr: "Douala", en: "Douala" };
+
+  function sample(field: string, shape: HistoryFieldShape, entityType: string): HistoryDiffChange[] {
+    if (shape === "HIDDEN") return [];
+    if (shape === "VALUE") return [{ field, kind: "VALUE", before: null, after: "Texte saisi" }];
+    if (shape === "MONEY") return [{ field, kind: "MONEY", before: null, after: 45_000 }];
+    if (shape === "COUNT") return [{ field, kind: "COUNT", before: 1, after: 2 }];
+    if (shape === "LINES") return [{ field, kind: "LINES", before: null, after: { count: 2, totalMinor: 45_000 } }];
+    if (shape === "CREW" || shape === "SEGMENT_ASSETS") return [{ field, kind: "NAMES", before: [], after: [name] }];
+    if (shape === "INLINE_NAMES") return [{ field, kind: "NAMES", before: null, after: [name] }];
+    if ("name" in shape) return [{ field, kind: "NAME", before: null, after: name }];
+    const codeSet: HistoryCodeSet = "code" in shape ? shape.code : shape.codes;
+    const codes = [...HISTORY_CODE_SETS[codeSet]];
+    if ("codes" in shape) return [{ field, kind: "CODES", codeSet, before: [], after: codes }];
+    // Every code of the set, one row each, so no label goes unchecked.
+    return codes.map((code) => ({ field: `${entityType}.${field}.${code}`, kind: "CODE", codeSet, before: null, after: code }));
+  }
+
+  it.each(HISTORY_ENTITY_TYPES.filter((entityType) => Object.keys(HISTORY_FIELD_SHAPES[entityType]).length > 0))(
+    "words every %s field",
+    async (entityType) => {
+      const shapes: Record<string, HistoryFieldShape> = HISTORY_FIELD_SHAPES[entityType];
+      const changes = Object.entries(shapes).flatMap(([field, shape]) => sample(field, shape, entityType));
+      stubHistory([event({ changedFields: [] })]);
+      stubDiff(changes);
+      renderSheet();
+      await userEvent.click(screen.getByRole("button", { name: "History" }));
+      await userEvent.click(screen.getByRole("button", { name: "Show changes" }));
+
+      expect(document.querySelectorAll("dd").length).toBe(changes.length);
+      expect(rawValues()).toEqual([]);
+    },
+  );
+
+  it("catches the raw values the sheet used to print", async () => {
+    // What develop rendered for #110 and #119, fed straight in: proves the
+    // detector above is not blind.
+    stubHistory([event({ changedFields: [] })]);
+    stubDiff([
+      { field: "status", kind: "VALUE", before: null, after: "INVOICE_PENDING" },
+      { field: "direction", kind: "VALUE", before: null, after: "EXPENSE" },
+      { field: "categoryId", kind: "VALUE", before: null, after: "99a0d46a-708a-4c8a-b41c-c5248619cfc0" },
+      { field: "postings", kind: "VALUE", before: null, after: '[{"lineNo":1}]' },
+      { field: "kind", kind: "CODE", codeSet: "costOutcome", before: null, after: "NOT_A_CODE" },
+    ]);
+    renderSheet();
+    await userEvent.click(screen.getByRole("button", { name: "History" }));
+    await userEvent.click(screen.getByRole("button", { name: "Show changes" }));
+
+    expect(rawValues()).toHaveLength(5);
   });
 });
