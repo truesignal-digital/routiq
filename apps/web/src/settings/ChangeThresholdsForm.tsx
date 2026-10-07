@@ -9,7 +9,7 @@ import { useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { CommandForm } from "@/components/command-form.js";
+import { CommandForm, type FormIssue } from "@/components/command-form.js";
 import { MoneyInput } from "@/components/money-input.js";
 import {
   Form,
@@ -102,6 +102,13 @@ export function ChangeThresholdsForm({
       ceiling: moneyAmountParts(financeCeilingMinor).amount,
     },
   });
+  const { errors, isSubmitted } = form.formState;
+  const issues: FormIssue[] = isSubmitted
+    ? (["recording", "ceiling"] as const).flatMap((name) => {
+        const message = errors[name]?.message;
+        return message === undefined ? [] : [{ name, message, focus: () => form.setFocus(name) }];
+      })
+    : [];
   const values = useWatch({ control: form.control }) as BandValues;
   const bands = parsedBands(values);
   const unchanged =
@@ -142,6 +149,7 @@ export function ChangeThresholdsForm({
         description={t("settings.approvals.form.description")}
         command="update-approval-threshold"
         error={error}
+        issues={issues}
         conflict={{
           title: t("settings.approvals.form.conflictTitle"),
           body: t("settings.approvals.form.conflictBody"),
