@@ -16,6 +16,13 @@ export interface MetricTile {
   tone?: MetricTone;
   /** One short line under the value — a unit, a qualifier, a period. */
   hint?: string;
+  /**
+   * Makes the tile a filter for the list under the strip: the caller sets the
+   * table filter (and the URL) it stands for. Without it the tile only reads.
+   */
+  onSelect?: () => void;
+  /** The list is currently filtered to this tile. */
+  selected?: boolean;
 }
 
 /**
@@ -83,14 +90,41 @@ function Tile({
   // A dash under a stale hint would read as if the hint still applied.
   const showHint = state === "ready" && tile.hint !== undefined;
 
+  const selectable = tile.onSelect !== undefined;
+
   return (
-    <Card size="sm" data-slot="metric-tile" data-tone={tone} className="h-full">
+    <Card
+      size="sm"
+      data-slot="metric-tile"
+      data-tone={tone}
+      data-selected={tile.selected === true ? "" : undefined}
+      className={cn(
+        "h-full",
+        selectable &&
+          "relative transition-colors hover:bg-muted/50 has-focus-visible:ring-2 has-focus-visible:ring-ring",
+        tile.selected === true && "bg-muted ring-2 ring-foreground/40",
+      )}
+    >
       <CardContent className="flex flex-col gap-1.5">
         <dt className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {tone === "warning" && (
             <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden />
           )}
-          {tile.label}
+          {selectable ? (
+            // The label is the control; its ::after stretches over the whole
+            // card, so the tile is one 44 px+ target while the dl stays a dl.
+            <button
+              type="button"
+              data-slot="metric-filter"
+              aria-pressed={tile.selected === true}
+              onClick={tile.onSelect}
+              className="text-start uppercase outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+            >
+              {tile.label}
+            </button>
+          ) : (
+            tile.label
+          )}
         </dt>
         <dd className="m-0">
           {state === "pending" ? (
