@@ -34,6 +34,8 @@ export interface SlotState {
   storage: { accessKey: string; secretKey: string };
   commit: string;
   startedAt: string;
+  /** "built": the web app was built and is served by vite preview; "dev": the Vite dev server. */
+  web?: "dev" | "built";
 }
 
 const statePath = (slot: number) => path.join(slotDir(slot), "state.json");
@@ -112,7 +114,7 @@ function seed(state: SlotState, reset: boolean): void {
   if (result.code !== 0) throw new Error(`seed-demo failed (exit ${result.code}). Log: ${state.logs.seed}\n${tail(state.logs.seed)}`);
 }
 
-export async function up(slot: number, reseed: boolean): Promise<void> {
+export async function up(slot: number, reseed: boolean, built = false): Promise<void> {
   const existing = readState(slot);
   if (existing !== undefined && isAlive(existing.pids.api) && isAlive(existing.pids.web)) {
     if (reseed) {
@@ -163,13 +165,14 @@ export async function up(slot: number, reseed: boolean): Promise<void> {
     storage: { accessKey: `verify-${slot}`, secretKey: randomBytes(18).toString("hex") },
     commit: run("git", ["rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT }).stdout.trim(),
     startedAt: new Date().toISOString(),
+    web: built ? "built" : "dev",
   };
 
   const storageImage = storageImageFrom(readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8"));
   writeFileSync(state.composeFile, renderCompose(project, ports, storageImage, state.storage));
   writeFileSync(
     state.viteConfig,
-    renderViteConfig(path.join(WEB_DIR, "vite.config.ts"), WEB_DIR, path.join(dir, "vite-cache"), ports),
+    renderViteConfig(path.join(WEB_DIR, "vite.config.ts"), WEB_DIR, path.join(dir, "vite-cache"), ports, path.join(dir, "dist")),
   );
   const save = () => writeFileSync(statePath(slot), `${JSON.stringify(state, null, 2)}\n`);
   save();
@@ -194,7 +197,13 @@ export async function up(slot: number, reseed: boolean): Promise<void> {
   seed(state, false);
   say(`demo workspace seeded: ${DEMO_WORKSPACE}. Log: ${state.logs.seed}`);
 
-  state.pids.web = startDetached(bin(WEB_DIR, "vite"), ["--config", state.viteConfig], {
+  if (built) {
+    say("building the web app for this slot (vite build)…");
+    const build = run(bin(WEB_DIR, "vite"), ["build", "--config", state.viteConfig], { cwd: WEB_DIR });
+    writeFileSync(state.logs.web, `${build.stdout}\n${build.stderr}`);
+    if (build.code !== 0) throw new Error(`vite build failed. Log: ${state.logs.web}\n${tail(state.logs.web)}`);
+  }
+  state.pids.web = startDetached(bin(WEB_DIR, "vite"), built ? ["preview", "--config", state.viteConfig] : ["--config", state.viteConfig], {
     cwd: WEB_DIR,
     env: { ...process.env, BROWSER: "none" },
     logFile: state.logs.web,
@@ -205,7 +214,7 @@ export async function up(slot: number, reseed: boolean): Promise<void> {
     90_000,
     () => (isAlive(state.pids.web) ? undefined : `web exited during start. Log: ${state.logs.web}\n${tail(state.logs.web)}`),
   );
-  say(`web up, proxying /v1 to the slot API: ${state.urls.web}  pid ${state.pids.web}`);
+  say(`web up${built ? " (built, vite preview)" : ""}, proxying /v1 to the slot API: ${state.urls.web}  pid ${state.pids.web}`);
   say(`logs: ${runDir}`);
   say(`next: pnpm verify doctor --slot ${slot}`);
 }

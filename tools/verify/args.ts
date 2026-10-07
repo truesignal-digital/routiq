@@ -23,7 +23,7 @@ export interface DriveOptions {
 export type Command =
   | { name: "help" }
   | { name: "status" }
-  | { name: "up"; slot: number; reseed: boolean }
+  | { name: "up"; slot: number; reseed: boolean; built: boolean }
   | { name: "down"; slot: number }
   | { name: "doctor"; slot: number }
   | { name: "logs"; slot: number; service: "api" | "web" | "seed" | "all" }
@@ -34,7 +34,7 @@ export type Command =
   | { name: "reel"; after: string | undefined; before: string | undefined; title: string | undefined };
 
 const BOOLEAN_FLAGS: Record<string, readonly string[]> = {
-  up: ["reseed"],
+  up: ["reseed", "built"],
   login: ["video", "reel", "strict", "headed"],
   drive: ["video", "reel", "strict", "headed"],
 };
@@ -150,7 +150,7 @@ export function parseArgs(argv: readonly string[], env: Readonly<Record<string, 
       return { name };
     case "up":
       noPositionals();
-      return { name, slot: slot(), reseed: parsed.flags.has("reseed") };
+      return { name, slot: slot(), reseed: parsed.flags.has("reseed"), built: parsed.flags.has("built") };
     case "down":
     case "doctor":
       noPositionals();
