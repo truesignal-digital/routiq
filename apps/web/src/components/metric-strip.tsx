@@ -86,7 +86,7 @@ function Tile({
   return (
     <Card size="sm" data-slot="metric-tile" data-tone={tone} className="h-full">
       <CardContent className="flex flex-col gap-1.5">
-        <dt className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           {tone === "warning" && (
             <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden />
           )}
@@ -99,7 +99,7 @@ function Tile({
             <span
               data-slot="metric-value"
               className={cn(
-                "font-mono text-2xl leading-none tabular-nums",
+                "text-2xl leading-none tabular-nums",
                 state === "error" || tile.value === null
                   ? "text-muted-foreground"
                   : TONE_VALUE[tone],

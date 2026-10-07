@@ -167,7 +167,7 @@ function KpiCard({
           <KpiPlaceholder isPending={isPending} />
         ) : (
           <>
-            <CardTitle data-slot="kpi-value" className="font-mono text-2xl tabular-nums">
+            <CardTitle data-slot="kpi-value" className="text-2xl tabular-nums">
               {children.value}
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">{children.description}</p>
@@ -209,7 +209,7 @@ function KpiPlaceholder({ isPending }: { isPending: boolean }): ReactNode {
     return (
       <div
         data-slot="kpi-value"
-        className="font-mono text-2xl text-muted-foreground tabular-nums"
+        className="text-2xl text-muted-foreground tabular-nums"
       >
         —
       </div>

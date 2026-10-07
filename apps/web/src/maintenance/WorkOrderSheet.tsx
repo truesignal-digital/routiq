@@ -126,7 +126,7 @@ export function CostLines({
         >
           <span className="flex min-w-0 flex-col">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs">{line.entryNumber}</span>
+              <span className="tabular-nums text-xs">{line.entryNumber}</span>
               <EntryStatusBadge status={line.entryStatus} />
             </span>
             <span className="text-xs text-muted-foreground">
@@ -313,7 +313,7 @@ export function WorkOrderSheet({
           ],
           [
             t("maintenance.workOrders.columns.asset"),
-            <span key="asset" className="font-mono">
+            <span key="asset" className="tabular-nums">
               {header.asset.assetCode}
             </span>,
           ],

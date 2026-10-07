@@ -201,6 +201,38 @@ const SMALL_CONTROL =
 const CATALOG = /^apps\/web\/src\/i18n\/(locales|presets)\/[^/]+\.json$/;
 
 /**
+ * Where colours are defined (apps/web/DESIGN.md): the tokens in styles.css and
+ * theme.ts's mirror of `--background` for <meta name="theme-color">, which
+ * cannot read a CSS variable.
+ */
+const TOKEN_FILES = ["apps/web/src/styles.css", "apps/web/src/lib/theme.ts"];
+/** The logo's geometry: mask cut-outs in pure black and white, and the wordmark's capitals. */
+const BRAND = "apps/web/src/components/brand/";
+
+const isWebStyled = (path: string) =>
+  (isWebProduction(path) || /^apps\/web\/src\/.+\.css$/.test(path)) && !path.startsWith(BRAND);
+
+/**
+ * A hex colour where code writes one (after a quote, a Tailwind `[`, or a CSS
+ * `prop:`), so an issue reference like "(#422)" is never a colour; and the CSS
+ * colour functions.
+ */
+const COLOUR_LITERAL =
+  /(?:["'`[]|:\s*)#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![\w-])|\b(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch)\(/;
+/** shadcn's chart selects recharts' own default strokes (`[stroke='#ccc']`) to restyle them with tokens. */
+const RECHARTS_ATTRIBUTE_SELECTOR = /\[(?:stroke|fill)='[^']*'\]/g;
+
+function colourLiterals(files: readonly SourceFile[]): Violation[] {
+  return files
+    .filter((file) => isWebStyled(file.path) && !TOKEN_FILES.includes(file.path))
+    .flatMap((file) =>
+      matchLines({ ...file, content: file.content.replace(RECHARTS_ATTRIBUTE_SELECTOR, "") }, COLOUR_LITERAL).map(
+        (violation) => ({ ...violation, text: (file.content.split("\n")[violation.line - 1] ?? "").trim() }),
+      ),
+    );
+}
+
+/**
  * Each catalog key with its line, for the two-space JSON the catalogs are
  * written in: a key's path is the keys opened above it at shallower depths.
  */
@@ -479,6 +511,24 @@ export const RULES: readonly Rule[] = [
         )
         .map((file) => ({ path: file.path, line: 1, text: "no sibling test runs the form harness" }));
     },
+  },
+  {
+    id: "DS-1",
+    name: "figures-tabular-sans",
+    fix: "Figures (money, counts, record numbers, codes) use `tabular-nums` in the sans face, never `font-mono` or a monospace family (apps/web/DESIGN.md).",
+    check: linesMatching(/\bfont-mono\b|--font-mono\b|\bmonospace\b/, isWebStyled),
+  },
+  {
+    id: "DS-2",
+    name: "colours-from-tokens",
+    fix: "Use a semantic token class (bg-primary, text-muted-foreground, fill-chart-1) or var(--token); colours are defined only in apps/web/src/styles.css (apps/web/DESIGN.md).",
+    check: colourLiterals,
+  },
+  {
+    id: "DS-4",
+    name: "labels-sentence-case",
+    fix: "Write labels, eyebrows and badges in sentence case in the catalog and render them as written; no `uppercase` class or text-transform (apps/web/DESIGN.md). A code the user types in capitals is capitalised in the value, not by CSS.",
+    check: linesMatching(/\buppercase\b|\bsmall-caps\b/, isWebStyled),
   },
   {
     id: "J1",

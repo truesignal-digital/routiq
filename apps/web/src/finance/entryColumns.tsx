@@ -39,7 +39,7 @@ function buildColumns(
       enableSorting: true,
       meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
       cell: ({ row }) => (
-        <span className="font-mono whitespace-nowrap">{row.original.entryNumber}</span>
+        <span className="tabular-nums whitespace-nowrap">{row.original.entryNumber}</span>
       ),
     },
     status: {
@@ -91,7 +91,7 @@ function buildColumns(
       cell: ({ row }) => (
         <span
           className={cn(
-            "text-right font-mono font-semibold whitespace-nowrap",
+            "text-right tabular-nums font-semibold whitespace-nowrap",
             foldedAmountClass(row.original),
           )}
         >
