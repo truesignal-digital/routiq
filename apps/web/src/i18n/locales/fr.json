@@ -387,16 +387,16 @@
         "reversed": "Écriture contre-passée",
         "locked": "Période verrouillée",
         "reopened": "Période rouverte",
-        "posted": "Transaction enregistrée et comptabilisée",
-        "submitted": "Transaction envoyée pour approbation",
-        "recorded": "Transaction enregistrée",
+        "posted": "Écriture enregistrée et comptabilisée",
+        "submitted": "Écriture envoyée pour approbation",
+        "recorded": "Écriture enregistrée",
         "updated": "Écriture modifiée, toujours en attente d'approbation",
         "updatedPosted": "Écriture modifiée et comptabilisée"
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
         "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-        "LATE_POSTING": "Cette transaction a été comptabilisée dans une période précédente.",
+        "LATE_POSTING": "Cette écriture a été comptabilisée dans une période précédente.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
       "errors": {
@@ -417,7 +417,7 @@
       "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
     },
     "record": {
-      "title": "Enregistrer une transaction",
+      "title": "Saisir une écriture",
       "expenseLabel": "Dépense",
       "revenueLabel": "Recette",
       "categoryLabel": "Catégorie",
@@ -437,7 +437,7 @@
       "counterpartyLabel": "Tiers (optionnel)",
       "counterpartyPlaceholder": "Fournisseur, client…",
       "descriptionLabel": "Description (optionnel)",
-      "descriptionPlaceholder": "Détails de la transaction…",
+      "descriptionPlaceholder": "Détails de l'écriture…",
       "paymentRefLabel": "Référence de paiement (optionnel)",
       "paymentRefPlaceholder": "N° de reçu, N° de virement…",
       "assetLabel": "Actif (optionnel)",
@@ -457,7 +457,6 @@
       "ownScope": "Seules les écritures que vous avez saisies apparaissent ici.",
       "ownEmpty": "Vous n'avez saisi aucune écriture. Celles que vous saisirez apparaîtront ici.",
       "loadMore": "Charger plus",
-      "recordAction": "Saisir une écriture",
       "status": {
         "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
