@@ -25,6 +25,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: null,
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
       {
@@ -45,6 +47,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: "2026-07-25T10:30:00Z",
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
       {
@@ -65,6 +69,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: null,
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
       {
@@ -85,6 +91,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: "2026-07-23T14:00:00Z",
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
     ];
@@ -121,6 +129,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-26T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
         {
@@ -141,6 +151,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-25T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
       ],
@@ -167,6 +179,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-24T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
         {
@@ -187,6 +201,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-23T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
       ],

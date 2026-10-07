@@ -193,6 +193,8 @@ function fullHaulage(): ActivityDetail {
         categoryLabelEn: "Freight",
         amountMinor: 900_000,
         status: "POSTED",
+        reversesEntryId: null,
+        cancelledBy: null,
       },
       {
         entryId: "00000000-0000-4000-8000-000000000082",
@@ -203,6 +205,8 @@ function fullHaulage(): ActivityDetail {
         categoryLabelEn: "Fuel",
         amountMinor: 400_000,
         status: "POSTED",
+        reversesEntryId: null,
+        cancelledBy: null,
       },
     ],
   };
