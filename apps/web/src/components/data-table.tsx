@@ -566,7 +566,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-slot="data-table" className="flex flex-col gap-3">
       {toolbar}
 
       {isDesktop ? (

@@ -993,6 +993,16 @@
           "OTHER": "Other"
         }
       }
+    },
+    "subtitle": "Every activity your fleet runs, from start to close.",
+    "metrics": {
+      "thisWeek": "This week",
+      "thisWeekHint": "Started since Monday",
+      "incomplete": "Incomplete data",
+      "incompleteHint": "Closed with exceptions",
+      "weekKm": "Km this week",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "From the legs recorded"
     }
   },
   "maintenance": {
@@ -1152,6 +1162,18 @@
         "workOrderCancelled": "Work order cancelled",
         "assetReleased": "Asset returned to service"
       }
+    },
+    "subtitle": "Problems reported and work orders, from report to repair.",
+    "metrics": {
+      "newProblems": "New problems",
+      "newProblemsHint": "{count, plural, =0 {None safety critical} one {# safety critical} other {# safety critical}}",
+      "grounded": "Grounded",
+      "groundedHint": "Must not be driven",
+      "inProgress": "Work orders in progress",
+      "inProgressHint": "Approved, not yet finished",
+      "repairDays": "Average days to repair",
+      "repairDaysValue": "{days, number} d",
+      "repairDaysHint": "{count, plural, =0 {No repair in the last {window} days} one {# repair in the last {window} days} other {# repairs in the last {window} days}}"
     }
   },
   "persons": {

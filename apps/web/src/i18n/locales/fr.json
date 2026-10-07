@@ -993,6 +993,16 @@
           "OTHER": "Autre"
         }
       }
+    },
+    "subtitle": "Chaque activité de votre flotte, du départ à la clôture.",
+    "metrics": {
+      "thisWeek": "Cette semaine",
+      "thisWeekHint": "Démarrage depuis lundi",
+      "incomplete": "Données incomplètes",
+      "incompleteHint": "Clôture avec exceptions",
+      "weekKm": "Km cette semaine",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "Selon les étapes saisies"
     }
   },
   "maintenance": {
@@ -1152,6 +1162,18 @@
         "workOrderCancelled": "Ordre de travail annulé",
         "assetReleased": "Actif remis en service"
       }
+    },
+    "subtitle": "Problèmes signalés et ordres de travail, de la déclaration à la réparation.",
+    "metrics": {
+      "newProblems": "Nouveaux problèmes",
+      "newProblemsHint": "{count, plural, =0 {Aucun critique pour la sécurité} one {# critique pour la sécurité} other {# critiques pour la sécurité}}",
+      "grounded": "Immobilisés",
+      "groundedHint": "Ne doivent pas rouler",
+      "inProgress": "Ordres de travail en cours",
+      "inProgressHint": "Approuvés, pas encore terminés",
+      "repairDays": "Durée moyenne de réparation",
+      "repairDaysValue": "{days, number} j",
+      "repairDaysHint": "{count, plural, =0 {Aucune réparation sur {window} jours} one {# réparation sur {window} jours} other {# réparations sur {window} jours}}"
     }
   },
   "persons": {

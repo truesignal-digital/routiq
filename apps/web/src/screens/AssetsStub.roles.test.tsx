@@ -6,10 +6,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { AssetsStub } from "./AssetsStub.js";
+import { applyNavigate, useTestSearch } from "../test-router.js";
 
 // A real Link needs a router around it; the screen renders bare here.
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => applyNavigate,
+  useSearch: () => useTestSearch(),
   Link: ({
     to,
     params,
