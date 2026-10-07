@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 562687,
+    "ceiling": 563492,
     "raises": [
       {
         "date": "2026-10-06",
@@ -49,6 +49,12 @@
         "from": 561863,
         "to": 562687,
         "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +824 B gzip measured on top of develop after #92; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562687,
+        "to": 563492,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip)"
       }
     ]
   },
@@ -64,7 +70,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 562687,
+    "ceiling": 563492,
     "raises": [
       {
         "date": "2026-10-06",
@@ -113,6 +119,12 @@
         "from": 561863,
         "to": 562687,
         "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +824 B gzip measured on top of develop after #92; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562687,
+        "to": 563492,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip)"
       }
     ]
   }
