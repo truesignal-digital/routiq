@@ -171,13 +171,15 @@ export function CardHead({
   title,
   aside,
   description,
+  className,
 }: {
   title: ReactNode;
   aside?: ReactNode;
   description?: ReactNode;
+  className?: string | undefined;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+    <div className={cn("flex items-center justify-between gap-3 border-b px-4 py-3", className)}>
       <div className="min-w-0">
         <h2 className="flex items-center gap-2 text-sm font-semibold">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}

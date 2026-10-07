@@ -235,17 +235,17 @@ it("reports a problem with the category's code and its safety default", async ()
   });
 });
 
-it("changes the custodian through the member picker, and can clear it", async () => {
+it("changes the assigned driver through the member picker, and can clear it", async () => {
   const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "More actions" }));
-  await user.click(within(await screen.findByRole("dialog", { name: "All actions" })).getByRole("button", { name: /Change custodian/ }));
-  const form = await screen.findByRole("dialog", { name: "Change custodian" });
+  await user.click(within(await screen.findByRole("dialog", { name: "All actions" })).getByRole("button", { name: /Change assigned driver/ }));
+  const form = await screen.findByRole("dialog", { name: "Change assigned driver" });
   expect(within(form).getByText("Current: Sali.")).toBeTruthy();
   expect(within(form).queryByLabelText("Assign to branch")).toBeNull();
-  await openSelect(user, within(form).getByLabelText("New custodian"));
-  await user.click(await screen.findByRole("option", { name: "Nobody (clear the custodian)" }));
-  await user.click(within(form).getByRole("button", { name: "Change custodian" }));
+  await openSelect(user, within(form).getByLabelText("New assigned driver"));
+  await user.click(await screen.findByRole("option", { name: "Nobody (clear the assigned driver)" }));
+  await user.click(within(form).getByRole("button", { name: "Change assigned driver" }));
   await waitFor(() => expect(recorded.commands).toHaveLength(1));
   expect(recorded.commands[0]?.name).toBe("assign-asset");
   expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, custodianMembershipId: null });

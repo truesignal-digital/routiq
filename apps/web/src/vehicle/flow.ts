@@ -447,6 +447,13 @@ export type Situation =
       days: number;
       report: string;
       phase: GroundedPhase;
+      /**
+       * Every work order on the grounding problem is done and nothing else
+       * stands in the release's way: the server's ASSET_AWAITING_RELEASE for
+       * this grounding, which it withholds while another safety-critical
+       * problem is OPEN (SAFETY_ISSUE_OPEN). Still grounded until released.
+       */
+      repaired: boolean;
       issueId: string;
       workOrderId: string | undefined;
     };
@@ -528,12 +535,18 @@ export function situationOf(
   }
   const facts = groundingFacts(asset);
   if (facts !== undefined) {
+    const phase = groundedPhase(facts, attention, signedOff);
     return {
       kind: "grounded",
       since: facts.grounded.since,
       days: daysSince(facts.grounded.since, now),
       report: facts.grounded.issue.description,
-      phase: groundedPhase(facts, attention, signedOff),
+      phase,
+      repaired:
+        (phase === "awaitingRelease" || phase === "awaitingReleaseSignedOff") &&
+        attention.some(
+          (item) => item.code === "ASSET_AWAITING_RELEASE" && item.subject.id === facts.grounded.intervalId,
+        ),
       issueId: facts.grounded.issue.id,
       workOrderId: (facts.workOrder ?? facts.refused)?.id,
     };

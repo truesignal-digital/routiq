@@ -370,6 +370,44 @@ describe("the status sentence", () => {
     expect(situation.kind === "grounded" && situation.phase).toBe("completionSentBack");
   });
 
+  // #92: amber "repair done, waiting for release" only when the server says the
+  // release is next for this grounding (ASSET_AWAITING_RELEASE).
+  describe("repaired, waiting for release", () => {
+    const ready = attention("ASSET_AWAITING_RELEASE", { severity: "CRITICAL", partOfGrounding: true });
+    const repaired = (workOrders: Parameters<typeof grounded>[0], items = [ready], issue = {}) => {
+      const situation = situationOf(asset({ availability: grounded(workOrders, issue) }), items, now);
+      return situation.kind === "grounded" && situation.repaired;
+    };
+
+    it("is repaired once every work order on the problem is completed and the release is next", () => {
+      expect(repaired([groundingWorkOrder("COMPLETED")])).toBe(true);
+      expect(repaired([groundingWorkOrder("COMPLETED"), groundingWorkOrder("CANCELLED")])).toBe(true);
+    });
+
+    it("stays grounded while a repair on the problem is still open", () => {
+      for (const status of ["SUBMITTED", "APPROVED", "COMPLETION_SUBMITTED"] as const) {
+        expect(repaired([groundingWorkOrder(status), groundingWorkOrder("COMPLETED")]), status).toBe(false);
+      }
+    });
+
+    it("stays grounded while another safety-critical problem is open: the server withholds the release item", () => {
+      const other = attention("ISSUE_UNPLANNED", { severity: "CRITICAL", params: { safetyCritical: true } });
+      expect(repaired([groundingWorkOrder("COMPLETED")], [other])).toBe(false);
+      expect(repaired([groundingWorkOrder("COMPLETED")], [])).toBe(false);
+    });
+
+    it("is not a repair when the problem was closed without one", () => {
+      expect(repaired([], [ready], { status: "DISMISSED" })).toBe(false);
+    });
+
+    it("ignores a release item for another grounding", () => {
+      const stale = attention("ASSET_AWAITING_RELEASE", {
+        subject: { entityType: "asset_availability_interval", id: OTHER_ID, number: null, rowVersion: 1 },
+      });
+      expect(repaired([groundingWorkOrder("COMPLETED")], [stale])).toBe(false);
+    });
+  });
+
   it("closes the problem without a repair as the override case", () => {
     const vehicle = asset({ availability: grounded([], { status: "DISMISSED" }) });
     const situation = situationOf(vehicle, [], now);

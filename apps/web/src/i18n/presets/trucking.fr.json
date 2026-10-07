@@ -213,7 +213,7 @@
     },
     "actions": {
       "change-custodian": {
-        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque trajet."
+        "description": "La personne qui conduit habituellement le véhicule. Chaque trajet peut avoir un autre chauffeur."
       }
     }
   },
