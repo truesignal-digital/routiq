@@ -570,6 +570,7 @@
     },
     "periods": {
       "title": "Period management",
+      "lead": "Each month takes entries until finance locks it. Late corrections go into the open month.",
       "columns": {
         "period": "Period",
         "status": "Status",
@@ -602,7 +603,8 @@
     }
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "howCalculated": "How this is calculated"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
@@ -2293,7 +2295,6 @@
       "revenue": "Posted revenue",
       "revenueHint": "Posted is not cash received",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "howCalculated": "How this is calculated",
       "byCategory": "Spending by category",
       "byCategoryHint": "Posted, {period}",
       "lastSixMonths": "Last 6 months",

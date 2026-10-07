@@ -570,6 +570,7 @@
     },
     "periods": {
       "title": "Gestion des périodes",
+      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -602,7 +603,8 @@
     }
   },
   "common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "howCalculated": "Mode de calcul"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
@@ -2293,7 +2295,6 @@
       "revenue": "Recettes comptabilisées",
       "revenueHint": "Comptabilisé n'est pas encaissé",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "howCalculated": "Mode de calcul",
       "byCategory": "Dépenses par catégorie",
       "byCategoryHint": "Comptabilisé, {period}",
       "lastSixMonths": "6 derniers mois",
