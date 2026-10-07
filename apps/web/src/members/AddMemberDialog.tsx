@@ -8,13 +8,11 @@ import { z } from "zod";
 import type { AddMemberPayload, MemberBranchScope } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FormPanel,
+  FormPanelCancel,
+  FormPanelFooter,
+  FormPanelHeader,
+} from "@/components/command-form.js";
 import {
   Form,
   FormControl,
@@ -173,18 +171,18 @@ export function AddMemberDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{label("add-member")}</DialogTitle>
-          <DialogDescription>{t("users.add.description")}</DialogDescription>
-        </DialogHeader>
+    <FormPanel open={open} onClose={() => onOpenChange(false)}>
+        <FormPanelHeader
+          title={label("add-member")}
+          description={t("users.add.description")}
+        />
 
         <Form {...form}>
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-1 flex-col"
             onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
           >
+            <div className="flex flex-col gap-4 p-4">
             {errorCode && <ErrorBanner code={errorCode} />}
 
             <FormField
@@ -293,26 +291,24 @@ export function AddMemberDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+            </div>
+
+            <FormPanelFooter>
+              <FormPanelCancel onDismiss={() => onOpenChange(false)}>
                 {t("users.form.cancel")}
-              </Button>
+              </FormPanelCancel>
               <Button
                 type="submit"
+                className="flex-1 sm:flex-none"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
                   ? label("add-member", "submitting")
                   : label("add-member", "submit")}
               </Button>
-            </DialogFooter>
+            </FormPanelFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

@@ -78,7 +78,8 @@ function FinanceEntriesContent() {
 
   // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
   // does the filtering, so the table never narrows rows itself.
-  const search = useSearch({ from: "/app/finance/entries" });
+  // Not strict: /finance/record renders this list behind its record panel.
+  const search = useSearch({ strict: false });
   const searchFilters = useMemo(() => ({
     periodCode: search.periodCode ?? "",
     status: search.status ?? "",

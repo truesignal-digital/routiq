@@ -49,6 +49,19 @@ vi.mock("../documents/useCategories.js", () => ({
   useCategories: mocks.useCategories,
 }));
 
+// The trip's expense is RecordEntryForm: its branch list and approval hint.
+vi.mock("../assets/reference.js", () => ({
+  useAssetRegistrationReference: () => ({
+    data: { assetClasses: [], branches: [{ code: "DLA", name: "Douala" }] },
+    isPending: false,
+    isError: false,
+  }),
+}));
+
+vi.mock("../approval-rules/useApprovalChain.js", () => ({
+  useApprovalChain: () => ({ data: undefined }),
+}));
+
 const ACTIVITY_ID = "00000000-0000-4000-8000-000000000001";
 const OPEN_SEGMENT_ID = "00000000-0000-4000-8000-000000000002";
 const CLOSED_SEGMENT_ID = "00000000-0000-4000-8000-000000000003";
@@ -816,7 +829,7 @@ describe("mid-trip capture", () => {
 
     await openSelect(user, screen.getByLabelText("Category"));
     await user.keyboard("{ArrowDown}{Enter}");
-    await user.type(screen.getByLabelText("Amount"), "40000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "40000");
     await waitFor(() => expect(submit().disabled).toBe(false));
     await user.click(submit());
 
@@ -844,7 +857,7 @@ describe("mid-trip capture", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Expense recorded",
+        title: "Transaction recorded",
       }),
     );
   });
@@ -856,13 +869,13 @@ describe("mid-trip capture", () => {
     await user.click(screen.getByRole("button", { name: "Record expense" }));
     await openSelect(user, screen.getByLabelText("Category"));
     await user.keyboard("{ArrowDown}{Enter}");
-    await user.type(screen.getByLabelText("Amount"), "900000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "900000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Expense sent for approval",
+        title: "Transaction sent for approval",
       }),
     );
   });
@@ -877,7 +890,7 @@ describe("mid-trip capture", () => {
     await user.click(screen.getByRole("button", { name: "Record expense" }));
     await openSelect(user, screen.getByLabelText("Category"));
     await user.keyboard("{ArrowDown}{Enter}");
-    await user.type(screen.getByLabelText("Amount"), "40000");
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "40000");
     await user.click(screen.getByRole("button", { name: "Record the expense" }));
 
     await waitFor(() =>

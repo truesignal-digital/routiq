@@ -9,7 +9,7 @@ The entries list shows every financial entry the role may read, with filters kep
 - `fin-detail` opens the full-page detail ("Détail de l'écriture" / "Entry detail") with posting lines.
 - `fin-reverse` reverses a POSTED entry with a reason and lands on the reversal entry.
 - `fin-chain` shows "Extourne l'écriture #…" / "Reverses entry #…" and "Extournée par l'écriture #…" / "Reversed by entry #…".
-- `fin-record` records a new entry ("Saisir une écriture" / "Record an entry", `/finance/record`).
+- `fin-record` records a new entry ("Saisir une écriture" / "Record an entry", `/finance/record`: Entries with the record panel open over it, #296). Flow: `flow:panel-forms --role director` shows every create form in the panel and the discard question.
 
 ## How to get to it (user POV)
 

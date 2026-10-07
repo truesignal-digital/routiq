@@ -20,7 +20,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
     page.getByRole("row").or(page.locator("div.rounded-xl.border")).filter({ hasText: text }).last();
 
   await nav("/finance/record");
-  await page.getByRole("heading", { level: 1 }).waitFor();
+  // The record panel opens over Entries (#296).
+  await page.getByRole("dialog", { name: t("Enregistrer une transaction", "Record a transaction") }).waitFor();
   await page.getByRole("combobox", { name: t("Catégorie", "Category") }).click();
   await page.getByRole("option", { name: t("Chargement", "Loading") }).click();
   await page.getByLabel(t("Montant (FCFA)", "Amount (FCFA)")).fill("150000");

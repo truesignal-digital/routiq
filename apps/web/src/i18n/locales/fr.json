@@ -1616,7 +1616,11 @@
     "conflictTitle": "Modifié ailleurs",
     "conflictBody": "Quelqu'un d'autre a modifié cet enregistrement. Actualisez, vérifiez, puis réappliquez votre action.",
     "approvalTitle": "Approbation requise",
-    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié."
+    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié.",
+    "discardTitle": "Abandonner ce formulaire ?",
+    "discardBody": "Ce que vous avez saisi sera perdu.",
+    "keepEditing": "Continuer la saisie",
+    "discard": "Abandonner"
   },
   "commands": {
     "register-asset": {
