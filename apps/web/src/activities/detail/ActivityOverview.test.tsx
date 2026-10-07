@@ -86,6 +86,8 @@ describe("activity overview band", () => {
               // XAF has exponent 0 — 900 000 francs is 900 000 minor units.
               amountMinor: 900_000,
               status: "POSTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
             {
               entryId: "00000000-0000-4000-8000-000000000002",
@@ -96,6 +98,8 @@ describe("activity overview band", () => {
               categoryLabelEn: "Fuel",
               amountMinor: 400_000,
               status: "POSTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
             {
               entryId: "00000000-0000-4000-8000-000000000003",
@@ -106,6 +110,8 @@ describe("activity overview band", () => {
               categoryLabelEn: "Tolls",
               amountMinor: 250_000,
               status: "SUBMITTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
           ],
         })}
@@ -133,6 +139,8 @@ describe("activity overview band", () => {
               categoryLabelEn: "Repairs",
               amountMinor: 120_000,
               status: "POSTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
           ],
         })}

@@ -156,11 +156,12 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
-  // `view=waiting` is the "Waiting your approval" view (#314). `branch=all`
-  // arrives from an overflow line that has already named the work outside the
-  // shell's agency, so the queue opens widened.
+  // `view=waiting` is the "Waiting your approval" view (#314), beside the
+  // read's own events / books views (#427). `branch=all` arrives from an
+  // overflow line that has already named the work outside the shell's agency,
+  // so the queue opens widened.
   validateSearch: financialEntryFilters.omit({ branchId: true }).extend({
-    view: z.literal("waiting").optional().catch(undefined),
+    view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
     branch: z.literal("all").optional().catch(undefined),
   }),
   component: FinanceEntriesScreen,

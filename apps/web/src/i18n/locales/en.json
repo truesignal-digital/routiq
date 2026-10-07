@@ -327,7 +327,9 @@
       "number": "Please enter a number.",
       "min": "Must be at least {min}.",
       "max": "Must not exceed {max}.",
-      "invalid": "Invalid value."
+      "invalid": "Invalid value.",
+      "tooShort": "At least {min} characters.",
+      "tooLong": "At most {max} characters."
     }
   },
   "fileUpload": {
@@ -387,16 +389,16 @@
         "reversed": "Entry reversed",
         "locked": "Period locked",
         "reopened": "Period reopened",
-        "posted": "Transaction recorded and posted",
-        "submitted": "Transaction sent for approval",
-        "recorded": "Transaction recorded",
+        "posted": "Entry recorded and posted",
+        "submitted": "Entry sent for approval",
+        "recorded": "Entry recorded",
         "updated": "Entry updated, still awaiting approval",
         "updatedPosted": "Entry updated and posted"
       },
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
         "EVIDENCE_MISSING": "Missing evidence: this category requires supporting documentation or a photo.",
-        "LATE_POSTING": "This transaction was posted to a previous accounting period.",
+        "LATE_POSTING": "This entry was posted to a previous accounting period.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
       },
       "errors": {
@@ -437,7 +439,7 @@
       }
     },
     "record": {
-      "title": "Record a transaction",
+      "title": "Record an entry",
       "expenseLabel": "Expense",
       "revenueLabel": "Revenue",
       "categoryLabel": "Category",
@@ -457,7 +459,7 @@
       "counterpartyLabel": "Counterparty (optional)",
       "counterpartyPlaceholder": "Vendor, customer…",
       "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Transaction details…",
+      "descriptionPlaceholder": "Entry details…",
       "paymentRefLabel": "Payment reference (optional)",
       "paymentRefPlaceholder": "Receipt #, Transfer #…",
       "assetLabel": "Asset (optional)",
@@ -541,6 +543,21 @@
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
         "assetOption": "{code} — {name}"
+      },
+      "events": {
+        "cancelledIn": "Cancelled in {month}",
+        "cancellationBadge": "Cancellation",
+        "cancellationOf": "Cancellation of entry {number} ({month})",
+        "cancellationOfEntry": "Cancellation of entry {number}",
+        "showCancellation": "Show cancellation",
+        "hideCancellation": "Hide cancellation",
+        "cancellationEntry": "Cancellation entry {number}",
+        "cancelledByOn": "Cancelled by {name} on {date}",
+        "cancelledOn": "Cancelled on {date}",
+        "reason": "Reason: {reason}",
+        "countsZero": "Counts as 0 in the totals",
+        "countsHere": "Still counts in {month}: the cancellation subtracts in {cancelMonth}",
+        "booksView": "Show every line in the books"
       }
     },
     "approvals": {
@@ -1636,7 +1653,9 @@
     "conflictTitle": "Modified elsewhere",
     "conflictBody": "Someone else changed this record. Refresh, review, then reapply your action.",
     "approvalTitle": "Approval required",
-    "approvalBody": "This action needs an approval before it takes effect. Nothing was changed."
+    "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
+    "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
+    "issue": "{field}: {message}"
   },
   "commands": {
     "register-asset": {
@@ -2281,7 +2300,7 @@
       "revenueLegend": "Revenue",
       "monthBar": "{month}: expenses {expenses}, revenue {revenue}",
       "entries": "Entries",
-      "entriesHint": "Nothing is edited: a correction is a reversal, and both stay listed.",
+      "entriesHint": "Nothing is edited: a cancellation in the same month folds under its entry; one from a later month is listed in that month.",
       "filterLabel": "Show entries",
       "filters": {
         "posted": "Posted",
