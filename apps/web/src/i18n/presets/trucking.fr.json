@@ -118,7 +118,8 @@
         "rowAttribute": "Imputer la ligne {position} à ce trajet",
         "attributeHint": "Décochez si la somme revient à l'engin et non au trajet : une réparation reste hors de la fiche."
       }
-    }
+    },
+    "subtitle": "Chaque trajet de vos camions, du départ à la clôture."
   },
   "maintenance": {
     "workOrders": {

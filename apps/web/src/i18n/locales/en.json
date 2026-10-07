@@ -1202,7 +1202,8 @@
       "MECHANIC": "Mechanic",
       "CLERK": "Clerk",
       "OTHER": "Other"
-    }
+    },
+    "lead": "The people your fleet works with: drivers, mechanics and crew. A person can drive without signing in."
   },
   "users": {
     "title": "Users",
@@ -1269,7 +1270,8 @@
         "reactivated": "User reactivated: {name}"
       },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
-    }
+    },
+    "lead": "Who can sign in, with which role and in which branches."
   },
   "branches": {
     "title": "Branches",
@@ -1317,7 +1319,8 @@
       "info": {
         "switched": "You are viewing: {branch}"
       }
-    }
+    },
+    "lead": "Branches group vehicles, people and money by site. Each user sees the branches they are given."
   },
   "provenance": {
     "template": "{code} v{version}",

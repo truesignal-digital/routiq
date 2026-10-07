@@ -1202,7 +1202,8 @@
       "MECHANIC": "Mécanicien",
       "CLERK": "Agent",
       "OTHER": "Autre"
-    }
+    },
+    "lead": "Les personnes avec qui votre flotte travaille : chauffeurs, mécaniciens, équipage. Une personne peut conduire sans se connecter."
   },
   "users": {
     "title": "Utilisateurs",
@@ -1269,7 +1270,8 @@
         "reactivated": "Utilisateur réactivé : {name}"
       },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
-    }
+    },
+    "lead": "Qui peut se connecter, avec quel rôle et dans quelles agences."
   },
   "branches": {
     "title": "Agences",
@@ -1317,7 +1319,8 @@
       "info": {
         "switched": "Vous consultez : {branch}"
       }
-    }
+    },
+    "lead": "Les agences regroupent les véhicules, le personnel et l'argent par site. Chaque utilisateur voit les agences qui lui sont confiées."
   },
   "provenance": {
     "template": "{code} v{version}",
