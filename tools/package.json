@@ -10,7 +10,8 @@
     "tighten": "tsx guards/tighten.ts",
     "verify": "tsx verify/cli.ts",
     "metrics": "tsx metrics/cli.ts",
-    "observe": "tsx observe/cli.ts"
+    "observe": "tsx observe/cli.ts",
+    "perf": "tsx perf/cli.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
