@@ -21,19 +21,25 @@ if (!sessionStore.getActive()) {
   window.addEventListener("load", () => setTimeout(preloadAfterSignIn, 0), { once: true });
 }
 
-// After the first signed-in screen has rendered and its data has arrived, so
-// other screens' code never competes with it for a slow connection.
+// Once the first signed-in screen has rendered and nothing has been fetched
+// for a second (the member is reading it), so other screens' code and data
+// never compete with it for a slow connection (#497).
+const QUIET_BEFORE_PRELOAD_MS = 1_000;
 const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
   if (toLocation.pathname === "/login") return;
   stopWatching();
+  let quietSince = performance.now();
   const startWhenQuiet = () => {
-    if (queryClient.isFetching() > 0) window.setTimeout(startWhenQuiet, 250);
+    if (queryClient.isFetching() > 0) quietSince = performance.now();
+    if (performance.now() - quietSince < QUIET_BEFORE_PRELOAD_MS) {
+      window.setTimeout(startWhenQuiet, 250);
+      return;
+    }
     // The rows this member can tap first, data included; then the rest's code.
-    else
-      void import("./shell/preload-sidebar.js")
-        .then(({ preloadSidebarScreens }) => preloadSidebarScreens(router, queryClient))
-        .catch(() => undefined)
-        .then(preloadScreens);
+    void import("./shell/preload-sidebar.js")
+      .then(({ preloadSidebarScreens }) => preloadSidebarScreens(router, queryClient))
+      .catch(() => undefined)
+      .then(preloadScreens);
   };
   window.setTimeout(startWhenQuiet, 250);
 });
