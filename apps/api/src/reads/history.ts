@@ -40,6 +40,7 @@ import {
   workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
+import { presentChanges } from "./history-present.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { canReadEntry } from "./money-scope.js";
 import {
@@ -572,8 +573,23 @@ export function registerHistoryReadRoutes(
               ),
             )
             .limit(1);
+          if (!row) return { row };
 
-          return { row };
+          // A vehicle's purchase price is a ledger figure (#121): the same rule
+          // as the vehicle's own detail and its History tab. A work order's
+          // amounts follow the work-order reads (#390). Posting-line totals are
+          // money too, under the same rule.
+          const hidesMoney =
+            (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
+            (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
+          const changes = await presentChanges(
+            tx,
+            auth.workspaceId,
+            entityType,
+            diffStates(entityType, row.beforeState, row.afterState),
+            { showMoney: !hidesMoney },
+          );
+          return { row, changes };
         });
 
         if ("error" in result) {
@@ -589,18 +605,10 @@ export function registerHistoryReadRoutes(
         }
 
         const { beforeState, afterState, workspaceCurrency } = result.row;
-        // A vehicle's purchase price is a ledger figure (#121): the same rule
-        // as the vehicle's own detail and its History tab. A work order's
-        // amounts follow the work-order reads (#390).
-        const hidesMoney =
-          (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
-          (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
         return historyEventDiff.parse({
           eventId: result.row.eventId,
           currency: diffCurrency(beforeState, afterState, workspaceCurrency),
-          changes: diffStates(entityType, beforeState, afterState).filter(
-            (change) => !hidesMoney || change.kind !== "MONEY",
-          ),
+          changes: result.changes,
         });
       } catch (error) {
         req.log.error({ err: error }, "record history diff read failed");

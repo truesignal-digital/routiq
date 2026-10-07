@@ -20,6 +20,8 @@ import {
   index,
   integer,
   jsonb,
+  doublePrecision,
+  pgSchema,
   pgTable,
   primaryKey,
   text,
@@ -228,6 +230,8 @@ export const commands = pgTable(
     }),
     approvalRuleId: uuid("approval_rule_id"),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Server time from receiving the call to finalising its receipt, before commit. Null on receipts written before 0040. */
+    durationMs: integer("duration_ms"),
   },
   // Partial: only success consumes the idempotency key. REJECTED/FAILED rows
   // are a retry/debugging trail and may repeat per key.
@@ -285,6 +289,9 @@ export const auditEvents = pgTable(
       t.occurredAt.desc().nullsFirst(),
       t.id,
     ),
+    // The dispatcher's "every command writes its own audit event" check (#153)
+    // looks events up by command on every write; without this it scans the table.
+    index("audit_events_ws_command_idx").on(t.workspaceId, t.commandId),
   ],
 );
 
@@ -1209,5 +1216,47 @@ export const approvalRuleAcknowledgements = pgTable(
       t.membershipId,
       t.changeId,
     ),
+  ],
+);
+
+/**
+ * Field telemetry from the web app (ADR-0011). Its own schema because it is
+ * measurement, not business state: no command writes it, no read serves it to
+ * a tenant, and the runtime role may only INSERT (plus DELETE of expired rows,
+ * which needs SELECT on `received_at` alone). Operators read it with the owner
+ * role through `pnpm observe`.
+ */
+export const telemetry = pgSchema("telemetry");
+
+export const telemetryEvents = telemetry.table(
+  "events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    /** From the session that sent it; null before sign-in. Goes with its workspace. */
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    /** The sender's role, never who they are. */
+    role: text("role"),
+    sessionId: uuid("session_id").notNull(),
+    kind: text("kind", { enum: ["session", "error", "vital", "journey"] }).notNull(),
+    /** Journey or vital name, or the error's source. */
+    name: text("name"),
+    /** Journey duration (ms) or vital value. */
+    value: doublePrecision("value"),
+    serverMs: doublePrecision("server_ms"),
+    outcome: text("outcome"),
+    route: text("route").notNull(),
+    appVersion: text("app_version").notNull(),
+    message: text("message"),
+    stack: text("stack"),
+    /** Groups the same error across sessions: hash of the message shape and first app frame. */
+    fingerprint: text("fingerprint"),
+    device: jsonb("device"),
+    detail: jsonb("detail"),
+  },
+  (t) => [
+    index("telemetry_events_received_idx").on(t.receivedAt),
+    index("telemetry_events_kind_name_idx").on(t.kind, t.name, t.receivedAt),
   ],
 );

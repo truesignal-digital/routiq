@@ -22,6 +22,7 @@ _Avoid_: current location, GPS location
 
 **Assigned Driver** (fr: **Chauffeur attitré**):
 The Person who regularly drives a vehicle; optional, must have the Chauffeur Fonction, needs no App Access. Replaces Custodian (ADR-0010). Accountability for a vehicle comes from its Home Branch's Administrateur, not from this field.
+The UI says Assigned driver / Chauffeur attitré on every screen; until the ADR-0010 migration the code still calls it custodian (`custodian_membership_id`, `CUSTODIAN_INELIGIBLE`, the `change-custodian` action) (#91).
 _Avoid_: custodian, owner, responsable
 
 **Person** (fr: **Personne**):

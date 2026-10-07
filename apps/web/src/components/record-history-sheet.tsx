@@ -1,7 +1,9 @@
 import type {
+  HistoryCodeSet,
+  HistoryDiffChange,
   HistoryEntityType,
-  HistoryFieldChange,
   HistoryItem,
+  HistoryName,
 } from "@routiq/contracts";
 import { ChevronDown, History } from "lucide-react";
 import { useState } from "react";
@@ -18,6 +20,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { HISTORY_CODE_LABEL_KEY } from "@/history/code-labels.js";
 import { useHistory, useHistoryEvent } from "@/history/useHistory.js";
 import {
   formatDate,
@@ -479,17 +482,25 @@ function HistoryDiff({
           <dt className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
             {t(`history.field.${change.field}`, { defaultValue: change.field })}
           </dt>
-          <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
-            <span className="text-muted-foreground">
-              {formatChangeValue(change, "before", currency, locale, t)}
-            </span>
-            <span aria-hidden className="text-muted-foreground/60">
-              →
-            </span>
-            <span className="font-medium">
-              {formatChangeValue(change, "after", currency, locale, t)}
-            </span>
-          </dd>
+          {/* The field changed, but its value cannot be shown: say so rather
+              than hide the change or invent a before/after. */}
+          {change.kind === "UNAVAILABLE" ? (
+            <dd className="text-xs italic text-muted-foreground">
+              {t("history.diff.unavailable")}
+            </dd>
+          ) : (
+            <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
+              <span className="text-muted-foreground">
+                {formatChangeValue(change, "before", currency, locale, t)}
+              </span>
+              <span aria-hidden className="text-muted-foreground/60">
+                →
+              </span>
+              <span className="font-medium">
+                {formatChangeValue(change, "after", currency, locale, t)}
+              </span>
+            </dd>
+          )}
         </div>
       ))}
     </dl>
@@ -501,34 +512,77 @@ const ISO_DATE_TIME =
   /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
 
 /**
- * Money goes through the money formatter — minor units, never divided. Anything
- * else renders as it was recorded, because guessing at an unknown field's
- * meaning is how a timeline starts lying.
+ * One side of a change, in words. The server has already resolved ids to
+ * names and tagged every code with its set (#110, #119), so each kind has one
+ * way to read: codes through the labels the rest of the app uses for them,
+ * money through the money formatter (minor units, never divided), and free
+ * values as they were recorded — guessing at an unknown field's meaning is how
+ * a timeline starts lying.
  */
 function formatChangeValue(
-  change: HistoryFieldChange,
+  change: Exclude<HistoryDiffChange, { kind: "UNAVAILABLE" }>,
   side: "before" | "after",
   currency: string,
   locale: string,
   t: TFunction,
 ): string {
-  const value = change[side];
+  const none = t("history.diff.none");
+  const list = (items: string[]) =>
+    items.length === 0
+      ? none
+      : new Intl.ListFormat(locale, { type: "unit", style: "short" }).format(items);
+  const name = ({ fr, en }: HistoryName) => (locale.startsWith("en") ? en : fr);
+  const codeLabel = (codeSet: HistoryCodeSet, code: string) =>
+    t(HISTORY_CODE_LABEL_KEY[codeSet](code));
 
-  if (value === null || value === undefined) return t("history.diff.none");
-  if (change.kind === "MONEY" && typeof value === "number") {
-    return formatMoney(value, { currency, locale });
+  switch (change.kind) {
+    case "MONEY": {
+      const value = change[side];
+      return value === null ? none : formatMoney(value, { currency, locale });
+    }
+    case "CODE": {
+      const value = change[side];
+      return value === null ? none : codeLabel(change.codeSet, value);
+    }
+    case "CODES": {
+      const value = change[side];
+      return value === null
+        ? none
+        : list(value.map((code) => codeLabel(change.codeSet, code)));
+    }
+    case "NAME": {
+      const value = change[side];
+      return value === null ? none : name(value);
+    }
+    case "NAMES": {
+      const value = change[side];
+      return value === null ? none : list(value.map(name));
+    }
+    case "COUNT": {
+      const value = change[side];
+      return value === null ? none : String(value);
+    }
+    case "LINES": {
+      const value = change[side];
+      if (value === null) return none;
+      return value.totalMinor === null
+        ? t("history.diff.linesCount", { count: value.count })
+        : t("history.diff.lines", {
+            count: value.count,
+            total: formatMoney(value.totalMinor, { currency, locale }),
+          });
+    }
+    case "VALUE": {
+      const value = change[side];
+      if (value === null || value === "") return none;
+      if (typeof value === "boolean") {
+        return t(value ? "history.diff.yes" : "history.diff.no");
+      }
+      if (typeof value === "number") return String(value);
+      if (!ISO_DATE_TIME.test(value)) return value;
+      return value.length === 10
+        ? formatDate(value, locale)
+        : formatDateTime(value, locale);
+    }
   }
-  if (typeof value === "boolean") {
-    return t(value ? "history.diff.yes" : "history.diff.no");
-  }
-  if (typeof value === "string") {
-    if (value === "") return t("history.diff.none");
-    if (change.field === "reasonCode") return t(`reasonCodes.${value}`, { defaultValue: value });
-    if (!ISO_DATE_TIME.test(value)) return value;
-    return value.length === 10
-      ? formatDate(value, locale)
-      : formatDateTime(value, locale);
-  }
-  if (typeof value === "number") return String(value);
-  return JSON.stringify(value);
 }

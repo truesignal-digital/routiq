@@ -8,7 +8,7 @@ import type { DriveContext, DriveScript } from "../browser.js";
  * fails with the route and the measured width when the page is wider than the
  * screen or a control sticks out past its right edge. It also opens an open
  * and a closed trip, whose header carries the most actions, and fails when the
- * trip number breaks across lines (#395). It also opens VH003's Now, History
+ * trip number breaks across lines (#395). It also opens VH003's Overview, History
  * (trips) and Money tabs and fails when any record number on a page, such as
  * the trip in "Leg recorded on trip DLA-2026-00003", wraps at a hyphen (#430).
  * Run: pnpm verify drive flow:phone-overflow
@@ -156,7 +156,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
           ];
           failures.push(`${where}: ${reasons.join("; ")}`);
           log(`OVERFLOW ${where}: ${reasons.join("; ")}`);
-          await shot(`overflow-${account.username}-${lang}-${route}`);
+          await shot(`overflow-${account.username}-${lang}-${route}`, { caption: `${route} as ${account.username} (${lang}) at phone width: nothing scrolls sideways` });
         } else {
           log(`ok ${where}: ${scrollWidth} px`);
         }

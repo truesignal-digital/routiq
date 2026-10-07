@@ -22,23 +22,23 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   const dialog = page.getByRole("dialog", { name: cancel });
   await dialog.getByRole("radio", { name: t("Mauvais détails, à ressaisir", "Wrong details, to record again") }).click();
   await page.waitForTimeout(300);
-  await shot("cancel-dialog");
+  await shot("cancel-dialog", { caption: "Cancel entry asks why, from a short list, before anything changes" });
   await dialog.getByRole("button", { name: cancel, exact: true }).click();
 
   const recordAgain = dialog.getByRole("button", { name: t("Enregistrer à nouveau", "Record again"), exact: true });
   await recordAgain.waitFor({ timeout: 15_000 });
   await quiet();
-  await shot("record-again-offered");
+  await shot("record-again-offered", { caption: "Wrong details offers to record the entry again" });
   await recordAgain.click();
 
   const form = page.getByRole("dialog", { name: t("Enregistrer une dépense", "Record expense") });
   await form.waitFor();
   await page.waitForTimeout(300);
-  await shot("record-again-form");
+  await shot("record-again-form", { caption: "The form opens pre-filled from the cancelled entry" });
   await form.getByRole("button", { name: t("Enregistrer la dépense", "Record the expense"), exact: true }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/finance/entries/") && !url.pathname.endsWith(entry.id), { timeout: 15_000 });
   await quiet();
-  await shot("new-entry");
+  await shot("new-entry", { caption: "The corrected entry is a new recording; the original reads Reversed with its reason" });
 
   const original = await apiGet(`/v1/finance/entries/${entry.id}`);
   const body = original.body as {

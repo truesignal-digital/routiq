@@ -11,12 +11,12 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 /**
- * 0040 (#426) on a database whose reversals were written by reverse-entry.v1:
+ * 0042 (#426) on a database whose reversals were written by reverse-entry.v1:
  * each becomes an OTHER cancellation carrying the free text its audit event
  * kept, and the reason is then as immutable as the rest of the row.
  */
-describe("0040 cancellation reasons on reversals that predate them", () => {
-  const databaseName = `pre0040_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+describe("0042 cancellation reasons on reversals that predate them", () => {
+  const databaseName = `pre0042_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   let adminPool: pg.Pool;
   let pool: pg.Pool;
   let truncatedFolder: string;
@@ -40,13 +40,13 @@ describe("0040 cancellation reasons on reversals that predate them", () => {
     pool = new pg.Pool({ connectionString: url.toString() });
     pool.on("error", () => {});
 
-    truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0040-"));
+    truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0042-"));
     await cp(MIGRATIONS, truncatedFolder, { recursive: true });
     const journalPath = join(truncatedFolder, "meta", "_journal.json");
     const journal = JSON.parse(await readFile(journalPath, "utf8")) as {
       entries: Array<{ idx: number }>;
     };
-    journal.entries = journal.entries.filter((entry) => entry.idx <= 39);
+    journal.entries = journal.entries.filter((entry) => entry.idx <= 41);
     await writeFile(journalPath, JSON.stringify(journal));
     await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
 
@@ -61,7 +61,7 @@ describe("0040 cancellation reasons on reversals that predate them", () => {
 
     await pool.query(`
       BEGIN;
-      INSERT INTO workspaces (id, slug, name) VALUES ('${ws}', 'pre-0040-${ws.slice(0, 8)}', 'Transports Pré-0040');
+      INSERT INTO workspaces (id, slug, name) VALUES ('${ws}', 'pre-0042-${ws.slice(0, 8)}', 'Transports Pré-0042');
       INSERT INTO branches (id, workspace_id, code, name) VALUES ('${branch}', '${ws}', 'DLA', 'Douala');
       INSERT INTO principals (id, principal_type, display_name) VALUES ('${principal}', 'HUMAN', 'Nadège');
       INSERT INTO memberships (id, workspace_id, principal_id, role, all_branches) VALUES ('${randomUUID()}', '${ws}', '${principal}', 'FINANCE', true);

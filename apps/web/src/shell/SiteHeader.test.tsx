@@ -55,7 +55,15 @@ vi.mock("@/components/ui/sidebar", () => ({
   ),
 }));
 
+let ambientBranch: BranchContextValue | undefined;
+
+vi.mock("./branch-context.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./branch-context.js")>();
+  return { ...actual, useCurrentBranch: () => ambientBranch ?? actual.useCurrentBranch() };
+});
+
 import { RecordCrumbProvider, useRecordCrumb } from "./record-crumb.js";
+import type { BranchContextValue } from "./branch-context.js";
 import { SiteHeader } from "./SiteHeader.js";
 
 const TRIP = "/activities/00000000-0000-4000-8000-000000000020";
@@ -80,6 +88,7 @@ function crumbs(): Array<[string, string | null]> {
 
 beforeEach(() => {
   pathname = "/";
+  ambientBranch = undefined;
 });
 
 afterEach(cleanup);
@@ -245,5 +254,50 @@ describe("SiteHeader breadcrumb", () => {
 
     // The header is wayfinding only; screens still own the page <h1>.
     expect(screen.queryByRole("heading")).toBeNull();
+  });
+});
+
+describe("SiteHeader with a branch in force (#57)", () => {
+  const douala = { id: "00000000-0000-4000-8000-00000000b001", code: "DLA", name: "Douala" };
+
+  function header() {
+    const element = document.querySelector("header");
+    if (element === null) throw new Error("no header");
+    return element;
+  }
+
+  /** A `bg-<token>/<alpha>` class sets a see-through background colour. */
+  const translucentBackground = /^bg-[a-z-]+\/\d+$/;
+
+  it("stays opaque, with the tint layered over the page background", () => {
+    ambientBranch = {
+      currentBranchId: douala.id,
+      currentBranch: douala,
+      options: [douala],
+      status: "ready",
+      locked: false,
+      announcement: "",
+      setCurrentBranchId: () => {},
+      retry: () => {},
+    };
+    render(<SiteHeader />);
+
+    const classes = header().className.split(/\s+/);
+    expect(header().getAttribute("data-branch-scoped")).toBe("true");
+    expect(classes).toContain("bg-background");
+    expect(classes.filter((name) => translucentBackground.test(name))).toEqual([]);
+    // The branch-in-force signal: the primary rule along the bottom, and the tint.
+    expect(classes).toContain("border-b-primary");
+    expect(classes).toContain("before:bg-primary/5");
+    expect(classes).toContain("before:-z-10");
+  });
+
+  it("keeps the plain opaque header when every branch is shown", () => {
+    render(<SiteHeader />);
+
+    const classes = header().className.split(/\s+/);
+    expect(header().hasAttribute("data-branch-scoped")).toBe(false);
+    expect(classes).toContain("bg-background");
+    expect(classes).not.toContain("border-b-primary");
   });
 });

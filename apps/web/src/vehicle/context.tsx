@@ -41,7 +41,9 @@ export interface VehicleContextValue {
   asset: AssetDetail;
   me: MeContext;
   viewer: Viewer;
+  /** Empty until the attention read answers; `attentionStatus` says whether it has. */
   attention: readonly AssetAttentionItem[];
+  attentionStatus: "pending" | "error" | "success";
   facts: VehicleFacts;
   gates: VehicleGates;
   /** Role and module allow the action at all. */

@@ -13,13 +13,13 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await (await openSidebar(page)).getByRole("link", { name: t("Trajets", "Trips") }).click();
   await page.getByRole("heading", { level: 1, name: t("Trajets", "Trips") }).waitFor();
   await quiet();
-  await shot("trips-list");
+  await shot("trips-list", { caption: "Trips list" });
 
   await page.getByRole("button", { name: trip.activityNumber, exact: true }).first().click();
   await page.waitForURL((url) => url.pathname === `/activities/${trip.id}`);
   await page.getByRole("heading", { level: 1, name: trip.activityNumber }).waitFor();
   await quiet();
-  await shot("trip-detail");
+  await shot("trip-detail", { caption: `A closed trip, ${trip.activityNumber}, opens on its detail page` });
 
   const detail = await apiGet(`/v1/activities/${trip.id}`);
   const body = detail.body as { status?: string; completeness?: string };
