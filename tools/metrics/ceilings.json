@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 564245,
+    "ceiling": 564537,
     "raises": [
       {
         "date": "2026-10-06",
@@ -61,6 +61,12 @@
         "from": 564169,
         "to": 564245,
         "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564245,
+        "to": 564537,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form"
       }
     ]
   },
@@ -82,7 +88,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 564245,
+    "ceiling": 564537,
     "raises": [
       {
         "date": "2026-10-06",
@@ -143,6 +149,12 @@
         "from": 564169,
         "to": 564245,
         "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564245,
+        "to": 564537,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form"
       }
     ]
   }
