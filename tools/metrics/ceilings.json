@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 568158,
+    "ceiling": 570710,
     "raises": [
       {
         "date": "2026-10-06",
@@ -73,6 +73,12 @@
         "from": 567875,
         "to": 568158,
         "reason": "Role-grouped sidebar (#312): section groups, role read predicates, Company rows and kit icons"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 568158,
+        "to": 570710,
+        "reason": "Overview tiles (#302): Trucks, Trips and Maintenance tiles with two summary hooks and URL-backed list filters, plus Home and the truck's Money tab on MetricStrip (link, secondary link, info tooltip, unit); re-recorded on develop 0fafed81"
       }
     ]
   },
@@ -100,7 +106,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 568158,
+    "ceiling": 570710,
     "raises": [
       {
         "date": "2026-10-06",
@@ -173,6 +179,12 @@
         "from": 567875,
         "to": 568158,
         "reason": "Role-grouped sidebar (#312): section groups, role read predicates, Company rows and kit icons"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 568158,
+        "to": 570710,
+        "reason": "Overview tiles (#302): Trucks, Trips and Maintenance tiles with two summary hooks and URL-backed list filters, plus Home and the truck's Money tab on MetricStrip (link, secondary link, info tooltip, unit); re-recorded on develop 0fafed81"
       }
     ]
   }
