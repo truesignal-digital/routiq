@@ -56,6 +56,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
   { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },
+  { pattern: "/more/company", trail: [{ labelKey: "settings.title" }] },
 ];
 
 function segments(path: string): string[] {

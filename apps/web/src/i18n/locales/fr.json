@@ -176,7 +176,8 @@
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être le chauffeur attitré de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
-    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
+    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
   },
   "assets": {
     "notify": {
@@ -1823,8 +1824,8 @@
       "submitting": "Désactivation…"
     },
     "update-approval-threshold": {
-      "label": "Modifier le seuil d'approbation",
-      "submit": "Enregistrer le seuil",
+      "label": "Modifier les seuils d'approbation",
+      "submit": "Enregistrer les seuils",
       "submitting": "Enregistrement…"
     },
     "create-category": {
@@ -2652,5 +2653,47 @@
     "DID_NOT_HAPPEN": "N'a pas eu lieu",
     "WRONG_DETAILS": "Mauvais détails, à ressaisir",
     "OTHER": "Autre"
+  },
+  "settings": {
+    "title": "Paramètres de l'entreprise",
+    "description": "Des règles qui s'appliquent à toute l'entreprise. Seule la Direction peut les modifier.",
+    "retry": "Réessayer",
+    "approvals": {
+      "title": "Approbations",
+      "description": "Jusqu'à quel montant une saisie d'argent est enregistrée sans contrôle, et qui décide au-delà.",
+      "loading": "Chargement des règles d'approbation",
+      "loadFailed": "Les règles d'approbation n'ont pas pu être chargées.",
+      "chainLabel": "La chaîne d'approbation",
+      "noBands": "Les règles d'approbation de cette entreprise ont été réglées à la main ; elles ne se modifient pas ici. Contactez le support ROUTIQ.",
+      "byRole": "Ce que rencontrent les saisies de chaque rôle",
+      "byRoleHint": "Personne n'approuve sa propre saisie, et les saisies de la Direction sont toujours enregistrées directement.",
+      "kind": {
+        "record-expense": "Dépenses",
+        "record-revenue": "Recettes"
+      },
+      "roleKind": "{role} : {kind}",
+      "overrides": "Exceptions pour une agence ou une catégorie",
+      "overridesHint": "Elles gardent leurs propres montants quand vous modifiez les seuils.",
+      "override": "{kind, select, record-expense {Dépenses} record-revenue {Recettes} other {Décisions}}, {scope} : {role} {bounded, select, yes {jusqu'à {amount}} other {quel que soit le montant}}",
+      "form": {
+        "description": "S'applique à toutes les agences, dès la prochaine saisie.",
+        "recording": "Enregistré directement jusqu'à",
+        "recordingHint": "Les saisies jusqu'à ce montant sont enregistrées sans contrôle.",
+        "ceiling": "La Finance approuve jusqu'à",
+        "ceilingHint": "Au-delà du premier montant et jusqu'à celui-ci, la Finance décide. Au-delà, seule la Direction décide.",
+        "whole": "Saisissez le montant en francs entiers, sans décimales.",
+        "belowCeiling": "Gardez ce montant sous celui jusqu'auquel la Finance approuve.",
+        "unchanged": "Modifiez un montant pour enregistrer.",
+        "afterSaving": "Après l'enregistrement",
+        "whoIsTold": "Les membres {roles} verront les nouvelles règles sur leur prochain écran.",
+        "conflictTitle": "Les seuils ont changé pendant votre modification",
+        "conflictBody": "Quelqu'un d'autre a enregistré de nouveaux seuils. Actualisez pour les voir, puis refaites votre modification."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Seuils d'approbation enregistrés"
+      }
+    }
   }
 }
