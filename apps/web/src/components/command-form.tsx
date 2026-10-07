@@ -73,6 +73,12 @@ export type CommandFormProps = CommandFormChrome & {
   /** Wording for the two replacing states, when the generic one is too vague. */
   conflict?: CommandFormCopy | undefined
   approval?: CommandFormCopy | undefined
+  /**
+   * Replaces the form once the command committed, when the host offers one
+   * follow-up (Record again after a cancellation, #426). Close comes first,
+   * the follow-up last.
+   */
+  done?: (CommandFormCopy & { action: { label: string; onClick: () => void } }) | undefined
   /** What "Refresh" does after a conflict. Defaults to dismissing the form. */
   onReload?: (() => void | Promise<void>) | undefined
   /**
@@ -205,6 +211,30 @@ function CommandFormBody(props: CommandFormProps) {
   // page has only the form to put it on.
   const bodyClassName =
     surface === "page" || surface === "panel" ? props.className : undefined
+
+  if (props.done !== undefined) {
+    const { done } = props
+    return (
+      <div className={cn(surfaceBodyClass(surface), bodyClassName)}>
+        <div className={cn(surface === "panel" || surface === "sheet" ? "p-4" : undefined)}>
+          <div role="status" className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success-foreground">
+            <p className="font-semibold">{done.title}</p>
+            <p className="mt-1">{done.body}</p>
+          </div>
+        </div>
+        <Footer surface={surface}>
+          {[
+            <Button key="close" type="button" variant="outline" className="flex-1 sm:flex-none" onClick={onDismiss}>
+              {t("commandForm.close")}
+            </Button>,
+            <Button key="action" type="button" className="flex-1 sm:flex-none" onClick={done.action.onClick}>
+              {done.action.label}
+            </Button>,
+          ]}
+        </Footer>
+      </div>
+    )
+  }
 
   if (outcome !== "form") {
     const copy =

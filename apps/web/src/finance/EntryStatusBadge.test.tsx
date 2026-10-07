@@ -21,7 +21,7 @@ describe("EntryStatusBadge", () => {
     ["SUBMITTED", "bg-warning/10", "lucide-clock", "Awaiting review"],
     ["POSTED", "bg-success/10", "lucide-circle-check", "Posted"],
     ["REJECTED", "bg-destructive/10", "lucide-circle-x", "Rejected"],
-    ["REVERSED", "bg-foreground/[0.05]", "lucide-undo-2", "Reversed"],
+    ["REVERSED", "bg-foreground/[0.05]", "lucide-undo-2", "Cancelled"],
   ] as const satisfies readonly (readonly [EntryStatus, string, string, string])[];
 
   it.each(cases)("shows %s with its one tone, glyph and label", (status, tone, icon, label) => {

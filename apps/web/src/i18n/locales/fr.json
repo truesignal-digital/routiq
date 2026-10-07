@@ -142,8 +142,8 @@
     "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente.",
     "POSTINGS_SUM_MISMATCH": "Le total des lignes ne correspond pas au montant de l'écriture.",
     "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
-    "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
-    "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une contre-passation et ne peut pas être contre-passée. Pour l'annuler, enregistrez à nouveau l'écriture d'origine.",
+    "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été annulée.",
+    "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une annulation et ne peut pas être annulée. Pour revenir en arrière, enregistrez à nouveau l'écriture d'origine.",
     "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
     "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
     "ACTIVITY_CLOSE_BLOCKED": "Impossible de clôturer : il manque les dates réelles ou au moins un engin affecté.",
@@ -394,7 +394,7 @@
         "generic": "Action terminée",
         "approved": "Écriture approuvée",
         "rejected": "Écriture rejetée",
-        "reversed": "Écriture contre-passée",
+        "reversed": "Écriture annulée",
         "locked": "Période verrouillée",
         "reopened": "Période rouverte",
         "posted": "Écriture enregistrée et comptabilisée",
@@ -413,8 +413,8 @@
         "generic": "L'action a échoué. Veuillez réessayer. ({code})",
         "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
         "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
-        "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été contre-passée.",
-        "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une contre-passation et ne peut pas être contre-passée. Pour l'annuler, enregistrez à nouveau l'écriture d'origine.",
+        "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été annulée.",
+        "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une annulation et ne peut pas être annulée. Pour revenir en arrière, enregistrez à nouveau l'écriture d'origine.",
         "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible."
       }
     },
@@ -471,7 +471,7 @@
         "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
         "REJECTED": "Rejetée",
-        "REVERSED": "Extournée"
+        "REVERSED": "Annulée"
       },
       "detail": {
         "title": "Détail de l'écriture",
@@ -481,7 +481,7 @@
         "status": "Statut",
         "category": "Catégorie",
         "amount": "Montant",
-        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Extourne de recette} EXPENSE_REVERSAL {Extourne de dépense} other {Dépense}}",
+        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Annulation de recette} EXPENSE_REVERSAL {Annulation de dépense} other {Dépense}}",
         "date": "Date comptable",
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
@@ -495,9 +495,9 @@
         "postings": "Lignes de débit/crédit",
         "asset": "Actif",
         "postingAmount": "Montant",
-        "reversalChain": "Chaîne d'extournement",
-        "reversesEntry": "Extourne l'écriture {number}",
-        "reversedByEntry": "Extournée par l'écriture {number}",
+        "reversalChain": "Annulation",
+        "reversesEntry": "Annulation de l'écriture {number}",
+        "reversedByEntry": "Annulée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
@@ -513,21 +513,26 @@
         "evidenceVia": {
           "RECORDED": "Joint à la saisie · {date} · {name}",
           "ATTACHED": "Joint après coup · {date} · {name}"
-        }
+        },
+        "cancellationReason": "Motif"
       },
       "viewer": {
         "description": "Date comptable {date}",
         "fullScreen": "Ouvrir en plein écran"
       },
       "reversal": {
-        "reasonLabel": "Motif du contre-passage",
-        "reasonPlaceholder": "Expliquez pourquoi cette écriture est contre-passée…",
-        "success": "Écriture contre-passée",
-        "successDesc": "L'écriture de contre-passage a été créée avec succès."
+        "reasonLabel": "Pourquoi annuler cette écriture ?",
+        "otherLabel": "Précisez le motif",
+        "otherPlaceholder": "Que s'est-il passé ?",
+        "description": "L'écriture reste dans les comptes, marquée Annulée. Une ligne d'annulation retire son montant des totaux.",
+        "recordAgainTitle": "Écriture annulée",
+        "recordAgainBody": "Enregistrez-la à nouveau avec les bons détails. Le formulaire s'ouvre rempli à partir de l'écriture annulée.",
+        "recordAgain": "Enregistrer à nouveau",
+        "done": "Terminé"
       },
       "filters": {
         "status": "Statut",
-        "ledger": "Comptabilisées et extournées",
+        "ledger": "Comptabilisées et annulées",
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
         "assetOption": "{code} — {name}"
@@ -1381,8 +1386,8 @@
       "financial_entry-submitted": "Écriture soumise à approbation",
       "financial_entry-approved": "Écriture approuvée",
       "financial_entry-rejected": "Écriture rejetée",
-      "financial_entry-reversed": "Écriture extournée",
-      "financial_entry-reversal_posted": "Extourne comptabilisée",
+      "financial_entry-reversed": "Écriture annulée",
+      "financial_entry-reversal_posted": "Annulation comptabilisée",
       "posting_period-locked": "Période verrouillée",
       "posting_period-reopened": "Période rouverte",
       "approval-threshold-updated": "Seuil d'approbation modifié",
@@ -1517,8 +1522,8 @@
       "paymentReference": "référence de paiement",
       "sourceReference": "référence source",
       "approvalNote": "note d'approbation",
-      "reversesEntryId": "écriture extournée",
-      "reversedByEntryId": "extourne",
+      "reversesEntryId": "écriture annulée",
+      "reversedByEntryId": "annulation",
       "loadState": "état de charge",
       "passengerCount": "nombre de passagers",
       "commandType": "commande",
@@ -1565,6 +1570,7 @@
       "dismissReason": "motif du classement",
       "defaultSafetyCritical": "critique pour la sécurité par défaut",
       "postings": "lignes d'imputation",
+      "reasonCode": "motif",
       "artifactIds": "fichiers",
       "body": "note"
     },
@@ -1794,10 +1800,10 @@
       "dismiss": "Garder l'écriture"
     },
     "reverse-entry": {
-      "label": "Contre-passer l'écriture",
-      "submit": "Contre-passer l'écriture",
-      "submitting": "Contre-passage…",
-      "short": "Contre-passer",
+      "label": "Annuler l'écriture",
+      "submit": "Annuler l'écriture",
+      "submitting": "Annulation…",
+      "short": "Annuler l'écriture",
       "dismiss": "Garder l'écriture"
     },
     "lock-period": {
@@ -2424,8 +2430,8 @@
         "financial_entry-submitted": "Écriture saisie, en attente d'examen",
         "financial_entry-approved": "Écriture approuvée",
         "financial_entry-rejected": "Écriture rejetée",
-        "financial_entry-reversed": "Écriture contre-passée",
-        "financial_entry-reversal_posted": "Contre-passation comptabilisée",
+        "financial_entry-reversed": "Écriture annulée",
+        "financial_entry-reversal_posted": "Annulation comptabilisée",
         "financial_entry-evidence_attached": "{count, plural, one {Reçu joint} other {# fichiers joints}}",
         "operational_issue-reported": "Problème signalé",
         "operational_issue-resolved": "Problème résolu",
@@ -2500,12 +2506,12 @@
       "recordedBy": "Saisie par",
       "postingPeriod": "Période comptable",
       "notPosted": "Non comptabilisée",
-      "reverses": "Contre-passe",
-      "reversedBy": "Contre-passée par",
+      "reverses": "Annule",
+      "reversedBy": "Annulée par",
       "openOriginal": "L'écriture d'origine",
-      "openReversal": "La contre-passation",
+      "openReversal": "L'annulation",
       "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur peut la modifier d'ici là, mais pas l'approuver.",
-      "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige par une contre-passation ; l'original reste.",
+      "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige en annulant l'écriture ; l'original reste.",
       "receipt": "Justificatif",
       "noFiles": "Aucun fichier sur cette écriture.",
       "evidenceVia": {
@@ -2605,7 +2611,7 @@
         "description": "Approuvez ou rejetez une écriture en attente. Son auteur ne peut pas l'approuver."
       },
       "reverse-entry": {
-        "description": "Une écriture comptabilisée n'est jamais modifiée : la contre-passation l'annule et les deux restent. Choisissez-la dans Argent."
+        "description": "Une écriture comptabilisée n'est jamais modifiée : l'annuler ajoute une ligne qui la retire, et les deux restent. Choisissez-la dans Argent."
       },
       "commission": {
         "description": "D'enregistré à en service : l'historique d'exploitation démarre ici."
@@ -2644,5 +2650,11 @@
       "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
       "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
     }
+  },
+  "reasonCodes": {
+    "ENTERED_TWICE": "Saisie en double",
+    "DID_NOT_HAPPEN": "N'a pas eu lieu",
+    "WRONG_DETAILS": "Mauvais détails, à ressaisir",
+    "OTHER": "Autre"
   }
 }
