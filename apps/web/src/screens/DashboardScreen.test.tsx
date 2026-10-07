@@ -91,6 +91,8 @@ const entries: FinancialEntryListResponse = {
       postedAt: "2026-07-22T10:00:00Z",
       rowVersion: 1,
       reversesEntryId: null,
+      cancelledBy: null,
+      cancels: null,
       ...entryVehicleFields,
     },
     {
@@ -111,6 +113,8 @@ const entries: FinancialEntryListResponse = {
       postedAt: null,
       rowVersion: 1,
       reversesEntryId: null,
+      cancelledBy: null,
+      cancels: null,
       ...entryVehicleFields,
     },
   ],

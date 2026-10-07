@@ -90,6 +90,11 @@ export const assetFinanceResponse = z.object({
     expenseMinor: moneyMinor,
     revenueMinor: moneyMinor,
     entryCount: z.number().int().nonnegative(),
+    /**
+     * Lines of the one-line-per-event list for the month (#427): a
+     * cancellation posted in its original's month folds into it.
+     */
+    eventCount: z.number().int().nonnegative(),
   }),
   pending: z.object({
     basis: z.literal("ECONOMIC_MONTH"),

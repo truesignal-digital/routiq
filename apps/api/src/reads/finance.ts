@@ -11,7 +11,7 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { entryEvidenceState } from "@routiq/domain";
-import { and, asc, desc, eq, exists, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gte, inArray, lt, not, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -54,6 +54,12 @@ import {
   type KeysetValue,
 } from "./cursor.js";
 import { defineRead, ENTRIES_GATE, LEDGER_GATE } from "./define-read.js";
+import {
+  cancelledBySql,
+  cancelsSql,
+  foldedCancellationSql,
+  toEntryCancellation,
+} from "./entry-cancellation.js";
 import { canReadEntry, readableEntrySql } from "./money-scope.js";
 import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
@@ -387,6 +393,8 @@ function toEntryItem(row: EntryItemRow, withAsset: boolean): FinancialEntryListI
     postedAt: row.postedAt?.toISOString() ?? null,
     rowVersion: row.rowVersion,
     reversesEntryId: row.reversesEntryId,
+    cancelledBy: null,
+    cancels: null,
     recordedBy: toActor({
       principalId: row.recorderPrincipalId,
       displayName: row.recorderDisplayName,
@@ -437,6 +445,7 @@ export function registerFinanceReadRoutes(
           evidence,
           assetId,
           branchId,
+          view = "events",
           cursor,
           limit,
         } = parsedQuery.data;
@@ -478,6 +487,12 @@ export function registerFinanceReadRoutes(
           }
           if (evidence === "MISSING") {
             conditions.push(entryEvidenceMissingSql());
+          }
+          // One line per event (#427): a cancellation in its original's window
+          // folds into the original's line. A WHERE condition, so the keyset
+          // page size stays exact.
+          if (view === "events") {
+            conditions.push(not(foldedCancellationSql(auth, periodCode)));
           }
 
           // EXISTS, not a join: an entry may carry several postings on the same
@@ -522,6 +537,8 @@ export function registerFinanceReadRoutes(
             .select({
               ...entryItemColumns(assetId),
               postedAtKey: microsecondKey(financialEntries.postedAt),
+              cancelledBy: cancelledBySql(auth),
+              cancels: cancelsSql(auth),
             })
             .from(financialEntries)
             .innerJoin(
@@ -560,9 +577,20 @@ export function registerFinanceReadRoutes(
 
         const { rows } = result || { rows: [] };
         const hasNextPage = rows.length > limit;
-        const entries = rows
-          .slice(0, limit)
-          .map((row) => toEntryItem(row, assetId !== undefined));
+        const entries = rows.slice(0, limit).map((row) => ({
+          ...toEntryItem(row, assetId !== undefined),
+          // Folded when the cancellation is not a line of this list: the same
+          // window as the original, in the events view.
+          cancelledBy:
+            row.cancelledBy === null
+              ? null
+              : toEntryCancellation(
+                  row.cancelledBy,
+                  view === "events" &&
+                    (periodCode === undefined || row.cancelledBy.postingPeriodCode === periodCode),
+                ),
+          cancels: row.cancels,
+        }));
 
         let nextCursor: string | null = null;
         if (hasNextPage && entries.length > 0) {

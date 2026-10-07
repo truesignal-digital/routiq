@@ -119,8 +119,8 @@ describe("finance reads", () => {
         rowVersion: 1,
         ...vehicleFields,
       };
-      const parsed = financialEntryListItem.parse(item);
-      expect(parsed).toEqual(item);
+      const parsed = financialEntryListItem.parse({ ...item, cancelledBy: null, cancels: null });
+      expect(parsed).toEqual({ ...item, cancelledBy: null, cancels: null });
     });
 
     it("parses financialEntryListResponse", () => {
@@ -144,6 +144,8 @@ describe("finance reads", () => {
             postedAt: new Date().toISOString(),
             rowVersion: 1,
             ...vehicleFields,
+            cancelledBy: null,
+            cancels: null,
           },
         ],
         nextCursor: null,

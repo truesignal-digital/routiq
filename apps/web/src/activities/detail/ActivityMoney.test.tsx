@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import type { ActivityDetail } from "@routiq/contracts";
+import userEvent from "@testing-library/user-event";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -47,6 +48,8 @@ function entry(overrides: Partial<Entry> = {}): Entry {
     // XAF has exponent 0 — 900 000 francs is 900 000 minor units.
     amountMinor: 900_000,
     status: "POSTED",
+    reversesEntryId: null,
+    cancelledBy: null,
     ...overrides,
   };
 }
@@ -102,6 +105,52 @@ describe("net sums", () => {
 });
 
 describe("activity money card", () => {
+  it("shows a cancelled entry as one struck-through line, the net unchanged (#427)", async () => {
+    const cancellationId = "00000000-0000-4000-8000-000000000039";
+    render(
+      <ActivityMoney
+        totals
+        scope="LEDGER"
+        entries={[
+          entry(),
+          entry({
+            entryId: "00000000-0000-4000-8000-000000000038",
+            entryNumber: "FIN-2026-0008",
+            direction: "EXPENSE",
+            amountMinor: 45_000,
+            status: "REVERSED",
+            cancelledBy: {
+              entryId: cancellationId,
+              entryNumber: "FIN-2026-0009",
+              postingPeriodCode: "2026-08",
+              postedAt: "2026-08-20T10:00:00.000Z",
+              reasonCode: null,
+              reasonText: "Entered twice",
+              recordedBy: { principalId: null, displayName: "Awa", scope: "WORKSPACE" },
+              folded: true,
+            },
+          }),
+          entry({
+            entryId: cancellationId,
+            entryNumber: "FIN-2026-0009",
+            direction: "EXPENSE",
+            amountMinor: -45_000,
+            status: "POSTED",
+            reversesEntryId: "00000000-0000-4000-8000-000000000038",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: /FIN-2026-0009/ })).toBeNull();
+    const original = screen.getByRole("link", { name: /FIN-2026-0008/ });
+    expect(original.querySelector(".line-through")).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show cancellation" }));
+    expect(screen.getByText("Reason: Entered twice")).toBeDefined();
+    // The pair still nets to zero: the net is the freight alone.
+    expect(digits(summaryValue("Net"))).toBe("+900000");
+  });
+
   it("renders nothing when no money touched the activity", () => {
     const { container } = render(<ActivityMoney totals scope="LEDGER" entries={[]} />);
 

@@ -41,6 +41,7 @@ import {
   persons,
   places,
 } from "../db/schema.js";
+import { cancelledBySql, toEntryCancellation } from "./entry-cancellation.js";
 import {
   afterKeyset,
   bindText,
@@ -659,6 +660,9 @@ export function registerActivityReadRoutes(
             financialRows?.map((entry) => ({
               ...entry,
               amountMinor: serializeMinor(entry.amountMinor),
+              // A trip's money is one window: the pair always folds (#427).
+              cancelledBy:
+                entry.cancelledBy === null ? null : toEntryCancellation(entry.cancelledBy, true),
             })) ?? null,
         });
       } catch (error) {
@@ -752,6 +756,8 @@ function activityFinancialRows(tx: ReadTx, auth: AuthContext, activityId: string
       categoryLabelEn: categories.labelEn,
       amountMinor: financialEntries.amountMinor,
       status: financialEntries.status,
+      reversesEntryId: financialEntries.reversesEntryId,
+      cancelledBy: cancelledBySql(auth),
     })
     .from(financialPostings)
     .innerJoin(

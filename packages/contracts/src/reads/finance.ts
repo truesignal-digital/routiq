@@ -57,6 +57,37 @@ export const financialEntryFilters = z.object({
   evidence: z.enum(["MISSING"]).optional(),
   assetId: z.uuid().optional(),
   branchId: z.uuid().optional(),
+  /**
+   * `events` (default): one line per real event (#427). A cancellation whose
+   * original falls in the same filtered window is left out and named on the
+   * original instead. `books`: every signed row, originals and cancellations.
+   */
+  view: z.enum(["events", "books"]).optional(),
+});
+
+/** The cancellation of an original entry, as its line in a money list names it (#427). */
+export const entryCancellation = z.object({
+  entryId: z.uuid(),
+  entryNumber: z.string(),
+  postingPeriodCode: z.string().nullable(),
+  postedAt: z.iso.datetime().nullable(),
+  /** Null for a cancellation recorded before reasons were picked from a list. */
+  reasonCode: z.string().nullable(),
+  reasonText: z.string().nullable(),
+  recordedBy: historyActor,
+  /**
+   * The cancellation is not a line of this list: it falls in the same window
+   * as the original, which then counts 0 there. False in the books view and
+   * when the cancellation posted in a later month than the list shows.
+   */
+  folded: z.boolean(),
+});
+
+/** On a cancellation's own line: the original it cancels, and that original's month. */
+export const cancelledEntryRef = z.object({
+  entryId: z.uuid(),
+  entryNumber: z.string(),
+  postingPeriodCode: z.string().nullable(),
 });
 
 export const financialEntryListItem = z.object({
@@ -78,6 +109,10 @@ export const financialEntryListItem = z.object({
   rowVersion: z.number(),
   /** Set on a reversal row: the entry it cancels. */
   reversesEntryId: z.uuid().nullable(),
+  /** On an original: its posted cancellation, when the reader may read it (#427). */
+  cancelledBy: entryCancellation.nullable(),
+  /** On a cancellation's line: the original, when the reader may read it. */
+  cancels: cancelledEntryRef.nullable(),
   /** Who recorded the entry, masked for PLATFORM actors like the history read. */
   recordedBy: historyActor,
   evidence: entryEvidence,
@@ -143,7 +178,10 @@ export const entryEvidenceFile = z.object({
   via: z.enum(["RECORDED", "ATTACHED"]),
 });
 
-export const financialEntryDetail = financialEntryListItem.extend({
+/** The one-line-per-event fields belong to money lists, not to a single entry. */
+const entryRecord = financialEntryListItem.omit({ cancelledBy: true, cancels: true });
+
+export const financialEntryDetail = entryRecord.extend({
   description: z.string().nullable(),
   paymentReference: z.string().nullable(),
   sourceReference: z.string().nullable(),
@@ -171,12 +209,14 @@ export const financialEntryDetail = financialEntryListItem.extend({
 export type EntryEvidenceState = z.infer<typeof entryEvidenceState>;
 export type EntryEvidence = z.infer<typeof entryEvidence>;
 export type EntryEvidenceFile = z.infer<typeof entryEvidenceFile>;
+export type EntryCancellation = z.infer<typeof entryCancellation>;
+export type CancelledEntryRef = z.infer<typeof cancelledEntryRef>;
 export type FinancialEntryListItem = z.infer<typeof financialEntryListItem>;
 export type FinancialEntryListResponse = z.infer<typeof financialEntryListResponse>;
 export type FinancialPosting = z.infer<typeof financialPosting>;
 export type FinancialEntryDetail = z.infer<typeof financialEntryDetail>;
 
-export const pendingApprovalItem = financialEntryListItem.extend({
+export const pendingApprovalItem = entryRecord.extend({
   submittedByPrincipalId: z.uuid(),
   submittedAt: z.iso.datetime(),
   /**

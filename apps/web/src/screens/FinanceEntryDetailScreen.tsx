@@ -142,7 +142,7 @@ function FinanceEntryDetailContent() {
 
           {canEdit && editOpen && (
             <RecordEntryForm
-              surface="dialog"
+              surface="sheet"
               editing={entryQuery.data}
               onRecorded={() => {
                 setEditOpen(false);
