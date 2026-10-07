@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 564169,
+    "ceiling": 565416,
     "raises": [
       {
         "date": "2026-10-06",
@@ -55,6 +55,12 @@
         "from": 562687,
         "to": 564169,
         "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 565416,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller"
       }
     ]
   },
@@ -70,7 +76,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 564169,
+    "ceiling": 565416,
     "raises": [
       {
         "date": "2026-10-06",
@@ -125,6 +131,12 @@
         "from": 562687,
         "to": 564169,
         "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 565416,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller"
       }
     ]
   }
