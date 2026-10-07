@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LogOut, Truck } from "lucide-react";
+import { Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Sidebar,
@@ -7,6 +7,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -15,9 +16,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useMeContext } from "../auth/me.js";
-import { useSignOut } from "../auth/sign-out.js";
-import { useActiveSession } from "../auth/store.js";
-import { isSectionActive, visibleSections } from "./sections.js";
+import { NameMenu } from "./NameMenu.js";
+import { activeSection, visibleSectionGroups } from "./sections.js";
 
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
 const MENU_BUTTON = "min-h-11 md:min-h-8";
@@ -25,21 +25,18 @@ const MENU_BUTTON = "min-h-11 md:min-h-8";
 export function AppSidebar() {
   const { t } = useTranslation();
   const me = useMeContext();
-  const session = useActiveSession();
-  const signOut = useSignOut();
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const sections = visibleSections(me?.enabledModules, me?.role);
+  const groups = visibleSectionGroups(me?.role, me?.enabledModules);
+  const active = activeSection(
+    groups.flatMap((group) => group.sections),
+    pathname,
+  );
 
   // The sheet has no route awareness of its own: navigating from inside it
   // would otherwise leave the overlay covering the screen it just opened.
   function closeOnMobile() {
     if (isMobile) setOpenMobile(false);
-  }
-
-  function onLogout() {
-    closeOnMobile();
-    signOut();
   }
 
   return (
@@ -66,55 +63,38 @@ export function AppSidebar() {
 
       <SidebarContent>
         <nav aria-label={t("shell.navLabel")}>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {sections.map((section) => {
-                  const { key, to, icon: Icon } = section;
-                  const label = t(`nav.${key}`);
-                  return (
-                    <SidebarMenuItem key={key}>
-                      <SidebarMenuButton
-                        isActive={isSectionActive(section, pathname)}
-                        tooltip={label}
-                        className={MENU_BUTTON}
-                        onClick={closeOnMobile}
-                        render={<Link to={to} />}
-                      >
-                        <Icon aria-hidden />
-                        <span>{label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {groups.map((group) => (
+            <SidebarGroup key={group.key}>
+              <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.sections.map(({ key, to, labelKey, icon: Icon }) => {
+                    const label = t(labelKey);
+                    return (
+                      <SidebarMenuItem key={key}>
+                        <SidebarMenuButton
+                          isActive={active?.key === key}
+                          tooltip={label}
+                          className={MENU_BUTTON}
+                          onClick={closeOnMobile}
+                          render={<Link to={to} />}
+                        >
+                          <Icon aria-hidden />
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </nav>
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarMenu>
-          {session && (
-            <SidebarMenuItem>
-              <div className="flex min-w-0 flex-col px-2 py-1 group-data-[collapsible=icon]:hidden">
-                <span className="truncate text-sm font-medium">{session.username}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {session.workspaceSlug}
-                </span>
-              </div>
-            </SidebarMenuItem>
-          )}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={t("more.logout")}
-              className={MENU_BUTTON}
-              onClick={onLogout}
-            >
-              <LogOut aria-hidden />
-              <span>{t("more.logout")}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <NameMenu />
         </SidebarMenu>
       </SidebarFooter>
 

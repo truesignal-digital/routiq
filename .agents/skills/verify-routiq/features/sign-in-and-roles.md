@@ -7,15 +7,14 @@ A user signs in with a workspace, a username and a numeric PIN, lands on Home (o
 - `signin-ok` signs in with the workspace, username and PIN and lands on `/`.
 - `signin-redirect` returns to the requested page after `/login?redirect=<path>`.
 - `signin-wrong-pin` shows the stable error for a wrong PIN and clears the PIN.
-- `signout` signs out from the sidebar footer or the More page and returns to `/login`.
+- `signout` signs out from the name menu in the sidebar footer (the only Sign out, #316) and returns to `/login`.
 - `switch-role` signs in as a different seeded account in the same browser.
 - `session-persists` keeps the session across a full reload (14-day token in `localStorage["routiq.sessions.v1"]`).
 
 ## How to get to it (user POV)
 
 - Open any page while signed out; the app redirects to `/login`.
-- Sidebar footer → "Se déconnecter" / "Sign out".
-- More (`/more`) → "Se déconnecter" / "Sign out".
+- Sidebar footer → the name menu (initial, name, role · branch) → "Se déconnecter" / "Sign out". `signOutThroughNameMenu(page)` in `tools/verify/browser.ts` does it.
 
 ## Driving it with pnpm verify
 

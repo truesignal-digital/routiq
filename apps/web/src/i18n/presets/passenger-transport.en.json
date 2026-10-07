@@ -19,7 +19,7 @@
         "assigned": "Vehicle assigned"
       }
     },
-    "title": "Your vehicles",
+    "title": "Vehicles",
     "searchLabel": "Search vehicles",
     "filterLabel": "Filter vehicles",
     "emptyHint": "Add a bus or a minibus. Its trustworthy history starts building from day one.",

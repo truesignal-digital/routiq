@@ -97,7 +97,7 @@ describe("SiteHeader breadcrumb", () => {
   it("shows Home alone on the dashboard, unlinked", () => {
     render(<SiteHeader />);
 
-    expect(crumbs()).toEqual([["nav.home", null]]);
+    expect(crumbs()).toEqual([["home.title", null]]);
   });
 
   it("links Home and names the section on a list route", () => {
@@ -105,8 +105,8 @@ describe("SiteHeader breadcrumb", () => {
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
-      ["nav.home", "/"],
-      ["nav.assets", null],
+      ["home.title", "/"],
+      ["assets.title", null],
     ]);
   });
 
@@ -115,8 +115,8 @@ describe("SiteHeader breadcrumb", () => {
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
-      ["nav.home", "/"],
-      ["nav.finances", "/finance/entries"],
+      ["home.title", "/"],
+      ["finance.entries.title", "/finance/entries"],
       ["finance.navigation.entries", null],
     ]);
   });
@@ -126,8 +126,8 @@ describe("SiteHeader breadcrumb", () => {
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
-      ["nav.home", "/"],
-      ["nav.finances", "/finance/entries"],
+      ["home.title", "/"],
+      ["finance.entries.title", "/finance/entries"],
       ["finance.navigation.entries", "/finance/entries"],
       ["finance.entries.detail.breadcrumb", null],
     ]);
@@ -138,8 +138,8 @@ describe("SiteHeader breadcrumb", () => {
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
-      ["nav.home", "/"],
-      ["nav.finances", "/finance/entries"],
+      ["home.title", "/"],
+      ["finance.entries.title", "/finance/entries"],
       ["finance.navigation.record", null],
     ]);
   });
@@ -154,8 +154,8 @@ describe("SiteHeader breadcrumb", () => {
     );
 
     expect(crumbs()).toEqual([
-      ["nav.home", "/"],
-      ["nav.activities", "/activities"],
+      ["home.title", "/"],
+      ["activities.title", "/activities"],
       ["TR-0042", null],
     ]);
   });
@@ -176,8 +176,8 @@ describe("SiteHeader breadcrumb", () => {
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
-      ["nav.home", "/"],
-      ["nav.activities", "/activities"],
+      ["home.title", "/"],
+      ["activities.title", "/activities"],
       ["commands.record-journey-sheet.label", null],
     ]);
   });
@@ -212,7 +212,7 @@ describe("SiteHeader breadcrumb", () => {
       const back = phoneCrumb(container);
       expect(back?.tagName).toBe("A");
       expect(back?.getAttribute("href")).toBe("/assets");
-      expect(back?.textContent).toBe("nav.assets");
+      expect(back?.textContent).toBe("assets.title");
       expect(back?.className).toContain("md:hidden");
       expect(container.querySelector('[data-slot="breadcrumb-list"]')?.className).toContain("max-md:hidden");
       expect(container.querySelector('[data-slot="separator"]')?.className).toContain("max-md:hidden");
@@ -232,7 +232,7 @@ describe("SiteHeader breadcrumb", () => {
         const { container, unmount } = render(<SiteHeader />);
 
         expect(phoneCrumb(container)?.getAttribute("href"), path).toBe("/activities");
-        expect(phoneCrumb(container)?.textContent, path).toBe("nav.activities");
+        expect(phoneCrumb(container)?.textContent, path).toBe("activities.title");
         unmount();
       }
     });
@@ -243,7 +243,7 @@ describe("SiteHeader breadcrumb", () => {
 
       const page = phoneCrumb(container);
       expect(page?.tagName).toBe("SPAN");
-      expect(page?.textContent).toBe("nav.assets");
+      expect(page?.textContent).toBe("assets.title");
       expect(page?.getAttribute("aria-current")).toBe("page");
     });
   });
