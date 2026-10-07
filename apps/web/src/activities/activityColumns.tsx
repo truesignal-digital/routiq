@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { ActivityListItem } from "@routiq/contracts";
 import { TripStatusBadge } from "@/activities/TripStatusBadge.js";
 import { formatDate, localizedLabel } from "@/lib/format.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 export type ActivityColumnId =
   | "activityNumber"
@@ -57,7 +58,7 @@ function buildColumns(
       enableSorting: true,
       meta: { mobile: "secondary", label: t("activities.columns.startedAt") },
       cell: ({ row }) =>
-        row.original.startedAt === null ? "—" : formatDate(row.original.startedAt, locale),
+        row.original.startedAt === null ? <NotRecorded /> : formatDate(row.original.startedAt, locale),
     },
     endedAt: {
       accessorKey: "endedAt",
@@ -65,7 +66,7 @@ function buildColumns(
       enableSorting: false,
       meta: { mobile: "hidden", label: t("activities.columns.endedAt") },
       cell: ({ row }) =>
-        row.original.endedAt === null ? "—" : formatDate(row.original.endedAt, locale),
+        row.original.endedAt === null ? <NotRecorded /> : formatDate(row.original.endedAt, locale),
     },
     primaryAssetCode: {
       accessorKey: "primaryAssetCode",
@@ -73,7 +74,7 @@ function buildColumns(
       meta: { mobile: "secondary", label: t("activities.columns.primaryAsset") },
       cell: ({ row }) => (
         <span className="whitespace-nowrap tabular-nums">
-          {row.original.primaryAssetCode ?? "—"}
+          {row.original.primaryAssetCode ?? <NotRecorded />}
         </span>
       ),
     },
@@ -82,7 +83,7 @@ function buildColumns(
       header: t("activities.columns.customer"),
       meta: { mobile: "hidden", label: t("activities.columns.customer") },
       cell: ({ row }) => (
-        <span className="whitespace-normal">{row.original.customerName ?? "—"}</span>
+        <span className="whitespace-normal">{row.original.customerName ?? <NotRecorded />}</span>
       ),
     },
     legCount: {

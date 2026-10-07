@@ -33,6 +33,7 @@ import { notifyCommandSuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
 import { canRegisterPersons, canViewActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
 const SEARCH_FILTER_ID = "search";
@@ -93,7 +94,7 @@ export function PersonsScreen() {
         meta: { mobile: "secondary", label: t("persons.columns.personCode") },
         cell: ({ row }) => (
           <span className="font-mono whitespace-nowrap">
-            {row.original.personCode ?? "—"}
+            {row.original.personCode ?? <NotRecorded />}
           </span>
         ),
       },
@@ -103,7 +104,7 @@ export function PersonsScreen() {
         meta: { mobile: "secondary", label: t("persons.columns.defaultRole") },
         cell: ({ row }) => {
           const role = row.original.defaultRole;
-          return role === null ? "—" : t(`persons.roles.${role}`);
+          return role === null ? <NotRecorded /> : t(`persons.roles.${role}`);
         },
       },
       {

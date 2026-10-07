@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { formatDateTime } from "@/lib/format.js";
+import { formatDateTime, notRecorded } from "@/lib/format.js";
 import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 import {
   CreateWorkOrderForm,
@@ -84,7 +84,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
         {title !== issue.description && <p className="text-sm">{issue.description}</p>}
         <FactList
           rows={[
-            [t("vehicle.panel.category"), category ?? t("vehicle.details.notRecorded")],
+            [t("vehicle.panel.category"), category ?? notRecorded()],
             [
               t("vehicle.panel.reported"),
               t("vehicle.panel.atBy", { date: formatDateTime(issue.reportedAt, locale), name: reportedBy }),

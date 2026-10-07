@@ -576,7 +576,7 @@ describe("MaintenanceScreen — row sheet costs", () => {
     ).toBeTruthy();
   });
 
-  it("shows a driver dashes and no cost sections when the server withholds the money (#390)", async () => {
+  it("shows a driver no cost facts and no cost sections when the server withholds the money (#390)", async () => {
     const user = userEvent.setup();
     me = as("DRIVER");
     workOrderRow = { ...makeWorkOrder("COMPLETED"), expectedCostMinor: null, actualCostMinor: null };
@@ -584,9 +584,9 @@ describe("MaintenanceScreen — row sheet costs", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    const fact = (label: string) => within(sheet).getByText(label).nextElementSibling?.textContent;
-    expect(fact("maintenance.workOrders.columns.expectedCost")).toBe("—");
-    expect(fact("maintenance.workOrders.columns.actualCost")).toBe("—");
+    // Withheld is not "not recorded": the cost facts are left out (#306).
+    expect(within(sheet).queryByText("maintenance.workOrders.columns.expectedCost")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.workOrders.columns.actualCost")).toBeNull();
     expect(within(sheet).queryByText("maintenance.detail.costLines")).toBeNull();
     expect(within(sheet).queryByText("maintenance.detail.costLinesEmpty")).toBeNull();
     expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();

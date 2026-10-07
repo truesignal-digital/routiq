@@ -7,7 +7,7 @@ import type { DashboardResponse } from "@routiq/contracts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMeContext } from "@/auth/me.js";
-import { formatMoney } from "@/lib/format.js";
+import { formatMoney, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { canOpenEntriesList, visibleDashboardCards, type DashboardCardKey } from "./cards.js";
 
@@ -82,7 +82,7 @@ function cardBody(
     // Null only when the API withholds finance from this caller; the card is
     // gated to approvers, so this is the brief window before /v1/me agrees.
     if (data.pendingApprovals === null) {
-      return { value: "—", description: t("home.cards.financeUnavailable") };
+      return { value: notRecorded(), description: t("home.cards.financeUnavailable") };
     }
     const { count, outsideBranchCount } = data.pendingApprovals;
     return {
@@ -112,10 +112,10 @@ function cardBody(
   }
 
   const { openPeriod } = data;
-  // No open period means nothing has been posted yet — an em dash, never a
+  // No open period means nothing has been posted yet — said in words, never a
   // zero, because a zero would claim the period balanced (§3.4).
   if (openPeriod === null) {
-    return { value: "—", description: t("home.cards.noOpenPeriod") };
+    return { value: notRecorded(), description: t("home.cards.noOpenPeriod") };
   }
 
   const minor =

@@ -74,11 +74,13 @@ describe("MetricStrip", () => {
     const { container } = render(<MetricStrip tiles={tiles} isError />);
 
     expect(values(container)).toEqual(["—", "—", "—"]);
+    // The dash is the one left in the app (guard H18); it is named for a screen reader.
+    expect(screen.getAllByRole("img", { name: "Chargement impossible" })).toHaveLength(3);
     expect(container.querySelector("dl")?.getAttribute("data-state")).toBe("error");
     expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(0);
   });
 
-  it("dashes a single unknown value without dimming the tiles that do have one", () => {
+  it("says a single unknown value is not recorded, without dimming the tiles that do have one", () => {
     const { container } = render(
       <MetricStrip
         tiles={[
@@ -88,7 +90,7 @@ describe("MetricStrip", () => {
       />,
     );
 
-    expect(values(container)).toEqual(["6", "—"]);
+    expect(values(container)).toEqual(["6", "Non renseigné"]);
   });
 
   it("drops the hint whenever the value it qualifies is missing", () => {

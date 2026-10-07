@@ -8,7 +8,7 @@ import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import { RecordText } from "@/components/record-number";
 import { SheetTitle } from "@/components/ui/sheet";
 import { useEntry } from "@/finance/useEntry.js";
-import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatDateTime, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { entrySteps, missingReceipt } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note } from "../parts.js";
@@ -170,7 +170,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
             [t("vehicle.panel.date"), formatDate(entry.economicDate, locale)],
             [
               t("vehicle.panel.costType"),
-              entry.category.layer === null ? t("vehicle.details.notRecorded") : t(`vehicle.layers.${entry.category.layer}`),
+              entry.category.layer === null ? notRecorded() : t(`vehicle.layers.${entry.category.layer}`),
             ],
             [t("vehicle.panel.thisVehicle"), money(share)],
             [
@@ -179,7 +179,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
                 ? t("vehicle.panel.notShared")
                 : t("vehicle.panel.sharedWith", { amount: money(entry.amountMinor) }),
             ],
-            [t("vehicle.panel.paidTo"), entry.counterpartyName ?? t("vehicle.details.notRecorded")],
+            [t("vehicle.panel.paidTo"), entry.counterpartyName ?? notRecorded()],
             [t("vehicle.panel.recordedBy"), recorder],
             [
               t("vehicle.panel.postingPeriod"),

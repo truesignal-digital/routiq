@@ -29,6 +29,7 @@ import {
   formatMoney,
   formatRelativeTime,
   localDayKey,
+  notRecorded,
 } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
@@ -526,7 +527,7 @@ function formatChangeValue(
   locale: string,
   t: TFunction,
 ): string {
-  const none = t("history.diff.none");
+  const none = notRecorded(locale);
   const list = (items: string[]) =>
     items.length === 0
       ? none

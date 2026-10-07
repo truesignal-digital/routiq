@@ -246,6 +246,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H18",
+    // Thirty lines printed a bare "—" for a missing plate, counterparty or cost (#306).
+    bad: [
+      file("apps/web/src/assets/assetColumns.tsx", '{row.original.registrationNumber ?? "—"}'),
+      file("apps/web/src/maintenance/columns.tsx", '<span className="text-muted-foreground">—</span>'),
+      file("apps/web/src/vehicle/tabs/TripsTab.tsx", "time: trip.startedAt === null ? '—' : formatDateTime(trip.startedAt, locale),"),
+    ],
+    good: [
+      file("apps/web/src/assets/assetColumns.tsx", "{row.original.registrationNumber ?? <NotRecorded />}"),
+      file("apps/web/src/components/metric-strip.tsx", '<span role="img" aria-label={t("common.readFailed")}>—</span>'),
+      file("apps/web/src/assets/assetColumns.test.tsx", 'expect(cell.textContent).not.toBe("—");'),
+      file("apps/web/src/finance/EntrySummary.tsx", '{t("finance.entry.title", { number })} — {name}'),
+    ],
+  },
+  {
     id: "H15",
     bad: [
       file(

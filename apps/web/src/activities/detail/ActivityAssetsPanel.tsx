@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatDateTime } from "@/lib/format.js";
+import { formatDateTime, notRecorded } from "@/lib/format.js";
 
 type Reading = ActivityDetail["readings"][number];
 
@@ -83,7 +83,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
             <span className="text-muted-foreground">
               {formatDateTime(segment.startedAt, locale)}
               {" → "}
-              {segment.endedAt === null ? "—" : formatDateTime(segment.endedAt, locale)}
+              {segment.endedAt === null ? notRecorded(locale) : formatDateTime(segment.endedAt, locale)}
             </span>
           </div>
         ))}

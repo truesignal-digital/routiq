@@ -5,6 +5,7 @@ import type { AssetListItem } from "@routiq/contracts";
 import { AssetStatusBadge } from "./AssetStatusBadge.js";
 import { localizedLabel } from "@/lib/format.js";
 import { assetDisplayName } from "./display.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 export type AssetColumnId =
   | "asset"
@@ -72,7 +73,7 @@ function buildColumns(
       meta: { mobile: "hidden", label: t("assets.columns.registration") },
       cell: ({ row }) => (
         <span className="font-mono whitespace-nowrap">
-          {row.original.registrationNumber ?? "—"}
+          {row.original.registrationNumber ?? <NotRecorded />}
         </span>
       ),
     },

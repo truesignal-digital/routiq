@@ -99,24 +99,25 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
                 name: actor(wo.createdBy.displayName),
               }),
             ],
-            [
-              t("vehicle.panel.expectedCost"),
-              !gates.workOrderCosts
-                ? "—"
-                : wo.expectedCostMinor === null
-                  ? t("vehicle.maintenance.noEstimate")
-                  : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
-            ],
-            [
-              t("vehicle.panel.actualCost"),
-              !gates.workOrderCosts
-                ? "—"
-                : wo.actualCostMinor === null
-                  ? t("vehicle.panel.actualCostLater")
-                  : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
-                    ? t("vehicle.panel.invoicePending")
-                    : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
-            ],
+            // Costs a viewer may not read are left out, not shown as blanks.
+            ...(!gates.workOrderCosts
+              ? []
+              : ([
+                  [
+                    t("vehicle.panel.expectedCost"),
+                    wo.expectedCostMinor === null
+                      ? t("vehicle.maintenance.noEstimate")
+                      : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
+                  ],
+                  [
+                    t("vehicle.panel.actualCost"),
+                    wo.actualCostMinor === null
+                      ? t("vehicle.panel.actualCostLater")
+                      : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
+                        ? t("vehicle.panel.invoicePending")
+                        : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
+                  ],
+                ] as const)),
             ...(wo.completedAt === null
               ? []
               : ([

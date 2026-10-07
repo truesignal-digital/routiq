@@ -546,7 +546,7 @@ describe("record history diff", () => {
     ]);
     await expandRow();
 
-    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("Not recorded")).toBeTruthy();
     expect(screen.queryByText("null")).toBeNull();
   });
 

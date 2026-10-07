@@ -36,6 +36,7 @@ import { useAmbientBranchId, useCurrentBranch } from "@/shell/branch-context.js"
 import { BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { PendingApprovalItem } from "@routiq/contracts";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 /** Only Reject asks anything first; Approve is one tap. */
 type RejectDialogState = { open: false } | { open: true; entryId: string; rowVersion: number };
@@ -170,12 +171,16 @@ export function FinanceApprovalsScreen() {
         header: t("finance.approvals.columns.branch"),
         enableSorting: false,
         meta: { mobile: "secondary", label: t("finance.approvals.columns.branch") },
-        cell: ({ row }) => (
-          <StatusBadge tone="neutral" icon={Building2}>
-            {branchOptions.find((branch) => branch.id === row.original.branchId)
-              ?.name ?? "—"}
-          </StatusBadge>
-        ),
+        cell: ({ row }) => {
+          // Every entry has a branch; a name not in the loaded options is
+          // unknown here, not unrecorded, so the cell stays empty.
+          const name = branchOptions.find((branch) => branch.id === row.original.branchId)?.name;
+          return name === undefined ? null : (
+            <StatusBadge tone="neutral" icon={Building2}>
+              {name}
+            </StatusBadge>
+          );
+        },
       },
       {
         id: "category",
@@ -215,7 +220,7 @@ export function FinanceApprovalsScreen() {
           label: t("finance.entries.detail.counterparty"),
         },
         cell: ({ row }) => (
-          <span className="whitespace-normal">{row.original.counterpartyName ?? "—"}</span>
+          <span className="whitespace-normal">{row.original.counterpartyName ?? <NotRecorded />}</span>
         ),
       },
     ],

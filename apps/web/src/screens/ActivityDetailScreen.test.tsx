@@ -362,7 +362,7 @@ describe("activity detail — a sparse open journey", () => {
     expect(screen.getByText("On the road")).toBeTruthy();
     expect(screen.queryByText("Open")).toBeNull();
     expect(screen.queryByText("Running")).toBeNull();
-    expect(screen.getByText("Ended").nextElementSibling?.textContent).toBe("—");
+    expect(screen.getByText("Ended").nextElementSibling?.textContent).toBe("Not recorded");
     expect(screen.getByText(/PASSENGER_TRANSPORT v1/)).toBeTruthy();
   });
 

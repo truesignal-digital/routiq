@@ -1,7 +1,7 @@
 import type { ActivityDetail } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/format.js";
+import { formatDateTime, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 export type ActivityTimelineData = Pick<
@@ -100,12 +100,12 @@ export function ActivityTimeline({ activity }: ActivityTimelineProps) {
 
   /** Either end can be missing on its own — say which one we have, not "nothing". */
   function spanLabel(from: string | null, to: string | null, isRunning: boolean): string {
-    if (from === null && to === null) return t("activities.detail.timeline.notRecorded");
+    if (from === null && to === null) return notRecorded(locale);
     const left = from === null ? "…" : formatDateTime(from, locale);
     const right =
       to === null
         ? isRunning
-          ? "—"
+          ? "…"
           : t("activities.detail.timeline.openEnd")
         : formatDateTime(to, locale);
     return `${left} → ${right}`;

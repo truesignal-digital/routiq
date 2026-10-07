@@ -1,5 +1,8 @@
+import { useTranslation } from "react-i18next";
+
 import { Card, CardContent } from "@/components/ui/card.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
+import { notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 /** Neutral states a count; warning marks the bucket that wants someone's attention. */
@@ -9,8 +12,8 @@ export interface MetricTile {
   /** Already translated — the strip carries no copy of its own. */
   label: string;
   /**
-   * Formatted by the caller. `null` means "not known", and renders as a dash:
-   * the strip never invents a number, and a zero would be a claim (§3.4).
+   * Formatted by the caller. `null` means "not known", and reads "Not
+   * recorded": the strip never invents a number, and a zero would be a claim (§3.4).
    */
   value: string | null;
   tone?: MetricTone;
@@ -79,6 +82,7 @@ function Tile({
   tile: MetricTile;
   state: "pending" | "error" | "ready";
 }) {
+  const { t } = useTranslation();
   const tone = tile.tone ?? "neutral";
   // A dash under a stale hint would read as if the hint still applied.
   const showHint = state === "ready" && tile.hint !== undefined;
@@ -105,7 +109,13 @@ function Tile({
                   : TONE_VALUE[tone],
               )}
             >
-              {state === "error" ? "—" : (tile.value ?? "—")}
+              {state === "error" ? (
+                // The one dash left in the app (guard no-bare-dash): a read
+                // that failed has no value to name, so the label says why.
+                <span role="img" aria-label={t("common.readFailed")}>—</span>
+              ) : (
+                (tile.value ?? <span className="text-base">{notRecorded()}</span>)
+              )}
             </span>
           )}
           {showHint && (
