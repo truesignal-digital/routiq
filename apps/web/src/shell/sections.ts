@@ -2,7 +2,6 @@ import {
   Banknote,
   Building,
   House,
-  Menu,
   Route,
   ShieldUser,
   SlidersHorizontal,
@@ -95,7 +94,6 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     reads: (role, enabledModules) =>
       canReadFinanceEntries(role, enabledModules) && moneyReadScope(role) !== "OWN_ENTRIES",
   },
-  { key: "more", group: "daily", labelKey: "more.title", to: "/more", icon: Menu },
   {
     key: "persons",
     group: "company",

@@ -6,7 +6,6 @@
     "home": "Accueil",
     "assets": "Actifs",
     "finances": "Finances",
-    "more": "Plus",
     "activities": "Activités",
     "maintenance": "Maintenance"
   },
@@ -310,21 +309,22 @@
       "registration": "Immatriculation"
     }
   },
-  "more": {
-    "title": "Plus",
-    "signedInAs": "Connecté en tant que {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# agence} other {# agences}}",
+    "mySettings": "Mes réglages",
+    "signOut": "Se déconnecter"
+  },
+  "mySettings": {
+    "title": "Mes réglages",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Langue",
-    "theme": {
-      "label": "Thème",
+    "appearance": {
+      "label": "Apparence",
       "light": "Clair",
       "dark": "Sombre",
-      "system": "Système"
-    },
-    "manage": "Gestion",
-    "persons": "Personnel",
-    "users": "Utilisateurs",
-    "branches": "Agences",
-    "logout": "Se déconnecter"
+      "system": "Comme le téléphone"
+    }
   },
   "form": {
     "errors": {
