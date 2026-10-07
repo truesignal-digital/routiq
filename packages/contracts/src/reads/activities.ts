@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ACTIVITY_COMPLETENESS_CODES } from "../errors.js";
+import { entryCancellation } from "./finance.js";
 import { listQuery, listResponse } from "./list.js";
 
 export const activityStatuses = ["OPEN", "CLOSED"] as const;
@@ -124,6 +125,10 @@ export const activityFinancialEntryRead = z.object({
   categoryLabelEn: z.string(),
   amountMinor: z.number().int(),
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]),
+  /** Set on a cancellation: the entry it cancels, so the card can fold the pair (#427). */
+  reversesEntryId: z.uuid().nullable(),
+  /** On an original: its posted cancellation. A trip's money is one window, so always folded. */
+  cancelledBy: entryCancellation.nullable(),
 });
 
 export const activityDetail = activityListItem.extend({

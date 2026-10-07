@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 564169,
     "raises": [
       {
         "date": "2026-10-06",
@@ -43,6 +43,18 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 562687,
+        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +824 B gzip measured on top of develop after #92; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562687,
+        "to": 564169,
+        "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
       }
     ]
   },
@@ -58,7 +70,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 564169,
     "raises": [
       {
         "date": "2026-10-06",
@@ -101,6 +113,18 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 562687,
+        "reason": "One command-form hook (#290): useCommandForm (contract-schema validation, one intent per opening, refusal banner, success toast), the error summary in CommandForm and its fr/en strings, +824 B gzip measured on top of develop after #92; about 4 ms on a pilot phone at about 5 ms per kB. Every later form move (#294) reuses it and sheds its own submit code."
+      },
+      {
+        "date": "2026-10-07",
+        "from": 562687,
+        "to": 564169,
+        "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
       }
     ]
   }
