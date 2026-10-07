@@ -1,6 +1,6 @@
 import type { Page } from "playwright-core";
 import { DEMO_ACCOUNTS, DEMO_WORKSPACE, type DemoAccount } from "../accounts.js";
-import type { DriveScript } from "../browser.js";
+import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 /**
  * Trips and Approvals fit the screen at desktop widths (#450). Opens each route
@@ -103,9 +103,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
 
   const signIn = async (account: DemoAccount) => {
     if (!new URL(page.url()).pathname.startsWith("/login")) {
-      await goTo("/more");
-      await page.getByRole("main").getByRole("button", { name: /^(Se déconnecter|Sign out)$/ }).click();
-      await page.waitForURL((url) => url.pathname === "/login");
+      await signOutThroughNameMenu(page);
     }
     await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
     await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
@@ -116,7 +114,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
   };
 
   const chooseLanguage = async (lang: "fr" | "en") => {
-    await goTo("/more");
+    await goTo("/my-settings");
     await page.getByRole("button", { name: lang === "en" ? "English" : "Français", exact: true }).click();
     await page.getByRole("heading", { name: lang === "en" ? "Language" : "Langue" }).waitFor({ timeout: 10_000 });
   };

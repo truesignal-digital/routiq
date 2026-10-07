@@ -51,6 +51,7 @@ export const PAGE_TRAILS: readonly PageTrail[] = [
   // Redirects to the waiting view; named the same in case a frame renders first.
   { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.periods.title" }] },
+  { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
   { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },

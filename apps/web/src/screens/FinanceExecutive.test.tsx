@@ -58,6 +58,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
           principalId: "00000000-0000-4000-8000-000000000002",
           membershipId: "00000000-0000-4000-8000-000000000003",
           principalType: "HUMAN", role: "ADMIN", branchScope: [branchId],
+          displayName: "Sali Ahmadou", workspaceName: "Transports Ngwa",
           enabledModules: options.financeEnabled === false ? ["CORE"] : ["CORE", "FINANCE"],
           enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
         };

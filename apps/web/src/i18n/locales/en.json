@@ -6,7 +6,6 @@
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More",
     "activities": "Activities",
     "maintenance": "Maintenance"
   },
@@ -310,21 +309,22 @@
       "registration": "Plate"
     }
   },
-  "more": {
-    "title": "More",
-    "signedInAs": "Signed in as {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "mySettings": "My settings",
+    "signOut": "Sign out"
+  },
+  "mySettings": {
+    "title": "My settings",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Language",
-    "theme": {
-      "label": "Theme",
+    "appearance": {
+      "label": "Appearance",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
-    },
-    "manage": "Manage",
-    "persons": "People",
-    "users": "Users",
-    "branches": "Branches",
-    "logout": "Sign out"
+      "system": "Same as phone"
+    }
   },
   "form": {
     "errors": {

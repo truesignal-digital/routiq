@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LogOut, Truck } from "lucide-react";
+import { Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Sidebar,
@@ -16,8 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useMeContext } from "../auth/me.js";
-import { useSignOut } from "../auth/sign-out.js";
-import { useActiveSession } from "../auth/store.js";
+import { NameMenu } from "./NameMenu.js";
 import { activeSection, visibleSectionGroups } from "./sections.js";
 
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
@@ -26,8 +25,6 @@ const MENU_BUTTON = "min-h-11 md:min-h-8";
 export function AppSidebar() {
   const { t } = useTranslation();
   const me = useMeContext();
-  const session = useActiveSession();
-  const signOut = useSignOut();
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const groups = visibleSectionGroups(me?.role, me?.enabledModules);
@@ -40,11 +37,6 @@ export function AppSidebar() {
   // would otherwise leave the overlay covering the screen it just opened.
   function closeOnMobile() {
     if (isMobile) setOpenMobile(false);
-  }
-
-  function onLogout() {
-    closeOnMobile();
-    signOut();
   }
 
   return (
@@ -102,26 +94,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          {session && (
-            <SidebarMenuItem>
-              <div className="flex min-w-0 flex-col px-2 py-1 group-data-[collapsible=icon]:hidden">
-                <span className="truncate text-sm font-medium">{session.username}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {session.workspaceSlug}
-                </span>
-              </div>
-            </SidebarMenuItem>
-          )}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={t("more.logout")}
-              className={MENU_BUTTON}
-              onClick={onLogout}
-            >
-              <LogOut aria-hidden />
-              <span>{t("more.logout")}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <NameMenu />
         </SidebarMenu>
       </SidebarFooter>
 

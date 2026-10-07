@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { MODULE_CODES } from "@routiq/contracts";
+import { MODULE_CODES, type MeResponse } from "@routiq/contracts";
 import { and, eq, sql } from "drizzle-orm";
 import Fastify from "fastify";
 import { LocalSessionProvider } from "./auth/local.js";
@@ -43,7 +43,7 @@ import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
-import { workspaceModules } from "./db/schema.js";
+import { principals, workspaceModules, workspaces } from "./db/schema.js";
 import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
@@ -144,7 +144,7 @@ export function buildServer({
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {
-    const { disabled, presets } = await read(async (tx) => ({
+    const { disabled, presets, principal, workspace } = await read(async (tx) => ({
       disabled: await tx
         .select({ moduleCode: workspaceModules.moduleCode })
         .from(workspaceModules)
@@ -157,13 +157,29 @@ export function buildServer({
       // Grandfather clause and ordering both live in the helper, so this set
       // and the dispatcher's per-command check can never disagree.
       presets: await enabledPresets(tx, auth.workspaceId),
+      principal: await tx
+        .select({ displayName: principals.displayName })
+        .from(principals)
+        .where(eq(principals.id, auth.principalId)),
+      workspace: await tx
+        .select({ name: workspaces.name })
+        .from(workspaces)
+        .where(eq(workspaces.id, auth.workspaceId)),
     }));
+    const displayName = principal[0]?.displayName;
+    const workspaceName = workspace[0]?.name;
+    // The session just resolved both rows, so a miss is a broken invariant.
+    if (displayName === undefined || workspaceName === undefined) {
+      throw new Error("me: principal or workspace row missing for a verified session");
+    }
     const disabledCodes = new Set(disabled.map((row) => row.moduleCode));
     return {
       ...auth,
+      displayName,
+      workspaceName,
       enabledModules: MODULE_CODES.filter((code) => !disabledCodes.has(code)),
       enabledPresets: presets,
-    };
+    } satisfies MeResponse;
   });
   defineRead(app, readDeps, { path: "/v1/commands", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async () => ({
     commands: listCommands(),
