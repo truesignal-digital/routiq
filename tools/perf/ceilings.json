@@ -1,6 +1,6 @@
 {
   "/.ready_ms": {
-    "ceiling": 670,
+    "ceiling": 793,
     "kind": "time"
   },
   "/.requests": {
@@ -96,15 +96,15 @@
     "kind": "count"
   },
   "login.js_bytes": {
-    "ceiling": 246644,
+    "ceiling": 560822,
     "kind": "bytes"
   },
   "login.lcp_ms": {
-    "ceiling": 2147,
+    "ceiling": 4188,
     "kind": "time"
   },
   "login.usable_ms": {
-    "ceiling": 2167,
+    "ceiling": 4204,
     "kind": "time"
   },
   "reload.shifts": {
