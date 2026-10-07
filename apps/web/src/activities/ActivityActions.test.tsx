@@ -144,6 +144,8 @@ function meWith(role: MeContext["role"]): MeContext {
     principalId: "00000000-0000-4000-8000-0000000000f2",
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-0000000000f3",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES"],

@@ -53,6 +53,8 @@ export function me(role: Role, modules: ModuleCode[] = ALL_MODULES): MeContext {
     principalId: ME_ID,
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-000000000003",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules: modules,
@@ -298,6 +300,8 @@ export function entryRow(overrides: Partial<FinancialEntryListItem> = {}): Finan
     postedAt: null,
     rowVersion: 1,
     reversesEntryId: null,
+    cancelledBy: null,
+    cancels: null,
     recordedBy: actor(OTHER_ID, "Hervé"),
     evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
     assetShareMinor: 310_000,
@@ -322,6 +326,7 @@ export function entryDetail(overrides: Partial<FinancialEntryDetail> = {}): Fina
     sourceReference: null,
     rejectedReason: null,
     reversedByEntryId: null,
+    cancellation: null,
     postings: [
       {
         lineNo: 1,
@@ -390,7 +395,7 @@ export function finance(periodCode = "2026-09", overrides: Partial<AssetFinanceR
     periodCode,
     periodStatus: "OPEN",
     layers: ["DIRECT", "MAINTENANCE", "OWNERSHIP", "SHARED"],
-    posted: { basis: "POSTING_PERIOD", expenseMinor: 661_000, revenueMinor: 0, entryCount: 3 },
+    posted: { basis: "POSTING_PERIOD", expenseMinor: 661_000, revenueMinor: 0, entryCount: 3, eventCount: 3 },
     pending: { basis: "ECONOMIC_MONTH", expenseMinor: 310_000, entryCount: 1 },
     rejected: { basis: "ECONOMIC_MONTH", entryCount: 0 },
     evidenceMissing: { postedCount: 1, pendingCount: 0 },
@@ -420,6 +425,7 @@ export function historyItem(overrides: Partial<VehicleHistoryItem> = {}): Vehicl
     currency: null,
     params: { description: "Brake pressure warning on the Kekem descent", safetyCritical: true },
     note: null,
+    noteCode: null,
     ...overrides,
   };
 }

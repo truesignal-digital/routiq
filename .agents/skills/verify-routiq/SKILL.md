@@ -79,6 +79,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `switch-user` | sign out, sign in as the cashier, role from `GET /v1/me` | no |
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
+| `add-note` | VH003 → Add note: empty submit shows the error summary and sends nothing, its link focuses the field, then the note lands in `GET /v1/assets/:id/history` (#290). Desktop or `--viewport 390x844` | yes |
 | `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
@@ -86,12 +87,13 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
 | `repaired-awaiting-release` | as the technician: VH003 red → Complete work → amber "Repair done — waiting for release to service", no release button; as the Administrateur: amber with Release to service → release → green (#92) | yes |
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
-| `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
+| `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
-| `settings` | More → Branches, Users, People against their reads | no |
+| `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
+| `form-fits-viewport` | entry detail → Edit (Sali's pending entry), Reject (pending, as Finance), Reverse (posted, as Finance) at 1440 × 900, 1366 × 768 and 390 × 844 in fr and en: the form's surface, title and submit stay inside the window and the submit is not covered (#470) | no |
 | `scoped-header` | Douala picked, light and dark, on Home scrolled under the header: header background opaque, `::before` tint at primary 5% covering it at z-index -10, controls win the hit test, header pixels unchanged by scrolling; then all branches: plain header (#57). Checks the run's `--lang` and `--viewport` | no |
 
 A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label, { caption, highlight })`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. `caption` is one English sentence saying what the frame proves; `highlight` is a locator the shot outlines, and the reel zooms into it. Copy a flow as a starting point; `approve-from-panel` uses both. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.

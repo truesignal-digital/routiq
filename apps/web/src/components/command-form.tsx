@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent, type ReactNode } from "react"
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react"
 import { ArrowLeft } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -40,6 +40,13 @@ export interface CommandFormBack {
   onBack: () => void
 }
 
+/** A field the last submit left invalid, for the summary above the form. */
+export interface FormIssue {
+  name: string
+  message: string
+  focus: () => void
+}
+
 export interface CommandFormCopy {
   title: string
   body: string
@@ -59,11 +66,19 @@ export type CommandFormProps = CommandFormChrome & {
    * anything else; every other code is a banner above the untouched fields.
    */
   error?: string | undefined
+  /** Fields the last submit left invalid; nothing was sent. */
+  issues?: readonly FormIssue[] | undefined
   /** Codes that are information rather than failure, shown as a note. */
   informativeCodes?: readonly string[] | undefined
   /** Wording for the two replacing states, when the generic one is too vague. */
   conflict?: CommandFormCopy | undefined
   approval?: CommandFormCopy | undefined
+  /**
+   * Replaces the form once the command committed, when the host offers one
+   * follow-up (Record again after a cancellation, #426). Close comes first,
+   * the follow-up last.
+   */
+  done?: (CommandFormCopy & { action: { label: string; onClick: () => void } }) | undefined
   /** What "Refresh" does after a conflict. Defaults to dismissing the form. */
   onReload?: (() => void | Promise<void>) | undefined
   /**
@@ -104,7 +119,14 @@ export function CommandForm(props: CommandFormProps) {
   if (surface === "dialog") {
     return (
       <Dialog open onOpenChange={(open) => !open && onDismiss()}>
-        <DialogContent className={props.className}>
+        {/* The fields scroll between the title and the footer, so neither
+            leaves a window shorter than the form (#470). */}
+        <DialogContent
+          className={cn(
+            "grid-rows-[auto_minmax(0,1fr)] overflow-hidden",
+            props.className,
+          )}
+        >
           <DialogHeader>
             <DialogTitle>{props.title}</DialogTitle>
             {props.description !== undefined && (
@@ -182,12 +204,37 @@ function CommandFormBody(props: CommandFormProps) {
   const { t, i18n } = useTranslation()
   const label = useCommandLabel()
   const formId = useId()
+  const formRef = useRef<HTMLFormElement>(null)
   const { surface, error, ready, submitting, onSubmit, onDismiss } = props
   const outcome = outcomeOf(error)
   // A dialog or a sheet takes the class on its overlay; a page or a panel
   // page has only the form to put it on.
   const bodyClassName =
     surface === "page" || surface === "panel" ? props.className : undefined
+
+  if (props.done !== undefined) {
+    const { done } = props
+    return (
+      <div className={cn(surfaceBodyClass(surface), bodyClassName)}>
+        <div className={cn(surface === "panel" || surface === "sheet" ? "p-4" : undefined)}>
+          <div role="status" className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success-foreground">
+            <p className="font-semibold">{done.title}</p>
+            <p className="mt-1">{done.body}</p>
+          </div>
+        </div>
+        <Footer surface={surface}>
+          {[
+            <Button key="close" type="button" variant="outline" className="flex-1 sm:flex-none" onClick={onDismiss}>
+              {t("commandForm.close")}
+            </Button>,
+            <Button key="action" type="button" className="flex-1 sm:flex-none" onClick={done.action.onClick}>
+              {done.action.label}
+            </Button>,
+          ]}
+        </Footer>
+      </div>
+    )
+  }
 
   if (outcome !== "form") {
     const copy =
@@ -280,15 +327,18 @@ function CommandFormBody(props: CommandFormProps) {
 
   return (
     <form
+      ref={formRef}
       id={formId}
       noValidate
       className={cn(surfaceBodyClass(surface), bodyClassName)}
       onSubmit={handleSubmit}
     >
       <div
+        data-slot="command-form-body"
         className={cn(
           "flex flex-col gap-4",
           (surface === "panel" || surface === "sheet") && "p-4",
+          surface === "dialog" && "-mx-4 -my-1 min-h-0 overflow-y-auto px-4 py-1",
         )}
       >
         {surface === "page" && props.title !== undefined && (
@@ -296,6 +346,9 @@ function CommandFormBody(props: CommandFormProps) {
         )}
         {surface === "page" && props.description !== undefined && (
           <p className="text-sm text-muted-foreground">{props.description}</p>
+        )}
+        {props.issues !== undefined && props.issues.length > 0 && (
+          <ErrorSummary issues={props.issues} form={formRef} />
         )}
         {error !== undefined &&
           (informative ? (
@@ -316,10 +369,64 @@ function CommandFormBody(props: CommandFormProps) {
   )
 }
 
+/**
+ * What the last submit left to fix, named by each field's own label. It takes
+ * focus when it appears, so a screen reader and a phone both land on it.
+ */
+function ErrorSummary({
+  issues,
+  form,
+}: {
+  issues: readonly FormIssue[]
+  form: RefObject<HTMLFormElement | null>
+}) {
+  const { t } = useTranslation()
+  const headingId = useId()
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => ref.current?.focus(), [])
+
+  return (
+    <section
+      ref={ref}
+      tabIndex={-1}
+      aria-labelledby={headingId}
+      className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm outline-none"
+    >
+      <p id={headingId} className="font-semibold text-destructive">
+        {t("commandForm.issues", { count: issues.length })}
+      </p>
+      <ul>
+        {issues.map((issue) => {
+          const field = fieldLabel(form.current, issue.name)
+          return (
+            <li key={issue.name}>
+              <button
+                type="button"
+                className="min-h-11 text-left underline underline-offset-2"
+                onClick={issue.focus}
+              >
+                {field === undefined
+                  ? issue.message
+                  : t("commandForm.issue", { field, message: issue.message })}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+function fieldLabel(form: HTMLFormElement | null, name: string): string | undefined {
+  const control = form?.elements.namedItem(name)
+  const label = control instanceof HTMLElement ? (control as HTMLInputElement).labels?.[0] : undefined
+  return label?.textContent?.replace(/\*\s*$/, "").trim() || undefined
+}
+
 function surfaceBodyClass(surface: CommandSurface): string {
   switch (surface) {
     case "dialog":
-      return "flex flex-col gap-4"
+      return "flex min-h-0 flex-col gap-4"
     case "page":
       return "flex flex-col gap-4 rounded-xl border border-border bg-card p-4"
     case "panel":
