@@ -21,7 +21,7 @@ const entry: FinancialEntryDetail = {
   counterpartyName: "Station Douala", paymentMethod: "CASH", estimateStatus: "ACTUAL",
   postedAt: "2026-09-04T12:00:00Z", rowVersion: 1,
   description: "Vehicle fuel", paymentReference: null, sourceReference: null,
-  rejectedReason: null, reversesEntryId: null, reversedByEntryId: null,
+  rejectedReason: null, reversesEntryId: null, reversedByEntryId: null, cancellation: null,
   ...entryVehicleFields,
   evidenceFiles: [], postings: [], directionDecides: false,
 };

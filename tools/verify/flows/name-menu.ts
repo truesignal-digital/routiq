@@ -22,7 +22,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
 
   let menu = await openNameMenu(page);
   await menu.getByText(me.workspaceName).waitFor();
-  await shot("menu-desktop", { caption: "The name menu: My settings, the admin pages this role had on More (until #312), Sign out" });
+  await shot("menu-desktop", { caption: "The name menu: My settings and Sign out" });
   // A full-page shot of a tall page resizes the viewport, which closes the popup.
   if (!(await menu.isVisible())) menu = await openNameMenu(page);
 

@@ -7,6 +7,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useMeContext } from "../auth/me.js";
 import { NameMenu } from "./NameMenu.js";
-import { isSectionActive, visibleSections } from "./sections.js";
+import { activeSection, visibleSectionGroups } from "./sections.js";
 
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
 const MENU_BUTTON = "min-h-11 md:min-h-8";
@@ -26,7 +27,11 @@ export function AppSidebar() {
   const me = useMeContext();
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const sections = visibleSections(me?.enabledModules, me?.role);
+  const groups = visibleSectionGroups(me?.role, me?.enabledModules);
+  const active = activeSection(
+    groups.flatMap((group) => group.sections),
+    pathname,
+  );
 
   // The sheet has no route awareness of its own: navigating from inside it
   // would otherwise leave the overlay covering the screen it just opened.
@@ -58,30 +63,32 @@ export function AppSidebar() {
 
       <SidebarContent>
         <nav aria-label={t("shell.navLabel")}>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {sections.map((section) => {
-                  const { key, to, icon: Icon } = section;
-                  const label = t(`nav.${key}`);
-                  return (
-                    <SidebarMenuItem key={key}>
-                      <SidebarMenuButton
-                        isActive={isSectionActive(section, pathname)}
-                        tooltip={label}
-                        className={MENU_BUTTON}
-                        onClick={closeOnMobile}
-                        render={<Link to={to} />}
-                      >
-                        <Icon aria-hidden />
-                        <span>{label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {groups.map((group) => (
+            <SidebarGroup key={group.key}>
+              <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.sections.map(({ key, to, labelKey, icon: Icon }) => {
+                    const label = t(labelKey);
+                    return (
+                      <SidebarMenuItem key={key}>
+                        <SidebarMenuButton
+                          isActive={active?.key === key}
+                          tooltip={label}
+                          className={MENU_BUTTON}
+                          onClick={closeOnMobile}
+                          render={<Link to={to} />}
+                        >
+                          <Icon aria-hidden />
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </nav>
       </SidebarContent>
 

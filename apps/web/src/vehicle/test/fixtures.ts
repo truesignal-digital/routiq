@@ -326,6 +326,7 @@ export function entryDetail(overrides: Partial<FinancialEntryDetail> = {}): Fina
     sourceReference: null,
     rejectedReason: null,
     reversedByEntryId: null,
+    cancellation: null,
     postings: [
       {
         lineNo: 1,
@@ -424,6 +425,7 @@ export function historyItem(overrides: Partial<VehicleHistoryItem> = {}): Vehicl
     currency: null,
     params: { description: "Brake pressure warning on the Kekem descent", safetyCritical: true },
     note: null,
+    noteCode: null,
     ...overrides,
   };
 }

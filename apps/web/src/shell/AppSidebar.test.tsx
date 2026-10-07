@@ -169,20 +169,17 @@ describe("the name menu in the sidebar footer (#316)", () => {
     expect(within(menu).getByRole("menuitem", { name: "Sign out" })).toBeTruthy();
   });
 
-  it("keeps the administration pages within reach until the Company group (#312) lands", async () => {
+  it("leaves the administration pages to the sidebar's Company rows (#312)", async () => {
     renderSidebar(member("DIRECTOR", "ALL"));
+    const nav = await screen.findByRole("navigation", { name: "Navigation" });
+    for (const name of ["People", "Users", "Branches"]) {
+      expect(within(nav).getByRole("link", { name })).toBeTruthy();
+    }
     const menu = await openNameMenu();
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
       "My settings",
-      "People",
-      "Users",
-      "Branches",
       "Sign out",
     ]);
-    cleanup();
-
-    renderSidebar(member("ADMIN", "ALL"));
-    expect(within(await openNameMenu()).queryByRole("menuitem", { name: "Branches" })).toBeNull();
   });
 
   it("has no More row", async () => {

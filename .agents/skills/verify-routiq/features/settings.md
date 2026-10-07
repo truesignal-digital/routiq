@@ -11,10 +11,10 @@ Direction manages branches; Direction and administrators manage users (logins wi
 
 ## How to get to it (user POV)
 
-- The More page is gone (#316; `/more` redirects to Home). The pages keep their paths. Until the Company group lands in the sidebar (#312) they are entries in the name menu at the foot of the sidebar:
-- Name menu → "Agences" / "Branches" (`/more/branches`, DIRECTOR).
-- Name menu → "Utilisateurs" / "Users" (`/more/users`, DIRECTOR and ADMIN).
-- Name menu → "Personnel" / "People" (`/more/persons`, needs the trips module).
+- The More page is gone (#316; `/more` redirects to Home). The pages keep their paths and are rows of the sidebar's Company group (#312):
+- Sidebar → "Agences" / "Branches" (`/more/branches`, DIRECTOR).
+- Sidebar → "Utilisateurs" / "Users" (`/more/users`, DIRECTOR and ADMIN).
+- Sidebar → "Personnel" / "People" (`/more/persons`, needs the trips module).
 
 ## Driving it with pnpm verify
 
@@ -22,10 +22,10 @@ Preconditions:
 
 - Fresh seed: branches BAF, DLA, YDE; eight users, one or more per role; driver Jean Ngwa (DRV001). Settings (branches) are Direction's: use `--role director`. Users is open to `admin` for drivers, technicians and cashiers in their branches.
 
-- **All three screens.** Run `pnpm verify drive flow:settings --role director --lang en`. For each it opens "Branches", "Users" or "People" from the sidebar row if there is one, otherwise from the name menu, waits for the heading, and screenshots. Cross-checks: every code from `GET /v1/branches` is a cell on the page; `GET /v1/members` returns 7 members; `GET /v1/persons` answers 200.
+- **All three screens.** Run `pnpm verify drive flow:settings --role director --lang en`. For each it opens "Branches", "Users" or "People" from its Company row in the sidebar, waits for the heading, and screenshots. Cross-checks: every code from `GET /v1/branches` is a cell on the page; `GET /v1/members` returns 7 members; `GET /v1/persons` answers 200.
 - **Create a branch.** In a DriveScript on `/more/branches`: "New branch" → fill "Code", "Nom"/"Name", pick "Fuseau horaire"/"Time zone" → "Créer"/"Create". Read back with `pnpm verify api GET /v1/branches --role admin`. Mutates.
 - **Change a role.** On `/more/users`: the user's row "Actions" → "Change role" → pick the role → "Save". Read back with `GET /v1/members`. Mutates.
-- **Non-admin.** `pnpm verify drive /more/users --role finance` shows the heading "Utilisateurs" over "Votre rôle ne permet pas cette action."; the name menu has no Users or Branches entry for that role.
+- **Non-admin.** `pnpm verify drive /more/users --role finance` shows the heading "Utilisateurs" over "Votre rôle ne permet pas cette action."; the sidebar has no Users or Branches row for that role.
 - **Proof.** `01-branches.png`, `02-users.png`, `03-people.png` and the cross-check lines.
 
 ## Gotchas

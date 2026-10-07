@@ -22,10 +22,10 @@ const numbersIn = (element: HTMLElement) =>
 
 describe("ReversalLink (#442)", () => {
   const cases = [
-    ["en", "reverses", "Reverses entry YDE-2026-00012"],
-    ["en", "reversedBy", "Reversed by entry YDE-2026-00012"],
-    ["fr-CM", "reverses", "Extourne l'écriture YDE-2026-00012"],
-    ["fr-CM", "reversedBy", "Extournée par l'écriture YDE-2026-00012"],
+    ["en", "reverses", "Cancellation of entry YDE-2026-00012"],
+    ["en", "reversedBy", "Cancelled by entry YDE-2026-00012"],
+    ["fr-CM", "reverses", "Annulation de l'écriture YDE-2026-00012"],
+    ["fr-CM", "reversedBy", "Annulée par l'écriture YDE-2026-00012"],
   ] as const;
 
   for (const [language, type, name] of cases) {

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Building2, ChevronsUpDown, LogOut, Settings, ShieldUser, Users } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
@@ -11,11 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
-import { canViewActivities } from "@/activities/permissions.js";
-import { useMeContext } from "@/auth/me.js";
 import { useSignOut } from "@/auth/sign-out.js";
-import { canAdministerBranches } from "@/branches/permissions.js";
-import { canAdministerMembers } from "@/members/permissions.js";
 import { useWho, type Who } from "./who.js";
 
 const ITEM = "min-h-11 gap-2 px-2";
@@ -38,7 +34,6 @@ export function MemberBadge({ who, className = "size-8" }: { who: Who; className
 export function NameMenu() {
   const { t } = useTranslation();
   const who = useWho();
-  const me = useMeContext();
   const signOut = useSignOut();
   const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -54,14 +49,6 @@ export function NameMenu() {
     if (isMobile) setOpenMobile(false);
     signOut();
   }
-
-  // role-config: until the Company group in the sidebar (#312) lands, the
-  // administration pages the More page used to list are reached from here.
-  const company = [
-    canViewActivities(me?.enabledModules) && { to: "/more/persons", icon: Users, label: t("persons.title") },
-    canAdministerMembers(me?.role) && { to: "/more/users", icon: ShieldUser, label: t("users.title") },
-    canAdministerBranches(me?.role) && { to: "/more/branches", icon: Building2, label: t("branches.title") },
-  ].filter((entry) => entry !== false);
 
   return (
     <SidebarMenuItem>
@@ -105,12 +92,6 @@ export function NameMenu() {
             <Settings aria-hidden />
             {t("nameMenu.mySettings")}
           </DropdownMenuItem>
-          {company.map(({ to, icon: Icon, label }) => (
-            <DropdownMenuItem key={to} className={ITEM} onClick={() => go(to)}>
-              <Icon aria-hidden />
-              {label}
-            </DropdownMenuItem>
-          ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" className={ITEM} onClick={onSignOut}>
             <LogOut aria-hidden />
