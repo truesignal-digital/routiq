@@ -210,6 +210,7 @@ export function FinancePeriodsScreen() {
       <PageHeader
         title={t("finance.periods.title")}
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("finance.periods.lead")}</p>
       <FinanceToolbar>
         {!periodsQuery.isPending && !periodsQuery.isError && (
           <DataTableViewOptions

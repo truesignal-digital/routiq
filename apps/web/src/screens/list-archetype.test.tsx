@@ -238,4 +238,9 @@ describe("module list archetype", () => {
       ).toBe("true");
     },
   );
+
+  // Finance entries and Approvals open on GET /v1/finance/summary tiles built
+  // in #516 (#314) on this same MetricStrip; their rows join LISTS once it is
+  // in develop.
+  it.todo("Finance entries and Approvals open on the metric strip — delivered by #516 (#314)");
 });
