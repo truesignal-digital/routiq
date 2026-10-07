@@ -24,7 +24,9 @@ export function ShellPending() {
           data-shift-region="header"
           className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4"
         >
-          <SidebarTrigger aria-label={t("shell.toggleSidebar")} className="-ms-1 size-11 md:size-7" />
+          {/* Inert: this frame is replaced when the member arrives, and a menu
+              opened here would close by itself. */}
+          <SidebarTrigger aria-label={t("shell.toggleSidebar")} className="-ms-1 size-11 md:size-7" disabled />
         </header>
         <div data-shift-region="page" className="flex min-w-0 flex-1 flex-col" />
       </SidebarInset>
