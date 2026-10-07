@@ -15,6 +15,30 @@ const SCHEMA = file(
   "apps/api/src/db/schema.ts",
   'export const assets = pgTable("assets", {});\nexport const sessions = pgTable("sessions", {});',
 );
+const APPEND_ONLY_SCHEMA = file(
+  "apps/api/src/db/schema.ts",
+  [
+    'export const notes = pgTable(\n  "notes",\n  {},\n);',
+    'export const auditEvents = pgTable(\n  "audit_events",\n  {},\n);',
+    'export const meterReadings = pgTable("meter_readings", {});',
+    'export const financialPostings = pgTable("financial_postings", {});',
+    'export const financialEntries = pgTable("financial_entries", {});',
+    'export const assets = pgTable("assets", {});',
+  ].join("\n"),
+);
+const APPEND_ONLY_INVENTORY = file(
+  "apps/api/src/db/append-only.ts",
+  [
+    "export const APPEND_ONLY_TABLES = {",
+    '  auditEvents: { update: [], delete: "never" },',
+    '  notes: { update: [], delete: "never" },',
+    '  meterReadings: { update: ["superseded_by_id"], delete: "never" },',
+    '  financialPostings: { update: ["posting_period_id"], delete: "pending entry lines only" },',
+    "} as const satisfies Record<string, unknown>;",
+  ].join("\n"),
+);
+const APPEND_ONLY = [APPEND_ONLY_SCHEMA, APPEND_ONLY_INVENTORY];
+
 const REGISTRY = file(
   "apps/web/registry.json",
   JSON.stringify({ items: [{ files: [{ path: "src/components/page.tsx" }] }] }),
@@ -78,6 +102,23 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
       file("apps/api/src/commands/x.ts", "await tx.insert(assets).values(row);"),
       file("apps/api/src/auth/local.ts", "await executor.insert(sessions).values(row);"),
       file("apps/api/src/reads/x.ts", "seen.delete(id);"),
+    ],
+  },
+  {
+    id: "A27",
+    bad: [
+      ...APPEND_ONLY,
+      file("apps/api/src/commands/add-note.ts", "await tx.update(notes).set({ body }).where(eq(notes.id, id));"),
+    ],
+    good: [
+      ...APPEND_ONLY,
+      file("apps/api/src/commands/add-note.ts", "await tx.insert(notes).values(row);"),
+      file("apps/api/src/commands/entry-decisions.ts", "await tx.update(financialPostings).set({ postingPeriodId });"),
+      file("apps/api/src/commands/update-pending-entry.ts", "await tx.delete(financialPostings).where(pending);"),
+      file("apps/api/src/commands/activity-legs.ts", "await tx.update(meterReadings).set({ supersededById });"),
+      file("apps/api/src/commands/reverse-entry.ts", "await tx.update(financialEntries).set({ status });"),
+      file("apps/api/scripts/seed-demo.ts", "await owner.delete(schema.notes).where(inWorkspace);"),
+      file("apps/api/src/commands/add-note.test.ts", "await tx.update(notes).set({ body: 'x' });"),
     ],
   },
   {
@@ -286,6 +327,18 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],
   },
+  {
+    id: "S1",
+    bad: [
+      file("apps/api/src/reads/assets.ts", "await tx.execute(sql.raw(`select * from assets where asset_code = '${code}'`));"),
+      file("apps/api/scripts/x.ts", 'await pool.query("select * from notes where body like \'%" + request.query.q + "%\'");'),
+    ],
+    good: [
+      file("apps/api/src/reads/assets.ts", "await tx.execute(sql`select * from assets where asset_code = ${code}`);"),
+      file("apps/api/scripts/x.ts", 'await pool.query("select * from notes where id = $1", [id]);'),
+      file("apps/api/src/reads/x.test.ts", "await ctx.db.execute(sql.raw(migrationSql));"),
+    ],
+  },
 ];
 
 describe("every rule", () => {
@@ -305,6 +358,63 @@ describe.each(CASES)("rule $id", ({ id, bad, good }) => {
 
   it("allows the paved path", () => {
     expect(rule(id).check(good)).toEqual([]);
+  });
+});
+
+describe("A27 append-only tables", () => {
+  const a27 = rule("A27");
+  const at = (content: string, path = "apps/api/src/commands/x.ts") =>
+    a27.check([...APPEND_ONLY, file(path, content)]).map((v) => v.line);
+
+  it.each([
+    ["a note edit", "await tx.update(notes).set({ body });"],
+    ["a note delete", "await tx.delete(notes).where(eq(notes.id, id));"],
+    ["an audit delete through the schema namespace", "await tx.delete(schema.auditEvents);"],
+    ["an aliased import", 'import { notes as remarks } from "../db/schema.js";\nawait tx.update(remarks).set({ body });'],
+    ["a call split over lines", "await tx\n  .update(\n    notes\n  )\n  .set({ body });"],
+    ["raw SQL", "await tx.execute(sql`UPDATE notes SET body = ${body} WHERE id = ${id}`);"],
+    ["raw SQL with a quoted, schema-qualified name", 'await client.query(\'delete from public."audit_events" where id = $1\', [id]);'],
+    ["raw SQL over lines", "await tx.execute(sql`\n  delete\n  from audit_events\n`);"],
+    ["truncate", "await tx.execute(sql.raw('truncate table notes'));"],
+    ["an interpolated table", "await tx.execute(sql`update ${notes} set body = ${body}`);"],
+    ["a meter reading delete, whose only sanctioned write is the supersede link", "await tx.delete(meterReadings);"],
+    ["a posting delete outside the pending-entry path", "await tx.delete(financialPostings);"],
+  ])("catches %s", (_label, snippet) => {
+    expect(at(snippet)).toHaveLength(1);
+  });
+
+  it("points at the line the call starts on", () => {
+    expect(at("const a = 1;\nawait tx\n  .update(notes)\n  .set({ body });")).toEqual([3]);
+  });
+
+  it.each([
+    ["an insert", "await tx.insert(notes).values(row);"],
+    ["a read", "await tx.select().from(auditEvents).where(eq(auditEvents.id, id));"],
+    ["a mutable table", "await tx.update(financialEntries).set({ status });"],
+    ["a table whose name only starts the same", "await tx.update(notesDraft).set({ body });"],
+    ["a doc comment", "/**\n * Never `update notes`: a correction is another note.\n */\nconst x = 1;"],
+    ["a line comment", "// tx.delete(auditEvents) would be refused by the grant\nconst x = 1;"],
+    ["a Map delete by id", "seen.delete(noteId);"],
+  ])("allows %s", (_label, snippet) => {
+    expect(at(snippet)).toEqual([]);
+  });
+
+  it("ignores test files and code outside the API", () => {
+    expect(at("await tx.update(notes).set({ body });", "apps/api/src/commands/add-note.test.ts")).toEqual([]);
+    expect(at("await tx.update(notes).set({ body });", "apps/web/src/notes/x.ts")).toEqual([]);
+  });
+
+  it("fails when the inventory is missing, so the guard cannot be switched off by deleting it", () => {
+    expect(a27.check([APPEND_ONLY_SCHEMA])).toEqual([
+      expect.objectContaining({ path: "apps/api/src/db/append-only.ts" }),
+    ]);
+  });
+
+  it("fails when the inventory names a table schema.ts does not have", () => {
+    const stale = file("apps/api/src/db/append-only.ts", 'export const APPEND_ONLY_TABLES = {\n  remarks: { update: [], delete: "never" },\n} as const;');
+    expect(a27.check([APPEND_ONLY_SCHEMA, stale])).toEqual([
+      expect.objectContaining({ text: "not a schema.ts table: remarks" }),
+    ]);
   });
 });
 

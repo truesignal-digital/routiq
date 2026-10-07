@@ -133,6 +133,12 @@
       "skillPath": "skills/personal/obsidian-vault/SKILL.md",
       "computedHash": "5c08eda96fd76a71793c0a8cb91bef41d518586654a14af4f2edf8f8fd0f96a7"
     },
+    "pr": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/pr/SKILL.md",
+      "computedHash": "22a15d4d469344b38e03eb0e95772478393975836289393b1bad3c0febcdc679"
+    },
     "principle-encode-lessons-in-structure": {
       "source": "cursor/plugins",
       "sourceType": "github",
@@ -180,6 +186,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/resolving-merge-conflicts/SKILL.md",
       "computedHash": "28aad6f8b1b7025abc8892fa8890f68fe1533499b28a565f416b159131d22fad"
+    },
+    "retro": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/retro/SKILL.md",
+      "computedHash": "b8d55851a2909e26c2dbb2e8563719c87b3b700559f604e4df344f8c27e21047"
     },
     "scaffold-exercises": {
       "source": "mattpocock/skills",
@@ -239,7 +251,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/to-tickets/SKILL.md",
-      "computedHash": "0349eee265e7005e667b4543de849672106c46d545e998f37d3319300bb07751"
+      "computedHash": "5f871bdc46a9212222214ba399be4965374208af1bd7f48f1271bef72841dd31"
     },
     "triage": {
       "source": "mattpocock/skills",

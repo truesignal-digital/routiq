@@ -103,6 +103,22 @@ describe("locale catalogs", () => {
       }
     }
   });
+
+  // The person who regularly drives a vehicle is its "assigned driver", « chauffeur
+  // attitré » (ADR-0010, #91). Keys and commands keep the internal name custodian.
+  it("calls the custodian the assigned driver, never custodian, gardien or responsable", () => {
+    for (const catalog of [en, truckingEn, passengerEn, fr, truckingFr, passengerFr]) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        expect(visibleWords(value), key).not.toMatch(/custodian|gardien/i);
+      }
+    }
+    for (const catalog of [fr, truckingFr, passengerFr]) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        if (!/custodian/i.test(key)) continue;
+        expect(visibleWords(value), key).not.toMatch(/responsable|répond/i);
+      }
+    }
+  });
 });
 
 const COMMANDS = Object.keys(COMMAND_QUEUEABILITY);
