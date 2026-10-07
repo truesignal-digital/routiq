@@ -2,6 +2,8 @@ import {
   activityDetail,
   activityListQuery,
   activityListResponse,
+  activitySummary,
+  activitySummaryQuery,
   canReadEntries,
   personListQuery,
   personListResponse,
@@ -40,7 +42,9 @@ import {
   movementLegs,
   persons,
   places,
+  workspaces,
 } from "../db/schema.js";
+import { addDays, currentBusinessDate, isoWeek } from "./business-date.js";
 import {
   afterKeyset,
   bindText,
@@ -350,6 +354,76 @@ export function registerActivityReadRoutes(
         return activityListResponse.parse({ items, nextCursor });
       } catch (error) {
         req.log.error({ err: error }, "activities list read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+
+  // Ahead of `/v1/activities/:activityId` so "summary" never reads as an id.
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/activities/summary", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
+      try {
+        const parsedQuery = activitySummaryQuery.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { branchId } = parsedQuery.data;
+
+        const summary = await read(async (tx) => {
+          const [workspace] = await tx
+            .select({ timezone: workspaces.timezone })
+            .from(workspaces)
+            .where(eq(workspaces.id, auth.workspaceId));
+          const timezone = workspace?.timezone ?? "Africa/Douala";
+          const week = isoWeek(currentBusinessDate(new Date(), timezone));
+
+          // The same scope the list applies: session branches, then the
+          // optional branch inside them, never instead of them.
+          const conditions: SQL[] = [eq(activities.workspaceId, auth.workspaceId)];
+          if (auth.branchScope !== "ALL") {
+            conditions.push(inArray(activities.branchId, auth.branchScope));
+          }
+          if (branchId) conditions.push(eq(activities.branchId, branchId));
+
+          // Week edges are local midnights, so a trip started at 00:30 Monday
+          // in Douala belongs to this week, not the last.
+          const startsAt = sql`(${week.from}::date)::timestamp at time zone ${timezone}`;
+          const endsBefore = sql`(${addDays(week.to, 1)}::date)::timestamp at time zone ${timezone}`;
+          const inWeek = sql`${activities.startedAt} >= ${startsAt} and ${activities.startedAt} < ${endsBefore}`;
+
+          const [counts] = await tx
+            .select({
+              thisWeek: sql<number>`count(*) filter (where ${inWeek})::int`,
+              open: sql<number>`count(*) filter (where ${activities.status} = 'OPEN')::int`,
+              incomplete: sql<number>`count(*) filter (where ${activities.completeness} = 'COMPLETE_WITH_EXCEPTIONS')::int`,
+              weekKm: sql<number | null>`(
+                select sum(${movementLegs.distanceKm})::int
+                from ${movementLegs}
+                where ${movementLegs.workspaceId} = ${auth.workspaceId}
+                  and ${movementLegs.activityId} in (
+                    select ${activities.id} from ${activities}
+                    where ${and(...conditions, inWeek)}
+                  )
+              )`,
+            })
+            .from(activities)
+            .where(and(...conditions));
+
+          return {
+            week,
+            thisWeek: counts?.thisWeek ?? 0,
+            open: counts?.open ?? 0,
+            incomplete: counts?.incomplete ?? 0,
+            weekKm: counts?.weekKm ?? null,
+          };
+        });
+
+        return activitySummary.parse(summary);
+      } catch (error) {
+        req.log.error({ err: error }, "activity summary read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });
       }
     },
