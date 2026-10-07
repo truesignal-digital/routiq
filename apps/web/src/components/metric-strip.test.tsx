@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { MetricStrip, type MetricTiles } from "./metric-strip.js";
 
 const tiles: MetricTiles = [
@@ -142,5 +143,34 @@ describe("MetricStrip", () => {
     const { container } = render(<MetricStrip tiles={tiles} />);
 
     expect(container.innerHTML).not.toMatch(/amber-|emerald-|sky-|red-/);
+  });
+
+  it("leaves a tile without a filter target as plain text", () => {
+    render(<MetricStrip tiles={tiles} />);
+
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("turns a tile with a filter target into a pressed-state button", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <MetricStrip
+        tiles={[
+          { label: "Fleet", value: "6", onSelect, selected: true },
+          { label: "In service", value: "2", onSelect: () => {} },
+        ]}
+      />,
+    );
+
+    const fleet = screen.getByRole("button", { name: "Fleet" });
+    expect(fleet.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "In service" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    // Still a description list: the button sits inside the term.
+    expect(container.querySelector("dt button")).toBe(fleet);
+
+    await userEvent.setup().click(fleet);
+    expect(onSelect).toHaveBeenCalledTimes(1);
   });
 });
