@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 562867,
+    "ceiling": 563062,
     "raises": [
       {
         "date": "2026-10-06",
@@ -41,7 +41,13 @@
       {
         "date": "2026-10-06",
         "from": 561678,
-        "to": 562867,
+        "to": 561863,
+        "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 563062,
         "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
       }
     ]
@@ -58,7 +64,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 562867,
+    "ceiling": 563062,
     "raises": [
       {
         "date": "2026-10-06",
@@ -99,7 +105,13 @@
       {
         "date": "2026-10-06",
         "from": 561678,
-        "to": 562867,
+        "to": 561863,
+        "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 563062,
         "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load"
       }
     ]
