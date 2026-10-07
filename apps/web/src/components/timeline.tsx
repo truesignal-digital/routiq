@@ -145,10 +145,10 @@ function TimelineRow({
       );
 
   return (
-    <li className="relative flex gap-3 pb-5 last:pb-0" data-testid="timeline-event">
+    <li className="group/event relative flex gap-3 pb-5 last:pb-0" data-testid="timeline-event">
       {/* The rail: a line from this marker down to the next one. */}
       <span
-        className="absolute top-3 bottom-0 left-3.5 w-px -translate-x-1/2 bg-border [li:last-child>&]:hidden"
+        className="absolute top-3 bottom-0 left-3.5 w-px -translate-x-1/2 bg-border group-last/event:hidden"
         aria-hidden
       />
       <span className="relative grid w-7 shrink-0 place-items-start justify-center pt-0.5" aria-hidden>
