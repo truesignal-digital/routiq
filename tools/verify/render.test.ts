@@ -39,9 +39,12 @@ describe("renderCompose", () => {
 
 describe("renderViteConfig", () => {
   it("points the dev server and the /v1 proxy at the slot", () => {
-    const config = renderViteConfig("/repo/apps/web/vite.config.ts", "/repo/apps/web", "/repo/.verify/slots/3/vite-cache", slotPorts(3));
+    const config = renderViteConfig("/repo/apps/web/vite.config.ts", "/repo/apps/web", "/repo/.verify/slots/3/vite-cache", slotPorts(3), "/repo/.verify/slots/3/dist");
     expect(config).toContain("port: 24033");
     expect(config).toContain('"/v1": "http://127.0.0.1:24032"');
+    expect(config).toContain('outDir: "/repo/.verify/slots/3/dist"');
+    // vite preview (a --built slot) serves on the same port with the same proxy.
+    expect(config.match(/"\/v1": "http:\/\/127\.0\.0\.1:24032"/g)).toHaveLength(2);
     expect(config).toContain("strictPort: true");
     expect(config).not.toContain("3001");
   });
