@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 563119,
     "raises": [
       {
         "date": "2026-10-06",
@@ -43,6 +43,12 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 563119,
+        "reason": "#96: change-issue-severity form, steps and fr/en strings, +1256 B gzip measured on top of develop after #92; the locales ship in the first load"
       }
     ]
   },
@@ -58,7 +64,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 563119,
     "raises": [
       {
         "date": "2026-10-06",
@@ -101,6 +107,12 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 563119,
+        "reason": "#96: change-issue-severity form, steps and fr/en strings, +1256 B gzip measured on top of develop after #92; the locales ship in the first load"
       }
     ]
   }
