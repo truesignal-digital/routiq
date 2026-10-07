@@ -13,6 +13,7 @@ import {
   type DataTableFilterValues,
 } from "@/components/data-table";
 import { buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -22,6 +23,7 @@ import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import {
+  canReadFinance,
   canReadFinanceEntries,
   canRecordFinance,
   canReverseEntry,
@@ -75,11 +77,15 @@ function FinanceEntriesContent() {
   // role-config: a driver's list holds only what they recorded (#264); the
   // screen says so, so a short list never reads as the whole ledger.
   const ownOnly = entriesScope(me?.role) === "OWN_ENTRIES";
+  // role-config: the books view is for ledger readers (#427); everyone else
+  // reads one line per event.
+  const canReadBooks = canReadFinance(me?.role, me?.enabledModules);
 
   // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
   // does the filtering, so the table never narrows rows itself.
   // Not strict: /finance/record renders this list behind its record panel.
   const search = useSearch({ strict: false });
+  const books = canReadBooks && search.view === "books";
   const searchFilters = useMemo(() => ({
     periodCode: search.periodCode ?? "",
     status: search.status ?? "",
@@ -99,9 +105,19 @@ function FinanceEntriesContent() {
         status: STATUS_OPTIONS.find((status) => status === values["status"]),
         direction: DIRECTION_OPTIONS.find((direction) => direction === values["direction"]),
         assetId: values["assetId"] || undefined,
+        view: search.view,
       },
     });
   };
+  const changeBooks = (next: boolean) =>
+    void navigate({
+      to: "/finance/entries",
+      replace: true,
+      search: (previous: Record<string, unknown>) => ({
+        ...previous,
+        view: next ? ("books" as const) : undefined,
+      }),
+    });
   // Owned here so the view menu can sit in the toolbar row beside the tabs.
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
@@ -115,6 +131,7 @@ function FinanceEntriesContent() {
     ...(filterValues["direction"] ? { direction: filterValues["direction"] } : {}),
     ...(periodCode ? { periodCode } : {}),
     ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
+    ...(books ? { view: "books" as const } : {}),
     ...(sort ? { sort } : {}),
   });
 
@@ -211,11 +228,17 @@ function FinanceEntriesContent() {
             className={buttonVariants({ size: "desktop-sm" })}
           >
             <Plus aria-hidden />
-            {t("finance.entries.recordAction")}
+            {t("finance.record.title")}
           </Link>
         )}
       </FinanceToolbar>
 
+      {canReadBooks && (
+        <label className="mt-3 flex min-h-11 w-fit items-center gap-2 text-sm desktop:min-h-8">
+          <Checkbox checked={books} onCheckedChange={(checked) => changeBooks(checked)} />
+          {t("finance.entries.events.booksView")}
+        </label>
+      )}
       {ownOnly && (
         <p data-slot="money-scope-line" className="mt-3 text-sm text-muted-foreground">
           {t("finance.entries.ownScope")}

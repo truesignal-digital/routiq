@@ -186,6 +186,19 @@ afterEach(() => {
 });
 
 describe("finance record form", () => {
+  // #458: the entries list's button and this page name the action the same way.
+  it("is titled with the words of the button that opens it", async () => {
+    renderScreen();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Record an entry");
+
+    await i18n.changeLanguage("fr-CM");
+    try {
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Saisir une écriture");
+    } finally {
+      await i18n.changeLanguage("en");
+    }
+  });
+
   it("blocks submission when the amount is invalid", async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -255,7 +268,7 @@ describe("finance record form", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Transaction recorded and posted",
+        title: "Entry recorded and posted",
       }),
     );
     expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" });
@@ -289,10 +302,10 @@ describe("finance record form", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Transaction sent for approval",
+        title: "Entry sent for approval",
         description:
           "Missing evidence: this category requires supporting documentation or a photo.\n" +
-          "This transaction was posted to a previous accounting period.",
+          "This entry was posted to a previous accounting period.",
       }),
     );
   });

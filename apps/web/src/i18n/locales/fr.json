@@ -327,7 +327,9 @@
       "number": "Veuillez saisir un nombre.",
       "min": "Doit être au moins {min}.",
       "max": "Ne doit pas dépasser {max}.",
-      "invalid": "Valeur invalide."
+      "invalid": "Valeur invalide.",
+      "tooShort": "Au moins {min} caractères.",
+      "tooLong": "Au plus {max} caractères."
     }
   },
   "fileUpload": {
@@ -387,16 +389,16 @@
         "reversed": "Écriture contre-passée",
         "locked": "Période verrouillée",
         "reopened": "Période rouverte",
-        "posted": "Transaction enregistrée et comptabilisée",
-        "submitted": "Transaction envoyée pour approbation",
-        "recorded": "Transaction enregistrée",
+        "posted": "Écriture enregistrée et comptabilisée",
+        "submitted": "Écriture envoyée pour approbation",
+        "recorded": "Écriture enregistrée",
         "updated": "Écriture modifiée, toujours en attente d'approbation",
         "updatedPosted": "Écriture modifiée et comptabilisée"
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
         "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-        "LATE_POSTING": "Cette transaction a été comptabilisée dans une période précédente.",
+        "LATE_POSTING": "Cette écriture a été comptabilisée dans une période précédente.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
       "errors": {
@@ -417,7 +419,7 @@
       "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
     },
     "record": {
-      "title": "Enregistrer une transaction",
+      "title": "Saisir une écriture",
       "expenseLabel": "Dépense",
       "revenueLabel": "Recette",
       "categoryLabel": "Catégorie",
@@ -437,7 +439,7 @@
       "counterpartyLabel": "Tiers (optionnel)",
       "counterpartyPlaceholder": "Fournisseur, client…",
       "descriptionLabel": "Description (optionnel)",
-      "descriptionPlaceholder": "Détails de la transaction…",
+      "descriptionPlaceholder": "Détails de l'écriture…",
       "paymentRefLabel": "Référence de paiement (optionnel)",
       "paymentRefPlaceholder": "N° de reçu, N° de virement…",
       "assetLabel": "Actif (optionnel)",
@@ -457,7 +459,6 @@
       "ownScope": "Seules les écritures que vous avez saisies apparaissent ici.",
       "ownEmpty": "Vous n'avez saisi aucune écriture. Celles que vous saisirez apparaîtront ici.",
       "loadMore": "Charger plus",
-      "recordAction": "Saisir une écriture",
       "status": {
         "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
@@ -522,6 +523,21 @@
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
         "assetOption": "{code} — {name}"
+      },
+      "events": {
+        "cancelledIn": "Annulée en {month}",
+        "cancellationBadge": "Annulation",
+        "cancellationOf": "Annulation de l'écriture {number} ({month})",
+        "cancellationOfEntry": "Annulation de l'écriture {number}",
+        "showCancellation": "Voir l'annulation",
+        "hideCancellation": "Masquer l'annulation",
+        "cancellationEntry": "Écriture d'annulation {number}",
+        "cancelledByOn": "Annulée par {name} le {date}",
+        "cancelledOn": "Annulée le {date}",
+        "reason": "Motif : {reason}",
+        "countsZero": "Compte pour 0 dans les totaux",
+        "countsHere": "Compte toujours en {month} : l'annulation se déduit en {cancelMonth}",
+        "booksView": "Afficher toutes les lignes du grand livre"
       }
     },
     "approvals": {
@@ -1617,6 +1633,8 @@
     "conflictBody": "Quelqu'un d'autre a modifié cet enregistrement. Actualisez, vérifiez, puis réappliquez votre action.",
     "approvalTitle": "Approbation requise",
     "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié.",
+    "issues": "{count, plural, one {# point à corriger} other {# points à corriger}}",
+    "issue": "{field} : {message}",
     "discardTitle": "Abandonner ce formulaire ?",
     "discardBody": "Ce que vous avez saisi sera perdu.",
     "keepEditing": "Continuer la saisie",
@@ -2265,7 +2283,7 @@
       "revenueLegend": "Recettes",
       "monthBar": "{month} : dépenses {expenses}, recettes {revenue}",
       "entries": "Écritures",
-      "entriesHint": "Rien n'est modifié : une correction est une contre-passation, et les deux restent listées.",
+      "entriesHint": "Rien n'est modifié : une annulation du même mois se range sous son écriture ; une annulation d'un mois suivant figure dans ce mois-là.",
       "filterLabel": "Afficher les écritures",
       "filters": {
         "posted": "Comptabilisées",

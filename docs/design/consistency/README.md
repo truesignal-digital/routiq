@@ -154,7 +154,7 @@ Dialog names the record, says what happens and what stays. Negative decisions (r
 4. Copy: `<feature>.<name>.{title,description,submit,submitting,hint,success}` + field labels in `fr.json` and `en.json`.
 5. Verify: one recipe line in `.agents/skills/verify-routiq/features/<feature>.md`; `pnpm verify drive` on desktop and phone, stored row read back via the API.
 
-`useCommandForm`, the field kit and the harness don't exist yet; they are slice 8 in the fix order.
+`useCommandForm` (`apps/web/src/components/use-command-form.ts`) and the harness (`describeCommandForm` in `apps/web/src/test/form-harness.ts`) exist since #290, with Add note as the first form on them; guard `H17` holds the forms not yet moved (#294). The field kit is #292.
 
 ### Guards (build fails on regressions)
 

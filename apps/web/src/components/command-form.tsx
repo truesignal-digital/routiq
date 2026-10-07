@@ -8,6 +8,7 @@ import {
   useState,
   type FormEvent,
   type ReactNode,
+  type RefObject,
 } from "react"
 import { ArrowLeft } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -50,6 +51,13 @@ export interface CommandFormBack {
   onBack: () => void
 }
 
+/** A field the last submit left invalid, for the summary above the form. */
+export interface FormIssue {
+  name: string
+  message: string
+  focus: () => void
+}
+
 export interface CommandFormCopy {
   title: string
   body: string
@@ -71,6 +79,8 @@ export type CommandFormProps = CommandFormChrome & {
    * anything else; every other code is a banner above the untouched fields.
    */
   error?: string | undefined
+  /** Fields the last submit left invalid; nothing was sent. */
+  issues?: readonly FormIssue[] | undefined
   /** Codes that are information rather than failure, shown as a note. */
   informativeCodes?: readonly string[] | undefined
   /** Wording for the two replacing states, when the generic one is too vague. */
@@ -386,6 +396,7 @@ function CommandFormBody(props: CommandFormProps) {
   const { t, i18n } = useTranslation()
   const label = useCommandLabel()
   const formId = useId()
+  const formRef = useRef<HTMLFormElement>(null)
   const { surface, error, ready, submitting, onSubmit, onDismiss } = props
   const outcome = outcomeOf(error)
   const guard = useContext(DiscardGuardContext)
@@ -488,6 +499,7 @@ function CommandFormBody(props: CommandFormProps) {
 
   return (
     <form
+      ref={formRef}
       id={formId}
       noValidate
       className={cn(surfaceBodyClass(surface), bodyClassName)}
@@ -504,6 +516,9 @@ function CommandFormBody(props: CommandFormProps) {
         )}
         {surface === "page" && props.description !== undefined && (
           <p className="text-sm text-muted-foreground">{props.description}</p>
+        )}
+        {props.issues !== undefined && props.issues.length > 0 && (
+          <ErrorSummary issues={props.issues} form={formRef} />
         )}
         {error !== undefined &&
           (informative ? (
@@ -522,6 +537,60 @@ function CommandFormBody(props: CommandFormProps) {
       <Footer surface={surface}>{[cancel, submit]}</Footer>
     </form>
   )
+}
+
+/**
+ * What the last submit left to fix, named by each field's own label. It takes
+ * focus when it appears, so a screen reader and a phone both land on it.
+ */
+function ErrorSummary({
+  issues,
+  form,
+}: {
+  issues: readonly FormIssue[]
+  form: RefObject<HTMLFormElement | null>
+}) {
+  const { t } = useTranslation()
+  const headingId = useId()
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => ref.current?.focus(), [])
+
+  return (
+    <section
+      ref={ref}
+      tabIndex={-1}
+      aria-labelledby={headingId}
+      className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm outline-none"
+    >
+      <p id={headingId} className="font-semibold text-destructive">
+        {t("commandForm.issues", { count: issues.length })}
+      </p>
+      <ul>
+        {issues.map((issue) => {
+          const field = fieldLabel(form.current, issue.name)
+          return (
+            <li key={issue.name}>
+              <button
+                type="button"
+                className="min-h-11 text-left underline underline-offset-2"
+                onClick={issue.focus}
+              >
+                {field === undefined
+                  ? issue.message
+                  : t("commandForm.issue", { field, message: issue.message })}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+function fieldLabel(form: HTMLFormElement | null, name: string): string | undefined {
+  const control = form?.elements.namedItem(name)
+  const label = control instanceof HTMLElement ? (control as HTMLInputElement).labels?.[0] : undefined
+  return label?.textContent?.replace(/\*\s*$/, "").trim() || undefined
 }
 
 function surfaceBodyClass(surface: CommandSurface): string {

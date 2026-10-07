@@ -501,6 +501,26 @@ export const RULES: readonly Rule[] = [
   },
   {
     id: "H17",
+    name: "forms-have-harness-tests",
+    fix: "Give the form a sibling <Name>.test.tsx that runs describeCommandForm from apps/web/src/test/form-harness.ts: the six command-form tests (docs/design/consistency/README.md, Recipe: a new form).",
+    check: (files) => {
+      const harnessed = new Set(
+        files
+          .filter((file) => isTestFile(file.path) && /test\/form-harness(\.js)?["']/.test(file.content))
+          .map((file) => file.path.replace(/\.test\.tsx?$/, "")),
+      );
+      return files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            /(Forms?|Dialogs?)\.tsx$/.test(file.path) &&
+            !harnessed.has(file.path.replace(/\.tsx$/, "")),
+        )
+        .map((file) => ({ path: file.path, line: 1, text: "no sibling test runs the form harness" }));
+    },
+  },
+  {
+    id: "H18",
     name: "dialogs-only-for-decisions",
     fix: "Recording or editing a fact opens the side panel: surface=\"sheet\" (or \"panel\" inside a record panel). A centred dialog is only for a decision on an existing record, the allow-list DECISION_SURFACES in tools/guards/rules.ts (docs/design/consistency/README.md, Surface by job).",
     check: (files) =>

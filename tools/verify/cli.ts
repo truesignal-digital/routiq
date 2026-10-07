@@ -8,8 +8,11 @@ Run ROUTIQ on an isolated slot (own compose project, volumes and ports), drive i
 with a headless browser, and keep the evidence under .verify/.
 
 Commands
-  up [--slot N] [--reseed]     start postgres + storage (compose project routiq-verify-N),
-                               the API (migrates at boot), the demo seed, and the web app
+  up [--slot N] [--reseed] [--built]
+                               start postgres + storage (compose project routiq-verify-N),
+                               the API (migrates at boot), the demo seed, and the web app;
+                               --built builds it and serves the build (vite preview), so
+                               load times match a deployed app instead of the dev server
   doctor [--slot N]            PASS/FAIL health checks; exits 1 on any failure
   status                       list slots that are up in this checkout
   login [--role R] [--lang en] log in through the UI and screenshot the landing page
@@ -47,7 +50,7 @@ async function main(command: Command): Promise<boolean> {
       status();
       return true;
     case "up":
-      await up(command.slot, command.reseed);
+      await up(command.slot, command.reseed, command.built);
       return true;
     case "down":
       await down(command.slot);
