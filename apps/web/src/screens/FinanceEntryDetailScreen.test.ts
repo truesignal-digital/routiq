@@ -131,6 +131,7 @@ beforeEach(() => {
       rejectedReason: null,
       reversesEntryId: null,
       reversedByEntryId: null,
+      cancellation: null,
       postings: [],
       links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
       recordedBy: { principalId: MAKER_ID, displayName: "Sali", scope: "WORKSPACE" },
@@ -145,19 +146,19 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("finance entry reversal dialog", () => {
+describe("finance entry cancel dialog (#426)", () => {
   it("cancels without dispatching", async () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reverse entry" }));
+    await user.click(screen.getByRole("button", { name: "Cancel entry" }));
     await user.click(screen.getByRole("button", { name: "Keep entry" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(mocks.createCommandIntent).not.toHaveBeenCalled();
   });
 
-  it("disables empty submit, dispatches reverse, and emits a success toast", async () => {
+  it("disables submit until a reason is picked, dispatches reverse-entry v2, and says Entry cancelled", async () => {
     const submit = vi.fn(async () => ({
       ok: true,
       outcome: {
@@ -175,30 +176,34 @@ describe("finance entry reversal dialog", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("button", { name: "Reverse entry" }));
-    const dialog = screen.getByRole("dialog", { name: "Reverse entry" });
-    const submitButton = within(dialog).getByRole("button", { name: "Reverse entry" });
+    await user.click(screen.getByRole("button", { name: "Cancel entry" }));
+    const dialog = screen.getByRole("dialog", { name: "Cancel entry" });
+    const submitButton = within(dialog).getByRole("button", { name: "Cancel entry" });
     expect(within(submitButton.parentElement!).getAllByRole("button").map((button) => button.textContent))
-      .toEqual(["Keep entry", "Reverse entry"]);
+      .toEqual(["Keep entry", "Cancel entry"]);
     expect((submitButton as HTMLButtonElement).disabled).toBe(true);
 
-    await user.type(screen.getByRole("textbox", { name: "Reason for reversal" }), "Duplicate posting");
+    await user.click(within(dialog).getByRole("radio", { name: "Entered twice" }));
     await user.click(submitButton);
 
     await waitFor(() => expect(submit).toHaveBeenCalledOnce());
     expect(mocks.createCommandIntent).toHaveBeenCalledWith(
       expect.anything(),
       "reverse-entry",
-      1,
+      2,
+    );
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({ originalEntryId: expect.any(String), reasonCode: "ENTERED_TWICE" }),
+      expect.anything(),
     );
     expect(mocks.toastAdd).toHaveBeenCalledWith({
       type: "success",
-      title: "Entry reversed",
+      title: "Entry cancelled",
     });
   });
 });
 
-describe("Reverse is one level only (#130)", () => {
+describe("Cancel entry is one level only (#130)", () => {
   function showingEntry(overrides: Record<string, unknown>) {
     const current = mocks.useEntry();
     mocks.useEntry.mockReturnValue({ ...current, data: { ...current.data, ...overrides } });
@@ -208,29 +213,40 @@ describe("Reverse is one level only (#130)", () => {
     searchParams.current = {};
   });
 
-  it("offers Reverse on a posted original", () => {
+  it("offers Cancel entry on a posted original", () => {
     renderScreen();
-    expect(screen.getByRole("button", { name: "Reverse entry" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cancel entry" })).toBeTruthy();
   });
 
-  it("offers no Reverse on a reversal, even when the link asks for the dialog", () => {
+  it("offers no Cancel entry on a cancellation, even when the link asks for the dialog", () => {
     showingEntry({
       amountMinor: -1000,
       reversesEntryId: "00000000-0000-4000-8000-000000000099",
     });
     searchParams.current = { reverse: true };
     renderScreen();
-    expect(screen.queryByRole("button", { name: "Reverse entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel entry" })).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("offers no Reverse on an entry already reversed", () => {
+  it("shows why a cancelled entry was cancelled, in words", () => {
+    showingEntry({
+      status: "REVERSED",
+      reversedByEntryId: "00000000-0000-4000-8000-000000000099",
+      cancellation: { reasonCode: "DID_NOT_HAPPEN", reasonText: null },
+    });
+    renderScreen();
+    expect(screen.getByText("Didn't happen")).toBeTruthy();
+    expect(screen.queryByText("DID_NOT_HAPPEN")).toBeNull();
+  });
+
+  it("offers no Cancel entry on an entry already cancelled", () => {
     showingEntry({
       status: "REVERSED",
       reversedByEntryId: "00000000-0000-4000-8000-000000000099",
     });
     renderScreen();
-    expect(screen.queryByRole("button", { name: "Reverse entry" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel entry" })).toBeNull();
   });
 });
 

@@ -6,6 +6,7 @@ import {
   listQuery,
   pendingApprovalsResponse,
   periodsResponse,
+  type CancellationReasonCode,
   type FinancialEntryListItem,
   type ListSort,
 } from "@routiq/contracts";
@@ -644,6 +645,8 @@ export function registerFinanceReadRoutes(
               estimateStatus: financialEntries.estimateStatus,
               rejectedReason: financialEntries.rejectedReason,
               reversesEntryId: financialEntries.reversesEntryId,
+              reversalReasonCode: financialEntries.reversalReasonCode,
+              reversalReasonText: financialEntries.reversalReasonText,
               postedAt: financialEntries.postedAt,
               rowVersion: financialEntries.rowVersion,
               createdByCommandId: financialEntries.createdByCommandId,
@@ -729,6 +732,30 @@ export function registerFinanceReadRoutes(
             reversedByEntryId = reversedByEntry.id;
           }
 
+          // The reason is about this entry, so it shows even where the
+          // cancellation itself is out of the caller's reach.
+          let cancellation: { reasonCode: CancellationReasonCode; reasonText: string | null } | null =
+            entry.reversalReasonCode === null
+              ? null
+              : { reasonCode: entry.reversalReasonCode, reasonText: entry.reversalReasonText };
+          if (entry.status === "REVERSED") {
+            const [reversal] = await tx
+              .select({
+                reasonCode: financialEntries.reversalReasonCode,
+                reasonText: financialEntries.reversalReasonText,
+              })
+              .from(financialEntries)
+              .where(
+                and(
+                  eq(financialEntries.workspaceId, auth.workspaceId),
+                  eq(financialEntries.reversesEntryId, entryId),
+                ),
+              );
+            if (reversal?.reasonCode != null) {
+              cancellation = { reasonCode: reversal.reasonCode, reasonText: reversal.reasonText };
+            }
+          }
+
           const evidenceFiles = await entryEvidenceFiles(tx, auth.workspaceId, entry);
           const recorders = await commandActors(tx, auth.workspaceId, [entry.createdByCommandId]);
           const [directionDecides = false] = await directionDecidesEntries(tx, auth, [entry]);
@@ -740,6 +767,7 @@ export function registerFinanceReadRoutes(
             periodCode,
             postings: postingsRows,
             reversedByEntryId,
+            cancellation,
             evidenceFiles,
             recordedBy: recorders.get(entry.createdByCommandId),
           };
@@ -755,6 +783,7 @@ export function registerFinanceReadRoutes(
           periodCode,
           postings,
           reversedByEntryId,
+          cancellation,
           evidenceFiles,
           recordedBy,
           directionDecides,
@@ -803,6 +832,7 @@ export function registerFinanceReadRoutes(
           rejectedReason: entry.rejectedReason,
           reversesEntryId: entry.reversesEntryId,
           reversedByEntryId,
+          cancellation,
           postings: mappedPostings,
           recordedBy: recordedBy ?? { principalId: null, displayName: null, scope: "WORKSPACE" },
           evidence: {
