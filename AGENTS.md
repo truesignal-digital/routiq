@@ -28,6 +28,7 @@ pnpm lint:tighten                 # lower guard baselines after you remove viola
 pnpm verify --help                # run and drive the real app on an isolated slot, with evidence (skill: verify-routiq)
 pnpm observe report               # what happened in the field: command ledger + web telemetry (ADR-0011), read-only
 pnpm metrics                      # first-load size against its ceilings (after a web build)
+pnpm perf run --slot N            # the performance ledger on a built slot (pnpm verify up --built); docs/performance/README.md is before vs today
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
 pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file
@@ -121,7 +122,7 @@ The UI consistency system and the product direction live in [`docs/design/consis
 
 ## Guards and the ratchet
 
-First-load size is ratcheted the same way: `pnpm metrics` in CI, `pnpm metrics tighten` to lock a gain in, and `pnpm metrics raise <metric> --reason "..."` when growth is worth it (a hand-edited ceiling fails).
+Performance is ratcheted too. `pnpm perf run` measures every screen on the pilot-phone profile against `tools/perf/ceilings.json`; a PR that makes the app faster runs `pnpm perf run --record` and `pnpm perf tighten`, and a slower number needs `pnpm perf raise <metric> --reason "..."`. First-load size is ratcheted the same way: `pnpm metrics` in CI, `pnpm metrics tighten` to lock a gain in, and `pnpm metrics raise <metric> --reason "..."` when growth is worth it (a hand-edited ceiling fails).
 
 `pnpm lint` runs the rules in `tools/guards/rules.ts`. Each rule names a mistake that must not spread and says what to do instead. Known violations are counted per file in `tools/guards/baselines.json`, and those counts may only go down:
 

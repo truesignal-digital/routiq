@@ -25,6 +25,7 @@ pnpm verify up                       # slot 1; pick another with --slot N (0-99)
 
 Slot N owns ports 24000+10N: Postgres +0, storage +1, API +2, web +3. Slot 1 is web `http://127.0.0.1:24013`, API `http://127.0.0.1:24012`. Ready means `up` printed `web up, proxying /v1 to the slot API`; it takes about 15 s warm. PIDs, ports and log paths are in `.verify/slots/N/state.json`.
 
+- `pnpm verify up --built` builds the web app and serves the build with `vite preview` (same port, same `/v1` proxy), so load times match a deployed app. `pnpm perf` needs it; the dev server's unbundled cold load says nothing about users. Rebuild by `down` then `up --built` after web changes.
 - Already up: `up` says so and does nothing. `pnpm verify up --reseed` resets the demo workspace (`seed-demo --reset`) on a running slot; do this between runs that mutate data.
 - A port in use means another checkout holds that slot. Pick another `--slot`; never kill its processes.
 - Two checkouts can run at once on different slots. Code changes in this checkout reload in the web app (Vite HMR); API changes need `down` then `up`.
@@ -78,6 +79,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `switch-user` | sign out, sign in as the cashier, role from `GET /v1/me` | no |
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
+| `add-note` | VH003 → Add note: empty submit shows the error summary and sends nothing, its link focuses the field, then the note lands in `GET /v1/assets/:id/history` (#290). Desktop or `--viewport 390x844` | yes |
 | `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
