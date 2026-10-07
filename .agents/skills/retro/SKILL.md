@@ -18,7 +18,7 @@ This skill looks at one session. The `correct` skill looks across many sessions 
 
 - **Navigation.** Did the agent take long to find a file or fact? Is there a hidden dependency between files? Would a pointer in `AGENTS.md`, `apps/web/AGENTS.md` or a skill have saved the search? _Use when_ the session spent many calls finding something.
 - **Automated checks.** Could a check have caught a mistake the agent made? Read what exists first: `tools/guards/rules.ts`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm metrics` and `.github/workflows/ci.yml`. A check that exists but is unwired or silently broken is the finding, not a new one. _Use when_ the agent made a mistake a check could catch.
-- **Review rules.** Should the reviewer enforce something new? A mechanical rule (a banned API, an import shape, a file location) becomes a guard in `tools/guards/rules.ts` with a case in `tools/guards/rules.test.ts`. Only a judgement call goes into `.agents/skills/code-review/SKILL.md` or the rule table in `AGENTS.md`. _Use when_ the review missed a mistake.
+- **Review rules.** Should the reviewer enforce something new? A mechanical rule (a banned API, an import shape, a file location) becomes a guard in `tools/guards/rules.ts` with a case in `tools/guards/rules.test.ts`. A judgement call no guard can check goes into `.agents/skills/code-review/SKILL.md`. Either way, a mistake made twice gets a row in the rule table in `AGENTS.md` naming what enforces it, as `correct` requires. _Use when_ the review missed a mistake.
 - **Steering file size.** Should an instruction in `AGENTS.md`, `CLAUDE.md`, `apps/web/AGENTS.md` or the user's global `~/.claude/CLAUDE.md` move into a guard, a skill or a doc? _Use when_ a steering file is long.
 - **No-ops.** Which instructions in the steering files change nothing the agent does? _Use when_ the steering files are long.
 - **Tool economy.** Did the agent make expensive calls that a script or a narrower command would replace, such as dumping whole files, rerunning the full suite, or polling? Is a CLI (`pnpm verify`, `pnpm observe`) missing a flag that would have saved the call? _Use when_ the agent made an expensive call.
@@ -30,7 +30,7 @@ This skill looks at one session. The `correct` skill looks across many sessions 
 
 The implementing agent carries the most context: it explores, writes code and debugs. The reviewing agent gets a diff and carries the least. So standards belong to review and to checks, not to the implementer's always-loaded files.
 
-- `AGENTS.md` (imported by `CLAUDE.md`) loads into every agent here. Keep additions to pointers and to rules that nothing can enforce. Follow its trust rungs: architecture, then static checks, then guidance, then human review.
+- `AGENTS.md` (imported by `CLAUDE.md`) loads into every agent here. Keep additions to pointers, rows in the rule table, and rules that nothing can enforce. Follow its trust rungs: architecture, then static checks, then guidance, then human review.
 - `apps/web/AGENTS.md` loads for web work only.
 - Docs under `docs/` are reference files; point to them from `AGENTS.md` or a skill. Look for an existing doc before writing a new one.
 - Skills live in `.agents/skills/<name>/` with a symlink in `.claude/skills/`. A skill's description is always in context, so it can carry a pointer. Follow `writing-great-skills`.

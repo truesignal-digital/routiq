@@ -38,7 +38,7 @@ Write the body in the order of `.github/pull_request_template.md`, with one adde
 
 ## Independent review
 
-<the template's fields, filled once the review exists>
+<Author model now; the reviewer fields once the review exists>
 
 ## Checks
 
@@ -96,7 +96,7 @@ Place each sketch next to the sentence it supports. Keep only the calls, files, 
 
 Follow the template's rule for when a video is required and how to make it. Put the before/after evidence here:
 
-- **App change:** the reel link from `pnpm verify drive ... --reel`; with `pnpm verify reel --before` when behaviour changed. Screenshots are the next best thing.
+- **App change:** the reel link from `pnpm verify drive ... --reel`; with `pnpm verify reel --before` when behaviour changed. Screenshots can supplement the reel; they don't replace a required video.
 - **No app change:** the exact test or command that failed before and passes after, with its output. Show the test as pseudocode if its name doesn't say it.
 
 ## Merge danger
@@ -112,4 +112,4 @@ Follow the template's rule for when a video is required and how to make it. Put 
 
 ## Found while testing and Independent review
 
-Fill these as the template says. Leave the review fields for the reviewer when the review hasn't happened yet; never fill them in advance.
+Fill these as the template says. Fill `Author model` when you open the PR, so reviewers can check they are a different model. Leave the reviewer model, reviewed head SHA, report URL and verdict empty until the review exists; never fill them in advance.
