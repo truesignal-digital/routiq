@@ -213,3 +213,43 @@ export type PendingApprovalItem = z.infer<typeof pendingApprovalItem>;
 export type PendingApprovalsResponse = z.infer<typeof pendingApprovalsResponse>;
 export type PeriodRead = z.infer<typeof periodRead>;
 export type PeriodsResponse = z.infer<typeof periodsResponse>;
+
+/** `GET /v1/finance/summary`: the shell's agency narrows it like the entries list. */
+export const financeSummaryQuery = z.object({
+  branchId: z.uuid().optional(),
+});
+
+/**
+ * The Money page's overview (#314), counted over the same rows the entries
+ * list would show the caller (`readableEntrySql`). Amounts are in the
+ * workspace currency only, so a total is never a mix.
+ */
+export const financeSummaryResponse = z.object({
+  currency: z.string(),
+  /** The current business month, `YYYY-MM`, that `out` and `in` cover. */
+  month: monthCode,
+  /** Latest OPEN and latest LOCKED accounting month; null when there is none. */
+  openPeriodCode: z.string().nullable(),
+  lastLockedPeriodCode: z.string().nullable(),
+  /** Signed ledger totals (POSTED + REVERSED) by economic date in `month`. */
+  outMinor: z.number().int(),
+  inMinor: z.number().int(),
+  /** What `evidence=MISSING` on the entries list returns. */
+  missingReceipt: z.object({
+    count: z.number().int().nonnegative(),
+    oldestEconomicDate: z.iso.date().nullable(),
+  }),
+  /**
+   * Pending entries the caller may decide: never their own submission, never
+   * above their approval band. Null for a role that decides nothing.
+   */
+  waiting: z
+    .object({
+      count: z.number().int().nonnegative(),
+      amountMinor: z.number().int().nonnegative(),
+      oldestSubmittedAt: z.iso.datetime().nullable(),
+    })
+    .nullable(),
+});
+
+export type FinanceSummaryResponse = z.infer<typeof financeSummaryResponse>;
