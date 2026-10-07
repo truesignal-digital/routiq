@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   Banknote,
   Building,
+  Calendar,
   House,
   Menu,
   Route,
@@ -44,13 +45,13 @@ describe("each role's sidebar (#312)", () => {
   const expected: Record<Role, Record<string, string[]>> = {
     DIRECTOR: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
-      company: ["persons", "users", "branches", "companySettings"],
+      company: ["persons", "users", "branches", "accountingMonths", "companySettings"],
     },
     ADMIN: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
       company: ["persons", "users"],
     },
-    FINANCE: { daily: ["home", "assets", "activities", "finances"], company: ["persons"] },
+    FINANCE: { daily: ["home", "assets", "activities", "finances"], company: ["persons", "accountingMonths"] },
     CASHIER: { daily: ["home", "assets", "finances"] },
     TECHNICIAN: { daily: ["home", "assets", "maintenance"] },
     DRIVER: { daily: ["home", "assets", "activities"] },
@@ -70,6 +71,19 @@ describe("each role's sidebar (#312)", () => {
   it("drops Company settings with Finance off: the approval chain is its only section (#354)", () => {
     const modules = EVERY.filter((code) => code !== "FINANCE");
     expect(sidebar("DIRECTOR", modules).company).not.toContain("companySettings");
+  });
+
+  it("drops Accounting months for everyone when Finance is off (#314)", () => {
+    for (const role of ROLES) {
+      const modules = EVERY.filter((code) => code !== "FINANCE");
+      expect(sidebar(role, modules).company ?? [], role).not.toContain("accountingMonths");
+    }
+  });
+
+  it("keeps one row per page: no Approvals row, and Accounting months is the only periods row (#314)", () => {
+    const rows = visibleSections("DIRECTOR", EVERY);
+    expect(rows.filter((row) => row.to.startsWith("/finance/approvals"))).toEqual([]);
+    expect(rows.filter((row) => row.to === "/finance/periods").map((row) => row.key)).toEqual(["accountingMonths"]);
   });
 
   it("drops Maintenance for everyone when Maintenance is off", () => {
@@ -122,6 +136,7 @@ describe("row label = page title (#312)", () => {
     persons: "screens/PersonsScreen.tsx",
     users: "screens/UsersScreen.tsx",
     branches: "screens/BranchesScreen.tsx",
+    accountingMonths: "screens/FinancePeriodsScreen.tsx",
     companySettings: "screens/CompanySettingsScreen.tsx",
   };
 
@@ -153,8 +168,13 @@ describe("isSectionActive (exact-or-child)", () => {
 
   it("a section owning a subtree stays active across its siblings", () => {
     expect(activeKey("/finance/entries")).toBe("finances");
-    expect(activeKey("/finance/periods")).toBe("finances");
+    expect(activeKey("/finance/record")).toBe("finances");
     expect(activeKey("/finance/approvals")).toBe("finances");
+  });
+
+  it("Accounting months owns its page, not the Money subtree it sits in (#314)", () => {
+    expect(activeKey("/finance/periods")).toBe("accountingMonths");
+    expect(activeSection(visibleSections("CASHIER", EVERY), "/finance/periods")?.key).toBe("finances");
   });
 
   it("a Company row owns its page, not the More page it sits under", () => {
@@ -203,6 +223,7 @@ describe("row icons follow the consistency kit", () => {
     persons: ["user", UserRound],
     users: [undefined, ShieldUser],
     branches: ["building", Building],
+    accountingMonths: ["cal", Calendar],
     companySettings: ["sliders", SlidersHorizontal],
   };
 

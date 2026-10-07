@@ -1,6 +1,7 @@
 import {
   Banknote,
   Building,
+  Calendar,
   House,
   Menu,
   Route,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { moneyReadScope, type ModuleCode, type Role } from "@routiq/contracts";
 import { canAdministerBranches } from "../branches/permissions.js";
-import { canReadFinanceEntries } from "../finance/permissions.js";
+import { canManagePeriods, canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 import { canAdministerMembers } from "../members/permissions.js";
 import { canManageCompanySettings } from "../settings/permissions.js";
@@ -120,6 +121,16 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     to: "/more/branches",
     icon: Building,
     reads: canAdministerBranches,
+  },
+  {
+    key: "accountingMonths",
+    group: "company",
+    labelKey: "finance.periods.title",
+    to: "/finance/periods",
+    icon: Calendar,
+    module: "FINANCE",
+    // The roles that lock a month; the page is theirs alone (#314).
+    reads: canManagePeriods,
   },
   {
     key: "companySettings",

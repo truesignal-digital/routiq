@@ -416,9 +416,7 @@
       }
     },
     "navigation": {
-      "record": "Saisie",
-      "entries": "Finances",
-      "periods": "Mois comptables"
+      "record": "Saisie"
     },
     "money": {
       "lead": {

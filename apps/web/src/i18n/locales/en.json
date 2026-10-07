@@ -416,9 +416,7 @@
       }
     },
     "navigation": {
-      "record": "Record",
-      "entries": "Money",
-      "periods": "Accounting months"
+      "record": "Record"
     },
     "money": {
       "lead": {
