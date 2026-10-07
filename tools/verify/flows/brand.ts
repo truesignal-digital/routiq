@@ -1,4 +1,4 @@
-import { openSidebar, type DriveScript } from "../browser.js";
+import { openSidebar, signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 /**
  * The ROUTIQ logo in the neutral theme (#320): the sidebar header shows the
@@ -47,7 +47,7 @@ const flow: DriveScript = async ({ page, shot, quiet, t, log }) => {
   await showSidebar();
   await shot("sidebar-dark", { caption: "Dark theme: the letter follows the text colour, the pin stays blue" });
 
-  await page.getByRole("button", { name: t("Se déconnecter", "Sign out") }).first().click();
+  await signOutThroughNameMenu(page);
   await page.waitForURL(/\/login/);
   const login = page.locator("main [data-slot=routiq-logo]");
   await login.waitFor();
