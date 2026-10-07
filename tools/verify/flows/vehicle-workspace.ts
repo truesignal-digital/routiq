@@ -10,12 +10,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await sidebar.getByRole("link", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("heading", { name: t("Vos camions", "Your trucks") }).waitFor();
   await quiet();
-  await shot("trucks-list");
+  await shot("trucks-list", { caption: "Trucks list" });
 
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor();
   await quiet();
-  await shot("vh003-now");
+  await shot("vh003-overview", { caption: "VH003 opens on its Overview tab" });
   const assetId = /\/assets\/([0-9a-f-]{36})/.exec(page.url())?.[1];
   if (assetId === undefined) throw new Error(`no asset id in ${page.url()}`);
 
@@ -38,7 +38,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     await tab.click();
     await page.waitForURL((url) => url.pathname.endsWith(suffix));
     await quiet();
-    await shot(`vh003-${en.toLowerCase()}`);
+    await shot(`vh003-${en.toLowerCase()}`, { caption: `VH003, ${en} tab` });
   }
 
   const { status, body } = await apiGet(`/v1/assets/${assetId}`);

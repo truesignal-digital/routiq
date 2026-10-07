@@ -94,7 +94,10 @@ services:
   # TODO(web): served PWA joins the appliance profile once apps/web has a build
   # script (owned by the UI session).
 
+# No fixed `name:`: Docker names each volume `<project>_<volume>`. The project
+# is `routiq` (top of this file), so local dev keeps `routiq_pgdata`, while
+# `docker compose -p <other> --profile appliance up` gets `<other>_pgdata` and
+# can never mount, migrate or `down -v` the dev database (#108).
 volumes:
   pgdata:
-    name: routiq_pgdata
   storagedata:

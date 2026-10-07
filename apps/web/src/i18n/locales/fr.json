@@ -122,6 +122,7 @@
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
     "COMMAND_FAILED": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
+    "AUDIT_EVENT_MISSING": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
     "EXPECTED_VERSION_REQUIRED": "Impossible d'enregistrer : version de l'enregistrement manquante. Actualisez la page.",
     "VERSION_CONFLICT": "Cet enregistrement a été modifié par quelqu'un d'autre. Actualisez puis réappliquez vos changements.",
     "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
@@ -169,7 +170,7 @@
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
     "SELF_RELEASE_FORBIDDEN": "La remise en service doit être validée par une autre personne que celle qui a déclaré les travaux terminés ou clos le problème.",
     "SAFETY_ISSUE_OPEN": "Un autre problème critique pour la sécurité est encore ouvert sur ce véhicule. Résolvez-le ou classez-le sans suite avant la remise en service.",
-    "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être responsable de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
+    "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être le chauffeur attitré de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
     "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
@@ -180,7 +181,7 @@
         "registered": "Actif enregistré",
         "commissioned": "Actif mis en service",
         "assigned": "Actif affecté",
-        "custodianChanged": "Responsable modifié"
+        "custodianChanged": "Chauffeur attitré modifié"
       }
     },
     "eyebrow": "Parc opérationnel",
@@ -294,7 +295,7 @@
       "open": "Ouvrir la fiche",
       "commissionHint": "Met l'actif en service. Son historique d'exploitation démarre ici.",
       "assignHint": "Rattache l'actif à une autre agence. Les écritures déjà passées restent à l'agence qui les a saisies.",
-      "custodianHint": "Désigne qui répond de l'actif au quotidien."
+      "custodianHint": "Désigne la personne qui conduit habituellement l'actif."
     },
     "columns": {
       "asset": "Actif",
@@ -1332,7 +1333,10 @@
       "empty": "Aucun changement détaillé",
       "none": "—",
       "yes": "Oui",
-      "no": "Non"
+      "no": "Non",
+      "lines": "{count, plural, one {# ligne} other {# lignes}}, {total}",
+      "linesCount": "{count, plural, one {# ligne} other {# lignes}}",
+      "unavailable": "Non disponible"
     },
     "event": {
       "activity-created": "Activité créée",
@@ -1434,7 +1438,7 @@
       "model": "modèle",
       "lifecycleStatus": "statut du cycle de vie",
       "commissionedAt": "mise en service",
-      "custodianMembershipId": "responsable",
+      "custodianMembershipId": "chauffeur attitré",
       "membershipId": "membre",
       "personCode": "code personne",
       "displayName": "nom",
@@ -1495,6 +1499,7 @@
       "passengerCount": "nombre de passagers",
       "commandType": "commande",
       "branch": "agence",
+      "branches": "agences",
       "defaultCurrency": "devise par défaut",
       "defaultLocale": "langue par défaut",
       "disabledModules": "modules désactivés",
@@ -1535,7 +1540,48 @@
       "dismissedAt": "classement sans suite",
       "dismissReason": "motif du classement",
       "defaultSafetyCritical": "critique pour la sécurité par défaut",
-      "postings": "lignes d'imputation"
+      "postings": "lignes d'imputation",
+      "artifactIds": "fichiers",
+      "body": "note"
+    },
+    "code": {
+      "entryDirection": {
+        "EXPENSE": "Dépense",
+        "REVENUE": "Recette"
+      },
+      "estimateStatus": {
+        "ACTUAL": "Montant réel",
+        "ESTIMATED": "Estimation"
+      },
+      "periodStatus": {
+        "OPEN": "Ouverte",
+        "LOCKED": "Verrouillée"
+      },
+      "costOutcome": {
+        "LINES": "Coûts saisis en lignes",
+        "NO_COST": "Aucun coût",
+        "INVOICE_PENDING": "Facture pas encore reçue"
+      },
+      "module": {
+        "CORE": "Socle",
+        "ASSETS": "Parc",
+        "DOCUMENTS": "Documents",
+        "FINANCE": "Finances",
+        "ACTIVITIES": "Activités",
+        "MAINTENANCE": "Maintenance"
+      },
+      "categoryKind": {
+        "ASSET_CLASS": "Classe d'actif",
+        "ACTIVITY_TYPE": "Type d'activité",
+        "REVENUE_CATEGORY": "Catégorie de recette",
+        "EXPENSE_CATEGORY": "Catégorie de dépense",
+        "DOCUMENT_TYPE": "Type de document",
+        "ISSUE_TYPE": "Type de problème"
+      },
+      "evidencePolicy": {
+        "RECEIPT_EXPECTED": "Justificatif attendu",
+        "NO_RECEIPT_EXPECTED": "Pas de justificatif attendu"
+      }
     }
   },
   "dateField": {
@@ -1595,9 +1641,9 @@
       "submitting": "Changement…",
       "short": "Agence",
       "custodian": {
-        "label": "Changer de responsable",
-        "short": "Responsable",
-        "submit": "Changer de responsable"
+        "label": "Changer de chauffeur attitré",
+        "short": "Chauffeur attitré",
+        "submit": "Changer de chauffeur attitré"
       }
     },
     "register-person": {
@@ -1915,13 +1961,13 @@
         "hint": "Ajoutez au moins un fichier."
       },
       "custodian": {
-        "label": "Nouveau responsable",
+        "label": "Nouveau chauffeur attitré",
         "choose": "Choisir un membre",
-        "none": "Personne (retirer le responsable)",
+        "none": "Personne (retirer le chauffeur attitré)",
         "current": "Actuel : {name}.",
         "currentNone": "Actuellement personne.",
-        "hint": "Seuls les membres dont les agences couvrent ce véhicule peuvent en être responsables. Un chauffeur sans compte n'est pas proposé.",
-        "empty": "Aucun membre ne peut encore en être responsable."
+        "hint": "Seuls les membres dont les agences couvrent ce véhicule peuvent en être le chauffeur attitré. Un chauffeur sans compte n'est pas proposé.",
+        "empty": "Aucun membre ne peut encore en être le chauffeur attitré."
       }
     },
     "page": {
@@ -1934,7 +1980,7 @@
     },
     "tabs": {
       "label": "Sections du véhicule",
-      "now": "En ce moment",
+      "now": "Vue d'ensemble",
       "maintenance": "Maintenance",
       "money": "Argent",
       "trips": "Activités",
@@ -1950,7 +1996,7 @@
       "moreActions": "Plus d'actions"
     },
     "facts": {
-      "custodian": "Responsable {name}",
+      "custodian": "Chauffeur attitré {name}",
       "nobody": "aucun",
       "reading": "{readingType, select, HOURS {Horamètre} other {Compteur}} {value}, {ago}",
       "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
@@ -1971,7 +2017,7 @@
       "lifecycleSince": "{status} depuis le {date}",
       "homeBranch": "Agence de rattachement",
       "homeBranchValue": "{branch}, rattachement administratif",
-      "custodian": "Responsable",
+      "custodian": "Chauffeur attitré",
       "custodianSince": "{name} depuis le {date}",
       "custodianInactive": "Accès désactivé",
       "nobodyAssigned": "Personne",
@@ -2025,6 +2071,7 @@
         "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
         "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
       },
+      "repairedLead": "Réparation terminée — en attente de remise en service.",
       "available": {
         "lead": "Disponible.",
         "sinceAndTrip": "En service depuis {since} ; dernière activité {lastTrip}.",
@@ -2091,7 +2138,8 @@
         "descriptionBesides": "En plus de la réparation ci-dessus, ce qui vous attend sur ce véhicule.",
         "emptyTitle": "Rien ne vous attend pour l'instant.",
         "emptyTitleBesides": "Rien d'autre ne vous attend sur ce véhicule.",
-        "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter."
+        "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter.",
+        "loadFailed": "Impossible de charger ce qui vous attend sur ce véhicule."
       },
       "month": {
         "description": "Part de ce véhicule",
@@ -2335,7 +2383,7 @@
       "event": {
         "asset-registered": "Véhicule enregistré",
         "asset-commissioned": "Mis en service",
-        "asset-assigned": "{change, select, branch {Rattaché à l'agence {branch}} custodian {Nouveau responsable : {custodian}} cleared {Responsable retiré} other {Affectation modifiée}}",
+        "asset-assigned": "{change, select, branch {Rattaché à l'agence {branch}} custodian {Nouveau chauffeur attitré : {custodian}} cleared {Chauffeur attitré retiré} other {Affectation modifiée}}",
         "activity-created": "Activité {number} démarrée",
         "activity-closed": "Activité {number} clôturée",
         "activity-reopened": "Activité {number} rouverte",
@@ -2511,7 +2559,7 @@
         "description": "Ouvre la feuille de route avec ce véhicule comme véhicule principal."
       },
       "change-custodian": {
-        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque activité."
+        "description": "La personne qui conduit habituellement le véhicule. Chaque activité peut avoir un autre chauffeur."
       },
       "transfer-branch": {
         "description": "Change durablement l'agence de rattachement. Les écritures passées restent à l'agence qui les a saisies."

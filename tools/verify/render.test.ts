@@ -4,7 +4,17 @@ import { describe, expect, it } from "vitest";
 import { renderCompose, renderViteConfig, storageImageFrom } from "./render.js";
 import { PROTECTED_VOLUME, REPO_ROOT, slotPorts } from "./slot.js";
 
-const image = storageImageFrom(readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8"));
+const appliance = readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8");
+const image = storageImageFrom(appliance);
+
+// #108: a fixed volume name made every `-p <project> --profile appliance up` mount the dev database.
+describe("docker-compose.yml", () => {
+  it("leaves volume names to the compose project", () => {
+    const volumes = appliance.slice(appliance.search(/^volumes:$/m));
+    expect(volumes).toMatch(/^volumes:\n/);
+    expect(volumes).not.toMatch(/^\s+name:/m);
+  });
+});
 
 describe("renderCompose", () => {
   const yaml = renderCompose("routiq-verify-3", slotPorts(3), image, { accessKey: "a", secretKey: "b" });
@@ -29,9 +39,12 @@ describe("renderCompose", () => {
 
 describe("renderViteConfig", () => {
   it("points the dev server and the /v1 proxy at the slot", () => {
-    const config = renderViteConfig("/repo/apps/web/vite.config.ts", "/repo/apps/web", "/repo/.verify/slots/3/vite-cache", slotPorts(3));
+    const config = renderViteConfig("/repo/apps/web/vite.config.ts", "/repo/apps/web", "/repo/.verify/slots/3/vite-cache", slotPorts(3), "/repo/.verify/slots/3/dist");
     expect(config).toContain("port: 24033");
     expect(config).toContain('"/v1": "http://127.0.0.1:24032"');
+    expect(config).toContain('outDir: "/repo/.verify/slots/3/dist"');
+    // vite preview (a --built slot) serves on the same port with the same proxy.
+    expect(config.match(/"\/v1": "http:\/\/127\.0\.0\.1:24032"/g)).toHaveLength(2);
     expect(config).toContain("strictPort: true");
     expect(config).not.toContain("3001");
   });

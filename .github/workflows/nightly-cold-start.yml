@@ -8,7 +8,11 @@ on:
 jobs:
   cold-start:
     runs-on: ubuntu-latest
-    
+    # Every compose call below runs under this project, so the stack gets
+    # throwaway volumes (routiq-cold-start_pgdata), never the dev name.
+    env:
+      COMPOSE_PROJECT_NAME: routiq-cold-start
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -11,15 +11,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  assetIdentityFields,
+  CHASSIS_NUMBER_MAX_LENGTH,
+  REGISTRATION_NUMBER_MAX_LENGTH,
   registerAssetPayload,
   templateFieldIssues,
   TEMPLATE_CODES,
   TEMPLATE_FIELDS,
 } from "@routiq/contracts";
-import type { z } from "zod";
+import { z } from "zod";
 import { useForm, type ControllerRenderProps, type FieldPath } from "react-hook-form";
 import { formatMoney, localizedLabel } from "@/lib/format";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -49,8 +53,36 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
-type FormInput = z.input<typeof registerAssetPayload>;
-type FormOutput = z.output<typeof registerAssetPayload>;
+/**
+ * The plate and chassis number follow the contract's rule in the Details edit's
+ * words, so both forms refuse the same value with the same sentence (#122). A
+ * blank one is none at all. Checked on the field itself so the message shows
+ * before the required fields are filled.
+ */
+function identityField(field: keyof typeof assetIdentityFields, message: () => string) {
+  return z
+    .string()
+    .optional()
+    .transform((value, ctx) => {
+      const text = value?.trim() || undefined;
+      if (text !== undefined && !assetIdentityFields[field].safeParse(text).success) {
+        ctx.addIssue({ code: "custom", message: message() });
+      }
+      return text;
+    });
+}
+
+function registerAssetForm(t: TFunction) {
+  return registerAssetPayload.extend({
+    registrationNumber: identityField("registrationNumber", () => t("form.errors.invalid")),
+    chassisNumber: identityField("chassisNumber", () =>
+      t("vehicle.details.edit.errors.chassisTooLong", { max: CHASSIS_NUMBER_MAX_LENGTH }),
+    ),
+  });
+}
+
+type FormInput = z.input<ReturnType<typeof registerAssetForm>>;
+type FormOutput = z.output<ReturnType<typeof registerAssetForm>>;
 
 const CAPACITY_UNITS = ["KG", "TONNE", "M3", "SEAT"] as const;
 
@@ -63,7 +95,7 @@ export function AssetRegisterScreen() {
   const reference = useAssetRegistrationReference();
 
   const [assetId] = useState(() => crypto.randomUUID());
-  const intentRef = useRef(createCommandIntent<FormOutput>(commandClient, "register-asset", 1));
+  const intentRef = useRef(createCommandIntent<FormOutput>(commandClient, "register-asset", 2));
   const [activeCommandId, setActiveCommandId] = useState<string>();
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
   const [errorCode, setErrorCode] = useState<string>();
@@ -78,7 +110,7 @@ export function AssetRegisterScreen() {
 
   const formSchema = useMemo(
     () =>
-      registerAssetPayload.superRefine((data, ctx) => {
+      registerAssetForm(t).superRefine((data, ctx) => {
         for (const issue of templateFieldIssues(data.templateCode, data.customValues)) {
           ctx.addIssue({
             code: "custom",
@@ -143,6 +175,8 @@ export function AssetRegisterScreen() {
         applyValidationMetadata(result.metadata, t, setFieldError);
       } else if (result.code === "DUPLICATE_ASSET_CODE") {
         setFieldError("assetCode", t("errors.DUPLICATE_ASSET_CODE"));
+      } else if (result.code === "DUPLICATE_REGISTRATION_NUMBER") {
+        setFieldError("registrationNumber", t("errors.DUPLICATE_REGISTRATION_NUMBER"));
       }
       setErrorCode(result.code);
       return;
@@ -279,6 +313,7 @@ export function AssetRegisterScreen() {
                   <FormLabel>{t("assets.form.registrationNumber")}</FormLabel>
                   <FormControl>
                     <Input
+                      maxLength={REGISTRATION_NUMBER_MAX_LENGTH}
                       {...textFieldProps(field)}
                     />
                   </FormControl>

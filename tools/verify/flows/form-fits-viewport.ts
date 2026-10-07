@@ -164,7 +164,9 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
         } else {
           log(`ok ${where}`);
         }
-        await shot(`${formCase.form}-${lang}-${viewport.width}x${viewport.height}`);
+        await shot(`${formCase.form}-${lang}-${viewport.width}x${viewport.height}`, {
+          caption: `${formCase.form} (${lang}) at ${viewport.width} × ${viewport.height}: title and submit stay inside the window`,
+        });
         await page.keyboard.press("Escape");
         await page.getByRole("dialog").last().waitFor({ state: "hidden", timeout: 5_000 }).catch(() => undefined);
       }

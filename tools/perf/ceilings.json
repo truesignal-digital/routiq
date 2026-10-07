@@ -1,0 +1,82 @@
+{
+  "/.ready_ms": {
+    "ceiling": 793,
+    "kind": "time"
+  },
+  "/.requests": {
+    "ceiling": 6,
+    "kind": "count"
+  },
+  "/activities.ready_ms": {
+    "ceiling": 309,
+    "kind": "time"
+  },
+  "/activities.requests": {
+    "ceiling": 4,
+    "kind": "count"
+  },
+  "/assets.ready_ms": {
+    "ceiling": 336,
+    "kind": "time"
+  },
+  "/assets.requests": {
+    "ceiling": 4,
+    "kind": "count"
+  },
+  "/assets/:id.ready_ms": {
+    "ceiling": 498,
+    "kind": "time"
+  },
+  "/assets/:id.requests": {
+    "ceiling": 6,
+    "kind": "count"
+  },
+  "/finance/approvals.ready_ms": {
+    "ceiling": 286,
+    "kind": "time"
+  },
+  "/finance/approvals.requests": {
+    "ceiling": 3,
+    "kind": "count"
+  },
+  "/finance/entries.ready_ms": {
+    "ceiling": 363,
+    "kind": "time"
+  },
+  "/finance/entries.requests": {
+    "ceiling": 4,
+    "kind": "count"
+  },
+  "/maintenance.ready_ms": {
+    "ceiling": 275,
+    "kind": "time"
+  },
+  "/maintenance.requests": {
+    "ceiling": 4,
+    "kind": "count"
+  },
+  "/more.ready_ms": {
+    "ceiling": 218,
+    "kind": "time"
+  },
+  "/more.requests": {
+    "ceiling": 1,
+    "kind": "count"
+  },
+  "api.p95_ms": {
+    "ceiling": 212,
+    "kind": "time"
+  },
+  "login.js_bytes": {
+    "ceiling": 560822,
+    "kind": "bytes"
+  },
+  "login.lcp_ms": {
+    "ceiling": 4188,
+    "kind": "time"
+  },
+  "login.usable_ms": {
+    "ceiling": 4204,
+    "kind": "time"
+  }
+}

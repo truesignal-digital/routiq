@@ -5,11 +5,15 @@ import {
   HISTORY_ENTITY_TYPES,
   HISTORY_MONEY_STATE_KEYS,
   HISTORY_STATE_KEYS,
-  historyEventDiff,
   historyItem,
   historyListQuery,
   historyListResponse,
 } from "./history.js";
+import {
+  HISTORY_CODE_SETS,
+  HISTORY_FIELD_SHAPES,
+  historyEventDiff,
+} from "./history-fields.js";
 
 const item = {
   eventId: "8c9a1f5e-2b74-4d16-93a0-1e7c5d8b4f30",
@@ -200,19 +204,50 @@ describe("state key allowlist", () => {
   });
 });
 
+describe("field display shapes", () => {
+  it("gives every allowlisted key a shape and names no key the allowlist lacks", () => {
+    for (const entityType of HISTORY_ENTITY_TYPES) {
+      expect(Object.keys(HISTORY_FIELD_SHAPES[entityType]).sort(), entityType).toEqual(
+        [...HISTORY_STATE_KEYS[entityType]].sort(),
+      );
+    }
+  });
+
+  it("shows money as money, and only the money keys", () => {
+    const money = new Set<string>(HISTORY_MONEY_STATE_KEYS);
+    for (const entityType of HISTORY_ENTITY_TYPES) {
+      for (const [key, shape] of Object.entries(HISTORY_FIELD_SHAPES[entityType])) {
+        expect(shape === "MONEY", `${entityType}.${key}`).toBe(money.has(key));
+      }
+    }
+  });
+
+  it("words the issue's fields: statuses as codes, ids as names, lines as a summary (#110, #119)", () => {
+    expect(HISTORY_FIELD_SHAPES.work_order.status).toEqual({ code: "workOrderStatus" });
+    expect(HISTORY_FIELD_SHAPES.work_order.costOutcome).toEqual({ code: "costOutcome" });
+    expect(HISTORY_FIELD_SHAPES.financial_entry.categoryId).toEqual({ name: "category" });
+    expect(HISTORY_FIELD_SHAPES.financial_entry.branchId).toEqual({ name: "branch" });
+    expect(HISTORY_FIELD_SHAPES.financial_entry.postings).toBe("LINES");
+  });
+
+  it("knows every code a work order can close with", () => {
+    expect([...HISTORY_CODE_SETS.costOutcome]).toEqual(["LINES", "NO_COST", "INVOICE_PENDING"]);
+  });
+});
+
 describe("event diff contract", () => {
   const diff = {
     eventId: "8c9a1f5e-2b74-4d16-93a0-1e7c5d8b4f30",
     currency: "XAF",
     changes: [
-      { field: "status", kind: "VALUE", before: "OPEN", after: "CLOSED" },
+      { field: "description", kind: "VALUE", before: null, after: "Vidange" },
       { field: "amountMinor", kind: "MONEY", before: null, after: 125_000 },
-      {
-        field: "customValues",
-        kind: "VALUE",
-        before: {},
-        after: { bonLivraison: "BL-4821" },
-      },
+      { field: "status", kind: "CODE", codeSet: "workOrderStatus", before: "APPROVED", after: "COMPLETED" },
+      { field: "completenessCodes", kind: "CODES", codeSet: "completenessCode", before: [], after: ["ACTIVITY_NO_LEGS"] },
+      { field: "branchId", kind: "NAME", before: null, after: { fr: "Douala", en: "Douala" } },
+      { field: "crew", kind: "NAMES", before: null, after: [{ fr: "Sali", en: "Sali" }] },
+      { field: "artifactIds", kind: "COUNT", before: null, after: 2 },
+      { field: "postings", kind: "LINES", before: null, after: { count: 2, totalMinor: 45_000 } },
     ],
   };
 
@@ -220,15 +255,24 @@ describe("event diff contract", () => {
     expect(historyEventDiff.parse(diff)).toEqual(diff);
   });
 
-  it("takes any JSON a snapshot can hold on either side", () => {
+  it("refuses an object or a list where a plain value belongs", () => {
+    for (const after of [{ bonLivraison: "BL-4821" }, ["a", "b"]]) {
+      expect(
+        historyEventDiff.safeParse({
+          ...diff,
+          changes: [{ field: "customValues", kind: "VALUE", before: null, after }],
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it("refuses a code without the set that words it", () => {
     expect(
       historyEventDiff.safeParse({
         ...diff,
-        changes: [
-          { field: "legIds", kind: "VALUE", before: [], after: ["a", "b"] },
-        ],
+        changes: [{ field: "status", kind: "CODE", before: null, after: "OPEN" }],
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("refuses a value kind it has no rendering rule for", () => {

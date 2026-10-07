@@ -1,5 +1,5 @@
 import { approvalChainResponse, type ApprovalChainResponse, type Role } from "@routiq/contracts";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { approvalRuleAcknowledgements, approvalRuleChanges, auditEvents } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
@@ -180,12 +180,81 @@ describe("approval rules notice (#422)", () => {
       entityId: notice.changeId,
       actorPrincipalId: t.FINANCE.principalId,
     });
+  });
 
-    const again = await api.send(t.FINANCE.token, "acknowledge-approval-rules", {
+  it("accepts a second acknowledgement of the same change, as from a second tab, without a second row (#453)", async () => {
+    const t = await team();
+    await move(t.DIRECTOR, "record-expense", 150_000);
+    const notice = (await chainOf(t.FINANCE)).notice;
+    if (notice === null) throw new Error("expected a notice");
+
+    // Two tabs, two envelopes: each its own idempotency key.
+    const first = await api.ok(t.FINANCE.token, "acknowledge-approval-rules", {
       changeId: notice.changeId,
     });
-    expect(again.status).toBe(409);
-    expect(again.body.error?.code).toBe("INVALID_STATE_TRANSITION");
+    const second = await api.send(t.FINANCE.token, "acknowledge-approval-rules", {
+      changeId: notice.changeId,
+    });
+    expect(second.status).toBe(200);
+    expect(second.body.recordId).toBe(first.recordId);
+
+    const rows = await ctx.db
+      .select()
+      .from(approvalRuleAcknowledgements)
+      .where(
+        and(
+          eq(approvalRuleAcknowledgements.changeId, notice.changeId),
+          eq(approvalRuleAcknowledgements.membershipId, t.FINANCE.membershipId),
+        ),
+      );
+    expect(rows).toHaveLength(1);
+    // Nothing happened the second time, so nothing is audited.
+    const events = await ctx.db
+      .select()
+      .from(auditEvents)
+      .where(
+        and(
+          eq(auditEvents.eventType, "approval-rules.acknowledged"),
+          eq(auditEvents.entityId, notice.changeId),
+          eq(auditEvents.actorPrincipalId, t.FINANCE.principalId),
+        ),
+      );
+    expect(events).toHaveLength(1);
+    // The second command still committed, so it is audited against itself (#153).
+    const secondCommandId = second.body.commandId ?? "";
+    const secondEvents = await ctx.db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.commandId, secondCommandId));
+    expect(secondEvents).toEqual([
+      expect.objectContaining({ eventType: "command.no_change", entityType: "command", entityId: secondCommandId }),
+    ]);
+    expect((await chainOf(t.FINANCE)).notice).toBeNull();
+  });
+
+  it("tells no one when a threshold update leaves every band where it was (#453)", async () => {
+    const t = await team();
+    await move(t.DIRECTOR, "record-expense", 150_000);
+    await move(t.DIRECTOR, "approve-entry", 500_000);
+    const notice = (await chainOf(t.ADMIN)).notice;
+    if (notice === null) throw new Error("expected a notice");
+    await api.ok(t.ADMIN.token, "acknowledge-approval-rules", { changeId: notice.changeId });
+
+    const changesBefore = await ctx.db
+      .select()
+      .from(approvalRuleChanges)
+      .where(eq(approvalRuleChanges.workspaceId, t.workspaceId));
+    await move(t.DIRECTOR, "record-expense", 150_000);
+    await move(t.DIRECTOR, "approve-entry", 500_000);
+    const changesAfter = await ctx.db
+      .select()
+      .from(approvalRuleChanges)
+      .where(eq(approvalRuleChanges.workspaceId, t.workspaceId));
+
+    expect(changesAfter).toHaveLength(changesBefore.length);
+    expect((await chainOf(t.ADMIN)).notice).toBeNull();
+    // A member who never acknowledged still sees the one real change.
+    expect((await chainOf(t.DRIVER)).notice?.changeId).toBe(notice.changeId);
   });
 
   it("shows one notice after several changes, for the current rules only", async () => {

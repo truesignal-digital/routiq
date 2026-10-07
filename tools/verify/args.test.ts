@@ -9,9 +9,9 @@ describe("parseArgs", () => {
   });
 
   it("defaults to slot 1, then ROUTIQ_VERIFY_SLOT, then --slot", () => {
-    expect(parseArgs(["up"])).toEqual({ name: "up", slot: 1, reseed: false });
-    expect(parseArgs(["up"], { ROUTIQ_VERIFY_SLOT: "4" })).toEqual({ name: "up", slot: 4, reseed: false });
-    expect(parseArgs(["up", "--slot", "2", "--reseed"], { ROUTIQ_VERIFY_SLOT: "4" })).toEqual({ name: "up", slot: 2, reseed: true });
+    expect(parseArgs(["up"])).toEqual({ name: "up", slot: 1, reseed: false, built: false });
+    expect(parseArgs(["up"], { ROUTIQ_VERIFY_SLOT: "4" })).toEqual({ name: "up", slot: 4, reseed: false, built: false });
+    expect(parseArgs(["up", "--slot", "2", "--reseed"], { ROUTIQ_VERIFY_SLOT: "4" })).toEqual({ name: "up", slot: 2, reseed: true, built: false });
     expect(parseArgs(["down", "--slot=3"])).toEqual({ name: "down", slot: 3 });
   });
 
@@ -20,7 +20,7 @@ describe("parseArgs", () => {
       name: "drive",
       slot: 1,
       targets: ["/assets", "/finance/entries"],
-      options: { role: "manager", lang: "en", video: true, strict: false, headed: false, viewport: { width: 1440, height: 900 } },
+      options: { role: "manager", lang: "en", video: true, reel: false, throttle: "none", strict: false, headed: false, viewport: { width: 1440, height: 900 } },
     });
   });
 
