@@ -12,10 +12,11 @@ afterEach(() => {
   sessionStore.logout(identity);
 });
 
-function serve(meStatus: number) {
+function serve(meStatus: number | "offline") {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(String(input), "http://app.test").pathname;
     if (path === "/v1/me") {
+      if (meStatus === "offline") throw new TypeError("Failed to fetch");
       return meStatus === 200
         ? Response.json({ workspaceId: "w", principalId: "p", principalType: "USER", membershipId: "m", role: "DIRECTOR", branchScope: "ALL", enabledModules: [], enabledPresets: ["TRUCKING"] })
         : new Response(null, { status: meStatus });
@@ -33,7 +34,7 @@ it("loads the member before the shell draws, and the notice and branches with it
   sessionStore.save({ ...identity, token: "t", expiresAt: "2099-01-01T00:00:00Z" });
   const client = new QueryClient();
   const me = await loadShell(client, "/assets");
-  expect(me.role).toBe("DIRECTOR");
+  expect(me?.role).toBe("DIRECTOR");
   const paths = fetchMock.mock.calls.map(([input]) => new URL(String(input), "http://app.test").pathname).sort();
   expect(paths).toEqual(["/v1/approval-chain", "/v1/me", "/v1/reference/asset-registration"]);
 });
@@ -46,4 +47,12 @@ it("ends the session and sends a dead token back to the PIN, then to where it wa
   expect(isRedirect(outcome)).toBe(true);
   expect((outcome as { options: { to: string; search: unknown } }).options).toMatchObject({ to: "/login", search: { redirect: "/assets?status=ACTIVE" } });
   expect(sessionStore.getActive()).toBeUndefined();
+});
+
+it("draws the shell without the member when the read fails for any other reason, as before", async () => {
+  serve("offline");
+  sessionStore.save({ ...identity, token: "t", expiresAt: "2099-01-01T00:00:00Z" });
+  const client = new QueryClient();
+  await expect(loadShell(client, "/assets")).resolves.toBeUndefined();
+  expect(sessionStore.getActive()).toBeDefined();
 });

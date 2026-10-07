@@ -11,10 +11,11 @@ import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overl
  * What the shell needs before it draws, so nothing in it moves once drawn
  * (#495): the member (sidebar rows, header crumbs and the preset's words), the
  * approval chain (the rules notice above the page) and the branches (the
- * header's switcher). The last two are best-effort: the shell draws without
- * them, as it did before.
+ * header's switcher). All three are best-effort past a dead session: offline
+ * or on a server error the shell draws without them, as it did before, so the
+ * member can still capture, retry or sign out.
  */
-export async function loadShell(queryClient: QueryClient, href: string): Promise<MeContext> {
+export async function loadShell(queryClient: QueryClient, href: string): Promise<MeContext | undefined> {
   const session = sessionStore.getActive();
   const slug = session?.workspaceSlug;
   const extras = Promise.allSettled([
@@ -24,12 +25,13 @@ export async function loadShell(queryClient: QueryClient, href: string): Promise
   let me: MeContext;
   try {
     me = await queryClient.ensureQueryData(meQueryOptions(queryClient, session));
-  } catch (error) {
+  } catch {
     // A dead token ends the session, and clearing the cache cancels this very
     // query, so the error here may be a cancellation, not the 401. Back to
     // the PIN, then here.
     if (sessionStore.getActive() === undefined) throw redirect({ to: "/login", search: { redirect: href } });
-    throw error;
+    await extras;
+    return undefined;
   }
   applyPresetVocabulary(i18n, presetVocabularyFor(me.enabledPresets));
   await extras;
