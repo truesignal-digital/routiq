@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 564169,
+    "ceiling": 567130,
     "raises": [
       {
         "date": "2026-10-06",
@@ -55,22 +55,34 @@
         "from": 562687,
         "to": 564169,
         "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 567130,
+        "reason": "Overview tiles on Trucks, Trips and Maintenance with two summary hooks, URL-backed list filters and fr/en strings (#302)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21493,
+    "ceiling": 21615,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 21376,
         "to": 21493,
         "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21493,
+        "to": 21615,
+        "reason": "Selectable metric tiles: stretched hit area, focus and selected rings (#302)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 564169,
+    "ceiling": 567130,
     "raises": [
       {
         "date": "2026-10-06",
@@ -125,6 +137,12 @@
         "from": 562687,
         "to": 564169,
         "reason": "#427: one line per event in money lists (cancelled-by and cancels labels, books-view toggle, 14 fr/en event strings), about 1.5 kB gzip measured on top of develop b0ccefb; about 7 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 63fd01a3)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 564169,
+        "to": 567130,
+        "reason": "Overview tiles on Trucks, Trips and Maintenance with two summary hooks, URL-backed list filters and fr/en strings (#302)"
       }
     ]
   }
