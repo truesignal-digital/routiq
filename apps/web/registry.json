@@ -965,12 +965,30 @@
         "page",
         "sheet",
         "status-badge",
+        "timeline",
         "use-mobile",
         "utils"
       ],
       "dependencies": [
         "@tanstack/react-query",
         "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "timeline",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/timeline.tsx",
+          "type": "registry:file",
+          "target": "components/timeline.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
         "react-i18next"
       ]
     },

@@ -305,6 +305,8 @@ describe("a problem reported before it was recorded (#396)", () => {
         eventId: "00000000-0000-4000-8000-0000000000c3",
         kind: "operational_issue.reported",
         occurredAt: "2026-09-22T09:24:00.000Z",
+        note: null,
+        noteCode: null,
         actor: actor(OTHER_ID, "Sali"),
       },
     ],

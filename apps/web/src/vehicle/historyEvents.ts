@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
-import { historyEventLabelKey } from "@/components/record-history-sheet.js";
+import { timelineAct } from "@/components/timeline.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { VehicleGates } from "./context.js";
 import type { PanelRef } from "./model.js";
@@ -43,7 +43,7 @@ const text = (value: unknown): string | null =>
 /**
  * An event's title is a sentence keyed by its type; its facts are the
  * allowlisted params the read carries. An event type added later still renders,
- * through the record history's label or, last, its raw code.
+ * through the record history's label or, last, "Other change".
  */
 export function describeEvent(
   item: VehicleHistoryItem,
@@ -53,7 +53,7 @@ export function describeEvent(
 ): EventView {
   const p = item.params;
   const key = `vehicle.history.event.${item.eventType.replace(/\./g, "-")}`;
-  const fallback = t(historyEventLabelKey(item.eventType), { defaultValue: item.eventType });
+  const fallback = timelineAct(item.eventType, t);
   const title = (values: Record<string, unknown> = {}) =>
     t(key, { defaultValue: fallback, ...values });
   const label = (fr: unknown, en: unknown) =>
