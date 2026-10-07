@@ -31,7 +31,7 @@ For each journey, measure first, before changing anything: the baseline goes in 
 2. If no number shows it, build one first: a flow in `tools/verify/flows/`, a count, a test. Prove it moves with what users feel before you optimise against it, and drop it if it doesn't.
 3. Fix it. Use several small PRs sized for review rather than one big one.
 4. Evidence: a reel (`pnpm verify drive ... --reel`, and `pnpm verify reel --before ...` for before and after) plus the numbers before and after.
-5. Lock it: tighten the ratchet in the same PR.
+5. Lock it: `pnpm perf run --record` then `pnpm perf tighten` in the same PR, so `docs/performance/README.md` shows before and after.
 6. Go to the next slow stretch of the same journey. Hitting a target is not the stopping point.
 
 ## Be bold inside the guardrails
