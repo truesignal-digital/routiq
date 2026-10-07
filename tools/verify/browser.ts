@@ -275,6 +275,9 @@ async function loginThroughUi(page: Page, state: SlotState, account: DemoAccount
  * they pass at every viewport.
  */
 export async function openSidebar(page: Page): Promise<Locator> {
+  // While the member loads, the shell is a placeholder frame (#495) whose menu
+  // is replaced, open or not, when the real shell draws.
+  await page.locator("[data-slot='sidebar-inset'][aria-busy='true']").waitFor({ state: "detached", timeout: 30_000 });
   const nav = page.getByRole("navigation", { name: "Navigation" });
   if (await nav.isVisible().catch(() => false)) return nav;
   await page.getByRole("button", { name: /Afficher ou masquer le menu|Show or hide the menu/ }).first().click();
