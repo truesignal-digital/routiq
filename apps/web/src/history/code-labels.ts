@@ -18,6 +18,7 @@ export const HISTORY_CODE_LABEL_KEY: Record<HistoryCodeSet, (code: string) => st
   entryDirection: (code) => `history.code.entryDirection.${code}`,
   paymentMethod: (code) => `finance.record.paymentMethods.${code.toLowerCase()}`,
   estimateStatus: (code) => `history.code.estimateStatus.${code}`,
+  cancellationReason: (code) => `reasonCodes.${code}`,
   periodStatus: (code) => `history.code.periodStatus.${code}`,
   workOrderStatus: (code) => `maintenance.workOrders.status.${code}`,
   costOutcome: (code) => `history.code.costOutcome.${code}`,

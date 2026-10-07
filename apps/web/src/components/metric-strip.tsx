@@ -118,7 +118,7 @@ function Tile({
               data-slot="metric-filter"
               aria-pressed={tile.selected === true}
               onClick={tile.onSelect}
-              className="text-start uppercase outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+              className="text-start outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
             >
               {tile.label}
             </button>

@@ -26,8 +26,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (entry === undefined) throw new Error("nothing waiting for this role (reseed?)");
   log(`api: summary waiting ${body.waiting.count} = decidable rows in the queue`);
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
-  const heading = page.getByRole("heading", { level: 1, name: t("Finances", "Money") });
+  await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
+  const heading = page.getByRole("heading", { level: 1, name: t("Argent", "Money") });
   await heading.waitFor();
   await quiet();
   const lead = page.locator("[data-slot='money-lead']");

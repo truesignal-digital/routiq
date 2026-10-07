@@ -179,6 +179,7 @@ describe("finance reads", () => {
         sourceReference: null,
         rejectedReason: null,
         reversedByEntryId: null,
+        cancellation: null,
         evidenceFiles: [],
         postings: [
           {

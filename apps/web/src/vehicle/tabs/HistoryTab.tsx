@@ -4,6 +4,7 @@ import { Clock } from "lucide-react";
 import type { VehicleHistoryItem, VehicleHistoryKind } from "@routiq/contracts";
 import { FilterChips } from "@/components/filter-chips";
 import { RecordText } from "@/components/record-number";
+import { historyNote } from "@/components/record-history-sheet.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -138,6 +139,7 @@ function EventRow({ item }: { item: VehicleHistoryItem }) {
   const { gates, panel } = useVehicle();
   const locale = i18n.language;
   const view = describeEvent(item, t, locale, gates);
+  const note = historyNote(item, t);
   const Icon = view.icon;
   const actor =
     item.actor.scope === "PLATFORM"
@@ -165,7 +167,7 @@ function EventRow({ item }: { item: VehicleHistoryItem }) {
           )}
         </div>
         {view.detail !== null && <p className="mt-0.5 text-sm whitespace-pre-line text-muted-foreground">{view.detail}</p>}
-        {item.note !== null && <p className="mt-0.5 text-sm text-muted-foreground">{item.note}</p>}
+        {note !== null && <p className="mt-0.5 text-sm text-muted-foreground">{note}</p>}
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
           <span>{actor}</span>
           <Sep />

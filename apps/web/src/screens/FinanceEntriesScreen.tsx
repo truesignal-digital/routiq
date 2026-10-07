@@ -66,7 +66,7 @@ export function FinanceEntriesScreen() {
   const me = useMeContext();
   if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
   if (!canReadFinanceEntries(me.role, me.enabledModules)) {
-    return <PermissionDenied width="wide" title={t("finance.money.title")}
+    return <PermissionDenied width="wide" title={t("finance.entries.title")}
       icon={<FileText className="size-7" aria-hidden />}
       code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
   }
@@ -226,7 +226,7 @@ function FinanceEntriesContent() {
   return (
     <PageContainer width="wide">
       <PageHeader
-        title={t("finance.money.title")}
+        title={t("finance.entries.title")}
         actions={
           <>
             {canManagePeriods(me?.role, me?.enabledModules) && (

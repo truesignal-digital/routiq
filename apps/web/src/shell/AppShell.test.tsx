@@ -191,13 +191,20 @@ describe("AppShell (sidebar frame)", () => {
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "More", "Users"]);
+  });
+
+  it("groups the rows under Daily work and Company", async () => {
+    await renderShell("/assets");
+    const nav = screen.getByRole("navigation", { name: "Navigation" });
+    const headings = [...nav.querySelectorAll("[data-sidebar='group-label']")].map((h) => h.textContent);
+    expect(headings).toEqual(["Daily work", "Company"]);
   });
 
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "More"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "More", "Users"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
@@ -208,7 +215,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("marks the section owning the route active, and only that one", async () => {
     await renderShell("/finance/periods");
-    expect(activeNavName()).toBe("Finance");
+    expect(activeNavName()).toBe("Money");
   });
 
   it("highlights Home on the landing route without swallowing the others", async () => {
@@ -228,7 +235,7 @@ describe("AppShell (sidebar frame)", () => {
   it("names the current section in the site header", async () => {
     await renderShell("/finance/entries");
     const header = document.querySelector("[data-slot='sidebar-inset'] header");
-    expect(header?.textContent).toContain("Finance");
+    expect(header?.textContent).toContain("Money");
   });
 
   it("overrides the English labels the vendored trigger and rail ship with", async () => {
@@ -320,13 +327,13 @@ describe("AppShell (sidebar frame)", () => {
     it("renames the chrome of a single-preset workspace", async () => {
       me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Trucks", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "More", "Users"]);
     });
 
     // Runs after the overlay above: also proves unmounting clears it.
     it("keeps the base vocabulary for a mixed fleet", async () => {
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "More", "Users"]);
     });
   });
 
@@ -340,14 +347,14 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "More", "Users"]);
     });
 
     it("closes the sheet after navigating", async () => {
       const router = await renderShell("/assets");
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
-      await userEvent.click(screen.getByRole("link", { name: "Finance" }));
+      await userEvent.click(screen.getByRole("link", { name: "Money" }));
 
       expect(router.state.location.pathname).toBe("/finance/entries");
       expect(screen.queryByRole("navigation", { name: "Navigation" })).toBeNull();

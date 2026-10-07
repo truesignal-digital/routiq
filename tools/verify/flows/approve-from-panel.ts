@@ -13,8 +13,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (queue.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/approvals → ${queue.status}, nothing pending (reseed?)`);
   log(`api: ${pending.length} pending; opening ${entry.entryNumber}`);
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
-  await page.getByRole("heading", { level: 1, name: t("Finances", "Money") }).waitFor();
+  await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
+  await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true }).click();
   await quiet();
   await shot("approvals-queue", {

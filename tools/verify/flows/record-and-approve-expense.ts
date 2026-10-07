@@ -70,7 +70,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await quiet();
 
   await nav("/finance/entries?view=waiting");
-  await page.getByRole("heading", { level: 1, name: t("Finances", "Money") }).waitFor();
+  await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   const row = itemWith(entry.entryNumber);
   await row.waitFor();
   await quiet();

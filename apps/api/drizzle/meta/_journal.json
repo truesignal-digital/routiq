@@ -295,6 +295,13 @@
       "when": 1791309018120,
       "tag": "0041_audit_events_command_index",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791309618120,
+      "tag": "0042_cancellation_reason",
+      "breakpoints": true
     }
   ]
 }
