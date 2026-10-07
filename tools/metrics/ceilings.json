@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 565407,
     "raises": [
       {
         "date": "2026-10-06",
@@ -43,22 +43,34 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 565407,
+        "reason": "Cancel entry (#426): same growth as web.initial-js-gzip, the reason list, RadioGroup, v2 contract and Record again; +3547 B gzip measured on top of develop b0ccefb6"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21493,
+    "ceiling": 21666,
     "raises": [
       {
         "date": "2026-10-06",
         "from": 21376,
         "to": 21493,
         "reason": "Branch-scoped header tint as a layer under the header's controls (#57), about 54 B gzip over develop; develop already sat 63 B over this ceiling inside the noise band"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21493,
+        "to": 21666,
+        "reason": "Cancel entry (#426): RadioGroup primitive styles for the reason list; +173 B gzip measured on top of develop b0ccefb6"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 561863,
+    "ceiling": 565407,
     "raises": [
       {
         "date": "2026-10-06",
@@ -101,6 +113,12 @@
         "from": 561678,
         "to": 561863,
         "reason": "#92: amber 'Repair done, waiting for release to service' state in the vehicle status block, reusing the existing release sentences and amber styles; +185 B gzip measured on top of develop after #90"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 561863,
+        "to": 565407,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
