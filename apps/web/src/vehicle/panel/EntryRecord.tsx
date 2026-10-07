@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts";
@@ -12,6 +13,7 @@ import { useVehicle, type PanelForm } from "../context.js";
 import { entrySteps, missingReceipt } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note } from "../parts.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
+import { cancellationReasonWords } from "@/finance/model.js";
 import {
   EvidenceMark,
   PanelFooter,
@@ -35,6 +37,8 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   const query = useEntry(gates.entries ? id : undefined);
   const host = useFormHost(t("vehicle.panel.entryTitle"));
   const locale = i18n.language;
+  // After a "wrong details" cancellation, the same panel page records it again.
+  const [recordingAgain, setRecordingAgain] = useState(false);
 
   if (!gates.entries) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
@@ -67,7 +71,27 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
       case "reject-entry":
         return <RejectEntryForm {...common} />;
       case "reverse-entry":
-        return <ReverseEntryForm {...common} />;
+        if (recordingAgain) {
+          const onThisVehicle = entry.postings[0]?.assetId === asset.id;
+          return (
+            <RecordEntryForm
+              surface="panel"
+              recordAgainFrom={entry}
+              back={back}
+              {...(onThisVehicle ? { pinnedAssetId: asset.id, pinnedAssetLabel: pinnedLabel } : {})}
+              onRecorded={() => {
+                setRecordingAgain(false);
+                host.onDone();
+                host.onDismiss();
+              }}
+              onDismiss={() => {
+                setRecordingAgain(false);
+                host.onDismiss();
+              }}
+            />
+          );
+        }
+        return <ReverseEntryForm {...common} onRecordAgain={() => setRecordingAgain(true)} />;
       case "edit-entry": {
         // The recording form writes one line, so it cannot write a split entry
         // back whole; that one is rejected and recorded again.
@@ -170,6 +194,11 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
                       {t("vehicle.panel.openOriginal")}
                     </LinkButton>,
                   ],
+                ] as const)),
+            ...(entry.cancellation === null
+              ? []
+              : ([
+                  [t("finance.entries.detail.cancellationReason"), cancellationReasonWords(entry.cancellation, t)],
                 ] as const)),
             ...(entry.reversedByEntryId === null
               ? []
