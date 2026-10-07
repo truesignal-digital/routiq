@@ -2075,6 +2075,7 @@
         "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
         "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
       },
+      "repairedLead": "Réparation terminée — en attente de remise en service.",
       "available": {
         "lead": "Disponible.",
         "sinceAndTrip": "En service depuis {since} ; dernière activité {lastTrip}.",
