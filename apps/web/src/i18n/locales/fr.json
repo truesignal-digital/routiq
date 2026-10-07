@@ -60,6 +60,11 @@
     "sidebarDescription": "Affiche le menu de navigation sur mobile.",
     "sidebarTitle": "Menu de navigation",
     "toggleSidebar": "Afficher ou masquer le menu",
+    "counts": {
+      "moneyWaiting": "{count, plural, one {# dépense attend votre approbation} other {# dépenses attendent votre approbation}}",
+      "maintenanceNew": "{count, plural, one {# nouveau problème à traiter} other {# nouveaux problèmes à traiter}}",
+      "tooltip": "{label} : {waiting}"
+    },
     "groups": {
       "daily": "Au quotidien",
       "company": "Entreprise"

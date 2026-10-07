@@ -1,0 +1,110 @@
+import { openSidebar, type DriveScript } from "../browser.js";
+
+/**
+ * Navigation counts (#322): the sidebar shows only work that waits on the
+ * viewer, counted by the server. Checks each count against GET /v1/nav-counts,
+ * opens Maintenance's count into the Problems tab, opens Money's count into the
+ * approvals waiting view, approves one entry there and watches the count drop,
+ * then collapses the rail on desktop to show the dot. Mutates the slot when
+ * Money has a count; reset with `pnpm verify up --reseed`.
+ * Run: pnpm verify drive flow:nav-counts --role finance --lang en
+ *      pnpm verify drive flow:nav-counts --role technician --lang en
+ */
+type Counts = { moneyWaiting: number | null; maintenanceNew: number | null };
+
+const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet }) => {
+  const failures: string[] = [];
+  const check = (ok: boolean, what: string) => {
+    log(`${ok ? "PASS" : "FAIL"} ${what}`);
+    if (!ok) failures.push(what);
+  };
+  const phone = (page.viewportSize()?.width ?? 1440) < 768;
+  const serverCounts = async () => (await apiGet("/v1/nav-counts")).body as Counts;
+  const shown = async (key: keyof Counts): Promise<number> => {
+    const nav = await openSidebar(page);
+    const badge = nav.locator(`[data-nav-count='${key}']`);
+    if ((await badge.count()) === 0) return 0;
+    return Number((await badge.textContent())?.trim() ?? "0");
+  };
+
+  await quiet();
+  const counts = await serverCounts();
+  log(`api: ${JSON.stringify(counts)}`);
+  const nav = await openSidebar(page);
+  await page.waitForTimeout(400);
+  for (const key of ["moneyWaiting", "maintenanceNew"] as const) {
+    check((await shown(key)) === (counts[key] ?? 0), `${key}: sidebar shows ${await shown(key)}, server counts ${counts[key]}`);
+  }
+  const badges = await nav.locator("[data-nav-count]").count();
+  const nonZero = Object.values(counts).filter((value) => (value ?? 0) > 0).length;
+  check(badges === nonZero, `${badges} rows carry a count; ${nonZero} counts are above zero`);
+  await shot(`${account.role.toLowerCase()}-counts`, {
+    caption: `${account.role}: counts only where work waits on this role (${JSON.stringify(counts)})`,
+  });
+
+  if ((counts.maintenanceNew ?? 0) > 0) {
+    await (await openSidebar(page)).locator("[data-nav-count='maintenanceNew']").click();
+    await page.waitForURL(/\/maintenance\?.*tab=issues/, { timeout: 10_000 });
+    await quiet();
+    check(page.url().includes("issueStatus=OPEN"), `Maintenance count opens ${new URL(page.url()).pathname}${new URL(page.url()).search}`);
+    await shot("maintenance-count-opens-problems", {
+      caption: `The Maintenance count opens the Problems tab on the open ones: ${counts.maintenanceNew} new`,
+    });
+  }
+
+  if ((counts.moneyWaiting ?? 0) > 0) {
+    await (await openSidebar(page)).locator("[data-nav-count='moneyWaiting']").click();
+    await page.waitForURL(/\/finance\/(approvals|entries)/, { timeout: 10_000 });
+    await quiet();
+    await shot("money-count-opens-waiting", {
+      caption: `The Money count opens the expenses waiting for approval: ${counts.moneyWaiting}`,
+    });
+
+    const me = (await apiGet("/v1/me")).body as { principalId?: string };
+    const queue = (await apiGet("/v1/finance/approvals")).body as {
+      entries?: Array<{ entryNumber: string; submittedByPrincipalId: string; directionDecides: boolean }>;
+    };
+    const entry = (queue.entries ?? []).find(
+      (item) => !item.directionDecides && item.submittedByPrincipalId !== me.principalId,
+    );
+    // The row menu is the desktop table's; the phone's cards are #300's.
+    if (entry !== undefined && !phone) {
+      await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
+      await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
+      await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
+      await quiet();
+      const after = await serverCounts();
+      const before = counts.moneyWaiting ?? 0;
+      check(after.moneyWaiting === before - 1, `server count went ${before} → ${after.moneyWaiting} after approving ${entry.entryNumber}`);
+      await page.waitForTimeout(500);
+      const nowShown = await shown("moneyWaiting");
+      check(nowShown === (after.moneyWaiting ?? 0), `sidebar refreshed to ${nowShown} without a reload`);
+      await shot("count-drops-after-decision", {
+        caption: `Approved ${entry.entryNumber}: the Money count drops to ${after.moneyWaiting} without a reload`,
+      });
+    } else {
+      log("phone, or no entry this role may decide: skipping the decision step");
+    }
+  }
+
+  if (!phone) {
+    await page.getByRole("button", { name: /Afficher ou masquer le menu|Show or hide the menu/ }).first().click();
+    await page.waitForTimeout(500);
+    const dots = await page.locator("[data-nav-count-dot]").evaluateAll((els) =>
+      els.filter((el) => getComputedStyle(el).display !== "none").length,
+    );
+    const live = Object.values(await serverCounts()).filter((value) => (value ?? 0) > 0).length;
+    check(dots === live, `collapsed rail shows ${dots} dots for ${live} counts`);
+    const dotted = page.locator("[data-nav-count-dot]").first();
+    if ((await dotted.count()) > 0) {
+      await dotted.locator("xpath=ancestor::a[1]").hover();
+      await page.waitForTimeout(700);
+    }
+    await shot("collapsed-rail-dot", { caption: "Collapsed rail: each count becomes a dot; the tooltip says the number" });
+    await page.getByRole("button", { name: /Afficher ou masquer le menu|Show or hide the menu/ }).first().click();
+  }
+
+  if (failures.length > 0) throw new Error(`nav counts failed:\n  ${failures.join("\n  ")}`);
+};
+
+export default flow;

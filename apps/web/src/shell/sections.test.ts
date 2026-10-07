@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Banknote, Building, House, Menu, Route, ShieldUser, Truck, UserRound, Wrench } from "lucide-react";
-import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
+import { ROLES, waitsOn, type ModuleCode, type Role } from "@routiq/contracts";
 import { visibleFinanceSections } from "../finance/navigation.js";
 import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
 import {
@@ -209,5 +209,26 @@ describe("row icons follow the consistency kit", () => {
     const [kit, icon] = entry ?? [];
     if (kit !== undefined) expect(KIT).toMatch(new RegExp(`^\\s+${kit}: '`, "m"));
     expect(section.icon).toBe(icon);
+  });
+});
+
+describe("navigation counts (#322)", () => {
+  it("are declared only on Money and Maintenance", () => {
+    const counted = ALL.filter((section) => section.count !== undefined).map((section) => [
+      section.key,
+      section.count?.key,
+    ]);
+    expect(counted).toEqual([
+      ["maintenance", "maintenanceNew"],
+      ["finances", "moneyWaiting"],
+    ]);
+  });
+
+  it("go only to roles that see the row they sit on", () => {
+    for (const role of ROLES) {
+      const keys = visibleSections(role, EVERY).map((section) => section.key);
+      if (waitsOn("moneyWaiting", role)) expect(keys, role).toContain("finances");
+      if (waitsOn("maintenanceNew", role)) expect(keys, role).toContain("maintenance");
+    }
   });
 });

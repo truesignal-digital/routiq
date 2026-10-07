@@ -10,7 +10,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { moneyReadScope, type ModuleCode, type Role } from "@routiq/contracts";
+import { moneyReadScope, type ModuleCode, type NavCountKey, type Role } from "@routiq/contracts";
 import { canAdministerBranches } from "../branches/permissions.js";
 import { canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
@@ -45,6 +45,19 @@ export interface ShellSection {
    * role; a row with one stays hidden until the role is known.
    */
   reads?: (role: Role, enabledModules: readonly ModuleCode[]) => boolean;
+  /**
+   * Work on this page that waits on the viewer (#322): which server count the
+   * row shows, its accessible label, and the filtered view the count opens.
+   */
+  count?: SectionCount;
+}
+
+export interface SectionCount {
+  key: NavCountKey;
+  /** ICU plural over `{count}`, said by screen readers and the collapsed rail's tooltip. */
+  labelKey: string;
+  to: string;
+  search: Record<string, string>;
 }
 
 const onlyFor =
@@ -80,6 +93,13 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     icon: Wrench,
     module: "MAINTENANCE",
     reads: onlyFor(["DIRECTOR", "ADMIN", "TECHNICIAN"]),
+    // Opens the Problems tab on the open ones (#302 reads `tab` and `issueStatus`).
+    count: {
+      key: "maintenanceNew",
+      labelKey: "shell.counts.maintenanceNew",
+      to: "/maintenance",
+      search: { tab: "issues", issueStatus: "OPEN" },
+    },
   },
   {
     key: "finances",
@@ -92,6 +112,14 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     // A driver reads only the entries they recorded, on their truck and trips.
     reads: (role, enabledModules) =>
       canReadFinanceEntries(role, enabledModules) && moneyReadScope(role) !== "OWN_ENTRIES",
+    // The approvals route opens the waiting view (#314), across every branch
+    // the count covers.
+    count: {
+      key: "moneyWaiting",
+      labelKey: "shell.counts.moneyWaiting",
+      to: "/finance/approvals",
+      search: { branch: "all" },
+    },
   },
   { key: "more", group: "daily", labelKey: "more.title", to: "/more", icon: Menu },
   {

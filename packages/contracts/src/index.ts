@@ -19,6 +19,7 @@ export * from "./commands/asset-lifecycle.js";
 export * from "./reads/list.js";
 export * from "./reads/assets.js";
 export * from "./reads/dashboard.js";
+export * from "./reads/nav-counts.js";
 export * from "./reads/artifacts.js";
 export * from "./reads/documents.js";
 export * from "./reads/activities.js";

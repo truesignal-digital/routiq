@@ -48,6 +48,7 @@ import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
+import { registerNavCountsReadRoutes } from "./reads/nav-counts.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
 import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
@@ -130,6 +131,7 @@ export function buildServer({
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
+  registerNavCountsReadRoutes(app, db, requireAuth);
   registerActivityReadRoutes(app, db, requireAuth);
   registerMemberReadRoutes(app, db, requireAuth);
   registerBranchReadRoutes(app, db, requireAuth);
