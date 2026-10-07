@@ -327,7 +327,9 @@
       "number": "Veuillez saisir un nombre.",
       "min": "Doit être au moins {min}.",
       "max": "Ne doit pas dépasser {max}.",
-      "invalid": "Valeur invalide."
+      "invalid": "Valeur invalide.",
+      "tooShort": "Au moins {min} caractères.",
+      "tooLong": "Au plus {max} caractères."
     }
   },
   "fileUpload": {
@@ -1615,7 +1617,9 @@
     "conflictTitle": "Modifié ailleurs",
     "conflictBody": "Quelqu'un d'autre a modifié cet enregistrement. Actualisez, vérifiez, puis réappliquez votre action.",
     "approvalTitle": "Approbation requise",
-    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié."
+    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié.",
+    "issues": "{count, plural, one {# point à corriger} other {# points à corriger}}",
+    "issue": "{field} : {message}"
   },
   "commands": {
     "register-asset": {

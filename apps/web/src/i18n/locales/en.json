@@ -327,7 +327,9 @@
       "number": "Please enter a number.",
       "min": "Must be at least {min}.",
       "max": "Must not exceed {max}.",
-      "invalid": "Invalid value."
+      "invalid": "Invalid value.",
+      "tooShort": "At least {min} characters.",
+      "tooLong": "At most {max} characters."
     }
   },
   "fileUpload": {
@@ -1615,7 +1617,9 @@
     "conflictTitle": "Modified elsewhere",
     "conflictBody": "Someone else changed this record. Refresh, review, then reapply your action.",
     "approvalTitle": "Approval required",
-    "approvalBody": "This action needs an approval before it takes effect. Nothing was changed."
+    "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
+    "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
+    "issue": "{field}: {message}"
   },
   "commands": {
     "register-asset": {
