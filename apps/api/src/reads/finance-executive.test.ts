@@ -126,7 +126,8 @@ describe("branch-scoped finance reader HTTP boundaries", () => {
       const response = await command(admin, name, payload, name === "reverse-entry" ? 1 : undefined);
       expect(response.statusCode, response.body).toBe(200);
     }
-    const response = await get(`/v1/finance/entries?branchId=${seeded.branch.id}&periodCode=2026-09&direction=EXPENSE&status=LEDGER`);
+    const drill = `/v1/finance/entries?branchId=${seeded.branch.id}&periodCode=2026-09&direction=EXPENSE&status=LEDGER`;
+    const response = await get(`${drill}&view=books`);
     expect(response.statusCode, response.body).toBe(200);
     const entries = financialEntryListResponse.parse(response.json()).entries;
     expect(entries.map((item) => item.id).sort()).toEqual([originalId, retainedId, reversalId].sort());
@@ -134,6 +135,12 @@ describe("branch-scoped finance reader HTTP boundaries", () => {
     expect(entries.find((item) => item.id === reversalId)?.amountMinor).toBe(-25000);
     const dashboard = await get(`/v1/dashboard?branchId=${seeded.branch.id}`);
     expect(entries.reduce((total, item) => total + item.amountMinor, 0)).toBe(dashboard.json().openPeriod.postedExpenseMinor);
+    // One line per event (#427): the pair folds into the original, which counts 0.
+    const events = financialEntryListResponse.parse((await get(drill)).json()).entries;
+    expect(events.map((item) => item.id).sort()).toEqual([originalId, retainedId].sort());
+    expect(
+      events.reduce((total, item) => total + (item.cancelledBy?.folded ? 0 : item.amountMinor), 0),
+    ).toBe(dashboard.json().openPeriod.postedExpenseMinor);
     expect((await get("/v1/finance/entries?direction=INVALID")).statusCode).toBe(400);
   });
 });

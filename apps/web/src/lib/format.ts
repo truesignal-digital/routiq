@@ -147,6 +147,16 @@ export function formatDate(iso: string | null | undefined, locale?: string): str
   }).format(date);
 }
 
+/** "septembre 2026" for the period "2026-09": a posting month in words. */
+export function formatMonth(periodCode: string | null | undefined, locale?: string): string {
+  if (periodCode == null || !/^\d{4}-\d{2}$/.test(periodCode)) return periodCode ?? "";
+  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${periodCode}-15T00:00:00Z`));
+}
+
 /** "31 juillet 2026" — the heading a day's worth of history sits under. */
 export function formatDayLong(
   value: string | Date | null | undefined,

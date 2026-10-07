@@ -531,6 +531,21 @@
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
         "assetOption": "{code} — {name}"
+      },
+      "events": {
+        "cancelledIn": "Annulée en {month}",
+        "cancellationBadge": "Annulation",
+        "cancellationOf": "Annulation de l'écriture {number} ({month})",
+        "cancellationOfEntry": "Annulation de l'écriture {number}",
+        "showCancellation": "Voir l'annulation",
+        "hideCancellation": "Masquer l'annulation",
+        "cancellationEntry": "Écriture d'annulation {number}",
+        "cancelledByOn": "Annulée par {name} le {date}",
+        "cancelledOn": "Annulée le {date}",
+        "reason": "Motif : {reason}",
+        "countsZero": "Compte pour 0 dans les totaux",
+        "countsHere": "Compte toujours en {month} : l'annulation se déduit en {cancelMonth}",
+        "booksView": "Afficher toutes les lignes du grand livre"
       }
     },
     "approvals": {
@@ -2272,7 +2287,7 @@
       "revenueLegend": "Recettes",
       "monthBar": "{month} : dépenses {expenses}, recettes {revenue}",
       "entries": "Écritures",
-      "entriesHint": "Rien n'est modifié : une correction est une contre-passation, et les deux restent listées.",
+      "entriesHint": "Rien n'est modifié : une annulation du même mois se range sous son écriture ; une annulation d'un mois suivant figure dans ce mois-là.",
       "filterLabel": "Afficher les écritures",
       "filters": {
         "posted": "Comptabilisées",
