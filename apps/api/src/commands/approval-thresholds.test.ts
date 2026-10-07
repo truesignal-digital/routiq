@@ -270,6 +270,15 @@ describe("approval thresholds (#354)", () => {
       expect(response.statusCode).toBe(200);
       expect(await changeRows()).toHaveLength(before.length);
       expect((await current()).version).toBe(version);
+
+      // #153 (develop): every committed command leaves an audit event, so the
+      // no-op files command.no_change against itself, not a threshold change.
+      const commandId = (response.json() as { commandId: string }).commandId;
+      const events = await db
+        .select({ eventType: auditEvents.eventType, entityType: auditEvents.entityType })
+        .from(auditEvents)
+        .where(and(eq(auditEvents.workspaceId, workspaceId), eq(auditEvents.commandId, commandId)));
+      expect(events).toEqual([{ eventType: "command.no_change", entityType: "command" }]);
     });
 
     it("leaves a branch's or a category's own rule alone, and lists it apart", async () => {
