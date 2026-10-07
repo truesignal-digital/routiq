@@ -1,7 +1,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { Banknote, Building, House, Menu, Route, ShieldUser, Truck, UserRound, Wrench } from "lucide-react";
+import {
+  Banknote,
+  Building,
+  House,
+  Menu,
+  Route,
+  ShieldUser,
+  SlidersHorizontal,
+  Truck,
+  UserRound,
+  Wrench,
+} from "lucide-react";
 import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
 import { visibleFinanceSections } from "../finance/navigation.js";
 import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
@@ -34,7 +45,7 @@ describe("each role's sidebar (#312)", () => {
   const expected: Record<Role, Record<string, string[]>> = {
     DIRECTOR: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
-      company: ["persons", "users", "branches"],
+      company: ["persons", "users", "branches", "companySettings"],
     },
     ADMIN: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
@@ -55,6 +66,11 @@ describe("each role's sidebar (#312)", () => {
       const modules = EVERY.filter((code) => code !== "FINANCE");
       expect(sidebar(role, modules).daily, role).not.toContain("finances");
     }
+  });
+
+  it("drops Company settings with Finance off: the approval chain is its only section (#354)", () => {
+    const modules = EVERY.filter((code) => code !== "FINANCE");
+    expect(sidebar("DIRECTOR", modules).company).not.toContain("companySettings");
   });
 
   it("drops Maintenance for everyone when Maintenance is off", () => {
@@ -121,6 +137,7 @@ describe("row label = page title (#312)", () => {
     persons: "screens/PersonsScreen.tsx",
     users: "screens/UsersScreen.tsx",
     branches: "screens/BranchesScreen.tsx",
+    companySettings: "screens/CompanySettingsScreen.tsx",
   };
 
   it.each(ALL.map((section) => [section.key, section] as const))("%s", (key, section) => {
@@ -201,6 +218,7 @@ describe("row icons follow the consistency kit", () => {
     persons: ["user", UserRound],
     users: [undefined, ShieldUser],
     branches: ["building", Building],
+    companySettings: ["sliders", SlidersHorizontal],
   };
 
   it.each(ALL.map((section) => [section.key, section] as const))("%s", (key, section) => {

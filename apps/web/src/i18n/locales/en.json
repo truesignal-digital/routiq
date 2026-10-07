@@ -177,7 +177,8 @@
     "CUSTODIAN_INELIGIBLE": "This member cannot be the assigned driver of this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
-    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
     "notify": {
@@ -1824,8 +1825,8 @@
       "submitting": "Disabling…"
     },
     "update-approval-threshold": {
-      "label": "Change approval threshold",
-      "submit": "Save threshold",
+      "label": "Change approval thresholds",
+      "submit": "Save thresholds",
       "submitting": "Saving…"
     },
     "create-category": {
@@ -2652,5 +2653,47 @@
     "DID_NOT_HAPPEN": "Didn't happen",
     "WRONG_DETAILS": "Wrong details, to record again",
     "OTHER": "Other"
+  },
+  "settings": {
+    "title": "Company settings",
+    "description": "Rules that apply to everyone in the company. Only Direction can change them.",
+    "retry": "Try again",
+    "approvals": {
+      "title": "Approvals",
+      "description": "Up to which amount a money entry posts without review, and who decides it above that.",
+      "loading": "Loading the approval rules",
+      "loadFailed": "The approval rules could not be loaded.",
+      "chainLabel": "The approval chain",
+      "noBands": "This company's approval rules were set by hand, so they can't be changed here. Contact ROUTIQ support.",
+      "byRole": "What each role's own entries meet",
+      "byRoleHint": "Nobody approves their own entry, and Direction's own entries always post.",
+      "kind": {
+        "record-expense": "Expenses",
+        "record-revenue": "Revenue"
+      },
+      "roleKind": "{role}: {kind}",
+      "overrides": "Exceptions for a branch or a category",
+      "overridesHint": "These keep their own amounts when you change the thresholds.",
+      "override": "{kind, select, record-expense {Expenses} record-revenue {Revenue} other {Decisions}}, {scope}: {role} {bounded, select, yes {up to {amount}} other {at any amount}}",
+      "form": {
+        "description": "Applies to every branch, from the next entry on.",
+        "recording": "Posts directly up to",
+        "recordingHint": "Entries up to this amount post without review.",
+        "ceiling": "Finance approves up to",
+        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only Direction decides.",
+        "whole": "Enter the amount in whole francs, without decimals.",
+        "belowCeiling": "Keep this below the amount Finance approves up to.",
+        "unchanged": "Change an amount to save.",
+        "afterSaving": "After saving",
+        "whoIsTold": "{roles} members will see the new rules on their next screen.",
+        "conflictTitle": "The thresholds changed while you were editing",
+        "conflictBody": "Someone else saved new thresholds. Refresh to see them, then make your change again."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Approval thresholds saved"
+      }
+    }
   }
 }
