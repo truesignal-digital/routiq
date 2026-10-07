@@ -60,6 +60,10 @@
     "sidebarDescription": "Affiche le menu de navigation sur mobile.",
     "sidebarTitle": "Menu de navigation",
     "toggleSidebar": "Afficher ou masquer le menu",
+    "groups": {
+      "daily": "Au quotidien",
+      "company": "Entreprise"
+    },
     "branch": {
       "label": "Agence courante",
       "all": "Toutes mes agences",
@@ -185,7 +189,7 @@
       }
     },
     "eyebrow": "Parc opérationnel",
-    "title": "Vos actifs",
+    "title": "Actifs",
     "subtitle": "Suivez chaque véhicule, de son enregistrement à sa mise hors service.",
     "searchLabel": "Rechercher dans les actifs",
     "searchPlaceholder": "Code, plaque ou modèle…",
@@ -450,7 +454,7 @@
       "branchesFailed": "Impossible de charger les agences. Actualisez cette page."
     },
     "entries": {
-      "title": "Écritures comptables",
+      "title": "Argent",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les écritures. Réessayez.",
       "retry": "Réessayer",

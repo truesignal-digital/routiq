@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 567875,
+    "ceiling": 568158,
     "raises": [
       {
         "date": "2026-10-06",
@@ -67,6 +67,12 @@
         "from": 564245,
         "to": 567875,
         "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 567875,
+        "to": 568158,
+        "reason": "Role-grouped sidebar (#312): section groups, role read predicates, Company rows and kit icons"
       }
     ]
   },
@@ -94,7 +100,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 567875,
+    "ceiling": 568158,
     "raises": [
       {
         "date": "2026-10-06",
@@ -161,6 +167,12 @@
         "from": 564245,
         "to": 567875,
         "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 567875,
+        "to": 568158,
+        "reason": "Role-grouped sidebar (#312): section groups, role read predicates, Company rows and kit icons"
       }
     ]
   }

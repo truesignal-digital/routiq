@@ -19,7 +19,7 @@
         "assigned": "Véhicule affecté"
       }
     },
-    "title": "Vos véhicules",
+    "title": "Véhicules",
     "searchLabel": "Rechercher dans les véhicules",
     "filterLabel": "Filtrer les véhicules",
     "emptyHint": "Ajoutez un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
