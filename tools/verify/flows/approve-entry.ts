@@ -20,7 +20,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (queue.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/approvals → ${queue.status}, nothing this role may decide (reseed?)`);
   log(`api: ${pending.length} pending; approving ${entry.entryNumber}`);
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("navigation", { name: t("Sections financières", "Finance sections") }).getByRole("tab", { name: new RegExp(`^${t("Approbations", "Approvals")}`) }).click();
   await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
   await quiet();

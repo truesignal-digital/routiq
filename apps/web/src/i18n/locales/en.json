@@ -60,6 +60,10 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "groups": {
+      "daily": "Daily work",
+      "company": "Company"
+    },
     "branch": {
       "label": "Current branch",
       "all": "All my branches",
@@ -185,7 +189,7 @@
       }
     },
     "eyebrow": "Operational fleet",
-    "title": "Your assets",
+    "title": "Assets",
     "subtitle": "Track every vehicle from registration through retirement.",
     "searchLabel": "Search assets",
     "searchPlaceholder": "Code, plate or model…",
@@ -448,7 +452,7 @@
       "branchesFailed": "We couldn't load branches. Retry this page."
     },
     "entries": {
-      "title": "Entries",
+      "title": "Money",
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "retry": "Try again",
