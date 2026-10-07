@@ -145,7 +145,7 @@ function Tile({
   // The label is the control; its ::after stretches over the whole card, so
   // the tile is one 44 px+ target while the dl stays a dl.
   const stretch =
-    "text-start uppercase outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']";
+    "text-start outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']";
 
   return (
     <Card
@@ -162,7 +162,7 @@ function Tile({
       )}
     >
       <CardContent className="flex flex-col gap-1.5">
-        <dt className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           {tone === "warning" && (
             <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden />
           )}
@@ -191,12 +191,12 @@ function Tile({
           {tile.info !== undefined && (
             <Tooltip>
               <TooltipTrigger
-                className="relative z-10 ml-auto inline-flex rounded-sm text-muted-foreground normal-case hover:text-foreground"
+                className="relative z-10 ml-auto inline-flex rounded-sm text-muted-foreground hover:text-foreground"
                 aria-label={t("common.howCalculated")}
               >
                 <Info className="size-3.5" aria-hidden />
               </TooltipTrigger>
-              <TooltipContent className="max-w-64 normal-case">{tile.info}</TooltipContent>
+              <TooltipContent className="max-w-64">{tile.info}</TooltipContent>
             </Tooltip>
           )}
         </dt>
