@@ -73,7 +73,8 @@ export type StepKey =
   | "approve-entry"
   | "reject-entry"
   | "edit-entry"
-  | "add-cost";
+  | "add-cost"
+  | "acknowledge-note";
 
 /** One thing to do, on the record it is done to. */
 export interface Step {

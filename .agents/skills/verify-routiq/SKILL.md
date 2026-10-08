@@ -82,6 +82,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `add-note` | VH003 → Add note: empty submit shows the error summary and sends nothing, its link focuses the field, then the note lands in `GET /v1/assets/:id/history` (#290). Desktop or `--viewport 390x844` | yes |
 | `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
+| `direction-note` | as Direction: write a note on VH001 → it waits in Now → To do; `--role driver` after it: the note is in the To do, Mark as seen → it leaves, the note says "Seen by" (#98) | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
 | `approve-entry` | Money → Waiting your approval → row Approve (one tap) → entry POSTED | yes |
 | `money-page` | Money: lead line, tiles = `GET /v1/finance/summary`, waiting tile → row Reject dialog / Approve, `/finance/approvals` redirect, Accounting months link (#314) | yes |

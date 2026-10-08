@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 579526,
+    "ceiling": 580712,
     "raises": [
       {
         "date": "2026-10-06",
@@ -119,8 +119,14 @@
       {
         "date": "2026-10-08",
         "from": 578177,
-        "to": 579526,
-        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop f8796dc8)"
+        "to": 579404,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop f8796dc8)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 579404,
+        "to": 580712,
+        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop f2778c2b)"
       }
     ]
   },
@@ -166,7 +172,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 579526,
+    "ceiling": 580712,
     "raises": [
       {
         "date": "2026-10-06",
@@ -285,8 +291,14 @@
       {
         "date": "2026-10-08",
         "from": 578177,
-        "to": 579526,
-        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop f8796dc8)"
+        "to": 579404,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop f8796dc8)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 579404,
+        "to": 580712,
+        "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop f2778c2b)"
       }
     ]
   }

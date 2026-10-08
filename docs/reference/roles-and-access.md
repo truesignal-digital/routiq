@@ -65,6 +65,7 @@ person held before.
 | Vehicles | Set the assigned driver (Chauffeur attitré) | ✓ | ✓ | — | — | — | — |
 | Vehicles | Record a meter reading | ✓ | ✓ | — | — | ✓ | ✓ |
 | Vehicles | Write a note | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Vehicles | Mark a note from Direction as seen (it waits in the vehicle's To-do until then; never its author) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Vehicles | Location (reported, not GPS) *(planned)* | V | ✓ | — | — | — | ✓ |
 | Maintenance | Report a problem | ✓ | ✓ | — | — | ✓ | ✓ |
 | Maintenance | Create and run a work order | ✓ | ✓ | — | — | ✓ | — |

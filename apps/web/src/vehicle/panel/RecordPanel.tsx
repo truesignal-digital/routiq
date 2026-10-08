@@ -80,7 +80,7 @@ function RecordView({ record, form }: { record: PanelRef; form: PanelForm | unde
     case "document":
       return <DocumentRecord id={record.id} form={form} />;
     case "note":
-      return <NoteRecord id={record.id} />;
+      return <NoteRecord id={record.id} form={form} />;
     case "readings":
       return <ReadingsRecord form={form} />;
   }

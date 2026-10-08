@@ -548,3 +548,16 @@ describe("an entry's steps", () => {
     expect(keys(entry(), "DIRECTOR")).toEqual(["attach-evidence", "approve-entry", "reject-entry"]);
   });
 });
+
+describe("Direction's notes (#98)", () => {
+  const note = (author: string) => attention("DIRECTION_NOTE", { makerPrincipalIds: [author] });
+
+  it.each(ROLES)("lets %s mark someone else's Direction note as seen", (role) => {
+    expect(token(attentionStep(note(OTHER_ID), viewer(role), asset()))).toBe("go:acknowledge-note");
+  });
+
+  it("leaves the author's own note waiting on the team, on its record", () => {
+    const [todo] = buildTodos([note(ME_ID)], asset(), viewer("DIRECTOR"));
+    expect(todo).toMatchObject({ step: { kind: "none" }, who: "team", record: { kind: "note" } });
+  });
+});

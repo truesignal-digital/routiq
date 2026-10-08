@@ -35,6 +35,7 @@ import "./commands/work-order-decisions.js";
 import "./commands/release-asset-to-service.js";
 import "./commands/update-asset-details.js";
 import "./commands/add-note.js";
+import "./commands/acknowledge-note.js";
 import "./commands/attach-evidence.js";
 import "./commands/update-pending-entry.js";
 import "./commands/acknowledge-approval-rules.js";
