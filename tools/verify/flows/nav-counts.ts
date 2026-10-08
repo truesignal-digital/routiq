@@ -99,10 +99,11 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     const entry = (queue.entries ?? []).find(
       (item) => !item.directionDecides && item.submittedByPrincipalId !== me.principalId,
     );
-    // The row menu is the desktop table's; the phone's cards are #300's.
+    // The waiting view approves from the row's own button, one tap (#314).
     if (entry !== undefined && !phone) {
-      await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
-      await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
+      await page
+        .getByRole("button", { name: `${t("Approuver l'écriture", "Approve entry")} ${entry.entryNumber}`, exact: true })
+        .click();
       await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
       await quiet();
       const after = await serverCounts();
@@ -127,7 +128,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     );
     const live = Object.values(await serverCounts()).filter((value) => (value ?? 0) > 0).length;
     check(dots === live, `collapsed rail shows ${dots} dots for ${live} counts`);
-    const dotted = page.locator("[data-nav-count-dot]").first();
+    const dotted = page.locator("[data-nav-count-dot]").locator("visible=true").first();
     if ((await dotted.count()) > 0) {
       await dotted.locator("xpath=ancestor::a[1]").hover();
       await page.waitForTimeout(700);
