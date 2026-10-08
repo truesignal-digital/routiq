@@ -30,6 +30,7 @@ import "./commands/set-template-preset.js";
 import "./commands/members.js";
 import "./commands/report-issue.js";
 import "./commands/issue-decisions.js";
+import "./commands/change-issue-severity.js";
 import "./commands/work-orders.js";
 import "./commands/work-order-decisions.js";
 import "./commands/release-asset-to-service.js";

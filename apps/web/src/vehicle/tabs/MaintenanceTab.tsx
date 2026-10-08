@@ -273,7 +273,11 @@ function IssueRow({ issue }: { issue: IssueListItem }) {
   const locale = i18n.language;
   const open = issue.status === "OPEN";
   const planned = issue.workOrders.some((wo) => isActiveWorkOrder(wo.status));
-  const steps = issueSteps({ id: issue.id, status: issue.status, planned }, viewer, groundingFacts(asset));
+  const steps = issueSteps(
+    { id: issue.id, status: issue.status, safetyCritical: issue.safetyCritical, planned },
+    viewer,
+    groundingFacts(asset),
+  );
   const category = categoryLabel(issue.category);
 
   return (

@@ -1,3 +1,4 @@
+import type { CommandEnvelope } from "@routiq/contracts";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   assetAvailabilityIntervals,
@@ -9,7 +10,12 @@ import {
   workOrders,
 } from "../db/schema.js";
 import { assetBranchIds } from "./branch-authorization.js";
-import { CommandError, type CommandContext, type Tx } from "./dispatcher.js";
+import {
+  appendAuditEvent,
+  CommandError,
+  type CommandContext,
+  type Tx,
+} from "./dispatcher.js";
 
 /**
  * The audit event a completion leaves behind, whichever side of the approval
@@ -227,6 +233,59 @@ export async function openAvailabilityInterval(
     .limit(1);
   const [interval] = opts.forUpdate ? await query.for("update") : await query;
   return interval;
+}
+
+/**
+ * Takes the asset out of service on account of a safety-critical signalement:
+ * what report-issue does for a report marked safety-critical, and what
+ * change-issue-severity does when the mark is added later (#96). One function,
+ * so the two groundings cannot drift.
+ *
+ * An asset already down opens no second interval: it cannot be more
+ * unavailable than it already is, and two open intervals would need two
+ * releases to undo one grounding. The partial unique index says the same thing
+ * structurally, and is the backstop for two members grounding it at once.
+ */
+export async function groundAssetForIssue(
+  tx: Tx,
+  ctx: CommandContext,
+  envelope: CommandEnvelope,
+  grounding: { assetId: string; issueId: string; openedAt: Date },
+): Promise<void> {
+  const alreadyDown = await openAvailabilityInterval(tx, ctx, grounding.assetId, {
+    forUpdate: true,
+  });
+  if (alreadyDown) return;
+
+  const [opened] = await tx
+    .insert(assetAvailabilityIntervals)
+    .values({
+      id: crypto.randomUUID(),
+      workspaceId: ctx.workspaceId,
+      assetId: grounding.assetId,
+      openedAt: grounding.openedAt,
+      openedByIssueId: grounding.issueId,
+      createdByCommandId: envelope.commandId,
+    })
+    // The loser of a race still records its signalement rather than failing.
+    .onConflictDoNothing()
+    .returning({ id: assetAvailabilityIntervals.id });
+  if (!opened) return;
+
+  await appendAuditEvent(tx, ctx, envelope, {
+    eventType: "asset_availability.opened",
+    entityType: "asset_availability_interval",
+    entityId: opened.id,
+    afterState: {
+      id: opened.id,
+      assetId: grounding.assetId,
+      openedAt: grounding.openedAt.toISOString(),
+      openedByIssueId: grounding.issueId,
+      closedAt: null,
+      rowVersion: 1,
+    },
+    changedFields: ["id", "assetId", "openedAt", "openedByIssueId", "closedAt", "rowVersion"],
+  });
 }
 
 /**

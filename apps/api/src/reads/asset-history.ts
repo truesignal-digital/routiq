@@ -585,16 +585,53 @@ async function pageParams(
     workspaceId,
     rows.filter((row) => row.event_type === "asset.assigned").map((row) => row.event_id),
   );
+  const severities = await severityAtEvent(
+    tx,
+    workspaceId,
+    rows.filter((row) => SEVERITY_EVENTS.has(row.event_type)).map((row) => row.event_id),
+  );
 
   for (const row of rows) {
     const params: Params = { ...(bySubject.get(row.entity_id) ?? {}) };
     if (row.event_type === "financial_entry.evidence_attached") {
       params["artifactCount"] = filesPerCall.get(row.command_id) ?? 0;
     }
+    const severity = severities.get(row.event_id);
+    if (severity !== undefined) params["safetyCritical"] = severity;
     Object.assign(params, assignments.get(row.event_id) ?? {});
     byEvent.set(row.event_id, params);
   }
   return byEvent;
+}
+
+/** The issue events that state a severity: the report and each change of it (#96). */
+const SEVERITY_EVENTS = new Set([
+  "operational_issue.reported",
+  "operational_issue.severity_raised",
+  "operational_issue.severity_lowered",
+]);
+
+/**
+ * The safety-critical mark as each event left it. The issue row holds only the
+ * current mark, and a report later marked safety-critical was not reported so:
+ * the timeline shows the severity each event recorded (#96).
+ */
+async function severityAtEvent(
+  tx: TenantTx,
+  workspaceId: string,
+  eventIds: readonly string[],
+): Promise<Map<string, boolean>> {
+  const result = new Map<string, boolean>();
+  if (eventIds.length === 0) return result;
+  for (const event of await tx
+    .select({ id: auditEvents.id, afterState: auditEvents.afterState })
+    .from(auditEvents)
+    .where(and(eq(auditEvents.workspaceId, workspaceId), inArray(auditEvents.id, [...eventIds])))) {
+    const after = event.afterState as Record<string, unknown> | null;
+    const value = after?.["safetyCritical"];
+    if (typeof value === "boolean") result.set(event.id, value);
+  }
+  return result;
 }
 
 /** The event a details edit writes (`update-asset-details`). */
