@@ -35,6 +35,7 @@ import {
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { lastEventActors, toActor } from "./actors.js";
+import { noteCodeSql, noteSql } from "./history.js";
 import { commandArtifacts } from "./record-artifacts.js";
 import { invalidRequest, notFound, sendReadFailure } from "./read-gate.js";
 import {
@@ -502,6 +503,8 @@ export function registerMaintenanceReadRoutes(
               eventId: auditEvents.id,
               kind: auditEvents.eventType,
               occurredAt: auditEvents.occurredAt,
+              note: noteSql(),
+              noteCode: noteCodeSql(),
               scope: auditEvents.scope,
               // The generated masking column, not `actor_principal_id`: it is
               // NULL for PLATFORM events, so the principals join finds nothing
@@ -625,6 +628,8 @@ export function registerMaintenanceReadRoutes(
             eventId: event.eventId,
             kind: event.kind,
             occurredAt: event.occurredAt.toISOString(),
+            note: event.note,
+            noteCode: event.noteCode,
             actor: {
               principalId: event.actorPrincipalId,
               displayName: event.actorDisplayName,
@@ -928,6 +933,8 @@ export function registerMaintenanceReadRoutes(
               eventId: auditEvents.id,
               kind: auditEvents.eventType,
               occurredAt: auditEvents.occurredAt,
+              note: noteSql(),
+              noteCode: noteCodeSql(),
               scope: auditEvents.scope,
               principalId: auditEvents.tenantActorPrincipalId,
               displayName: principals.displayName,
@@ -973,6 +980,8 @@ export function registerMaintenanceReadRoutes(
               eventId: event.eventId,
               kind: event.kind,
               occurredAt: event.occurredAt.toISOString(),
+              note: event.note,
+              noteCode: event.noteCode,
               actor: toActor(event),
             })),
             artifactCount: artifacts.length,

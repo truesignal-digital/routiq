@@ -165,6 +165,8 @@ function membership(role: Role, enabledModules: ModuleCode[]): MeContext {
     principalId: "44444444-4444-4444-8444-444444444444",
     principalType: "HUMAN",
     membershipId: "55555555-5555-4555-8555-555555555555",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules,

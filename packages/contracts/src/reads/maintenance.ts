@@ -153,6 +153,13 @@ export const workOrderChronologieEvent = z.object({
   occurredAt: z.iso.datetime(),
   /** Masked for PLATFORM actors exactly as the history timeline masks them. */
   actor: historyActor,
+  /**
+   * The decision's reason or note, through the same allowlist the record
+   * history reads (`noteSql`), so the two timelines can't disagree.
+   */
+  note: z.string().nullable(),
+  /** A reason picked from a list (#426): a code the client words. */
+  noteCode: z.string().nullable(),
 });
 
 const costLineFields = {

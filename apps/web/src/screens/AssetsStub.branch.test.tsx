@@ -73,6 +73,8 @@ function renderScreen() {
     principalId: "p",
     principalType: "HUMAN",
     membershipId: "m",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role: "ADMIN",
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS"],

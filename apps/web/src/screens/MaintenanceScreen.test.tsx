@@ -193,6 +193,8 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
         eventId: "aaaa0001-0000-4000-8000-000000000001",
         kind: "work_order.created",
         occurredAt: "2026-08-01T08:00:00.000Z",
+        note: null,
+        noteCode: null,
         actor: {
           principalId: "bbbb0001-0000-4000-8000-000000000001",
           displayName: "Amina Njoya",
@@ -243,6 +245,8 @@ const admin: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
   role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS", "MAINTENANCE"],
@@ -620,6 +624,20 @@ describe("MaintenanceScreen — row sheet costs", () => {
 });
 
 describe("MaintenanceScreen — commands", () => {
+  it("opens Complete work order in the side panel at the Line items width (#296)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    await user.click(
+      within(sheet).getByRole("button", { name: "commands.complete-work-order.label" }),
+    );
+
+    const panel = await screen.findByRole("dialog", { name: "commands.complete-work-order.label" });
+    expect(panel.getAttribute("data-slot")).toBe("sheet-content");
+    expect(panel.className).toContain("sm:max-w-[560px]");
+  });
+
   it("declares completion with the row's version quoted", async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -902,6 +920,19 @@ describe("MaintenanceScreen — commands", () => {
     });
     // Client-generated so the same signalement can be captured offline (§6).
     expect(typeof submittedPayload()["issueId"]).toBe("string");
+  });
+
+  it("opens Report a problem in the side panel, as the vehicle does (#296)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(
+      await screen.findByRole("button", { name: "commands.report-issue.label" }),
+    );
+
+    const panel = await screen.findByRole("dialog", { name: "commands.report-issue.label" });
+    expect(panel.getAttribute("data-slot")).toBe("sheet-content");
+    expect(panel.className).toContain("sm:max-w-[440px]");
   });
 });
 

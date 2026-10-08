@@ -8,7 +8,7 @@ import type { SlotState } from "../verify/stack.js";
 import { median, type Measured, type Run } from "./perf.js";
 
 /** The screens a run opens after sign-in, in order. `:asset` becomes the first vehicle in the list. */
-export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/finance/approvals", "/maintenance", "/more"] as const;
+export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/finance/approvals", "/maintenance", "/my-settings"] as const;
 
 /** How long a run stays on Home after sign-in before opening the next screen. */
 export const HOME_DWELL_MS = 3_000;

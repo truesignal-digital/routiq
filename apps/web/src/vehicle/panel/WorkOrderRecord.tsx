@@ -24,6 +24,7 @@ import {
   PanelMissing,
   useFormHost,
 } from "./shared.js";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
@@ -162,8 +163,11 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
         )}
 
         <DetailSection title={t("maintenance.detail.chronologie")}>
-          <Chronologie events={wo.chronologie} locale={locale} />
+          <Chronologie events={wo.chronologie} />
         </DetailSection>
+        <div>
+          <RecordHistorySheet entityType="work_order" entityId={wo.id} />
+        </div>
       </div>
       <PanelFooter
         steps={steps}

@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PoweredByRoutiq, RoutiqLogo, useCompanyLogo } from "@/components/brand/routiq-logo";
 import { login } from "../auth/api.js";
 import { sessionStore } from "../auth/store.js";
 import { ErrorBanner } from "@/components/error-banner.js";
@@ -33,6 +34,7 @@ export function LoginScreen() {
   const last = sessionStore.getLastIdentity();
 
   const [errorCode, setErrorCode] = useState<string>();
+  const companyLogo = useCompanyLogo();
 
   const formSchema = useMemo(
     () =>
@@ -70,7 +72,9 @@ export function LoginScreen() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-10">
-      <h1 className="text-2xl font-semibold">{t("app.name")}</h1>
+      <h1>
+        <RoutiqLogo markClassName="size-10" wordmarkClassName="text-2xl" />
+      </h1>
       <p className="mt-1 text-sm text-muted-foreground">{t("login.subtitle")}</p>
 
       <Form {...form}>
@@ -146,6 +150,10 @@ export function LoginScreen() {
           </Button>
         </form>
       </Form>
+
+      <footer className="mt-10 flex justify-center empty:hidden">
+        <PoweredByRoutiq companyLogo={companyLogo} />
+      </footer>
     </main>
   );
 }

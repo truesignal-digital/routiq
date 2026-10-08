@@ -17,9 +17,10 @@ import { sessionStore } from "./auth/store.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
 import { BranchesScreen } from "./screens/BranchesScreen.js";
+import { CompanySettingsScreen } from "./screens/CompanySettingsScreen.js";
 import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
-import { MoreStub } from "./screens/MoreStub.js";
+import { MySettingsScreen } from "./screens/MySettingsScreen.js";
 import { PersonsScreen } from "./screens/PersonsScreen.js";
 import { UsersScreen } from "./screens/UsersScreen.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
@@ -241,13 +242,23 @@ const financePeriodsRoute = createRoute({
   component: FinancePeriodsScreen,
 });
 
+// The More page went with #316: personal settings live in the name menu.
+// Old links and bookmarks land on Home rather than on a missing page.
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
-  component: MoreStub,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
 
-// Under /more so the shell keeps the Plus tab lit while you administer.
+const mySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/my-settings",
+  component: MySettingsScreen,
+});
+
+// The administration pages keep their /more paths so existing links still work.
 const personsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/persons",
@@ -264,6 +275,12 @@ const branchesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/branches",
   component: BranchesScreen,
+});
+
+const companySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/company",
+  component: CompanySettingsScreen,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -293,9 +310,11 @@ const routeTree = rootRoute.addChildren([
     financeApprovalsRoute,
     financePeriodsRoute,
     moreRoute,
+    mySettingsRoute,
     personsRoute,
     usersRoute,
     branchesRoute,
+    companySettingsRoute,
   ]),
 ]);
 

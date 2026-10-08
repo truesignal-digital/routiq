@@ -98,6 +98,8 @@ function renderScreen(
     principalId: "p",
     principalType: "HUMAN",
     membershipId: "m",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules,

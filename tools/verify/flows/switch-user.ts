@@ -1,4 +1,4 @@
-import type { DriveScript } from "../browser.js";
+import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
 
 /**
@@ -6,10 +6,10 @@ import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
  * who approves nothing, so her home has no approvals card.
  * Run: pnpm verify drive flow:switch-user --role director --lang en
  */
-const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
+const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
   const viewer = resolveAccount("cashier");
   await page.getByRole("navigation", { name: "Navigation" }).waitFor();
-  await page.getByRole("button", { name: t("Se déconnecter", "Sign out") }).first().click();
+  await signOutThroughNameMenu(page);
   await page.waitForURL((url) => url.pathname === "/login");
   await shot("signed-out", { caption: "Signed out: back on the sign-in screen" });
 
