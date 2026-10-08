@@ -30,7 +30,6 @@ import { MaintenanceScreen } from "./screens/MaintenanceScreen.js";
 import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
 import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
-import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
 import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
 import { AppShell } from "./shell/AppShell.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
@@ -170,7 +169,14 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
-  validateSearch: financialEntryFilters.omit({ branchId: true }),
+  // `view=waiting` is the "Waiting your approval" view (#314), beside the
+  // read's own events / books views (#427). `branch=all` arrives from an
+  // overflow line that has already named the work outside the shell's agency,
+  // so the queue opens widened.
+  validateSearch: financialEntryFilters.omit({ branchId: true }).extend({
+    view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
+    branch: z.literal("all").optional().catch(undefined),
+  }),
   component: FinanceEntriesScreen,
 });
 
@@ -226,14 +232,19 @@ const financeEntryDetailRoute = createRoute({
   component: FinanceEntryDetailScreen,
 });
 
+// The Approvals page became the Money page's waiting view (#314). Old links,
+// notifications and the dashboard keep landing on the same work.
 const financeApprovalsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/approvals",
-  // The dashboard's overflow line sends an approver to the queue already
-  // widened; without it the queue presets itself to the shell's agency, which
-  // is exactly the narrowing that line is reporting around.
-  validateSearch: z.object({ branch: z.literal("all").optional() }),
-  component: FinanceApprovalsScreen,
+  validateSearch: z.object({ branch: z.literal("all").optional().catch(undefined) }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/finance/entries",
+      search: { view: "waiting", ...(search.branch === "all" ? { branch: "all" } : {}) },
+      replace: true,
+    });
+  },
 });
 
 const financePeriodsRoute = createRoute({

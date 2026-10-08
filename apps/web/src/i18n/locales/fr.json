@@ -190,6 +190,9 @@
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
     "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur.",
+    "ISSUE_SEVERITY_ALREADY_SET": "Ce problème est déjà marqué ainsi. Actualisez la page.",
+    "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
   },
   "assets": {
@@ -429,12 +432,29 @@
       }
     },
     "navigation": {
-      "label": "Sections financières",
-      "record": "Saisie",
-      "entries": "Écritures",
-      "approvals": "Approbations",
-      "periods": "Périodes",
-      "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
+      "record": "Saisie"
+    },
+    "money": {
+      "lead": {
+        "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
+        "open": "Toutes les dépenses et recettes. {open} est ouvert.",
+        "none": "Toutes les dépenses et recettes."
+      },
+      "tiles": {
+        "out": "Sorties en {month}",
+        "in": "Entrées en {month}",
+        "waiting": "En attente de votre approbation",
+        "waitingHint": "{amount} · la plus ancienne {age}",
+        "missing": "Justificatif manquant",
+        "missingHint": "Le plus ancien : {date}"
+      },
+      "lens": {
+        "waiting": "En attente d’approbation",
+        "out": "Sorties du mois",
+        "in": "Entrées du mois",
+        "missing": "Justificatif manquant",
+        "clear": "Retirer le filtre : {name}"
+      }
     },
     "record": {
       "title": "Saisir une écriture",
@@ -564,14 +584,14 @@
       }
     },
     "approvals": {
-      "title": "Approbations",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les approbations. Réessayez.",
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "branch": "Agence",
-        "submittedAt": "Soumis le"
+        "submittedAt": "Soumis le",
+        "decision": "Décision"
       },
       "filters": {
         "branch": "Agence",
@@ -579,8 +599,6 @@
       },
       "branchEmpty": "Aucune écriture en attente pour {branch}.",
       "outsideBranch": "{count, plural, one {+# en attente dans une autre agence} other {+# en attente dans d'autres agences}}",
-      "makerGuard": "Votre saisie — un autre approbateur doit décider",
-      "directionDecides": "La Direction décide",
       "noteLabel": "Remarque",
       "optional": "(optionnel)",
       "notePlaceholder": "Ajoutez une remarque…",
@@ -589,10 +607,12 @@
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
-      "done": "Fermer"
+      "done": "Fermer",
+      "noReceipt": "pas de justificatif",
+      "decideRow": "{action} {number}"
     },
     "periods": {
-      "title": "Gestion des périodes",
+      "title": "Mois comptables",
       "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",
@@ -1146,7 +1166,9 @@
       "releaseHint": "L'actif redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème.",
       "releaseSubject": "Ordre de travail {reference}",
       "resolveIssueHint": "Le problème a été traité, par exemple réparé sur place. La résolution ne lève pas l'immobilisation : seule la remise en service le fait.",
-      "dismissIssueHint": "Le problème n'aurait pas dû être signalé : erreur, doublon, rien constaté. Le motif reste au journal."
+      "dismissIssueHint": "Le problème n'aurait pas dû être signalé : erreur, doublon, rien constaté. Le motif reste au journal.",
+      "raiseSeverityHint": "Le véhicule est immobilisé dès l'enregistrement, jusqu'à ce qu'un responsable le remette en service.",
+      "lowerSeverityHint": "Le véhicule reste immobilisé : la remise en service est une étape à part. Le motif reste dans l'historique."
     },
     "close": {
       "hint": "Indiquez ce qui a été fait et ce que la réparation a coûté.",
@@ -1204,7 +1226,9 @@
         "completionApproved": "Fin des travaux validée",
         "completionRejected": "Fin des travaux refusée",
         "workOrderCancelled": "Ordre de travail annulé",
-        "assetReleased": "Actif remis en service"
+        "assetReleased": "Actif remis en service",
+        "severityRaised": "Marqué critique pour la sécurité. Le véhicule est immobilisé.",
+        "severityLowered": "Mention critique retirée"
       }
     },
     "subtitle": "Problèmes signalés et ordres de travail, de la déclaration à la réparation.",
@@ -1460,7 +1484,10 @@
       "work_order-closure_approved": "Clôture validée",
       "asset_availability-opened": "Actif immobilisé",
       "asset_availability-closed": "Immobilisation levée",
-      "financial_entry-updated": "Écriture modifiée"
+      "financial_entry-updated": "Écriture modifiée",
+      "operational_issue-severity_raised": "Marqué critique pour la sécurité",
+      "operational_issue-severity_lowered": "Mention critique retirée",
+      "note-acknowledged": "Note marquée comme vue"
     },
     "field": {
       "status": "statut",
@@ -2010,6 +2037,21 @@
       "submit": "J'ai compris",
       "submitting": "Enregistrement…",
       "dismiss": "Plus tard"
+    },
+    "change-issue-severity": {
+      "label": "Marquer critique pour la sécurité",
+      "submit": "Marquer critique",
+      "submitting": "Enregistrement…",
+      "lower": {
+        "label": "Retirer la mention critique",
+        "submit": "Retirer la mention",
+        "dismiss": "Garder la mention"
+      }
+    },
+    "acknowledge-note": {
+      "label": "Marquer comme vu",
+      "submit": "Marquer comme vu",
+      "submitting": "Enregistrement…"
     }
   },
   "vehicle": {
@@ -2206,7 +2248,8 @@
       "workshop": "L'atelier",
       "manager": "Un responsable",
       "operations": "L'exploitation",
-      "recorder": "L'auteur de la saisie"
+      "recorder": "L'auteur de la saisie",
+      "team": "L'équipe"
     },
     "now": {
       "todo": {
@@ -2278,6 +2321,11 @@
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Reçu manquant",
         "detail": "{ref} · {amount}, saisie par {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note de la Direction · {name} · {when}",
+        "badge": "Note de la Direction"
       }
     },
     "maintenance": {
@@ -2494,7 +2542,10 @@
         "asset_availability-closed": "Immobilisation levée",
         "note-added": "Note ajoutée",
         "financial_entry-updated": "Écriture modifiée avant examen",
-        "asset-details_updated": "Informations modifiées"
+        "asset-details_updated": "Informations modifiées",
+        "operational_issue-severity_raised": "Problème marqué critique pour la sécurité",
+        "operational_issue-severity_lowered": "Mention critique retirée d'un problème",
+        "note-acknowledged": "Note marquée comme vue"
       },
       "change": "{field} : {before} → {after}"
     },
@@ -2575,7 +2626,11 @@
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
       "photoNumber": "Photo {number}",
-      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau."
+      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau.",
+      "directionNoteEyebrow": "Note de la Direction",
+      "notSeenYet": "Personne ne l'a encore marquée comme vue. Elle reste dans la liste « À faire » du véhicule jusque-là.",
+      "seenBy": "Vu par {name} le {date}",
+      "acknowledgeHint": "Indique à la Direction que vous avez lu cette note. Elle quitte la liste « À faire » ; votre nom et l'heure restent sur la note."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"
@@ -2588,7 +2643,8 @@
       "success": {
         "noteAdded": "Note ajoutée",
         "evidenceAttached": "Reçu joint",
-        "detailsSaved": "Informations du véhicule enregistrées."
+        "detailsSaved": "Informations du véhicule enregistrées.",
+        "noteAcknowledged": "Marquée comme vue"
       },
       "info": {
         "nothingToSave": "Rien à enregistrer : aucun changement."

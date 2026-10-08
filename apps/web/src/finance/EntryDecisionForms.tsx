@@ -52,7 +52,7 @@ export interface EntryDecisionHost {
  * because the client crossed it off locally — so a decision refreshes the
  * reads it changed and nothing else.
  */
-function useFinanceRefresh(...reads: ReadonlyArray<"approvals" | "entries" | "entry">) {
+function useFinanceRefresh(...reads: ReadonlyArray<"approvals" | "entries" | "entry" | "summary">) {
   const queryClient = useQueryClient();
   const session = useActiveSession();
   return async () => {
@@ -79,7 +79,7 @@ function useDecisionChrome(host: EntryDecisionHost, refresh: () => Promise<void>
 export function ApproveEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const refresh = useFinanceRefresh("approvals", "entries", "entry");
+  const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [note, setNote] = useState("");
@@ -135,7 +135,7 @@ export function ApproveEntryForm(host: EntryDecisionHost) {
  * so tapping again after a dropped connection replays the same envelope.
  */
 export function useApproveEntry(client?: CommandClient) {
-  const refresh = useFinanceRefresh("approvals", "entries", "entry");
+  const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
   const [submitting, setSubmitting] = useState(false);
   const intents = useRef(new Map<string, CommandIntent<ApprovePayload>>());
 
@@ -209,7 +209,7 @@ export function EntryDecisionButtons({
 export function RejectEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const refresh = useFinanceRefresh("approvals", "entries", "entry");
+  const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [reason, setReason] = useState("");
@@ -281,7 +281,7 @@ export function ReverseEntryForm({
 }) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const refresh = useFinanceRefresh("entry", "entries");
+  const refresh = useFinanceRefresh("entry", "entries", "summary");
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [reversalEntryId] = useState(() => crypto.randomUUID());

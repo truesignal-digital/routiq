@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import type {
   cancelWorkOrderPayload,
+  ChangeIssueSeverityPayload,
   CompleteWorkOrderInput,
   createWorkOrderPayload,
   IssueListItem,
@@ -112,7 +113,8 @@ export type MaintenanceDialog =
   | { kind: "complete"; workOrder: WorkOrderRef }
   | { kind: "cancel"; workOrder: WorkOrderRef }
   | { kind: "release"; workOrder: WorkOrderRef }
-  | { kind: "decide-issue"; decision: IssueDecision; issue: IssueListItem };
+  | { kind: "decide-issue"; decision: IssueDecision; issue: IssueListItem }
+  | { kind: "issue-severity"; raise: boolean; issue: IssueListItem };
 
 /**
  * What every maintenance form takes from its host: where it renders, the
@@ -1140,6 +1142,73 @@ export function IssueDecisionForm({
 }
 
 /**
+ * Adds the safety-critical mark to an open problem, or takes it off (#96).
+ * Adding it grounds the vehicle, so the form says so; taking it off needs a
+ * reason and never releases the vehicle.
+ */
+export function IssueSeverityForm({
+  issue,
+  raise,
+  ...host
+}: MaintenanceFormHost & { issue: IssueRef; raise: boolean }) {
+  const { t } = useTranslation();
+  const label = useCommandLabel();
+  const { commit, finish, chrome } = useMaintenanceChrome(host);
+  const submission = useCommandSubmission();
+  const client = host.client ?? commandClient;
+  const [reason, setReason] = useState("");
+  const intent = useRef<CommandIntent<ChangeIssueSeverityPayload> | undefined>(undefined);
+  const ref = raise
+    ? ("change-issue-severity" as const)
+    : ({ command: "change-issue-severity", intent: "lower" } as const);
+
+  const trimmed = reason.trim();
+  const ready = raise || trimmed !== "";
+
+  async function submit() {
+    if (!ready) return;
+    const payload: ChangeIssueSeverityPayload = raise
+      ? { issueId: issue.id, safetyCritical: true }
+      : { issueId: issue.id, safetyCritical: false, reason: trimmed };
+    const result = await submission.run(() => {
+      intent.current ??= createCommandIntent<ChangeIssueSeverityPayload>(
+        client,
+        "change-issue-severity",
+        1,
+      );
+      return intent.current.submit(payload, { expectedVersion: issue.rowVersion });
+    });
+    if (!result.ok) return;
+    await commit(raise ? "severityRaised" : "severityLowered", result.outcome.warnings);
+    finish();
+  }
+
+  return (
+    <CommandForm
+      {...chrome}
+      title={label(ref)}
+      description={t(raise ? "maintenance.actions.raiseSeverityHint" : "maintenance.actions.lowerSeverityHint")}
+      error={submission.error}
+      command={ref}
+      tone={raise ? "default" : "destructive"}
+      ready={ready}
+      submitting={submission.submitting}
+      onSubmit={() => void submit()}
+    >
+      <p className="text-sm text-muted-foreground">{issue.description}</p>
+      {!raise && (
+        <ReasonField
+          id="issue-severity-reason"
+          label={t("maintenance.fields.reason")}
+          value={reason}
+          onChange={setReason}
+        />
+      )}
+    </CommandForm>
+  );
+}
+
+/**
  * What a return to service stands on. Normally the completed work order that
  * answered the grounding signalement; failing that, the signalement itself once
  * it was resolved or dismissed, with a reason saying why no repair was needed.
@@ -1282,6 +1351,12 @@ export function IssueDecisionDialog(
   props: DialogHost & { issue: IssueListItem; decision: IssueDecision },
 ) {
   return <IssueDecisionForm surface="dialog" {...props} />;
+}
+
+export function IssueSeverityDialog(
+  props: DialogHost & { issue: IssueListItem; raise: boolean },
+) {
+  return <IssueSeverityForm surface="dialog" {...props} />;
 }
 
 export function ReleaseAssetDialog({

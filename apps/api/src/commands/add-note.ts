@@ -12,7 +12,9 @@ import { requireAsset } from "./work-order-lookup.js";
  * A remark on a vehicle (§3.1 Note). Append-only: the row is never edited and
  * the runtime role cannot delete it, so a correction is another note.
  *
- * Every role may write one: a note is a remark, not a decision. A disposed vehicle takes no new operational record
+ * Every role may write one: a note is a remark, not a decision. A note from
+ * DIRECTOR waits in the vehicle's To-do until someone acknowledges it (#98),
+ * so the author's role is stored with it. A disposed vehicle takes no new operational record
  * (§3.4), and a note is one — `operationalAssetId` makes the dispatcher refuse
  * it with ASSET_NOT_OPERATIONAL.
  */
@@ -38,6 +40,7 @@ export const addNote: CommandDefinition<AddNotePayload> = {
       entityId: payload.entityId,
       assetId: asset.id,
       authorMembershipId: ctx.membershipId,
+      authorRole: ctx.role,
       body: payload.body,
       createdByCommandId: envelope.commandId,
     });
@@ -49,9 +52,10 @@ export const addNote: CommandDefinition<AddNotePayload> = {
       afterState: {
         entityType: payload.entityType,
         entityId: payload.entityId,
+        authorRole: ctx.role,
         body: payload.body,
       },
-      changedFields: ["entityType", "entityId", "body"],
+      changedFields: ["entityType", "entityId", "authorRole", "body"],
     });
 
     return { recordId: payload.noteId, rowVersion: 1 };

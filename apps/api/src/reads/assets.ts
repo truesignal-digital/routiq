@@ -43,6 +43,7 @@ import {
   workspaces,
 } from "../db/schema.js";
 import { registerAssetAttentionReadRoutes } from "./asset-attention.js";
+import { registerNoteReadRoutes } from "./notes.js";
 import { registerAssetCustodianReadRoutes } from "./asset-custodians.js";
 import { registerAssetFinanceReadRoutes } from "./asset-finance.js";
 import { registerAssetHistoryReadRoutes } from "./asset-history.js";
@@ -295,6 +296,7 @@ export function registerAssetReadRoutes(
   registerAssetCustodianReadRoutes(app, db, requireAuth);
   registerAssetFinanceReadRoutes(app, db, requireAuth);
   registerAssetAttentionReadRoutes(app, db, requireAuth);
+  registerNoteReadRoutes(app, db, requireAuth);
   registerAssetHistoryReadRoutes(app, db, requireAuth);
 
   defineRead(

@@ -18,7 +18,7 @@ export const DESKTOP_VIEWPORTS = [
   { width: 1280, height: 800 },
 ] as const;
 
-export const FIT_ROUTES = ["/activities", "/finance/approvals"] as const;
+export const FIT_ROUTES = ["/activities", "/finance/entries?view=waiting"] as const;
 
 /**
  * Every role that reads money: the ⋯ menu differs by role, the columns don't.
@@ -69,7 +69,7 @@ function measureTables(page: Page): Promise<TableMeasure> {
 
 /** Opens the first row's ⋯ menu and reports a sideways scroll it caused. */
 async function menuShift(page: Page): Promise<string | undefined> {
-  const trigger = page.locator("main [data-slot='table-container'] tbody tr").first().locator("td").last().locator("button");
+  const trigger = page.locator("main [data-slot='table-container'] tbody tr").first().locator("td").last().locator("button[aria-haspopup='menu']");
   if ((await trigger.count()) === 0) return undefined;
   await trigger.click();
   await page.getByRole("menu").waitFor({ timeout: 5_000 });

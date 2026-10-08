@@ -129,6 +129,7 @@ const DECISION_SURFACES: ReadonlySet<string> = new Set([
   "WorkOrderDecisionForm",
   "CancelWorkOrderForm",
   "IssueDecisionForm",
+  "IssueSeverityForm",
   "ReleaseForm",
   "CloseTripDialog",
   "ReopenTripDialog",
