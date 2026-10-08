@@ -50,14 +50,13 @@ Branches: **DLA** Douala, **YDE** Yaoundé, **BAF** Bafoussam.
 
 What is on the demo now:
 
-- **VH003** is grounded. A driver reported "Brake pressure warning on the Kekem descent" as safety-critical. Work order **059DC371** is **Approved**. Its brake parts (310,000, **DLA-2026-00008**) are **Awaiting review**.
-- **VH003** also has an open problem with no work order: "Rear mudguard cracked and loose".
-- **VH001** is in service. Its A/C work order **1E2D1747** is **Completed**.
+- **VH003** (Mercedes-Benz Actros 2640, LT 482 AB) is grounded. A driver reported "Brake pressure warning on the Kekem descent" as safety-critical. Work order **059DC371** is **Approved**. Its brake parts (310,000, **DLA-2026-00006**) are **Awaiting review**.
+- **VH003** also has an open problem with no work order: "Rear mudguard cracked and loose on its bracket".
+- **VH001** is in service. Its A/C work order **1E2D1747** is **Completed**, with an 85,000 cost (**DLA-2026-00007**, **Posted**).
 - **TR001** is a trailer, registered but not in service.
-- Trips **DLA-2026-00001** to **00004**. Two are **On the road**. **00002** is closed with gaps.
-- Money waiting for a decision: brake parts 310,000 (**DLA-2026-00008**, Finance), plus older entries **DLA-2026-00006** (300,000) and **00007** (50,000).
-- Accounting months: August is locked. July, September and October are open.
-- The demo was reseeded on top of older data, so some August records (for example the trailer "Yutong G6" and entries **DLA-2026-00006** and **00007**) sit next to the story data.
+- Trips: **DLA-2026-00001** closed and complete, **00002** closed with exceptions, **00003** **On the road**.
+- Money waiting for Finance: **DLA-2026-00005** (VH003 repair, 450,000) and **DLA-2026-00006** (brake parts, 310,000). Posted: freight revenue 2,850,000, fuel 1,180,000, driver allowance 120,000, tolls 45,000, fuel 86,000, and the A/C cost.
+- Accounting months: September and October are open. None is locked.
 
 ### Littoral Voyages (passenger transport, workspace `littoral-voyages`)
 
@@ -365,10 +364,9 @@ Report these only if they behave differently from what is written here.
 - **#529.** "TrajetDLA-…" / "TripDLA-…": a missing space in the **Linked to** column and on the entry detail.
 - **#531.** A work order closed with **Invoice not received yet** cannot receive its invoice later. The app refuses any cost on a **Completed** work order, even though the form says "the invoice is added when it arrives". When you know the cost, choose **Yes, add a cost**.
 - **#532.** A Driver can add revenue on a trip sheet, although drivers are meant to record expenses only. The owner is deciding. For now, driver revenue from a sheet waits for approval at any amount.
-- The amount hint in the recording form names the first approver only. A 1,500,000 expense still says "waits for Finance" although Direction decides.
+- **#534.** The amount hint in the recording form names the first approver only. A 1,500,000 expense still says "waits for Finance" although Direction decides. The late-posting notice says "posted to a previous accounting period" when the entry actually lands in the current month.
 - **Cancel entry** appears only on the full-screen entry page, not in the side panel.
 - On the **Maintenance** page, the work-order panel has no **Record expense**. Book costs from the vehicle page.
 - Nothing is saved while offline. If the network drops, the form shows an error; record it again when you are back online.
 - One file attached to a trip sheet counts as the receipt for every entry that sheet created.
 - French trucking category "Job de halage" is awkward wording.
-- The demo keeps older August records next to the story data (for example trailer "Yutong G6", entries DLA-2026-00006 and 00007).
