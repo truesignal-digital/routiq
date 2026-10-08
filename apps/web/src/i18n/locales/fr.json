@@ -427,12 +427,29 @@
       }
     },
     "navigation": {
-      "label": "Sections financières",
-      "record": "Saisie",
-      "entries": "Écritures",
-      "approvals": "Approbations",
-      "periods": "Périodes",
-      "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
+      "record": "Saisie"
+    },
+    "money": {
+      "lead": {
+        "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
+        "open": "Toutes les dépenses et recettes. {open} est ouvert.",
+        "none": "Toutes les dépenses et recettes."
+      },
+      "tiles": {
+        "out": "Sorties en {month}",
+        "in": "Entrées en {month}",
+        "waiting": "En attente de votre approbation",
+        "waitingHint": "{amount} · la plus ancienne {age}",
+        "missing": "Justificatif manquant",
+        "missingHint": "Le plus ancien : {date}"
+      },
+      "lens": {
+        "waiting": "En attente d’approbation",
+        "out": "Sorties du mois",
+        "in": "Entrées du mois",
+        "missing": "Justificatif manquant",
+        "clear": "Retirer le filtre : {name}"
+      }
     },
     "record": {
       "title": "Saisir une écriture",
@@ -562,14 +579,14 @@
       }
     },
     "approvals": {
-      "title": "Approbations",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les approbations. Réessayez.",
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "branch": "Agence",
-        "submittedAt": "Soumis le"
+        "submittedAt": "Soumis le",
+        "decision": "Décision"
       },
       "filters": {
         "branch": "Agence",
@@ -577,8 +594,6 @@
       },
       "branchEmpty": "Aucune écriture en attente pour {branch}.",
       "outsideBranch": "{count, plural, one {+# en attente dans une autre agence} other {+# en attente dans d'autres agences}}",
-      "makerGuard": "Votre saisie — un autre approbateur doit décider",
-      "directionDecides": "La Direction décide",
       "noteLabel": "Remarque",
       "optional": "(optionnel)",
       "notePlaceholder": "Ajoutez une remarque…",
@@ -587,10 +602,12 @@
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
-      "done": "Fermer"
+      "done": "Fermer",
+      "noReceipt": "pas de justificatif",
+      "decideRow": "{action} {number}"
     },
     "periods": {
-      "title": "Gestion des périodes",
+      "title": "Mois comptables",
       "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",

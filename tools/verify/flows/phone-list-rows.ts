@@ -12,8 +12,8 @@ const ROUTES = [
   ["/assets", "Trucks: title left, status badge right"],
   ["/activities", "Trips: number, then type, date and truck on the second line"],
   ["/maintenance", "Work orders: reference, truck and description, cost and status on the right"],
-  ["/finance/entries", "Entries: amount right in tabular figures, status under it"],
-  ["/finance/approvals", "Approvals: the same row anatomy"],
+  ["/finance/entries", "Money: amount right in tabular figures, status under it"],
+  ["/finance/entries?view=waiting", "Waiting your approval: the same row anatomy, Reject and Approve under the amount"],
   ["/finance/periods", "Periods: entry count right, status under it"],
   ["/more/persons", "People"],
   ["/more/users", "Users"],
@@ -55,7 +55,7 @@ const flow: DriveScript = async ({ page, nav, shot, quiet, t, log, apiGet }) => 
     });
     log(`${route}: ${check.rows} rows, ${check.short} under 60 px, ${check.boxed} boxed, ${check.strayDash} with a stray dash`);
     if (check.short + check.boxed + check.strayDash > 0) problems.push(`${route} ${JSON.stringify(check)}`);
-    await shot(`list${route.replaceAll("/", "-") || "-home"}`, { caption });
+    await shot(`list${route.replace(/[/?=&]/g, "-") || "-home"}`, { caption });
   }
 
   await nav("/finance/entries");

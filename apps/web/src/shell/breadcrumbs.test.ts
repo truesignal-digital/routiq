@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import en from "../i18n/locales/en.json";
 import fr from "../i18n/locales/fr.json";
-import { breadcrumbTrail } from "./breadcrumbs.js";
+import { ROLES, type ModuleCode } from "@routiq/contracts";
+import { breadcrumbTrail, PAGE_TRAILS } from "./breadcrumbs.js";
 import { visibleSections } from "./sections.js";
 import { VEHICLE_TABS } from "../vehicle/VehicleTabsNav.js";
 
@@ -112,19 +113,17 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
-  it("labels a finance list under Finance", () => {
+  it("reads Home › Money on the Money page: the row names it once", () => {
     expect(trailAt("/finance/entries")).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
-      ["finance.navigation.entries", undefined],
+      ["finance.entries.title", undefined],
     ]);
   });
 
-  it("adds a fourth crumb for an entry, linking back to the list", () => {
+  it("adds a third crumb for an entry, the Money crumb linking back to the list", () => {
     expect(trailAt("/finance/entries/00000000-0000-4000-8000-000000000010")).toEqual([
       ["home.title", "/"],
       ["finance.entries.title", "/finance/entries"],
-      ["finance.navigation.entries", "/finance/entries"],
       ["finance.entries.detail.breadcrumb", undefined],
     ]);
   });
@@ -138,13 +137,10 @@ describe("breadcrumbTrail", () => {
   });
 
   it("covers the remaining finance pages", () => {
-    expect(trailAt("/finance/approvals").at(-1)).toEqual([
-      "finance.navigation.approvals",
-      undefined,
-    ]);
-    expect(trailAt("/finance/periods").at(-1)).toEqual([
-      "finance.navigation.periods",
-      undefined,
+    // Accounting months is its own Company row (#314), so it is the section crumb.
+    expect(trailAt("/finance/periods")).toEqual([
+      ["home.title", "/"],
+      ["finance.periods.title", undefined],
     ]);
     expect(trailAt("/my-settings")).toEqual([
       ["home.title", "/"],
@@ -203,6 +199,35 @@ describe("breadcrumbTrail", () => {
 
     expect(
       breadcrumbTrail(withoutFinance, "/finance/entries").map(({ labelKey }) => labelKey),
-    ).toEqual(["home.title", "finance.navigation.entries"]);
+    ).toEqual(["home.title", "finance.entries.title"]);
+  });
+});
+
+describe("no crumb repeats the one before it", () => {
+  const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
+  const CATALOGS = { en, fr } as const;
+
+  function label(catalog: unknown, key: string): string {
+    let node = catalog;
+    for (const part of key.split(".")) node = (node as Record<string, unknown>)[part];
+    return String(node);
+  }
+
+  // Every route in the trail table plus every row's own page, `$param` filled.
+  const routes = [
+    ...new Set([
+      ...PAGE_TRAILS.map(({ pattern }) => pattern.replace(/\$[^/]+/g, "00000000-0000-4000-8000-000000000010")),
+      ...visibleSections("DIRECTOR", EVERY).map((section) => section.to),
+    ]),
+  ];
+
+  it.each(routes)("%s", (route) => {
+    for (const role of ROLES) {
+      for (const [locale, catalog] of Object.entries(CATALOGS)) {
+        const labels = breadcrumbTrail(visibleSections(role, EVERY), route).map(({ labelKey }) => label(catalog, labelKey));
+        const repeats = labels.filter((name, index) => index > 0 && name === labels[index - 1]);
+        expect(repeats, `${role} ${locale}: ${labels.join(" › ")}`).toEqual([]);
+      }
+    }
   });
 });

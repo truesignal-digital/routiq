@@ -52,6 +52,7 @@ import { registerActivityReadRoutes } from "./reads/activities.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
+import { registerFinanceSummaryReadRoutes } from "./reads/finance-summary.js";
 import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
@@ -133,6 +134,7 @@ export function buildServer({
   registerCommandRoutes(app, db, requireAuth);
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);
+  registerFinanceSummaryReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
   registerActivityReadRoutes(app, db, requireAuth);
   registerMemberReadRoutes(app, db, requireAuth);
