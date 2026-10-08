@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 574681,
+    "ceiling": 575551,
     "raises": [
       {
         "date": "2026-10-06",
@@ -97,11 +97,17 @@
         "from": 574502,
         "to": 574681,
         "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574681,
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21891,
+    "ceiling": 21973,
     "raises": [
       {
         "date": "2026-10-06",
@@ -126,11 +132,17 @@
         "from": 21741,
         "to": 21891,
         "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21891,
+        "to": 21973,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 574681,
+    "ceiling": 575551,
     "raises": [
       {
         "date": "2026-10-06",
@@ -227,6 +239,12 @@
         "from": 574502,
         "to": 574681,
         "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574681,
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
       }
     ]
   }
