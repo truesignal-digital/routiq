@@ -67,6 +67,10 @@
       "daily": "Daily work",
       "company": "Company"
     },
+    "bottomBar": {
+      "label": "Shortcuts",
+      "menu": "Menu"
+    },
     "branch": {
       "label": "Current branch",
       "all": "All my branches",
