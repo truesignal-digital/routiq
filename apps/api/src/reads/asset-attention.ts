@@ -43,6 +43,7 @@ import { serializeMinor } from "./serialize-minor.js";
 import { workOrderActualCostSql } from "./work-order-cost.js";
 import { directionDecidesEntries } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
+import { directionNoteItems } from "./notes.js";
 
 const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
 
@@ -536,7 +537,8 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
     .where(eq(workspaces.id, auth.workspaceId));
   const businessDate = currentBusinessDate(new Date(), workspace?.timezone ?? "Africa/Douala");
 
-  const items: AssetAttentionItem[] = [];
+  // Notes are CORE: whoever sees the vehicle sees Direction's notes on it (#98).
+  const items: AssetAttentionItem[] = await directionNoteItems(tx, auth, assetId);
   if (modules.has("MAINTENANCE")) {
     items.push(...(await maintenanceItems(tx, auth, assetId)).items);
   }

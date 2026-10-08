@@ -153,6 +153,13 @@ export const ATTENTION_CODES = [
   "DOCUMENT_EXPIRING",
   "ENTRY_AWAITING_REVIEW",
   "ENTRY_EVIDENCE_MISSING",
+  /**
+   * A note Direction left on the vehicle that nobody has acknowledged yet
+   * (#98). INFO: an instruction to read, not a fault. `description` is the
+   * note's text, `recordedBy` its author; it leaves once someone runs
+   * acknowledge-note.
+   */
+  "DIRECTION_NOTE",
 ] as const;
 export const attentionCode = z.enum(ATTENTION_CODES);
 
@@ -165,6 +172,7 @@ export const ATTENTION_SUBJECT_TYPES = [
   "asset_availability_interval",
   "document",
   "financial_entry",
+  "note",
 ] as const;
 
 /** How many days ahead an expiry becomes DOCUMENT_EXPIRING. */

@@ -151,9 +151,11 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     ),
 
-    // Reading a notice is no decision: every member acknowledges their own (#422).
+    // Reading a notice is no decision: every member acknowledges their own
+    // (#422), and anyone who sees a vehicle may say they saw Direction's note
+    // on it (#98).
     ...wildcard(
-      ["acknowledge-approval-rules"],
+      ["acknowledge-approval-rules", "acknowledge-note"],
       ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     ),
   ];
