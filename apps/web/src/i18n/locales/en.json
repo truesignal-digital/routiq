@@ -630,6 +630,9 @@
     "view": "View",
     "columns": "Columns",
     "clearFilters": "Clear filters",
+    "filters": "{count, plural, =0 {Filters} other {Filters (#)}}",
+    "filtersTitle": "Filters",
+    "showResults": "Show results",
     "filterAll": "All",
     "rowsPerPage": "Rows per page",
     "pageOf": "Page {page} of {pages}",
@@ -1373,6 +1376,7 @@
       "unavailable": "Not available"
     },
     "event": {
+      "other": "Other change",
       "activity-created": "Activity created",
       "activity-closed": "Activity closed",
       "activity-reopened": "Activity reopened",

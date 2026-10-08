@@ -93,6 +93,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
+| `phone-list-rows` | every module list at 390 px: rows at least 60 px, no card border, no stray " · –"; entries → Filters → pick a status → "Filters (1)" and the rows match `GET /v1/finance/entries?status=POSTED` (#300). Run with `--viewport 390x844` | no |
 | `form-fits-viewport` | entry detail → Edit (Sali's pending entry), Reject (pending, as Finance), Reverse (posted, as Finance) at 1440 × 900, 1366 × 768 and 390 × 844 in fr and en: the form's surface, title and submit stay inside the window and the submit is not covered (#470) | no |
 | `scoped-header` | Douala picked, light and dark, on Home scrolled under the header: header background opaque, `::before` tint at primary 5% covering it at z-index -10, controls win the hit test, header pixels unchanged by scrolling; then all branches: plain header (#57). Checks the run's `--lang` and `--viewport` | no |
 

@@ -1,15 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { I18nextProvider } from "react-i18next";
-import type { ColumnDef } from "@tanstack/react-table";
 import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "../i18n/index.js";
-import { DataTable } from "./data-table.js";
+import { DataTable, type DataTableColumn } from "./data-table.js";
 
 type Person = { name: string };
 
-const columns: ColumnDef<Person>[] = [
-  { accessorKey: "name", header: "Nom", meta: { mobile: "primary" } },
+const columns: DataTableColumn<Person>[] = [
+  { accessorKey: "name", header: "Nom", meta: { phone: "title" } },
 ];
 
 const data: Person[] = [{ name: "Ada Lovelace" }, { name: "Grace Hopper" }];
@@ -73,5 +72,35 @@ describe("DataTable localization", () => {
     expect(screen.getByText("Page 1 of 2")).toBeTruthy();
     expect(screen.getByText("Rows per page")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Go to next page" })).toBeTruthy();
+  });
+
+  it("counts active phone filters as a plural in both languages", async () => {
+    const original = window.matchMedia;
+    window.matchMedia = (query: string) => ({ ...original(query), matches: false });
+    const filters = [
+      { columnId: "q", type: "search" as const, placeholder: "Rechercher" },
+      { columnId: "s", type: "search" as const, placeholder: "Statut" },
+    ];
+    const renderFiltered = (values: Record<string, string>) =>
+      render(
+        <I18nextProvider i18n={i18n}>
+          <DataTable columns={columns} data={data} filters={filters} filterValues={values} />
+        </I18nextProvider>,
+      );
+
+    try {
+      renderFiltered({});
+      expect(screen.getByRole("button", { name: "Filtres" })).toBeTruthy();
+      cleanup();
+      renderFiltered({ q: "a", s: "b" });
+      expect(screen.getByRole("button", { name: "Filtres (2)" })).toBeTruthy();
+
+      cleanup();
+      await i18n.changeLanguage("en");
+      renderFiltered({ q: "a" });
+      expect(screen.getByRole("button", { name: "Filters (1)" })).toBeTruthy();
+    } finally {
+      window.matchMedia = original;
+    }
   });
 });

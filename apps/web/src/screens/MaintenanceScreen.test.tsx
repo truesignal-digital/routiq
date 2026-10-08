@@ -175,6 +175,8 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
         eventId: "aaaa0001-0000-4000-8000-000000000001",
         kind: "work_order.created",
         occurredAt: "2026-08-01T08:00:00.000Z",
+        note: null,
+        noteCode: null,
         actor: {
           principalId: "bbbb0001-0000-4000-8000-000000000001",
           displayName: "Amina Njoya",

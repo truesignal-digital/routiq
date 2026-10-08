@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 575406,
+    "ceiling": 576243,
     "raises": [
       {
         "date": "2026-10-06",
@@ -101,13 +101,19 @@
       {
         "date": "2026-10-08",
         "from": 574681,
-        "to": 575406,
-        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop db40ba03)"
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 575551,
+        "to": 576243,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21891,
+    "ceiling": 22136,
     "raises": [
       {
         "date": "2026-10-06",
@@ -132,11 +138,23 @@
         "from": 21741,
         "to": 21891,
         "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21891,
+        "to": 21973,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21973,
+        "to": 22136,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 575406,
+    "ceiling": 576243,
     "raises": [
       {
         "date": "2026-10-06",
@@ -237,8 +255,14 @@
       {
         "date": "2026-10-08",
         "from": 574681,
-        "to": 575406,
-        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop db40ba03)"
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 575551,
+        "to": 576243,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   }
