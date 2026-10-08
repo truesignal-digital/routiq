@@ -121,7 +121,7 @@ export function UsersScreen() {
         header: t("users.columns.username"),
         meta: { phone: "meta", label: t("users.columns.username") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {row.original.username ?? "—"}
           </span>
         ),

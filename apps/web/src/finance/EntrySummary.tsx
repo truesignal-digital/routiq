@@ -56,13 +56,13 @@ export function EntrySummary({ entryId }: { entryId: string }) {
     <div className="flex flex-col gap-6">
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+          <dt className="text-xs font-semibold text-muted-foreground">
             {t("finance.entries.detail.entryNumber")}
           </dt>
-          <dd className="mt-1 font-mono">{entry.entryNumber}</dd>
+          <dd className="mt-1 tabular-nums">{entry.entryNumber}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+          <dt className="text-xs font-semibold text-muted-foreground">
             {t("finance.entries.detail.status")}
           </dt>
           <dd className="mt-1">
@@ -70,17 +70,17 @@ export function EntrySummary({ entryId }: { entryId: string }) {
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+          <dt className="text-xs font-semibold text-muted-foreground">
             {t("finance.entries.detail.category")}
           </dt>
           <dd className="mt-1">{localizedLabel(entry.category)}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+          <dt className="text-xs font-semibold text-muted-foreground">
             {t("finance.entries.detail.amount")}
           </dt>
           <dd className="mt-1 flex flex-wrap items-baseline gap-x-2">
-            <span className="font-mono text-lg font-semibold">
+            <span className="tabular-nums text-lg font-semibold">
               {formatMoney(entry.amountMinor, { currency: entry.currency, sign: { context: "record" } })}
             </span>
             <span className="text-sm text-muted-foreground">
@@ -89,14 +89,14 @@ export function EntrySummary({ entryId }: { entryId: string }) {
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+          <dt className="text-xs font-semibold text-muted-foreground">
             {t("finance.entries.detail.date")}
           </dt>
           <dd className="mt-1">{formatDate(entry.economicDate)}</dd>
         </div>
         {entry.postedAt && (
           <div>
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.postingDate")}
             </dt>
             <dd className="mt-1">{formatDate(entry.postedAt)}</dd>
@@ -104,7 +104,7 @@ export function EntrySummary({ entryId }: { entryId: string }) {
         )}
         {entry.counterpartyName && (
           <div>
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.counterparty")}
             </dt>
             <dd className="mt-1">{entry.counterpartyName}</dd>
@@ -112,7 +112,7 @@ export function EntrySummary({ entryId }: { entryId: string }) {
         )}
         {(entry.links.workOrderId !== null || entry.links.activityId !== null) && (
           <div>
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.linkedTo")}
             </dt>
             <dd className="mt-1">
@@ -121,14 +121,14 @@ export function EntrySummary({ entryId }: { entryId: string }) {
           </div>
         )}
         <div>
-          <dt className="text-xs font-semibold uppercase text-muted-foreground">
+          <dt className="text-xs font-semibold text-muted-foreground">
             {t("finance.entries.detail.paymentMethod")}
           </dt>
           <dd className="mt-1">{formatPaymentMethod(entry.paymentMethod, t)}</dd>
         </div>
         {entry.description && (
           <div className="sm:col-span-2">
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.description")}
             </dt>
             <dd className="mt-1">{entry.description}</dd>
@@ -136,23 +136,23 @@ export function EntrySummary({ entryId }: { entryId: string }) {
         )}
         {entry.paymentReference && (
           <div>
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.paymentReference")}
             </dt>
-            <dd className="mt-1 font-mono text-sm">{entry.paymentReference}</dd>
+            <dd className="mt-1 tabular-nums text-sm">{entry.paymentReference}</dd>
           </div>
         )}
         {entry.sourceReference && (
           <div>
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.sourceReference")}
             </dt>
-            <dd className="mt-1 font-mono text-sm">{entry.sourceReference}</dd>
+            <dd className="mt-1 tabular-nums text-sm">{entry.sourceReference}</dd>
           </div>
         )}
         {entry.rejectedReason && (
           <div className="sm:col-span-2">
-            <dt className="text-xs font-semibold uppercase text-muted-foreground">
+            <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.rejectedReason")}
             </dt>
             <dd className="mt-1">{entry.rejectedReason}</dd>
@@ -174,7 +174,7 @@ function EntryPostings({ entry }: { entry: FinancialEntryDetail }) {
   if (entry.postings.length === 0) return null;
   return (
     <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+      <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
         {t("finance.entries.detail.postings")}
       </h3>
       <ul className="divide-y rounded-lg border">
@@ -186,7 +186,7 @@ function EntryPostings({ entry }: { entry: FinancialEntryDetail }) {
                 <span className="text-xs text-muted-foreground">{posting.assetCode}</span>
               )}
             </div>
-            <span className="font-mono font-semibold whitespace-nowrap">
+            <span className="tabular-nums font-semibold whitespace-nowrap">
               {formatMoney(posting.amountMinor, { currency: entry.currency })}
             </span>
           </li>
@@ -201,7 +201,7 @@ function EntryReceipt({ entry }: { entry: FinancialEntryDetail }) {
   return (
     <section>
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h3 className="text-xs font-semibold uppercase text-muted-foreground">
+        <h3 className="text-xs font-semibold text-muted-foreground">
           {t("finance.entries.detail.receipt")}
         </h3>
         <span className="text-xs text-muted-foreground">

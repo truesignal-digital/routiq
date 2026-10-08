@@ -376,7 +376,7 @@ function HistoryDiff({
     <dl className="mt-1.5 flex flex-col gap-1.5 rounded-md bg-foreground/[0.035] px-3 py-2">
       {changes.map((change) => (
         <div key={change.field} className="flex flex-col gap-0.5">
-          <dt className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+          <dt className="text-[0.7rem] text-muted-foreground">
             {t(`history.field.${change.field}`, { defaultValue: change.field })}
           </dt>
           {/* The field changed, but its value cannot be shown: say so rather

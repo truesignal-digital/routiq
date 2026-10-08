@@ -179,7 +179,7 @@ export function CreateBranchDialog({
                       autoComplete="off"
                       autoCapitalize="characters"
                       maxLength={8}
-                      className="font-mono uppercase"
+                      className="tabular-nums"
                       {...field}
                       onChange={(event) =>
                         field.onChange(event.target.value.toUpperCase())
