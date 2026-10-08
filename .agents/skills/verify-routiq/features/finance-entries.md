@@ -9,7 +9,7 @@ The entries list shows every financial entry the role may read, with filters kep
 - `fin-detail` opens the full-page detail ("Détail de l'écriture" / "Entry detail") with posting lines.
 - `fin-reverse` reverses a POSTED entry with a reason and lands on the reversal entry.
 - `fin-chain` shows "Extourne l'écriture #…" / "Reverses entry #…" and "Extournée par l'écriture #…" / "Reversed by entry #…".
-- `fin-record` records a new entry ("Saisir une écriture" / "Record an entry", `/finance/record`).
+- `fin-record` records a new entry ("Saisir une écriture" / "Record an entry", `/finance/record`: Entries with the record panel open over it, #296). Flow: `flow:panel-forms --role director` shows every create form in the panel and the discard question.
 
 ## How to get to it (user POV)
 
@@ -25,7 +25,7 @@ Preconditions:
 - Fresh seed: 6 POSTED and 2 SUBMITTED entries (`pnpm verify db "select entry_number, status, amount_minor from financial_entries order by 1"`). Readers (interim): DIRECTOR, ADMIN, FINANCE, DRIVER. Reversers: FINANCE, DIRECTOR.
 
 - **List, drawer, detail.** Run `pnpm verify drive flow:finance-entry --role finance --lang en`. It reads the newest POSTED entry from `GET /v1/finance/entries?status=POSTED`, clicks "Finance", waits for the "Entries" heading, clicks the button named with the entry number, screenshots the drawer, clicks "Open full screen" inside the dialog, and waits for `/finance/entries/<id>` with the heading "Entry detail". The cross-check reads the same entry back.
-- **Reverse.** Run `pnpm verify drive flow:reverse-entry --role finance --lang en`. It opens a POSTED entry's detail, clicks `getByRole("button", { name: "Reverse", exact: true })`, fills "Reason for reversal", clicks the dialog's "Reverse", waits for the app to move to the new entry (about 1.5 s), and finds the button "Reverses entry #<original>". The cross-check reads the original as `REVERSED` with `reversedByEntryId` set.
+- **Cancel entry** (the interface word for a reversal, #426). Run `pnpm verify drive flow:reverse-entry --role finance --lang en`. It opens a POSTED entry's detail, clicks "Cancel entry", picks the radio "Wrong details, to record again", submits with the dialog's "Cancel entry", clicks "Record again" in the same dialog, submits the pre-filled "Record expense" form and lands on the new entry. The cross-check reads the original as `REVERSED` with `reversedByEntryId` set and `cancellation.reasonCode` `WRONG_DETAILS`, and the new entry as a plain recording.
 - **Plain routes.** `pnpm verify ui /finance/entries --role director` screenshots the list in French.
 - **Proof.** `01-entries-list.png`, `02-entry-drawer.png`, `03-entry-detail.png`; for reversal `01-reverse-dialog.png`, `02-reversal-entry.png`.
 

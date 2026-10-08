@@ -100,6 +100,7 @@ describe("GET /v1/assets/:assetId/finance", () => {
       expenseMinor: 0,
       revenueMinor: 0,
       entryCount: 0,
+      eventCount: 0,
     });
     expect(body.evidenceMissing).toEqual({ postedCount: 0, pendingCount: 1 });
 

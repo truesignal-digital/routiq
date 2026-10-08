@@ -19,7 +19,7 @@
         "assigned": "Truck assigned"
       }
     },
-    "title": "Your trucks",
+    "title": "Trucks",
     "subtitle": "Track every truck from registration through retirement.",
     "searchLabel": "Search trucks",
     "filterLabel": "Filter trucks",
@@ -118,7 +118,8 @@
         "rowAttribute": "Charge line {position} to this trip",
         "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
       }
-    }
+    },
+    "subtitle": "Every trip your trucks run, from start to close."
   },
   "maintenance": {
     "workOrders": {

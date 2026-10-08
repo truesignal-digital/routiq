@@ -26,7 +26,7 @@ describe("toast surface", () => {
     await waitFor(() => expect(screen.getByText("Entry approved")).toBeDefined());
     expect(
       screen.getByText(
-        "This transaction was posted to a previous accounting period.",
+        "This entry was posted to a previous accounting period.",
       ),
     ).toBeDefined();
   });

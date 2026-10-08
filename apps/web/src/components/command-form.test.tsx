@@ -251,6 +251,21 @@ describe.each(SURFACES)("CommandForm footer on a %s", (surface) => {
   });
 });
 
+describe("CommandForm in a dialog taller than the window (#470)", () => {
+  it("caps the dialog at the window and scrolls only the fields, between a fixed title and footer", () => {
+    onSurface("dialog", {});
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toContain("max-h-[calc(100dvh-2rem)]");
+
+    const body = dialog.querySelector<HTMLElement>("[data-slot='command-form-body']");
+    expect(body).not.toBeNull();
+    expect(body?.className).toContain("overflow-y-auto");
+    expect(body?.contains(screen.getByRole("textbox", { name: "Summary" }))).toBe(true);
+    expect(body?.contains(screen.getByRole("heading", { name: "Cancel work order" }))).toBe(false);
+    expect(body?.contains(footerButtons().at(-1) ?? null)).toBe(false);
+  });
+});
+
 describe("CommandForm labels", () => {
   it("reads a command's intent words, falling back to the command's", () => {
     render(

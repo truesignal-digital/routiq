@@ -2,13 +2,12 @@ import { readFileSync } from "fs"
 import { resolve } from "path"
 import { describe, it, expect, afterEach, beforeAll } from "vitest"
 import { cleanup, render, screen, within } from "@testing-library/react"
-import type { ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { DataTable, type DataTableFilter } from "@/components/data-table"
+import { DataTable, type DataTableColumn, type DataTableFilter } from "@/components/data-table"
 import { DateRangePicker } from "@/components/date-range-picker"
 import { FilterChips } from "@/components/filter-chips"
 import { i18n } from "@/i18n/index.js"
@@ -259,9 +258,9 @@ describe("touch targets: 44 px on phone by default", () => {
 
   describe("DataTable controls", () => {
     type Row = { name: string; status: string }
-    const columns: ColumnDef<Row>[] = [
-      { accessorKey: "name", header: "Name", enableSorting: true, meta: { mobile: "primary", label: "Name" } },
-      { accessorKey: "status", header: "Status", meta: { mobile: "secondary", label: "Status" } },
+    const columns: DataTableColumn<Row>[] = [
+      { accessorKey: "name", header: "Name", enableSorting: true, meta: { phone: "title", label: "Name" } },
+      { accessorKey: "status", header: "Status", meta: { phone: "meta", label: "Status" } },
     ]
     const data: Row[] = Array.from({ length: 30 }, (_, index) => ({
       name: `Row ${index}`,
@@ -307,7 +306,7 @@ describe("touch targets: 44 px on phone by default", () => {
       expectTouchTarget(screen.getByRole("combobox", { name: t("dataTable.rowsPerPage") }))
     })
 
-    it("row menu on the phone card list", async () => {
+    it("row menu on the phone list rows", async () => {
       const desktop = window.matchMedia
       window.matchMedia = (query: string) => ({ ...desktop(query), matches: false })
       try {

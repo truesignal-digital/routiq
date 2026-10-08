@@ -25,21 +25,10 @@ import { useHistory, useHistoryEvent } from "@/history/useHistory.js";
 import {
   formatDate,
   formatDateTime,
-  formatDayLong,
   formatMoney,
-  formatRelativeTime,
-  localDayKey,
 } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
-
-/**
- * The event vocabulary is open — new commands add codes without touching this
- * file — so the label is a lookup with the raw code as its own fallback. i18next
- * reads "." as a key separator, hence the dashes.
- */
-export function historyEventLabelKey(eventType: string): string {
-  return `history.event.${eventType.split(".").join("-")}`;
-}
+import { historyNote, Timeline, timelineAct } from "@/components/timeline.js";
 
 /**
  * Bookkeeping columns every write touches: the row's own identity, the version
@@ -141,25 +130,6 @@ function isDataChange(item: HistoryItem): boolean {
   return dataFields(item.changedFields).length > 0 || isLifecycleEvent(item.eventType);
 }
 
-type HistoryDay = { key: string; occurredAt: string; items: HistoryItem[] };
-
-/**
- * The server returns the feed newest-first and we never reorder it, so a day
- * only ever ends where the local calendar date changes. Breaking on that
- * boundary alone is also what lets an appended page continue the run it belongs
- * to instead of raising a second heading for the same date.
- */
-function groupByDay(items: HistoryItem[]): HistoryDay[] {
-  const days: HistoryDay[] = [];
-  for (const item of items) {
-    const key = localDayKey(item.occurredAt);
-    const current = days.at(-1);
-    if (current !== undefined && current.key === key) current.items.push(item);
-    else days.push({ key, occurredAt: item.occurredAt, items: [item] });
-  }
-  return days;
-}
-
 export interface RecordHistorySheetProps {
   entityType: HistoryEntityType;
   entityId: string;
@@ -189,19 +159,7 @@ export function RecordHistorySheet({
 
   const locale = i18n.language;
   const items = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const days = groupByDay(showAll ? items : items.filter(isDataChange));
-
-  const today = new Date();
-  const todayKey = localDayKey(today);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = localDayKey(yesterday);
-
-  function dayHeading(day: HistoryDay): string {
-    if (day.key === todayKey) return t("history.today");
-    if (day.key === yesterdayKey) return t("history.yesterday");
-    return formatDayLong(day.occurredAt, locale);
-  }
+  const shown = showAll ? items : items.filter(isDataChange);
 
   return (
     <Sheet
@@ -253,31 +211,39 @@ export function RecordHistorySheet({
                 </Button>
               </div>
 
-              {days.length === 0 ? (
+              {shown.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {t("history.emptyChanges")}
                 </p>
               ) : (
-                <ol className="flex flex-col gap-4">
-                  {days.map((day) => (
-                    <li key={day.key}>
-                      <h3 className="pb-2 text-xs font-semibold text-muted-foreground">
-                        {dayHeading(day)}
-                      </h3>
-                      <ol className="flex flex-col">
-                        {day.items.map((item) => (
-                          <HistoryRow
-                            key={item.eventId}
-                            item={item}
-                            entityType={entityType}
-                            entityId={entityId}
-                            locale={locale}
-                          />
-                        ))}
-                      </ol>
-                    </li>
-                  ))}
-                </ol>
+                <Timeline
+                  groupByDay
+                  events={shown.map((item) => ({
+                    id: item.eventId,
+                    occurredAt: item.occurredAt,
+                    actor: item.actor,
+                    act: timelineAct(item.eventType, t),
+                    note: historyNote(item, t),
+                    // Plain web is the norm and needs no label; anything else
+                    // changes how much the line can be trusted, so it is stamped.
+                    aside:
+                      item.command.origin === "HUMAN_UI" ? undefined : (
+                        <StatusBadge tone="info" icon={null}>
+                          {t(`history.origin.${item.command.origin}`, {
+                            defaultValue: item.command.origin,
+                          })}
+                        </StatusBadge>
+                      ),
+                    children: (
+                      <HistoryRowChanges
+                        item={item}
+                        entityType={entityType}
+                        entityId={entityId}
+                        locale={locale}
+                      />
+                    ),
+                  }))}
+                />
               )}
             </>
           )}
@@ -300,7 +266,8 @@ export function RecordHistorySheet({
   );
 }
 
-function HistoryRow({
+/** The changed-field chips and the before/after toggle under one event. */
+function HistoryRowChanges({
   item,
   entityType,
   entityId,
@@ -313,66 +280,10 @@ function HistoryRow({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-
-  const isPlatform = item.actor.scope === "PLATFORM";
-  const actorLabel = isPlatform
-    ? t("history.actor.platform")
-    : (item.actor.displayName ?? t("history.actor.unknown"));
   const changedFields = chipFields(item.changedFields);
-  const hasNote = item.note !== null && item.note !== "";
 
   return (
-    <li className="relative border-l border-border pb-5 pl-4 last:pb-0">
-      <span
-        className="absolute -left-[3.5px] top-1.5 size-1.5 rounded-full bg-foreground/30"
-        aria-hidden
-      />
-
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        {/* One sentence, assembled from elements rather than from glued-together
-            translations: fr and en both read actor, act, motif in that order,
-            and each part stays a message of its own. */}
-        <p className="text-sm">
-          <span
-            className={cn(
-              "font-medium",
-              isPlatform && "rounded-full bg-primary/10 px-2 py-0.5 text-primary",
-            )}
-          >
-            {actorLabel}
-          </span>{" "}
-          <span className="text-muted-foreground">
-            {t(historyEventLabelKey(item.eventType), {
-              defaultValue: item.eventType,
-            })}
-          </span>
-          {hasNote && (
-            <>
-              {" — "}
-              <span className="italic text-muted-foreground">{item.note}</span>
-            </>
-          )}
-        </p>
-        {/* Plain web is the norm and needs no label; anything else changes how
-            much the line can be trusted, so it is stamped. */}
-        {item.command.origin !== "HUMAN_UI" && (
-          <StatusBadge tone="info" icon={null}>
-            {t(`history.origin.${item.command.origin}`, {
-              defaultValue: item.command.origin,
-            })}
-          </StatusBadge>
-        )}
-      </div>
-
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <time dateTime={item.occurredAt} className="tabular-nums">
-          {formatDateTime(item.occurredAt, locale)}
-        </time>
-        <span className="text-muted-foreground/70">
-          {formatRelativeTime(item.occurredAt, locale)}
-        </span>
-      </div>
-
+    <>
       {changedFields.length > 0 && (
         <ul className="mt-1.5 flex flex-wrap gap-1">
           {changedFields.map((field) => (
@@ -407,7 +318,7 @@ function HistoryRow({
           locale={locale}
         />
       )}
-    </li>
+    </>
   );
 }
 

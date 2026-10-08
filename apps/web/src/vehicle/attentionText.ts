@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { AssetAttentionItem } from "@routiq/contracts";
-import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
 import { recordReference } from "./model.js";
 
 /**
@@ -33,6 +33,7 @@ export function attentionText(
     reason: p.completionRejectReason ?? "",
     override: p.overrideRequired === true ? "yes" : "no",
     name: recorder,
+    when: formatDateTime(item.since, locale),
   };
   const key = `vehicle.attention.${item.code}`;
   // Which facts exist picks the whole sentence; nothing is glued together.

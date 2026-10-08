@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import type { ColumnDef } from "@tanstack/react-table";
 import { describe, expect, it, vi } from "vitest";
-import { DataTable } from "./data-table.js";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable, type DataTableColumn } from "./data-table.js";
 
 /**
  * Compile-time coverage: `tsc --noEmit` runs over this file, so a
@@ -11,8 +11,8 @@ import { DataTable } from "./data-table.js";
 
 type Person = { name: string };
 
-const columns: ColumnDef<Person>[] = [
-  { accessorKey: "name", header: "Name", meta: { mobile: "primary" } },
+const columns: DataTableColumn<Person>[] = [
+  { accessorKey: "name", header: "Name", meta: { phone: "title" } },
 ];
 const data: Person[] = [{ name: "Ada Lovelace" }];
 
@@ -22,6 +22,40 @@ const viewer = {
 };
 
 const loadMore = { hasNextPage: false, isFetching: false, onLoadMore: vi.fn() };
+
+describe("DataTable phone roles", () => {
+  it("requires every column to declare where it sits on a phone", () => {
+    // @ts-expect-error a column without `meta` has no phone role
+    const bare: DataTableColumn<Person>[] = [{ accessorKey: "name", header: "Name" }];
+    const unlabelled: DataTableColumn<Person>[] = [
+      // @ts-expect-error `meta` without `phone` is not enough
+      { accessorKey: "name", header: "Name", meta: { label: "Name" } },
+    ];
+    const retired: DataTableColumn<Person>[] = [
+      // @ts-expect-error the old card visibility is gone; phone roles replaced it
+      { accessorKey: "name", header: "Name", meta: { mobile: "primary" } },
+    ];
+
+    expect([bare, unlabelled, retired]).toHaveLength(3);
+  });
+
+  it("rejects a role outside the row anatomy", () => {
+    const columns: DataTableColumn<Person>[] = [
+      // @ts-expect-error a phone row has title, meta, value and status slots only
+      { accessorKey: "name", header: "Name", meta: { phone: "secondary" } },
+    ];
+
+    expect(columns).toHaveLength(1);
+  });
+
+  it("refuses plain TanStack columns, whose meta is optional", () => {
+    const plain: ColumnDef<Person>[] = [{ accessorKey: "name", header: "Name" }];
+    // @ts-expect-error DataTable only takes columns with a phone role
+    const table = <DataTable columns={plain} data={data} />;
+
+    expect(table).toBeTruthy();
+  });
+});
 
 describe("DataTable prop exclusivity", () => {
   it("accepts either row activation on its own", () => {

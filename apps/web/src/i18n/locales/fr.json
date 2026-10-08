@@ -2,11 +2,14 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "Logo ROUTIQ",
+    "poweredBy": "propulsé par ROUTIQ"
+  },
   "nav": {
     "home": "Accueil",
     "assets": "Actifs",
     "finances": "Finances",
-    "more": "Plus",
     "activities": "Activités",
     "maintenance": "Maintenance"
   },
@@ -60,6 +63,14 @@
     "sidebarDescription": "Affiche le menu de navigation sur mobile.",
     "sidebarTitle": "Menu de navigation",
     "toggleSidebar": "Afficher ou masquer le menu",
+    "groups": {
+      "daily": "Au quotidien",
+      "company": "Entreprise"
+    },
+    "bottomBar": {
+      "label": "Raccourcis",
+      "menu": "Menu"
+    },
     "branch": {
       "label": "Agence courante",
       "all": "Toutes mes agences",
@@ -134,8 +145,8 @@
     "DOCUMENT_ALREADY_SUPERSEDED": "Ce document a déjà été renouvelé. Renouvelez la version la plus récente.",
     "POSTINGS_SUM_MISMATCH": "Le total des lignes ne correspond pas au montant de l'écriture.",
     "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
-    "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été extournée.",
-    "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une contre-passation et ne peut pas être contre-passée. Pour l'annuler, enregistrez à nouveau l'écriture d'origine.",
+    "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été annulée.",
+    "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une annulation et ne peut pas être annulée. Pour revenir en arrière, enregistrez à nouveau l'écriture d'origine.",
     "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
     "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
     "ACTIVITY_CLOSE_BLOCKED": "Impossible de clôturer : il manque les dates réelles ou au moins un engin affecté.",
@@ -174,7 +185,10 @@
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
     "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur.",
-    "ISSUE_SEVERITY_ALREADY_SET": "Ce problème est déjà marqué ainsi. Actualisez la page."
+    "ISSUE_SEVERITY_ALREADY_SET": "Ce problème est déjà marqué ainsi. Actualisez la page.",
+    "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
   },
   "assets": {
     "notify": {
@@ -186,7 +200,7 @@
       }
     },
     "eyebrow": "Parc opérationnel",
-    "title": "Vos actifs",
+    "title": "Actifs",
     "subtitle": "Suivez chaque véhicule, de son enregistrement à sa mise hors service.",
     "searchLabel": "Rechercher dans les actifs",
     "searchPlaceholder": "Code, plaque ou modèle…",
@@ -306,21 +320,22 @@
       "registration": "Immatriculation"
     }
   },
-  "more": {
-    "title": "Plus",
-    "signedInAs": "Connecté en tant que {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# agence} other {# agences}}",
+    "mySettings": "Mes réglages",
+    "signOut": "Se déconnecter"
+  },
+  "mySettings": {
+    "title": "Mes réglages",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Langue",
-    "theme": {
-      "label": "Thème",
+    "appearance": {
+      "label": "Apparence",
       "light": "Clair",
       "dark": "Sombre",
-      "system": "Système"
-    },
-    "manage": "Gestion",
-    "persons": "Personnel",
-    "users": "Utilisateurs",
-    "branches": "Agences",
-    "logout": "Se déconnecter"
+      "system": "Comme le téléphone"
+    }
   },
   "form": {
     "errors": {
@@ -328,7 +343,9 @@
       "number": "Veuillez saisir un nombre.",
       "min": "Doit être au moins {min}.",
       "max": "Ne doit pas dépasser {max}.",
-      "invalid": "Valeur invalide."
+      "invalid": "Valeur invalide.",
+      "tooShort": "Au moins {min} caractères.",
+      "tooLong": "Au plus {max} caractères."
     }
   },
   "fileUpload": {
@@ -385,27 +402,27 @@
         "generic": "Action terminée",
         "approved": "Écriture approuvée",
         "rejected": "Écriture rejetée",
-        "reversed": "Écriture contre-passée",
+        "reversed": "Écriture annulée",
         "locked": "Période verrouillée",
         "reopened": "Période rouverte",
-        "posted": "Transaction enregistrée et comptabilisée",
-        "submitted": "Transaction envoyée pour approbation",
-        "recorded": "Transaction enregistrée",
+        "posted": "Écriture enregistrée et comptabilisée",
+        "submitted": "Écriture envoyée pour approbation",
+        "recorded": "Écriture enregistrée",
         "updated": "Écriture modifiée, toujours en attente d'approbation",
         "updatedPosted": "Écriture modifiée et comptabilisée"
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
         "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-        "LATE_POSTING": "Cette transaction a été comptabilisée dans une période précédente.",
+        "LATE_POSTING": "Cette écriture a été comptabilisée dans une période précédente.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
       "errors": {
         "generic": "L'action a échoué. Veuillez réessayer. ({code})",
         "INVALID_STATE_TRANSITION": "Cette action n'est pas possible dans l'état actuel de l'enregistrement.",
         "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
-        "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été contre-passée.",
-        "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une contre-passation et ne peut pas être contre-passée. Pour l'annuler, enregistrez à nouveau l'écriture d'origine.",
+        "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été annulée.",
+        "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une annulation et ne peut pas être annulée. Pour revenir en arrière, enregistrez à nouveau l'écriture d'origine.",
         "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible."
       }
     },
@@ -418,7 +435,7 @@
       "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
     },
     "record": {
-      "title": "Enregistrer une transaction",
+      "title": "Saisir une écriture",
       "expenseLabel": "Dépense",
       "revenueLabel": "Recette",
       "categoryLabel": "Catégorie",
@@ -438,7 +455,7 @@
       "counterpartyLabel": "Tiers (optionnel)",
       "counterpartyPlaceholder": "Fournisseur, client…",
       "descriptionLabel": "Description (optionnel)",
-      "descriptionPlaceholder": "Détails de la transaction…",
+      "descriptionPlaceholder": "Détails de l'écriture…",
       "paymentRefLabel": "Référence de paiement (optionnel)",
       "paymentRefPlaceholder": "N° de reçu, N° de virement…",
       "assetLabel": "Actif (optionnel)",
@@ -449,7 +466,7 @@
       "branchesFailed": "Impossible de charger les agences. Actualisez cette page."
     },
     "entries": {
-      "title": "Écritures comptables",
+      "title": "Argent",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les écritures. Réessayez.",
       "retry": "Réessayer",
@@ -458,12 +475,11 @@
       "ownScope": "Seules les écritures que vous avez saisies apparaissent ici.",
       "ownEmpty": "Vous n'avez saisi aucune écriture. Celles que vous saisirez apparaîtront ici.",
       "loadMore": "Charger plus",
-      "recordAction": "Saisir une écriture",
       "status": {
         "SUBMITTED": "En attente d'examen",
         "POSTED": "Comptabilisée",
         "REJECTED": "Rejetée",
-        "REVERSED": "Extournée"
+        "REVERSED": "Annulée"
       },
       "detail": {
         "title": "Détail de l'écriture",
@@ -473,7 +489,7 @@
         "status": "Statut",
         "category": "Catégorie",
         "amount": "Montant",
-        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Extourne de recette} EXPENSE_REVERSAL {Extourne de dépense} other {Dépense}}",
+        "amountKind": "{kind, select, REVENUE {Recette} REVENUE_REVERSAL {Annulation de recette} EXPENSE_REVERSAL {Annulation de dépense} other {Dépense}}",
         "date": "Date comptable",
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
@@ -487,9 +503,9 @@
         "postings": "Lignes de débit/crédit",
         "asset": "Actif",
         "postingAmount": "Montant",
-        "reversalChain": "Chaîne d'extournement",
-        "reversesEntry": "Extourne l'écriture {number}",
-        "reversedByEntry": "Extournée par l'écriture {number}",
+        "reversalChain": "Annulation",
+        "reversesEntry": "Annulation de l'écriture {number}",
+        "reversedByEntry": "Annulée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
         "breadcrumb": "Détail",
@@ -505,24 +521,44 @@
         "evidenceVia": {
           "RECORDED": "Joint à la saisie · {date} · {name}",
           "ATTACHED": "Joint après coup · {date} · {name}"
-        }
+        },
+        "cancellationReason": "Motif"
       },
       "viewer": {
         "description": "Date comptable {date}",
         "fullScreen": "Ouvrir en plein écran"
       },
       "reversal": {
-        "reasonLabel": "Motif du contre-passage",
-        "reasonPlaceholder": "Expliquez pourquoi cette écriture est contre-passée…",
-        "success": "Écriture contre-passée",
-        "successDesc": "L'écriture de contre-passage a été créée avec succès."
+        "reasonLabel": "Pourquoi annuler cette écriture ?",
+        "otherLabel": "Précisez le motif",
+        "otherPlaceholder": "Que s'est-il passé ?",
+        "description": "L'écriture reste dans les comptes, marquée Annulée. Une ligne d'annulation retire son montant des totaux.",
+        "recordAgainTitle": "Écriture annulée",
+        "recordAgainBody": "Enregistrez-la à nouveau avec les bons détails. Le formulaire s'ouvre rempli à partir de l'écriture annulée.",
+        "recordAgain": "Enregistrer à nouveau",
+        "done": "Terminé"
       },
       "filters": {
         "status": "Statut",
-        "ledger": "Comptabilisées et extournées",
+        "ledger": "Comptabilisées et annulées",
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
         "assetOption": "{code} — {name}"
+      },
+      "events": {
+        "cancelledIn": "Annulée en {month}",
+        "cancellationBadge": "Annulation",
+        "cancellationOf": "Annulation de l'écriture {number} ({month})",
+        "cancellationOfEntry": "Annulation de l'écriture {number}",
+        "showCancellation": "Voir l'annulation",
+        "hideCancellation": "Masquer l'annulation",
+        "cancellationEntry": "Écriture d'annulation {number}",
+        "cancelledByOn": "Annulée par {name} le {date}",
+        "cancelledOn": "Annulée le {date}",
+        "reason": "Motif : {reason}",
+        "countsZero": "Compte pour 0 dans les totaux",
+        "countsHere": "Compte toujours en {month} : l'annulation se déduit en {cancelMonth}",
+        "booksView": "Afficher toutes les lignes du grand livre"
       }
     },
     "approvals": {
@@ -555,6 +591,7 @@
     },
     "periods": {
       "title": "Gestion des périodes",
+      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -587,7 +624,8 @@
     }
   },
   "common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "howCalculated": "Mode de calcul"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
@@ -597,6 +635,9 @@
     "view": "Affichage",
     "columns": "Colonnes",
     "clearFilters": "Effacer les filtres",
+    "filters": "{count, plural, =0 {Filtres} other {Filtres (#)}}",
+    "filtersTitle": "Filtres",
+    "showResults": "Voir les résultats",
     "filterAll": "Tous",
     "rowsPerPage": "Lignes par page",
     "pageOf": "Page {page} sur {pages}",
@@ -994,6 +1035,16 @@
           "OTHER": "Autre"
         }
       }
+    },
+    "subtitle": "Chaque activité de votre flotte, du départ à la clôture.",
+    "metrics": {
+      "thisWeek": "Cette semaine",
+      "thisWeekHint": "Démarrage depuis lundi",
+      "incomplete": "Données incomplètes",
+      "incompleteHint": "Clôture avec exceptions",
+      "weekKm": "Km cette semaine",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "Selon les étapes saisies"
     }
   },
   "maintenance": {
@@ -1157,6 +1208,18 @@
         "severityRaised": "Marqué critique pour la sécurité. Le véhicule est immobilisé.",
         "severityLowered": "Mention critique retirée"
       }
+    },
+    "subtitle": "Problèmes signalés et ordres de travail, de la déclaration à la réparation.",
+    "metrics": {
+      "newProblems": "Nouveaux problèmes",
+      "newProblemsHint": "{count, plural, =0 {Aucun critique pour la sécurité} one {# critique pour la sécurité} other {# critiques pour la sécurité}}",
+      "grounded": "Immobilisés",
+      "groundedHint": "Ne doivent pas rouler",
+      "inProgress": "Ordres de travail en cours",
+      "inProgressHint": "Approuvés, pas encore terminés",
+      "repairDays": "Durée moyenne de réparation",
+      "repairDaysValue": "{days, number} j",
+      "repairDaysHint": "{count, plural, =0 {Aucune réparation sur {window} jours} one {# réparation sur {window} jours} other {# réparations sur {window} jours}}"
     }
   },
   "persons": {
@@ -1185,7 +1248,8 @@
       "MECHANIC": "Mécanicien",
       "CLERK": "Agent",
       "OTHER": "Autre"
-    }
+    },
+    "lead": "Les personnes avec qui votre flotte travaille : chauffeurs, mécaniciens, équipage. Une personne peut conduire sans se connecter."
   },
   "users": {
     "title": "Utilisateurs",
@@ -1252,7 +1316,8 @@
         "reactivated": "Utilisateur réactivé : {name}"
       },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
-    }
+    },
+    "lead": "Qui peut se connecter, avec quel rôle et dans quelles agences."
   },
   "branches": {
     "title": "Agences",
@@ -1300,7 +1365,8 @@
       "info": {
         "switched": "Vous consultez : {branch}"
       }
-    }
+    },
+    "lead": "Les agences regroupent les véhicules, le personnel et l'argent par site. Chaque utilisateur voit les agences qui lui sont confiées."
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -1344,6 +1410,7 @@
       "unavailable": "Non disponible"
     },
     "event": {
+      "other": "Autre modification",
       "activity-created": "Activité créée",
       "activity-closed": "Activité clôturée",
       "activity-reopened": "Activité rouverte",
@@ -1362,8 +1429,8 @@
       "financial_entry-submitted": "Écriture soumise à approbation",
       "financial_entry-approved": "Écriture approuvée",
       "financial_entry-rejected": "Écriture rejetée",
-      "financial_entry-reversed": "Écriture extournée",
-      "financial_entry-reversal_posted": "Extourne comptabilisée",
+      "financial_entry-reversed": "Écriture annulée",
+      "financial_entry-reversal_posted": "Annulation comptabilisée",
       "posting_period-locked": "Période verrouillée",
       "posting_period-reopened": "Période rouverte",
       "approval-threshold-updated": "Seuil d'approbation modifié",
@@ -1397,7 +1464,8 @@
       "asset_availability-closed": "Immobilisation levée",
       "financial_entry-updated": "Écriture modifiée",
       "operational_issue-severity_raised": "Marqué critique pour la sécurité",
-      "operational_issue-severity_lowered": "Mention critique retirée"
+      "operational_issue-severity_lowered": "Mention critique retirée",
+      "note-acknowledged": "Note marquée comme vue"
     },
     "field": {
       "status": "statut",
@@ -1500,8 +1568,8 @@
       "paymentReference": "référence de paiement",
       "sourceReference": "référence source",
       "approvalNote": "note d'approbation",
-      "reversesEntryId": "écriture extournée",
-      "reversedByEntryId": "extourne",
+      "reversesEntryId": "écriture annulée",
+      "reversedByEntryId": "annulation",
       "loadState": "état de charge",
       "passengerCount": "nombre de passagers",
       "commandType": "commande",
@@ -1548,6 +1616,7 @@
       "dismissReason": "motif du classement",
       "defaultSafetyCritical": "critique pour la sécurité par défaut",
       "postings": "lignes d'imputation",
+      "reasonCode": "motif",
       "artifactIds": "fichiers",
       "body": "note"
     },
@@ -1623,7 +1692,13 @@
     "conflictTitle": "Modifié ailleurs",
     "conflictBody": "Quelqu'un d'autre a modifié cet enregistrement. Actualisez, vérifiez, puis réappliquez votre action.",
     "approvalTitle": "Approbation requise",
-    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié."
+    "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié.",
+    "issues": "{count, plural, one {# point à corriger} other {# points à corriger}}",
+    "issue": "{field} : {message}",
+    "discardTitle": "Abandonner ce formulaire ?",
+    "discardBody": "Ce que vous avez saisi sera perdu.",
+    "keepEditing": "Continuer la saisie",
+    "discard": "Abandonner"
   },
   "commands": {
     "register-asset": {
@@ -1775,10 +1850,10 @@
       "dismiss": "Garder l'écriture"
     },
     "reverse-entry": {
-      "label": "Contre-passer l'écriture",
-      "submit": "Contre-passer l'écriture",
-      "submitting": "Contre-passage…",
-      "short": "Contre-passer",
+      "label": "Annuler l'écriture",
+      "submit": "Annuler l'écriture",
+      "submitting": "Annulation…",
+      "short": "Annuler l'écriture",
       "dismiss": "Garder l'écriture"
     },
     "lock-period": {
@@ -1802,8 +1877,8 @@
       "submitting": "Désactivation…"
     },
     "update-approval-threshold": {
-      "label": "Modifier le seuil d'approbation",
-      "submit": "Enregistrer le seuil",
+      "label": "Modifier les seuils d'approbation",
+      "submit": "Enregistrer les seuils",
       "submitting": "Enregistrement…"
     },
     "create-category": {
@@ -1950,6 +2025,11 @@
         "submit": "Retirer la mention",
         "dismiss": "Garder la mention"
       }
+    },
+    "acknowledge-note": {
+      "label": "Marquer comme vu",
+      "submit": "Marquer comme vu",
+      "submitting": "Enregistrement…"
     }
   },
   "vehicle": {
@@ -2146,7 +2226,8 @@
       "workshop": "L'atelier",
       "manager": "Un responsable",
       "operations": "L'exploitation",
-      "recorder": "L'auteur de la saisie"
+      "recorder": "L'auteur de la saisie",
+      "team": "L'équipe"
     },
     "now": {
       "todo": {
@@ -2218,6 +2299,11 @@
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Reçu manquant",
         "detail": "{ref} · {amount}, saisie par {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note de la Direction · {name} · {when}",
+        "badge": "Note de la Direction"
       }
     },
     "maintenance": {
@@ -2267,7 +2353,6 @@
       "revenue": "Recettes comptabilisées",
       "revenueHint": "Comptabilisé n'est pas encaissé",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "howCalculated": "Mode de calcul",
       "byCategory": "Dépenses par catégorie",
       "byCategoryHint": "Comptabilisé, {period}",
       "lastSixMonths": "6 derniers mois",
@@ -2278,7 +2363,7 @@
       "revenueLegend": "Recettes",
       "monthBar": "{month} : dépenses {expenses}, recettes {revenue}",
       "entries": "Écritures",
-      "entriesHint": "Rien n'est modifié : une correction est une contre-passation, et les deux restent listées.",
+      "entriesHint": "Rien n'est modifié : une annulation du même mois se range sous son écriture ; une annulation d'un mois suivant figure dans ce mois-là.",
       "filterLabel": "Afficher les écritures",
       "filters": {
         "posted": "Comptabilisées",
@@ -2415,8 +2500,8 @@
         "financial_entry-submitted": "Écriture saisie, en attente d'examen",
         "financial_entry-approved": "Écriture approuvée",
         "financial_entry-rejected": "Écriture rejetée",
-        "financial_entry-reversed": "Écriture contre-passée",
-        "financial_entry-reversal_posted": "Contre-passation comptabilisée",
+        "financial_entry-reversed": "Écriture annulée",
+        "financial_entry-reversal_posted": "Annulation comptabilisée",
         "financial_entry-evidence_attached": "{count, plural, one {Reçu joint} other {# fichiers joints}}",
         "operational_issue-reported": "Problème signalé",
         "operational_issue-resolved": "Problème résolu",
@@ -2437,7 +2522,8 @@
         "financial_entry-updated": "Écriture modifiée avant examen",
         "asset-details_updated": "Informations modifiées",
         "operational_issue-severity_raised": "Problème marqué critique pour la sécurité",
-        "operational_issue-severity_lowered": "Mention critique retirée d'un problème"
+        "operational_issue-severity_lowered": "Mention critique retirée d'un problème",
+        "note-acknowledged": "Note marquée comme vue"
       },
       "change": "{field} : {before} → {after}"
     },
@@ -2493,12 +2579,12 @@
       "recordedBy": "Saisie par",
       "postingPeriod": "Période comptable",
       "notPosted": "Non comptabilisée",
-      "reverses": "Contre-passe",
-      "reversedBy": "Contre-passée par",
+      "reverses": "Annule",
+      "reversedBy": "Annulée par",
       "openOriginal": "L'écriture d'origine",
-      "openReversal": "La contre-passation",
+      "openReversal": "L'annulation",
       "awaitingReviewNote": "En attente d'examen : non comptée dans le comptabilisé avant approbation. Son auteur peut la modifier d'ici là, mais pas l'approuver.",
-      "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige par une contre-passation ; l'original reste.",
+      "postedNotPaid": "Comptabilisé veut dire inscrit dans les comptes, pas payé. Une erreur se corrige en annulant l'écriture ; l'original reste.",
       "receipt": "Justificatif",
       "noFiles": "Aucun fichier sur cette écriture.",
       "evidenceVia": {
@@ -2518,7 +2604,11 @@
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
       "photoNumber": "Photo {number}",
-      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau."
+      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau.",
+      "directionNoteEyebrow": "Note de la Direction",
+      "notSeenYet": "Personne ne l'a encore marquée comme vue. Elle reste dans la liste « À faire » du véhicule jusque-là.",
+      "seenBy": "Vu par {name} le {date}",
+      "acknowledgeHint": "Indique à la Direction que vous avez lu cette note. Elle quitte la liste « À faire » ; votre nom et l'heure restent sur la note."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"
@@ -2531,7 +2621,8 @@
       "success": {
         "noteAdded": "Note ajoutée",
         "evidenceAttached": "Reçu joint",
-        "detailsSaved": "Informations du véhicule enregistrées."
+        "detailsSaved": "Informations du véhicule enregistrées.",
+        "noteAcknowledged": "Marquée comme vue"
       },
       "info": {
         "nothingToSave": "Rien à enregistrer : aucun changement."
@@ -2598,7 +2689,7 @@
         "description": "Approuvez ou rejetez une écriture en attente. Son auteur ne peut pas l'approuver."
       },
       "reverse-entry": {
-        "description": "Une écriture comptabilisée n'est jamais modifiée : la contre-passation l'annule et les deux restent. Choisissez-la dans Argent."
+        "description": "Une écriture comptabilisée n'est jamais modifiée : l'annuler ajoute une ligne qui la retire, et les deux restent. Choisissez-la dans Argent."
       },
       "commission": {
         "description": "D'enregistré à en service : l'historique d'exploitation démarre ici."
@@ -2636,6 +2727,54 @@
       "posts": "Vos saisies sont enregistrées directement, quel que soit le montant.",
       "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
       "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
+    }
+  },
+  "reasonCodes": {
+    "ENTERED_TWICE": "Saisie en double",
+    "DID_NOT_HAPPEN": "N'a pas eu lieu",
+    "WRONG_DETAILS": "Mauvais détails, à ressaisir",
+    "OTHER": "Autre"
+  },
+  "settings": {
+    "title": "Paramètres de l'entreprise",
+    "description": "Des règles qui s'appliquent à toute l'entreprise. Seule la Direction peut les modifier.",
+    "retry": "Réessayer",
+    "approvals": {
+      "title": "Approbations",
+      "description": "Jusqu'à quel montant une saisie d'argent est enregistrée sans contrôle, et qui décide au-delà.",
+      "loading": "Chargement des règles d'approbation",
+      "loadFailed": "Les règles d'approbation n'ont pas pu être chargées.",
+      "chainLabel": "La chaîne d'approbation",
+      "noBands": "Les règles d'approbation de cette entreprise ont été réglées à la main ; elles ne se modifient pas ici. Contactez le support ROUTIQ.",
+      "byRole": "Ce que rencontrent les saisies de chaque rôle",
+      "byRoleHint": "Personne n'approuve sa propre saisie, et les saisies de la Direction sont toujours enregistrées directement.",
+      "kind": {
+        "record-expense": "Dépenses",
+        "record-revenue": "Recettes"
+      },
+      "roleKind": "{role} : {kind}",
+      "overrides": "Exceptions pour une agence ou une catégorie",
+      "overridesHint": "Elles gardent leurs propres montants quand vous modifiez les seuils.",
+      "override": "{kind, select, record-expense {Dépenses} record-revenue {Recettes} other {Décisions}}, {scope} : {role} {bounded, select, yes {jusqu'à {amount}} other {quel que soit le montant}}",
+      "form": {
+        "description": "S'applique à toutes les agences, dès la prochaine saisie.",
+        "recording": "Enregistré directement jusqu'à",
+        "recordingHint": "Les saisies jusqu'à ce montant sont enregistrées sans contrôle.",
+        "ceiling": "La Finance approuve jusqu'à",
+        "ceilingHint": "Au-delà du premier montant et jusqu'à celui-ci, la Finance décide. Au-delà, seule la Direction décide.",
+        "whole": "Saisissez le montant en francs entiers, sans décimales.",
+        "belowCeiling": "Gardez ce montant sous celui jusqu'auquel la Finance approuve.",
+        "unchanged": "Modifiez un montant pour enregistrer.",
+        "afterSaving": "Après l'enregistrement",
+        "whoIsTold": "Les membres {roles} verront les nouvelles règles sur leur prochain écran.",
+        "conflictTitle": "Les seuils ont changé pendant votre modification",
+        "conflictBody": "Quelqu'un d'autre a enregistré de nouveaux seuils. Actualisez pour les voir, puis refaites votre modification."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Seuils d'approbation enregistrés"
+      }
     }
   }
 }

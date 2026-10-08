@@ -245,6 +245,9 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
         ENABLE TRIGGER financial_postings_balance_on_delete
     `);
     await tx
+      .delete(schema.noteAcknowledgements)
+      .where(eq(schema.noteAcknowledgements.workspaceId, workspace.id));
+    await tx
       .delete(schema.notes)
       .where(eq(schema.notes.workspaceId, workspace.id));
     await tx

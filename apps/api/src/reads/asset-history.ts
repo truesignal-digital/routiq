@@ -48,7 +48,7 @@ import { diffStates } from "./history.js";
 import { readingBranchScope } from "./asset-readings.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import { decodeTimestampCursor, encodeKeysetCursor, microsecondKey } from "./cursor.js";
-import { noteSql } from "./history.js";
+import { noteCodeSql, noteSql } from "./history.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
@@ -290,6 +290,7 @@ interface EventRow {
   currency: string | null;
   kind: VehicleHistoryKind;
   note: string | null;
+  note_code: string | null;
 }
 
 async function pageOfEvents(
@@ -335,7 +336,8 @@ async function pageOfEvents(
       s.amount_minor::text as amount_minor,
       s.currency,
       ${kindSql} as kind,
-      ${noteSql()} as note
+      ${noteSql()} as note,
+      ${noteCodeSql()} as note_code
     from s
     inner join ${auditEvents}
       on ${auditEvents.workspaceId} = ${context.workspaceId}
@@ -789,6 +791,7 @@ export function registerAssetHistoryReadRoutes(
           currency: row.kind === "MONEY" ? row.currency : null,
           params: page.paramsByEvent.get(row.event_id) ?? {},
           note: row.note,
+          noteCode: row.note_code,
           ...(row.event_type === DETAILS_UPDATED
             ? { changes: page.changesByEvent.get(row.event_id) ?? [] }
             : {}),

@@ -114,6 +114,46 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
   },
 ];
 
+/**
+ * The forms a centred dialog may host (#296): a decision on an existing
+ * record, with at most a reason. Approve, reject and reverse an entry; the
+ * work-order decisions and cancel; dismiss and resolve a problem; release to
+ * service; close and reopen a trip; deactivate a branch or a user, reset a
+ * PIN; lock and reopen a period; discard. A name here is the JSX element
+ * that sets `surface="dialog"` or the component that renders it.
+ */
+const DECISION_SURFACES: ReadonlySet<string> = new Set([
+  "ApproveEntryForm",
+  "RejectEntryForm",
+  "ReverseEntryForm",
+  "WorkOrderDecisionForm",
+  "CancelWorkOrderForm",
+  "IssueDecisionForm",
+  "IssueSeverityForm",
+  "ReleaseForm",
+  "CloseTripDialog",
+  "ReopenTripDialog",
+  "BranchActionDialog",
+  "MemberActionDialog",
+  "PeriodDecisionDialog",
+  "DiscardDialog",
+]);
+
+function dialogSurfacesOutsideDecisions(file: SourceFile): Violation[] {
+  const code = withoutComments(file.content);
+  const lines = file.content.split("\n");
+  return [...code.matchAll(/\bsurface\s*[=:]\s*\{?\s*["'`]dialog["'`]/g)].flatMap((match) => {
+    const before = code.slice(0, match.index);
+    const tag = [...before.matchAll(/<([A-Z]\w*)/g)].at(-1)?.[1];
+    const component = [...before.matchAll(/function\s+([A-Z]\w*)/g)].at(-1)?.[1];
+    if ((tag !== undefined && DECISION_SURFACES.has(tag)) || (component !== undefined && DECISION_SURFACES.has(component))) {
+      return [];
+    }
+    const line = before.split("\n").length;
+    return [{ path: file.path, line, text: (lines[line - 1] ?? "").trim() }];
+  });
+}
+
 /** Whole-line `//` comments and block comments that open a line, blanked with their line breaks kept. */
 function withoutComments(content: string): string {
   const blank = (text: string) => text.replace(/[^\n]/g, " ");
@@ -459,6 +499,40 @@ export const RULES: readonly Rule[] = [
       /\bnew Intl\.NumberFormat\b|\bsignDisplay\b|\bformatXAF\b/,
       (path) => isWebProduction(path) && path !== "apps/web/src/lib/format.ts",
     ),
+  },
+  {
+    id: "H17",
+    name: "forms-have-harness-tests",
+    fix: "Give the form a sibling <Name>.test.tsx that runs describeCommandForm from apps/web/src/test/form-harness.ts: the six command-form tests (docs/design/consistency/README.md, Recipe: a new form).",
+    check: (files) => {
+      const harnessed = new Set(
+        files
+          .filter((file) => isTestFile(file.path) && /test\/form-harness(\.js)?["']/.test(file.content))
+          .map((file) => file.path.replace(/\.test\.tsx?$/, "")),
+      );
+      return files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            /(Forms?|Dialogs?)\.tsx$/.test(file.path) &&
+            !harnessed.has(file.path.replace(/\.tsx$/, "")),
+        )
+        .map((file) => ({ path: file.path, line: 1, text: "no sibling test runs the form harness" }));
+    },
+  },
+  {
+    id: "H18",
+    name: "dialogs-only-for-decisions",
+    fix: "Recording or editing a fact opens the side panel: surface=\"sheet\" (or \"panel\" inside a record panel). A centred dialog is only for a decision on an existing record, the allow-list DECISION_SURFACES in tools/guards/rules.ts (docs/design/consistency/README.md, Surface by job).",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            file.path.endsWith(".tsx") &&
+            file.path !== "apps/web/src/components/command-form.tsx",
+        )
+        .flatMap(dialogSurfacesOutsideDecisions),
   },
   {
     id: "J1",

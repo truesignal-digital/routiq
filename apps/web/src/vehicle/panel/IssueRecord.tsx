@@ -15,6 +15,7 @@ import { recordReference } from "../model.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note, SafetyMark } from "../parts.js";
 import { useIssue } from "../useVehicle.js";
 import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 const TITLE_MAX = 120;
 
@@ -141,8 +142,11 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
         )}
         {issue.safetyCritical && <Note>{t("vehicle.panel.safetyCriticalNote")}</Note>}
         <DetailSection title={t("maintenance.detail.chronologie")}>
-          <Chronologie events={issue.chronologie} locale={locale} />
+          <Chronologie events={issue.chronologie} />
         </DetailSection>
+        <div>
+          <RecordHistorySheet entityType="operational_issue" entityId={issue.id} />
+        </div>
       </div>
       <PanelFooter
         steps={steps}

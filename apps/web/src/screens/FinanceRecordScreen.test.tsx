@@ -66,6 +66,11 @@ vi.mock("../assets/useAssets.js", () => ({
   useAssets: mocks.useAssets,
 }));
 
+// The list behind the panel has its own tests; here it only has to be there.
+vi.mock("./FinanceEntriesScreen.js", () => ({
+  FinanceEntriesScreen: () => createElement("div", { "data-testid": "entries-list" }),
+}));
+
 vi.mock("../finance/FinanceNav.js", () => ({
   FinanceNav: () => null,
 }));
@@ -79,6 +84,8 @@ const recorder: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
   role: "FINANCE",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
@@ -181,6 +188,19 @@ afterEach(() => {
 });
 
 describe("finance record form", () => {
+  // #458: the entries list's button and this panel name the action the same way.
+  it("is titled with the words of the button that opens it", async () => {
+    renderScreen();
+    expect(screen.getByRole("dialog", { name: "Record an entry" })).toBeTruthy();
+
+    await i18n.changeLanguage("fr-CM");
+    try {
+      expect(screen.getByRole("dialog", { name: "Saisir une écriture" })).toBeTruthy();
+    } finally {
+      await i18n.changeLanguage("en");
+    }
+  });
+
   it("blocks submission when the amount is invalid", async () => {
     const user = userEvent.setup();
     renderScreen();
@@ -250,11 +270,16 @@ describe("finance record form", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Transaction recorded and posted",
+        title: "Entry recorded and posted",
       }),
     );
     expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" });
-    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+    // No inline outcome panel: the only "Close" left is the panel's own ×.
+    expect(
+      screen
+        .queryAllByRole("button", { name: "Close" })
+        .every((button) => button.getAttribute("data-slot") === "sheet-close"),
+    ).toBe(true);
   });
 
   it("carries a server warning as a line on the same success toast", async () => {
@@ -279,10 +304,10 @@ describe("finance record form", () => {
     await waitFor(() =>
       expect(mocks.toastAdd).toHaveBeenCalledWith({
         type: "success",
-        title: "Transaction sent for approval",
+        title: "Entry sent for approval",
         description:
           "Missing evidence: this category requires supporting documentation or a photo.\n" +
-          "This transaction was posted to a previous accounting period.",
+          "This entry was posted to a previous accounting period.",
       }),
     );
   });
@@ -334,14 +359,43 @@ describe("finance record form", () => {
     expect(category.textContent).not.toContain("FUEL");
   });
 
-  it("aligns with the finance pages while keeping the fields readable", () => {
-    const { container } = renderScreen();
+  it("opens in the side panel over the Entries list (#296)", () => {
+    renderScreen();
 
-    // Wide container so the heading lines up with entries/approvals/periods…
-    expect(container.querySelector("section")?.className).toContain("max-w-6xl");
-    // …but the form itself stays in a narrow column.
-    const form = container.querySelector("form");
-    expect(form?.closest(".max-w-xl")).not.toBeNull();
+    expect(screen.getByTestId("entries-list")).toBeTruthy();
+    const panel = screen.getByRole("dialog", { name: "Record an entry" });
+    expect(panel.getAttribute("data-slot")).toBe("sheet-content");
+    expect(panel.className).toContain("sm:max-w-[440px]");
+  });
+
+  it("lands on Entries when the panel is closed", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" });
+  });
+
+  it("asks before dropping what was typed, and keeps the form on Keep editing", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "5000");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    const ask = await screen.findByRole("dialog", { name: "Discard this form?" });
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    const buttons = Array.from(ask.querySelectorAll("button")).map((button) => button.textContent);
+    // Submit last: the dismiss button keeps the form, the verb comes after it.
+    expect(buttons).toEqual(["Keep editing", "Discard"]);
+
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect((screen.getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toContain("5");
+    expect(mocks.navigate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(await screen.findByRole("button", { name: "Discard" }));
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" });
   });
 
   it("drops the finance tabs — it is an action page, not a section", () => {

@@ -1,19 +1,12 @@
-import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
-import { NOTE_BODY_MAX, type AddNotePayload } from "@routiq/contracts";
-import {
-  CommandForm,
-  useCommandSubmission,
-  type CommandFormBack,
-  type CommandSurface,
-} from "@/components/command-form.js";
-import { Label } from "@/components/ui/label";
+import { addNotePayload, NOTE_BODY_MAX } from "@routiq/contracts";
+import { CommandForm, type CommandFormBack, type CommandSurface } from "@/components/command-form.js";
+import { useCommandForm } from "@/components/use-command-form.js";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { PinnedAssetField } from "../../assets/PinnedAssetField.js";
-import { commandClient, type CommandClient } from "../../commands/instance.js";
-import { createCommandIntent, type CommandIntent } from "../../commands/intent.js";
-import { notifyCommandSuccess } from "../../lib/notify.js";
+import type { CommandClient } from "../../commands/instance.js";
 
 export interface AddNoteFormProps {
   surface: CommandSurface;
@@ -30,41 +23,16 @@ export interface AddNoteFormProps {
  * A remark on the vehicle's history. Notes are append-only: a correction is
  * another note, so the form says so rather than offering an edit later.
  */
-export function AddNoteForm({
-  surface,
-  assetId,
-  assetLabel,
-  client = commandClient,
-  back,
-  onDone,
-  onDismiss,
-}: AddNoteFormProps) {
+export function AddNoteForm({ surface, assetId, assetLabel, client, back, onDone, onDismiss }: AddNoteFormProps) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const submission = useCommandSubmission();
-  // Minted once per opening, so a retry replays this note instead of adding a second.
-  const noteId = useRef(crypto.randomUUID());
-  const intent = useRef<CommandIntent<AddNotePayload> | undefined>(undefined);
-  const [body, setBody] = useState("");
-  const trimmed = body.trim();
-  const ready = trimmed !== "" && trimmed.length <= NOTE_BODY_MAX;
-
-  async function submit() {
-    if (!ready) return;
-    const result = await submission.run(() => {
-      intent.current ??= createCommandIntent<AddNotePayload>(client, "add-note", 1);
-      return intent.current.submit({
-        noteId: noteId.current,
-        entityType: "asset",
-        entityId: assetId,
-        body: trimmed,
-      });
-    });
-    if (!result.ok) return;
-    notifyCommandSuccess("vehicle", "noteAdded", result.outcome.warnings);
-    onDone?.();
-    onDismiss();
-  }
+  const { form, formProps } = useCommandForm(addNotePayload, "add-note", 1, {
+    defaults: () => ({ noteId: crypto.randomUUID(), entityType: "asset" as const, entityId: assetId, body: "" }),
+    success: { namespace: "vehicle", message: "noteAdded" },
+    onDone,
+    onDismiss,
+    client,
+  });
 
   return (
     <CommandForm
@@ -72,26 +40,30 @@ export function AddNoteForm({
       title={label("add-note")}
       description={t("vehicle.forms.note.description")}
       back={back}
-      error={submission.error}
       informativeCodes={["ASSET_NOT_OPERATIONAL"]}
-      command="add-note"
-      ready={ready}
-      submitting={submission.submitting}
-      onSubmit={() => void submit()}
-      onDismiss={onDismiss}
+      {...formProps}
     >
       <PinnedAssetField assetId={assetId} label={assetLabel} />
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="vehicle-note-body">{t("vehicle.forms.note.label")}</Label>
-        <Textarea
-          id="vehicle-note-body"
-          rows={4}
-          maxLength={NOTE_BODY_MAX}
-          placeholder={t("vehicle.forms.note.placeholder")}
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
+      <Form {...form}>
+        <FormField
+          control={form.control}
+          name="body"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("vehicle.forms.note.label")}</FormLabel>
+              <FormControl>
+                <Textarea
+                  rows={4}
+                  maxLength={NOTE_BODY_MAX}
+                  placeholder={t("vehicle.forms.note.placeholder")}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
+      </Form>
     </CommandForm>
   );
 }

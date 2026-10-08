@@ -299,8 +299,22 @@
     {
       "idx": 42,
       "version": "7",
-      "when": 1791325271716,
-      "tag": "0042_change_issue_severity_rules",
+      "when": 1791309618120,
+      "tag": "0042_cancellation_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791326009734,
+      "tag": "0043_direction_note_acknowledgements",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791326609734,
+      "tag": "0044_change_issue_severity_rules",
       "breakpoints": true
     }
   ]

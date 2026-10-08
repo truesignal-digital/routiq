@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ChevronRight, CircleCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleCheck, Megaphone, TriangleAlert } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
@@ -115,6 +115,26 @@ function TodoCard({
   );
 }
 
+/**
+ * Direction's notes read as instructions, not faults (#98): a megaphone in
+ * place of the severity icon and an info-tinted row, so they stand apart from
+ * the workshop and money items around them.
+ */
+const isDirectionNote = (todo: Todo) => todo.item.code === "DIRECTION_NOTE";
+
+function TodoIcon({ todo, className }: { todo: Todo; className: string }) {
+  const { t } = useTranslation();
+  return isDirectionNote(todo) ? (
+    <Megaphone
+      className={cn("size-4 shrink-0 text-info-foreground", className)}
+      role="img"
+      aria-label={t("vehicle.attention.DIRECTION_NOTE.badge")}
+    />
+  ) : (
+    <SeverityIcon severity={todo.item.severity} className={className} />
+  );
+}
+
 /** Whether To do is open is a device preference; storage throws in private-mode browsers. */
 const TODO_STORAGE_KEY = "routiq-vehicle-todo";
 
@@ -152,8 +172,13 @@ function TodoRow({ todo }: { todo: Todo }) {
   const Icon = STEP_ICONS[step.step.key];
 
   return (
-    <li className="flex items-start gap-3 px-4 py-3.5">
-      <SeverityIcon severity={item.severity} className="mt-1" />
+    <li
+      className={cn(
+        "flex items-start gap-3 px-4 py-3.5",
+        isDirectionNote(todo) && "border-l-2 border-info bg-info/10",
+      )}
+    >
+      <TodoIcon todo={todo} className="mt-1" />
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4">
         <div className="min-w-0 flex-1">
           {record !== null ? (
@@ -223,7 +248,7 @@ function WaitingRow({ todo }: { todo: Todo }) {
   const text = attentionText(todo.item, t, i18n.language);
   const body = (
     <>
-      <SeverityIcon severity={todo.item.severity} className="mt-0.5" />
+      <TodoIcon todo={todo} className="mt-0.5" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm leading-snug font-medium">{text.title}</span>
         <span className="mt-0.5 block text-xs text-muted-foreground">{text.detail}</span>
@@ -241,7 +266,10 @@ function WaitingRow({ todo }: { todo: Todo }) {
         <button
           type="button"
           onClick={() => panel.openRecord(record)}
-          className="flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50"
+          className={cn(
+            "flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50",
+            isDirectionNote(todo) && "border-l-2 border-info bg-info/10",
+          )}
         >
           {body}
         </button>

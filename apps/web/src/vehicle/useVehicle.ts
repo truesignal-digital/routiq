@@ -8,6 +8,7 @@ import type {
   HistoryEventDiff,
   HistoryListResponse,
   IssueDetail,
+  NoteDetail,
   VehicleHistoryKind,
   VehicleHistoryResponse,
 } from "@routiq/contracts";
@@ -139,39 +140,18 @@ export function useIssue(issueId: string, enabled = true) {
   });
 }
 
-export interface VehicleNote {
-  body: string;
-  occurredAt: string;
-  actor: HistoryListResponse["items"][number]["actor"];
-}
-
 /**
- * A note is never edited, so its first event carries all of it: who and when
- * from the timeline, the body from that event's allowlisted state.
+ * One note with its author's role and, for a note from Direction, who said
+ * they saw it (#98). Under the vehicle's prefix, so an acknowledgement's
+ * refresh reaches it with the To-do.
  */
-export function useNote(noteId: string) {
+export function useNote(assetId: string, noteId: string) {
   const session = useActiveSession();
-  return useQuery<VehicleNote | null>({
-    queryKey: ["ws", session?.workspaceSlug, "notes", noteId],
+  return useQuery<NoteDetail>({
+    queryKey: [...vehicleQueryKey(session?.workspaceSlug, assetId), "notes", noteId],
     retry: retryUnlessNotFound,
     enabled: session !== undefined,
-    queryFn: async ({ signal }) => {
-      const timeline = await getJson<HistoryListResponse>(`/v1/history/note/${noteId}`, signal, "NOTE");
-      const added = timeline.items[timeline.items.length - 1];
-      if (added === undefined) return null;
-      const diff = await getJson<HistoryEventDiff>(
-        `/v1/history/note/${noteId}/${added.eventId}`,
-        signal,
-        "NOTE",
-      );
-      const change = diff.changes.find((item) => item.field === "body");
-      const body = change?.kind === "VALUE" ? change.after : null;
-      return {
-        body: typeof body === "string" ? body : "",
-        occurredAt: added.occurredAt,
-        actor: added.actor,
-      };
-    },
+    queryFn: ({ signal }) => getJson(`/v1/notes/${noteId}`, signal, "NOTE"),
   });
 }
 

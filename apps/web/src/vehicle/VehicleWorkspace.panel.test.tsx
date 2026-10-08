@@ -15,6 +15,8 @@ import {
   grounded,
   groundingWorkOrder,
   issueDetail,
+  NOTE_ID,
+  noteDetail,
   workOrderDetail,
   workOrderRow,
 } from "./test/fixtures.js";
@@ -62,6 +64,15 @@ it("opens a record from the URL and keeps it across a reload", async () => {
   cleanup();
   await openVehicle(path, scenario);
   expect(await screen.findByRole("dialog", { name: "Brake repair: replace pads and air valve" })).toBeTruthy();
+});
+
+it.each([
+  ["work order", `panel=work_order:${WORK_ORDER_ID}`, /Brake repair/],
+  ["problem", `panel=issue:${ISSUE_ID}`, /Kekem/],
+] as const)("offers the same History button on the %s panel (#308)", async (_kind, panelParam, name) => {
+  await openVehicle(`/assets/${ASSET_ID}/maintenance?${panelParam}`, scenario);
+  const panel = await screen.findByRole("dialog", { name });
+  expect(within(panel).getByRole("button", { name: "History" })).toBeTruthy();
 });
 
 it("follows a reference by pushing history, so Back returns to the record", async () => {
@@ -305,6 +316,8 @@ describe("a problem reported before it was recorded (#396)", () => {
         eventId: "00000000-0000-4000-8000-0000000000c3",
         kind: "operational_issue.reported",
         occurredAt: "2026-09-22T09:24:00.000Z",
+        note: null,
+        noteCode: null,
         actor: actor(OTHER_ID, "Sali"),
       },
     ],
@@ -489,5 +502,109 @@ describe("the safety-critical mark on a problem (#96)", () => {
     });
     const driverPanel = await screen.findByRole("dialog", { name: /Kekem/ });
     expect(within(driverPanel).queryByRole("button", { name: "Remove the safety-critical mark" })).toBeNull();
+  });
+});
+
+describe("Cancel entry from the vehicle panel (#426)", () => {
+  const posted = () =>
+    entryDetail({
+      status: "POSTED",
+      evidence: { state: "SUPPLIED", artifactCount: 1 },
+      rowVersion: 2,
+    });
+
+  it("cancels for wrong details, then records again pre-filled through record-expense", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FINANCE",
+      entryDetails: [posted()],
+    });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+    await user.click(within(panel).getByRole("button", { name: "Cancel entry" }));
+
+    const form = await screen.findByRole("dialog", { name: "Cancel entry" });
+    await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
+    await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.name).toBe("reverse-entry");
+    expect(recorded.commands[0]?.body.version).toBe(2);
+    expect(recorded.commands[0]?.body.payload).toEqual({
+      reversalEntryId: expect.any(String),
+      originalEntryId: ENTRY_ID,
+      reasonCode: "WRONG_DETAILS",
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Record again" }));
+    const again = await screen.findByRole("dialog", { name: "Record expense" });
+    const amount = within(again).getByLabelText("Amount (FCFA)") as HTMLInputElement;
+    expect(amount.value).toMatch(/^310\s?000$/);
+    await user.clear(amount);
+    await user.type(amount, "300000");
+    await user.click(within(again).getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(2));
+    expect(recorded.commands[1]?.name).toBe("record-expense");
+    expect(recorded.commands[1]?.body.payload).toMatchObject({ amountMinor: 300_000 });
+    expect(recorded.commands[1]?.body.payload).not.toMatchObject({ entryId: ENTRY_ID });
+  });
+
+  it("shows a cancelled entry's reason in words", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FINANCE",
+      entryDetails: [
+        entryDetail({
+          status: "REVERSED",
+          cancellation: { reasonCode: "OTHER", reasonText: "Carte carburant remboursée" },
+        }),
+      ],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+    expect(within(panel).getByText("Carte carburant remboursée")).toBeTruthy();
+    expect(within(panel).getByText("Cancelled")).toBeTruthy();
+  });
+});
+
+describe("a note from Direction on its record (#98)", () => {
+  const path = `/assets/${ASSET_ID}/history?panel=note:${NOTE_ID}`;
+
+  it("offers Mark as seen to anyone but its author", async () => {
+    const recorded = await openVehicle(path, { role: "TECHNICIAN", notes: [noteDetail()] });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
+    expect(within(panel).getByText("Note from Direction")).toBeTruthy();
+    expect(within(panel).getByText(/Nobody has marked it as seen yet/)).toBeTruthy();
+    await user.click(within(panel).getByRole("button", { name: "Mark as seen" }));
+    const form = await screen.findByRole("dialog", { name: "Mark as seen" });
+    await user.click(within(form).getByRole("button", { name: "Mark as seen" }));
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.body.payload).toEqual({ noteId: NOTE_ID });
+  });
+
+  it("offers nothing to its author", async () => {
+    await openVehicle(path, { role: "DIRECTOR", notes: [noteDetail({ author: actor(ME_ID, "Émilienne") })] });
+    const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
+    expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
+  });
+
+  it.each([
+    ["en", "Seen by Boris on "],
+    ["fr-CM", "Vu par Boris le "],
+  ] as const)("says who saw it once acknowledged (%s)", async (locale, seen) => {
+    await openVehicle(path, {
+      role: "DRIVER",
+      locale,
+      notes: [noteDetail({ acknowledgement: { by: actor(OTHER_ID, "Boris"), at: "2026-09-24T09:00:00.000Z" } })],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Émilienne/ });
+    expect(within(panel).getByText((text) => text.startsWith(seen))).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: /seen|vu/i })).toBeNull();
+  });
+
+  it("offers nothing on a note that is not Direction's", async () => {
+    await openVehicle(path, { role: "DRIVER", notes: [noteDetail({ authorRole: "ADMIN" })] });
+    const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
+    expect(within(panel).queryByText("Note from Direction")).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
   });
 });

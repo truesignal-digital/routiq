@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   CircleCheck,
   CircleSlash,
@@ -13,6 +14,7 @@ import type { IssueListItem, IssueStatus, WorkOrderStatus } from "@routiq/contra
 import { issueStatuses, workOrderStatuses } from "@routiq/contracts";
 import { DataTable, type DataTableRowAction } from "@/components/data-table";
 import { FilterChips } from "@/components/filter-chips";
+import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -43,7 +45,11 @@ import {
   canResolveIssues,
   canViewMaintenance,
 } from "@/maintenance/permissions.js";
-import { useIssues, useWorkOrders } from "@/maintenance/useMaintenance.js";
+import {
+  useIssues,
+  useMaintenanceSummary,
+  useWorkOrders,
+} from "@/maintenance/useMaintenance.js";
 import { WorkOrderSheet } from "@/maintenance/WorkOrderSheet.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 
@@ -106,8 +112,32 @@ export function MaintenanceScreen() {
   const canRaise = canRaiseIssueSeverity(me?.role, me?.enabledModules);
   const canLower = canLowerIssueSeverity(me?.role, me?.enabledModules);
 
-  const [status, setStatus] = useState<WorkOrderFilter>("ALL");
-  const [issueStatus, setIssueStatus] = useState<IssueFilter>("ALL");
+  // Tab and status filters live in the URL, where the overview tiles put them
+  // (#302), so a tile's view is a link that survives reload and back.
+  const navigate = useNavigate();
+  const urlSearch = useSearch({ from: "/app/maintenance" });
+  const tab = urlSearch.tab ?? "work-orders";
+  const status: WorkOrderFilter = urlSearch.status ?? "ALL";
+  const issueStatus: IssueFilter = urlSearch.issueStatus ?? "ALL";
+  const setView = (next: {
+    tab?: "work-orders" | "issues";
+    status?: WorkOrderFilter;
+    issueStatus?: IssueFilter;
+  }) => {
+    const merged = { tab, status, issueStatus, ...next };
+    void navigate({
+      to: "/maintenance",
+      replace: true,
+      search: {
+        tab: merged.tab === "work-orders" ? undefined : merged.tab,
+        status: merged.status === "ALL" ? undefined : merged.status,
+        issueStatus: merged.issueStatus === "ALL" ? undefined : merged.issueStatus,
+      },
+    });
+  };
+  const setStatus = (next: WorkOrderFilter) => setView({ status: next });
+  const setIssueStatus = (next: IssueFilter) => setView({ issueStatus: next });
+  const summaryQuery = useMaintenanceSummary();
   const [dialog, setDialog] = useState<MaintenanceDialog>({ kind: "none" });
 
   // `/v1/work-orders` and `/v1/issues` do the filtering; narrowing the loaded
@@ -126,6 +156,62 @@ export function MaintenanceScreen() {
   const workOrders = workOrdersQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const issueRows = issuesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const issues = allIssuesQuery.data?.pages.flatMap((page) => page.items) ?? [];
+
+  const tiles = useMemo<MetricTiles>(() => {
+    const counts = summaryQuery.data;
+    const onNewProblems = tab === "issues" && issueStatus === "OPEN";
+    const onInProgress = tab === "work-orders" && status === "APPROVED";
+    const days =
+      counts?.averageRepairDays == null
+        ? null
+        : t("maintenance.metrics.repairDaysValue", {
+            days: counts.averageRepairDays,
+          });
+    return [
+      {
+        label: t("maintenance.metrics.newProblems"),
+        value: counts === undefined ? null : String(counts.openIssues),
+        tone: (counts?.openSafetyCritical ?? 0) > 0 ? "warning" : "neutral",
+        hint: t("maintenance.metrics.newProblemsHint", {
+          count: counts?.openSafetyCritical ?? 0,
+        }),
+        selected: onNewProblems,
+        onSelect: () =>
+          setView(
+            onNewProblems
+              ? { issueStatus: "ALL" }
+              : { tab: "issues", issueStatus: "OPEN" },
+          ),
+      },
+      {
+        label: t("maintenance.metrics.grounded"),
+        value: counts === undefined ? null : String(counts.grounded),
+        tone: (counts?.grounded ?? 0) > 0 ? "warning" : "neutral",
+        hint: t("maintenance.metrics.groundedHint"),
+      },
+      {
+        label: t("maintenance.metrics.inProgress"),
+        value: counts === undefined ? null : String(counts.approvedWorkOrders),
+        hint: t("maintenance.metrics.inProgressHint"),
+        selected: onInProgress,
+        onSelect: () =>
+          setView(
+            onInProgress
+              ? { status: "ALL" }
+              : { tab: "work-orders", status: "APPROVED" },
+          ),
+      },
+      {
+        label: t("maintenance.metrics.repairDays"),
+        value: counts === undefined ? null : days,
+        hint: t("maintenance.metrics.repairDaysHint", {
+          count: counts?.repairsCounted ?? 0,
+          window: counts?.repairWindowDays ?? 90,
+        }),
+      },
+    ];
+    // setView closes over navigate and the URL state listed here.
+  }, [summaryQuery.data, t, tab, status, issueStatus]);
 
   const dismiss = () => setDialog({ kind: "none" });
 
@@ -217,7 +303,24 @@ export function MaintenanceScreen() {
         }
       />
 
-      <Tabs defaultValue="work-orders" className="mt-6">
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+        {t("maintenance.subtitle")}
+      </p>
+
+      <MetricStrip
+        className="mt-6"
+        tiles={tiles}
+        isPending={summaryQuery.isPending}
+        isError={summaryQuery.isError}
+      />
+
+      <Tabs
+        value={tab}
+        onValueChange={(value) =>
+          setView({ tab: value === "issues" ? "issues" : "work-orders" })
+        }
+        className="mt-6"
+      >
         <TabsList>
           <TabsTrigger value="work-orders">{t("maintenance.workOrders.tab")}</TabsTrigger>
           <TabsTrigger value="issues">{t("maintenance.issues.tab")}</TabsTrigger>

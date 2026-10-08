@@ -175,6 +175,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [REGISTRY, file("apps/web/src/components/page.tsx", ""), file("apps/web/src/components/page.test.tsx", "")],
   },
   {
+    id: "H17",
+    bad: [
+      file("apps/web/src/vehicle/forms/LogFuelForm.tsx", "export function LogFuelForm() {}"),
+      file("apps/web/src/vehicle/forms/LogFuelForm.test.tsx", 'import { render } from "@testing-library/react";'),
+      file("apps/web/src/members/AddMemberDialog.tsx", "export function AddMemberDialog() {}"),
+      file("apps/web/src/finance/EntryDecisionForms.tsx", "export function RejectEntryForm() {}"),
+    ],
+    good: [
+      file("apps/web/src/vehicle/forms/AddNoteForm.tsx", "export function AddNoteForm() {}"),
+      file("apps/web/src/vehicle/forms/AddNoteForm.test.tsx", 'import { describeCommandForm } from "../../test/form-harness.js";'),
+      file("apps/web/src/components/command-form.tsx", "export function CommandForm() {}"),
+      file("apps/web/src/vehicle/forms/useFormDraft.ts", ""),
+    ],
+  },
+  {
     id: "G1",
     bad: [file("apps/web/src/x.ts", "queryClient.setQueryData(key, next);")],
     good: [file("apps/web/src/x.ts", "queryClient.invalidateQueries({ queryKey: key });")],
@@ -259,6 +274,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
       file("apps/web/src/lib/format.ts", 'new Intl.NumberFormat(locale, { signDisplay: "exceptZero" })'),
       file("apps/web/src/finance/entryColumns.tsx", 'formatMoney(minor, { sign: { context: "ledger", direction } })'),
       file("packages/domain/src/money.ts", "export function formatXAF(minor: MoneyMinor) {}"),
+    ],
+  },
+  {
+    id: "H18",
+    // From Maintenance, Report a problem was a centred dialog; from the truck, a panel.
+    bad: [
+      file("apps/web/src/maintenance/MaintenanceDialogs.tsx", 'export function ReportIssueDialog(props: DialogHost) {\n  return <ReportIssueForm surface="dialog" {...props} />;\n}'),
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<RecordEntryForm\n  surface="dialog"\n  editing={entry}\n/>'),
+      file("apps/web/src/activities/ActivityActions.tsx", 'function LegForm() {\n  const common = { surface: "dialog" as const };\n}'),
+    ],
+    good: [
+      file("apps/web/src/maintenance/MaintenanceDialogs.tsx", 'export function ReportIssueDialog(props: DialogHost) {\n  return <ReportIssueForm surface="sheet" {...props} />;\n}'),
+      file("apps/web/src/screens/FinanceApprovalsScreen.tsx", '<RejectEntryForm\n  surface="dialog"\n  entry={entry}\n/>'),
+      file("apps/web/src/activities/ActivityActions.tsx", 'function CloseTripDialog() {\n  return <ActivityForm\n    surface="dialog"\n  />;\n}'),
+      file("apps/web/src/components/command-form.tsx", '| { surface: "dialog" | "sheet" | "panel"; title: ReactNode }'),
     ],
   },
   {

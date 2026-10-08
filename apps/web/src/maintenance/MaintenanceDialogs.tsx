@@ -809,6 +809,7 @@ export function CompleteWorkOrderForm({
         {...chrome}
         title={label("complete-work-order")}
         description={t("maintenance.close.hint")}
+        width="line-items"
         error={submission.error}
         command="complete-work-order"
         ready={ready}
@@ -1310,7 +1311,8 @@ export function ReleaseForm({
   );
 }
 
-// The /maintenance screen opens each form as a dialog.
+// The /maintenance screen opens the forms that record a fact in the side
+// panel, as the vehicle does, and keeps the dialog for decisions.
 
 interface DialogHost {
   client?: CommandClient;
@@ -1318,7 +1320,7 @@ interface DialogHost {
 }
 
 export function ReportIssueDialog(props: DialogHost) {
-  return <ReportIssueForm surface="dialog" {...props} />;
+  return <ReportIssueForm surface="sheet" {...props} />;
 }
 
 export function CreateWorkOrderDialog({
@@ -1328,11 +1330,11 @@ export function CreateWorkOrderDialog({
   issue?: IssueListItem | undefined;
   issues: readonly IssueListItem[];
 }) {
-  return <CreateWorkOrderForm surface="dialog" issues={issues} {...props} />;
+  return <CreateWorkOrderForm surface="sheet" issues={issues} {...props} />;
 }
 
 export function CompleteWorkOrderDialog(props: DialogHost & { workOrder: WorkOrderRef }) {
-  return <CompleteWorkOrderForm surface="dialog" {...props} />;
+  return <CompleteWorkOrderForm surface="sheet" {...props} />;
 }
 
 export function CancelWorkOrderDialog(props: DialogHost & { workOrder: WorkOrderRef }) {

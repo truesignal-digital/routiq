@@ -531,6 +531,23 @@ describe("work order and signalement reads", () => {
       }
     });
 
+    it("carries the note each decision command wrote (#308)", async () => {
+      const body = workOrderDetail.parse((await detail(lifecycleWorkOrderId)).json());
+      expect(body.chronologie.map((event) => [event.kind, event.note])).toEqual([
+        ["work_order.submitted", null],
+        ["work_order.approved", "Devis validé"],
+        ["work_order.completion_submitted", null],
+        ["work_order.completion_approved", "Facture conforme"],
+        ["work_order.asset_released", "Essai routier concluant"],
+      ]);
+
+      const cancelled = workOrderDetail.parse((await detail(cancelledWorkOrderId)).json());
+      expect(cancelled.chronologie.at(-1)).toMatchObject({
+        kind: "work_order.cancelled",
+        note: "Reporté à la prochaine immobilisation",
+      });
+    });
+
     it("carries the completion summary and the header the list already shows", async () => {
       const body = workOrderDetail.parse((await detail(lifecycleWorkOrderId)).json());
       expect(body).toMatchObject({
@@ -963,6 +980,8 @@ describe("work order makers and the issue detail read", () => {
       "operational_issue.reported",
       "operational_issue.resolved",
     ]);
+    // The resolution note sits on its event, as on the record history (#308).
+    expect(body.chronologie.map((event) => event.note)).toEqual([null, "Refixé sur place"]);
   });
 
   it("answers 404 across branches and workspaces, 403 with the module off", async () => {

@@ -3,6 +3,7 @@ import {
   CircleCheck,
   CircleX,
   ClipboardX,
+  Eye,
   Pencil,
   ReceiptText,
   ShieldAlert,
@@ -31,6 +32,7 @@ export const STEP_ICONS: Record<StepKey, LucideIcon> = {
   "reject-entry": CircleX,
   "edit-entry": Pencil,
   "add-cost": ReceiptText,
+  "acknowledge-note": Eye,
 };
 
 /**
@@ -69,6 +71,7 @@ export const STEP_COMMANDS: Record<Exclude<StepKey, "review-entry">, CommandLabe
   "reject-entry": "reject-entry",
   "edit-entry": "update-pending-entry",
   "add-cost": "record-expense",
+  "acknowledge-note": "acknowledge-note",
 };
 
 /** Steps that refuse or cancel: their buttons take the destructive variant. */
