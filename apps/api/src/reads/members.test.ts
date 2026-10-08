@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { credentials } from "../db/schema.js";
+import { branches, credentials } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 
@@ -32,7 +32,7 @@ describe("GET /v1/members", () => {
 
     const admin = await seedMember(ctx.db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminToken = (
@@ -41,7 +41,7 @@ describe("GET /v1/members", () => {
 
     const ops = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "CASHIER",
       allBranches: true,
     });
     opsToken = (
@@ -67,7 +67,7 @@ describe("GET /v1/members", () => {
       url: "/v1/commands/add-member",
       headers: { authorization: `Bearer ${adminToken}` },
       payload: {
-        version: 1,
+        version: 2,
         envelope: {
           commandId: randomUUID(),
           idempotencyKey: `idem-${randomUUID()}`,
@@ -88,7 +88,7 @@ describe("GET /v1/members", () => {
           displayName: "Aïcha Moussa",
           username,
           pin: "4821",
-          role: "MAINTENANCE",
+          role: "TECHNICIAN",
           branchScope: [branchId],
         })
       ).statusCode,
@@ -102,7 +102,7 @@ describe("GET /v1/members", () => {
     expect(row).toMatchObject({
       displayName: "Aïcha Moussa",
       username,
-      role: "MAINTENANCE",
+      role: "TECHNICIAN",
       branchScope: [branchId],
       status: "ACTIVE",
       rowVersion: 1,
@@ -113,7 +113,7 @@ describe("GET /v1/members", () => {
   it("shows a member who holds no credential with a null username", async () => {
     const bare = await seedMember(ctx.db, {
       workspaceId,
-      role: "EXECUTIVE_VIEWER",
+      role: "FINANCE",
       allBranches: true,
     });
 
@@ -131,7 +131,7 @@ describe("GET /v1/members", () => {
           displayName: "Verrouillé",
           username: `locked-${randomUUID().slice(0, 8)}`,
           pin: "4821",
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           branchScope: "ALL",
         })
       ).statusCode,
@@ -171,7 +171,7 @@ describe("GET /v1/members", () => {
           displayName: "Parti",
           username: `gone-${randomUUID().slice(0, 8)}`,
           pin: "4821",
-          role: "FIELD_SUBMITTER",
+          role: "DRIVER",
           branchScope: "ALL",
         })
       ).statusCode,
@@ -225,7 +225,48 @@ describe("GET /v1/members", () => {
     expect(resorted.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
   });
 
-  it("is ADMIN-only", async () => {
+  /**
+   * #260: an ADMIN reads the members of their own branches, the same members
+   * the member commands let them reach; DIRECTOR reads everyone.
+   */
+  it("shows an ADMIN only the members inside their own branches", async () => {
+    const arena = await seedWorkspace(ctx.db, `ws-read-scope-${randomUUID().slice(0, 8)}`);
+    const wsId = arena.workspace.id;
+    const dla = arena.branch.id;
+    const [second] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId: wsId, code: "YDE", name: "Yaoundé" })
+      .returning();
+    const yde = second!.id;
+
+    const member = (role: "DIRECTOR" | "ADMIN" | "FINANCE" | "DRIVER", scope: "ALL" | string[]) =>
+      seedMember(ctx.db, {
+        workspaceId: wsId,
+        role,
+        allBranches: scope === "ALL",
+        ...(scope === "ALL" ? {} : { branchIds: scope }),
+      });
+    const director = await member("DIRECTOR", "ALL");
+    const adminDla = await member("ADMIN", [dla]);
+    const driverDla = await member("DRIVER", [dla]);
+    await member("DRIVER", [yde]);
+    await member("DRIVER", [dla, yde]);
+    await member("FINANCE", "ALL");
+
+    const tokenOf = async (principalId: string) =>
+      (await createSession(ctx.db, { workspaceId: wsId, principalId })).token;
+
+    const asAdmin = await list("?limit=100", await tokenOf(adminDla.principal.id));
+    expect(asAdmin.statusCode).toBe(200);
+    expect(
+      (asAdmin.json() as { items: MemberRow[] }).items.map((item) => item.principalId).sort(),
+    ).toEqual([adminDla.principal.id, driverDla.principal.id].sort());
+
+    const asDirector = await list("?limit=100", await tokenOf(director.principal.id));
+    expect((asDirector.json() as { items: MemberRow[] }).items).toHaveLength(6);
+  });
+
+  it("is for DIRECTOR and ADMIN only", async () => {
     const response = await list("", opsToken);
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });

@@ -21,8 +21,6 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children?: ReactNode }) => children,
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({ FinanceNav: () => null }));
-
 const pendingQuery = {
   data: undefined,
   isPending: true,
@@ -51,8 +49,6 @@ vi.mock("../documents/useDocuments.js", () => ({
   useAssetDocuments: () => pendingQuery,
 }));
 
-const { AssetDocumentsScreen } = await import("../screens/AssetDocumentsScreen.js");
-const { FinanceApprovalsScreen } = await import("../screens/FinanceApprovalsScreen.js");
 const { FinanceEntriesScreen } = await import("../screens/FinanceEntriesScreen.js");
 const { FinancePeriodsScreen } = await import("../screens/FinancePeriodsScreen.js");
 const { FinanceRecordScreen } = await import("../screens/FinanceRecordScreen.js");
@@ -60,15 +56,13 @@ const { FinanceRecordScreen } = await import("../screens/FinanceRecordScreen.js"
 const SCREENS = [
   ["record", FinanceRecordScreen],
   ["entries", FinanceEntriesScreen],
-  ["approvals", FinanceApprovalsScreen],
   ["periods", FinancePeriodsScreen],
-  ["documents", AssetDocumentsScreen],
 ] as const;
 
 /** Every screen a role can be shut out of, minus the two role-gated finance ones. */
 const MODULE_GATED = SCREENS;
 const ROLE_GATED = SCREENS.filter(([name]) =>
-  name === "approvals" || name === "periods",
+  name === "periods",
 );
 
 function me(overrides: Partial<MeContext>): MeContext {
@@ -77,7 +71,9 @@ function me(overrides: Partial<MeContext>): MeContext {
     principalId: "00000000-0000-4000-8000-000000000002",
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-000000000003",
-    role: "EXECUTIVE_VIEWER",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
+    role: "CASHIER",
     branchScope: "ALL",
     enabledModules: [],
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
@@ -135,7 +131,7 @@ describe("permission denied surface", () => {
     for (const [name, Screen] of ROLE_GATED) {
       renderScreen(
         Screen,
-        me({ role: "FIELD_SUBMITTER", enabledModules: ["CORE", "FINANCE"] }),
+        me({ role: "DRIVER", enabledModules: ["CORE", "FINANCE"] }),
       );
       expect(deniedSurface()?.message, name).toBe(
         "Your role does not allow this action.",

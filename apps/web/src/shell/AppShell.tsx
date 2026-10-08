@@ -3,11 +3,15 @@ import { Outlet } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toast.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ApprovalRulesNotice } from "../approval-rules/ApprovalRulesNotice.js";
+import { useRecheckApprovalChainOnNavigation } from "../approval-rules/useApprovalChain.js";
 import { MeCtx, useMe } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overlay.js";
 import { AppSidebar } from "./AppSidebar.js";
+import { BottomBar } from "./BottomBar.js";
 import { BranchProvider, useCurrentBranch } from "./branch-context.js";
+import { RecordCrumbProvider } from "./record-crumb.js";
 import { SiteHeader } from "./SiteHeader.js";
 
 /**
@@ -26,6 +30,7 @@ function BranchScopeAnnouncer() {
 
 export function AppShell() {
   const me = useMe();
+  useRecheckApprovalChainOnNavigation();
   const preset = presetVocabularyFor(me.data?.enabledPresets);
 
   // The overlay mutates a shared store, so it is cleared on unmount: logging
@@ -43,12 +48,18 @@ export function AppShell() {
         <TooltipProvider>
           <SidebarProvider>
             <AppSidebar />
-            <SidebarInset>
-              <SiteHeader />
-              <BranchScopeAnnouncer />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <Outlet />
-              </div>
+            {/* A flex item beside the sidebar: without min-w-0 a wide table's
+                min-content width widens the whole page (#450). */}
+            <SidebarInset className="min-w-0 [--bottom-bar:calc(4rem+env(safe-area-inset-bottom))] md:[--bottom-bar:0px]">
+              <RecordCrumbProvider>
+                <SiteHeader />
+                <BranchScopeAnnouncer />
+                <ApprovalRulesNotice />
+                <div className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
+                  <Outlet />
+                </div>
+                <BottomBar />
+              </RecordCrumbProvider>
             </SidebarInset>
           </SidebarProvider>
         </TooltipProvider>

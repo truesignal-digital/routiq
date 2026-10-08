@@ -1,32 +1,36 @@
 import { and, asc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { assetDocumentsReadResponse } from "@routiq/contracts";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { assetDocumentsReadResponse, DOCUMENT_READER_ROLES } from "@routiq/contracts";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
+import { defineRead } from "./define-read.js";
 import { assets, categories, documents } from "../db/schema.js";
+import { commandArtifacts } from "./record-artifacts.js";
 
-/** Documents of one asset, with type labels and the superseding back-link. */
+/**
+ * Documents of one asset, with type labels and the superseding back-link. The
+ * counter does not see vehicle documents (ADR-0009).
+ */
 export function registerDocumentReadRoutes(
   app: FastifyInstance,
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/assets/:assetId/documents",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/:assetId/documents", module: "DOCUMENTS", roles: DOCUMENT_READER_ROLES, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z.object({ assetId: z.uuid() }).safeParse(req.params);
         if (!parsedParams.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { assetId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const [asset] = await tx
             .select({ id: assets.id, branchId: assets.branchId })
             .from(assets)
@@ -52,6 +56,7 @@ export function registerDocumentReadRoutes(
               supersedesDocumentId: documents.supersedesDocumentId,
               supersededByDocumentId: superseding.id,
               createdAt: documents.createdAt,
+              createdByCommandId: documents.createdByCommandId,
             })
             .from(documents)
             .leftJoin(
@@ -76,12 +81,19 @@ export function registerDocumentReadRoutes(
               ),
             )
             .orderBy(asc(documents.documentTypeCode), asc(documents.createdAt));
-          return { rows };
+          // A scan travels with the command that recorded the document, so the
+          // files are that command's links, never another row's.
+          const files = await commandArtifacts(
+            tx,
+            auth.workspaceId,
+            rows.map((row) => row.createdByCommandId),
+          );
+          return { rows, files };
         });
         if (!result) {
           return reply.status(404).send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
-        const { rows } = result;
+        const { rows, files } = result;
 
         return assetDocumentsReadResponse.parse({
           assetId,
@@ -99,6 +111,8 @@ export function registerDocumentReadRoutes(
             supersedesDocumentId: row.supersedesDocumentId,
             supersededByDocumentId: row.supersededByDocumentId,
             createdAt: row.createdAt.toISOString(),
+            artifactCount: files.get(row.createdByCommandId)?.length ?? 0,
+            artifacts: files.get(row.createdByCommandId) ?? [],
           })),
         });
       } catch (error) {

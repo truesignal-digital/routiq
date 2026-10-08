@@ -20,12 +20,13 @@ import {
   type AssetVersionedChanges,
 } from "./versioned-write.js";
 import { assetBranchIds } from "./branch-authorization.js";
+import { custodianIneligibility } from "./custodian-eligibility.js";
 
 export const commissionAsset: CommandDefinition<CommissionAssetPayload> = {
   name: "commission-asset",
   module: "ASSETS",
   version: 1,
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: commissionAssetPayload,
   branchAuthorization: {
     kind: "branches",
@@ -121,17 +122,17 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
   module: "ASSETS",
   version: 1,
   /**
-   * FINANCE_APPROVER is here for the cross-branch transfer alone. The seeded
+   * FINANCE is here for the cross-branch transfer alone. The seeded
    * CROSS_BRANCH rule names them as the approving role, and `allowedRoles` is
    * checked before approval is ever evaluated — so without this the rule was
    * unsatisfiable by every role in the workspace and a transfer between branches
    * could not be completed by anyone.
    *
    * It does not widen ordinary assignment: a same-branch move matches only the
-   * two wildcard rules (ADMIN, OPS_MANAGER), neither of which authorizes
-   * FINANCE_APPROVER, so they are answered APPROVAL_REQUIRED as before.
+   * wildcard rules (DIRECTOR, ADMIN), neither of which authorizes FINANCE,
+   * so it is answered APPROVAL_REQUIRED as before.
    */
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FINANCE_APPROVER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "FINANCE"],
   payloadSchema: assignAssetPayload,
   operationalAssetId: (payload) => payload.assetId,
   branchAuthorization: {
@@ -213,7 +214,10 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
       newBranchId = branch.id;
     }
 
-    if (payload.custodianMembershipId) {
+    // `null` clears the custodian; `undefined` leaves it alone.
+    if (payload.custodianMembershipId === null) {
+      newCustodianMembershipId = null;
+    } else if (payload.custodianMembershipId !== undefined) {
       const membership = await tx.query.memberships.findFirst({
         where: and(
           eq(memberships.workspaceId, ctx.workspaceId),
@@ -225,6 +229,17 @@ export const assignAsset: CommandDefinition<AssignAssetPayload> = {
         throw new CommandError(422, "REFERENCE_NOT_FOUND", {
           referenceType: "membership",
           referenceCode: payload.custodianMembershipId,
+        });
+      }
+
+      // Checked against the branch the vehicle lands in, so a transfer and a
+      // new custodian in one call cannot hand the truck to someone who can no
+      // longer see it.
+      const reason = custodianIneligibility(membership, newBranchId);
+      if (reason !== undefined) {
+        throw new CommandError(422, "CUSTODIAN_INELIGIBLE", {
+          reason,
+          membershipId: membership.id,
         });
       }
 

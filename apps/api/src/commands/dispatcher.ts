@@ -1,4 +1,5 @@
 import {
+  clientAuthorityKeyPaths,
   commandEnvelope,
   type CommandEnvelope,
   type CommandErrorCode,
@@ -102,8 +103,12 @@ export interface CommandExecuteResult {
  *      rejected APPROVAL_REQUIRED (registry.test.ts enforces this).
  *   4. New tables need explicit GRANTs to routiq_app in their migration
  *      (db/grants.test.ts enforces this).
+ *   5. A decision command (`approve-*`, `reject-*`) declares `maker`, and gets
+ *      a row in maker-checker.test.ts.
  * The dispatcher supplies auth, module check, idempotency, approval evaluation,
- * receipt, audit atomicity; execute() owns only references, invariants, writes.
+ * receipt, audit atomicity; execute() owns only references, invariants, writes,
+ * and at least one appendAuditEvent for its command id. A success without one
+ * is refused AUDIT_EVENT_MISSING and rolled back (#153), no-ops included.
  */
 export interface CommandDefinition<P> {
   scope?: "workspace";
@@ -111,6 +116,12 @@ export interface CommandDefinition<P> {
   version: number;
   module: ModuleCode;
   allowedRoles: readonly Role[];
+  /**
+   * Refuse every principal but a HUMAN, whatever its role. For decisions §5.1
+   * reserves to people outright — release to service is "never AI" — so an AI
+   * agent or integration granted an eligible role still cannot make them.
+   */
+  requiresHumanPrincipal?: true;
   payloadSchema: z.ZodType<P>;
   /**
    * Declares which asset the command writes operational records against. The
@@ -152,6 +163,14 @@ export interface CommandDefinition<P> {
    * so the seam has to cover input that never parsed.
    */
   redactPayload?(payload: unknown): unknown;
+  /**
+   * Required on a decision command (`approve-*`, `reject-*`; registerCommand
+   * enforces it): the member who made the record being decided, or undefined
+   * when the record does not exist. The dispatcher refuses that member
+   * MAKER_CANNOT_APPROVE before approval rules are read. Lock the record here
+   * (`FOR UPDATE`) so its maker cannot change before `execute` runs.
+   */
+  maker?(tx: Tx, ctx: CommandContext, payload: P): Promise<string | undefined>;
   /** Filter values approval rules may match on (branch, category, amount). May read via tx. */
   approvalContext?(tx: Tx, ctx: CommandContext, payload: P): Promise<ApprovalContext>;
   /**
@@ -186,14 +205,16 @@ export interface PlatformCommandDefinition<P> {
   version: number;
   payloadSchema: z.ZodType<P>;
   /**
-   * Creates the workspace the receipt is filed under, and nothing else.
+   * Returns the workspace the receipt is filed under: provisioning creates it
+   * here and nothing else; a command on an existing workspace (appoint-director)
+   * looks it up.
    *
    * The ordering is forced, not stylistic: `commands.workspace_id` is a real FK,
    * so the workspace must exist before the receipt — and every row `execute`
    * writes carries `created_by_command_id`, so the receipt must exist before
    * them. That leaves exactly one slot for the workspace insert, and it is here.
    */
-  createWorkspace(
+  resolveWorkspace(
     tx: Tx,
     ctx: OperatorContext,
     envelope: CommandEnvelope,
@@ -255,7 +276,15 @@ export function registerCommand<P>(def: CommandDefinition<P>): void {
   if (!def.branchAuthorization) {
     throw new Error(`command branch authorization missing: ${key}`);
   }
+  if (isDecisionCommand(def.name) && !def.maker) {
+    throw new Error(`decision command names no maker: ${key}`);
+  }
   registry.set(key, def as CommandDefinition<unknown>);
+}
+
+/** Nobody approves a record they submitted (ADR-0009): these commands must name its maker. */
+export function isDecisionCommand(name: string): boolean {
+  return /^(approve|reject)-/.test(name);
 }
 
 /** Separate entry point, so a platform command cannot be declared with tenant fields. */
@@ -296,6 +325,26 @@ export async function appendAuditEvent(
   event: AuditEventInput,
 ): Promise<void> {
   await writeAuditEvent(tx, "WORKSPACE", ctx.workspaceId, ctx.principalId, envelope, event);
+}
+
+/**
+ * A command that succeeds without changing anything (the end state was already
+ * the one asked for) still ran, and every committed command leaves an audit
+ * event (#153). The event is filed against the command itself, so the record's
+ * own history gains no line for a change that did not happen.
+ */
+export async function appendNoChangeAuditEvent(
+  tx: Tx,
+  ctx: CommandContext,
+  envelope: CommandEnvelope,
+  afterState: Record<string, unknown>,
+): Promise<void> {
+  await appendAuditEvent(tx, ctx, envelope, {
+    eventType: "command.no_change",
+    entityType: "command",
+    entityId: envelope.commandId,
+    afterState,
+  });
 }
 
 /** Same append-only trail, for an actor who is not a member of the workspace it lands in. */
@@ -355,6 +404,21 @@ export async function dispatchCommand(
   body: unknown,
   log?: CommandLog,
 ): Promise<{ status: number; body: CommandOutcome | ErrorBody }> {
+  const started = performance.now();
+  /**
+   * Workspace, actor and branch scope come from `ctx` alone (#152). A request
+   * that tries to name them, at any depth of its envelope or payload, is
+   * refused here, before any schema runs: an open schema would strip the key
+   * and carry on, and the caller would never learn its field was ignored.
+   */
+  const smuggled = clientAuthorityKeyPaths(body);
+  if (smuggled.length > 0) {
+    return commandErrorResponse(
+      new CommandError(400, "VALIDATION_FAILED", {
+        issues: smuggled.map((path) => ({ code: "unrecognized_keys", path })),
+      }),
+    );
+  }
   const outer = commandRequest.safeParse(body);
   if (!outer.success) {
     return commandErrorResponse(
@@ -403,7 +467,7 @@ export async function dispatchCommand(
           actorScope: "workspace",
         });
       }
-      return await dispatchPlatform(requirePlatformDb(db), ctx, definition, outer.data);
+      return await dispatchPlatform(requirePlatformDb(db), ctx, definition, outer.data, started);
     }
     if (isOperatorContext(ctx)) {
       throw new CommandError(403, "COMMAND_SCOPE_FORBIDDEN", {
@@ -416,6 +480,12 @@ export async function dispatchCommand(
 
     if (!definition.allowedRoles.includes(ctx.role)) {
       throw new CommandError(403, "ROLE_FORBIDDEN", { command });
+    }
+    if (definition.requiresHumanPrincipal && ctx.principalType !== "HUMAN") {
+      throw new CommandError(403, "HUMAN_PRINCIPAL_REQUIRED", {
+        command,
+        principalType: ctx.principalType,
+      });
     }
 
     const parsedPayload = definition.payloadSchema.safeParse(outer.data.payload);
@@ -499,6 +569,13 @@ export async function dispatchCommand(
           }
         }
 
+        if (definition.maker) {
+          const maker = await definition.maker(tx, ctx, parsedPayload.data);
+          if (maker !== undefined && maker === ctx.principalId) {
+            throw new CommandError(403, "MAKER_CANNOT_APPROVE");
+          }
+        }
+
         const approval = await evaluateApproval(
           tx,
           ctx,
@@ -539,6 +616,7 @@ export async function dispatchCommand(
           parsedPayload.data,
           approval,
         );
+        await requireAuditEvent(tx, "WORKSPACE", ctx.workspaceId, outer.data.envelope.commandId);
         const outcome: CommandOutcome = {
           commandId: outer.data.envelope.commandId,
           recordId: result.recordId,
@@ -549,7 +627,10 @@ export async function dispatchCommand(
           idempotentReplay: false,
         };
 
-        await tx.update(commands).set({ result: outcome }).where(eq(commands.id, outcome.commandId));
+        await tx
+          .update(commands)
+          .set({ result: outcome, durationMs: elapsedMs(started) })
+          .where(eq(commands.id, outcome.commandId));
 
         return { status: 200, body: outcome };
       });
@@ -577,9 +658,20 @@ export async function dispatchCommand(
       throw error;
     }
   } catch (error) {
+    // A server bug, not a business rejection: log it and send it to Sentry.
+    const reportFailure = (failure: unknown) => {
+      log?.error({ err: failure, event: "command.failed" });
+      reportUnexpectedFailure(failure, {
+        commandId: outer.data.envelope.commandId,
+        workspaceId: isOperatorContext(ctx) ? "" : ctx.workspaceId,
+        commandType: outer.data.name,
+        origin: outer.data.envelope.origin,
+      });
+    };
     let commandError: CommandError;
     if (error instanceof CommandError) {
       commandError = error;
+      if (error.code === "AUDIT_EVENT_MISSING") reportFailure(error);
     } else {
       const violation = uniqueViolation(error);
       if (violation) {
@@ -605,13 +697,7 @@ export async function dispatchCommand(
                 },
               );
       } else {
-        log?.error({ err: error, event: "command.failed" });
-        reportUnexpectedFailure(error, {
-          commandId: outer.data.envelope.commandId,
-          workspaceId: isOperatorContext(ctx) ? "" : ctx.workspaceId,
-          commandType: outer.data.name,
-          origin: outer.data.envelope.origin,
-        });
+        reportFailure(error);
         commandError = new CommandError(500, "COMMAND_FAILED");
       }
     }
@@ -625,6 +711,7 @@ export async function dispatchCommand(
         { ...outer.data, payload: receiptPayload, payloadHash: payloadFingerprint },
         commandError,
         log,
+        elapsedMs(started),
       );
     }
     return commandErrorResponse(commandError);
@@ -643,6 +730,7 @@ async function dispatchPlatform(
   ctx: OperatorContext,
   definition: PlatformCommandDefinition<unknown>,
   request: { name: string; version: number; envelope: CommandEnvelope; payload: unknown },
+  started: number,
 ): Promise<{ status: number; body: CommandOutcome | ErrorBody }> {
   const parsedPayload = definition.payloadSchema.safeParse(request.payload);
   if (!parsedPayload.success) {
@@ -690,7 +778,7 @@ async function dispatchPlatform(
         );
       }
 
-      const workspaceId = await definition.createWorkspace(
+      const workspaceId = await definition.resolveWorkspace(
         tx,
         ctx,
         request.envelope,
@@ -724,6 +812,7 @@ async function dispatchPlatform(
         parsedPayload.data,
         workspaceId,
       );
+      await requireAuditEvent(tx, "PLATFORM", workspaceId, request.envelope.commandId);
       const outcome: CommandOutcome = {
         commandId: request.envelope.commandId,
         recordId: result.recordId,
@@ -734,7 +823,10 @@ async function dispatchPlatform(
         idempotentReplay: false,
       };
 
-      await tx.update(commands).set({ result: outcome }).where(eq(commands.id, outcome.commandId));
+      await tx
+        .update(commands)
+        .set({ result: outcome, durationMs: elapsedMs(started) })
+        .where(eq(commands.id, outcome.commandId));
 
       return { status: 200, body: outcome };
     });
@@ -755,6 +847,34 @@ async function dispatchPlatform(
     }
     throw error;
   }
+}
+
+/**
+ * Receipt, business rows and audit event commit together (§5), and that must
+ * not depend on every handler remembering its `append*AuditEvent` call. Runs
+ * after `execute`, inside its transaction: a success that left no event for
+ * this command id, in this workspace and on this trail, throws, and the throw
+ * rolls back the receipt and everything `execute` wrote (#153). An event filed
+ * by another command, or on the other scope's trail, does not count.
+ */
+async function requireAuditEvent(
+  tx: Tx,
+  scope: "WORKSPACE" | "PLATFORM",
+  workspaceId: string,
+  commandId: string,
+): Promise<void> {
+  const [event] = await tx
+    .select({ id: auditEvents.id })
+    .from(auditEvents)
+    .where(
+      and(
+        eq(auditEvents.workspaceId, workspaceId),
+        eq(auditEvents.commandId, commandId),
+        eq(auditEvents.scope, scope),
+      ),
+    )
+    .limit(1);
+  if (event === undefined) throw new CommandError(500, "AUDIT_EVENT_MISSING");
 }
 
 function isPlatformDb(db: Db | PlatformDb): db is PlatformDb {
@@ -794,7 +914,8 @@ async function recordFailureReceipt(
     payloadHash: string;
   },
   commandError: CommandError,
-  log?: CommandLog,
+  log: CommandLog | undefined,
+  durationMs: number,
 ): Promise<void> {
   try {
     await inWorkspace(db, ctx.workspaceId, async (tx) => {
@@ -815,11 +936,16 @@ async function recordFailureReceipt(
         payloadHash: request.payloadHash,
         result: null,
         failureCode: commandError.code,
+        durationMs,
       });
     });
   } catch (receiptError) {
     log?.error({ err: receiptError, event: "command.failure_receipt_failed" });
   }
+}
+
+function elapsedMs(started: number): number {
+  return Math.round(performance.now() - started);
 }
 
 /** §5.3 optimistic concurrency: mutations of existing rows must carry expectedVersion. */

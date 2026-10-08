@@ -1,258 +1,167 @@
+import type { Role } from "@routiq/contracts";
 import type { approvalRules, categories } from "../../db/schema.js";
 
-function defaultApprovalRules(): Array<
-  Omit<typeof approvalRules.$inferInsert, "workspaceId">
-> {
-  const rules: Array<Omit<typeof approvalRules.$inferInsert, "workspaceId">> = [
-    {
-      commandType: "register-asset",
+type ApprovalRuleDefault = Omit<typeof approvalRules.$inferInsert, "workspaceId">;
+
+/** The amount up to which a maker role's money record posts without review. */
+const RECORDING_BAND = 100_000n;
+
+/** The amount up to which Finance decides a pending entry; above it, Direction (owner, 2026-10-05). */
+const ENTRY_DECISION_BAND = 1_000_000n;
+
+/** Rules with no filter: each role runs the command at any amount, in any branch. */
+function wildcard(commandTypes: readonly string[], roles: readonly Role[]): ApprovalRuleDefault[] {
+  return commandTypes.flatMap((commandType) =>
+    roles.map((requiredRole) => ({
+      commandType,
       categoryCode: null,
       branchId: null,
       amountMinMinor: null,
       amountMaxMinor: null,
-      requiredRole: "ADMIN",
+      requiredRole,
       createdByCommandId: null,
-    },
+    })),
+  );
+}
+
+/** Rules bounded at `amountMaxMinor`: above it, the role's record waits for review. */
+function banded(
+  commandTypes: readonly string[],
+  roles: readonly Role[],
+  amountMaxMinor: bigint,
+): ApprovalRuleDefault[] {
+  return wildcard(commandTypes, roles).map((rule) => ({ ...rule, amountMaxMinor }));
+}
+
+/**
+ * Catalog approval defaults (§5.1). A role in a command's `allowedRoles` with
+ * no matching rule is answered APPROVAL_REQUIRED, so every allowed role has a
+ * row here and no other role does (`role-matrix.test.ts`).
+ *
+ * These are the pre-ADR-0009 defaults put through the role map (migration
+ * 0036 does the same to existing workspaces), plus: DIRECTOR on every rule
+ * shape, since Direction may approve anything; CASHIER on the money it records,
+ * inside the same band as a driver; FINANCE on documents. The decisions follow
+ * the ADR-0009 chain (migration 0037): work orders go to the branch's
+ * Administrateur, entries to Finance up to 1 000 000 XAF, and anything above
+ * it to Direction. The chain covers Finance's and the Administrateur's own
+ * entries too (#412, migration 0038): only Direction's post at any amount.
+ */
+function defaultApprovalRules(): ApprovalRuleDefault[] {
+  const DIRECTOR_ADMIN = ["DIRECTOR", "ADMIN"] as const;
+  return [
+    ...wildcard(
+      [
+        "register-asset",
+        "commission-asset",
+        "update-asset-details",
+        "release-asset-to-service",
+        "register-person",
+        "reopen-activity",
+        "assign-asset",
+      ],
+      DIRECTOR_ADMIN,
+    ),
+    // A transfer between branches is the decision of finance or Direction:
+    // the more specific rule outranks the wildcard ones above.
     {
-      commandType: "register-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "commission-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "commission-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "assign-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "assign-asset",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "assign-asset",
+      ...wildcard(["assign-asset"], ["FINANCE"])[0]!,
       categoryCode: "CROSS_BRANCH",
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "FINANCE_APPROVER",
-      createdByCommandId: null,
     },
     {
-      commandType: "enable-module",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
+      ...wildcard(["assign-asset"], ["DIRECTOR"])[0]!,
+      categoryCode: "CROSS_BRANCH",
     },
-    {
-      commandType: "disable-module",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "update-approval-threshold",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "add-or-renew-document",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "add-or-renew-document",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "OPS_MANAGER",
-      createdByCommandId: null,
-    },
-    {
-      commandType: "add-or-renew-document",
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "FIELD_SUBMITTER",
-      createdByCommandId: null,
-    },
+
+    // Settings belong to Direction (ADR-0009). Modules are vendor-only
+    // (ADR-0005); DIRECTOR holds the toggles until they move to platform scope.
+    ...wildcard(
+      [
+        "enable-module",
+        "disable-module",
+        "update-approval-threshold",
+        "set-template-preset",
+        "create-category",
+        "relabel-category",
+        "deactivate-category",
+        "reactivate-category",
+        "create-branch",
+        "rename-branch",
+        "set-branch-status",
+      ],
+      ["DIRECTOR"],
+    ),
+
+    ...wildcard(["add-or-renew-document"], ["DIRECTOR", "ADMIN", "FINANCE"]),
+
+    // App access. The handlers narrow ADMIN to the field roles in its branches.
+    ...wildcard(
+      ["add-member", "update-member-role", "deactivate-member", "reactivate-member", "reset-member-pin"],
+      DIRECTOR_ADMIN,
+    ),
+
+    // Money in: every role that records posts inside the band; above it the
+    // entry waits for the chain below. Direction alone posts at any amount,
+    // since no one is above it (#412; migration 0038).
+    ...banded(["record-expense"], ["DRIVER", "ADMIN", "FINANCE", "DIRECTOR", "TECHNICIAN", "CASHIER"], RECORDING_BAND),
+    ...banded(["record-revenue"], ["ADMIN", "FINANCE", "DIRECTOR", "CASHIER"], RECORDING_BAND),
+    ...wildcard(["record-expense", "record-revenue"], ["DIRECTOR"]),
+
+    // Finance decides an entry up to its own band, Direction at any amount.
+    // DIRECTOR holds the band too: wherever the band matches it is the more
+    // specific rule, and only the roles on it decide. Direction moves it with
+    // update-approval-threshold ("approve-entry" moves both decisions).
+    ...banded(["approve-entry", "reject-entry"], ["FINANCE", "DIRECTOR"], ENTRY_DECISION_BAND),
+    ...wildcard(["approve-entry", "reject-entry"], ["DIRECTOR"]),
+    ...wildcard(["reverse-entry", "lock-period"], ["FINANCE", "DIRECTOR"]),
+    ...wildcard(["reopen-period"], ["DIRECTOR"]),
+
+    ...wildcard(
+      [
+        "create-activity",
+        "record-movement-leg",
+        "record-meter-reading",
+        "substitute-asset",
+        "close-activity",
+        "record-journey-sheet",
+        "record-haulage-job-sheet",
+      ],
+      ["DIRECTOR", "ADMIN", "DRIVER"],
+    ),
+    // The workshop reads the odometer when a truck comes in.
+    ...wildcard(["record-meter-reading"], ["TECHNICIAN"]),
+
+    ...wildcard(["report-issue"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
+    // Whoever reports may mark a problem safety-critical later; the handler
+    // keeps taking the mark off to DIRECTOR and ADMIN (#96).
+    ...wildcard(["change-issue-severity"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
+    ...wildcard(
+      ["resolve-issue", "dismiss-issue", "create-work-order", "complete-work-order", "cancel-work-order"],
+      ["DIRECTOR", "ADMIN", "TECHNICIAN"],
+    ),
+    // Work orders are approved by the branch's Administrateur (ADR-0009). No
+    // amount bounds, so a workspace that never sets a threshold never meets a
+    // pending work order.
+    ...wildcard(
+      ["approve-work-order", "reject-work-order", "approve-work-order-closure", "reject-work-order-completion"],
+      DIRECTOR_ADMIN,
+    ),
+
+    // A receipt, the author's edit of a pending entry, and a note change no
+    // posted amount, so there is no band: whoever could record may do them.
+    ...wildcard(
+      ["attach-evidence", "update-pending-entry", "add-note"],
+      ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
+    ),
+
+    // Reading a notice is no decision: every member acknowledges their own
+    // (#422), and anyone who sees a vehicle may say they saw Direction's note
+    // on it (#98).
+    ...wildcard(
+      ["acknowledge-approval-rules", "acknowledge-note"],
+      ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
+    ),
   ];
-
-  // Workspace configuration, ADMIN only — matching each command's allowedRoles
-  // and the enable-module/disable-module rows above. An OPS_MANAGER default
-  // would be the surprising choice: these edit the vocabulary and the preset set
-  // every other role then records against.
-  for (const commandType of [
-    "create-category",
-    "relabel-category",
-    "deactivate-category",
-    "reactivate-category",
-    "set-template-preset",
-    "create-branch",
-    "rename-branch",
-    "set-branch-status",
-  ]) {
-    rules.push({
-      commandType,
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    });
-  }
-
-  // Member administration, ADMIN only — same reasoning one step further: these
-  // decide who holds a role at all, so anyone who could grant themselves one
-  // could grant themselves every rule above.
-  for (const commandType of [
-    "add-member",
-    "update-member-role",
-    "deactivate-member",
-    "reactivate-member",
-    "reset-member-pin",
-  ]) {
-    rules.push({
-      commandType,
-      categoryCode: null,
-      branchId: null,
-      amountMinMinor: null,
-      amountMaxMinor: null,
-      requiredRole: "ADMIN",
-      createdByCommandId: null,
-    });
-  }
-
-  for (const commandType of ["record-expense", "record-revenue"]) {
-    rules.push(
-      ...(["FIELD_SUBMITTER", "OPS_MANAGER", "FINANCE_APPROVER", "ADMIN"] as const).map(
-        (requiredRole) => ({
-          commandType,
-          categoryCode: null,
-          branchId: null,
-          amountMinMinor: null,
-          amountMaxMinor: 100_000n,
-          requiredRole,
-          createdByCommandId: null,
-        }),
-      ),
-    );
-    rules.push(
-      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  for (const commandType of [
-    "approve-entry",
-    "reject-entry",
-    "reverse-entry",
-    "lock-period",
-    "reopen-period",
-  ]) {
-    rules.push(
-      ...(["FINANCE_APPROVER", "ADMIN"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  for (const commandType of ["register-person", "reopen-activity"]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  for (const commandType of [
-    "create-activity",
-    "record-movement-leg",
-    "record-meter-reading",
-    "substitute-asset",
-    "close-activity",
-    "record-journey-sheet",
-    "record-haulage-job-sheet",
-  ]) {
-    rules.push(
-      ...(["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"] as const).map((requiredRole) => ({
-        commandType,
-        categoryCode: null,
-        branchId: null,
-        amountMinMinor: null,
-        amountMaxMinor: null,
-        requiredRole,
-        createdByCommandId: null,
-      })),
-    );
-  }
-
-  return rules;
 }
 
 export const corePack: {
@@ -332,6 +241,27 @@ export const corePack: {
       profitabilityLayer: "DIRECT",
       evidencePolicy: "NO_RECEIPT_EXPECTED",
     },
+    // Fault types a reporter picks from (#28). `defaultSafetyCritical` only
+    // pre-checks the box; the reporter's confirmed flag is what grounds a
+    // truck. Mirrored for existing workspaces by migration 0027.
+    ...(
+      [
+        ["BRAKES", "Freins", "Brakes", true],
+        ["STEERING", "Direction", "Steering", true],
+        ["TYRES", "Pneumatiques", "Tyres", true],
+        ["LIGHTING", "Éclairage", "Lighting", false],
+        ["ENGINE", "Moteur", "Engine", false],
+        ["BODYWORK", "Carrosserie", "Bodywork", false],
+        ["OTHER", "Autre", "Other", false],
+      ] as const
+    ).map(([code, labelFr, labelEn, defaultSafetyCritical]) => ({
+      kind: "ISSUE_TYPE" as const,
+      code,
+      active: true,
+      labelFr,
+      labelEn,
+      defaultSafetyCritical,
+    })),
   ],
   approvalRules: defaultApprovalRules(),
 };

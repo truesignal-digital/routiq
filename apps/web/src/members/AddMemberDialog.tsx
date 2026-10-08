@@ -3,17 +3,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
-import { ROLES, type AddMemberPayload, type MemberBranchScope } from "@routiq/contracts";
+import type { AddMemberPayload, MemberBranchScope } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FormPanel,
+  FormPanelCancel,
+  FormPanelFooter,
+  FormPanelHeader,
+} from "@/components/command-form.js";
 import {
   Form,
   FormControl,
@@ -31,10 +30,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { scopedByBranch } from "../auth/me.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
+import {
+  pickableRoles,
+  type MemberActor,
+} from "./permissions.js";
 import { MIN_PIN_LENGTH } from "./pin.js";
 
 interface AddMemberValues {
@@ -62,20 +67,31 @@ export function AddMemberDialog({
   open,
   onOpenChange,
   branches,
+  actor,
   onAdded,
   client = commandClient,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branches: readonly BranchOption[];
+  /** Who is hiring: decides the roles offered and the branches they may give. */
+  actor: MemberActor | undefined;
   onAdded: () => void;
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const [principalId, setPrincipalId] = useState(() => crypto.randomUUID());
-  const [branchScope, setBranchScope] = useState<MemberBranchScope>("ALL");
+  // role-config: an actor gives only the roles and branches they hold (ADR-0009).
+  const actorScope: MemberBranchScope = actor?.branchScope ?? "ALL";
+  const roleOptions = pickableRoles(actor);
+  const pickerBranches = useMemo(
+    () => scopedByBranch(actorScope, [...branches], (branch) => branch.id),
+    [actorScope, branches],
+  );
+  const [branchScope, setBranchScope] = useState<MemberBranchScope>(actorScope);
   const [errorCode, setErrorCode] = useState<string>();
   const intent = useRef<CommandIntent<AddMemberPayload> | undefined>(undefined);
 
@@ -110,14 +126,16 @@ export function AddMemberDialog({
   useEffect(() => {
     if (!open) return;
     setPrincipalId(crypto.randomUUID());
-    setBranchScope("ALL");
+    setBranchScope(actorScope);
     setErrorCode(undefined);
     form.reset(EMPTY);
+    // Per opening only: actorScope is a fresh array on every /v1/me read.
   }, [open, form]);
+
 
   async function onSubmit(values: AddMemberValues) {
     setErrorCode(undefined);
-    intent.current ??= createCommandIntent<AddMemberPayload>(client, "add-member", 1);
+    intent.current ??= createCommandIntent<AddMemberPayload>(client, "add-member", 2);
 
     const result = await intent.current.submit({
       principalId,
@@ -139,6 +157,9 @@ export function AddMemberDialog({
       return;
     }
 
+    notifyCommandSuccess("users", "added", result.outcome.warnings, {
+      values: { name: values.displayName.trim() },
+    });
     // Nothing carries the PIN out of this function: the form is emptied before
     // the dialog closes, so no later render can hold it.
     form.reset(EMPTY);
@@ -150,18 +171,18 @@ export function AddMemberDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("users.add.title")}</DialogTitle>
-          <DialogDescription>{t("users.add.description")}</DialogDescription>
-        </DialogHeader>
+    <FormPanel open={open} onClose={() => onOpenChange(false)}>
+        <FormPanelHeader
+          title={label("add-member")}
+          description={t("users.add.description")}
+        />
 
         <Form {...form}>
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-1 flex-col"
             onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
           >
+            <div className="flex flex-col gap-4 p-4">
             {errorCode && <ErrorBanner code={errorCode} />}
 
             <FormField
@@ -171,7 +192,7 @@ export function AddMemberDialog({
                 <FormItem>
                   <FormLabel>{t("users.form.displayName")}</FormLabel>
                   <FormControl>
-                    <Input type="text" className="min-h-11" {...field} />
+                    <Input type="text" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -189,7 +210,6 @@ export function AddMemberDialog({
                       type="text"
                       autoComplete="off"
                       autoCapitalize="none"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -209,12 +229,12 @@ export function AddMemberDialog({
                     onValueChange={(value) => field.onChange(value ?? "")}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t("users.form.rolePlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ROLES.map((role) => (
+                      {roleOptions.map((role) => (
                         <SelectItem key={role} value={role}>
                           {t(`users.roles.${role}`)}
                         </SelectItem>
@@ -227,9 +247,10 @@ export function AddMemberDialog({
             />
 
             <BranchScopeField
-              branches={branches}
+              branches={pickerBranches}
               value={branchScope}
               onChange={setBranchScope}
+              allowAll={actorScope === "ALL"}
             />
 
             <FormField
@@ -243,7 +264,6 @@ export function AddMemberDialog({
                       type="password"
                       inputMode="numeric"
                       autoComplete="new-password"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -263,7 +283,6 @@ export function AddMemberDialog({
                       type="password"
                       inputMode="numeric"
                       autoComplete="new-password"
-                      className="min-h-11"
                       {...field}
                     />
                   </FormControl>
@@ -272,28 +291,24 @@ export function AddMemberDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                onClick={() => onOpenChange(false)}
-              >
+            </div>
+
+            <FormPanelFooter>
+              <FormPanelCancel onDismiss={() => onOpenChange(false)}>
                 {t("users.form.cancel")}
-              </Button>
+              </FormPanelCancel>
               <Button
                 type="submit"
-                className="min-h-11"
+                className="flex-1 sm:flex-none"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("users.form.submitting")
-                  : t("users.add.submit")}
+                  ? label("add-member", "submitting")
+                  : label("add-member", "submit")}
               </Button>
-            </DialogFooter>
+            </FormPanelFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

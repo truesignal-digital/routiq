@@ -48,7 +48,7 @@ describe("set-template-preset.v1", () => {
   async function grandfatheredTenant() {
     const seeded = await seedWorkspace(db);
     const workspaceId = seeded.workspace.id;
-    const admin = await seedMember(db, { workspaceId, role: "ADMIN", allBranches: true });
+    const admin = await seedMember(db, { workspaceId, role: "DIRECTOR", allBranches: true });
     const session = await createSession(db, {
       principalId: admin.principal.id,
       workspaceId,
@@ -231,11 +231,11 @@ describe("set-template-preset.v1", () => {
     expect(response.json().error.code).toBe("PRESET_ALREADY_SET");
   });
 
-  it("is ADMIN-only", async () => {
+  it("is DIRECTOR-only", async () => {
     const seeded = await seedWorkspace(db);
     const ops = await seedMember(db, {
       workspaceId: seeded.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       allBranches: true,
     });
     const session = await createSession(db, {

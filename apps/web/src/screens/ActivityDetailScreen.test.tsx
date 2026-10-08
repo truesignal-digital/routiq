@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({ useActivity: vi.fn() }));
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ activityId: ACTIVITY_ID }),
+  useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+    select({ location: { pathname: `/activities/${ACTIVITY_ID}` } }),
   Link: ({
     to,
     params,
@@ -60,7 +62,9 @@ const manager: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "OPS_MANAGER",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
+  role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ACTIVITIES", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
@@ -88,6 +92,10 @@ function fullHaulage(): ActivityDetail {
     primaryAssetCode: "CAMION-03",
     legCount: 2,
     crewCount: 2,
+    originName: null,
+    destinationName: null,
+    distanceKm: null,
+    driverName: null,
     templateCode: "TRUCKING",
     templateVersion: 2,
     customValues: {},
@@ -97,6 +105,7 @@ function fullHaulage(): ActivityDetail {
     closedAt: "2026-07-19T08:00:00.000Z",
     createdAt: "2026-07-18T05:30:00.000Z",
     createdByCommandId: COMMAND_ID,
+    recordedByPrincipalId: null,
     rowVersion: 4,
     segments: [
       {
@@ -182,16 +191,24 @@ function fullHaulage(): ActivityDetail {
         entryNumber: "FIN-2026-0001",
         direction: "REVENUE",
         categoryCode: "FREIGHT",
+        categoryLabelFr: "Fret",
+        categoryLabelEn: "Freight",
         amountMinor: 900_000,
         status: "POSTED",
+        reversesEntryId: null,
+        cancelledBy: null,
       },
       {
         entryId: "00000000-0000-4000-8000-000000000082",
         entryNumber: "FIN-2026-0002",
         direction: "EXPENSE",
         categoryCode: "FUEL",
+        categoryLabelFr: "Carburant",
+        categoryLabelEn: "Fuel",
         amountMinor: 400_000,
         status: "POSTED",
+        reversesEntryId: null,
+        cancelledBy: null,
       },
     ],
   };
@@ -228,6 +245,7 @@ function sparseJourney(): ActivityDetail {
     plannedEndAt: null,
     closedAt: null,
     createdByCommandId: null,
+    recordedByPrincipalId: null,
     segments: [],
     crew: [],
     legs: [],
@@ -243,12 +261,12 @@ function sectionTitles(): string[] {
   );
 }
 
-function renderScreen() {
+function renderScreen(me: MeContext = manager) {
   return render(
     createElement(
       QueryClientProvider,
       { client: new QueryClient() },
-      createElement(MeCtx.Provider, { value: manager }, createElement(ActivityDetailScreen)),
+      createElement(MeCtx.Provider, { value: me }, createElement(ActivityDetailScreen)),
     ),
   );
 }
@@ -342,9 +360,11 @@ describe("activity detail — a sparse open journey", () => {
     renderScreen();
 
     expect(screen.getByRole("heading", { name: "YDE-2026-00007" })).toBeTruthy();
-    expect(screen.getByText("Open")).toBeTruthy();
-    // An open activity has no end, and the band says so instead of showing a dash.
-    expect(screen.getByText("Running")).toBeTruthy();
+    // One state, worded as on the vehicle's Trips tab; the end stays a time (#94).
+    expect(screen.getByText("On the road")).toBeTruthy();
+    expect(screen.queryByText("Open")).toBeNull();
+    expect(screen.queryByText("Running")).toBeNull();
+    expect(screen.getByText("Ended").nextElementSibling?.textContent).toBe("—");
     expect(screen.getByText(/PASSENGER_TRANSPORT v1/)).toBeTruthy();
   });
 
@@ -354,4 +374,62 @@ describe("activity detail — a sparse open journey", () => {
     const net = screen.getByText("Net").nextElementSibling;
     expect((net?.textContent ?? "").replace(/[^\d+-]/g, "")).toBe("0");
   });
+});
+
+describe("activity detail — a reader the server keeps the ledger from (#103)", () => {
+  beforeEach(() => {
+    mocks.useActivity.mockReturnValue({
+      data: { ...fullHaulage(), financialEntries: null },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+  });
+
+  it("shows the trip without its money section or net", () => {
+    renderScreen();
+
+    expect(screen.getByRole("heading", { name: "DLA-2026-00042" })).toBeTruthy();
+    expect(sectionTitles()).toEqual(["Planned vs actual", "Assets and crew", "Legs"]);
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.queryByRole("link", { name: /FIN-2026-0001/ })).toBeNull();
+    expect(screen.getByText("Legs", { selector: "dt" })).toBeTruthy();
+  });
+});
+
+/**
+ * #408: the money card says whose entries it lists from the reader's entries
+ * scope. The counter reads its branches' entries, not only its own.
+ */
+describe("activity detail — whose entries the money card lists (#408)", () => {
+  const sentences = {
+    en: {
+      own: "Only the entries you recorded on this activity.",
+      branch: "Only the entries of your branches on this activity.",
+    },
+    "fr-CM": {
+      own: "Seules les écritures que vous avez saisies sur cette activité.",
+      branch: "Seules les écritures de vos agences sur cette activité.",
+    },
+  } as const;
+
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  for (const locale of ["en", "fr-CM"] as const) {
+    it(`tells the driver and the cashier apart on the same trip (${locale})`, async () => {
+      await i18n.changeLanguage(locale);
+      const { own, branch } = sentences[locale];
+
+      const driver = renderScreen({ ...manager, role: "DRIVER" });
+      expect(screen.getByText(own)).toBeTruthy();
+      expect(screen.queryByText(branch)).toBeNull();
+      driver.unmount();
+
+      renderScreen({ ...manager, role: "CASHIER" });
+      expect(screen.getByText(branch)).toBeTruthy();
+      expect(screen.queryByText(own)).toBeNull();
+    });
+  }
 });

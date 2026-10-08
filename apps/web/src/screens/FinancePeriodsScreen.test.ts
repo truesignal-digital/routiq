@@ -31,29 +31,27 @@ vi.mock("../finance/usePeriods.js", () => ({
   usePeriods: mocks.usePeriods,
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({
-  FinanceNav: () => null,
-}));
-
-const approver: MeContext = {
+const director: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
-  role: "FINANCE_APPROVER",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
+  role: "DIRECTOR",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
-function renderScreen() {
+function renderScreen(me: MeContext = director) {
   return render(
     createElement(
       QueryClientProvider,
       { client: new QueryClient() },
       createElement(
         MeCtx.Provider,
-        { value: approver },
+        { value: me },
         createElement(FinancePeriodsScreen),
       ),
     ),
@@ -159,29 +157,51 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await chooseRowAction(user, 0, "Lock");
-    expect(screen.getByRole("alertdialog")).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await chooseRowAction(user, 0, "Lock period");
+    const dialog = screen.getByRole("alertdialog", { name: "Lock period" });
+    expect(within(dialog).getAllByRole("button").map((button) => button.textContent))
+      .toEqual(["Cancel", "Lock period"]);
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
     await waitFor(() => expect(submissionOrder).toEqual(["lock-period"]));
     expect(mocks.toastAdd).toHaveBeenCalledWith({
       type: "success",
       title: "Period locked",
     });
 
-    await chooseRowAction(user, 1, "Reopen");
+    await chooseRowAction(user, 1, "Reopen period");
     await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");
-    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    await user.click(screen.getByRole("button", { name: "Reopen period" }));
 
     await waitFor(() =>
       expect(submissionOrder).toEqual(["lock-period", "reopen-period"]),
     );
   });
 
+  it("lets Finance lock a period but leaves reopening to the Director", async () => {
+    const user = userEvent.setup();
+    renderScreen({ ...director, role: "FINANCE" });
+
+    const menus = screen.getAllByRole("button", { name: "Actions" });
+    // Only the open period's row has a menu: the locked one offers Finance nothing.
+    expect(menus).toHaveLength(1);
+    await user.click(menus[0]!);
+    expect(await screen.findByRole("menuitem", { name: "Lock period" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Reopen period" })).toBeNull();
+  });
+
+  it.each(["ADMIN", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
+    "shows %s no period actions at all",
+    (role) => {
+      renderScreen({ ...director, role });
+      expect(screen.queryAllByRole("button", { name: "Actions" })).toHaveLength(0);
+    },
+  );
+
   it("cancels reopen without dispatching", async () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await chooseRowAction(user, 1, "Reopen");
+    await chooseRowAction(user, 1, "Reopen period");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(() =>
@@ -217,7 +237,7 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await chooseRowAction(user, 0, "Lock");
+    await chooseRowAction(user, 0, "Lock period");
     const overlay = document.querySelector<HTMLElement>(
       '[data-slot="alert-dialog-overlay"]',
     );

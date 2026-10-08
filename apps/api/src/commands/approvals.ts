@@ -1,4 +1,4 @@
-import type { CommandEnvelope } from "@routiq/contracts";
+import type { CommandEnvelope, Role } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { approvalRules, branches } from "../db/schema.js";
 import type { CommandContext, Tx } from "./dispatcher.js";
@@ -12,8 +12,13 @@ const APPROVAL_REQUIRED: ApprovalDecision = { outcome: "APPROVAL_REQUIRED", rule
 
 export interface ApprovalContext {
   branchCode?: string;
+  /**
+   * For commands whose branch is resolved rather than named — a work order
+   * lives in its asset's branch. Takes precedence over `branchCode`.
+   */
+  branchId?: string;
   categoryCode?: string;
-  amountMinor?: number;
+  amountMinor?: number | bigint;
 }
 
 /**
@@ -44,20 +49,11 @@ export async function evaluateApproval(
   commandType: string,
   approvalContext: ApprovalContext,
 ): Promise<ApprovalDecision> {
-  const rules = await tx
-    .select()
-    .from(approvalRules)
-    .where(
-      and(
-        eq(approvalRules.workspaceId, ctx.workspaceId),
-        eq(approvalRules.commandType, commandType),
-      ),
-    );
-
+  const rules = await loadApprovalRules(tx, ctx.workspaceId, commandType);
   if (rules.length === 0) return APPROVAL_REQUIRED;
 
-  let resolvedBranchId: string | undefined;
-  if (approvalContext.branchCode) {
+  let resolvedBranchId: string | undefined = approvalContext.branchId;
+  if (resolvedBranchId === undefined && approvalContext.branchCode) {
     const [resolvedBranch] = await tx
       .select({ id: branches.id })
       .from(branches)
@@ -71,6 +67,40 @@ export async function evaluateApproval(
     resolvedBranchId = resolvedBranch?.id;
   }
 
+  return matchApproval(rules, ctx.role, {
+    ...approvalContext,
+    ...(resolvedBranchId === undefined ? {} : { branchId: resolvedBranchId }),
+  });
+}
+
+export type ApprovalRuleRow = typeof approvalRules.$inferSelect;
+
+export function loadApprovalRules(
+  tx: Tx,
+  workspaceId: string,
+  commandType: string,
+): Promise<ApprovalRuleRow[]> {
+  return tx
+    .select()
+    .from(approvalRules)
+    .where(
+      and(
+        eq(approvalRules.workspaceId, workspaceId),
+        eq(approvalRules.commandType, commandType),
+      ),
+    );
+}
+
+/**
+ * Steps 2–4 above over rules already loaded, with the branch already resolved
+ * to an id. Reads use it to tell a viewer which pending records their role may
+ * decide, with the same answer the command would give.
+ */
+export function matchApproval(
+  rules: readonly ApprovalRuleRow[],
+  role: Role,
+  approvalContext: Omit<ApprovalContext, "branchCode">,
+): ApprovalDecision {
   const amountMinor = BigInt(approvalContext.amountMinor ?? 0);
 
   const matchingRules = rules.filter((rule) => {
@@ -79,7 +109,7 @@ export async function evaluateApproval(
     }
 
     if (rule.branchId !== null) {
-      if (!resolvedBranchId || rule.branchId !== resolvedBranchId) {
+      if (!approvalContext.branchId || rule.branchId !== approvalContext.branchId) {
         return false;
       }
     }
@@ -94,7 +124,7 @@ export async function evaluateApproval(
 
   const maxSpecificity = Math.max(...matchingRules.map(ruleSpecificity));
   const authorizingRule = matchingRules
-    .filter((rule) => ruleSpecificity(rule) === maxSpecificity && rule.requiredRole === ctx.role)
+    .filter((rule) => ruleSpecificity(rule) === maxSpecificity && rule.requiredRole === role)
     .sort(
       (left, right) =>
         left.createdAt.getTime() - right.createdAt.getTime() || left.id.localeCompare(right.id),
@@ -104,7 +134,7 @@ export async function evaluateApproval(
   return APPROVAL_REQUIRED;
 }
 
-function ruleSpecificity(rule: typeof approvalRules.$inferSelect): number {
+function ruleSpecificity(rule: ApprovalRuleRow): number {
   return [rule.categoryCode, rule.branchId, rule.amountMinMinor, rule.amountMaxMinor].filter(
     (value) => value !== null,
   ).length;

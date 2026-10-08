@@ -3,8 +3,12 @@ import { activeSection, type ShellSection } from "./sections.js";
 export interface Crumb {
   /** Translation key; this module stays free of i18n so it can be unit-tested. */
   labelKey: string;
+  /** The record's own name (a trip's number), shown instead of `labelKey` once the screen has it. */
+  label?: string;
   /** Where the crumb navigates. The trail's last crumb is the current page and has none. */
   to?: string;
+  /** The crumb naming the record a detail route shows. */
+  record?: true;
 }
 
 interface PageTrail {
@@ -20,38 +24,38 @@ interface PageTrail {
  * longer include Saisie, but a breadcrumb has to name whatever page you are
  * actually looking at.
  */
-const PAGE_TRAILS: readonly PageTrail[] = [
-  { pattern: "/assets/new", trail: [{ labelKey: "assets.register" }] },
+export const PAGE_TRAILS: readonly PageTrail[] = [
+  { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
+  // The vehicle workspace: its sections are tabs on one record, so every
+  // section shares the record's crumb and the tabs say where you are.
+  ...["", "/maintenance", "/money", "/trips", "/documents", "/history", "/details"].map((section) => ({
+    pattern: `/assets/$assetId${section}`,
+    trail: [{ labelKey: "assets.detail.breadcrumb", record: true as const }],
+  })),
+  // Before the $activityId pattern, or "record" reads as a trip.
+  { pattern: "/activities/record", trail: [{ labelKey: "commands.record-journey-sheet.label" }] },
   {
-    pattern: "/assets/$assetId",
-    trail: [{ labelKey: "assets.detail.breadcrumb" }],
-  },
-  {
-    pattern: "/assets/$assetId/documents",
-    trail: [
-      // Documents hang off one asset, so the trail passes through it — but
-      // the crumb cannot link there without the id, which this module has
-      // no access to; the section crumb remains the way back.
-      { labelKey: "documents.link" },
-    ],
+    pattern: "/activities/$activityId",
+    trail: [{ labelKey: "activities.detail.breadcrumb", record: true }],
   },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
-  { pattern: "/finance/entries", trail: [{ labelKey: "finance.navigation.entries" }] },
+  // The page title keys, so the Money and Accounting months rows name these pages once.
+  { pattern: "/finance/entries", trail: [{ labelKey: "finance.entries.title" }] },
   {
     pattern: "/finance/entries/$entryId",
     trail: [
-      { labelKey: "finance.navigation.entries", to: "/finance/entries" },
-      { labelKey: "finance.entries.detail.breadcrumb" },
+      { labelKey: "finance.entries.title", to: "/finance/entries" },
+      { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
   },
-  {
-    pattern: "/finance/approvals",
-    trail: [{ labelKey: "finance.navigation.approvals" }],
-  },
-  { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
+  // Redirects to the waiting view; named the same in case a frame renders first.
+  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
+  { pattern: "/finance/periods", trail: [{ labelKey: "finance.periods.title" }] },
+  { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
   { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },
+  { pattern: "/more/company", trail: [{ labelKey: "settings.title" }] },
 ];
 
 function segments(path: string): string[] {
@@ -70,28 +74,37 @@ function matchesPattern(pattern: string, pathname: string): boolean {
 /**
  * `Accueil / <section> / <page>` for the current location. The last crumb is
  * always the page you are on and carries no `to`; everything before it links.
+ * `recordLabel` names the record on a detail route; until the screen has
+ * loaded it the crumb says what kind of record it is.
  */
 export function breadcrumbTrail(
   sections: readonly ShellSection[],
   pathname: string,
+  recordLabel?: string,
 ): Crumb[] {
-  const crumbs: Crumb[] = [{ labelKey: "nav.home", to: "/" }];
+  const crumbs: Crumb[] = [{ labelKey: "home.title", to: "/" }];
 
   const section = activeSection(sections, pathname);
   // The home section is the crumb we just seeded; anything else nests under it.
   if (section !== undefined && section.key !== "home") {
-    crumbs.push({ labelKey: `nav.${section.key}`, to: section.to });
+    crumbs.push({ labelKey: section.labelKey, to: section.to });
   }
 
   const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
   if (page !== undefined) {
-    crumbs.push(...page.trail);
+    // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
+    crumbs.push(...page.trail.filter((crumb) => crumb.labelKey !== section?.labelKey));
   }
 
   const last = crumbs[crumbs.length - 1];
   if (last !== undefined) {
     // You are already here; a link back to the current page is noise.
-    crumbs[crumbs.length - 1] = { labelKey: last.labelKey };
+    const label = last.record === true ? recordLabel : undefined;
+    crumbs[crumbs.length - 1] = {
+      labelKey: last.labelKey,
+      ...(last.record === true && { record: true }),
+      ...(label !== undefined && { label }),
+    };
   }
 
   return crumbs;

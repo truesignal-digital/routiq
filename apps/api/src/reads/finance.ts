@@ -1,27 +1,41 @@
 import {
   financialEntryDetail,
+  financialEntryFilters,
+  ledgerEntryStatuses,
   financialEntryListResponse,
   listQuery,
   pendingApprovalsResponse,
   periodsResponse,
+  type CancellationReasonCode,
+  type FinancialEntryListItem,
   type ListSort,
 } from "@routiq/contracts";
-import { and, asc, desc, eq, exists, inArray, sql, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { entryEvidenceState } from "@routiq/domain";
+import { and, asc, desc, eq, exists, gte, inArray, lt, not, sql, type SQL } from "drizzle-orm";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
 import {
+  activities,
   assets,
   categories,
   commands,
   financialEntries,
   financialPostings,
   postingPeriods,
+  principals,
+  workOrders,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
+import { commandActors, toActor } from "./actors.js";
+import {
+  entryArtifactCountSql,
+  entryEvidenceFiles,
+  entryEvidenceMissingSql,
+} from "./entry-evidence.js";
 import {
   countPendingOutsideBranch,
+  directionDecidesEntries,
   pendingApprovalConditions,
 } from "./approvals-queue.js";
 import {
@@ -29,13 +43,25 @@ import {
   bindBigint,
   bindDate,
   bindText,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeColumnCursor,
   encodeKeysetCursor,
+  isInt64Text,
+  isIsoDate,
   keysetOrderBy,
+  microsecondKey,
+  timestampKeyset,
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
+import { defineRead, ENTRIES_GATE, LEDGER_GATE } from "./define-read.js";
+import {
+  cancelledBySql,
+  cancelsSql,
+  foldedCancellationSql,
+  toEntryCancellation,
+} from "./entry-cancellation.js";
+import { canReadEntry, readableEntrySql } from "./money-scope.js";
+import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 
 const entrySortFields = [
@@ -53,22 +79,19 @@ const defaultEntrySort: ListSort<EntrySortField> = {
 };
 
 const entrySortColumns: Record<EntrySortField, KeysetColumn> = {
-  economicDate: { column: financialEntries.economicDate, bind: bindDate },
+  economicDate: { column: financialEntries.economicDate, bind: bindDate, accepts: isIsoDate },
   // Null until an entry posts, so the null tail is part of this ordering.
-  postedAt: {
-    column: financialEntries.postedAt,
-    bind: bindTimestamp,
-    nullable: true,
-  },
+  postedAt: timestampKeyset(financialEntries.postedAt, { nullable: true }),
   // The entry's own SIGNED total. Postings sum to it by invariant (§3.4), so
   // there is nothing to aggregate — and a reversal sorts below its original.
-  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  amount: { column: financialEntries.amountMinor, bind: bindBigint, accepts: isInt64Text },
   entryNumber: { column: financialEntries.entryNumber, bind: bindText },
 };
 
 interface EntrySortRow {
   economicDate: string;
-  postedAt: Date | null;
+  /** `postedAt` as microsecond keyset text. */
+  postedAtKey: string | null;
   amountMinor: bigint;
   entryNumber: string;
 }
@@ -78,7 +101,7 @@ function entrySortValue(field: EntrySortField, row: EntrySortRow): KeysetValue {
     case "economicDate":
       return row.economicDate;
     case "postedAt":
-      return row.postedAt?.toISOString() ?? null;
+      return row.postedAtKey;
     // Minor units are bigint; a string survives the round trip exactly.
     case "amount":
       return row.amountMinor.toString();
@@ -91,12 +114,7 @@ function entrySortValue(field: EntrySortField, row: EntrySortRow): KeysetValue {
 // pagination on a stable sort key, server-bounded limits. This response keeps
 // `entries` where new resources use `items` — the legacy key documented there.
 const listQuerySchema = listQuery(
-  {
-    status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]).optional(),
-    periodCode: z.string().optional(),
-    assetId: z.uuid().optional(),
-    branchId: z.uuid().optional(),
-  },
+  financialEntryFilters.shape,
   { sortFields: entrySortFields },
 );
 
@@ -110,13 +128,14 @@ const defaultApprovalSort: ListSort<ApprovalSortField> = {
 };
 
 const approvalSortColumns: Record<ApprovalSortField, KeysetColumn> = {
-  submittedAt: { column: financialEntries.createdAt, bind: bindTimestamp },
-  amount: { column: financialEntries.amountMinor, bind: bindBigint },
+  submittedAt: timestampKeyset(financialEntries.createdAt),
+  amount: { column: financialEntries.amountMinor, bind: bindBigint, accepts: isInt64Text },
   entryNumber: { column: financialEntries.entryNumber, bind: bindText },
 };
 
 interface ApprovalSortRow {
-  submittedAt: Date;
+  /** `submittedAt` as microsecond keyset text. */
+  submittedAtKey: string;
   amountMinor: bigint;
   entryNumber: string;
 }
@@ -127,7 +146,7 @@ function approvalSortValue(
 ): KeysetValue {
   switch (field) {
     case "submittedAt":
-      return row.submittedAt.toISOString();
+      return row.submittedAtKey;
     case "amount":
       return row.amountMinor.toString();
     case "entryNumber":
@@ -151,53 +170,329 @@ const approvalsQuerySchema = listQuery(
   },
 );
 
+/** The first day of `YYYY-MM` and of the month after it, as ISO dates. */
+export function monthBounds(month: string): { from: string; to: string } {
+  const [year, monthNumber] = month.split("-").map(Number) as [number, number];
+  const nextYear = monthNumber === 12 ? year + 1 : year;
+  const nextMonth = monthNumber === 12 ? 1 : monthNumber + 1;
+  return {
+    from: `${month}-01`,
+    to: `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`,
+  };
+}
+
+/**
+ * A line carrying a value in `column`. A work order's lines are its expense
+ * lines: revenue that named an order before #432 refused it links to none.
+ */
+function attributedSql(
+  column: typeof financialPostings.activityId | typeof financialPostings.workOrderId,
+): SQL {
+  return column === financialPostings.workOrderId
+    ? sql`${column} is not null and ${financialPostings.direction} = 'EXPENSE'`
+    : sql`${column} is not null`;
+}
+
+/**
+ * The vehicle's lines of the outer entry, first by line number, carrying a
+ * value in `column` — the attribution the Money tab links an entry to.
+ */
+function firstAssetLineSql(
+  assetId: string,
+  column: typeof financialPostings.activityId | typeof financialPostings.workOrderId,
+): SQL {
+  return sql`(
+    select ${column} from ${financialPostings}
+    where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+      and ${financialPostings.financialEntryId} = ${financialEntries.id}
+      and ${financialPostings.assetId} = ${assetId}
+      and ${attributedSql(column)}
+    order by ${financialPostings.lineNo}
+    limit 1
+  )`;
+}
+
+/**
+ * The entry's first line, by line number, carrying a value in `column`: what
+ * the entry as a whole belongs to, on any vehicle (#87).
+ */
+function firstLineSql(
+  column: typeof financialPostings.activityId | typeof financialPostings.workOrderId,
+): SQL {
+  return sql`(
+    select ${column} from ${financialPostings}
+    where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+      and ${financialPostings.financialEntryId} = ${financialEntries.id}
+      and ${attributedSql(column)}
+    order by ${financialPostings.lineNo}
+    limit 1
+  )`;
+}
+
+/**
+ * The trip and the work order an entry belongs to, for every row of the list,
+ * the approvals queue and the detail. The work order's vehicle comes along
+ * because the order opens in that vehicle's workspace. Reads `financialEntries`
+ * as the outer row.
+ */
+function entryLinkColumns() {
+  return {
+    linkActivityId: sql<string | null>`${firstLineSql(financialPostings.activityId)}`,
+    linkActivityNumber: sql<string | null>`(
+      select ${activities.activityNumber} from ${activities}
+      where ${activities.workspaceId} = ${financialEntries.workspaceId}
+        and ${activities.id} = ${firstLineSql(financialPostings.activityId)}
+    )`,
+    linkWorkOrderId: sql<string | null>`${firstLineSql(financialPostings.workOrderId)}`,
+    linkWorkOrderAssetId: sql<string | null>`(
+      select ${workOrders.assetId} from ${workOrders}
+      where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
+        and ${workOrders.id} = ${firstLineSql(financialPostings.workOrderId)}
+    )`,
+  };
+}
+
+interface EntryLinkRow {
+  linkActivityId: string | null;
+  linkActivityNumber: string | null;
+  linkWorkOrderId: string | null;
+  linkWorkOrderAssetId: string | null;
+}
+
+function toEntryLinks(row: EntryLinkRow): FinancialEntryListItem["links"] {
+  return {
+    activityId: row.linkActivityId,
+    activityNumber: row.linkActivityNumber,
+    workOrderId: row.linkWorkOrderId,
+    workOrderAssetId: row.linkWorkOrderAssetId,
+  };
+}
+
+/**
+ * The columns every entry row carries, list and approvals queue alike, so the
+ * two can never drift apart. Reads `categories`, `postingPeriods`, `commands`
+ * and `principals` as the queries below join them.
+ */
+function entryItemColumns(assetId: string | undefined) {
+  return {
+    id: financialEntries.id,
+    entryNumber: financialEntries.entryNumber,
+    direction: financialEntries.direction,
+    status: financialEntries.status,
+    categoryCode: categories.code,
+    categoryLabelFr: categories.labelFr,
+    categoryLabelEn: categories.labelEn,
+    categoryLayer: categories.profitabilityLayer,
+    evidencePolicy: categories.evidencePolicy,
+    amountMinor: financialEntries.amountMinor,
+    currency: financialEntries.currency,
+    economicDate: financialEntries.economicDate,
+    postingPeriodCode: postingPeriods.periodCode,
+    isLatePosting: financialEntries.isLatePosting,
+    branchId: financialEntries.branchId,
+    counterpartyName: financialEntries.counterpartyName,
+    paymentMethod: financialEntries.paymentMethod,
+    paymentReference: financialEntries.paymentReference,
+    estimateStatus: financialEntries.estimateStatus,
+    postedAt: financialEntries.postedAt,
+    rowVersion: financialEntries.rowVersion,
+    reversesEntryId: financialEntries.reversesEntryId,
+    artifactCount: entryArtifactCountSql(),
+    // The generated masking column: NULL for PLATFORM receipts, so the
+    // principals join finds nothing and the operator stays unnamed.
+    recorderPrincipalId: commands.tenantActorPrincipalId,
+    recorderDisplayName: principals.displayName,
+    recorderScope: commands.scope,
+    assetShareMinor:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`(
+            select sum(${financialPostings.amountMinor})::text from ${financialPostings}
+            where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+              and ${financialPostings.financialEntryId} = ${financialEntries.id}
+              and ${financialPostings.assetId} = ${assetId}
+          )`,
+    assetActivityId:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`${firstAssetLineSql(assetId, financialPostings.activityId)}`,
+    assetActivityNumber:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`(
+            select ${activities.activityNumber} from ${activities}
+            where ${activities.workspaceId} = ${financialEntries.workspaceId}
+              and ${activities.id} = ${firstAssetLineSql(assetId, financialPostings.activityId)}
+          )`,
+    assetWorkOrderId:
+      assetId === undefined
+        ? sql<string | null>`null`
+        : sql<string | null>`${firstAssetLineSql(assetId, financialPostings.workOrderId)}`,
+    ...entryLinkColumns(),
+  };
+}
+
+type EntryRow = typeof financialEntries.$inferSelect;
+type CategoryRow = typeof categories.$inferSelect;
+
+/** A row of `entryItemColumns` as the joins above leave it. */
+interface EntryItemRow extends EntryLinkRow {
+  id: string;
+  entryNumber: string;
+  direction: EntryRow["direction"];
+  status: EntryRow["status"];
+  categoryCode: string;
+  categoryLabelFr: string;
+  categoryLabelEn: string;
+  categoryLayer: CategoryRow["profitabilityLayer"];
+  evidencePolicy: CategoryRow["evidencePolicy"];
+  amountMinor: bigint;
+  currency: string;
+  economicDate: string;
+  postingPeriodCode: string | null;
+  isLatePosting: boolean;
+  branchId: string;
+  counterpartyName: string | null;
+  paymentMethod: EntryRow["paymentMethod"];
+  paymentReference: string | null;
+  estimateStatus: EntryRow["estimateStatus"];
+  postedAt: Date | null;
+  rowVersion: number;
+  reversesEntryId: string | null;
+  artifactCount: number;
+  recorderPrincipalId: string | null;
+  recorderDisplayName: string | null;
+  recorderScope: "WORKSPACE" | "PLATFORM";
+  assetShareMinor: string | null;
+  assetActivityId: string | null;
+  assetActivityNumber: string | null;
+  assetWorkOrderId: string | null;
+}
+
+function toEntryItem(row: EntryItemRow, withAsset: boolean): FinancialEntryListItem {
+  return {
+    id: row.id,
+    entryNumber: row.entryNumber,
+    direction: row.direction,
+    status: row.status,
+    category: {
+      code: row.categoryCode,
+      labelFr: row.categoryLabelFr,
+      labelEn: row.categoryLabelEn,
+      layer: row.categoryLayer,
+    },
+    amountMinor: serializeMinor(row.amountMinor),
+    currency: row.currency,
+    economicDate: row.economicDate,
+    postingPeriodCode: row.postingPeriodCode ?? null,
+    isLatePosting: row.isLatePosting,
+    branchId: row.branchId,
+    counterpartyName: row.counterpartyName,
+    paymentMethod: row.paymentMethod,
+    estimateStatus: row.estimateStatus,
+    postedAt: row.postedAt?.toISOString() ?? null,
+    rowVersion: row.rowVersion,
+    reversesEntryId: row.reversesEntryId,
+    cancelledBy: null,
+    cancels: null,
+    recordedBy: toActor({
+      principalId: row.recorderPrincipalId,
+      displayName: row.recorderDisplayName,
+      scope: row.recorderScope,
+    }),
+    evidence: {
+      state: entryEvidenceState({
+        policy: row.evidencePolicy,
+        artifactCount: row.artifactCount,
+        paymentMethod: row.paymentMethod,
+        paymentReference: row.paymentReference,
+      }),
+      artifactCount: row.artifactCount,
+    },
+    assetShareMinor:
+      withAsset && row.assetShareMinor !== null ? serializeMinor(BigInt(row.assetShareMinor)) : null,
+    assetLinks: withAsset
+      ? {
+          activityId: row.assetActivityId,
+          activityNumber: row.assetActivityNumber,
+          workOrderId: row.assetWorkOrderId,
+        }
+      : null,
+    links: toEntryLinks(row),
+  };
+}
+
 export function registerFinanceReadRoutes(
   app: FastifyInstance,
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/finance/entries",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/entries", ...ENTRIES_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, periodCode, assetId, branchId, cursor, limit } =
-          parsedQuery.data;
+        const {
+          status,
+          direction,
+          periodCode,
+          economicMonth,
+          evidence,
+          assetId,
+          branchId,
+          view = "events",
+          cursor,
+          limit,
+        } = parsedQuery.data;
         const sort = parsedQuery.data.sort ?? defaultEntrySort;
         const sortColumn = entrySortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" };
           }
 
-          const conditions: SQL[] = [
-            eq(financialEntries.workspaceId, auth.workspaceId),
-          ];
+          // Workspace, branch scope and the caller's money scope (#264).
+          const conditions: SQL[] = [readableEntrySql(auth)];
 
-          // Apply branch scope
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(financialEntries.branchId, auth.branchScope));
-          }
           // Also apply branchId filter if provided (works for both ALL and scoped)
           if (branchId) {
             conditions.push(eq(financialEntries.branchId, branchId));
           }
 
-          if (status) {
+          if (status === "LEDGER") {
+            conditions.push(inArray(financialEntries.status, [...ledgerEntryStatuses]));
+          } else if (status) {
             conditions.push(eq(financialEntries.status, status));
+          }
+          if (direction) {
+            conditions.push(eq(financialEntries.direction, direction));
           }
 
           if (periodCode) {
             conditions.push(eq(postingPeriods.periodCode, periodCode));
+          }
+          if (economicMonth) {
+            const { from, to } = monthBounds(economicMonth);
+            conditions.push(gte(financialEntries.economicDate, from));
+            conditions.push(lt(financialEntries.economicDate, to));
+          }
+          if (evidence === "MISSING") {
+            conditions.push(entryEvidenceMissingSql());
+          }
+          // One line per event (#427): a cancellation in its original's window
+          // folds into the original's line. A WHERE condition, so the keyset
+          // page size stays exact.
+          if (view === "events") {
+            conditions.push(not(foldedCancellationSql(auth, periodCode)));
           }
 
           // EXISTS, not a join: an entry may carry several postings on the same
@@ -240,24 +535,10 @@ export function registerFinanceReadRoutes(
 
           const rows = await tx
             .select({
-              id: financialEntries.id,
-              entryNumber: financialEntries.entryNumber,
-              direction: financialEntries.direction,
-              status: financialEntries.status,
-              categoryCode: categories.code,
-              categoryLabelFr: categories.labelFr,
-              categoryLabelEn: categories.labelEn,
-              amountMinor: financialEntries.amountMinor,
-              currency: financialEntries.currency,
-              economicDate: financialEntries.economicDate,
-              postingPeriodCode: postingPeriods.periodCode,
-              isLatePosting: financialEntries.isLatePosting,
-              branchId: financialEntries.branchId,
-              counterpartyName: financialEntries.counterpartyName,
-              paymentMethod: financialEntries.paymentMethod,
-              estimateStatus: financialEntries.estimateStatus,
-              postedAt: financialEntries.postedAt,
-              rowVersion: financialEntries.rowVersion,
+              ...entryItemColumns(assetId),
+              postedAtKey: microsecondKey(financialEntries.postedAt),
+              cancelledBy: cancelledBySql(auth),
+              cancels: cancelsSql(auth),
             })
             .from(financialEntries)
             .innerJoin(
@@ -274,6 +555,14 @@ export function registerFinanceReadRoutes(
                 eq(postingPeriods.id, financialEntries.postingPeriodId),
               ),
             )
+            .innerJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, financialEntries.workspaceId),
+                eq(commands.id, financialEntries.createdByCommandId),
+              ),
+            )
+            .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...conditions))
             .orderBy(...keysetOrderBy(sortColumn, sort.direction, financialEntries.id))
             // One extra row is the has-next probe, never returned.
@@ -289,32 +578,24 @@ export function registerFinanceReadRoutes(
         const { rows } = result || { rows: [] };
         const hasNextPage = rows.length > limit;
         const entries = rows.slice(0, limit).map((row) => ({
-          id: row.id,
-          entryNumber: row.entryNumber,
-          direction: row.direction,
-          status: row.status,
-          category: {
-            code: row.categoryCode,
-            labelFr: row.categoryLabelFr,
-            labelEn: row.categoryLabelEn,
-          },
-          amountMinor: serializeMinor(row.amountMinor),
-          currency: row.currency,
-          economicDate: row.economicDate,
-          postingPeriodCode: row.postingPeriodCode ?? null,
-          isLatePosting: row.isLatePosting,
-          branchId: row.branchId,
-          counterpartyName: row.counterpartyName,
-          paymentMethod: row.paymentMethod,
-          estimateStatus: row.estimateStatus,
-          postedAt: row.postedAt?.toISOString() ?? null,
-          rowVersion: row.rowVersion,
+          ...toEntryItem(row, assetId !== undefined),
+          // Folded when the cancellation is not a line of this list: the same
+          // window as the original, in the events view.
+          cancelledBy:
+            row.cancelledBy === null
+              ? null
+              : toEntryCancellation(
+                  row.cancelledBy,
+                  view === "events" &&
+                    (periodCode === undefined || row.cancelledBy.postingPeriodCode === periodCode),
+                ),
+          cancels: row.cancels,
         }));
 
         let nextCursor: string | null = null;
         if (hasNextPage && entries.length > 0) {
           // Encoded off the raw row: the mapped item has already lost the
-          // bigint amount and the Date to their wire forms.
+          // bigint amount to its wire form and never carries the microsecond key.
           const lastRow = rows[entries.length - 1]!;
           nextCursor = encodeKeysetCursor(
             sort,
@@ -325,25 +606,24 @@ export function registerFinanceReadRoutes(
 
         return financialEntryListResponse.parse({ entries, nextCursor });
       } catch (error) {
-        req.log.error({ err: error }, "finance entries list read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance entries list");
       }
     },
   );
 
-  app.get(
-    "/v1/finance/entries/:entryId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/entries/:entryId", ...ENTRIES_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedParams = z.object({ entryId: z.uuid() }).safeParse(req.params);
         if (!parsedParams.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { entryId } = parsedParams.data;
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const [entry] = await tx
             .select({
               id: financialEntries.id,
@@ -365,8 +645,12 @@ export function registerFinanceReadRoutes(
               estimateStatus: financialEntries.estimateStatus,
               rejectedReason: financialEntries.rejectedReason,
               reversesEntryId: financialEntries.reversesEntryId,
+              reversalReasonCode: financialEntries.reversalReasonCode,
+              reversalReasonText: financialEntries.reversalReasonText,
               postedAt: financialEntries.postedAt,
               rowVersion: financialEntries.rowVersion,
+              createdByCommandId: financialEntries.createdByCommandId,
+              ...entryLinkColumns(),
             })
             .from(financialEntries)
             .where(
@@ -376,10 +660,7 @@ export function registerFinanceReadRoutes(
               ),
             );
 
-          if (
-            !entry ||
-            (auth.branchScope !== "ALL" && !auth.branchScope.includes(entry.branchId))
-          ) {
+          if (!entry || !(await canReadEntry(tx, auth, entry.id))) {
             return undefined;
           }
 
@@ -388,6 +669,8 @@ export function registerFinanceReadRoutes(
               labelFr: categories.labelFr,
               labelEn: categories.labelEn,
               code: categories.code,
+              layer: categories.profitabilityLayer,
+              evidencePolicy: categories.evidencePolicy,
             })
             .from(categories)
             .where(
@@ -413,6 +696,8 @@ export function registerFinanceReadRoutes(
               assetId: financialPostings.assetId,
               assetCode: assets.assetCode,
               assetAttribution: financialPostings.assetAttribution,
+              activityId: financialPostings.activityId,
+              workOrderId: financialPostings.workOrderId,
               categoryId: financialPostings.categoryId,
               categoryLabelFr: categories.labelFr,
               categoryLabelEn: categories.labelEn,
@@ -440,22 +725,51 @@ export function registerFinanceReadRoutes(
           const [reversedByEntry] = await tx
             .select({ id: financialEntries.id })
             .from(financialEntries)
-            .where(
-              and(
-                eq(financialEntries.workspaceId, auth.workspaceId),
-                eq(financialEntries.reversesEntryId, entryId),
-              ),
-            );
+            // A link the caller could not open is no link: a driver's entry
+            // reversed by Finance shows its status, not Finance's entry.
+            .where(and(readableEntrySql(auth), eq(financialEntries.reversesEntryId, entryId)));
           if (reversedByEntry) {
             reversedByEntryId = reversedByEntry.id;
           }
 
+          // The reason is about this entry, so it shows even where the
+          // cancellation itself is out of the caller's reach.
+          let cancellation: { reasonCode: CancellationReasonCode; reasonText: string | null } | null =
+            entry.reversalReasonCode === null
+              ? null
+              : { reasonCode: entry.reversalReasonCode, reasonText: entry.reversalReasonText };
+          if (entry.status === "REVERSED") {
+            const [reversal] = await tx
+              .select({
+                reasonCode: financialEntries.reversalReasonCode,
+                reasonText: financialEntries.reversalReasonText,
+              })
+              .from(financialEntries)
+              .where(
+                and(
+                  eq(financialEntries.workspaceId, auth.workspaceId),
+                  eq(financialEntries.reversesEntryId, entryId),
+                ),
+              );
+            if (reversal?.reasonCode != null) {
+              cancellation = { reasonCode: reversal.reasonCode, reasonText: reversal.reasonText };
+            }
+          }
+
+          const evidenceFiles = await entryEvidenceFiles(tx, auth.workspaceId, entry);
+          const recorders = await commandActors(tx, auth.workspaceId, [entry.createdByCommandId]);
+          const [directionDecides = false] = await directionDecidesEntries(tx, auth, [entry]);
+
           return {
             entry,
+            directionDecides,
             category,
             periodCode,
             postings: postingsRows,
             reversedByEntryId,
+            cancellation,
+            evidenceFiles,
+            recordedBy: recorders.get(entry.createdByCommandId),
           };
         });
 
@@ -463,7 +777,17 @@ export function registerFinanceReadRoutes(
           return reply.status(404).send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { entry, category, periodCode, postings, reversedByEntryId } = result;
+        const {
+          entry,
+          category,
+          periodCode,
+          postings,
+          reversedByEntryId,
+          cancellation,
+          evidenceFiles,
+          recordedBy,
+          directionDecides,
+        } = result;
 
         const mappedPostings = postings.map((p) => ({
           lineNo: p.lineNo,
@@ -471,6 +795,8 @@ export function registerFinanceReadRoutes(
           assetId: p.assetId,
           assetCode: p.assetCode ?? null,
           assetAttribution: p.assetAttribution,
+          activityId: p.activityId,
+          workOrderId: p.workOrderId,
           category: {
             code: p.categoryCode,
             labelFr: p.categoryLabelFr,
@@ -487,6 +813,7 @@ export function registerFinanceReadRoutes(
             code: category?.code ?? entry.categoryId,
             labelFr: category?.labelFr ?? entry.categoryId,
             labelEn: category?.labelEn ?? entry.categoryId,
+            layer: category?.layer ?? null,
           },
           amountMinor: serializeMinor(entry.amountMinor),
           currency: entry.currency,
@@ -505,23 +832,38 @@ export function registerFinanceReadRoutes(
           rejectedReason: entry.rejectedReason,
           reversesEntryId: entry.reversesEntryId,
           reversedByEntryId,
+          cancellation,
           postings: mappedPostings,
+          recordedBy: recordedBy ?? { principalId: null, displayName: null, scope: "WORKSPACE" },
+          evidence: {
+            state: entryEvidenceState({
+              policy: category?.evidencePolicy ?? "RECEIPT_EXPECTED",
+              artifactCount: evidenceFiles.length,
+              paymentMethod: entry.paymentMethod,
+              paymentReference: entry.paymentReference,
+            }),
+            artifactCount: evidenceFiles.length,
+          },
+          assetShareMinor: null,
+          assetLinks: null,
+          links: toEntryLinks(entry),
+          evidenceFiles,
+          directionDecides,
         };
 
         return financialEntryDetail.parse(response);
       } catch (error) {
-        req.log.error({ err: error }, "finance entry detail read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance entry detail");
       }
     },
   );
 
-  app.get(
-    "/v1/finance/approvals",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/approvals", ...LEDGER_GATE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = approvalsQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -530,9 +872,9 @@ export function registerFinanceReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultApprovalSort;
         const sortColumn = approvalSortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -573,26 +915,10 @@ export function registerFinanceReadRoutes(
 
           const rows = await tx
             .select({
-              id: financialEntries.id,
-              entryNumber: financialEntries.entryNumber,
-              direction: financialEntries.direction,
-              status: financialEntries.status,
-              categoryCode: categories.code,
-              categoryLabelFr: categories.labelFr,
-              categoryLabelEn: categories.labelEn,
-              amountMinor: financialEntries.amountMinor,
-              currency: financialEntries.currency,
-              economicDate: financialEntries.economicDate,
-              postingPeriodCode: postingPeriods.periodCode,
-              isLatePosting: financialEntries.isLatePosting,
-              branchId: financialEntries.branchId,
-              counterpartyName: financialEntries.counterpartyName,
-              paymentMethod: financialEntries.paymentMethod,
-              estimateStatus: financialEntries.estimateStatus,
-              postedAt: financialEntries.postedAt,
-              rowVersion: financialEntries.rowVersion,
+              ...entryItemColumns(undefined),
               submittedByPrincipalId: commands.initiatedByPrincipalId,
               submittedAt: financialEntries.createdAt,
+              submittedAtKey: microsecondKey(financialEntries.createdAt),
             })
             .from(financialEntries)
             .innerJoin(
@@ -609,53 +935,42 @@ export function registerFinanceReadRoutes(
                 eq(postingPeriods.id, financialEntries.postingPeriodId),
               ),
             )
-            .leftJoin(
+            .innerJoin(
               commands,
-              eq(commands.id, financialEntries.createdByCommandId),
+              and(
+                eq(commands.workspaceId, financialEntries.workspaceId),
+                eq(commands.id, financialEntries.createdByCommandId),
+              ),
             )
+            .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...pageConditions))
             .orderBy(...keysetOrderBy(sortColumn, sort.direction, financialEntries.id))
             // One extra row is the has-next probe, never returned.
             .limit(limit + 1);
 
-          return { rows, total, outsideBranchCount };
+          const directionDecides = await directionDecidesEntries(tx, auth, rows);
+
+          return { rows, total, outsideBranchCount, directionDecides };
         });
 
         if (result && "error" in result) {
           return reply.status(400).send({ error: { code: result.error } });
         }
 
-        const { rows, total, outsideBranchCount } = result || {
+        const { rows, total, outsideBranchCount, directionDecides } = result || {
           rows: [],
           total: 0,
           outsideBranchCount: 0,
+          directionDecides: [],
         };
         const hasNextPage = rows.length > limit;
         const pageRows = rows.slice(0, limit);
 
-        const entries = pageRows.map((row) => ({
-          id: row.id,
-          entryNumber: row.entryNumber,
-          direction: row.direction,
-          status: row.status,
-          category: {
-            code: row.categoryCode,
-            labelFr: row.categoryLabelFr,
-            labelEn: row.categoryLabelEn,
-          },
-          amountMinor: serializeMinor(row.amountMinor),
-          currency: row.currency,
-          economicDate: row.economicDate,
-          postingPeriodCode: row.postingPeriodCode ?? null,
-          isLatePosting: row.isLatePosting,
-          branchId: row.branchId,
-          counterpartyName: row.counterpartyName,
-          paymentMethod: row.paymentMethod,
-          estimateStatus: row.estimateStatus,
-          postedAt: row.postedAt?.toISOString() ?? null,
-          rowVersion: row.rowVersion,
+        const entries = pageRows.map((row, index) => ({
+          ...toEntryItem(row, false),
           submittedByPrincipalId: row.submittedByPrincipalId,
           submittedAt: row.submittedAt.toISOString(),
+          directionDecides: directionDecides[index] ?? false,
         }));
 
         let nextCursor: string | null = null;
@@ -675,20 +990,18 @@ export function registerFinanceReadRoutes(
           outsideBranchCount,
         });
       } catch (error) {
-        req.log.error({ err: error }, "finance approvals read failed");
-        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+        return sendReadFailure(req, reply, error, "finance approvals");
       }
     },
   );
 
-  app.get(
-    "/v1/finance/periods",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/finance/periods", ...LEDGER_GATE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const rows = await tx
             .select({
               id: postingPeriods.id,

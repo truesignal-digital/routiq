@@ -19,12 +19,10 @@
         "assigned": "Véhicule affecté"
       }
     },
-    "title": "Vos véhicules",
-    "register": "Nouveau véhicule",
+    "title": "Véhicules",
     "searchLabel": "Rechercher dans les véhicules",
     "filterLabel": "Filtrer les véhicules",
     "emptyHint": "Ajoutez un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
-    "emptyAction": "Enregistrer un véhicule",
     "loading": "Chargement des véhicules…",
     "noResultsTitle": "Aucun véhicule trouvé",
     "branchEmptyHint": "Aucun véhicule n'est rattaché à cette agence.",
@@ -39,9 +37,7 @@
       }
     },
     "form": {
-      "title": "Enregistrer un véhicule",
-      "assetCode": "Code du véhicule",
-      "submit": "Enregistrer le véhicule"
+      "assetCode": "Code du véhicule"
     },
     "actions": {
       "commissionHint": "Met le véhicule en service. Son historique d'exploitation démarre ici.",
@@ -61,7 +57,8 @@
     },
     "entries": {
       "detail": {
-        "asset": "Véhicule"
+        "asset": "Véhicule",
+        "tripLink": "Voyage {number}"
       },
       "filters": {
         "asset": "Véhicule"
@@ -88,17 +85,19 @@
       "open": "Ouvrir le voyage"
     },
     "detail": {
+      "breadcrumb": "Voyage",
       "loading": "Chargement du voyage…",
       "readings": {
         "allSuperseded": "Tous les relevés de ce voyage ont été corrigés."
+      },
+      "moneySummary": {
+        "ownOnly": "Seules les écritures que vous avez saisies sur ce voyage.",
+        "branchOnly": "Seules les écritures de vos agences sur ce voyage."
       }
     },
     "actions": {
-      "closeTitle": "Clôturer le voyage",
-      "reopenTitle": "Rouvrir le voyage",
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
       "addLegHint": "Étape n° {legNo} de ce voyage.",
-      "addExpenseTitle": "Dépense du voyage",
       "addExpenseHint": "La dépense est rattachée à ce voyage et au véhicule choisi."
     },
     "notify": {
@@ -114,8 +113,118 @@
       "chooseAsset": "Choisir un véhicule",
       "entries": {
         "attributeLabel": "Imputer à ce voyage",
-        "rowAttribute": "Imputer la ligne {position} à ce voyage"
+        "rowAttribute": "Imputer la ligne {position} à ce voyage",
+        "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche."
       }
+    },
+    "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture."
+  },
+  "maintenance": {
+    "workOrders": {
+      "newHint": "Ouvrez un ordre de travail sur un véhicule, avec ou sans problème à l'origine.",
+      "columns": {
+        "asset": "Véhicule"
+      }
+    },
+    "issues": {
+      "newHint": "Décrivez le défaut constaté sur le véhicule. Un problème critique pour la sécurité immobilise le véhicule immédiatement.",
+      "columns": {
+        "asset": "Véhicule"
+      }
+    },
+    "fields": {
+      "asset": "Véhicule",
+      "safetyCriticalHint": "Le véhicule est immobilisé dès l'enregistrement et jusqu'à sa remise en service."
+    },
+    "actions": {
+      "releaseHint": "Le véhicule redevient disponible. Cette décision demande une autre personne que celle qui a déclaré les travaux terminés ou clos le problème."
+    },
+    "detail": {
+      "unavailableTitle": "Véhicule immobilisé"
+    },
+    "notify": {
+      "success": {
+        "assetReleased": "Véhicule remis en service"
+      }
+    }
+  },
+  "history": {
+    "event": {
+      "work_order-asset_released": "Véhicule remis en service",
+      "asset_availability-opened": "Véhicule immobilisé"
+    }
+  },
+  "vehicle": {
+    "tabs": {
+      "trips": "Voyages"
+    },
+    "trips": {
+      "title": "Voyages",
+      "description": "Voyages avec ce véhicule",
+      "descriptionWithKm": "Voyages avec ce véhicule · {km, number} km enregistrés",
+      "empty": "Aucun voyage pour l'instant. Démarrez-en un quand le véhicule quitte le dépôt.",
+      "tripNumber": "Voyage {number}",
+      "wholeTrip": "Montants du voyage entier",
+      "noMoney": "Aucune écriture liée à ce voyage.",
+      "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce voyage.",
+      "noBranchMoney": "Aucune écriture de vos agences sur ce voyage pour l'instant.",
+      "openFull": "Ouvrir le voyage complet"
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Voyages"
+      },
+      "event": {
+        "activity-created": "Voyage {number} démarré",
+        "activity-closed": "Voyage {number} clôturé",
+        "activity-reopened": "Voyage {number} rouvert",
+        "activity-asset_substituted": "Véhicule substitué sur le voyage {number}",
+        "movement_leg-recorded": "Étape enregistrée sur le voyage {number}"
+      }
+    },
+    "status": {
+      "available": {
+        "sinceAndTrip": "En service depuis {since} ; dernier voyage {lastTrip}.",
+        "sinceNoTrips": "En service depuis {since} ; aucun voyage pour l'instant.",
+        "lastTripOnly": "Dernier voyage {lastTrip}.",
+        "noTrips": "Aucun voyage pour l'instant."
+      }
+    },
+    "money": {
+      "forTrip": "pour le voyage {number}"
+    },
+    "readings": {
+      "source": {
+        "ACTIVITY_START": "Départ du voyage",
+        "ACTIVITY_END": "Fin du voyage"
+      }
+    },
+    "panel": {
+      "backTo": "{kind, select, work_order {Retour à l'ordre de travail {ref}} issue {Retour au problème {ref}} entry {Retour à l'écriture} trip {Retour au voyage} document {Retour au document} note {Retour à la note} other {Retour aux relevés}}",
+      "tripTitle": "Voyage",
+      "tripEyebrow": "Voyage {number} · {type}"
+    },
+    "actions": {
+      "change-custodian": {
+        "description": "La personne qui conduit habituellement le véhicule. Chaque voyage peut avoir un autre chauffeur."
+      }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Enregistrer un véhicule",
+      "submit": "Enregistrer le véhicule"
+    },
+    "close-activity": {
+      "label": "Clôturer le voyage",
+      "submit": "Clôturer le voyage"
+    },
+    "reopen-activity": {
+      "label": "Rouvrir le voyage",
+      "submit": "Rouvrir le voyage"
+    },
+    "record-journey-sheet": {
+      "short": "Voyage"
     }
   }
 }

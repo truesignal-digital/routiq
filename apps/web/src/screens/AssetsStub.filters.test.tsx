@@ -8,10 +8,12 @@ import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { AssetsStub } from "./AssetsStub.js";
+import { applyNavigate, useTestSearch } from "../test-router.js";
 
 // A real Link needs a router around it; the screen renders bare here.
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => applyNavigate,
+  useSearch: () => useTestSearch(),
   Link: ({
     to,
     params,
@@ -87,15 +89,20 @@ function stubFetch(bodies: unknown[]) {
   return { requested, summaryRequested };
 }
 
-function renderScreen(role: MeContext["role"] = "ADMIN") {
+function renderScreen(
+  role: MeContext["role"] = "ADMIN",
+  enabledModules: MeContext["enabledModules"] = ["CORE", "ASSETS"],
+) {
   const me: MeContext = {
     workspaceId: "ws",
     principalId: "p",
     principalType: "HUMAN",
     membershipId: "m",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
-    enabledModules: ["CORE", "ASSETS"],
+    enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
   };
   return render(
@@ -152,7 +159,7 @@ describe("assets explorer server-side filtering", () => {
     await waitFor(() => expect(lastQuery(requested).get("search")).toBe("scania"));
   });
 
-  it("maps the ATTENTION choice onto its three lifecycle statuses", async () => {
+  it("asks the server for the Attention tile's set, not three lifecycle statuses", async () => {
     const { requested } = stubFetch([
       { items: [item("AST-001", "Mercedes")], nextCursor: null },
     ]);
@@ -162,13 +169,8 @@ describe("assets explorer server-side filtering", () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Statut" }));
     await userEvent.click(await screen.findByRole("option", { name: "À surveiller" }));
 
-    await waitFor(() =>
-      expect(lastQuery(requested).getAll("status")).toEqual([
-        "UNDER_MAINTENANCE",
-        "RETIRED",
-        "WRITTEN_OFF",
-      ]),
-    );
+    await waitFor(() => expect(lastQuery(requested).get("attention")).toBe("true"));
+    expect(lastQuery(requested).getAll("status")).toEqual([]);
   });
 
   it("narrows by class on the server", async () => {
@@ -259,6 +261,21 @@ describe("assets explorer server-side filtering", () => {
       expect(summaryRequested).toHaveLength(1);
     });
 
+    it("says the Attention count covers grounded vehicles only while MAINTENANCE is on", async () => {
+      stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
+      const { unmount } = renderScreen("ADMIN", ["CORE", "ASSETS", "MAINTENANCE"]);
+      expect(
+        await screen.findByText("Immobilisés, en maintenance, retirés ou réformés"),
+      ).toBeDefined();
+      unmount();
+
+      renderScreen("ADMIN", ["CORE", "ASSETS"]);
+      expect(await screen.findByText("En maintenance, retirés ou réformés")).toBeDefined();
+      expect(
+        screen.queryByText("Immobilisés, en maintenance, retirés ou réformés"),
+      ).toBeNull();
+    });
+
     it("asks the summary to narrow with the table, minus the status bucket", async () => {
       const { summaryRequested } = stubFetch([
         { items: [item("AST-001", "Mercedes")], nextCursor: null },
@@ -309,23 +326,23 @@ describe("assets explorer server-side filtering", () => {
       await userEvent.click(screen.getByRole("button", { name: "Actions" }));
       const menu = await screen.findByRole("menu");
       expect(within(menu).getByText("Mettre en service")).toBeDefined();
-      expect(within(menu).getByText("Affecter")).toBeDefined();
+      expect(within(menu).getByText("Changer d'agence")).toBeDefined();
 
       await userEvent.click(within(menu).getByText("Mettre en service"));
 
       const dialog = await screen.findByRole("dialog");
-      expect(within(dialog).getByRole("button", { name: "Confirmer" })).toBeDefined();
+      expect(within(dialog).getByRole("button", { name: "Mettre en service" })).toBeDefined();
     });
 
     it("offers a viewer no commands at all", async () => {
       stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
-      renderScreen("EXECUTIVE_VIEWER");
+      renderScreen("CASHIER");
       await screen.findByText("AST-001");
 
       await userEvent.click(screen.getByRole("button", { name: "Actions" }));
       const menu = await screen.findByRole("menu");
 
-      expect(within(menu).queryByText("Affecter")).toBeNull();
+      expect(within(menu).queryByText("Changer d'agence")).toBeNull();
       expect(within(menu).getByText("Ouvrir la fiche")).toBeDefined();
     });
   });

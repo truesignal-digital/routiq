@@ -13,13 +13,17 @@ export const HISTORY_ENTITY_TYPES = [
   "activity_asset_segment",
   "approval_rule",
   "asset",
+  "asset_availability_interval",
   "category",
   "document",
   "financial_entry",
   "meter_reading",
   "movement_leg",
+  "note",
+  "operational_issue",
   "person",
   "posting_period",
+  "work_order",
   "workspace",
   "workspace_module",
   "workspace_template",
@@ -31,7 +35,9 @@ export type HistoryEntityType = (typeof HISTORY_ENTITY_TYPES)[number];
 
 /**
  * History is visible to whoever can read the record, so the owning module's
- * entitlement (plus RLS) is the whole gate. Ownership mirrors the `module`
+ * entitlement and tenant RLS apply, and every type that has a branch — its own
+ * or its parent's — is read against the actor's branch scope. Ownership mirrors
+ * the `module`
  * field on the commands that write each entity type — `person` sits under
  * ACTIVITIES because `register-person` does.
  */
@@ -40,13 +46,23 @@ export const HISTORY_ENTITY_MODULE = {
   activity_asset_segment: "ACTIVITIES",
   approval_rule: "CORE",
   asset: "ASSETS",
+  /**
+   * MAINTENANCE, not ASSETS: the grounding is opened by `report-issue` and
+   * closed by `release-asset-to-service`, so it follows the module whose
+   * commands write it — same rule that puts `person` under ACTIVITIES.
+   */
+  asset_availability_interval: "MAINTENANCE",
   category: "CORE",
   document: "DOCUMENTS",
   financial_entry: "FINANCE",
   meter_reading: "ACTIVITIES",
   movement_leg: "ACTIVITIES",
+  /** `add-note` is a CORE command: every member may annotate what they can see. */
+  note: "CORE",
+  operational_issue: "MAINTENANCE",
   person: "ACTIVITIES",
   posting_period: "FINANCE",
+  work_order: "MAINTENANCE",
   workspace: "CORE",
   workspace_module: "CORE",
   workspace_template: "CORE",
@@ -95,6 +111,11 @@ export const historyItem = z.object({
    * `after_state` themselves stay out of the list — it has to stay light on 2G.
    */
   note: z.string().nullable(),
+  /**
+   * A reason picked from a list (`reasonCode`, #426), for the client to put in
+   * words; the free text, when there is any, stays in `note`.
+   */
+  noteCode: z.string().nullable(),
 });
 
 export const historyListResponse = listResponse(historyItem);
@@ -112,6 +133,12 @@ export const historyListResponse = listResponse(historyItem);
  * `workspaceId`, `rowVersion`, `*ByCommandId`) are left out on purpose: they are
  * in every snapshot, they say nothing to an operator, and omitting them keeps
  * the payload small on 2G. The diff renders in the order listed here.
+ *
+ * Every key also needs a display shape in `HISTORY_FIELD_SHAPES`
+ * (`history-fields.ts`), and the type checker holds the two lists together.
+ * A key that cannot be shown as words — a segment or reading id, a template's
+ * custom-field bag, a place id next to the typed place — stays off this list
+ * (#110, #119).
  */
 export const HISTORY_STATE_KEYS = {
   activity: [
@@ -119,7 +146,6 @@ export const HISTORY_STATE_KEYS = {
     "completeness",
     "completenessCodes",
     "activityNumber",
-    "activityTypeCode",
     "activityTypeId",
     "branchId",
     "startedAt",
@@ -130,20 +156,14 @@ export const HISTORY_STATE_KEYS = {
     "description",
     "note",
     "reason",
-    "customValues",
     "crew",
     "segments",
     "segmentIds",
     "legIds",
     "readingIds",
-    "entries",
     "role",
-    "outgoingSegmentId",
     "outgoingAssetId",
     "outgoingEndedAt",
-    "outgoingReadingId",
-    "incomingReadingId",
-    "newSegmentId",
     "substituteAssetId",
     "templateCode",
     "templateVersion",
@@ -173,6 +193,21 @@ export const HISTORY_STATE_KEYS = {
     "templateCode",
     "templateVersion",
   ],
+  /**
+   * A grounding, from `asset_availability.opened` and `.closed`. `closedAt`
+   * moving from null to a timestamp IS the release — availability is not
+   * lifecycle status, so nothing else on the row says the truck came back.
+   * `closedByCommandId` is bookkeeping and stays out; `releaseNote` is the
+   * releaser's own words and does not.
+   */
+  asset_availability_interval: [
+    "assetId",
+    "openedAt",
+    "openedByIssueId",
+    "closedAt",
+    "releaseNote",
+    "overrideReason",
+  ],
   category: [
     "kind",
     "code",
@@ -180,6 +215,7 @@ export const HISTORY_STATE_KEYS = {
     "labelEn",
     "profitabilityLayer",
     "evidencePolicy",
+    "defaultSafetyCritical",
     "active",
   ],
   document: [
@@ -213,9 +249,12 @@ export const HISTORY_STATE_KEYS = {
     "postings",
     "approvalNote",
     "rejectedReason",
+    "reasonCode",
     "reason",
     "reversesEntryId",
     "reversedByEntryId",
+    /** `financial_entry.evidence_attached`: the files linked by that call. */
+    "artifactIds",
   ],
   meter_reading: [
     "readingType",
@@ -224,23 +263,39 @@ export const HISTORY_STATE_KEYS = {
     "source",
     "assetId",
     "activityId",
-    "supersedesReadingId",
     "supersedeReason",
   ],
   movement_leg: [
     "legNo",
-    "segmentId",
     "activityId",
     "originText",
-    "originPlaceId",
     "destinationText",
-    "destinationPlaceId",
     "departedAt",
     "arrivedAt",
     "distanceKm",
     "loadState",
     "passengerCount",
-    "customValues",
+  ],
+  /** A note is its body and what it annotates; it never changes after `note.added`. */
+  note: ["body"],
+  /**
+   * A signalement's report is never edited; what moves is its status, once —
+   * resolved (on the spot or by a completed work order) or dismissed. The
+   * timeline is what an operator opens to ask who called the truck unsafe, and
+   * who said it was dealt with.
+   */
+  operational_issue: [
+    "status",
+    "assetId",
+    "description",
+    "safetyCritical",
+    "category",
+    "reportedAt",
+    "resolvedAt",
+    "resolutionNote",
+    "resolvedByWorkOrderId",
+    "dismissedAt",
+    "dismissReason",
   ],
   person: [
     "displayName",
@@ -253,6 +308,36 @@ export const HISTORY_STATE_KEYS = {
   ],
   posting_period: ["status", "lockedAt", "reason"],
   /**
+   * The work-order workflow, from creation through both approvals to
+   * completion, rejection, cancellation or release. `approvalNote` is the
+   * authorizer's justification of a spend, the reject and cancel reasons the
+   * refusal and abandonment motifs — all of them are why the decision was taken
+   * and exist nowhere but the trail.
+   */
+  work_order: [
+    "status",
+    "description",
+    "assetId",
+    "issueId",
+    "expectedCostMinor",
+    "actualCostMinor",
+    "declaredCostMinor",
+    "costOutcome",
+    "currency",
+    "summary",
+    "resolveLinkedIssue",
+    "completedAt",
+    "rejectReason",
+    "rejectedAt",
+    "completionRejectReason",
+    "cancelReason",
+    "cancelledAt",
+    "approvalNote",
+    "releasedAt",
+    "releaseNote",
+    "overrideReason",
+  ],
+  /**
    * `admin` and `users` from `workspace.provisioned` are deliberately absent:
    * they are principal snapshots carrying login usernames, and CORE entitles
    * every member to this timeline.
@@ -263,10 +348,9 @@ export const HISTORY_STATE_KEYS = {
     "defaultCurrency",
     "defaultLocale",
     "timezone",
-    "branch",
+    "branches",
     "enabledPresets",
     "disabledModules",
-    "packs",
   ],
   workspace_module: ["moduleCode", "enabled", "updatedAt"],
   workspace_template: ["presetCode", "enabled"],
@@ -280,30 +364,26 @@ export const HISTORY_MONEY_STATE_KEYS = [
   "amountMinor",
   "amountMaxMinor",
   "acquisitionAmountMinor",
+  "expectedCostMinor",
+  "actualCostMinor",
+  "declaredCostMinor",
 ] as const;
 
 export const historyValueKinds = ["MONEY", "VALUE"] as const;
 export const historyValueKind = z.enum(historyValueKinds);
 
+/**
+ * One allowlisted key that moved, as recorded. Not for display as it stands:
+ * the record history diff serves `historyDiffChange` (`history-fields.ts`);
+ * this raw pair feeds readers that word the change themselves, such as the
+ * vehicle History tab's details-edit lines.
+ */
 export const historyFieldChange = z.object({
   field: z.string(),
-  /** MONEY pairs the value with the diff's `currency`; VALUE renders as it came. */
+  /** MONEY pairs the value with a currency; VALUE is the snapshot's own JSON. */
   kind: historyValueKind,
   before: z.json(),
   after: z.json(),
-});
-
-/**
- * What a single event changed — the only shape `before_state`/`after_state` are
- * ever served through. The list item already carries who, when and through which
- * command, so the diff repeats none of it: on 2G the expansion pays for the
- * changes alone.
- */
-export const historyEventDiff = z.object({
-  eventId: z.uuid(),
-  /** For MONEY changes: the state's own currency, else the workspace default. */
-  currency: z.string().length(3),
-  changes: z.array(historyFieldChange),
 });
 
 export type HistoryListQuery = z.infer<typeof historyListQuery>;
@@ -312,4 +392,3 @@ export type HistoryItem = z.infer<typeof historyItem>;
 export type HistoryListResponse = z.infer<typeof historyListResponse>;
 export type HistoryValueKind = z.infer<typeof historyValueKind>;
 export type HistoryFieldChange = z.infer<typeof historyFieldChange>;
-export type HistoryEventDiff = z.infer<typeof historyEventDiff>;

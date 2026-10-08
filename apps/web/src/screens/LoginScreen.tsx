@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -14,6 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PoweredByRoutiq, RoutiqLogo, useCompanyLogo } from "@/components/brand/routiq-logo";
 import { login } from "../auth/api.js";
 import { sessionStore } from "../auth/store.js";
 import { ErrorBanner } from "@/components/error-banner.js";
@@ -27,10 +29,12 @@ interface LoginFormValues {
 export function LoginScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { redirect: redirectTo } = useSearch({ from: "/login" });
   const last = sessionStore.getLastIdentity();
 
   const [errorCode, setErrorCode] = useState<string>();
+  const companyLogo = useCompanyLogo();
 
   const formSchema = useMemo(
     () =>
@@ -59,13 +63,18 @@ export function LoginScreen() {
       form.setValue("pin", "");
       return;
     }
+    // A session that expired never signed out: nothing read under it may
+    // render this member's screens.
+    queryClient.clear();
     sessionStore.save(result.session);
     void navigate({ to: safeInternalPath(redirectTo) ?? "/" });
   }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-10">
-      <h1 className="text-2xl font-semibold">{t("app.name")}</h1>
+      <h1>
+        <RoutiqLogo markClassName="size-10" wordmarkClassName="text-2xl" />
+      </h1>
       <p className="mt-1 text-sm text-muted-foreground">{t("login.subtitle")}</p>
 
       <Form {...form}>
@@ -81,7 +90,6 @@ export function LoginScreen() {
                 <FormLabel>{t("login.workspace")}</FormLabel>
                 <FormControl>
                   <Input
-                    className="min-h-11"
                     autoCapitalize="none"
                     autoCorrect="off"
                     {...field}
@@ -100,7 +108,6 @@ export function LoginScreen() {
                 <FormLabel>{t("login.username")}</FormLabel>
                 <FormControl>
                   <Input
-                    className="min-h-11"
                     autoCapitalize="none"
                     autoCorrect="off"
                     autoComplete="username"
@@ -120,7 +127,6 @@ export function LoginScreen() {
                 <FormLabel>{t("login.pin")}</FormLabel>
                 <FormControl>
                   <Input
-                    className="min-h-11"
                     type="password"
                     inputMode="numeric"
                     autoComplete="current-password"
@@ -136,15 +142,18 @@ export function LoginScreen() {
 
           <Button
             type="submit"
-            className="min-h-11"
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting
-              ? t("login.submitting")
-              : t("login.submit")}
+              ? t("login.signingIn")
+              : t("login.signIn")}
           </Button>
         </form>
       </Form>
+
+      <footer className="mt-10 flex justify-center empty:hidden">
+        <PoweredByRoutiq companyLogo={companyLogo} />
+      </footer>
     </main>
   );
 }

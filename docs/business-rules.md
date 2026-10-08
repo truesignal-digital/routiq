@@ -26,7 +26,7 @@ negatives so sums always net exactly.
 - **Over the threshold** → saved as SUBMITTED and waits for a decision
   (`En attente d'approbation`) — this is a SUCCESS, the record is safe; it just
   isn't final.
-- An approver (FINANCE_APPROVER or ADMIN) approves or rejects; rejection requires
+- An approver (Finance or Direction) approves or rejects; rejection requires
   a written reason.
 
 **Why:** field staff record small fuel/toll receipts all day; approving each one
@@ -34,8 +34,11 @@ would bury the approver. Human judgment is concentrated on large amounts.
 
 **The number:** pilot placeholder is **100 000 XAF**, stored per tenant in
 `approval_rules` — it is data, not code. Each business gets its own threshold
-(can be 0 = "approve everything"). Changed via the `update-approval-threshold`
-command — audited like everything else. Real per-tenant values are an open
+(can be 0 = "approve everything"). Direction changes it, together with the
+amount up to which Finance decides (1 000 000 XAF by default), under More →
+Company settings → Approvals, which sends `update-approval-threshold` v2 —
+audited like everything else. The amount that posts directly must stay below
+Finance's. Real per-tenant values are an open
 onboarding decision (mtp-pilot 06).
 
 ## 4. Maker ≠ approver
@@ -58,9 +61,9 @@ at most once. Reversal requires a reason and an approver role.
 ## 6. Monthly periods — locking makes history final
 
 - Periods (calendar months) create themselves OPEN on first posting — no setup ceremony.
-- **Locking** a period is the deliberate act (FINANCE_APPROVER/ADMIN): after the
+- **Locking** a period is the deliberate act (Finance or Direction): after the
   lock, that month's figures are final.
-- Reopening is possible but requires a reason, and the reason is audited.
+- Reopening is Direction's, requires a reason, and the reason is audited.
 - An entry approved after its month locked **late-posts** into the current open
   month, flagged (`is_late_posting`) — recorded honestly rather than blocked or
   backdated.
@@ -91,12 +94,16 @@ server can never see each other's data — by construction, not by convention.
 
 ## 10. Roles (who can do what, finance)
 
-| Role | Record | Approve/Reject | Reverse | Lock/Reopen period |
-|---|---|---|---|---|
-| FIELD_SUBMITTER | ✓ | — | — | — |
-| OPS_MANAGER | ✓ | — | — | — |
-| FINANCE_APPROVER | ✓ | ✓ (not own) | ✓ | ✓ |
-| ADMIN | ✓ | ✓ (not own) | ✓ | ✓ |
+| Role | Record | Approve/Reject | Reverse | Lock period | Reopen period |
+|---|---|---|---|---|---|
+| DRIVER | expenses, within the band | — | — | — | — |
+| TECHNICIAN | work-order expenses, within the band | — | — | — | — |
+| CASHIER | ✓ within the band | — | — | — | — |
+| ADMIN | ✓ | — | — | — | — |
+| FINANCE | ✓ | ✓ (not own) | ✓ | ✓ | — |
+| DIRECTOR | ✓ | ✓ (not own) | ✓ | ✓ | ✓ |
+
+The full feature map is [the roles and access reference](reference/roles-and-access.md).
 
 Branch scope applies on top: a branch-scoped user only sees and touches their
 branches' records.

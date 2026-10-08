@@ -76,16 +76,14 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
       <CardContent className="flex flex-col gap-3">
         {segments.map((segment) => (
           <div key={segment.id} className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-mono">{segment.assetCode}</span>
+            <span className="tabular-nums">{segment.assetCode}</span>
             <StatusBadge tone={segment.role === "SUBSTITUTE" ? "warning" : "neutral"}>
               {t(`activities.roles.${segment.role}`)}
             </StatusBadge>
             <span className="text-muted-foreground">
               {formatDateTime(segment.startedAt, locale)}
               {" → "}
-              {segment.endedAt === null
-                ? t("activities.detail.stillRunning")
-                : formatDateTime(segment.endedAt, locale)}
+              {segment.endedAt === null ? "—" : formatDateTime(segment.endedAt, locale)}
             </span>
           </div>
         ))}
@@ -111,7 +109,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
           <>
             {(segments.length > 0 || crew.length > 0) && <Separator />}
             <div className="flex flex-col gap-2">
-              <h3 className="text-muted-foreground text-xs uppercase tracking-wide">
+              <h3 className="text-muted-foreground text-xs">
                 {t("activities.detail.readings.title")}
               </h3>
 
@@ -168,7 +166,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
                 // A correction that hid what it replaced would be an edit. The
                 // chain is folded away, never dropped.
                 <details className="rounded-lg bg-foreground/[0.03] px-3 py-2">
-                  <summary className="min-h-9 cursor-pointer list-none text-xs text-muted-foreground">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-muted-foreground">
                     {t("activities.detail.readings.corrected", {
                       count: superseded.length,
                     })}

@@ -2,17 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import type { CreateBranchPayload } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FormPanel,
+  FormPanelCancel,
+  FormPanelFooter,
+  FormPanelHeader,
+} from "@/components/command-form.js";
 import {
   Form,
   FormControl,
@@ -31,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { BRANCH_TIMEZONES, DEFAULT_BRANCH_TIMEZONE } from "./timezones.js";
@@ -72,6 +72,7 @@ export function CreateBranchDialog({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const invalidateBranches = useInvalidateBranches();
   const [branchId, setBranchId] = useState(() => crypto.randomUUID());
   const [errorCode, setErrorCode] = useState<string>();
@@ -142,6 +143,9 @@ export function CreateBranchDialog({
       return;
     }
 
+    notifyCommandSuccess("branches", "created", result.outcome.warnings, {
+      values: { name: values.name.trim() },
+    });
     await invalidateBranches();
     form.reset(EMPTY);
     onCreated();
@@ -149,18 +153,18 @@ export function CreateBranchDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("branches.add.title")}</DialogTitle>
-          <DialogDescription>{t("branches.add.description")}</DialogDescription>
-        </DialogHeader>
+    <FormPanel open={open} onClose={() => onOpenChange(false)}>
+        <FormPanelHeader
+          title={label("create-branch")}
+          description={t("branches.add.description")}
+        />
 
         <Form {...form}>
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-1 flex-col"
             onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
           >
+            <div className="flex flex-col gap-4 p-4">
             {errorCode && <ErrorBanner code={errorCode} />}
 
             <FormField
@@ -175,7 +179,7 @@ export function CreateBranchDialog({
                       autoComplete="off"
                       autoCapitalize="characters"
                       maxLength={8}
-                      className="min-h-11 font-mono uppercase"
+                      className="tabular-nums"
                       {...field}
                       onChange={(event) =>
                         field.onChange(event.target.value.toUpperCase())
@@ -195,7 +199,7 @@ export function CreateBranchDialog({
                 <FormItem>
                   <FormLabel>{t("branches.form.name")}</FormLabel>
                   <FormControl>
-                    <Input type="text" className="min-h-11" {...field} />
+                    <Input type="text" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -214,7 +218,7 @@ export function CreateBranchDialog({
                   >
                     <FormControl>
                       <SelectTrigger
-                        className="min-h-11 w-full"
+                        className="w-full"
                         aria-label={t("branches.form.timezone")}
                       >
                         <SelectValue />
@@ -233,28 +237,24 @@ export function CreateBranchDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                onClick={() => onOpenChange(false)}
-              >
+            </div>
+
+            <FormPanelFooter>
+              <FormPanelCancel onDismiss={() => onOpenChange(false)}>
                 {t("branches.form.cancel")}
-              </Button>
+              </FormPanelCancel>
               <Button
                 type="submit"
-                className="min-h-11"
+                className="flex-1 sm:flex-none"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("branches.form.submitting")
-                  : t("branches.add.submit")}
+                  ? label("create-branch", "submitting")
+                  : label("create-branch", "submit")}
               </Button>
-            </DialogFooter>
+            </FormPanelFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

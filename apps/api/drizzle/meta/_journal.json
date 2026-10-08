@@ -176,6 +176,146 @@
       "when": 1786825947084,
       "tag": "0024_branch_name_uq",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787719900641,
+      "tag": "0025_dark_sheva_callister",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787719900642,
+      "tag": "0026_maintenance_command_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790371033364,
+      "tag": "0027_maintenance_state_machines",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790385834227,
+      "tag": "0028_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790386417516,
+      "tag": "0029_attach_evidence_command_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790461427409,
+      "tag": "0030_tenant_fk_gaps",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790461577099,
+      "tag": "0031_postings_balance",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790775400376,
+      "tag": "0032_work_order_cost_outcome",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790775400782,
+      "tag": "0033_drop_work_order_actual_cost",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790776416375,
+      "tag": "0034_edit_pending_entry",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790777080332,
+      "tag": "0035_update_asset_details_command_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791125516813,
+      "tag": "0036_six_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791161560104,
+      "tag": "0037_entry_decision_chain",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791248318714,
+      "tag": "0038_chain_covers_finance_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791251554003,
+      "tag": "0039_approval_rule_notice",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791282207774,
+      "tag": "0040_observability",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791309018120,
+      "tag": "0041_audit_events_command_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791309618120,
+      "tag": "0042_cancellation_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791326009734,
+      "tag": "0043_direction_note_acknowledgements",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791326609734,
+      "tag": "0044_change_issue_severity_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Encode lessons in structure"
+  short_description: "Turn repeated corrections into checks"

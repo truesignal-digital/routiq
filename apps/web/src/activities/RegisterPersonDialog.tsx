@@ -4,16 +4,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { registerPersonPayload } from "@routiq/contracts";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FormPanel,
+  FormPanelCancel,
+  FormPanelFooter,
+  FormPanelHeader,
+} from "@/components/command-form.js";
 import {
   Form,
   FormControl,
@@ -76,6 +75,7 @@ export function RegisterPersonDialog({
   client = commandClient,
 }: RegisterPersonDialogProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const [personId, setPersonId] = useState(() => crypto.randomUUID());
@@ -140,20 +140,18 @@ export function RegisterPersonDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("activities.registerPerson.title")}</DialogTitle>
-          <DialogDescription>
-            {t("activities.registerPerson.description")}
-          </DialogDescription>
-        </DialogHeader>
+    <FormPanel open={open} onClose={() => onOpenChange(false)}>
+        <FormPanelHeader
+          title={label("register-person")}
+          description={t("activities.registerPerson.description")}
+        />
 
         <Form {...form}>
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-1 flex-col"
             onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
           >
+            <div className="flex flex-col gap-4 p-4">
             {errorCode && <ErrorBanner code={errorCode} />}
 
             <FormField
@@ -165,7 +163,6 @@ export function RegisterPersonDialog({
                   <FormControl>
                     <Input
                       type="text"
-                      className="min-h-11"
                       placeholder={t("activities.registerPerson.namePlaceholder")}
                       {...field}
                     />
@@ -186,7 +183,7 @@ export function RegisterPersonDialog({
                     onValueChange={(value) => field.onChange(value ?? "")}
                   >
                     <FormControl>
-                      <SelectTrigger className="min-h-11 w-full">
+                      <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={t("activities.registerPerson.rolePlaceholder")}
                         />
@@ -214,7 +211,6 @@ export function RegisterPersonDialog({
                   <FormControl>
                     <Input
                       type="tel"
-                      className="min-h-11"
                       placeholder={t("activities.registerPerson.phonePlaceholder")}
                       {...field}
                     />
@@ -224,28 +220,24 @@ export function RegisterPersonDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11"
-                onClick={() => onOpenChange(false)}
-              >
-                {t("activities.registerPerson.cancel")}
-              </Button>
+            </div>
+
+            <FormPanelFooter>
+              <FormPanelCancel onDismiss={() => onOpenChange(false)}>
+                {t("commandForm.cancel")}
+              </FormPanelCancel>
               <Button
                 type="submit"
-                className="min-h-11"
+                className="flex-1 sm:flex-none"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
-                  ? t("activities.registerPerson.submitting")
-                  : t("activities.registerPerson.submit")}
+                  ? label("register-person", "submitting")
+                  : label("register-person", "submit")}
               </Button>
-            </DialogFooter>
+            </FormPanelFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

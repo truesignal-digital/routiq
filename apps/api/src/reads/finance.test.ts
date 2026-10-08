@@ -11,9 +11,18 @@ import {
 } from "@routiq/contracts";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
-import { branches } from "../db/schema.js";
+import {
+  branches,
+  categories,
+  commands,
+  financialEntries,
+  financialPostings,
+  principals,
+} from "../db/schema.js";
+import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedMember, seedWorkspace } from "../test/seed.js";
+import { plantWorkOrderRevenue, seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { and, eq } from "drizzle-orm";
 import { serializeMinor } from "./serialize-minor.js";
 
 describe("finance reads", () => {
@@ -35,7 +44,7 @@ describe("finance reads", () => {
 
     const admin = await seedMember(db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     allBranchesToken = (
@@ -44,7 +53,7 @@ describe("finance reads", () => {
 
     const scoped = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: false,
       branchIds: [branchId],
     });
@@ -80,13 +89,23 @@ describe("finance reads", () => {
   });
 
   describe("contract schemas", () => {
+    /** The #44 and #87 fields every entry row carries. */
+    const vehicleFields = {
+      reversesEntryId: null,
+      recordedBy: { principalId: randomUUID(), displayName: "Sali", scope: "WORKSPACE" as const },
+      evidence: { state: "NOT_SUPPLIED" as const, artifactCount: 0 },
+      assetShareMinor: null,
+      assetLinks: null,
+      links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+    };
+
     it("parses financialEntryListItem", () => {
       const item = {
         id: randomUUID(),
         entryNumber: "DLA-2026-00001",
         direction: "EXPENSE" as const,
         status: "POSTED" as const,
-        category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+        category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: "DIRECT" as const },
         amountMinor: 50000,
         currency: "XAF",
         economicDate: "2026-07-25",
@@ -98,9 +117,10 @@ describe("finance reads", () => {
         estimateStatus: "ACTUAL" as const,
         postedAt: new Date().toISOString(),
         rowVersion: 1,
+        ...vehicleFields,
       };
-      const parsed = financialEntryListItem.parse(item);
-      expect(parsed).toEqual(item);
+      const parsed = financialEntryListItem.parse({ ...item, cancelledBy: null, cancels: null });
+      expect(parsed).toEqual({ ...item, cancelledBy: null, cancels: null });
     });
 
     it("parses financialEntryListResponse", () => {
@@ -111,7 +131,7 @@ describe("finance reads", () => {
             entryNumber: "DLA-2026-00001",
             direction: "EXPENSE" as const,
             status: "POSTED" as const,
-            category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+            category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: "DIRECT" as const },
             amountMinor: 50000,
             currency: "XAF",
             economicDate: "2026-07-25",
@@ -123,6 +143,9 @@ describe("finance reads", () => {
             estimateStatus: "ACTUAL" as const,
             postedAt: new Date().toISOString(),
             rowVersion: 1,
+            ...vehicleFields,
+            cancelledBy: null,
+            cancels: null,
           },
         ],
         nextCursor: null,
@@ -138,7 +161,7 @@ describe("finance reads", () => {
         entryNumber: "DLA-2026-00001",
         direction: "EXPENSE" as const,
         status: "POSTED" as const,
-        category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+        category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: "DIRECT" as const },
         amountMinor: 50000,
         currency: "XAF",
         economicDate: "2026-07-25",
@@ -150,12 +173,14 @@ describe("finance reads", () => {
         estimateStatus: "ACTUAL" as const,
         postedAt: new Date().toISOString(),
         rowVersion: 1,
+        ...vehicleFields,
         description: null,
         paymentReference: null,
         sourceReference: null,
         rejectedReason: null,
-        reversesEntryId: null,
         reversedByEntryId: null,
+        cancellation: null,
+        evidenceFiles: [],
         postings: [
           {
             lineNo: 1,
@@ -163,6 +188,8 @@ describe("finance reads", () => {
             assetId: randomUUID(),
             assetCode: "FIN-TRUCK-001",
             assetAttribution: "DIRECT" as const,
+            activityId: null,
+            workOrderId: null,
             category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
           },
         ],
@@ -178,7 +205,7 @@ describe("finance reads", () => {
         entryNumber: "DLA-2026-00002",
         direction: "EXPENSE" as const,
         status: "SUBMITTED" as const,
-        category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+        category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: "DIRECT" as const },
         amountMinor: 100000,
         currency: "XAF",
         economicDate: "2026-07-26",
@@ -190,8 +217,10 @@ describe("finance reads", () => {
         estimateStatus: "ACTUAL" as const,
         postedAt: null,
         rowVersion: 1,
+        ...vehicleFields,
         submittedByPrincipalId: randomUUID(),
         submittedAt: new Date().toISOString(),
+        directionDecides: false,
       };
       const parsed = pendingApprovalItem.parse(item);
       expect(parsed).toEqual(item);
@@ -450,7 +479,7 @@ describe("finance reads", () => {
       const seeded = await seedWorkspace(db);
       const submitter = await seedMember(db, {
         workspaceId: seeded.workspace.id,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       pagedToken = (
@@ -460,7 +489,7 @@ describe("finance reads", () => {
         })
       ).token;
 
-      // Below the 100_000 threshold a FIELD_SUBMITTER auto-approves → POSTED
+      // Below the 100_000 threshold a DRIVER auto-approves → POSTED
       // with a postedAt. Above it the entry stays SUBMITTED with postedAt null.
       for (let index = 0; index < POSTED_COUNT; index += 1) {
         const { entryId, recordStatus } = await recordExpense(pagedToken, {
@@ -669,7 +698,7 @@ describe("finance reads", () => {
       const seeded = await seedWorkspace(db);
       const submitter = await seedMember(db, {
         workspaceId: seeded.workspace.id,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       sortToken = (
@@ -862,6 +891,8 @@ describe("finance reads", () => {
           assetId,
           assetCode: "FIN-TRUCK-001",
           assetAttribution: "DIRECT",
+          activityId: null,
+          workOrderId: null,
           category: original.postings[0]!.category,
         },
       ]);
@@ -896,7 +927,7 @@ describe("finance reads", () => {
 
       const submitter = await seedMember(db, {
         workspaceId: approvalsWorkspaceId,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       submitterPrincipalId = submitter.principal.id;
@@ -909,7 +940,7 @@ describe("finance reads", () => {
 
       const approverAll = await seedMember(db, {
         workspaceId: approvalsWorkspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: true,
       });
       approverAllToken = (
@@ -921,7 +952,7 @@ describe("finance reads", () => {
 
       const approverScoped = await seedMember(db, {
         workspaceId: approvalsWorkspaceId,
-        role: "FINANCE_APPROVER",
+        role: "FINANCE",
         allBranches: false,
         branchIds: [dlaBranchId],
       });
@@ -932,7 +963,7 @@ describe("finance reads", () => {
         })
       ).token;
 
-      // Above the 100_000 threshold a FIELD_SUBMITTER cannot auto-approve, so
+      // Above the 100_000 threshold a DRIVER cannot auto-approve, so
       // these land SUBMITTED. Spaced so createdAt ordering is unambiguous.
       const first = await recordExpense(submitterToken, {
         amountMinor: 150_000,
@@ -1046,13 +1077,14 @@ describe("finance reads", () => {
       expect(body.outsideBranchCount).toBe(0);
     });
 
-    it("does not hide the caller's own submissions (maker guard is client-side)", async () => {
-      const body = await fetchApprovals(submitterToken);
-
-      expect(body.total).toBe(3);
-      expect(body.entries.map((entry) => entry.id).sort()).toEqual(
-        [...inScopeIds, outOfScopeId].sort(),
-      );
+    it("refuses the queue to the driver who submitted to it (#264)", async () => {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/finance/approvals",
+        headers: { authorization: `Bearer ${submitterToken}` },
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toEqual({ error: { code: "ROLE_FORBIDDEN" } });
     });
   });
 
@@ -1066,20 +1098,25 @@ describe("finance reads", () => {
 
     beforeAll(async () => {
       const seeded = await seedWorkspace(db);
-      const submitter = await seedMember(db, {
-        workspaceId: seeded.workspace.id,
-        role: "FIELD_SUBMITTER",
-        allBranches: true,
-      });
-      queueToken = (
-        await createSession(db, {
-          principalId: submitter.principal.id,
+      const session = async (role: "DRIVER" | "FINANCE") => {
+        const member = await seedMember(db, {
           workspaceId: seeded.workspace.id,
-        })
-      ).token;
+          role,
+          allBranches: true,
+        });
+        return (
+          await createSession(db, {
+            principalId: member.principal.id,
+            workspaceId: seeded.workspace.id,
+          })
+        ).token;
+      };
+      // The driver submits inside its band; the books read the queue.
+      const submitterToken = await session("DRIVER");
+      queueToken = await session("FINANCE");
 
       for (const amountMinor of amounts) {
-        const entry = await recordExpense(queueToken, { amountMinor });
+        const entry = await recordExpense(submitterToken, { amountMinor });
         expect(entry.recordStatus).toBe("SUBMITTED");
         queued.push(entry.entryId);
         await tick();
@@ -1210,7 +1247,7 @@ describe("finance reads", () => {
 
       const admin = await seedMember(db, {
         workspaceId: periodsWorkspaceId,
-        role: "ADMIN",
+        role: "DIRECTOR",
         allBranches: true,
       });
       periodsAdminToken = (
@@ -1222,7 +1259,7 @@ describe("finance reads", () => {
 
       const submitter = await seedMember(db, {
         workspaceId: periodsWorkspaceId,
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         allBranches: true,
       });
       periodsSubmitterToken = (
@@ -1468,3 +1505,272 @@ describe("finance reads", () => {
 function tick() {
   return new Promise((resolve) => setTimeout(resolve, 2));
 }
+
+/**
+ * The entry fields the vehicle workspace reads (#44): who recorded it, its
+ * evidence, its category's layer, and — under an asset filter — the vehicle's
+ * share and links. Plus the two new filters.
+ */
+describe("finance entry fields for the vehicle workspace", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
+  let branchId: string;
+  let admin: Actor;
+  let driver: Actor;
+  let truckA: string;
+  let truckB: string;
+  let splitEntryId: string;
+  let jobNumber: string;
+  let jobId: string;
+  let workOrderId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    branchId = seeded.branch.id;
+    admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN", displayName: "Émilienne" });
+    driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER", displayName: "Sali" });
+    truckA = await seedAsset(ctx.app, admin.token, { assetCode: "SPLIT-A" });
+    truckB = await seedAsset(ctx.app, admin.token, { assetCode: "SPLIT-B" });
+
+    jobId = randomUUID();
+    await api.ok(admin.token, "create-activity", {
+      activityId: jobId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truckA,
+      startedAt: "2026-08-01T06:00:00Z",
+    });
+    jobNumber = ((await api.get(admin.token, `/v1/activities/${jobId}`)).body as {
+      activityNumber: string;
+    }).activityNumber;
+    workOrderId = randomUUID();
+    await api.ok(admin.token, "create-work-order", {
+      workOrderId,
+      assetId: truckA,
+      description: "Plaquettes",
+      expectedCostMinor: 0,
+    });
+
+    // 100 000 split 60 000 / 40 000 across two trucks, the A line carrying
+    // both a job and a work order.
+    splitEntryId = randomUUID();
+    await api.ok(admin.token, "record-expense", {
+      entryId: splitEntryId,
+      branchCode: "DLA",
+      categoryCode: "REPAIRS",
+      economicDate: "2026-08-20",
+      amountMinor: 100_000,
+      paymentMethod: "CASH",
+      postings: [
+        { assetId: truckA, activityId: jobId, workOrderId, amountMinor: 60_000 },
+        { assetId: truckB, amountMinor: 40_000 },
+      ],
+    });
+    await api.ok(driver.token, "record-expense", {
+      entryId: randomUUID(),
+      branchCode: "DLA",
+      categoryCode: "TOLLS",
+      economicDate: "2026-07-31",
+      amountMinor: 2_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truckA, amountMinor: 2_000 }],
+    });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function entries(query: string, token = admin.token) {
+    const response = await api.get(token, `/v1/finance/entries${query}`);
+    expect(response.status).toBe(200);
+    return financialEntryListResponse.parse(response.body).entries;
+  }
+
+  it("gives the vehicle's share and links under an asset filter", async () => {
+    const onA = await entries(`?assetId=${truckA}`);
+    expect(onA.find((entry) => entry.id === splitEntryId)).toMatchObject({
+      amountMinor: 100_000,
+      assetShareMinor: 60_000,
+      assetLinks: { activityId: jobId, activityNumber: jobNumber, workOrderId },
+      category: { code: "REPAIRS", layer: "MAINTENANCE" },
+      recordedBy: { principalId: admin.principalId, displayName: "Émilienne", scope: "WORKSPACE" },
+      evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
+      reversesEntryId: null,
+    });
+    const onB = await entries(`?assetId=${truckB}`);
+    expect(onB.find((entry) => entry.id === splitEntryId)).toMatchObject({
+      assetShareMinor: 40_000,
+      assetLinks: { activityId: null, activityNumber: null, workOrderId: null },
+    });
+  });
+
+  it("leaves share and links null without an asset filter", async () => {
+    const all = await entries("");
+    expect(all.find((entry) => entry.id === splitEntryId)).toMatchObject({
+      assetShareMinor: null,
+      assetLinks: null,
+    });
+  });
+
+  it("names the trip and work order of every entry without a filter (#87)", async () => {
+    const all = await entries("");
+    expect(all.find((entry) => entry.id === splitEntryId)?.links).toEqual({
+      activityId: jobId,
+      activityNumber: jobNumber,
+      workOrderId,
+      workOrderAssetId: truckA,
+    });
+    const tolls = all.find((entry) => entry.category.code === "TOLLS");
+    expect(tolls?.links).toEqual({
+      activityId: null,
+      activityNumber: null,
+      workOrderId: null,
+      workOrderAssetId: null,
+    });
+    // The same answer under a filter on the other truck: the entry belongs to
+    // the work order even where this vehicle's own line does not.
+    const onB = await entries(`?assetId=${truckB}`);
+    expect(onB.find((entry) => entry.id === splitEntryId)?.links).toMatchObject({ workOrderId });
+  });
+
+  it("names the trip and work order on the entry detail (#87)", async () => {
+    const response = await api.get(admin.token, `/v1/finance/entries/${splitEntryId}`);
+    expect(response.status).toBe(200);
+    expect(financialEntryDetail.parse(response.body).links).toEqual({
+      activityId: jobId,
+      activityNumber: jobNumber,
+      workOrderId,
+      workOrderAssetId: truckA,
+    });
+  });
+
+  it("filters by the month of the economic date", async () => {
+    const august = await entries(`?assetId=${truckA}&economicMonth=2026-08`);
+    expect(august.map((entry) => entry.category.code)).toEqual(["REPAIRS"]);
+    const july = await entries(`?assetId=${truckA}&economicMonth=2026-07`);
+    expect(july.map((entry) => entry.category.code)).toEqual(["TOLLS"]);
+    const refused = await api.get(admin.token, "/v1/finance/entries?economicMonth=2026-13");
+    expect(refused.status).toBe(400);
+  });
+
+  it("filters evidence=MISSING, leaving out what needs no receipt", async () => {
+    const missing = await entries(`?assetId=${truckA}&evidence=MISSING`);
+    // Tolls are NO_RECEIPT_EXPECTED; the repair has no file.
+    expect(missing.map((entry) => entry.id)).toEqual([splitEntryId]);
+  });
+
+  it("masks a PLATFORM recorder exactly as the history read does", async () => {
+    const [operator] = await ctx.db
+      .insert(principals)
+      .values({ principalType: "VENDOR_OPERATOR", displayName: "ROUTIQ support" })
+      .returning();
+    const commandId = randomUUID();
+    await ctx.db.insert(commands).values({
+      id: commandId,
+      workspaceId,
+      scope: "PLATFORM",
+      commandType: "import-ledger",
+      origin: "API",
+      status: "EXECUTED",
+      initiatedByPrincipalId: operator!.id,
+      idempotencyKey: `platform-${randomUUID()}`,
+      payload: {},
+    });
+    const [fuel] = await ctx.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.workspaceId, workspaceId), eq(categories.code, "FUEL")));
+    const entryId = randomUUID();
+    // One transaction: the balance trigger checks the entry against its postings at commit.
+    await ctx.db.transaction(async (tx) => {
+      await tx.insert(financialEntries).values({
+        id: entryId,
+        workspaceId,
+        entryNumber: `PLAT-${entryId.slice(0, 8)}`,
+        direction: "EXPENSE",
+        categoryId: fuel!.id,
+        economicDate: "2026-08-02",
+        branchId,
+        amountMinor: 5_000n,
+        paymentMethod: "CASH",
+        status: "SUBMITTED",
+        createdByCommandId: commandId,
+      });
+      await tx.insert(financialPostings).values({
+        workspaceId,
+        financialEntryId: entryId,
+        lineNo: 1,
+        economicDate: "2026-08-02",
+        direction: "EXPENSE",
+        categoryId: fuel!.id,
+        branchId,
+        assetId: truckB,
+        amountMinor: 5_000n,
+        createdByCommandId: commandId,
+      });
+    });
+
+    const listed = (await entries(`?assetId=${truckB}`)).find((entry) => entry.id === entryId);
+    expect(listed?.recordedBy).toEqual({ principalId: null, displayName: null, scope: "PLATFORM" });
+    const detail = financialEntryDetail.parse(
+      (await api.get(admin.token, `/v1/finance/entries/${entryId}`)).body,
+    );
+    expect(detail.recordedBy).toEqual({ principalId: null, displayName: null, scope: "PLATFORM" });
+  });
+
+  it("serves the same fields on the approvals queue", async () => {
+    const pendingId = randomUUID();
+    await api.ok(driver.token, "record-expense", {
+      entryId: pendingId,
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: "2026-08-21",
+      amountMinor: 350_000,
+      paymentMethod: "MOMO",
+      paymentReference: "MP260821.1234",
+      postings: [{ assetId: truckA, amountMinor: 350_000 }],
+    });
+    const response = await api.get(admin.token, "/v1/finance/approvals");
+    expect(response.status).toBe(200);
+    const queue = pendingApprovalsResponse.parse(response.body);
+    expect(queue.entries.find((entry) => entry.id === pendingId)).toMatchObject({
+      recordedBy: { principalId: driver.principalId, displayName: "Sali", scope: "WORKSPACE" },
+      evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 },
+      category: { code: "FUEL", layer: "DIRECT" },
+      assetShareMinor: null,
+      assetLinks: null,
+      submittedByPrincipalId: driver.principalId,
+    });
+  });
+
+  it("links revenue that names a work order to no work order (#444)", async () => {
+    const template = randomUUID();
+    await api.ok(admin.token, "record-revenue", {
+      entryId: template,
+      branchCode: "DLA",
+      categoryCode: "FREIGHT_REVENUE",
+      economicDate: "2026-08-22",
+      amountMinor: 30_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truckA, amountMinor: 30_000 }],
+    });
+    const revenue = await plantWorkOrderRevenue(ctx.db, { revenueEntryId: template, workOrderId });
+    const noWorkOrder = { workOrderId: null, workOrderAssetId: null };
+
+    const onA = (await entries(`?assetId=${truckA}`)).find((entry) => entry.id === revenue);
+    expect({ assetLinks: onA?.assetLinks, links: onA?.links }).toMatchObject({
+      assetLinks: { workOrderId: null },
+      links: noWorkOrder,
+    });
+    const detail = await api.get(admin.token, `/v1/finance/entries/${revenue}`);
+    expect(detail.status).toBe(200);
+    expect(financialEntryDetail.parse(detail.body).links).toMatchObject(noWorkOrder);
+  });
+});

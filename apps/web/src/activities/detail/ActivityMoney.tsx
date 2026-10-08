@@ -1,35 +1,32 @@
-import type { ActivityDetail } from "@routiq/contracts";
+import { ledgerEntryStatuses, type ActivityDetail, type MoneyReadScope } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { StatusBadge } from "@/components/status-badge.js";
+import { CancellationDetails, foldedAmountClass, foldTripEntries } from "@/finance/EntryCancellation.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatMoney } from "@/lib/format.js";
+import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
-type Entry = ActivityDetail["financialEntries"][number];
-
-const STATUS_TONES: Record<Entry["status"], "success" | "warning" | "danger" | "neutral"> =
-  {
-    POSTED: "success",
-    SUBMITTED: "warning",
-    REJECTED: "danger",
-    REVERSED: "neutral",
-  };
+type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
 
 /** Direction carries the sign: the read stores magnitudes, the reader needs a balance. */
 function signedMinor(entry: Entry): number {
   return entry.direction === "REVENUE" ? entry.amountMinor : -entry.amountMinor;
 }
 
+const IN_THE_BOOKS: ReadonlySet<Entry["status"]> = new Set(ledgerEntryStatuses);
+
 /**
  * §3.4: only posted lines are money in the books. A net that quietly folded in
  * lines still awaiting an approver would be a number nobody could reconcile,
- * so pending amounts are totalled separately and never merged in.
+ * so pending amounts are totalled separately and never merged in. A reversed
+ * entry stays in the books beside its negative reversal, so the pair nets to
+ * zero only when both count (#60).
  */
 export function postedNetMinor(entries: readonly Entry[]): number {
   return entries.reduce(
-    (total, entry) => (entry.status === "POSTED" ? total + signedMinor(entry) : total),
+    (total, entry) => (IN_THE_BOOKS.has(entry.status) ? total + signedMinor(entry) : total),
     0,
   );
 }
@@ -48,10 +45,17 @@ export function netToneClass(minor: number): string {
 }
 
 export interface ActivityMoneyProps {
-  entries: ActivityDetail["financialEntries"];
+  entries: readonly Entry[];
+  /**
+   * Whether `entries` is the trip's whole money. False outside the ledger
+   * (#264): no net is summed over a part.
+   */
+  totals: boolean;
+  /** Which slice of the trip's entries the server sent, to say so (#408). */
+  scope: MoneyReadScope | undefined;
 }
 
-export function ActivityMoney({ entries }: ActivityMoneyProps) {
+export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
@@ -60,6 +64,8 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
   const postedNet = postedNetMinor(entries);
   const pendingNet = pendingNetMinor(entries);
   const hasPending = entries.some((entry) => entry.status === "SUBMITTED");
+  // One line per event (#427); the sums above stay on every signed row.
+  const lines = foldTripEntries(entries);
 
   return (
     <Card>
@@ -68,7 +74,7 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col gap-1">
-          {entries.map((entry) => (
+          {lines.map((entry) => (
             <li key={entry.entryId}>
               <Link
                 to="/finance/entries/$entryId"
@@ -76,29 +82,50 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                 className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm transition hover:bg-foreground/[0.04]"
               >
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono">{entry.entryNumber}</span>
-                  <span className="text-muted-foreground">{entry.categoryCode}</span>
+                  <span className="tabular-nums">{entry.entryNumber}</span>
+                  <span className="text-muted-foreground">
+                    {localizedLabel(
+                      { labelFr: entry.categoryLabelFr, labelEn: entry.categoryLabelEn },
+                      locale,
+                    )}
+                  </span>
                   {/* A line still awaiting approval is the one thing a reader
                       must not mistake for money already in the books. */}
-                  <StatusBadge tone={STATUS_TONES[entry.status]}>
-                    {t(`finance.entries.status.${entry.status}`)}
-                  </StatusBadge>
+                  <EntryStatusBadge status={entry.status} />
                 </span>
-                <span className="tabular-nums">
-                  {formatMoney(signedMinor(entry), { locale, signDisplay: "exceptZero" })}
+                <span className={cn("tabular-nums", foldedAmountClass(entry))}>
+                  {formatMoney(entry.amountMinor, {
+                    locale,
+                    sign: { context: "ledger", direction: entry.direction },
+                  })}
                 </span>
               </Link>
+              {entry.cancelledBy !== null && (
+                <CancellationDetails cancellation={entry.cancelledBy} className="px-2" />
+              )}
             </li>
           ))}
         </ul>
 
+        {(scope === "OWN_ENTRIES" || scope === "BRANCH_ENTRIES") && (
+          <p className="mt-3 text-muted-foreground text-xs">
+            {t(
+              scope === "OWN_ENTRIES"
+                ? "activities.detail.moneySummary.ownOnly"
+                : "activities.detail.moneySummary.branchOnly",
+            )}
+          </p>
+        )}
+
+        {totals && (
+        <>
         <Separator className="my-4" />
 
         <dl className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <dt className="text-sm font-medium">
               <span>{t("activities.detail.moneySummary.net")}</span>
-              <span className="ml-2 text-muted-foreground text-xs uppercase tracking-wide">
+              <span className="ml-2 text-muted-foreground text-xs">
                 {t("activities.detail.moneySummary.postedOnly")}
               </span>
             </dt>
@@ -108,7 +135,7 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                 netToneClass(postedNet),
               )}
             >
-              {formatMoney(postedNet, { locale, signDisplay: "exceptZero" })}
+              {formatMoney(postedNet, { locale, sign: { context: "net" } })}
             </dd>
           </div>
 
@@ -118,7 +145,7 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
                 {t("activities.detail.moneySummary.pending")}
               </dt>
               <dd className="text-sm tabular-nums text-muted-foreground">
-                {formatMoney(pendingNet, { locale, signDisplay: "exceptZero" })}
+                {formatMoney(pendingNet, { locale, sign: { context: "net" } })}
               </dd>
             </div>
           )}
@@ -128,6 +155,8 @@ export function ActivityMoney({ entries }: ActivityMoneyProps) {
           <p className="mt-2 text-muted-foreground text-xs">
             {t("activities.detail.moneySummary.pendingHint")}
           </p>
+        )}
+        </>
         )}
       </CardContent>
     </Card>

@@ -19,6 +19,7 @@ import type {
 } from "@routiq/contracts";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
+import { entryVehicleFields } from "../test-entry-fields.js";
 
 const session = {
   username: "ada",
@@ -77,7 +78,7 @@ const entries: FinancialEntryListResponse = {
       entryNumber: "ENT-0042",
       direction: "EXPENSE",
       status: "POSTED",
-      category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" },
+      category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: null },
       amountMinor: -50000,
       currency: "XAF",
       economicDate: "2026-07-22",
@@ -89,13 +90,17 @@ const entries: FinancialEntryListResponse = {
       estimateStatus: "ACTUAL",
       postedAt: "2026-07-22T10:00:00Z",
       rowVersion: 1,
+      reversesEntryId: null,
+      cancelledBy: null,
+      cancels: null,
+      ...entryVehicleFields,
     },
     {
       id: "22222222-2222-4222-8222-222222222222",
       entryNumber: "ENT-0041",
       direction: "REVENUE",
       status: "SUBMITTED",
-      category: { code: "FREIGHT", labelFr: "Fret", labelEn: "Freight" },
+      category: { code: "FREIGHT", labelFr: "Fret", labelEn: "Freight", layer: null },
       amountMinor: 120000,
       currency: "XAF",
       economicDate: "2026-07-21",
@@ -107,6 +112,10 @@ const entries: FinancialEntryListResponse = {
       estimateStatus: "ACTUAL",
       postedAt: null,
       rowVersion: 1,
+      reversesEntryId: null,
+      cancelledBy: null,
+      cancels: null,
+      ...entryVehicleFields,
     },
   ],
   nextCursor: "cursor-1",
@@ -156,6 +165,8 @@ function membership(role: Role, enabledModules: ModuleCode[]): MeContext {
     principalId: "44444444-4444-4444-8444-444444444444",
     principalType: "HUMAN",
     membershipId: "55555555-5555-4555-8555-555555555555",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules,
@@ -209,13 +220,13 @@ async function renderHome(me: MeContext) {
 /** The KPI value a card is currently showing, by its stable slot attribute. */
 function kpiValue(key: string): string | undefined {
   return document
-    .querySelector(`[data-kpi='${key}'] [data-slot='kpi-value']`)
+    .querySelector(`[data-metric='${key}'] [data-slot='metric-value']`)
     ?.textContent?.trim();
 }
 
 function kpiKeys(): string[] {
-  return [...document.querySelectorAll("[data-kpi]")].map(
-    (card) => card.getAttribute("data-kpi") ?? "",
+  return [...document.querySelectorAll("[data-slot='metric-tile'][data-metric]")].map(
+    (card) => card.getAttribute("data-metric") ?? "",
   );
 }
 
@@ -236,7 +247,7 @@ afterEach(() => {
 describe("DashboardScreen — KPI cards", () => {
   it("prints the numbers the aggregate read returned, counting nothing itself", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
     // 9 in service out of 12 — the byStatus bucket, not a filter over a list.
@@ -247,9 +258,22 @@ describe("DashboardScreen — KPI cards", () => {
     expect(screen.getAllByText("Open period 2026-07").length).toBe(2);
   });
 
+  it("renders the tiles through the shared metric strip, each opening its list (#302)", async () => {
+    installFetch();
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
+
+    await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
+    const strip = document.querySelector("[data-slot='metric-strip']");
+    expect(strip?.querySelectorAll("[data-slot='metric-tile']")).toHaveLength(4);
+    expect(document.querySelector("[data-slot='kpi-card']")).toBeNull();
+    expect(
+      document.querySelector("[data-metric='assets'] [data-slot='metric-link']")?.getAttribute("href"),
+    ).toBe("/assets");
+  });
+
   it("shows skeletons rather than zeros while the aggregate is in flight", async () => {
     installFetch({ hold: true });
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiKeys().length).toBe(4));
     expect(kpiValue("pendingApprovals")).toBeUndefined();
@@ -258,7 +282,7 @@ describe("DashboardScreen — KPI cards", () => {
 
   it("offers a retry banner when the read fails, and no invented numbers", async () => {
     installFetch({ dashboardStatus: 500 });
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("We couldn't load the dashboard");
@@ -268,7 +292,7 @@ describe("DashboardScreen — KPI cards", () => {
 
   it("reports an em dash, never a zero, when no period is open yet", async () => {
     installFetch({ dashboard: { ...dashboard, openPeriod: null } });
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("openPeriodExpense")).toBe("—"));
     expect(screen.getAllByText("No open period yet").length).toBe(2);
@@ -281,7 +305,7 @@ describe("DashboardScreen — KPI cards", () => {
         pendingApprovals: { count: 3, outsideBranchCount: 2 },
       },
     });
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
     const overflow = screen.getByRole("link", {
@@ -300,10 +324,10 @@ describe("DashboardScreen — KPI cards", () => {
 
   it("says nothing about other branches when the count is the whole queue", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
-    expect(document.querySelector("[data-slot='kpi-secondary']")).toBeNull();
+    expect(document.querySelector("[data-slot='metric-secondary']")).toBeNull();
   });
 
   it("phrases an empty approvals queue rather than pluralizing zero", async () => {
@@ -313,7 +337,7 @@ describe("DashboardScreen — KPI cards", () => {
         pendingApprovals: { count: 0, outsideBranchCount: 0 },
       },
     });
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("0"));
     expect(screen.getByText("Nothing awaiting your decision")).toBeTruthy();
@@ -323,7 +347,7 @@ describe("DashboardScreen — KPI cards", () => {
 describe("DashboardScreen — gating", () => {
   it("drops every finance card, the chart and the recent list without the module", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS"]));
 
     await waitFor(() => expect(kpiKeys()).toEqual(["assets"]));
     expect(screen.queryByText("Expense and revenue")).toBeNull();
@@ -333,7 +357,7 @@ describe("DashboardScreen — gating", () => {
 
   it("drops the assets card without the assets module", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "FINANCE"]));
 
     await waitFor(() =>
       expect(kpiKeys()).toEqual([
@@ -346,26 +370,26 @@ describe("DashboardScreen — gating", () => {
 
   it("hides the approvals card from a role that cannot approve", async () => {
     installFetch();
-    await renderHome(membership("FIELD_SUBMITTER", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiKeys().length).toBe(3));
     expect(kpiKeys()).not.toContain("pendingApprovals");
   });
 
-  it("keeps the totals for a read-only executive but not the link into entries", async () => {
+  it("lets the Administrateur trace totals and recent entries", async () => {
     installFetch();
-    await renderHome(membership("EXECUTIVE_VIEWER", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("openPeriodRevenue")).toBeTruthy());
-    expect(screen.queryByRole("link", { name: /Period revenue/ })).toBeNull();
-    expect(screen.queryByText("Recent entries")).toBeNull();
+    expect(screen.getByRole("link", { name: /Period revenue/ })).toBeTruthy();
+    expect(await screen.findByText("Recent entries")).toBeTruthy();
   });
 });
 
 describe("DashboardScreen — chart", () => {
   it("re-reads the aggregate with the days the range toggle asked for", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(dashboardRequests()).toEqual(["/v1/dashboard?days=90"]));
 
@@ -380,7 +404,7 @@ describe("DashboardScreen — chart", () => {
 
   it("says the window is empty instead of drawing a flat line at zero", async () => {
     installFetch({ dashboard: { ...dashboard, series: FLAT_SERIES } });
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     expect(await screen.findByText("Nothing posted in this range.")).toBeTruthy();
     expect(document.querySelector("[data-slot='chart']")).toBeNull();
@@ -388,7 +412,7 @@ describe("DashboardScreen — chart", () => {
 
   it("draws the series when something was posted", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() =>
       expect(document.querySelector("[data-slot='chart']")).not.toBeNull(),
@@ -400,7 +424,7 @@ describe("DashboardScreen — chart", () => {
 describe("DashboardScreen — recent entries", () => {
   it("renders the first page of the entries read, unfiltered", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     expect(await screen.findByText("ENT-0042")).toBeTruthy();
     expect(screen.getByText("ENT-0041")).toBeTruthy();
@@ -412,16 +436,16 @@ describe("DashboardScreen — recent entries", () => {
 
   it("reuses the entries status chips and money formatting", async () => {
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     expect(await screen.findByText("Posted")).toBeTruthy();
-    expect(screen.getByText("Pending")).toBeTruthy();
+    expect(screen.getByText("Awaiting review")).toBeTruthy();
     expect(screen.getByText("Fuel")).toBeTruthy();
   });
 
   it("opens the entry detail route from the entry number", async () => {
     installFetch();
-    const router = await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    const router = await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     // The entry number is the primary cell, so it is the row's one trigger.
     await userEvent.click(await screen.findByRole("button", { name: "ENT-0042" }));
@@ -435,7 +459,7 @@ describe("DashboardScreen — recent entries", () => {
 
   it("leaves the rest of the recent row inert, as on the entries screen", async () => {
     installFetch();
-    const router = await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    const router = await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await userEvent.click(await screen.findByText("Fuel"));
 
@@ -447,7 +471,7 @@ describe("DashboardScreen — i18n", () => {
   it("renders in French with no English left behind", async () => {
     await i18n.changeLanguage("fr-CM");
     installFetch();
-    await renderHome(membership("ADMIN", ["CORE", "ASSETS", "FINANCE"]));
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     expect(await screen.findByRole("heading", { name: "Accueil" })).toBeTruthy();
     expect(screen.getByText("Approbations en attente")).toBeTruthy();

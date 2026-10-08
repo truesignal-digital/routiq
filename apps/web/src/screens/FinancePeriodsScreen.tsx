@@ -1,11 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { formatDate } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
-import { DataTable, DataTableViewOptions } from "@/components/data-table";
+import {
+  DataTable,
+  DataTableViewOptions,
+  type DataTableColumn,
+} from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -40,13 +45,12 @@ import {
   mergeImplicitCurrentPeriod,
   validateReopenReason,
 } from "@/finance/model.js";
-import { canManagePeriods } from "@/finance/permissions.js";
+import { canManagePeriods, canReopenPeriod } from "@/finance/permissions.js";
 import {
   lockPeriodPayload,
   reopenPeriodPayload,
   type PeriodRead,
 } from "@routiq/contracts";
-import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
@@ -58,10 +62,12 @@ type ActionDialogState =
 
 export function FinancePeriodsScreen() {
   const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const me = useMeContext();
   const canManage = canManagePeriods(me?.role, me?.enabledModules);
+  const canReopen = canReopenPeriod(me?.role, me?.enabledModules);
 
   const periodsQuery = usePeriods();
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false });
@@ -82,13 +88,13 @@ export function FinancePeriodsScreen() {
   // Every column sorts. `/v1/finance/periods` is unpaginated — the whole list
   // is in memory — so ordering it client-side reorders all of the data, not a
   // loaded prefix. Newest period first is the default view.
-  const columns = useMemo<ColumnDef<PeriodRead>[]>(
+  const columns = useMemo<DataTableColumn<PeriodRead>[]>(
     () => [
       {
         accessorKey: "periodCode",
         header: t("finance.periods.columns.period"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("finance.periods.columns.period") },
+        meta: { phone: "title", label: t("finance.periods.columns.period") },
         cell: ({ row }) => (
           <span className="font-medium">{row.original.periodCode}</span>
         ),
@@ -97,7 +103,7 @@ export function FinancePeriodsScreen() {
         accessorKey: "status",
         header: t("finance.periods.columns.status"),
         enableSorting: true,
-        meta: { mobile: "secondary", label: t("finance.periods.columns.status") },
+        meta: { phone: "status", label: t("finance.periods.columns.status") },
         cell: ({ row }) =>
           row.original.status === "OPEN"
             ? t("finance.periods.statusOpen")
@@ -109,7 +115,7 @@ export function FinancePeriodsScreen() {
         accessorKey: "entryCount",
         header: t("finance.periods.columns.entries"),
         enableSorting: true,
-        meta: { mobile: "secondary", label: t("finance.periods.columns.entries") },
+        meta: { phone: "value", label: t("finance.periods.columns.entries") },
         cell: ({ row }) =>
           t("finance.periods.entryCount", { count: row.original.entryCount }),
       },
@@ -118,15 +124,16 @@ export function FinancePeriodsScreen() {
   );
 
   const rowActions = (period: PeriodRead) => {
-    // role-config: locking and reopening are the period manager's calls; a role
-    // without them sees a read-only ledger.
+    // role-config: locking is the period manager's call, reopening the
+    // Director's alone; a role without them sees a read-only ledger.
     if (!canManage) return [];
+    if (period.status !== "OPEN" && !canReopen) return [];
 
     return period.status === "OPEN"
       ? [
           {
             key: "lock",
-            label: t("finance.periods.lock"),
+            label: label("lock-period"),
             icon: Lock,
             onSelect: () =>
               setActionDialog({
@@ -139,7 +146,7 @@ export function FinancePeriodsScreen() {
       : [
           {
             key: "reopen",
-            label: t("finance.periods.reopen"),
+            label: label("reopen-period"),
             icon: Unlock,
             onSelect: () =>
               setActionDialog({
@@ -206,7 +213,8 @@ export function FinancePeriodsScreen() {
       <PageHeader
         title={t("finance.periods.title")}
       />
-      <FinanceToolbar>
+      <p className="mt-1 text-sm text-muted-foreground">{t("finance.periods.lead")}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         {!periodsQuery.isPending && !periodsQuery.isError && (
           <DataTableViewOptions
             columns={columns}
@@ -215,7 +223,7 @@ export function FinancePeriodsScreen() {
             primaryColumn={{ columnId: "periodCode" }}
           />
         )}
-      </FinanceToolbar>
+      </div>
 
       {periodsQuery.isPending ? (
         <LoadingState className="mt-6" label={t("finance.periods.loading")} />
@@ -280,6 +288,7 @@ function ActionDialog({
   error: string | undefined;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -301,7 +310,7 @@ function ActionDialog({
       <AlertDialog open onOpenChange={(open) => !open && onCancel()}>
         <AlertDialogContent onBackdropClick={onCancel}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("finance.periods.lockTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>{label("lock-period")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("finance.periods.lockExplanation")}
             </AlertDialogDescription>
@@ -312,18 +321,18 @@ function ActionDialog({
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="min-h-11 flex-1 sm:flex-none">
+            <AlertDialogCancel className="flex-1 sm:flex-none">
               {t("finance.periods.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              className="min-h-11 flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
               disabled={submitting}
               onClick={() => void handleSubmit()}
             >
               {submitting
-                ? t("finance.periods.submitting")
-                : t("finance.periods.lock")}
+                ? label("lock-period", "submitting")
+                : label("lock-period")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -335,7 +344,7 @@ function ActionDialog({
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("finance.periods.reopenTitle")}</DialogTitle>
+          <DialogTitle>{label("reopen-period")}</DialogTitle>
         </DialogHeader>
 
         {error && (
@@ -356,20 +365,20 @@ function ActionDialog({
             render={
               <Button
                 variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
               />
             }
           >
             {t("finance.periods.cancel")}
           </DialogClose>
           <Button
-            className="min-h-11 flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none"
             disabled={!validateReopenReason(reason) || submitting}
             onClick={() => void handleSubmit()}
           >
             {submitting
-              ? t("finance.periods.submitting")
-              : t("finance.periods.reopen")}
+              ? label("reopen-period", "submitting")
+              : label("reopen-period")}
           </Button>
         </DialogFooter>
       </DialogContent>

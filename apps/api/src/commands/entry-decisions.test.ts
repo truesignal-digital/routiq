@@ -38,17 +38,17 @@ describe("entry decisions", () => {
 
     const submitter = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     const approverA = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     const approverB = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     const admin = await seedMember(db, {
@@ -361,7 +361,7 @@ describe("entry decisions", () => {
         and(
           eq(approvalRules.workspaceId, workspaceId),
           eq(approvalRules.commandType, "record-expense"),
-          eq(approvalRules.requiredRole, "FIELD_SUBMITTER"),
+          eq(approvalRules.requiredRole, "DRIVER"),
         ),
       );
 

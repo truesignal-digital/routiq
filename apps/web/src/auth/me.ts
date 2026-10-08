@@ -1,29 +1,11 @@
 import { createContext, useContext } from "react";
-import { useQuery } from "@tanstack/react-query";
-import type {
-  BranchScope,
-  ModuleCode,
-  PrincipalType,
-  Role,
-  TemplateCode,
-} from "@routiq/contracts";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { BranchScope, MeResponse } from "@routiq/contracts";
+import { endSession } from "./sign-out.js";
 import { sessionStore, useActiveSession } from "./store.js";
 
-export interface MeContext {
-  workspaceId: string;
-  principalId: string;
-  principalType: PrincipalType;
-  membershipId: string;
-  role: Role;
-  branchScope: BranchScope;
-  enabledModules: ModuleCode[];
-  /**
-   * The template presets this workspace enabled (ADR-0004). Workspaces
-   * provisioned before `provision-workspace` existed are grandfathered to every
-   * preset by the server, so this is never empty.
-   */
-  enabledPresets: TemplateCode[];
-}
+/** The signed-in member as `/v1/me` describes them (`reads/me.ts` in contracts). */
+export type MeContext = MeResponse;
 
 export async function fetchMe(
   token: string,
@@ -41,6 +23,7 @@ export async function fetchMe(
 
 export function useMe() {
   const session = useActiveSession();
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["ws", session?.workspaceSlug, "me"],
     enabled: session !== undefined,
@@ -51,10 +34,11 @@ export function useMe() {
       try {
         return await fetchMe(token, signal);
       } catch (error) {
-        // A dead token means the session is over: drop it so the route
-        // guard re-prompts the PIN instead of rendering a broken shell.
+        // A dead token means the session is over: drop it, and every read
+        // made under it, so the route guard re-prompts the PIN instead of
+        // rendering a broken shell.
         if (error instanceof Error && error.message === "AUTH_REQUIRED" && session) {
-          sessionStore.logout(session);
+          endSession(queryClient, session);
         }
         throw error;
       }
@@ -67,11 +51,6 @@ export const MeCtx = createContext<MeContext | undefined>(undefined);
 /** Membership context for gating; undefined while /v1/me is loading. */
 export function useMeContext(): MeContext | undefined {
   return useContext(MeCtx);
-}
-
-/** EXECUTIVE_VIEWER is the read-only role: zero mutating affordances. */
-export function isReadOnlyRole(role: Role | undefined): boolean {
-  return role === undefined || role === "EXECUTIVE_VIEWER";
 }
 
 /** Client-side branch gate — defense in depth over the server-side filter.

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel, type CommandLabelRef } from "@/commands/labels.js";
 import type {
   BranchListItem,
   RenameBranchPayload,
@@ -17,12 +18,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorBanner } from "@/components/error-banner.js";
+import { notifyCommandSuccess } from "@/lib/notify.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { useInvalidateBranches } from "./useBranches.js";
 import { BRANCH_NAME_MAX_LENGTH, branchNameProblem } from "./validation.js";
 
 export type BranchActionKey = "rename" | "deactivate" | "reactivate";
+
+/** The command each action sends, whose words name it on the menu and in the dialog. */
+export const BRANCH_ACTION_COMMANDS: Record<BranchActionKey, CommandLabelRef> = {
+  rename: "rename-branch",
+  deactivate: { command: "set-branch-status", intent: "deactivate" },
+  reactivate: { command: "set-branch-status", intent: "reactivate" },
+};
 
 /**
  * Which actions a branch's row offers. An inactive branch has exactly one way
@@ -32,6 +41,12 @@ export type BranchActionKey = "rename" | "deactivate" | "reactivate";
 export function branchActions(branch: BranchListItem): BranchActionKey[] {
   return branch.active ? ["rename", "deactivate"] : ["reactivate"];
 }
+
+const BRANCH_ACTION_SUCCESS: Record<BranchActionKey, string> = {
+  rename: "renamed",
+  deactivate: "deactivated",
+  reactivate: "reactivated",
+};
 
 type Outcome = { kind: "form" } | { kind: "conflict" } | { kind: "error"; code: string };
 
@@ -56,6 +71,7 @@ export function BranchActionDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const invalidateBranches = useInvalidateBranches();
 
   const [outcome, setOutcome] = useState<Outcome>({ kind: "form" });
@@ -132,6 +148,9 @@ export function BranchActionDialog({
       return;
     }
 
+    notifyCommandSuccess("branches", BRANCH_ACTION_SUCCESS[action], result.outcome.warnings, {
+      values: { name: action === "rename" ? trimmedName : branch.name },
+    });
     await invalidateBranches();
     onDismiss();
   }
@@ -145,7 +164,7 @@ export function BranchActionDialog({
     <Dialog open onOpenChange={(open) => !open && onDismiss()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t(`branches.actions.${action}`)}</DialogTitle>
+          <DialogTitle>{label(BRANCH_ACTION_COMMANDS[action])}</DialogTitle>
           <DialogDescription>
             {t(`branches.actions.${action}Hint`, { name: branch.name })}
           </DialogDescription>
@@ -161,7 +180,7 @@ export function BranchActionDialog({
               <p className="mt-1">{t("branches.actions.conflictBody")}</p>
             </div>
             <DialogFooter>
-              <Button className="min-h-11" onClick={() => void reload()}>
+              <Button onClick={() => void reload()}>
                 {t("branches.actions.reload")}
               </Button>
             </DialogFooter>
@@ -179,7 +198,7 @@ export function BranchActionDialog({
                     type="text"
                     readOnly
                     disabled
-                    className="min-h-11 font-mono"
+                    className="tabular-nums"
                     value={branch.code}
                   />
                   <p className="text-sm text-muted-foreground">
@@ -191,7 +210,6 @@ export function BranchActionDialog({
                   <Input
                     id="branch-name"
                     type="text"
-                    className="min-h-11"
                     aria-invalid={nameError !== undefined}
                     aria-describedby={nameError === undefined ? undefined : "branch-name-error"}
                     value={name}
@@ -212,20 +230,20 @@ export function BranchActionDialog({
             <DialogFooter>
               <Button
                 variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
                 onClick={onDismiss}
               >
                 {t("branches.form.cancel")}
               </Button>
               <Button
-                className="min-h-11 flex-1 sm:flex-none"
+                className="flex-1 sm:flex-none"
                 variant={action === "deactivate" ? "destructive" : "default"}
                 disabled={!ready}
                 onClick={() => void submit()}
               >
                 {submitting
-                  ? t("branches.form.submitting")
-                  : t(`branches.actions.${action}Confirm`)}
+                  ? label(BRANCH_ACTION_COMMANDS[action], "submitting")
+                  : label(BRANCH_ACTION_COMMANDS[action], "submit")}
               </Button>
             </DialogFooter>
           </>

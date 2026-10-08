@@ -21,6 +21,23 @@ export const COMMAND_QUEUEABILITY = {
   "record-haulage-job-sheet": true,
   "record-expense": true,
   "record-revenue": true,
+  "report-issue": true,
+  /*
+   * Resolving is the fault fixed on the spot — the mechanic tightened the
+   * clamp on a roadside with no signal, and that happened whether or not the
+   * server hears about it for an hour. The version it quotes still decides a
+   * race with a dismissal.
+   */
+  "resolve-issue": true,
+  "create-work-order": true,
+  "complete-work-order": true,
+  /* A remark written in the yard with no signal is still what the driver saw. */
+  "add-note": true,
+  /*
+   * A receipt photographed offline is a fact about a spend already recorded;
+   * attaching it changes nothing the entry says, so a late replay is harmless.
+   */
+  "attach-evidence": true,
 
   /*
    * Decisions — never queued.
@@ -71,6 +88,60 @@ export const COMMAND_QUEUEABILITY = {
   "deactivate-member": false,
   "reactivate-member": false,
   "reset-member-pin": false,
+  "cancel-work-order": false,
+  "release-asset-to-service": false,
+  /*
+   * An edit of what the vehicle is, made against the version on screen. Held
+   * in an outbox it would replay onto a record others may have changed since,
+   * and the version check would refuse it anyway; the editor has to see the
+   * current values.
+   */
+  "update-asset-details": false,
+
+  /*
+   * The two work-order decisions. A creation or a completion is a fact the
+   * workshop can capture offline; deciding that the spend is authorized and
+   * that the declared costs are accepted is a judgement about a record whose
+   * current state the approver must see. Queuing either would let an approval
+   * replayed an hour later land on a work order that had since been cancelled.
+   */
+  "approve-work-order": false,
+  "approve-work-order-closure": false,
+  /*
+   * Their refusing pairs, for the same reason — and a dismissal is a judgement
+   * that someone's report was wrong, made against the issue as it stands now.
+   */
+  "reject-work-order": false,
+  "reject-work-order-completion": false,
+  "dismiss-issue": false,
+  /*
+   * Changing the mark on a report someone may be resolving or dismissing right
+   * now, quoted against the version on screen: raising grounds the vehicle
+   * and lowering overrules a report, so both are judged against the issue as
+   * it stands. A driver with no signal reports a new safety-critical problem
+   * instead, which is a fact and queues.
+   */
+  "change-issue-severity": false,
+  /*
+   * Not a fact about the road but an edit to a record someone else is about to
+   * judge. It is valid only while the entry is still pending, and an approver
+   * may decide it at any moment; a replay an hour later would meet a conflict
+   * the author is no longer there to read. The author edits online, or has it
+   * rejected and records it again.
+   */
+  "update-pending-entry": false,
+  /*
+   * Says "I have read the rules as they stand now". Replayed later, it could
+   * acknowledge a change the member never saw; the notice is a server read
+   * anyway, so dismissing it online costs nothing.
+   */
+  "acknowledge-approval-rules": false,
+  /*
+   * "I have seen Direction's note" said against the note as it stands, like
+   * the rules notice. The To-do is a server read, so it costs nothing to
+   * acknowledge online.
+   */
+  "acknowledge-note": false,
 } as const satisfies Record<string, boolean>;
 
 export type QueueableCommandName = keyof typeof COMMAND_QUEUEABILITY;

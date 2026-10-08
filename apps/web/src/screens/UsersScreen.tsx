@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { KeyRound, ShieldCheck, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { MemberListItem, MemberStatus } from "@routiq/contracts";
+import { useCommandLabel } from "@/commands/labels.js";
+import type { MemberListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -10,32 +11,28 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
   type DataTableRowAction,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
-import { StatusBadge } from "@/components/status-badge.js";
+import { MemberStatusBadge } from "@/members/MemberStatusBadge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { AddMemberDialog } from "@/members/AddMemberDialog.js";
 import { branchScopeLabel } from "@/members/BranchScopeField.js";
 import {
+  MEMBER_ACTION_COMMANDS,
   memberActions,
   MemberActionDialog,
   type MemberActionKey,
 } from "@/members/MemberActionDialog.js";
-import { canAdministerMembers } from "@/members/permissions.js";
+import { canAdministerMembers, type MemberActor } from "@/members/permissions.js";
 import { useMembers } from "@/members/useMembers.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
 const DEACTIVATED_FILTER_ID = "includeDeactivated";
-
-const STATUS_TONES: Record<MemberStatus, "success" | "warning" | "neutral"> = {
-  ACTIVE: "success",
-  LOCKED: "warning",
-  DEACTIVATED: "neutral",
-};
 
 const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
   role: ShieldCheck,
@@ -49,12 +46,18 @@ const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
  * one place day-2 administration happens: before it existed a hire or a
  * departure meant hand-written SQL against `credentials`.
  *
- * ADMIN-only, matching `/v1/members` and the five commands behind the row menu.
+ * Direction and Administrateur, matching `/v1/members`. The row menu offers
+ * only the members this actor may manage (`memberActions`).
  */
 export function UsersScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canAdminister = canAdministerMembers(me?.role);
+  const actor: MemberActor | undefined =
+    me === undefined
+      ? undefined
+      : { principalId: me.principalId, role: me.role, branchScope: me.branchScope };
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -98,13 +101,13 @@ export function UsersScreen() {
     [t],
   );
 
-  const columns = useMemo<ColumnDef<MemberListItem>[]>(
+  const columns = useMemo<DataTableColumn<MemberListItem>[]>(
     () => [
       {
         accessorKey: "displayName",
         header: t("users.columns.displayName"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("users.columns.displayName") },
+        meta: { phone: "title", label: t("users.columns.displayName") },
         cell: ({ row }) => (
           <span
             className={row.original.status === "DEACTIVATED" ? "text-muted-foreground" : ""}
@@ -116,9 +119,9 @@ export function UsersScreen() {
       {
         accessorKey: "username",
         header: t("users.columns.username"),
-        meta: { mobile: "secondary", label: t("users.columns.username") },
+        meta: { phone: "meta", label: t("users.columns.username") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {row.original.username ?? "—"}
           </span>
         ),
@@ -126,24 +129,22 @@ export function UsersScreen() {
       {
         accessorKey: "role",
         header: t("users.columns.role"),
-        meta: { mobile: "secondary", label: t("users.columns.role") },
+        meta: { phone: "meta", label: t("users.columns.role") },
         cell: ({ row }) => t(`users.roles.${row.original.role}`),
       },
       {
         id: "branchScope",
         header: t("users.columns.branchScope"),
-        meta: { mobile: "hidden", label: t("users.columns.branchScope") },
+        meta: { phone: "hidden", label: t("users.columns.branchScope") },
         cell: ({ row }) =>
           branchScopeLabel(row.original.branchScope, branches, t("users.form.allBranches")),
       },
       {
         accessorKey: "status",
         header: t("users.columns.status"),
-        meta: { mobile: "primary", label: t("users.columns.status") },
+        meta: { phone: "status", label: t("users.columns.status") },
         cell: ({ row }) => (
-          <StatusBadge tone={STATUS_TONES[row.original.status]}>
-            {t(`users.status.${row.original.status}`)}
-          </StatusBadge>
+          <MemberStatusBadge status={row.original.status} />
         ),
       },
     ],
@@ -168,12 +169,13 @@ export function UsersScreen() {
       <PageHeader
         title={t("users.title")}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button type="button" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" aria-hidden />
-            {t("users.add.open")}
+            {label("add-member")}
           </Button>
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("users.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions
@@ -206,10 +208,10 @@ export function UsersScreen() {
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(member) =>
-              memberActions(member).map(
+              memberActions(member, actor).map(
                 (action): DataTableRowAction<MemberListItem> => ({
                   key: action,
-                  label: t(`users.actions.${action}`),
+                  label: label(MEMBER_ACTION_COMMANDS[action]),
                   icon: ACTION_ICONS[action],
                   ...(action === "deactivate" ? { destructive: true } : {}),
                   onSelect: (row) => setActing({ member: row, action }),
@@ -239,6 +241,7 @@ export function UsersScreen() {
         open={adding}
         onOpenChange={setAdding}
         branches={branches}
+        actor={actor}
         onAdded={() => void membersQuery.refetch()}
       />
 
@@ -247,6 +250,7 @@ export function UsersScreen() {
           member={acting.member}
           action={acting.action}
           branches={branches}
+          actor={actor}
           onDismiss={() => setActing(undefined)}
         />
       )}

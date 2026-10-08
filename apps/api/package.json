@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "provision": "tsx scripts/provision.ts",
+    "appoint-director": "tsx scripts/appoint-director.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "contracts:snapshot": "tsx scripts/contract-snapshots.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",

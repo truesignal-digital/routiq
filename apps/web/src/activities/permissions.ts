@@ -7,13 +7,28 @@ export function canViewActivities(
   return enabledModules?.includes("ACTIVITIES") ?? false;
 }
 
-/** Recording and closing trips. EXECUTIVE_VIEWER sees no submit affordances. */
+const TRIP_RECORDERS: readonly Role[] = ["DIRECTOR", "ADMIN", "DRIVER"];
+
+/** Recording and closing trips: the managers and the drivers who run them. */
 export function canRecordActivities(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
   if (!canViewActivities(enabledModules)) return false;
-  return role === "ADMIN" || role === "OPS_MANAGER" || role === "FIELD_SUBMITTER";
+  return role !== undefined && TRIP_RECORDERS.includes(role);
+}
+
+/**
+ * Closing a trip and swapping its vehicle: a trip recorder, but a DRIVER only
+ * on the trips they recorded (server: OWN_RECORDS_ONLY).
+ */
+export function canCloseActivity(
+  me: { role: Role; principalId: string } | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+  activity: { recordedByPrincipalId: string | null },
+): boolean {
+  if (!canRecordActivities(me?.role, enabledModules)) return false;
+  return me?.role !== "DRIVER" || activity.recordedByPrincipalId === me.principalId;
 }
 
 /** Reopening a closed job — §5.1 gives it one approval, i.e. a manager. */
@@ -22,5 +37,27 @@ export function canReopenActivity(
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
   if (!canViewActivities(enabledModules)) return false;
-  return role === "ADMIN" || role === "OPS_MANAGER";
+  return role === "DIRECTOR" || role === "ADMIN";
+}
+
+const READING_RECORDERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"];
+
+/**
+ * A standalone meter reading. The workshop reads the odometer when a truck
+ * comes in, so TECHNICIAN may record one although it records no trips.
+ */
+export function canRecordReadings(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  if (!canViewActivities(enabledModules)) return false;
+  return role !== undefined && READING_RECORDERS.includes(role);
+}
+
+/** Adding a person to Personnel (register-person): the managers only. */
+export function canRegisterPersons(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return canReopenActivity(role, enabledModules);
 }

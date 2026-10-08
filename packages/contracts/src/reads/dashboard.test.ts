@@ -116,7 +116,18 @@ describe("dashboard contract", () => {
       ...response,
       series: [{ date: "2026-07-26", expenseMinor: -45000, revenueMinor: 0 }],
     });
-    expect(parsed.series[0]?.expenseMinor).toBe(-45000);
+    expect(parsed.series?.[0]?.expenseMinor).toBe(-45000);
+  });
+
+  it("carries no finance figures for a caller who may not read finance", () => {
+    const parsed = dashboardResponse.parse({
+      ...response,
+      openPeriod: null,
+      pendingApprovals: null,
+      series: null,
+    });
+    expect(parsed.pendingApprovals).toBeNull();
+    expect(parsed.series).toBeNull();
   });
 
   it("rejects a series date that is a timestamp rather than a calendar day", () => {

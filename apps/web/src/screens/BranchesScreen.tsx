@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { Building2, Pencil, Plus, PowerOff, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { BranchListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
   DataTableViewOptions,
   type DataTableRowAction,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -16,6 +18,7 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
+  BRANCH_ACTION_COMMANDS,
   branchActions,
   BranchActionDialog,
   type BranchActionKey,
@@ -41,6 +44,7 @@ const ACTION_ICONS: Record<BranchActionKey, typeof Pencil> = {
  */
 export function BranchesScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canAdminister = canAdministerBranches(me?.role);
 
@@ -59,21 +63,21 @@ export function BranchesScreen() {
     [branchesQuery.data],
   );
 
-  const columns = useMemo<ColumnDef<BranchListItem>[]>(
+  const columns = useMemo<DataTableColumn<BranchListItem>[]>(
     () => [
       {
         accessorKey: "code",
         header: t("branches.columns.code"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("branches.columns.code") },
+        meta: { phone: "title", label: t("branches.columns.code") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">{row.original.code}</span>
+          <span className="tabular-nums whitespace-nowrap">{row.original.code}</span>
         ),
       },
       {
         accessorKey: "name",
         header: t("branches.columns.name"),
-        meta: { mobile: "primary", label: t("branches.columns.name") },
+        meta: { phone: "meta", label: t("branches.columns.name") },
         cell: ({ row }) => (
           <span className={row.original.active ? "" : "text-muted-foreground"}>
             {row.original.name}
@@ -83,7 +87,7 @@ export function BranchesScreen() {
       {
         accessorKey: "timezone",
         header: t("branches.columns.timezone"),
-        meta: { mobile: "secondary", label: t("branches.columns.timezone") },
+        meta: { phone: "meta", label: t("branches.columns.timezone") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap">{row.original.timezone}</span>
         ),
@@ -91,7 +95,7 @@ export function BranchesScreen() {
       {
         accessorKey: "active",
         header: t("branches.columns.status"),
-        meta: { mobile: "primary", label: t("branches.columns.status") },
+        meta: { phone: "status", label: t("branches.columns.status") },
         cell: ({ row }) => (
           <StatusBadge tone={row.original.active ? "success" : "neutral"}>
             {t(row.original.active ? "branches.status.active" : "branches.status.inactive")}
@@ -120,12 +124,13 @@ export function BranchesScreen() {
       <PageHeader
         title={t("branches.title")}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setAdding(true)}>
+          <Button type="button" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden />
-            {t("branches.add.open")}
+            {label("create-branch")}
           </Button>
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("branches.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions
@@ -158,7 +163,7 @@ export function BranchesScreen() {
               branchActions(branch).map(
                 (action): DataTableRowAction<BranchListItem> => ({
                   key: action,
-                  label: t(`branches.actions.${action}`),
+                  label: label(BRANCH_ACTION_COMMANDS[action]),
                   icon: ACTION_ICONS[action],
                   ...(action === "deactivate" ? { destructive: true } : {}),
                   onSelect: (row) => setActing({ branch: row, action }),

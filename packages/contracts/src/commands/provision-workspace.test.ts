@@ -3,11 +3,12 @@ import {
   provisionWorkspaceCommand,
   provisionWorkspaceV1Command,
   provisionWorkspaceV1ToV2,
+  provisionWorkspaceV2Command,
 } from "./provision-workspace.js";
 
 const valid = {
   name: "provision-workspace",
-  version: 2,
+  version: 3,
   envelope: {
     commandId: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     idempotencyKey: "tenant3-initial",
@@ -112,7 +113,7 @@ describe("provision-workspace contract", () => {
         displayName: "Operations Manager",
         username: "ops",
         pin: "5678",
-        role: "OPS_MANAGER",
+        role: "ADMIN",
         branchScope: "ALL",
       },
       {
@@ -120,7 +121,7 @@ describe("provision-workspace contract", () => {
         displayName: "Field Agent",
         username: "field",
         pin: "9012",
-        role: "FIELD_SUBMITTER",
+        role: "DRIVER",
         branchScope: ["HQ"],
       },
     ];
@@ -316,5 +317,39 @@ describe("provision-workspace v1 compatibility", () => {
     expect(
       provisionWorkspaceCommand.safeParse({ ...valid, payload: migrated }).success,
     ).toBe(true);
+  });
+});
+
+describe("provision-workspace v2 compatibility (pre-ADR-0009 roles)", () => {
+  const user = {
+    id: "0b6f5e0a-7c1d-4e2f-9a3b-4c5d6e7f8a9b",
+    username: "boris",
+    displayName: "Boris",
+    pin: "2222",
+    role: "OPS_MANAGER",
+    branchScope: "ALL",
+  };
+
+  it("reads each legacy role code as the role it became", () => {
+    const parsed = provisionWorkspaceV2Command.parse({
+      ...valid,
+      version: 2,
+      payload: { ...valid.payload, users: [user, { ...user, id: "1b6f5e0a-7c1d-4e2f-9a3b-4c5d6e7f8a9b", username: "sali", role: "FIELD_SUBMITTER" }] },
+    });
+    expect(parsed.payload.users?.map((u) => u.role)).toEqual(["ADMIN", "DRIVER"]);
+    expect(provisionWorkspaceCommand.safeParse({ ...valid, payload: parsed.payload }).success).toBe(true);
+  });
+
+  it("v3 refuses a legacy role code and v2 refuses a new one", () => {
+    expect(
+      provisionWorkspaceCommand.safeParse({ ...valid, payload: { ...valid.payload, users: [user] } }).success,
+    ).toBe(false);
+    expect(
+      provisionWorkspaceV2Command.safeParse({
+        ...valid,
+        version: 2,
+        payload: { ...valid.payload, users: [{ ...user, role: "CASHIER" }] },
+      }).success,
+    ).toBe(false);
   });
 });

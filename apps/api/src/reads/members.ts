@@ -6,12 +6,11 @@ import {
   type MemberListSortField,
   type MemberStatus,
 } from "@routiq/contracts";
-import { and, eq, isNull, type SQL } from "drizzle-orm";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { and, arrayContained, eq, isNull, type SQL } from "drizzle-orm";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { inWorkspace } from "../db/tenant.js";
 import { credentials, memberships, principals } from "../db/schema.js";
 import {
   afterKeyset,
@@ -21,6 +20,7 @@ import {
   keysetOrderBy,
   type KeysetColumn,
 } from "./cursor.js";
+import { ADMINISTRATORS, defineRead } from "./define-read.js";
 
 const listQuerySchema = listQuery(
   {
@@ -51,24 +51,23 @@ const memberSortColumns: Record<MemberListSortField, KeysetColumn> = {
  * people are its memberships — with the principal supplying the name and the
  * credential the login, left-joined because a member may hold no credential.
  *
- * ADMIN-only, matching the commands the screen sends: usernames and lockout
- * state are administrative facts, not directory information every role reads.
+ * DIRECTOR and ADMIN only, matching the commands the screen sends: usernames
+ * and lockout state are administrative facts, not directory information every
+ * role reads. An ADMIN scoped to some branches sees the members whose every
+ * branch is one of theirs, the members the member commands let them reach;
+ * a member who also works elsewhere, or everywhere, is Direction's to see.
  */
 export function registerMemberReadRoutes(
   app: FastifyInstance,
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/members",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/members", module: "CORE", roles: ADMINISTRATORS, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-        if (auth.role !== "ADMIN") {
-          return reply.status(403).send({ error: { code: "ROLE_FORBIDDEN" } });
-        }
-
         const parsedQuery = listQuerySchema.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -86,13 +85,19 @@ export function registerMemberReadRoutes(
         if (!includeDeactivated) {
           conditions.push(isNull(memberships.deactivatedAt));
         }
+        if (auth.branchScope !== "ALL") {
+          conditions.push(
+            eq(memberships.allBranches, false),
+            arrayContained(memberships.branchIds, auth.branchScope),
+          );
+        }
         if (decodedCursor) {
           conditions.push(
             afterKeyset(sortColumn, sort.direction, memberships.principalId, decodedCursor),
           );
         }
 
-        const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const rows = await read((tx) =>
           tx
             .select({
               principalId: memberships.principalId,

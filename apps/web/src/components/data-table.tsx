@@ -16,6 +16,7 @@ import {
   type Cell,
   type Column,
   type ColumnDef,
+  type ColumnMeta,
   type OnChangeFn,
   type PaginationState,
   type RowData,
@@ -86,15 +87,35 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 const NO_FILTERS: DataTableFilter[] = [];
 const NO_FILTER_VALUES: DataTableFilterValues = {};
 
-export type DataTableMobileVisibility = "primary" | "secondary" | "hidden";
+/**
+ * Where a column lands in a phone list row. Line 1: `title` left (the primary
+ * column, the only tap target), `value` right in tabular figures. Line 2:
+ * `meta` joined by " · ", `status` under the value. `hidden` stays off the
+ * phone. One row anatomy for every list, so screens cannot drift into cards.
+ */
+export type DataTablePhoneRole = "title" | "meta" | "value" | "status" | "hidden";
 
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
-    mobile: DataTableMobileVisibility;
+    phone: DataTablePhoneRole;
+    /**
+     * Plain text for the phone row, for a cell laid out for the desktop table
+     * (stacked lines, links). `null` or `""` leaves the slot out, separator
+     * included.
+     */
+    phoneText?: (row: TData) => string | null;
     /** Already-localized display name, used by the column visibility menu. */
     label?: string;
   }
 }
+
+/**
+ * A column `DataTable` accepts. TanStack leaves `meta` optional; here it is
+ * required, so a column without a phone role fails to type-check.
+ */
+export type DataTableColumn<TData> = ColumnDef<TData> & {
+  meta: ColumnMeta<TData, unknown>;
+};
 
 export interface DataTableFilterOption {
   value: string;
@@ -132,6 +153,11 @@ export interface DataTableRowViewer<TData> {
     label: string;
     onOpen: (row: TData) => void;
   };
+  /**
+   * Decisions on the row, rendered last in the footer. When present they own
+   * the page's one filled button, so `fullScreen` steps down to an outline.
+   */
+  actions?: (row: TData, drawer: { close: () => void }) => ReactNode;
 }
 
 /**
@@ -193,7 +219,7 @@ export type DataTableProps<TData> = DataTableBaseProps<TData> &
   DataTablePaging;
 
 interface DataTableBaseProps<TData> {
-  columns: ColumnDef<TData>[];
+  columns: DataTableColumn<TData>[];
   data: TData[];
   emptyState?: ReactNode;
   getRowId?: (row: TData, index: number) => string;
@@ -276,6 +302,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   // The row survives the close so the drawer can animate out with its content
   // still on screen.
   const [viewerState, setViewerState] = useState<DataTableViewerState<TData>>();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const activateRow =
     onRowClick ??
@@ -338,7 +365,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
             id: ACTIONS_COLUMN_ID,
             enableSorting: false,
             enableHiding: false,
-            meta: { mobile: "hidden" },
+            meta: { phone: "hidden" },
             // The cells are rendered at the call site, which owns the row menu.
             header: () => <span className="sr-only">{t("dataTable.actions")}</span>,
           },
@@ -353,7 +380,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       id: SELECTION_COLUMN_ID,
       enableSorting: false,
       enableHiding: false,
-      meta: { mobile: "hidden" },
+      meta: { phone: "hidden" },
       header: ({ table }) => (
         <RowActivationBoundary>
           <Checkbox
@@ -458,47 +485,57 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     onFilterChange?.(next);
   };
 
-  const hasActiveFilter = filters.some((filter) =>
+  const isFilterActive = (filter: DataTableFilter) =>
     (filter.columnIds ?? [filter.columnId]).some(
       (columnId) => (filterValues[columnId] ?? "") !== "",
-    ),
-  );
+    );
+  const activeFilterCount = filters.filter(isFilterActive).length;
+  const hasActiveFilter = activeFilterCount > 0;
   const hideableColumns = table
     .getAllLeafColumns()
     .filter((column) => column.id !== SELECTION_COLUMN_ID && column.getCanHide());
-  const showToolbar = filters.length > 0 || (enableColumnVisibility && hideableColumns.length > 0);
+  // Phone rows place columns by their declared role, so the view menu is a
+  // desktop control.
+  const showColumnVisibility =
+    isDesktop && enableColumnVisibility && hideableColumns.length > 0;
+  const showToolbar = filters.length > 0 || showColumnVisibility;
 
-  const toolbar = showToolbar ? (
+  const filterControls = (inSheet: boolean) =>
+    filters.map((filter) =>
+      filter.type === "custom" ? (
+        <div key={filter.columnId}>{filter.render}</div>
+      ) : filter.type === "search" ? (
+        <DataTableSearchFilter
+          key={filter.columnId}
+          placeholder={filter.placeholder}
+          value={filterValues[filter.columnId] ?? ""}
+          delayMs={searchDebounceMs}
+          showLabel={inSheet}
+          onCommit={(value) => commitFilter(filter.columnId, value)}
+        />
+      ) : (
+        <DataTableSelectFilter
+          key={filter.columnId}
+          filter={filter}
+          value={filterValues[filter.columnId] ?? ""}
+          resetLabel={t("dataTable.filterAll")}
+          showLabel={inSheet}
+          onCommit={(value) => commitFilter(filter.columnId, value)}
+        />
+      ),
+    );
+
+  const toolbar = !showToolbar ? null : isDesktop ? (
     <div className="flex flex-wrap items-center gap-2">
-      {filters.map((filter) =>
-        filter.type === "custom" ? (
-          <div key={filter.columnId}>{filter.render}</div>
-        ) : filter.type === "search" ? (
-          <DataTableSearchFilter
-            key={filter.columnId}
-            placeholder={filter.placeholder}
-            value={filterValues[filter.columnId] ?? ""}
-            delayMs={searchDebounceMs}
-            onCommit={(value) => commitFilter(filter.columnId, value)}
-          />
-        ) : (
-          <DataTableSelectFilter
-            key={filter.columnId}
-            filter={filter}
-            value={filterValues[filter.columnId] ?? ""}
-            resetLabel={t("dataTable.filterAll")}
-            onCommit={(value) => commitFilter(filter.columnId, value)}
-          />
-        ),
-      )}
+      {filterControls(false)}
 
       {hasActiveFilter && (
-        <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+        <Button type="button" variant="ghost" size="desktop-sm" onClick={clearFilters}>
           {t("dataTable.clearFilters")}
         </Button>
       )}
 
-      {enableColumnVisibility && hideableColumns.length > 0 && (
+      {showColumnVisibility && (
         <ColumnVisibilityMenu
           className="ml-auto"
           entries={hideableColumns.map((column) => ({
@@ -510,7 +547,16 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
         />
       )}
     </div>
-  ) : null;
+  ) : (
+    <DataTablePhoneFilters
+      activeCount={activeFilterCount}
+      open={filtersOpen}
+      onOpenChange={setFiltersOpen}
+      onClear={clearFilters}
+    >
+      {filterControls(true)}
+    </DataTablePhoneFilters>
+  );
 
   if (data.length === 0) {
     if (toolbar === null) {
@@ -533,7 +579,10 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     : modelRows;
   const selectedCount = table.getSelectedRowModel().rows.length;
 
-  const renderCell = (cell: Cell<TData, unknown>) => {
+  const renderCell = (
+    cell: Cell<TData, unknown>,
+    content: ReactNode = flexRender(cell.column.columnDef.cell, cell.getContext()),
+  ) => {
     if (cell.column.id === ACTIONS_COLUMN_ID) {
       return (
         <RowActionsMenu
@@ -543,7 +592,6 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       );
     }
 
-    const content = flexRender(cell.column.columnDef.cell, cell.getContext());
     if (cell.column.id !== primaryColumnId || activateRow === undefined) {
       return content;
     }
@@ -561,7 +609,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-slot="data-table" className="flex flex-col gap-3">
       {toolbar}
 
       {isDesktop ? (
@@ -579,7 +627,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
+                          size="desktop-sm"
                           className="-ml-2.5"
                           onClick={header.column.getToggleSortingHandler()}
                         >
@@ -624,61 +672,27 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
           </Table>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map((row) => {
-            const visibleCells = row.getVisibleCells();
-            const selectionCell = visibleCells.find(
-              (cell) => cell.column.id === SELECTION_COLUMN_ID,
-            );
-            const primaryCells = visibleCells.filter(
-              (cell) =>
-                cell.column.id !== ACTIONS_COLUMN_ID &&
-                cell.column.columnDef.meta?.mobile === "primary",
-            );
-            const secondaryCells = visibleCells.filter(
-              (cell) => cell.column.columnDef.meta?.mobile === "secondary",
-            );
-
-            return (
-              // The card mirrors the table: its title opens the row and the ⋯
-              // menu sits in the corner.
-              <div
-                key={row.id}
-                className="rounded-xl border border-border bg-card p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  {selectionCell &&
-                    flexRender(
-                      selectionCell.column.columnDef.cell,
-                      selectionCell.getContext(),
-                    )}
-                  {primaryCells.map((cell) => (
-                    <div key={cell.id} className="font-medium">
-                      {renderCell(cell)}
-                    </div>
-                  ))}
-                  {rowActions && (
-                    <RowActionsMenu
-                      actions={rowActions(row.original)}
-                      row={row.original}
-                      className="ml-auto"
-                    />
-                  )}
-                </div>
-                {secondaryCells.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-x-1 text-xs text-muted-foreground">
-                    {secondaryCells.map((cell, index) => (
-                      <span key={cell.id}>
-                        {index > 0 && <span aria-hidden> · </span>}
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <ul data-slot="data-table-list" className="flex flex-col">
+          {rows.map((row) => (
+            <DataTablePhoneRow
+              key={row.id}
+              cells={row.getVisibleCells()}
+              selected={row.getIsSelected()}
+              renderCell={renderCell}
+              actions={
+                rowActions && (
+                  <RowActionsMenu
+                    actions={rowActions(row.original)}
+                    row={row.original}
+                    // A row with nothing to offer keeps the column, so values
+                    // and badges stay aligned down the list.
+                    placeholder={<span aria-hidden className="size-11 shrink-0" />}
+                  />
+                )
+              }
+            />
+          ))}
+        </ul>
       )}
 
       {/* Either pager subsumes the row count — it already says where the
@@ -756,7 +770,7 @@ function DataTableRowDrawer<TData>({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { description, fullScreen } = viewer;
+  const { description, fullScreen, actions } = viewer;
 
   return (
     <Drawer
@@ -784,6 +798,7 @@ function DataTableRowDrawer<TData>({
               {fullScreen && (
                 <Button
                   type="button"
+                  variant={actions ? "outline" : "default"}
                   className="min-h-11"
                   onClick={() => fullScreen.onOpen(state.row)}
                 >
@@ -795,11 +810,191 @@ function DataTableRowDrawer<TData>({
               >
                 {t("dataTable.viewer.close")}
               </DrawerClose>
+              {actions?.(state.row, { close: onClose })}
             </DrawerFooter>
           </>
         )}
       </DrawerContent>
     </Drawer>
+  );
+}
+
+/**
+ * One phone list row: two lines, divided from its neighbours by a 1 px line, no
+ * card border. Each slot takes the columns that declared its role, in column
+ * order, so every list on a phone reads the same way.
+ */
+function DataTablePhoneRow<TData>({
+  cells,
+  selected,
+  renderCell,
+  actions,
+}: {
+  cells: Cell<TData, unknown>[];
+  selected: boolean;
+  renderCell: (cell: Cell<TData, unknown>, content?: ReactNode) => ReactNode;
+  actions: ReactNode;
+}) {
+  const selectionCell = cells.find((cell) => cell.column.id === SELECTION_COLUMN_ID);
+  const slot = (role: DataTablePhoneRole) =>
+    cells.flatMap((cell) => {
+      if (cell.column.id === SELECTION_COLUMN_ID || cell.column.id === ACTIONS_COLUMN_ID) {
+        return [];
+      }
+      if (cell.column.columnDef.meta?.phone !== role) return [];
+      const content = phoneContent(cell);
+      return content === null ? [] : [{ cell, content }];
+    });
+
+  const title = slot("title");
+  const meta = slot("meta");
+  const value = slot("value");
+  const status = slot("status");
+
+  return (
+    <li
+      data-slot="data-table-row"
+      data-state={selected ? "selected" : undefined}
+      className="flex min-h-15 items-center gap-3 border-b border-border py-2 data-[state=selected]:bg-muted/50"
+    >
+      {selectionCell &&
+        flexRender(selectionCell.column.columnDef.cell, selectionCell.getContext())}
+      {/*
+        The end column may take at most half of the space between the checkbox
+        and the ⋯ menu, so a long status (a cancellation's reason, a month
+        name) wraps there instead of squeezing the title to zero width (#300).
+      */}
+      <div data-slot="data-table-row-body" className="flex min-w-0 flex-1 items-center gap-3">
+        <div data-slot="data-table-row-main" className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div data-slot="data-table-row-title" className="min-w-0 truncate text-sm font-semibold">
+            {title.map(({ cell, content }) => (
+              <span key={cell.id}>{renderCell(cell, content)}</span>
+            ))}
+          </div>
+          {meta.length > 0 && (
+            <div
+              data-slot="data-table-row-meta"
+              // Cells laid out for the table (flex stacks, wrapping text) still
+              // read as one line here, cut with an ellipsis.
+              className="min-w-0 truncate text-xs text-muted-foreground [&_*]:inline [&_*]:whitespace-nowrap"
+            >
+              {meta.map(({ cell, content }, index) => (
+                <span key={cell.id}>
+                  {index > 0 && <span aria-hidden> · </span>}
+                  {content}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {(value.length > 0 || status.length > 0) && (
+          <div
+            data-slot="data-table-row-end"
+            className="flex max-w-1/2 min-w-0 flex-col items-end gap-1 text-right"
+          >
+            {value.length > 0 && (
+              <div
+                data-slot="data-table-row-value"
+                className="text-sm font-semibold whitespace-nowrap tabular-nums"
+              >
+                {value.map(({ cell, content }) => (
+                  <span key={cell.id}>{content}</span>
+                ))}
+              </div>
+            )}
+            {status.length > 0 && (
+              <div
+                data-slot="data-table-row-status"
+                // Badges and buttons are one-line pills elsewhere; here they wrap
+                // too, so nothing pokes out over the title. A wrapped button
+                // grows from its 44 px touch target, never below it.
+                className="flex max-w-full min-w-0 flex-col items-end gap-1 text-left text-xs wrap-anywhere text-muted-foreground [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:py-1 [&_[data-slot=button]]:whitespace-normal"
+              >
+                {status.map(({ cell, content }) => (
+                  <span key={cell.id}>{content}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {actions}
+    </li>
+  );
+}
+
+/**
+ * What a cell shows in a phone row, or `null` to leave its slot out. A blank
+ * accessor value counts as empty, so a missing date or counterparty drops out
+ * of the meta line instead of printing "–" between two separators.
+ */
+function phoneContent<TData>(cell: Cell<TData, unknown>): ReactNode | null {
+  const meta = cell.column.columnDef.meta;
+  if (meta?.phoneText !== undefined) {
+    const text = meta.phoneText(cell.row.original);
+    return text === null || text === "" ? null : text;
+  }
+  if (cell.column.accessorFn !== undefined) {
+    const value = cell.getValue();
+    if (value === null || value === undefined || value === "") return null;
+  }
+  return flexRender(cell.column.columnDef.cell, cell.getContext());
+}
+
+/**
+ * Phone filters: one "Filters (n)" button above the list, opening a bottom
+ * sheet with the same controls the desktop toolbar shows, so five filters
+ * never stack in front of the first row.
+ */
+function DataTablePhoneFilters({
+  activeCount,
+  open,
+  onOpenChange,
+  onClear,
+  children,
+}: {
+  activeCount: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onClear: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button type="button" variant="outline" onClick={() => onOpenChange(true)}>
+        <SlidersHorizontal aria-hidden />
+        {t("dataTable.filters", { count: activeCount })}
+      </Button>
+      <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="down">
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>{t("dataTable.filtersTitle")}</DrawerTitle>
+          </DrawerHeader>
+          <div
+            data-slot="data-table-filters"
+            className="flex flex-col gap-4 overflow-y-auto px-4 py-4"
+          >
+            {children}
+          </div>
+          <DrawerFooter className="flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              disabled={activeCount === 0}
+              onClick={onClear}
+            >
+              {t("dataTable.clearFilters")}
+            </Button>
+            <DrawerClose render={<Button type="button" className="flex-1" />}>
+              {t("dataTable.showResults")}
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </div>
   );
 }
 
@@ -888,7 +1083,7 @@ function DataTableFooter<TData>({
                 }
               }}
             >
-              <SelectTrigger size="sm" className="w-20" id={rowsPerPageId}>
+              <SelectTrigger size="desktop-sm" className="w-20" id={rowsPerPageId}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent side="top">
@@ -912,7 +1107,7 @@ function DataTableFooter<TData>({
             <Button
               type="button"
               variant="outline"
-              size="icon"
+              size="desktop-icon-sm"
               className="hidden lg:flex"
               aria-label={t("dataTable.firstPage")}
               disabled={!canPrevious}
@@ -924,7 +1119,7 @@ function DataTableFooter<TData>({
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size="desktop-icon-sm"
             aria-label={t("dataTable.previousPage")}
             disabled={!canPrevious || busy}
             onClick={goPrevious}
@@ -934,7 +1129,7 @@ function DataTableFooter<TData>({
           <Button
             type="button"
             variant="outline"
-            size="icon"
+            size="desktop-icon-sm"
             aria-label={t("dataTable.nextPage")}
             disabled={!canNext || busy}
             onClick={goNext}
@@ -945,7 +1140,7 @@ function DataTableFooter<TData>({
             <Button
               type="button"
               variant="outline"
-              size="icon"
+              size="desktop-icon-sm"
               className="hidden lg:flex"
               aria-label={t("dataTable.lastPage")}
               disabled={!canNext}
@@ -964,14 +1159,17 @@ function RowActionsMenu<TData>({
   actions,
   row,
   className,
+  placeholder = null,
 }: {
   actions: DataTableRowAction<TData>[];
   row: TData;
   className?: string;
+  /** Rendered instead of the menu when the row offers no action. */
+  placeholder?: ReactNode;
 }) {
   const { t } = useTranslation();
 
-  if (actions.length === 0) return null;
+  if (actions.length === 0) return placeholder;
 
   return (
     <DropdownMenu>
@@ -980,7 +1178,7 @@ function RowActionsMenu<TData>({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="desktop-icon-sm"
             aria-label={t("dataTable.actions")}
             className={className}
           />
@@ -996,7 +1194,7 @@ function RowActionsMenu<TData>({
             onClick={() => action.onSelect(row)}
           >
             {action.icon && <action.icon aria-hidden />}
-            {action.label}
+            <span className="min-w-0 truncate">{action.label}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -1025,7 +1223,7 @@ function ColumnVisibilityMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" size="sm" className={className}>
+          <Button type="button" variant="outline" size="desktop-sm" className={className}>
             <SlidersHorizontal aria-hidden />
             {t("dataTable.view")}
           </Button>
@@ -1079,6 +1277,7 @@ export function DataTableViewOptions<TData>({
   primaryColumn?: DataTablePrimaryColumn;
   className?: string;
 }) {
+  const isDesktop = useDesktopMediaQuery();
   const entries = columns
     .map((column, index) => ({ column, id: columnDefId(column, index) }))
     .filter(
@@ -1091,7 +1290,8 @@ export function DataTableViewOptions<TData>({
       visible: value[id] !== false,
     }));
 
-  if (entries.length === 0) return null;
+  // Phone rows place columns by their declared role, not by this menu.
+  if (!isDesktop || entries.length === 0) return null;
 
   return (
     <ColumnVisibilityMenu
@@ -1106,13 +1306,17 @@ function DataTableSearchFilter({
   placeholder,
   value,
   delayMs,
+  showLabel,
   onCommit,
 }: {
   placeholder: string;
   value: string;
   delayMs: number;
+  /** In the phone sheet every control carries a visible label. */
+  showLabel: boolean;
   onCommit: (value: string) => void;
 }) {
+  const id = useId();
   const [draft, setDraft] = useState(value);
   const debounced = useDebounce(draft, delayMs);
   const committed = useRef(value);
@@ -1133,15 +1337,25 @@ function DataTableSearchFilter({
     onCommit(debounced);
   }, [debounced, onCommit]);
 
-  return (
+  const input = (
     <Input
       type="search"
+      id={id}
       aria-label={placeholder}
       placeholder={placeholder}
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      className="h-9 w-full sm:w-56"
+      className="w-full desktop:h-8 sm:w-56"
     />
+  );
+
+  if (!showLabel) return input;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{placeholder}</Label>
+      {input}
+    </div>
   );
 }
 
@@ -1149,20 +1363,29 @@ function DataTableSelectFilter({
   filter,
   value,
   resetLabel,
+  showLabel,
   onCommit,
 }: {
   filter: Extract<DataTableFilter, { type: "select" }>;
   value: string;
   resetLabel: string;
+  /** In the phone sheet a picked value would otherwise lose what it filters. */
+  showLabel: boolean;
   onCommit: (value: string) => void;
 }) {
-  return (
+  const id = useId();
+  const select = (
     <Select
       items={filter.options}
       value={value === "" ? null : value}
       onValueChange={(next) => onCommit(next ?? "")}
     >
-      <SelectTrigger aria-label={filter.placeholder} className="h-9 w-full sm:w-48">
+      <SelectTrigger
+        size="desktop-sm"
+        id={id}
+        aria-label={filter.placeholder}
+        className="w-full sm:w-48"
+      >
         <SelectValue placeholder={filter.placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -1174,6 +1397,15 @@ function DataTableSelectFilter({
         ))}
       </SelectContent>
     </Select>
+  );
+
+  if (!showLabel) return select;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{filter.placeholder}</Label>
+      {select}
+    </div>
   );
 }
 

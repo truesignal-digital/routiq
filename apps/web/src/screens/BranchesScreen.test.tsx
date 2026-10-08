@@ -100,8 +100,8 @@ vi.mock("../branches/BranchActionDialog.js", async () => {
   };
 });
 
-const admin = { role: "ADMIN" as const, enabledModules: ["CORE"] as const };
-let meValue: unknown = admin;
+const director = { role: "DIRECTOR" as const, enabledModules: ["CORE"] as const };
+let meValue: unknown = director;
 
 vi.mock("../auth/me.js", async () => {
   const actual = await vi.importActual<typeof import("../auth/me.js")>("../auth/me.js");
@@ -132,7 +132,7 @@ describe("BranchesScreen", () => {
   beforeEach(() => {
     issuedQueries.length = 0;
     vi.clearAllMocks();
-    meValue = admin;
+    meValue = director;
     mockDesktop();
   });
   afterEach(cleanup);
@@ -150,14 +150,14 @@ describe("BranchesScreen", () => {
     expect(issuedQueries[0]).toEqual({ sort: "code:asc" });
   });
 
-  it("shows a non-admin the reason rather than the workspace's branches", async () => {
-    meValue = { role: "OPS_MANAGER", enabledModules: ["CORE", "ACTIVITIES"] };
+  it("shows anyone but the Director the reason rather than the workspace's branches", async () => {
+    meValue = { role: "ADMIN", enabledModules: ["CORE", "ACTIVITIES"] };
     render(<BranchesScreen />);
 
     expect(await screen.findByText("branches.title")).toBeTruthy();
     expect(screen.getByText("errors.ROLE_FORBIDDEN")).toBeTruthy();
     expect(screen.queryByText("Douala")).toBeNull();
-    expect(screen.queryByRole("button", { name: "branches.add.open" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "commands.create-branch.label" })).toBeNull();
   });
 
   it("offers an inactive branch reactivation, and nothing that assumes it is open", async () => {
@@ -168,12 +168,12 @@ describe("BranchesScreen", () => {
     await userEvent.click(menus[1]!);
 
     expect(
-      await screen.findByRole("menuitem", { name: "branches.actions.reactivate" }),
+      await screen.findByRole("menuitem", { name: "commands.set-branch-status.reactivate.label" }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("menuitem", { name: "branches.actions.deactivate" }),
+      screen.queryByRole("menuitem", { name: "commands.set-branch-status.deactivate.label" }),
     ).toBeNull();
-    expect(screen.queryByRole("menuitem", { name: "branches.actions.rename" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "commands.rename-branch.label" })).toBeNull();
   });
 
   it("opens the deactivation dialog on the row the admin chose", async () => {
@@ -182,7 +182,7 @@ describe("BranchesScreen", () => {
 
     await userEvent.click(screen.getAllByRole("button", { name: "dataTable.actions" })[0]!);
     await userEvent.click(
-      await screen.findByRole("menuitem", { name: "branches.actions.deactivate" }),
+      await screen.findByRole("menuitem", { name: "commands.set-branch-status.deactivate.label" }),
     );
 
     const dialog = await screen.findByRole("dialog", { name: "branch-action" });
@@ -195,7 +195,7 @@ describe("BranchesScreen", () => {
     await screen.findByText("Douala");
 
     expect(screen.queryByRole("dialog", { name: "create-branch" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "branches.add.open" }));
+    await userEvent.click(screen.getByRole("button", { name: "commands.create-branch.label" }));
     expect(await screen.findByRole("dialog", { name: "create-branch" })).toBeTruthy();
   });
 });

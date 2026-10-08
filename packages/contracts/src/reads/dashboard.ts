@@ -70,15 +70,20 @@ export const dashboardSeriesPoint = z.object({
 /** `GET /v1/dashboard` — aggregates computed per request, no projections (ADR-0003). */
 export const dashboardResponse = z.object({
   assets: dashboardAssetCounts,
-  /** Null when the workspace has no open period yet — nothing has been posted. */
+  /**
+   * Null when the workspace has no open period yet (nothing has been posted),
+   * or when the caller may not read finance.
+   */
   openPeriod: dashboardOpenPeriod.nullable(),
-  pendingApprovals: dashboardPendingApprovals,
+  /** Null when the caller may not read finance: FINANCE disabled, or a role outside LEDGER_READER_ROLES. */
+  pendingApprovals: dashboardPendingApprovals.nullable(),
   /**
    * Every day of the requested window, ascending, zero-filled: a day with no
    * postings arrives as an explicit zero so the chart plots a flat line there
-   * instead of interpolating across a gap it cannot see.
+   * instead of interpolating across a gap it cannot see. Null when the caller
+   * may not read finance.
    */
-  series: z.array(dashboardSeriesPoint),
+  series: z.array(dashboardSeriesPoint).nullable(),
 });
 
 export type DashboardAssetCounts = z.infer<typeof dashboardAssetCounts>;

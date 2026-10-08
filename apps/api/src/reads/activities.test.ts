@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   activityDetail,
   activityListResponse,
+  LEDGER_READER_ROLES,
   personListResponse,
   placeListResponse,
 } from "@routiq/contracts";
@@ -10,10 +11,12 @@ import { createSession } from "../auth/local.js";
 import { branches } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { apiClient, seedActor } from "../test/client.js";
 
 describe("activity, person and place reads", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let adminToken: string;
+  let adminPrincipalId: string;
   let doualaToken: string;
   let doualaBranchId: string;
   let yaoundeBranchId: string;
@@ -47,6 +50,7 @@ describe("activity, person and place reads", () => {
       role: "ADMIN",
       allBranches: true,
     });
+    adminPrincipalId = admin.principal.id;
     adminToken = (
       await createSession(ctx.db, {
         workspaceId: seeded.workspace.id,
@@ -56,7 +60,7 @@ describe("activity, person and place reads", () => {
 
     const doualaMember = await seedMember(ctx.db, {
       workspaceId: seeded.workspace.id,
-      role: "OPS_MANAGER",
+      role: "ADMIN",
       branchIds: [doualaBranchId],
     });
     doualaToken = (
@@ -370,6 +374,9 @@ describe("activity, person and place reads", () => {
     // §3.4 provenance: the detail read is where a record says which command
     // wrote it, so the stamp on the screen has something to name.
     expect(detail.createdByCommandId).not.toBeNull();
+    // Who recorded it: a DRIVER closes only their own trips, and the screen
+    // offers the close only where it will pass.
+    expect(detail.recordedByPrincipalId).toBe(adminPrincipalId);
     expect(Date.parse(detail.createdAt)).not.toBeNaN();
     expect(detail.branchId).toBe(doualaBranchId);
     expect(
@@ -408,8 +415,12 @@ describe("activity, person and place reads", () => {
       expect.objectContaining({
         direction: "REVENUE",
         categoryCode: "FREIGHT_REVENUE",
+        // #129: the detail names the category in both languages, as the finance reads do.
+        categoryLabelFr: "Recettes de fret",
+        categoryLabelEn: "Freight revenue",
         amountMinor: 1_850_000,
-        status: "POSTED",
+        // #412: an Administrateur's own entry above the recording band waits.
+        status: "SUBMITTED",
       }),
     ]);
   });
@@ -566,4 +577,189 @@ describe("activity, person and place reads", () => {
     });
   });
 
+});
+
+/** The trip row's route, distance and driver (#44 Trips tab). */
+describe("activity list route fields", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let token: string;
+  let truck: string;
+  let tripId: string;
+  let bareId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    const admin = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN" });
+    token = admin.token;
+    truck = await seedAsset(ctx.app, token);
+
+    const person = async (displayName: string) => {
+      const personId = randomUUID();
+      await api.ok(token, "register-person", { personId, displayName, branchCode: "DLA" });
+      return personId;
+    };
+    const conductor = await person("Aaron");
+    const firstDriver = await person("Zacharie");
+    const relief = await person("Alain");
+
+    tripId = randomUUID();
+    await api.ok(token, "create-activity", {
+      activityId: tripId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truck,
+      startedAt: "2026-08-01T05:00:00Z",
+      crew: [
+        { activityPersonId: randomUUID(), personId: conductor, role: "CONDUCTOR" },
+        { activityPersonId: randomUUID(), personId: firstDriver, role: "DRIVER" },
+        { activityPersonId: randomUUID(), personId: relief, role: "DRIVER" },
+      ],
+    });
+    const leg = (legNo: number, origin: object, destination: object, distanceKm?: number) =>
+      api.ok(token, "record-movement-leg", {
+        legId: randomUUID(),
+        activityId: tripId,
+        legNo,
+        origin,
+        destination,
+        ...(distanceKm === undefined ? {} : { distanceKm }),
+      });
+    // Recorded out of order: the row reads by leg number, not by insertion.
+    await leg(2, { kind: "text", text: "Edéa" }, { kind: "place", placeId: randomUUID(), name: "Yaoundé" }, 180);
+    await leg(1, { kind: "place", placeId: randomUUID(), name: "Douala" }, { kind: "text", text: "Edéa" }, 60);
+    await leg(3, { kind: "text", text: "Yaoundé" }, { kind: "text", text: "Obala" });
+
+    bareId = randomUUID();
+    await api.ok(token, "create-activity", {
+      activityId: bareId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truck,
+      startedAt: "2026-07-01T05:00:00Z",
+    });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  it("names the route end to end, sums the kilometres and names the first driver", async () => {
+    const list = activityListResponse.parse(
+      (await api.get(token, `/v1/activities?assetId=${truck}`)).body,
+    );
+    // Both drivers joined in one command, so the name decides; the
+    // conductor is not a driver whatever their name.
+    expect(list.items.find((item) => item.id === tripId)).toMatchObject({
+      originName: "Douala",
+      destinationName: "Obala",
+      distanceKm: 240,
+      driverName: "Alain",
+      legCount: 3,
+    });
+    expect(list.items.find((item) => item.id === bareId)).toMatchObject({
+      originName: null,
+      destinationName: null,
+      distanceKm: null,
+      driverName: null,
+    });
+
+    const detail = activityDetail.parse((await api.get(token, `/v1/activities/${tripId}`)).body);
+    expect(detail).toMatchObject({
+      originName: "Douala",
+      destinationName: "Obala",
+      distanceKm: 240,
+      driverName: "Alain",
+    });
+  });
+});
+
+/**
+ * #103: every role reads the trip, only the roles that read the books see its
+ * money, and nobody does with FINANCE off.
+ */
+describe("activity detail ledger gate", () => {
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
+  let adminToken: string;
+  let tripId: string;
+  let entryId: string;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+    const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
+    adminToken = (await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" })).token;
+    const truck = await seedAsset(ctx.app, adminToken);
+
+    tripId = randomUUID();
+    await api.ok(adminToken, "create-activity", {
+      activityId: tripId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: truck,
+      startedAt: "2026-08-01T05:00:00Z",
+    });
+    entryId = randomUUID();
+    await api.ok(adminToken, "record-expense", {
+      entryId,
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: "2026-08-01",
+      amountMinor: 45_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truck, activityId: tripId, amountMinor: 45_000 }],
+    });
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  async function detailAs(token: string) {
+    const response = await api.get(token, `/v1/activities/${tripId}`);
+    expect(response.status).toBe(200);
+    return activityDetail.parse(response.body);
+  }
+
+  it("shows the trip's entries to every role that reads the books", async () => {
+    for (const role of LEDGER_READER_ROLES) {
+      const { token } = await seedActor(ctx.db, { workspaceId, role });
+      const detail = await detailAs(token);
+      expect({ role, entries: detail.financialEntries }).toEqual({
+        role,
+        entries: [expect.objectContaining({ entryId, amountMinor: 45_000 })],
+      });
+    }
+  });
+
+  it("gives the workshop the trip without its money", async () => {
+    const { token } = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
+    const detail = await detailAs(token);
+    expect(detail.id).toBe(tripId);
+    expect(detail.financialEntries).toBeNull();
+  });
+
+  it("gives nobody the money with FINANCE off", async () => {
+    await api.ok(adminToken, "disable-module", { moduleCode: "FINANCE" });
+    try {
+      for (const role of ["ADMIN", "FINANCE", "TECHNICIAN"] as const) {
+        const { token } = await seedActor(ctx.db, { workspaceId, role });
+        const detail = await detailAs(token);
+        expect({ role, entries: detail.financialEntries }).toEqual({ role, entries: null });
+      }
+    } finally {
+      await api.ok(adminToken, "enable-module", { moduleCode: "FINANCE" });
+    }
+  });
 });

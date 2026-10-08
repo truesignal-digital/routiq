@@ -23,6 +23,7 @@ import {
   type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
+import { assertOwnRecord } from "./own-records.js";
 
 type CloseActivityPayload = z.infer<typeof closeActivityPayload>;
 type ReopenActivityPayload = z.infer<typeof reopenActivityPayload>;
@@ -44,7 +45,7 @@ const closeActivity: CommandDefinition<CloseActivityPayload> = {
   name: "close-activity",
   version: 1,
   module: "ACTIVITIES",
-  allowedRoles: ["ADMIN", "OPS_MANAGER", "FIELD_SUBMITTER"],
+  allowedRoles: ["DIRECTOR", "ADMIN", "DRIVER"],
   payloadSchema: closeActivityPayload,
   branchAuthorization: {
     kind: "branches",
@@ -69,6 +70,11 @@ const closeActivity: CommandDefinition<CloseActivityPayload> = {
         referenceCode: payload.activityId,
       });
     }
+    await assertOwnRecord(tx, ctx, ["DRIVER"], {
+      entityType: "activity",
+      id: activity.id,
+      createdByCommandId: activity.createdByCommandId,
+    });
     checkOptimisticVersion(envelope, activity.rowVersion);
     if (activity.status === "CLOSED") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
@@ -225,7 +231,7 @@ const reopenActivity: CommandDefinition<ReopenActivityPayload> = {
   // §5.1 gives reopen one approval; realized the way reopen-period already is —
   // a restricted role plus a mandatory reason in the audit trail, not a second
   // approval step (§5.2 keeps approvals single-step).
-  allowedRoles: ["ADMIN", "OPS_MANAGER"],
+  allowedRoles: ["DIRECTOR", "ADMIN"],
   payloadSchema: reopenActivityPayload,
   branchAuthorization: {
     kind: "branches",

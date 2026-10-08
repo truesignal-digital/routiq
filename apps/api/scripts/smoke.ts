@@ -1,7 +1,7 @@
 /**
  * Hands-on smoke of the spine against the local compose Postgres.
  * Prereqs: `docker compose up -d` and `pnpm db:migrate`.
- * Run: pnpm --filter @routiq/api exec tsx scripts/smoke.ts
+ * Run: pnpm --filter @routiq/api smoke
  */
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
@@ -29,21 +29,21 @@ try {
   const { workspace, branch } = await seedWorkspace(authDb, slug);
   const admin = await seedMember(authDb, {
     workspaceId: workspace.id,
-    role: "ADMIN",
+    role: "DIRECTOR",
     allBranches: true,
     username: "smoke-admin",
     pin: "4821",
   });
   const approver = await seedMember(authDb, {
     workspaceId: workspace.id,
-    role: "FINANCE_APPROVER",
+    role: "FINANCE",
     allBranches: true,
     username: "smoke-approver",
     pin: "5732",
   });
   const submitter = await seedMember(authDb, {
     workspaceId: workspace.id,
-    role: "FIELD_SUBMITTER",
+    role: "DRIVER",
     allBranches: true,
     username: "smoke-submitter",
     pin: "1948",
@@ -99,7 +99,7 @@ try {
   check(
     "/v1/me resolves server-side context",
     (me as { workspaceId: string; role: string }).workspaceId === workspace.id &&
-      (me as { role: string }).role === "ADMIN",
+      (me as { role: string }).role === "DIRECTOR",
     me,
   );
 
@@ -121,6 +121,14 @@ try {
     },
     payload,
   });
+  /** Commands go to their named route (ADR-0002, ADR-0007), never the generic facade. */
+  const sendAs = (authToken: string, cmd: ReturnType<typeof command>) =>
+    authedAs(authToken, `/v1/commands/${cmd.name}`, {
+      version: cmd.version,
+      envelope: cmd.envelope,
+      payload: cmd.payload,
+    });
+  const send = (cmd: ReturnType<typeof command>) => sendAs(adminToken, cmd);
   const assetPayload = (assetId: string, code: string) => ({
     assetId,
     assetCode: code,
@@ -132,11 +140,11 @@ try {
   const assetId = randomUUID();
   const key = `smoke-${randomUUID()}`;
   const first = command("register-asset", assetPayload(assetId, "SMOKE-001"), key);
-  const r1 = await authed("/v1/commands", first);
+  const r1 = await send(first);
   const r1b = (await r1.json()) as { recordId: string; idempotentReplay: boolean };
   check("register-asset commits", r1.status === 200 && r1b.recordId === assetId, r1b);
 
-  const r2 = await authed("/v1/commands", first);
+  const r2 = await send(first);
   const r2b = (await r2.json()) as { recordId: string; idempotentReplay: boolean };
   check(
     "exact retry replays original outcome",
@@ -144,34 +152,24 @@ try {
     r2b,
   );
 
-  const r3 = await authed(
-    "/v1/commands",
-    command("register-asset", assetPayload(randomUUID(), "SMOKE-002"), key),
+  const r3 = await send(command("register-asset", assetPayload(randomUUID(), "SMOKE-002"), key),
   );
   check("same key + new payload → 409", r3.status === 409, await r3.json());
 
-  const r4 = await authed(
-    "/v1/commands",
-    command("disable-module", { moduleCode: "ASSETS" }, `smoke-${randomUUID()}`),
+  const r4 = await send(command("disable-module", { moduleCode: "ASSETS" }, `smoke-${randomUUID()}`),
   );
   check("disable-module ASSETS", r4.status === 200, await r4.json());
 
-  const r5 = await authed(
-    "/v1/commands",
-    command("register-asset", assetPayload(randomUUID(), "SMOKE-003"), `smoke-${randomUUID()}`),
+  const r5 = await send(command("register-asset", assetPayload(randomUUID(), "SMOKE-003"), `smoke-${randomUUID()}`),
   );
   const r5b = (await r5.json()) as { error?: { code: string } };
   check("register while disabled → MODULE_DISABLED", r5.status === 403 && r5b.error?.code === "MODULE_DISABLED", r5b);
 
-  const r6 = await authed(
-    "/v1/commands",
-    command("enable-module", { moduleCode: "ASSETS" }, `smoke-${randomUUID()}`),
+  const r6 = await send(command("enable-module", { moduleCode: "ASSETS" }, `smoke-${randomUUID()}`),
   );
   check("enable-module ASSETS", r6.status === 200, await r6.json());
 
-  const r7 = await authed(
-    "/v1/commands",
-    command("register-asset", assetPayload(randomUUID(), "SMOKE-004"), `smoke-${randomUUID()}`),
+  const r7 = await send(command("register-asset", assetPayload(randomUUID(), "SMOKE-004"), `smoke-${randomUUID()}`),
   );
   check("register works again", r7.status === 200, await r7.json());
 
@@ -192,9 +190,8 @@ try {
   });
 
   const belowThresholdEntryId = randomUUID();
-  const belowThresholdRes = await authedAs(
+  const belowThresholdRes = await sendAs(
     submitterToken,
-    "/v1/commands",
     command(
       "record-expense",
       expensePayload(belowThresholdEntryId, 40_000),
@@ -211,9 +208,8 @@ try {
   );
 
   const submittedEntryId = randomUUID();
-  const submittedRes = await authedAs(
+  const submittedRes = await sendAs(
     submitterToken,
-    "/v1/commands",
     command(
       "record-expense",
       expensePayload(submittedEntryId, 150_000),
@@ -221,9 +217,8 @@ try {
     ),
   );
   const submittedBody = (await submittedRes.json()) as CommandResult;
-  const approvedRes = await authedAs(
+  const approvedRes = await sendAs(
     approverToken,
-    "/v1/commands",
     command(
       "approve-entry",
       { entryId: submittedEntryId },
@@ -242,9 +237,8 @@ try {
   );
 
   const rejectedEntryId = randomUUID();
-  const rejectedEntryRes = await authedAs(
+  const rejectedEntryRes = await sendAs(
     submitterToken,
-    "/v1/commands",
     command(
       "record-expense",
       expensePayload(rejectedEntryId, 150_000),
@@ -252,9 +246,8 @@ try {
     ),
   );
   const rejectedEntryBody = (await rejectedEntryRes.json()) as CommandResult;
-  const forbiddenDecisionRes = await authedAs(
+  const forbiddenDecisionRes = await sendAs(
     submitterToken,
-    "/v1/commands",
     command(
       "approve-entry",
       { entryId: rejectedEntryId },
@@ -263,9 +256,8 @@ try {
     ),
   );
   const forbiddenDecisionBody = (await forbiddenDecisionRes.json()) as CommandResult;
-  const rejectRes = await authedAs(
+  const rejectRes = await sendAs(
     approverToken,
-    "/v1/commands",
     command(
       "reject-entry",
       { entryId: rejectedEntryId, reason: "smoke rejection" },
@@ -289,16 +281,14 @@ try {
   );
 
   const lastPeriod = previousPeriodCode(currentPeriod);
-  const lockRes = await authedAs(
+  const lockRes = await sendAs(
     approverToken,
-    "/v1/commands",
     command("lock-period", { periodCode: lastPeriod }, `smoke-${randomUUID()}`),
   );
   const lockBody = (await lockRes.json()) as CommandResult;
   const lateEntryId = randomUUID();
-  const lateRes = await authedAs(
+  const lateRes = await sendAs(
     submitterToken,
-    "/v1/commands",
     command(
       "record-expense",
       expensePayload(lateEntryId, 40_000, `${lastPeriod}-15`),
@@ -309,9 +299,8 @@ try {
   if (lockBody.rowVersion === undefined) {
     throw new Error("lock-period response did not include rowVersion");
   }
-  const reopenRes = await authedAs(
-    approverToken,
-    "/v1/commands",
+  const reopenRes = await sendAs(
+    adminToken,
     command(
       "reopen-period",
       { periodCode: lastPeriod, reason: "smoke reopen" },
@@ -330,9 +319,8 @@ try {
   );
 
   const reversalEntryId = randomUUID();
-  const reversalRes = await authedAs(
+  const reversalRes = await sendAs(
     approverToken,
-    "/v1/commands",
     command(
       "reverse-entry",
       {
@@ -372,9 +360,8 @@ try {
   );
 
   const revenueEntryId = randomUUID();
-  const revenueRes = await authedAs(
-    submitterToken,
-    "/v1/commands",
+  const revenueRes = await sendAs(
+    approverToken,
     command(
       "record-revenue",
       {

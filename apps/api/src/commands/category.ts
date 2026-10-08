@@ -31,6 +31,7 @@ const FULL_FIELDS = [
   "labelEn",
   "profitabilityLayer",
   "evidencePolicy",
+  "defaultSafetyCritical",
   "active",
   "createdByCommandId",
   "rowVersion",
@@ -72,6 +73,7 @@ function categoryState(row: CategoryRow): Record<string, unknown> {
     labelEn: row.labelEn,
     profitabilityLayer: row.profitabilityLayer,
     evidencePolicy: row.evidencePolicy,
+    defaultSafetyCritical: row.defaultSafetyCritical,
     active: row.active,
     createdByCommandId: row.createdByCommandId,
     rowVersion: row.rowVersion,
@@ -82,7 +84,7 @@ const createCategory: CommandDefinition<CreateCategoryPayload> = {
   name: "create-category",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: createCategoryPayload,
   branchAuthorization: { kind: "workspace" },
 
@@ -94,6 +96,14 @@ const createCategory: CommandDefinition<CreateCategoryPayload> = {
       throw new CommandError(422, "CATEGORY_LAYER_INVALID", {
         kind: payload.kind,
         profitabilityLayer: payload.profitabilityLayer ?? null,
+      });
+    }
+
+    // A safety-critical default only means something where a reporter picks a
+    // fault type; on any other kind it would be a flag nothing ever reads.
+    if (payload.defaultSafetyCritical !== undefined && payload.kind !== "ISSUE_TYPE") {
+      throw new CommandError(400, "VALIDATION_FAILED", {
+        issues: [{ code: "custom", path: ["defaultSafetyCritical"] }],
       });
     }
 
@@ -131,6 +141,9 @@ const createCategory: CommandDefinition<CreateCategoryPayload> = {
         ...(payload.evidencePolicy === undefined
           ? {}
           : { evidencePolicy: payload.evidencePolicy }),
+        ...(payload.defaultSafetyCritical === undefined
+          ? {}
+          : { defaultSafetyCritical: payload.defaultSafetyCritical }),
         active: true,
         createdByCommandId: envelope.commandId,
       })
@@ -153,7 +166,7 @@ const relabelCategory: CommandDefinition<RelabelCategoryPayload> = {
   name: "relabel-category",
   version: 1,
   module: "CORE",
-  allowedRoles: ["ADMIN"],
+  allowedRoles: ["DIRECTOR"],
   payloadSchema: relabelCategoryPayload,
   branchAuthorization: { kind: "workspace" },
 
@@ -211,7 +224,7 @@ function categoryStateFlip(opts: {
     name: opts.name,
     version: 1,
     module: "CORE",
-    allowedRoles: ["ADMIN"],
+    allowedRoles: ["DIRECTOR"],
     payloadSchema: opts.payloadSchema,
     branchAuthorization: { kind: "workspace" },
 

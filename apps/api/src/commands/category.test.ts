@@ -27,11 +27,11 @@ describe("category commands", () => {
     const seeded = await seedWorkspace(db);
     workspaceId = seeded.workspace.id;
 
-    const admin = await seedMember(db, { workspaceId, role: "ADMIN", allBranches: true });
+    const admin = await seedMember(db, { workspaceId, role: "DIRECTOR", allBranches: true });
     adminToken = (await createSession(db, { principalId: admin.principal.id, workspaceId }))
       .token;
 
-    const ops = await seedMember(db, { workspaceId, role: "OPS_MANAGER", allBranches: true });
+    const ops = await seedMember(db, { workspaceId, role: "ADMIN", allBranches: true });
     opsToken = (await createSession(db, { principalId: ops.principal.id, workspaceId })).token;
   });
 
@@ -179,7 +179,7 @@ describe("category commands", () => {
       expect(strayLayer.json().error.code).toBe("CATEGORY_LAYER_INVALID");
     });
 
-    it("is ADMIN-only", async () => {
+    it("is DIRECTOR-only", async () => {
       const response = await post(
         "create-category",
         {
@@ -323,6 +323,66 @@ describe("category commands", () => {
         { expectedVersion: 1 },
       );
       expect(fresh.statusCode).toBe(200);
+    });
+  });
+
+  /** #28: fault types carry the default that pre-checks the safety-critical box. */
+  describe("ISSUE_TYPE safety-critical defaults", () => {
+    function issueTypes() {
+      return testApp.app
+        .inject({
+          method: "GET",
+          url: "/v1/categories?kind=ISSUE_TYPE",
+          headers: { authorization: `Bearer ${adminToken}` },
+        })
+        .then(
+          (response) =>
+            response.json().categories as Array<{ code: string; defaultSafetyCritical: boolean }>,
+        );
+    }
+
+    it("serves the seeded fault types with their defaults", async () => {
+      const rows = await issueTypes();
+      expect(rows.find((row) => row.code === "BRAKES")).toMatchObject({
+        defaultSafetyCritical: true,
+      });
+      expect(rows.find((row) => row.code === "BODYWORK")).toMatchObject({
+        defaultSafetyCritical: false,
+      });
+    });
+
+    it("lets an admin add a fault type that grounds by default", async () => {
+      const response = await post("create-category", {
+        id: randomUUID(),
+        kind: "ISSUE_TYPE",
+        code: "SUSPENSION",
+        labelFr: "Suspension",
+        labelEn: "Suspension",
+        defaultSafetyCritical: true,
+      });
+      expect(response.statusCode).toBe(200);
+      expect((await issueTypes()).find((row) => row.code === "SUSPENSION")).toMatchObject({
+        defaultSafetyCritical: true,
+      });
+    });
+
+    it("refuses the flag on a kind a reporter never picks", async () => {
+      const response = await post("create-category", {
+        id: randomUUID(),
+        kind: "EXPENSE_CATEGORY",
+        code: "PNEUS_NEUFS",
+        labelFr: "Pneus",
+        labelEn: "Tyres",
+        profitabilityLayer: "MAINTENANCE",
+        defaultSafetyCritical: true,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error: {
+          code: "VALIDATION_FAILED",
+          metadata: { issues: [{ path: ["defaultSafetyCritical"] }] },
+        },
+      });
     });
   });
 });

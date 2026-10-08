@@ -117,7 +117,8 @@
         "button"
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -382,6 +383,21 @@
       ]
     },
     {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/radio-group.tsx",
+          "type": "registry:file",
+          "target": "components/ui/radio-group.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react"
+      ]
+    },
+    {
       "name": "checkbox",
       "type": "registry:ui",
       "files": [
@@ -473,7 +489,8 @@
       ],
       "dependencies": [
         "@base-ui/react",
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -511,7 +528,8 @@
       "dependencies": [
         "@base-ui/react",
         "class-variance-authority",
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -588,11 +606,6 @@
           "path": "src/screens/DashboardScreen.tsx",
           "type": "registry:file",
           "target": "screens/DashboardScreen.tsx"
-        },
-        {
-          "path": "src/dashboard/SectionCards.tsx",
-          "type": "registry:file",
-          "target": "dashboard/SectionCards.tsx"
         },
         {
           "path": "src/dashboard/ChartAreaInteractive.tsx",
@@ -697,9 +710,10 @@
       "registryDependencies": [
         "card",
         "skeleton",
+        "tooltip",
         "utils"
       ],
-      "dependencies": []
+      "dependencies": ["@tanstack/react-router", "lucide-react", "react-i18next"]
     },
     {
       "name": "provenance-stamp",
@@ -849,7 +863,50 @@
       "registryDependencies": [],
       "dependencies": [
         "@base-ui/react",
-        "lucide-react"
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "date-picker",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/date-picker.tsx",
+          "type": "registry:file",
+          "target": "components/date-picker.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "date-field",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/date-field.tsx",
+          "type": "registry:file",
+          "target": "components/date-field.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "calendar",
+        "input",
+        "label",
+        "popover"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {
@@ -872,6 +929,19 @@
       ]
     },
     {
+      "name": "filter-chips",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/filter-chips.tsx",
+          "type": "registry:file",
+          "target": "components/filter-chips.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
       "name": "record-history-sheet",
       "type": "registry:component",
       "files": [
@@ -891,6 +961,7 @@
         "page",
         "sheet",
         "status-badge",
+        "timeline",
         "use-mobile",
         "utils"
       ],
@@ -898,6 +969,97 @@
         "@tanstack/react-query",
         "lucide-react",
         "react-i18next"
+      ]
+    },
+    {
+      "name": "timeline",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/timeline.tsx",
+          "type": "registry:file",
+          "target": "components/timeline.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "record-number",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/record-number.tsx",
+          "type": "registry:file",
+          "target": "components/record-number.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "command-form",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/command-form.tsx",
+          "type": "registry:file",
+          "target": "components/command-form.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "sheet",
+        "error-banner",
+        "error-message",
+        "use-mobile",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "routiq-logo",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/brand/routiq-logo.tsx",
+          "type": "registry:file",
+          "target": "components/brand/routiq-logo.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "use-command-form",
+      "type": "registry:hook",
+      "files": [
+        {
+          "path": "src/components/use-command-form.ts",
+          "type": "registry:file",
+          "target": "components/use-command-form.ts"
+        }
+      ],
+      "registryDependencies": [
+        "command-form"
+      ],
+      "dependencies": [
+        "@hookform/resolvers",
+        "react-hook-form",
+        "react-i18next",
+        "zod"
       ]
     }
   ]

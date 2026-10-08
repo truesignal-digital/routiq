@@ -34,7 +34,8 @@ function tone(label: string): string | null {
 }
 
 function digits(element: HTMLElement): string {
-  return (element.textContent ?? "").replace(/[^\d+-]/g, "");
+  // The minus is the typographic U+2212 in every language.
+  return (element.textContent ?? "").replace(/\u2212/g, "-").replace(/[^\d+-]/g, "");
 }
 
 beforeAll(async () => {
@@ -49,20 +50,21 @@ afterEach(cleanup);
 
 describe("activity overview band", () => {
   it("counts the legs the server counted", () => {
-    render(<ActivityOverview activity={overview()} />);
+    render(<ActivityOverview showNet activity={overview()} />);
 
     expect(tile("Legs").textContent).toContain("2");
   });
 
-  it("says an open activity is running, and flags the tile", () => {
-    render(<ActivityOverview activity={overview({ status: "OPEN", endedAt: null })} />);
+  it("keeps the end a time: an open activity's end is a dash, not a state (#94)", () => {
+    render(<ActivityOverview showNet activity={overview({ status: "OPEN", endedAt: null })} />);
 
-    expect(tile("Ended").textContent).toContain("Running");
-    expect(tone("Ended")).toBe("warning");
+    expect(tile("Ended").textContent).toBe("—");
+    expect(screen.queryByText("Running")).toBeNull();
+    expect(tone("Ended")).not.toBe("warning");
   });
 
   it("dashes a closed activity with no end rather than calling it running", () => {
-    render(<ActivityOverview activity={overview({ status: "CLOSED", endedAt: null })} />);
+    render(<ActivityOverview showNet activity={overview({ status: "CLOSED", endedAt: null })} />);
 
     expect(tile("Ended").textContent).toContain("—");
     expect(screen.queryByText("Running")).toBeNull();
@@ -71,6 +73,7 @@ describe("activity overview band", () => {
   it("nets only the posted lines, and says so", () => {
     render(
       <ActivityOverview
+        showNet
         activity={overview({
           financialEntries: [
             {
@@ -78,25 +81,37 @@ describe("activity overview band", () => {
               entryNumber: "E-1",
               direction: "REVENUE",
               categoryCode: "FREIGHT",
+              categoryLabelFr: "Fret",
+              categoryLabelEn: "Freight",
               // XAF has exponent 0 — 900 000 francs is 900 000 minor units.
               amountMinor: 900_000,
               status: "POSTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
             {
               entryId: "00000000-0000-4000-8000-000000000002",
               entryNumber: "E-2",
               direction: "EXPENSE",
               categoryCode: "FUEL",
+              categoryLabelFr: "Carburant",
+              categoryLabelEn: "Fuel",
               amountMinor: 400_000,
               status: "POSTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
             {
               entryId: "00000000-0000-4000-8000-000000000003",
               entryNumber: "E-3",
               direction: "EXPENSE",
               categoryCode: "TOLLS",
+              categoryLabelFr: "Péages",
+              categoryLabelEn: "Tolls",
               amountMinor: 250_000,
               status: "SUBMITTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
           ],
         })}
@@ -112,6 +127,7 @@ describe("activity overview band", () => {
   it("flags a loss and signs it, so colour is never the only signal", () => {
     render(
       <ActivityOverview
+        showNet
         activity={overview({
           financialEntries: [
             {
@@ -119,8 +135,12 @@ describe("activity overview band", () => {
               entryNumber: "E-4",
               direction: "EXPENSE",
               categoryCode: "REPAIRS",
+              categoryLabelFr: "Réparations",
+              categoryLabelEn: "Repairs",
               amountMinor: 120_000,
               status: "POSTED",
+              reversesEntryId: null,
+              cancelledBy: null,
             },
           ],
         })}
@@ -129,5 +149,19 @@ describe("activity overview band", () => {
 
     expect(digits(tile("Net"))).toBe("-120000");
     expect(tone("Net")).toBe("warning");
+  });
+
+  it("leaves the net out for a driver, whose entries are only their own (#264)", () => {
+    render(<ActivityOverview showNet={false} activity={overview()} />);
+
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(tile("Legs").textContent).toContain("2");
+  });
+
+  it("leaves the net out when the server kept the ledger back (#103)", () => {
+    render(<ActivityOverview showNet activity={overview({ financialEntries: null })} />);
+
+    expect(screen.queryByText("Net")).toBeNull();
+    expect(tile("Legs").textContent).toContain("2");
   });
 });

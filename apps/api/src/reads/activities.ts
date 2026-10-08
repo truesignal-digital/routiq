@@ -2,6 +2,9 @@ import {
   activityDetail,
   activityListQuery,
   activityListResponse,
+  activitySummary,
+  activitySummaryQuery,
+  canReadEntries,
   personListQuery,
   personListResponse,
   placeListResponse,
@@ -20,9 +23,10 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
+import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import {
   activities,
@@ -31,25 +35,31 @@ import {
   assets,
   branches,
   categories,
+  commands,
   financialEntries,
   financialPostings,
   meterReadings,
   movementLegs,
   persons,
   places,
+  workspaces,
 } from "../db/schema.js";
-import { inWorkspace } from "../db/tenant.js";
+import { addDays, currentBusinessDate, isoWeek } from "./business-date.js";
+import { cancelledBySql, toEntryCancellation } from "./entry-cancellation.js";
 import {
   afterKeyset,
   bindText,
-  bindTimestamp,
-  decodeKeysetCursor,
+  decodeColumnCursor,
   encodeKeysetCursor,
   keysetOrderBy,
+  microsecondKey,
+  timestampKeyset,
   type KeysetColumn,
   type KeysetValue,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
+import { readableEntrySql } from "./money-scope.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -59,16 +69,13 @@ const defaultActivitySort: ListSort<"startedAt"> = {
 type ActivitySortField = "startedAt" | "activityNumber";
 
 const activitySortColumns: Record<ActivitySortField, KeysetColumn> = {
-  startedAt: {
-    column: activities.startedAt,
-    bind: bindTimestamp,
-    nullable: true,
-  },
+  startedAt: timestampKeyset(activities.startedAt, { nullable: true }),
   activityNumber: { column: activities.activityNumber, bind: bindText },
 };
 
 interface ActivitySortRow {
-  startedAt: Date | null;
+  /** `startedAt` as microsecond keyset text. */
+  startedAtKey: string | null;
   activityNumber: string;
 }
 
@@ -76,9 +83,7 @@ function activitySortValue(
   field: ActivitySortField,
   row: ActivitySortRow,
 ): KeysetValue {
-  return field === "startedAt"
-    ? row.startedAt?.toISOString() ?? null
-    : row.activityNumber;
+  return field === "startedAt" ? row.startedAtKey : row.activityNumber;
 }
 
 function likePattern(search: string): string {
@@ -117,6 +122,58 @@ function legCountSql(): SQL<number> {
   )`;
 }
 
+/**
+ * One end of the trip: the first leg's origin or the last leg's destination,
+ * as the detail read names it — the place, else the text typed for an ad-hoc
+ * stop. Null for an activity with no legs.
+ */
+function legEndSql(end: "origin" | "destination"): SQL<string | null> {
+  const placeId = end === "origin" ? movementLegs.originPlaceId : movementLegs.destinationPlaceId;
+  const text = end === "origin" ? movementLegs.originText : movementLegs.destinationText;
+  const order = end === "origin" ? sql`asc` : sql`desc`;
+  return sql<string | null>`(
+    select coalesce(${places.name}, ${text})
+    from ${movementLegs}
+    left join ${places}
+      on ${places.workspaceId} = ${movementLegs.workspaceId}
+      and ${places.id} = ${placeId}
+    where ${movementLegs.workspaceId} = ${activities.workspaceId}
+      and ${movementLegs.activityId} = ${activities.id}
+    order by ${movementLegs.legNo} ${order}
+    limit 1
+  )`;
+}
+
+/** Kilometres over the legs that carry them; null when none does. */
+function distanceKmSql(): SQL<number | null> {
+  return sql<number | null>`(
+    select sum(${movementLegs.distanceKm})::integer
+    from ${movementLegs}
+    where ${movementLegs.workspaceId} = ${activities.workspaceId}
+      and ${movementLegs.activityId} = ${activities.id}
+  )`;
+}
+
+/**
+ * The first DRIVER put on the crew; the trip row names one driver. Crew given
+ * in one command shares a timestamp, so the name breaks the tie — the order
+ * the detail read lists the crew in.
+ */
+function driverNameSql(): SQL<string | null> {
+  return sql<string | null>`(
+    select ${persons.displayName}
+    from ${activityPeople}
+    inner join ${persons}
+      on ${persons.workspaceId} = ${activityPeople.workspaceId}
+      and ${persons.id} = ${activityPeople.personId}
+    where ${activityPeople.workspaceId} = ${activities.workspaceId}
+      and ${activityPeople.activityId} = ${activities.id}
+      and ${activityPeople.role} = 'DRIVER'
+    order by ${activityPeople.createdAt} asc, ${persons.displayName} asc, ${activityPeople.id} asc
+    limit 1
+  )`;
+}
+
 function crewCountSql(): SQL<number> {
   return sql<number>`(
     select count(*)::integer
@@ -131,12 +188,12 @@ export function registerActivityReadRoutes(
   db: Db,
   requireAuth: RequireAuth,
 ) {
-  app.get(
-    "/v1/activities",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/activities", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = activityListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -156,9 +213,9 @@ export function registerActivityReadRoutes(
         const sort = parsedQuery.data.sort ?? defaultActivitySort;
         const sortColumn = activitySortColumns[sort.field];
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const decodedCursor = cursor
-            ? decodeKeysetCursor(cursor, sort)
+            ? decodeColumnCursor(cursor, sort, sortColumn)
             : undefined;
           if (cursor && !decodedCursor) {
             return { error: "VALIDATION_FAILED" as const };
@@ -223,6 +280,7 @@ export function registerActivityReadRoutes(
               completeness: activities.completeness,
               completenessCodes: activities.completenessCodes,
               startedAt: activities.startedAt,
+              startedAtKey: microsecondKey(activities.startedAt),
               endedAt: activities.endedAt,
               customerName: activities.customerName,
               clientReference: activities.clientReference,
@@ -230,6 +288,10 @@ export function registerActivityReadRoutes(
               primaryAssetCode: primaryAssetCodeSql(),
               legCount: legCountSql(),
               crewCount: crewCountSql(),
+              originName: legEndSql("origin"),
+              destinationName: legEndSql("destination"),
+              distanceKm: distanceKmSql(),
+              driverName: driverNameSql(),
             })
             .from(activities)
             .innerJoin(
@@ -274,6 +336,10 @@ export function registerActivityReadRoutes(
           primaryAssetCode: row.primaryAssetCode,
           legCount: row.legCount,
           crewCount: row.crewCount,
+          originName: row.originName,
+          destinationName: row.destinationName,
+          distanceKm: row.distanceKm,
+          driverName: row.driverName,
         }));
 
         let nextCursor: string | null = null;
@@ -294,12 +360,82 @@ export function registerActivityReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/activities/:activityId",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  // Ahead of `/v1/activities/:activityId` so "summary" never reads as an id.
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/activities/summary", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
+        const parsedQuery = activitySummaryQuery.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { branchId } = parsedQuery.data;
+
+        const summary = await read(async (tx) => {
+          const [workspace] = await tx
+            .select({ timezone: workspaces.timezone })
+            .from(workspaces)
+            .where(eq(workspaces.id, auth.workspaceId));
+          const timezone = workspace?.timezone ?? "Africa/Douala";
+          const week = isoWeek(currentBusinessDate(new Date(), timezone));
+
+          // The same scope the list applies: session branches, then the
+          // optional branch inside them, never instead of them.
+          const conditions: SQL[] = [eq(activities.workspaceId, auth.workspaceId)];
+          if (auth.branchScope !== "ALL") {
+            conditions.push(inArray(activities.branchId, auth.branchScope));
+          }
+          if (branchId) conditions.push(eq(activities.branchId, branchId));
+
+          // Week edges are local midnights, so a trip started at 00:30 Monday
+          // in Douala belongs to this week, not the last.
+          const startsAt = sql`(${week.from}::date)::timestamp at time zone ${timezone}`;
+          const endsBefore = sql`(${addDays(week.to, 1)}::date)::timestamp at time zone ${timezone}`;
+          const inWeek = sql`${activities.startedAt} >= ${startsAt} and ${activities.startedAt} < ${endsBefore}`;
+
+          const [counts] = await tx
+            .select({
+              thisWeek: sql<number>`count(*) filter (where ${inWeek})::int`,
+              open: sql<number>`count(*) filter (where ${activities.status} = 'OPEN')::int`,
+              incomplete: sql<number>`count(*) filter (where ${activities.completeness} = 'COMPLETE_WITH_EXCEPTIONS')::int`,
+              weekKm: sql<number | null>`(
+                select sum(${movementLegs.distanceKm})::int
+                from ${movementLegs}
+                where ${movementLegs.workspaceId} = ${auth.workspaceId}
+                  and ${movementLegs.activityId} in (
+                    select ${activities.id} from ${activities}
+                    where ${and(...conditions, inWeek)}
+                  )
+              )`,
+            })
+            .from(activities)
+            .where(and(...conditions));
+
+          return {
+            week,
+            thisWeek: counts?.thisWeek ?? 0,
+            open: counts?.open ?? 0,
+            incomplete: counts?.incomplete ?? 0,
+            weekKm: counts?.weekKm ?? null,
+          };
+        });
+
+        return activitySummary.parse(summary);
+      } catch (error) {
+        req.log.error({ err: error }, "activity summary read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/activities/:activityId", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, modules, read }) => {
+      try {
         const parsedParams = z
           .object({ activityId: z.uuid() })
           .safeParse(req.params);
@@ -307,8 +443,12 @@ export function registerActivityReadRoutes(
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { activityId } = parsedParams.data;
+        // The trip's entries, as many as the caller's money scope reads (#264):
+        // all of them for the ledger and the counter, a driver's own, none for
+        // the workshop.
+        const entriesVisible = canReadEntries(auth.role) && modules.has("FINANCE");
 
-        const result = await inWorkspace(db, auth.workspaceId, async (tx) => {
+        const result = await read(async (tx) => {
           const conditions: SQL[] = [
             eq(activities.workspaceId, auth.workspaceId),
             eq(activities.id, activityId),
@@ -340,9 +480,16 @@ export function registerActivityReadRoutes(
               closedAt: activities.closedAt,
               createdAt: activities.createdAt,
               createdByCommandId: activities.createdByCommandId,
+              recordedByPrincipalId: commands.initiatedByPrincipalId,
               branchId: activities.branchId,
               branchCode: branches.code,
               rowVersion: activities.rowVersion,
+              // Same expressions as the list, so a trip row and its detail
+              // can never name a different route or driver.
+              originName: legEndSql("origin"),
+              destinationName: legEndSql("destination"),
+              distanceKm: distanceKmSql(),
+              driverName: driverNameSql(),
             })
             .from(activities)
             .innerJoin(
@@ -358,6 +505,13 @@ export function registerActivityReadRoutes(
               and(
                 eq(branches.workspaceId, activities.workspaceId),
                 eq(branches.id, activities.branchId),
+              ),
+            )
+            .leftJoin(
+              commands,
+              and(
+                eq(commands.workspaceId, activities.workspaceId),
+                eq(commands.id, activities.createdByCommandId),
               ),
             )
             .where(and(...conditions))
@@ -491,43 +645,11 @@ export function registerActivityReadRoutes(
             )
             .orderBy(asc(meterReadings.observedAt), asc(meterReadings.id));
 
-          const financialRows = await tx
-            .selectDistinct({
-              entryId: financialEntries.id,
-              entryNumber: financialEntries.entryNumber,
-              direction: financialEntries.direction,
-              categoryCode: categories.code,
-              amountMinor: financialEntries.amountMinor,
-              status: financialEntries.status,
-            })
-            .from(financialPostings)
-            .innerJoin(
-              financialEntries,
-              and(
-                eq(
-                  financialEntries.workspaceId,
-                  financialPostings.workspaceId,
-                ),
-                eq(financialEntries.id, financialPostings.financialEntryId),
-              ),
-            )
-            .innerJoin(
-              categories,
-              and(
-                eq(categories.workspaceId, financialEntries.workspaceId),
-                eq(categories.id, financialEntries.categoryId),
-              ),
-            )
-            .where(
-              and(
-                eq(financialPostings.workspaceId, auth.workspaceId),
-                eq(financialPostings.activityId, activityId),
-              ),
-            )
-            .orderBy(
-              asc(financialEntries.entryNumber),
-              asc(financialEntries.id),
-            );
+          // Every role reads the trip, not its money (#103). Null, never an
+          // empty list, so a hidden ledger cannot pass for a trip with no money.
+          const financialRows = entriesVisible
+            ? await activityFinancialRows(tx, auth, activityId)
+            : null;
 
           return {
             header,
@@ -581,11 +703,16 @@ export function registerActivityReadRoutes(
           closedAt: header.closedAt?.toISOString() ?? null,
           createdAt: header.createdAt.toISOString(),
           createdByCommandId: header.createdByCommandId,
+          recordedByPrincipalId: header.recordedByPrincipalId,
           branchId: header.branchId,
           branchCode: header.branchCode,
           primaryAssetCode,
           legCount: legRows.length,
           crewCount: crewRows.length,
+          originName: header.originName,
+          destinationName: header.destinationName,
+          distanceKm: header.distanceKm,
+          driverName: header.driverName,
           rowVersion: header.rowVersion,
           segments: segmentRows.map((segment) => ({
             ...segment,
@@ -603,10 +730,14 @@ export function registerActivityReadRoutes(
             value: serializeReadingValue(reading.value),
             observedAt: reading.observedAt.toISOString(),
           })),
-          financialEntries: financialRows.map((entry) => ({
-            ...entry,
-            amountMinor: serializeMinor(entry.amountMinor),
-          })),
+          financialEntries:
+            financialRows?.map((entry) => ({
+              ...entry,
+              amountMinor: serializeMinor(entry.amountMinor),
+              // A trip's money is one window: the pair always folds (#427).
+              cancelledBy:
+                entry.cancelledBy === null ? null : toEntryCancellation(entry.cancelledBy, true),
+            })) ?? null,
         });
       } catch (error) {
         req.log.error({ err: error }, "activity detail read failed");
@@ -615,12 +746,12 @@ export function registerActivityReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/persons",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/persons", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
         const parsedQuery = personListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
@@ -639,7 +770,7 @@ export function registerActivityReadRoutes(
           conditions.push(ilike(persons.displayName, likePattern(search)));
         }
 
-        const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const rows = await read((tx) =>
           tx
             .select({
               id: persons.id,
@@ -662,13 +793,13 @@ export function registerActivityReadRoutes(
     },
   );
 
-  app.get(
-    "/v1/places",
-    { preHandler: requireAuth },
-    async (req: FastifyRequest, reply: FastifyReply) => {
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/places", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "workspace" },
+    async ({ req, reply, auth, read }) => {
       try {
-        const auth = req.auth!;
-        const rows = await inWorkspace(db, auth.workspaceId, (tx) =>
+        const rows = await read((tx) =>
           tx
             .select({ id: places.id, name: places.name })
             .from(places)
@@ -682,4 +813,53 @@ export function registerActivityReadRoutes(
       }
     },
   );
+}
+
+/**
+ * The trip's entries with their amounts: ledger figures, so the detail read
+ * loads them only for the roles that read the books, with FINANCE on (#103).
+ */
+function activityFinancialRows(tx: ReadTx, auth: AuthContext, activityId: string) {
+  return tx
+    .selectDistinct({
+      entryId: financialEntries.id,
+      entryNumber: financialEntries.entryNumber,
+      direction: financialEntries.direction,
+      categoryCode: categories.code,
+      categoryLabelFr: categories.labelFr,
+      categoryLabelEn: categories.labelEn,
+      amountMinor: financialEntries.amountMinor,
+      status: financialEntries.status,
+      reversesEntryId: financialEntries.reversesEntryId,
+      cancelledBy: cancelledBySql(auth),
+    })
+    .from(financialPostings)
+    .innerJoin(
+      financialEntries,
+      and(
+        eq(
+          financialEntries.workspaceId,
+          financialPostings.workspaceId,
+        ),
+        eq(financialEntries.id, financialPostings.financialEntryId),
+      ),
+    )
+    .innerJoin(
+      categories,
+      and(
+        eq(categories.workspaceId, financialEntries.workspaceId),
+        eq(categories.id, financialEntries.categoryId),
+      ),
+    )
+    .where(
+      and(
+        eq(financialPostings.workspaceId, auth.workspaceId),
+        eq(financialPostings.activityId, activityId),
+        readableEntrySql(auth),
+      ),
+    )
+    .orderBy(
+      asc(financialEntries.entryNumber),
+      asc(financialEntries.id),
+    );
 }

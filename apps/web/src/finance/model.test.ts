@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  amountKind,
   parseMoneyXaf,
   toRecordExpensePayload,
   toRecordRevenuePayload,
@@ -24,6 +25,13 @@ describe("parseMoneyXaf", () => {
     expect(parseMoneyXaf("-1")).toBeNull();
     expect(parseMoneyXaf("abc")).toBeNull();
     expect(parseMoneyXaf("12.34")).toBeNull();
+  });
+
+  it("reads the grouping of the language the input was formatted in", () => {
+    expect(parseMoneyXaf("86,000", "en")).toBe(86_000);
+    expect(parseMoneyXaf("86 000", "fr-CM")).toBe(86_000);
+    expect(parseMoneyXaf("86,000", "fr-CM")).toBeNull();
+    expect(parseMoneyXaf("86.5", "en")).toBeNull();
   });
 });
 
@@ -158,5 +166,13 @@ describe("branch code validation (regression: branchScope bug)", () => {
     // The payload must contain the selected branch CODE (not UUID or "ALL")
     expect(payload.branchCode).toBe("CM-DB");
     expect(payload.branchCode).toMatch(/^[A-Z]{2}-[A-Z]{2}$/);
+  });
+});
+
+describe("amountKind", () => {
+  it("names a record's direction, and a reversal's, for the words beside its unsigned amount", () => {
+    expect(amountKind({ direction: "EXPENSE", reversesEntryId: null })).toBe("EXPENSE");
+    expect(amountKind({ direction: "REVENUE", reversesEntryId: null })).toBe("REVENUE");
+    expect(amountKind({ direction: "EXPENSE", reversesEntryId: "x" })).toBe("EXPENSE_REVERSAL");
   });
 });

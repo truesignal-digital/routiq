@@ -36,7 +36,7 @@ describe("record-expense.v1", () => {
 
     const admin = await seedMember(db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     const adminSession = await createSession(db, {
@@ -46,7 +46,7 @@ describe("record-expense.v1", () => {
     adminToken = adminSession.token;
     const submitter = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       allBranches: true,
     });
     token = (
@@ -57,7 +57,7 @@ describe("record-expense.v1", () => {
     ).token;
     const approver = await seedMember(db, {
       workspaceId,
-      role: "FINANCE_APPROVER",
+      role: "FINANCE",
       allBranches: true,
     });
     approverToken = (
@@ -247,7 +247,7 @@ describe("record-expense.v1", () => {
     expect(postings[0]?.postingPeriodId).toBeNull();
   });
 
-  it("lets a finance approver auto-post above threshold under the catalog wildcard", async () => {
+  it("holds Finance's own expense above the recording band for review (#412)", async () => {
     const entryId = randomUUID();
     const response = await postCommand(approverToken, "record-expense", {
       entryId,
@@ -263,7 +263,7 @@ describe("record-expense.v1", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       recordId: entryId,
-      recordStatus: "POSTED",
+      recordStatus: "SUBMITTED",
       warnings: [],
     });
   });
@@ -693,7 +693,7 @@ describe("record-expense.v1", () => {
     expect(registered.statusCode).toBe(200);
     const scopedMember = await seedMember(db, {
       workspaceId,
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchIds: [branchId],
     });
     const scopedToken = (

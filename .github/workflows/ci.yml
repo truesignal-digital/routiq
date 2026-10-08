@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -42,6 +42,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # Version comes from the root package.json "packageManager" field.
       - uses: pnpm/action-setup@v6
@@ -55,6 +57,14 @@ jobs:
 
       - run: pnpm typecheck
 
+      # Repo rules from tools/guards; known violations may only shrink.
+      - name: Check guards against develop
+        run: |
+          git cat-file -e origin/develop:apps/api/drizzle/meta/_journal.json
+          pnpm lint
+        env:
+          GUARD_BASE_REF: origin/develop
+
       - name: Apply migrations (drizzle-kit CLI path)
         run: pnpm db:migrate
         env:
@@ -64,7 +74,20 @@ jobs:
       # present on ubuntu-latest, so no DATABASE_URL is needed here.
       - run: pnpm test
 
+      # End to end over HTTP against the migrated service Postgres above:
+      # login, idempotent replay, module gates, finance approval and reversal.
+      - name: Smoke the API end to end
+        run: pnpm --filter @routiq/api smoke
+        env:
+          DATABASE_URL: postgres://routiq_app:routiq_app@localhost:5432/routiq_dev
+          AUTH_DATABASE_URL: postgres://routiq:routiq@localhost:5432/routiq_dev
+          COMMAND_PAYLOAD_HMAC_KEY: ci-smoke-only-0123456789abcdef0123456789abcdef
+
       - run: pnpm --filter @routiq/web build
+
+      # First-load size ceilings from tools/metrics; they may only go down
+      # unless a raise is recorded with its reason.
+      - run: pnpm metrics
 
       # §6a guard 4: docker-compose.yml is the distribution artifact. Cheap
       # validity check only — the full cold-start boot is a nightly job.

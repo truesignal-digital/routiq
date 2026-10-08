@@ -1,6 +1,6 @@
 import type { ActivityDetail } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
-import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
+import { MetricStrip, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { formatDateTime, formatMoney } from "@/lib/format.js";
 import { postedNetMinor } from "./ActivityMoney.js";
 
@@ -11,6 +11,11 @@ export type ActivityOverviewData = Pick<
 
 export interface ActivityOverviewProps {
   activity: ActivityOverviewData;
+  /**
+   * Whether the reader sees the trip's whole money. A driver gets only the
+   * entries they recorded (#264), and a net over those is no trip's net.
+   */
+  showNet: boolean;
 }
 
 /**
@@ -18,39 +23,43 @@ export interface ActivityOverviewProps {
  * panel, which names every member — a count beside the names would be the same
  * fact twice, and the strip stops at four tiles.
  */
-export function ActivityOverview({ activity }: ActivityOverviewProps) {
+export function ActivityOverview({ activity, showNet }: ActivityOverviewProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const net = postedNetMinor(activity.financialEntries);
-  const running = activity.endedAt === null && activity.status === "OPEN";
 
+  const started: MetricTile = {
+    label: t("activities.detail.overview.started"),
+    value:
+      activity.startedAt === null ? null : formatDateTime(activity.startedAt, locale),
+  };
+  // The end is a time; whether the trip is still out is the state chip's job (#94).
+  const ended: MetricTile = {
+    label: t("activities.detail.overview.ended"),
+    value: activity.endedAt === null ? null : formatDateTime(activity.endedAt, locale),
+  };
+  const legs: MetricTile = {
+    label: t("activities.detail.overview.legs"),
+    value: new Intl.NumberFormat(locale).format(activity.legCount),
+  };
+
+  // No net for a reader the server kept the ledger from (#103).
+  if (activity.financialEntries === null || !showNet) {
+    return <MetricStrip tiles={[started, ended, legs]} />;
+  }
+
+  const net = postedNetMinor(activity.financialEntries);
   const tiles: MetricTiles = [
-    {
-      label: t("activities.detail.overview.started"),
-      value:
-        activity.startedAt === null ? null : formatDateTime(activity.startedAt, locale),
-    },
-    {
-      label: t("activities.detail.overview.ended"),
-      value: running
-        ? t("activities.detail.overview.running")
-        : activity.endedAt === null
-          ? null
-          : formatDateTime(activity.endedAt, locale),
-      ...(running ? { tone: "warning" as const } : {}),
-    },
+    started,
+    ended,
     {
       label: t("activities.detail.overview.net"),
       // The sign is spelled out, never left to colour alone; a job that lost
       // money is exactly the tile that wants someone's attention.
-      value: formatMoney(net, { locale, signDisplay: "exceptZero" }),
+      value: formatMoney(net, { locale, sign: { context: "net" } }),
       hint: t("activities.detail.overview.postedOnly"),
       ...(net < 0 ? { tone: "warning" as const } : {}),
     },
-    {
-      label: t("activities.detail.overview.legs"),
-      value: new Intl.NumberFormat(locale).format(activity.legCount),
-    },
+    legs,
   ];
 
   return <MetricStrip tiles={tiles} />;

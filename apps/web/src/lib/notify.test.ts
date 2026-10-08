@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
-import { notifyCommandError, notifyCommandSuccess } from "./notify.js";
+import { notifyCommandError, notifyCommandSuccess, notifyInfo } from "./notify.js";
 
 const mocks = vi.hoisted(() => ({
   add: vi.fn(),
@@ -62,10 +62,20 @@ describe("command notifications", () => {
     expect(mocks.add).toHaveBeenCalledOnce();
     expect(mocks.add).toHaveBeenCalledWith({
       type: "success",
-      title: "Transaction recorded and posted",
+      title: "Entry recorded and posted",
       description:
-        "This transaction was posted to a previous accounting period.\n" +
+        "This entry was posted to a previous accounting period.\n" +
         "Missing evidence: this category requires supporting documentation or a photo.",
+    });
+  });
+
+  it("falls back to the shared warnings catalog for a code no domain words itself", () => {
+    notifyCommandSuccess("maintenance", "assetReleased", ["GROUNDING_ISSUE_STILL_OPEN"]);
+
+    expect(mocks.add).toHaveBeenCalledWith({
+      type: "success",
+      title: "Asset returned to service",
+      description: "Vehicle released, but the problem that grounded it is still open.",
     });
   });
 
@@ -89,11 +99,25 @@ describe("command notifications", () => {
       type: "success",
       // The domain still names the outcome: where a record landed does not
       // cancel what happened to it, so the caller's line joins the warnings.
-      title: "Transaction recorded and posted",
+      title: "Entry recorded and posted",
       description:
-        "This transaction was posted to a previous accounting period.\n" +
+        "This entry was posted to a previous accounting period.\n" +
         "Saved in Yaoundé",
       actionProps: { children: "View", onClick },
+    });
+  });
+
+  it("names the record in the title when the caller passes its values", () => {
+    notifyCommandSuccess("branches", "created", [], { values: { name: "Kribi" } });
+    notifyInfo("branches", "switched", { branch: "Kribi" });
+
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "success",
+      title: "Branch created: Kribi",
+    });
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "info",
+      title: "You are viewing: Kribi",
     });
   });
 
@@ -112,5 +136,12 @@ describe("command notifications", () => {
       type: "success",
       title: "Action completed",
     });
+  });
+
+  it("gives an info toast with an unknown key a sentence, not the raw key", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    notifyInfo("assets", "missingKey");
+
+    expect(mocks.add).toHaveBeenCalledWith({ type: "info", title: "Noted" });
   });
 });

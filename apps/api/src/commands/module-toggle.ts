@@ -26,7 +26,7 @@ function moduleToggleCommand(opts: {
     name: opts.name,
     version: 1,
     module: "CORE",
-    allowedRoles: ["ADMIN"],
+    allowedRoles: ["DIRECTOR"],
     payloadSchema: opts.payloadSchema,
     branchAuthorization: { kind: "workspace" },
     async execute(tx, ctx, envelope, payload) {

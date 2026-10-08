@@ -1,26 +1,34 @@
 import { z } from "zod";
+import { CANCELLATION_REASON_CODES } from "@routiq/contracts";
+import { parseWholeAmount } from "../lib/format.js";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
+  updatePendingEntryPayload,
   PeriodRead,
+  CancellationReasonCode,
+  ReverseEntryPayload,
 } from "@routiq/contracts";
 
 type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
 type RecordRevenuePayload = z.infer<typeof recordRevenuePayload>;
+type UpdatePendingEntryPayload = z.infer<typeof updatePendingEntryPayload>;
 
 /**
- * Parse user input string to XAF minor units (positive integer).
- * Removes whitespace and thousands separators; returns null if invalid.
+ * A typed XAF amount in minor units (exponent 0), read with the grouping of
+ * the language the money input formatted it in. Null when empty or invalid.
  */
-export function parseMoneyXaf(input: string): number | null {
-  if (!input.trim()) return null;
-  // Reject if input contains decimal point or comma (which would be decimal in some locales)
-  if (input.includes(".") || input.includes(",")) return null;
-  // Remove whitespace and common separators
-  const normalized = input.replace(/[\s]/g, "");
-  const parsed = parseInt(normalized, 10);
-  if (isNaN(parsed) || parsed < 0) return null;
-  return parsed;
+export function parseMoneyXaf(input: string, locale?: string): number | null {
+  const amount = parseWholeAmount(input, locale);
+  return amount.kind === "amount" ? amount.minor : null;
+}
+
+/** A record's direction in words, where its own amount is shown unsigned. */
+export function amountKind(entry: {
+  direction: "REVENUE" | "EXPENSE";
+  reversesEntryId: string | null;
+}): string {
+  return entry.reversesEntryId === null ? entry.direction : `${entry.direction}_REVERSAL`;
 }
 
 export interface FinanceFormState {
@@ -34,6 +42,21 @@ export interface FinanceFormState {
   description?: string;
   paymentReference?: string;
   assetId?: string;
+  /** The trip the amount was spent on: a dimension on the line, never a second entry. */
+  activityId?: string;
+  /** The repair the amount pays for, counted once on the work order and the vehicle. */
+  workOrderId?: string;
+}
+
+/** The entry's single line: its whole amount, on the dimensions the form named. */
+function singlePosting(form: FinanceFormState) {
+  return {
+    assetId: form.assetId,
+    amountMinor: form.amountMinor,
+    assetAttribution: "DIRECT" as const,
+    ...(form.activityId === undefined ? {} : { activityId: form.activityId }),
+    ...(form.workOrderId === undefined ? {} : { workOrderId: form.workOrderId }),
+  };
 }
 
 /**
@@ -55,13 +78,7 @@ export function toRecordExpensePayload(
     counterpartyName: form.counterpartyName,
     description: form.description,
     estimateStatus: "ACTUAL",
-    postings: [
-      {
-        assetId: form.assetId,
-        amountMinor: form.amountMinor,
-        assetAttribution: "DIRECT",
-      },
-    ],
+    postings: [singlePosting(form)],
   };
 }
 
@@ -80,19 +97,46 @@ export function toRecordRevenuePayload(
     counterpartyName: form.counterpartyName,
     description: form.description,
     estimateStatus: "ACTUAL",
-    postings: [
-      {
-        assetId: form.assetId,
-        amountMinor: form.amountMinor,
-        assetAttribution: "DIRECT",
-      },
-    ],
+    postings: [singlePosting(form)],
   };
 }
 
-/** Mirrors reverse-entry.v1 contract: reason z.string().min(1).max(500). */
-export function validateReversalReason(reason: string): boolean {
-  return reason.trim().length > 0 && reason.length <= 500;
+/**
+ * The author's edit of a pending entry: the recording payload without the
+ * branch, which stays where the entry was recorded. A field left empty is sent
+ * absent, which clears it.
+ */
+export function toUpdatePendingEntryPayload(
+  form: FinanceFormState,
+): UpdatePendingEntryPayload {
+  return {
+    entryId: form.entryId,
+    economicDate: form.economicDate,
+    categoryCode: form.categoryCode,
+    amountMinor: form.amountMinor,
+    currency: "XAF",
+    paymentMethod: form.paymentMethod,
+    paymentReference: form.paymentReference,
+    counterpartyName: form.counterpartyName,
+    description: form.description,
+    estimateStatus: "ACTUAL",
+    postings: [singlePosting(form)],
+  };
+}
+
+/**
+ * The reason part of a reverse-entry.v2 payload, or undefined while the form
+ * can't send one: no reason picked yet, or Other without words (1-500).
+ */
+export function cancellationPayload(
+  reasonCode: CancellationReasonCode | undefined,
+  reasonText: string,
+): Pick<ReverseEntryPayload, "reasonCode" | "reasonText"> | undefined {
+  if (reasonCode === undefined) return undefined;
+  if (reasonCode !== "OTHER") return { reasonCode };
+  const trimmed = reasonText.trim();
+  if (trimmed.length === 0 || trimmed.length > 500) return undefined;
+  return { reasonCode, reasonText: trimmed };
 }
 
 /**
@@ -158,4 +202,22 @@ export function mergeImplicitCurrentPeriod(
 export function validateReopenReason(reason: string): boolean {
   const trimmed = reason.trim();
   return trimmed.length > 0 && trimmed.length <= 500;
+}
+
+/**
+ * A cancellation's reason in words (#426): the listed reason, or for Other the
+ * person's own words. A code this build doesn't know shows as Other.
+ */
+export function cancellationReasonWords(
+  cancellation: { reasonCode: string; reasonText: string | null },
+  t: (key: string) => string,
+): string {
+  if (cancellation.reasonCode === "OTHER" || !isCancellationReasonCode(cancellation.reasonCode)) {
+    return cancellation.reasonText ?? t("reasonCodes.OTHER");
+  }
+  return t(`reasonCodes.${cancellation.reasonCode}`);
+}
+
+function isCancellationReasonCode(code: string): code is CancellationReasonCode {
+  return (CANCELLATION_REASON_CODES as readonly string[]).includes(code);
 }

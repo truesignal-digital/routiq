@@ -29,7 +29,7 @@ describe("GET /v1/branches", () => {
 
     const admin = await seedMember(ctx.db, {
       workspaceId,
-      role: "ADMIN",
+      role: "DIRECTOR",
       allBranches: true,
     });
     adminToken = (
@@ -49,7 +49,7 @@ describe("GET /v1/branches", () => {
 
     const ops = await seedMember(ctx.db, {
       workspaceId,
-      role: "OPS_MANAGER",
+      role: "CASHIER",
       allBranches: true,
     });
     opsToken = (
@@ -161,7 +161,7 @@ describe("GET /v1/branches", () => {
     expect(resorted.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
   });
 
-  it("is ADMIN-only", async () => {
+  it("is for DIRECTOR and ADMIN only", async () => {
     const response = await list("", opsToken);
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });

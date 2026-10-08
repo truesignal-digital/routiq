@@ -200,7 +200,7 @@ describe("Command Pipeline", () => {
     it("role not allowed returns 403 ROLE_FORBIDDEN", async () => {
       const member = await seedMember(db, {
         workspaceId: workspace.id,
-        role: "EXECUTIVE_VIEWER",
+        role: "CASHIER",
       });
       const session = await createSession(db, {
         principalId: member.principal.id,
@@ -454,46 +454,55 @@ describe("Command Pipeline", () => {
   });
 
   describe("Tenant isolation", () => {
-    it("forged tenant fields in envelope and payload are stripped by zod", async () => {
+    /**
+     * Before #152 the forged fields were stripped and the command committed;
+     * now the request is refused so the caller learns the field was never
+     * honoured. Either way the session decides the workspace.
+     */
+    it("refuses forged tenant fields in the envelope, then commits the clean retry in the session's workspace", async () => {
       const assetId = randomUUID();
       const commandId = randomUUID();
       const idempotencyKey = `idem-${randomUUID()}`;
+      const payload = {
+        assetId,
+        assetCode: "TRUCK-008",
+        assetClassCode: "TRUCK",
+        templateCode: "TRUCKING",
+        branchCode: "DLA",
+      };
+      const envelope = { commandId, idempotencyKey, origin: "HUMAN_UI" };
 
-      const response = await postCommand(
+      const forged = await postCommand(
         {
           name: "register-asset",
           version: 1,
-          envelope: {
-            commandId,
-            idempotencyKey,
-            origin: "HUMAN_UI",
-            workspaceId: randomUUID(), // forged
-            actorId: randomUUID(), // forged
-          },
-          payload: {
-            assetId,
-            assetCode: "TRUCK-008",
-            assetClassCode: "TRUCK",
-            templateCode: "TRUCKING",
-            branchCode: "DLA",
-          },
+          envelope: { ...envelope, workspaceId: randomUUID(), actorId: randomUUID() },
+          payload,
         },
         token
       );
 
-      expect(response.statusCode).toBe(200);
-      const responseBody = JSON.parse(response.body);
-      expect(responseBody.recordId).toBe(assetId);
+      expect(forged.statusCode).toBe(400);
+      expect(JSON.parse(forged.body)).toEqual({
+        error: {
+          code: "VALIDATION_FAILED",
+          metadata: {
+            issues: [
+              { code: "unrecognized_keys", path: ["envelope", "workspaceId"] },
+              { code: "unrecognized_keys", path: ["envelope", "actorId"] },
+            ],
+          },
+        },
+      });
+      expect(await db.select().from(commands).where(eq(commands.id, commandId))).toHaveLength(0);
 
-      // Verify receipt was created in correct workspace
-      const receipts = await db
-        .select()
-        .from(commands)
-        .where(eq(commands.id, commandId));
+      const clean = await postCommand({ name: "register-asset", version: 1, envelope, payload }, token);
+
+      expect(clean.statusCode).toBe(200);
+      expect(JSON.parse(clean.body).recordId).toBe(assetId);
+      const receipts = await db.select().from(commands).where(eq(commands.id, commandId));
       expect(receipts).toHaveLength(1);
-      if (receipts[0]) {
-        expect(receipts[0].workspaceId).toBe(workspace.id);
-      }
+      expect(receipts[0]?.workspaceId).toBe(workspace.id);
     });
   });
 

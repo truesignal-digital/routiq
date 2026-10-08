@@ -1,0 +1,13 @@
+# Why the first workspace centers on the vehicle
+
+ROUTIQ's first target is companies managing their own internal fleets in Cameroon. Their stated problem is lack of business insight and money traceability. The product should help someone answer “what did this vehicle cost, what supports that number, and what needs action?” without requiring a transport revenue model.
+
+The owner selected this customer over a trucking/passenger-first release and asked to inspect and perform a vehicle's relevant actions from its page. The team discussion added an important distinction: a vehicle or person can visit another branch without changing their home branch or permanent reporting relationship. Presence is not authority. The later policy work must specify who may assign visiting resources and for how long; v1 must not grant that power by inference.
+
+Fleetio is a reference for vehicle-centered records and explainable cost drill-through, not a feature checklist to copy. The existing transport pilots still matter: preserve their presets, revenue records and workflows while making internal-fleet capture independent of fares or freight jobs. A company owning delivery vehicles is in scope for its fleet; its retail inventory, payroll and sales system remain out of scope.
+
+French/English, exact XAF, paper/mobile-money references, low-end phones and interrupted connectivity shape the workflow. Keep capture small, show durable save/retry state where implemented, preserve evidence and make exceptions visible. Do not claim offline reliability until recovery tests pass. Do not advertise regulatory compliance, live GPS, payment settlement or predictive maintenance based on a translated label or a prototype.
+
+Build a connected workflow before more dashboard cards: one vehicle expense, source evidence, the authorized reviewer, a signed posted total, executive drill-through and a correction that preserves history. Use the same commands and records from the vehicle and global finance surfaces. Report recorded vehicle expenses with their included cost layers; savings, utilization and business growth require additional measured inputs.
+
+This is a curated explanation from the September 4 product/technical review and supplied team discussion, not a fresh market/legal survey. Their broad horizon included fuel measurements, budgets, maintenance, custody and payment reconciliation. The [v1 implementation contract](../reference/vehicle-workspace-v1.md) explicitly separates the initial slice from those later capabilities. Current product decisions and unresolved work are tracked under [#36](https://github.com/truesignal-digital/routiq/issues/36), with authority/payment questions in [#46](https://github.com/truesignal-digital/routiq/issues/46).

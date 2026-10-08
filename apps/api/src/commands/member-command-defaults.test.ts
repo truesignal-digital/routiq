@@ -33,7 +33,7 @@ describe("member command approval defaults", () => {
   let backfillSql: string;
 
   beforeAll(async () => {
-    ctx = await createTestApp();
+    ctx = await createTestApp({ isolated: true });
     backfillSql = await readFile(BACKFILL, "utf8");
   });
 
@@ -108,7 +108,7 @@ describe("member command approval defaults", () => {
         url: "/v1/commands/add-member",
         headers: { authorization: `Bearer ${token}` },
         payload: {
-          version: 1,
+          version: 2,
           envelope: {
             commandId: randomUUID(),
             idempotencyKey: `idem-${randomUUID()}`,
@@ -119,7 +119,7 @@ describe("member command approval defaults", () => {
             displayName: "Après migration",
             username: `user-${randomUUID().slice(0, 8)}`,
             pin: "4821",
-            role: "FIELD_SUBMITTER",
+            role: "DRIVER",
             branchScope: "ALL",
           },
         },

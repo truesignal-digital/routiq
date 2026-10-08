@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataTableColumn } from "@/components/data-table.js";
 import type { AssetListItem } from "@routiq/contracts";
-import { StatusBadge } from "@/components/status-badge.js";
+import { AssetStatusBadge } from "./AssetStatusBadge.js";
 import { localizedLabel } from "@/lib/format.js";
-import { ASSET_STATUS_TONES, assetDisplayName } from "./display.js";
+import { assetDisplayName } from "./display.js";
 
 export type AssetColumnId =
   | "asset"
@@ -23,7 +23,7 @@ export type AssetColumnId =
 function buildColumns(
   t: (key: string) => string,
   locale: string,
-): Record<AssetColumnId, ColumnDef<AssetListItem>> {
+): Record<AssetColumnId, DataTableColumn<AssetListItem>> {
   return {
     // Sorting keys on `assetCode`, so the column carries that id even though it
     // shows the code and the name together.
@@ -32,13 +32,21 @@ function buildColumns(
       id: "assetCode",
       header: t("assets.columns.asset"),
       enableSorting: true,
-      meta: { mobile: "primary", label: t("assets.columns.asset") },
+      meta: {
+        phone: "title",
+        label: t("assets.columns.asset"),
+        // The desktop cell stacks name over code; a phone title is one line.
+        phoneText: (asset) => {
+          const name = assetDisplayName(asset);
+          return name === asset.assetCode ? name : `${asset.assetCode} · ${name}`;
+        },
+      },
       cell: ({ row }) => {
         const name = assetDisplayName(row.original);
         return (
           <span className="flex min-w-0 flex-col">
             <span className="truncate">{name}</span>
-            <span className="truncate font-mono text-xs text-muted-foreground uppercase">
+            <span className="truncate tabular-nums text-xs text-muted-foreground">
               {row.original.assetCode}
             </span>
           </span>
@@ -49,31 +57,29 @@ function buildColumns(
       accessorKey: "lifecycleStatus",
       id: "status",
       header: t("assets.columns.status"),
-      meta: { mobile: "primary", label: t("assets.columns.status") },
+      meta: { phone: "status", label: t("assets.columns.status") },
       cell: ({ row }) => (
-        <StatusBadge tone={ASSET_STATUS_TONES[row.original.lifecycleStatus]}>
-          {t(`assets.status.${row.original.lifecycleStatus}`)}
-        </StatusBadge>
+        <AssetStatusBadge status={row.original.lifecycleStatus} />
       ),
     },
     category: {
       id: "category",
       header: t("assets.columns.category"),
-      meta: { mobile: "secondary", label: t("assets.columns.category") },
+      meta: { phone: "meta", label: t("assets.columns.category") },
       cell: ({ row }) => localizedLabel(row.original.category, locale),
     },
     branch: {
       id: "branch",
       header: t("assets.columns.branch"),
-      meta: { mobile: "secondary", label: t("assets.columns.branch") },
+      meta: { phone: "meta", label: t("assets.columns.branch") },
       cell: ({ row }) => row.original.branch.name,
     },
     registrationNumber: {
       accessorKey: "registrationNumber",
       header: t("assets.columns.registration"),
-      meta: { mobile: "hidden", label: t("assets.columns.registration") },
+      meta: { phone: "hidden", label: t("assets.columns.registration") },
       cell: ({ row }) => (
-        <span className="font-mono whitespace-nowrap">
+        <span className="tabular-nums whitespace-nowrap">
           {row.original.registrationNumber ?? "—"}
         </span>
       ),
@@ -83,7 +89,7 @@ function buildColumns(
 
 export function useAssetColumns(
   ids: readonly AssetColumnId[],
-): ColumnDef<AssetListItem>[] {
+): DataTableColumn<AssetListItem>[] {
   const { t, i18n } = useTranslation();
   return useMemo(() => {
     const columns = buildColumns(t, i18n.language);

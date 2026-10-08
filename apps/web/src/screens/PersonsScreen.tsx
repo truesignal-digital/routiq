@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useCommandLabel } from "@/commands/labels.js";
 import type { PersonListItem } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
   DataTableViewOptions,
   type DataTableFilter,
   type DataTableFilterValues,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -30,7 +32,7 @@ import {
 } from "@/shell/branch-scope.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
-import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
+import { canRegisterPersons, canViewActivities } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
@@ -38,9 +40,10 @@ const SEARCH_FILTER_ID = "search";
 
 export function PersonsScreen() {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const canView = canViewActivities(me?.enabledModules);
-  const canRegister = canRecordActivities(me?.role, me?.enabledModules);
+  const canRegister = canRegisterPersons(me?.role, me?.enabledModules);
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -75,22 +78,22 @@ export function PersonsScreen() {
     [t],
   );
 
-  const columns = useMemo<ColumnDef<PersonListItem>[]>(
+  const columns = useMemo<DataTableColumn<PersonListItem>[]>(
     () => [
       {
         accessorKey: "displayName",
         header: t("persons.columns.displayName"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("persons.columns.displayName") },
+        meta: { phone: "title", label: t("persons.columns.displayName") },
         cell: ({ row }) => row.original.displayName,
       },
       {
         accessorKey: "personCode",
         header: t("persons.columns.personCode"),
         enableSorting: true,
-        meta: { mobile: "secondary", label: t("persons.columns.personCode") },
+        meta: { phone: "meta", label: t("persons.columns.personCode") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {row.original.personCode ?? "—"}
           </span>
         ),
@@ -98,7 +101,7 @@ export function PersonsScreen() {
       {
         accessorKey: "defaultRole",
         header: t("persons.columns.defaultRole"),
-        meta: { mobile: "secondary", label: t("persons.columns.defaultRole") },
+        meta: { phone: "meta", label: t("persons.columns.defaultRole") },
         cell: ({ row }) => {
           const role = row.original.defaultRole;
           return role === null ? "—" : t(`persons.roles.${role}`);
@@ -107,7 +110,7 @@ export function PersonsScreen() {
       {
         accessorKey: "active",
         header: t("persons.columns.active"),
-        meta: { mobile: "primary", label: t("persons.columns.active") },
+        meta: { phone: "status", label: t("persons.columns.active") },
         cell: ({ row }) => (
           <StatusBadge tone={row.original.active ? "success" : "neutral"}>
             {t(row.original.active ? "persons.active" : "persons.inactive")}
@@ -147,7 +150,7 @@ export function PersonsScreen() {
                 >
                   <SelectTrigger
                     aria-label={t("persons.branchLabel")}
-                    className="h-9 w-40"
+                    className="w-40"
                   >
                     <SelectValue placeholder={t("persons.branchPlaceholder")} />
                   </SelectTrigger>
@@ -162,17 +165,17 @@ export function PersonsScreen() {
               )}
               <Button
                 type="button"
-                className="min-h-11"
                 disabled={branchCode === ""}
                 onClick={() => setRegistering(true)}
               >
                 <UserPlus className="size-4" aria-hidden />
-                {t("persons.register")}
+                {label("register-person")}
               </Button>
             </>
           ) : undefined
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("persons.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <BranchScopeLine

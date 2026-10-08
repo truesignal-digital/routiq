@@ -1,7 +1,9 @@
 import {
+  CANCELLATION_REASON_CODES,
   CATEGORY_KINDS,
   EVIDENCE_POLICIES,
   MODULE_CODES,
+  NOTE_ENTITY_TYPES,
   PRINCIPAL_TYPES,
   PROFITABILITY_LAYERS,
   ROLES,
@@ -18,6 +20,8 @@ import {
   index,
   integer,
   jsonb,
+  doublePrecision,
+  pgSchema,
   pgTable,
   primaryKey,
   text,
@@ -226,6 +230,8 @@ export const commands = pgTable(
     }),
     approvalRuleId: uuid("approval_rule_id"),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Server time from receiving the call to finalising its receipt, before commit. Null on receipts written before 0040. */
+    durationMs: integer("duration_ms"),
   },
   // Partial: only success consumes the idempotency key. REJECTED/FAILED rows
   // are a retry/debugging trail and may repeat per key.
@@ -283,6 +289,9 @@ export const auditEvents = pgTable(
       t.occurredAt.desc().nullsFirst(),
       t.id,
     ),
+    // The dispatcher's "every command writes its own audit event" check (#153)
+    // looks events up by command on every write; without this it scans the table.
+    index("audit_events_ws_command_idx").on(t.workspaceId, t.commandId),
   ],
 );
 
@@ -416,6 +425,12 @@ export const categories = pgTable(
     })
       .notNull()
       .default("RECEIPT_EXPECTED"),
+    /**
+     * ISSUE_TYPE only (#28): picking this kind of fault pre-checks the
+     * reporter's safety-critical box. A default, never a decision — the
+     * interval opens on the reporter's confirmed flag, not on this column.
+     */
+    defaultSafetyCritical: boolean("default_safety_critical").notNull().default(false),
     active: boolean("active").notNull().default(true),
     createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
     rowVersion: integer("row_version").notNull().default(1),
@@ -450,7 +465,12 @@ export const documents = pgTable(
       .references(() => commands.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("documents_supersedes_uq").on(t.workspaceId, t.supersedesDocumentId)],
+  (t) => [
+    uniqueIndex("documents_supersedes_uq").on(t.workspaceId, t.supersedesDocumentId),
+    // The vehicle workspace reads a vehicle's documents for its history and
+    // its expiry attention; nothing indexed them by asset before.
+    index("documents_ws_asset_idx").on(t.workspaceId, t.assetId),
+  ],
 );
 
 /** Immutable, hashed evidence blobs (§3.4). No update path exists by design. */
@@ -562,6 +582,12 @@ export const financialEntries = pgTable(
     }).notNull(),
     rejectedReason: text("rejected_reason"),
     reversesEntryId: uuid("reverses_entry_id").references((): AnyPgColumn => financialEntries.id),
+    /**
+     * On a reversal row only, set once at insert: why the entry was cancelled
+     * (#426). Text is the person's words, required for OTHER.
+     */
+    reversalReasonCode: text("reversal_reason_code", { enum: CANCELLATION_REASON_CODES }),
+    reversalReasonText: text("reversal_reason_text"),
     postedAt: timestamp("posted_at", { withTimezone: true }),
     rowVersion: integer("row_version").notNull().default(1),
     createdByCommandId: uuid("created_by_command_id")
@@ -582,8 +608,10 @@ export const financialEntries = pgTable(
  * from routiq_app) except the period-assignment update at approval time, done
  * via the owner path inside the command transaction — corrections are new
  * negated rows via reversal entries. Sum of a POSTED entry's postings equals
- * the entry amount (command-layer invariant). activity_id / work_order_id /
- * person_id attribution dimensions land with their own specs.
+ * the entry amount (command-layer invariant). activity_id, work_order_id and
+ * person_id are the attribution dimensions: what a cost was for. A posting
+ * carries at most one of each, and the work-order dimension is how labour and
+ * parts costs reach the chronologie of the order that incurred them.
  */
 export const financialPostings = pgTable(
   "financial_postings",
@@ -608,6 +636,7 @@ export const financialPostings = pgTable(
       .references(() => branches.id),
     assetId: uuid("asset_id").references(() => assets.id),
     activityId: uuid("activity_id").references((): AnyPgColumn => activities.id),
+    workOrderId: uuid("work_order_id").references((): AnyPgColumn => workOrders.id),
     personId: uuid("person_id").references((): AnyPgColumn => persons.id),
     /** SIGNED minor units: reversals subtract, sums can't double-count. */
     amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
@@ -627,6 +656,7 @@ export const financialPostings = pgTable(
     index("financial_postings_ws_asset_date_idx").on(t.workspaceId, t.assetId, t.economicDate),
     index("financial_postings_ws_period_idx").on(t.workspaceId, t.postingPeriodId),
     index("financial_postings_ws_activity_idx").on(t.workspaceId, t.activityId),
+    index("financial_postings_ws_work_order_idx").on(t.workspaceId, t.workOrderId),
     index("financial_postings_ws_person_idx").on(t.workspaceId, t.personId),
   ],
 );
@@ -938,5 +968,333 @@ export const meterReadings = pgTable(
   (t) => [
     index("meter_readings_ws_asset_observed_idx").on(t.workspaceId, t.assetId, t.observedAt),
     uniqueIndex("meter_readings_superseded_uq").on(t.supersededById),
+  ],
+);
+
+/**
+ * Operational issue (Signalement): captures the initial report of a problem
+ * with an asset. An issue is created offline (queueable) and may spawn one or
+ * more work orders. State is derived from work orders and availability intervals,
+ * never stored. Status column intentionally absent — the issue lifecycle is
+ * implicit in its work orders and release-to-service decision.
+ */
+export const operationalIssues = pgTable(
+  "operational_issues",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    description: text("description").notNull(),
+    safetyCritical: boolean("safety_critical").notNull(),
+    category: text("category"),
+    reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+    /**
+     * OPEN → RESOLVED | DISMISSED, once (#28). No triage state: what happens
+     * next — a work order, a dismissal, nothing yet — is an attribute of the
+     * issue's surroundings, not a status. The report columns above never move,
+     * except `safety_critical`, which change-issue-severity sets while the
+     * issue is OPEN (#96); its audit events keep every earlier value.
+     */
+    status: text("status", { enum: ["OPEN", "RESOLVED", "DISMISSED"] })
+      .notNull()
+      .default("OPEN"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNote: text("resolution_note"),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    dismissReason: text("dismiss_reason"),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [
+    index("operational_issues_ws_asset_idx").on(t.workspaceId, t.assetId),
+  ],
+);
+
+/**
+ * Maintenance work order (Ordre de travail): planned work to address an issue
+ * or preventive maintenance. The owner's state machine (#28): creation lands
+ * APPROVED (auto band) or SUBMITTED; SUBMITTED → APPROVED | REJECTED; APPROVED
+ * is open work and the only state costs attach to; completion lands COMPLETED
+ * or COMPLETION_SUBMITTED, whose rejection returns to APPROVED; CANCELLED from
+ * any non-terminal state. COMPLETED, REJECTED and CANCELLED never reopen. An
+ * issue may spawn multiple work orders; cancellation does not delete — it
+ * records a reason and opens the door for a new order on the same issue.
+ * Composite tenant FKs put the work order, its asset and its linked issue in one
+ * workspace; that the issue names the same asset is a handler check, not a
+ * structural one.
+ */
+export const workOrders = pgTable(
+  "work_orders",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
+    description: text("description").notNull(),
+    /**
+     * Plain `text` with no CHECK, as Drizzle emits it; the value set is held by
+     * the handlers. 0027 renamed the pre-#28 values in place.
+     */
+    status: text("status", {
+      enum: [
+        "SUBMITTED",
+        "APPROVED",
+        "COMPLETION_SUBMITTED",
+        "COMPLETED",
+        "REJECTED",
+        "CANCELLED",
+      ],
+    })
+      .notNull()
+      .default("APPROVED"),
+    expectedCostMinor: bigint("expected_cost_minor", { mode: "bigint" }),
+    currency: char("currency", { length: 3 }).notNull().default("XAF"),
+    /**
+     * The amount a complete-work-order v1 close typed (#81). The closer's
+     * declaration only: it never reached the books, and the order's actual cost
+     * is derived from its cost lines on read. NULL for every v2 close.
+     */
+    declaredCostMinor: bigint("declared_cost_minor", { mode: "bigint" }),
+    /**
+     * What the closer said about the cost at completion: LINES, NO_COST or
+     * INVOICE_PENDING. Plain `text` like `status`; the value set is held by
+     * the contract. NULL before completion and for v1 closes.
+     */
+    costOutcome: text("cost_outcome", { enum: ["LINES", "NO_COST", "INVOICE_PENDING"] }),
+    summary: text("summary"),
+    /**
+     * The completion's resolve-the-issue flag, held with the other completion
+     * facts while COMPLETION_SUBMITTED waits for review, and acted on when the
+     * completion is approved.
+     */
+    resolveLinkedIssue: boolean("resolve_linked_issue").notNull().default(false),
+    cancelReason: text("cancel_reason"),
+    rejectReason: text("reject_reason"),
+    /** The last completion sent back; the workshop reads it before resubmitting. */
+    completionRejectReason: text("completion_reject_reason"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [
+    index("work_orders_ws_asset_idx").on(t.workspaceId, t.assetId),
+    index("work_orders_ws_status_idx").on(t.workspaceId, t.status),
+  ],
+);
+
+/**
+ * Asset availability interval: tracks when an asset transitions to UNAVAILABLE
+ * due to safety-critical issues and when it is released back to service.
+ * At most one open interval per (workspace_id, asset_id) enforced via PARTIAL
+ * UNIQUE constraint. An asset is implicitly AVAILABLE unless it holds an open
+ * interval; this separation from lifecycle_status is deliberate (§3 invariants).
+ * closed_by_command_id is the release-asset-to-service decision, which requires
+ * approval; created_by_command_id tracks the opener (usually report-issue).
+ */
+export const assetAvailabilityIntervals = pgTable(
+  "asset_availability_intervals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => assets.id),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
+    openedByIssueId: uuid("opened_by_issue_id")
+      .notNull()
+      .references((): AnyPgColumn => operationalIssues.id),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedByCommandId: uuid("closed_by_command_id").references(() => commands.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    rowVersion: integer("row_version").notNull().default(1),
+  },
+  (t) => [
+    index("asset_availability_intervals_ws_asset_idx").on(t.workspaceId, t.assetId),
+    uniqueIndex("asset_availability_intervals_open_per_asset_uq")
+      .on(t.workspaceId, t.assetId)
+      .where(sql`${t.closedAt} IS NULL`),
+  ],
+);
+
+/**
+ * A free-text annotation on a record (§3.1). Append-only: UPDATE and DELETE are
+ * not granted, so a correction is another note. v1 annotates assets only, and
+ * `asset_id` is the exclusive arc the composite tenant FK hangs off — a CHECK
+ * in the migration ties it to `entity_id` — so a note can never point into
+ * another workspace. `author_membership_id` is the member who wrote it.
+ */
+export const notes = pgTable(
+  "notes",
+  {
+    id: uuid("id").primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    entityType: text("entity_type", { enum: NOTE_ENTITY_TYPES }).notNull(),
+    entityId: uuid("entity_id").notNull(),
+    assetId: uuid("asset_id").references(() => assets.id),
+    authorMembershipId: uuid("author_membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    /**
+     * The author's role when the note was written (#98): a note from Direction
+     * waits in the vehicle's To-do until someone acknowledges it. Stored, not
+     * read off the membership, so a later role change does not move old notes
+     * in or out of the To-do. Notes written before 0043 took the role their
+     * author held then.
+     */
+    authorRole: text("author_role", { enum: ROLES }).notNull(),
+    body: text("body").notNull(),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("notes_ws_entity_created_idx").on(t.workspaceId, t.entityType, t.entityId, t.createdAt),
+    uniqueIndex("notes_ws_id_uq").on(t.workspaceId, t.id),
+  ],
+);
+
+/**
+ * Someone saw a note from Direction (#98), written by acknowledge-note.
+ * Append-only and one per note: the note leaves the To-do with "Seen by" the
+ * first member who acknowledged it, and a later acknowledgement adds nothing.
+ * The note itself is never touched.
+ */
+export const noteAcknowledgements = pgTable(
+  "note_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    noteId: uuid("note_id")
+      .notNull()
+      .references(() => notes.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("note_acknowledgements_ws_note_uq").on(t.workspaceId, t.noteId)],
+);
+
+/**
+ * A change to the entry approval chain that members must be told about (#422).
+ * Written by `update-approval-threshold` beside its audit event, and once per
+ * workspace by migration 0039 for the release that changed the chain (0038):
+ * a migration cannot write a command receipt or an audit event, so that row
+ * carries no `created_by_command_id` and names no member. Append-only.
+ * `affected_roles` are the roles whose own entries the change moved.
+ */
+export const approvalRuleChanges = pgTable(
+  "approval_rule_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    affectedRoles: text("affected_roles", { enum: ROLES }).array().notNull(),
+    createdByCommandId: uuid("created_by_command_id").references(() => commands.id),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("approval_rule_changes_ws_id_uq").on(t.workspaceId, t.id),
+    index("approval_rule_changes_ws_changed_idx").on(t.workspaceId, t.changedAt),
+  ],
+);
+
+/**
+ * A member's acknowledgement of one approval-rule change, written by
+ * `acknowledge-approval-rules`. Append-only; one per member and change.
+ */
+export const approvalRuleAcknowledgements = pgTable(
+  "approval_rule_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    changeId: uuid("change_id")
+      .notNull()
+      .references(() => approvalRuleChanges.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("approval_rule_acknowledgements_ws_member_change_uq").on(
+      t.workspaceId,
+      t.membershipId,
+      t.changeId,
+    ),
+  ],
+);
+
+/**
+ * Field telemetry from the web app (ADR-0011). Its own schema because it is
+ * measurement, not business state: no command writes it, no read serves it to
+ * a tenant, and the runtime role may only INSERT (plus DELETE of expired rows,
+ * which needs SELECT on `received_at` alone). Operators read it with the owner
+ * role through `pnpm observe`.
+ */
+export const telemetry = pgSchema("telemetry");
+
+export const telemetryEvents = telemetry.table(
+  "events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    /** From the session that sent it; null before sign-in. Goes with its workspace. */
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    /** The sender's role, never who they are. */
+    role: text("role"),
+    sessionId: uuid("session_id").notNull(),
+    kind: text("kind", { enum: ["session", "error", "vital", "journey"] }).notNull(),
+    /** Journey or vital name, or the error's source. */
+    name: text("name"),
+    /** Journey duration (ms) or vital value. */
+    value: doublePrecision("value"),
+    serverMs: doublePrecision("server_ms"),
+    outcome: text("outcome"),
+    route: text("route").notNull(),
+    appVersion: text("app_version").notNull(),
+    message: text("message"),
+    stack: text("stack"),
+    /** Groups the same error across sessions: hash of the message shape and first app frame. */
+    fingerprint: text("fingerprint"),
+    device: jsonb("device"),
+    detail: jsonb("detail"),
+  },
+  (t) => [
+    index("telemetry_events_received_idx").on(t.receivedAt),
+    index("telemetry_events_kind_name_idx").on(t.kind, t.name, t.receivedAt),
   ],
 );

@@ -18,9 +18,9 @@ const themeOptions: ReadonlyArray<{
   icon: LucideIcon;
   labelKey: string;
 }> = [
-  { mode: "light", icon: Sun, labelKey: "more.theme.light" },
-  { mode: "dark", icon: Moon, labelKey: "more.theme.dark" },
-  { mode: "system", icon: Monitor, labelKey: "more.theme.system" },
+  { mode: "light", icon: Sun, labelKey: "mySettings.appearance.light" },
+  { mode: "dark", icon: Moon, labelKey: "mySettings.appearance.dark" },
+  { mode: "system", icon: Monitor, labelKey: "mySettings.appearance.system" },
 ];
 
 /** The full three-option control, for a settings screen. */
@@ -31,7 +31,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <div
       role="group"
-      aria-label={t("more.theme.label")}
+      aria-label={t("mySettings.appearance.label")}
       className={cn("flex flex-wrap gap-2", className)}
     >
       {themeOptions.map((option) => {
@@ -42,7 +42,6 @@ export function ThemeToggle({ className }: { className?: string }) {
             key={option.mode}
             type="button"
             variant={selected ? "default" : "outline"}
-            className="min-h-11"
             aria-pressed={selected}
             onClick={() => setMode(option.mode)}
           >
@@ -69,8 +68,8 @@ export function ThemeToggleMenu({ className }: { className?: string }) {
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={t("more.theme.label")}
-            className={cn("size-11 md:size-8", className)}
+            aria-label={t("mySettings.appearance.label")}
+            className={cn("md:size-8", className)}
           />
         }
       >

@@ -7,9 +7,13 @@ export async function fetchFinanceEntries(
   token: string,
   params?: {
     status?: string;
+    direction?: string;
     periodCode?: string;
+    economicMonth?: string;
+    evidence?: string;
     assetId?: string;
     branchId?: string;
+    view?: string;
     sort?: string;
     cursor?: string;
   },
@@ -18,9 +22,13 @@ export async function fetchFinanceEntries(
 ): Promise<FinancialEntryListResponse> {
   const url = new URL("/v1/finance/entries", window.location.origin);
   if (params?.status) url.searchParams.append("status", params.status);
+  if (params?.direction) url.searchParams.append("direction", params.direction);
   if (params?.periodCode) url.searchParams.append("periodCode", params.periodCode);
+  if (params?.economicMonth) url.searchParams.append("economicMonth", params.economicMonth);
+  if (params?.evidence) url.searchParams.append("evidence", params.evidence);
   if (params?.assetId) url.searchParams.append("assetId", params.assetId);
   if (params?.branchId) url.searchParams.append("branchId", params.branchId);
+  if (params?.view) url.searchParams.append("view", params.view);
   if (params?.sort) url.searchParams.append("sort", params.sort);
   if (params?.cursor) url.searchParams.append("cursor", params.cursor);
 
@@ -34,9 +42,16 @@ export async function fetchFinanceEntries(
 
 export interface UseEntriesParams {
   status?: string;
+  direction?: string;
   periodCode?: string;
+  /** `YYYY-MM` of the economic date: the Money page's month tiles. */
+  economicMonth?: string;
+  /** `MISSING`: entries still waiting for paperwork. */
+  evidence?: string;
   assetId?: string;
   branchId?: string;
+  /** `books` lists every signed row; the default is one line per event (#427). */
+  view?: "events" | "books";
   /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
   sort?: string;
 }

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UseActivitiesParams } from "../activities/useActivities.js";
+import { applyNavigate, useTestSearch } from "../test-router.js";
 
 /** One record per distinct query key — an unchanged key is a cache hit. */
 const issuedQueries: UseActivitiesParams[] = [];
@@ -20,8 +21,8 @@ vi.mock("react-i18next", async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, options?: Record<string, unknown>) =>
-        key === "activities.completeness.short"
-          ? `${String(options?.["count"])} exceptions`
+        key === "activities.state.closedWithGaps"
+          ? `Closed, ${String(options?.["count"])} gaps`
           : key,
       i18n: { language: "en", resolvedLanguage: "en", exists: () => true, t: (k: string) => k },
     }),
@@ -32,8 +33,12 @@ vi.mock("react-i18next", async () => {
 const navigate = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => navigate,
+  useNavigate: () => (options: unknown) => {
+    applyNavigate(options);
+    return navigate(options);
+  },
   useParams: () => ({}),
+  useSearch: () => useTestSearch(),
   Link: ({ to, children, ...props }: { to: string; children?: ReactNode }) => (
     <a href={to} {...props}>
       {children}
@@ -77,6 +82,17 @@ const activityRows = [
 ];
 
 vi.mock("../activities/useActivities.js", () => ({
+  useActivitySummary: () => ({
+    data: {
+      week: { from: "2026-10-05", to: "2026-10-11" },
+      thisWeek: 3,
+      open: 2,
+      incomplete: 1,
+      weekKm: 224,
+    },
+    isPending: false,
+    isError: false,
+  }),
   useActivities: (params: UseActivitiesParams) => {
     recordQuery(params);
     return {
@@ -128,7 +144,7 @@ vi.mock("../assets/useAssetOptions.js", () => ({
 }));
 
 const me = {
-  role: "OPS_MANAGER" as const,
+  role: "ADMIN" as const,
   enabledModules: ["CORE", "ACTIVITIES"] as const,
 };
 
@@ -160,7 +176,7 @@ describe("ActivitiesScreen", () => {
     render(<ActivitiesScreen />);
     // §3.4 inv. 6 lets a job close with gaps; the list has to say so, or the
     // reader takes an incomplete record for a complete one.
-    expect(await screen.findByText("1 exceptions")).toBeTruthy();
+    expect(await screen.findByText("Closed, 1 gaps")).toBeTruthy();
   });
 
   it("asks the server to filter rather than narrowing the loaded page", async () => {
@@ -296,7 +312,7 @@ describe("ActivitiesScreen", () => {
   });
 
   it("shows a denied surface when the module is off", async () => {
-    meValue = { role: "OPS_MANAGER", enabledModules: ["CORE"] };
+    meValue = { role: "ADMIN", enabledModules: ["CORE"] };
     render(<ActivitiesScreen />);
     expect(await screen.findByText("activities.title")).toBeTruthy();
     expect(screen.queryByText("DLA-2026-00042")).toBeNull();

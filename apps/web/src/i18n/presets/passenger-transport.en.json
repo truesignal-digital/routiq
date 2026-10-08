@@ -19,12 +19,10 @@
         "assigned": "Vehicle assigned"
       }
     },
-    "title": "Your vehicles",
-    "register": "New vehicle",
+    "title": "Vehicles",
     "searchLabel": "Search vehicles",
     "filterLabel": "Filter vehicles",
     "emptyHint": "Add a bus or a minibus. Its trustworthy history starts building from day one.",
-    "emptyAction": "Register a vehicle",
     "loading": "Loading vehicles…",
     "noResultsTitle": "No vehicles found",
     "branchEmptyHint": "No vehicle is attached to this branch.",
@@ -39,9 +37,7 @@
       }
     },
     "form": {
-      "title": "Register a vehicle",
-      "assetCode": "Vehicle code",
-      "submit": "Register vehicle"
+      "assetCode": "Vehicle code"
     },
     "actions": {
       "commissionHint": "Puts the vehicle into service. Its operating history starts counting from here.",
@@ -61,7 +57,8 @@
     },
     "entries": {
       "detail": {
-        "asset": "Vehicle"
+        "asset": "Vehicle",
+        "tripLink": "Trip {number}"
       },
       "filters": {
         "asset": "Vehicle"
@@ -88,17 +85,19 @@
       "open": "Open trip"
     },
     "detail": {
+      "breadcrumb": "Trip",
       "loading": "Loading trip…",
       "readings": {
         "allSuperseded": "Every reading on this trip has been corrected."
+      },
+      "moneySummary": {
+        "ownOnly": "Only the entries you recorded on this trip.",
+        "branchOnly": "Only the entries of your branches on this trip."
       }
     },
     "actions": {
-      "closeTitle": "Close the trip",
-      "reopenTitle": "Reopen the trip",
       "reasonPlaceholder": "Why reopen this trip?",
       "addLegHint": "Leg no. {legNo} of this trip.",
-      "addExpenseTitle": "Expense on this trip",
       "addExpenseHint": "The expense is attributed to this trip and to the chosen vehicle."
     },
     "notify": {
@@ -114,8 +113,118 @@
       "chooseAsset": "Choose a vehicle",
       "entries": {
         "attributeLabel": "Charge to this trip",
-        "rowAttribute": "Charge line {position} to this trip"
+        "rowAttribute": "Charge line {position} to this trip",
+        "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
       }
+    },
+    "subtitle": "Every trip your vehicles run, from start to close."
+  },
+  "maintenance": {
+    "workOrders": {
+      "newHint": "Open a work order on a vehicle, with or without a problem behind it.",
+      "columns": {
+        "asset": "Vehicle"
+      }
+    },
+    "issues": {
+      "newHint": "Describe the fault found on the vehicle. A safety-critical problem grounds the vehicle immediately.",
+      "columns": {
+        "asset": "Vehicle"
+      }
+    },
+    "fields": {
+      "asset": "Vehicle",
+      "safetyCriticalHint": "The vehicle is grounded from the moment this is filed until it is returned to service."
+    },
+    "actions": {
+      "releaseHint": "The vehicle becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem."
+    },
+    "detail": {
+      "unavailableTitle": "Vehicle grounded"
+    },
+    "notify": {
+      "success": {
+        "assetReleased": "Vehicle returned to service"
+      }
+    }
+  },
+  "history": {
+    "event": {
+      "work_order-asset_released": "Vehicle returned to service",
+      "asset_availability-opened": "Vehicle grounded"
+    }
+  },
+  "vehicle": {
+    "tabs": {
+      "trips": "Trips"
+    },
+    "trips": {
+      "title": "Trips",
+      "description": "Trips with this vehicle",
+      "descriptionWithKm": "Trips with this vehicle · {km, number} km recorded",
+      "empty": "No trips yet. Start one when the vehicle leaves the depot.",
+      "tripNumber": "Trip {number}",
+      "wholeTrip": "Whole-trip amounts",
+      "noMoney": "No entries linked to this trip yet.",
+      "noOwnMoney": "You have not recorded any entry on this trip.",
+      "noBranchMoney": "No entry from your branches on this trip yet.",
+      "openFull": "Open the full trip"
+    },
+    "history": {
+      "filters": {
+        "TRIPS": "Trips"
+      },
+      "event": {
+        "activity-created": "Trip {number} started",
+        "activity-closed": "Trip {number} closed",
+        "activity-reopened": "Trip {number} reopened",
+        "activity-asset_substituted": "Vehicle substituted on trip {number}",
+        "movement_leg-recorded": "Leg recorded on trip {number}"
+      }
+    },
+    "status": {
+      "available": {
+        "sinceAndTrip": "In service since {since}; last trip {lastTrip}.",
+        "sinceNoTrips": "In service since {since}; no trips yet.",
+        "lastTripOnly": "Last trip {lastTrip}.",
+        "noTrips": "No trips yet."
+      }
+    },
+    "money": {
+      "forTrip": "for trip {number}"
+    },
+    "readings": {
+      "source": {
+        "ACTIVITY_START": "Trip start",
+        "ACTIVITY_END": "Trip end"
+      }
+    },
+    "panel": {
+      "backTo": "{kind, select, work_order {Back to work order {ref}} issue {Back to problem {ref}} entry {Back to the entry} trip {Back to the trip} document {Back to the document} note {Back to the note} other {Back to the readings}}",
+      "tripTitle": "Trip",
+      "tripEyebrow": "Trip {number} · {type}"
+    },
+    "actions": {
+      "change-custodian": {
+        "description": "The person who regularly drives the vehicle. Each trip can still name another driver."
+      }
+    }
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Register a vehicle",
+      "submit": "Register vehicle"
+    },
+    "close-activity": {
+      "label": "Close the trip",
+      "submit": "Close the trip"
+    },
+    "reopen-activity": {
+      "label": "Reopen the trip",
+      "submit": "Reopen the trip"
+    },
+    "record-journey-sheet": {
+      "short": "Trip"
     }
   }
 }

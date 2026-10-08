@@ -96,6 +96,78 @@ describe("preset overlays", () => {
   }
 });
 
+// The base catalog says "activité"/"activity"; each preset brings its own trip
+// noun. A base string that names the trip itself shows one fleet the other's word.
+const TRIP_NOUN = /\b(trajets?|voyages?|trips?|journeys?)\b/i;
+
+describe("trip noun in the base catalog", () => {
+  for (const locale of LOCALES) {
+    it(`${locale}: every base string naming the trip is overlaid by every preset`, () => {
+      const offenders = flattenKeys(BASE[locale])
+        .filter((key) => TRIP_NOUN.test(String(at(BASE[locale], key))))
+        .flatMap((key) =>
+          TEMPLATE_CODES.filter(
+            (preset) => at(PRESET_VOCABULARIES[preset][locale], key) === undefined,
+          ).map((preset) => `${key} (${preset})`),
+        );
+      expect(offenders).toEqual([]);
+    });
+  }
+
+  // The test above can't see a base string that slides back to "trip" once
+  // every preset overlays it, yet a mixed fleet reads the base. The base
+  // catalog therefore stays neutral, overlaid or not.
+  // ICU select and plural case keys (`trip {Back to the activity}`) are code,
+  // not words on screen; a placeholder (`Trip {number}`) is not a case key.
+  const withoutCaseKeys = (message: string) => message.replace(/\b\w+\s*\{(?!\s*\w+\s*[,}])/g, "{");
+
+  it("ignores ICU case keys but not a noun before a placeholder", () => {
+    expect(TRIP_NOUN.test(withoutCaseKeys("{kind, select, trip {Back to the activity} other {Back}}"))).toBe(false);
+    expect(TRIP_NOUN.test(withoutCaseKeys("Trip {number} · {type}"))).toBe(true);
+    expect(TRIP_NOUN.test(withoutCaseKeys("{count, plural, one {# trip} other {# trips}}"))).toBe(true);
+  });
+
+  const tripNounOffenders = (catalog: Record<string, unknown>) =>
+    flattenKeys(catalog)
+      .filter((key) => TRIP_NOUN.test(withoutCaseKeys(String(at(catalog, key)))))
+      .map((key) => `${key}: ${String(at(catalog, key))}`);
+
+  it("checks every section of the catalog, not only the trip's own (#442)", () => {
+    const catalog = {
+      finance: { entries: { detail: { tripLink: "Trip {number}" } } },
+      history: { event: { started: "Trip started" } },
+      vehicle: { money: { forTrip: "For trip {ref}" } },
+    };
+    expect(tripNounOffenders(catalog)).toEqual([
+      "finance.entries.detail.tripLink: Trip {number}",
+      "history.event.started: Trip started",
+      "vehicle.money.forTrip: For trip {ref}",
+    ]);
+  });
+
+  for (const locale of LOCALES) {
+    it(`${locale}: no string in the base catalog names the trip`, () => {
+      expect(tripNounOffenders(BASE[locale])).toEqual([]);
+    });
+  }
+
+  // French has a word per fleet, so an overlay copied from the other preset
+  // shows up as the other fleet's noun.
+  const FOREIGN_TRIP_NOUN: Record<TemplateCode, RegExp> = {
+    TRUCKING: /\bvoyages?\b/i,
+    PASSENGER_TRANSPORT: /\btrajets?\b/i,
+  };
+  for (const preset of TEMPLATE_CODES) {
+    it(`fr: the ${preset} overlay never names the other fleet's trip`, () => {
+      const overlay = PRESET_VOCABULARIES[preset].fr;
+      const offenders = flattenKeys(overlay).filter((key) =>
+        FOREIGN_TRIP_NOUN[preset].test(String(at(overlay, key))),
+      );
+      expect(offenders).toEqual([]);
+    });
+  }
+});
+
 describe("presetVocabularyFor", () => {
   it("returns nothing while /v1/me is loading", () => {
     expect(presetVocabularyFor(undefined)).toBeUndefined();
@@ -128,6 +200,87 @@ describe("applyPresetVocabulary", () => {
     expect(instance.t("activities.columns.primaryAsset")).toBe("Véhicule principal");
   });
 
+  it("names the trip in each fleet's own word in the money card's scope sentences", () => {
+    const instance = freshInstance();
+
+    for (const [preset, word] of [
+      ["TRUCKING", "ce trajet"],
+      ["PASSENGER_TRANSPORT", "ce voyage"],
+    ] as const) {
+      applyPresetVocabulary(instance, presetVocabularyFor([preset]));
+      expect(instance.t("activities.detail.moneySummary.ownOnly", { lng: "fr" }), preset).toContain(word);
+      expect(instance.t("activities.detail.moneySummary.branchOnly", { lng: "fr" }), preset).toContain(word);
+      expect(instance.t("activities.detail.moneySummary.ownOnly", { lng: "en" }), preset).toContain("this trip");
+    }
+  });
+
+  it("names the trip in each fleet's own word on the trip sheet", () => {
+    const instance = freshInstance();
+
+    // A mixed fleet sees the sheet-type tabs and the base words, so neither
+    // may borrow one preset's trip noun.
+    for (const lng of LOCALES) {
+      for (const key of [
+        "activities.record.subtitle",
+        "assets.form.templates.PASSENGER_TRANSPORT",
+        "assets.form.templates.TRUCKING",
+        "activities.record.entries.attributeHint",
+      ]) {
+        expect(instance.t(key, { lng }), `${key} ${lng}`).not.toMatch(TRIP_NOUN);
+      }
+    }
+    expect(instance.t("assets.form.templates.PASSENGER_TRANSPORT", { lng: "fr" })).toBe(
+      "Transport de voyageurs",
+    );
+
+    for (const [preset, word] of [
+      ["TRUCKING", "non au trajet"],
+      ["PASSENGER_TRANSPORT", "non au voyage"],
+    ] as const) {
+      applyPresetVocabulary(instance, preset);
+      expect(instance.t("activities.record.entries.attributeHint", { lng: "fr" }), preset).toContain(word);
+      expect(instance.t("activities.record.entries.attributeHint", { lng: "en" }), preset).toContain(
+        "rather than the trip",
+      );
+    }
+  });
+
+  it("names the trip in each fleet's own word in the vehicle workspace", () => {
+    const instance = freshInstance();
+    const trip = (lng: "fr" | "en") => ({
+      tab: instance.t("vehicle.tabs.trips", { lng }),
+      description: instance.t("vehicle.trips.description", { lng }),
+      row: instance.t("vehicle.trips.tripNumber", { number: 12, lng }),
+      open: instance.t("vehicle.trips.openFull", { lng }),
+    });
+
+    expect(trip("fr")).toEqual({
+      tab: "Activités",
+      description: "Activités avec ce véhicule",
+      row: "Activité 12",
+      open: "Ouvrir l'activité complète",
+    });
+    expect(trip("en").row).toBe("Activity 12");
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(trip("fr")).toEqual({
+      tab: "Trajets",
+      description: "Trajets avec ce camion",
+      row: "Trajet 12",
+      open: "Ouvrir le trajet complet",
+    });
+    expect(trip("en").row).toBe("Trip 12");
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(trip("fr")).toEqual({
+      tab: "Voyages",
+      description: "Voyages avec ce véhicule",
+      row: "Voyage 12",
+      open: "Ouvrir le voyage complet",
+    });
+    expect(trip("en").row).toBe("Trip 12");
+  });
+
   it("keeps the branch-empty hint in each fleet's own word for a vehicle", () => {
     const instance = freshInstance();
 
@@ -148,6 +301,55 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  it("renames the vehicle inside the workshop too", () => {
+    const instance = freshInstance();
+
+    expect(instance.t("maintenance.fields.asset")).toBe("Actif");
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(instance.t("maintenance.fields.asset")).toBe("Camion");
+    expect(instance.t("maintenance.detail.unavailableTitle")).toBe("Camion immobilisé");
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(instance.t("maintenance.workOrders.columns.asset")).toBe("Véhicule");
+    expect(instance.t("maintenance.notify.success.assetReleased")).toBe(
+      "Véhicule remis en service",
+    );
+  });
+
+  // The work-order sheet reads its timeline labels out of `history.event.*`,
+  // so an unrenamed event would contradict the columns beside it.
+  it("renames the vehicle in the chronologie's shared event labels", () => {
+    const instance = freshInstance();
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(instance.t("history.event.work_order-asset_released")).toBe(
+      "Camion remis en service",
+    );
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(instance.t("history.event.asset_availability-opened")).toBe(
+      "Véhicule immobilisé",
+    );
+  });
+
+  // The sheet's title is its breadcrumb and the Trips button, and its submit
+  // says "la fiche": renaming only the title would leave the page disagreeing.
+  it("keeps the trip sheet's title in step with its submit in every preset", () => {
+    const instance = freshInstance();
+
+    for (const preset of TEMPLATE_CODES) {
+      applyPresetVocabulary(instance, preset);
+      for (const [lng, title, submit] of [
+        ["fr", "Saisir une fiche", "Enregistrer la fiche"],
+        ["en", "Record a sheet", "Record sheet"],
+      ] as const) {
+        expect(instance.t("commands.record-journey-sheet.label", { lng }), `${preset} ${lng}`).toBe(title);
+        expect(instance.t("commands.record-journey-sheet.submit", { lng }), `${preset} ${lng}`).toBe(submit);
+      }
+    }
+  });
+
   it("leaves a mixed fleet on the base vocabulary", () => {
     const instance = freshInstance();
 
@@ -163,7 +365,7 @@ describe("applyPresetVocabulary", () => {
     applyPresetVocabulary(instance, undefined);
 
     expect(instance.t("nav.assets")).toBe("Actifs");
-    expect(instance.t("assets.form.submit")).toBe("Enregistrer l'actif");
+    expect(instance.t("commands.register-asset.submit")).toBe("Enregistrer l'actif");
   });
 
   it("survives a language switch", async () => {

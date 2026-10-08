@@ -89,7 +89,7 @@ vi.mock("../activities/RegisterPersonDialog.js", () => ({
 }));
 
 const me = {
-  role: "OPS_MANAGER" as const,
+  role: "ADMIN" as const,
   enabledModules: ["CORE", "ACTIVITIES"] as const,
 };
 
@@ -140,7 +140,7 @@ describe("PersonsScreen", () => {
   it("registers into the branch it resolved, then reloads the list", async () => {
     render(<PersonsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: /persons.register/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "commands.register-person.label" }));
 
     const dialog = await screen.findByRole("dialog", { name: "register-person" });
     expect(dialog.textContent).toContain("DLA");
@@ -152,7 +152,7 @@ describe("PersonsScreen", () => {
   it("confirms the registration with a toast, as the other capture forms do", async () => {
     render(<PersonsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: /persons.register/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "commands.register-person.label" }));
     await userEvent.click(await screen.findByRole("button", { name: "confirm" }));
 
     // The row lands in the branch on screen, so nothing is added about where.
@@ -162,16 +162,19 @@ describe("PersonsScreen", () => {
     });
   });
 
-  it("a read-only role reads the list but is offered no way to add", async () => {
-    meValue = { role: "EXECUTIVE_VIEWER", enabledModules: ["CORE", "ACTIVITIES"] };
-    render(<PersonsScreen />);
+  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"])(
+    "%s reads the list but is offered no way to add",
+    async (role) => {
+      meValue = { role, enabledModules: ["CORE", "ACTIVITIES"] };
+      render(<PersonsScreen />);
 
-    expect(await screen.findByText("Amadou Bello")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /persons.register/ })).toBeNull();
-  });
+      expect(await screen.findByText("Amadou Bello")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "commands.register-person.label" })).toBeNull();
+    },
+  );
 
   it("shows a denied surface when the module is off", async () => {
-    meValue = { role: "OPS_MANAGER", enabledModules: ["CORE"] };
+    meValue = { role: "ADMIN", enabledModules: ["CORE"] };
     render(<PersonsScreen />);
 
     expect(await screen.findByText("persons.title")).toBeTruthy();

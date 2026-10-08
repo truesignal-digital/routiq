@@ -6,10 +6,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { AssetsStub } from "./AssetsStub.js";
+import { applyNavigate, useTestSearch } from "../test-router.js";
 
 // A real Link needs a router around it; the screen renders bare here.
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => applyNavigate,
+  useSearch: () => useTestSearch(),
   Link: ({
     to,
     params,
@@ -41,6 +43,8 @@ function renderWith(
     principalId: "p",
     principalType: "HUMAN",
     membershipId: "m",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules,
@@ -61,13 +65,13 @@ describe("register affordances by role", () => {
   it("ADMIN sees the register affordance", () => {
     renderWith("ADMIN");
     expect(
-      screen.getAllByRole("link", { name: /nouvel actif/i }).length,
+      screen.getAllByRole("link", { name: /enregistrer un actif/i }).length,
     ).toBeGreaterThan(0);
   });
 
-  it("EXECUTIVE_VIEWER sees zero mutating affordances", () => {
-    renderWith("EXECUTIVE_VIEWER");
-    expect(screen.queryByRole("link", { name: /nouvel actif/i })).toBeNull();
+  it("CASHIER sees zero mutating affordances", () => {
+    renderWith("CASHIER");
+    expect(screen.queryByRole("link", { name: /enregistrer un actif/i })).toBeNull();
     expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
   });
 });
@@ -83,7 +87,7 @@ describe("module gating", () => {
   });
 
   it("serves the fleet to a role that may not register one", () => {
-    renderWith("EXECUTIVE_VIEWER");
+    renderWith("CASHIER");
 
     expect(screen.getByRole("searchbox")).toBeDefined();
   });

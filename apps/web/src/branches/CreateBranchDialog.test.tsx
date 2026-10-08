@@ -9,6 +9,20 @@ import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { CreateBranchDialog } from "./CreateBranchDialog.js";
 
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("@/components/ui/toast.js", () => ({ toast }));
+
+/** Success is one toast, and nothing in the dialog repeats it. */
+function expectOneSuccessToast(title: string, description?: string) {
+  expect(toast.add).toHaveBeenCalledTimes(1);
+  expect(toast.add).toHaveBeenCalledWith({
+    type: "success",
+    title,
+    ...(description === undefined ? {} : { description }),
+  });
+  expect(screen.queryByRole("status")).toBeNull();
+}
+
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
 const committed: SubmitResult = {
@@ -85,12 +99,47 @@ function messageDescribing(label: string): string {
 }
 
 describe("CreateBranchDialog", () => {
+  it("opens in the side panel over the branch list (#296)", () => {
+    renderDialog(fakeClient(committed));
+
+    const panel = screen.getByRole("dialog");
+    expect(panel.getAttribute("data-slot")).toBe("sheet-content");
+    expect(panel.className).toContain("sm:max-w-[440px]");
+    // Submit is the last button in the footer.
+    const footer = Array.from(panel.querySelectorAll("[data-slot=sheet-footer] button"));
+    expect(footer.at(-1)?.textContent).toBe("Créer l'agence");
+  });
+
+  it("closes at once when nothing was typed", async () => {
+    const { onOpenChange } = renderDialog(fakeClient(committed));
+
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("asks before dropping a typed branch, as a Decision dialog", async () => {
+    const { onOpenChange } = renderDialog(fakeClient(committed));
+    await userEvent.type(screen.getByLabelText("Nom"), "Kribi");
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(await screen.findByRole("dialog", { name: "Abandonner ce formulaire ?" })).toBeTruthy();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Continuer la saisie" }));
+    expect((screen.getByLabelText("Nom") as HTMLInputElement).value).toBe("Kribi");
+
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Abandonner" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("sends create-branch with a client-generated id and the default time zone", async () => {
     const client = fakeClient(committed);
     const { onCreated, onOpenChange } = renderDialog(client);
 
     await fillForm("yde", "Yaoundé");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
@@ -107,6 +156,7 @@ describe("CreateBranchDialog", () => {
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expectOneSuccessToast("Agence créée : Yaoundé");
   });
 
   it("refuses a code the numbering scheme could not carry", async () => {
@@ -114,7 +164,7 @@ describe("CreateBranchDialog", () => {
     renderDialog(client);
 
     await fillForm("y", "Yaoundé");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(
       await screen.findByText("2 à 8 caractères, en majuscules ou chiffres (ex. DLA)."),
@@ -127,7 +177,7 @@ describe("CreateBranchDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm("DLA", "Douala Nord");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(
       await screen.findByText("Ce code d'agence existe déjà dans votre espace."),
@@ -140,7 +190,7 @@ describe("CreateBranchDialog", () => {
     renderDialog(client);
 
     await fillForm("YDE", "   ");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(await screen.findByText("Ce champ est obligatoire.")).toBeTruthy();
     expect(client.seen).toHaveLength(0);
@@ -158,7 +208,7 @@ describe("CreateBranchDialog", () => {
     await userEvent.type(screen.getByLabelText("Code"), "YDE");
     await userEvent.click(screen.getByLabelText("Nom"));
     await userEvent.paste("a".repeat(121));
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     expect(messageDescribing("Nom")).toContain(
       "Le nom ne doit pas dépasser 120 caractères.",
@@ -171,7 +221,7 @@ describe("CreateBranchDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm("CTR", "Centre");
-    await userEvent.click(screen.getByRole("button", { name: "Créer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Créer l'agence" }));
 
     await screen.findByText("Ce nom d'agence existe déjà dans votre espace.");
     expect(messageDescribing("Nom")).toContain(

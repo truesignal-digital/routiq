@@ -1,0 +1,3 @@
+interface:
+  display_name: "Verify ROUTIQ"
+  short_description: "Run and drive the real app and capture evidence"

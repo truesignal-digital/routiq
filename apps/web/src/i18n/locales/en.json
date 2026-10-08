@@ -2,12 +2,16 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "ROUTIQ logo",
+    "poweredBy": "powered by ROUTIQ"
+  },
   "nav": {
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More",
-    "activities": "Activities"
+    "activities": "Activities",
+    "maintenance": "Maintenance"
   },
   "home": {
     "title": "Home",
@@ -30,7 +34,8 @@
         "title": "Period revenue"
       },
       "periodDescription": "Open period {period}",
-      "noOpenPeriod": "No open period yet"
+      "noOpenPeriod": "No open period yet",
+      "financeUnavailable": "Not available for your role"
     },
     "chart": {
       "title": "Expense and revenue",
@@ -58,12 +63,24 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "counts": {
+      "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
+      "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
+      "tooltip": "{label}: {waiting}"
+    },
+    "groups": {
+      "daily": "Daily work",
+      "company": "Company"
+    },
+    "bottomBar": {
+      "label": "Shortcuts",
+      "menu": "Menu"
+    },
     "branch": {
       "label": "Current branch",
       "all": "All my branches",
       "loading": "Branches…",
       "loadFailed": "Branches unavailable",
-      "switched": "You are viewing: {branch}",
       "scopeLine": "Filtered: {branch} — {count, plural, one {# result} other {# results}}",
       "scopeLineAtLeast": "Filtered: {branch} — at least {count, plural, one {# result} other {# results}}",
       "scopeLineLoading": "Filtered: {branch}",
@@ -82,12 +99,15 @@
     "workspace": "Workspace",
     "username": "Username",
     "pin": "PIN code",
-    "submit": "Sign in",
-    "submitting": "Signing in…"
+    "signIn": "Sign in",
+    "signingIn": "Signing in…"
   },
   "notify": {
     "success": {
       "generic": "Action completed"
+    },
+    "info": {
+      "generic": "Noted"
     },
     "warnings": {
       "generic": "The action completed with a warning ({code})."
@@ -104,6 +124,7 @@
     "DUPLICATE_ASSET_CODE": "This asset code already exists in your workspace.",
     "DUPLICATE_BRANCH_CODE": "This branch code already exists in your workspace.",
     "DUPLICATE_BRANCH_NAME": "This branch name already exists in your workspace.",
+    "DUPLICATE_REGISTRATION_NUMBER": "Another vehicle already has this plate.",
     "TEMPLATE_FIELD_INVALID": "A template-specific field is invalid or missing.",
     "APPROVAL_REQUIRED": "This action requires an approval. It will be available soon.",
     "IDEMPOTENCY_KEY_REUSED": "This submission conflicts with a previous one. Check the list, then retry.",
@@ -117,17 +138,20 @@
     "MODULE_DISABLED": "This module is not enabled for your workspace.",
     "UNIQUE_CONSTRAINT_VIOLATION": "An identical record already exists.",
     "COMMAND_FAILED": "The action failed. Retry; if it persists, contact your administrator.",
+    "AUDIT_EVENT_MISSING": "The action failed. Retry; if it persists, contact your administrator.",
     "EXPECTED_VERSION_REQUIRED": "Cannot save: record version missing. Refresh the page.",
     "VERSION_CONFLICT": "Someone else modified this record. Refresh, then reapply your changes.",
     "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
     "ARTIFACT_UPLOAD_INCOMPLETE": "An attachment has not finished uploading. Wait or remove it.",
+    "ARTIFACT_INTEGRITY_MISMATCH": "This attachment no longer matches its recorded evidence. Contact an administrator; it cannot be downloaded safely.",
     "UNSUPPORTED_MEDIA_TYPE": "Unsupported file format (JPEG, PNG, WebP or PDF only).",
     "STORAGE_FAILED": "Storing the file failed. Please retry.",
     "ASSET_NOT_OPERATIONAL": "This asset has left the fleet: no new operations are possible.",
     "DOCUMENT_ALREADY_SUPERSEDED": "This document was already renewed. Renew the latest version.",
     "POSTINGS_SUM_MISMATCH": "The posting lines do not add up to the entry amount.",
     "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
-    "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
+    "ENTRY_ALREADY_REVERSED": "This entry has already been cancelled.",
+    "ENTRY_IS_REVERSAL": "This entry is itself a cancellation and cannot be cancelled. To undo it, record the original entry again.",
     "PERIOD_LOCKED": "This period is locked. No postings are possible.",
     "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense).",
     "ACTIVITY_CLOSE_BLOCKED": "Cannot close: the actual dates or at least one assigned asset are missing.",
@@ -141,25 +165,48 @@
     "PRESET_ALREADY_SET": "This activity type is already in that state. Refresh the page.",
     "LAST_PRESET": "At least one activity type must stay enabled.",
     "USERNAME_TAKEN": "This username is already taken in your workspace.",
-    "LAST_ADMIN": "Your workspace must keep at least one active administrator.",
+    "LAST_DIRECTOR": "Your workspace must keep at least one active Director.",
     "SELF_DEACTIVATION": "You cannot deactivate your own account. Ask another administrator.",
+    "SELF_ROLE_CHANGE": "You cannot change your own role or branches. Ask a Director.",
+    "MEMBER_ROLE_NOT_GRANTABLE": "You cannot give or remove this role. Ask a Director.",
+    "MEMBER_BRANCH_OUT_OF_SCOPE": "This member or these branches are outside your branches. Ask a Director.",
+    "DIRECTOR_REQUIRES_ALL_BRANCHES": "A Director always covers every branch.",
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
     "BRANCH_STATUS_ALREADY_SET": "This branch is already in that state. Refresh the page.",
-    "AUTH_FAILED": "Incorrect workspace, username, or PIN."
+    "ISSUE_ASSET_MISMATCH": "That problem was reported against a different asset. Pick a problem for the same asset.",
+    "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
+    "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the problem that grounded this asset. Complete the work before returning it to service.",
+    "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the problem that grounded the asset.",
+    "WORK_ORDER_NOT_OPEN": "This work order is not open: costs can only be booked against it after approval and before it is completed, rejected or cancelled.",
+    "WORK_ORDER_COST_ONLY": "A work order collects costs only. Record this revenue on the vehicle without a work order.",
+    "WORK_ORDER_COST_MISSING": "Enter the repair cost, or choose “No cost” or “Invoice not received yet”.",
+    "WORK_ORDER_HAS_COSTS": "Costs are already recorded on this work order. Reopen the form to see them.",
+    "HUMAN_PRINCIPAL_REQUIRED": "This action must be taken by a person, not by an integration or an automated agent.",
+    "ASSET_NOT_UNAVAILABLE": "This asset is not out of service, so there is nothing to release.",
+    "SELF_RELEASE_FORBIDDEN": "The release must be signed off by someone other than the person who declared the work complete or closed the problem.",
+    "SAFETY_ISSUE_OPEN": "Another safety-critical problem is still open on this vehicle. Resolve or dismiss it before releasing the vehicle.",
+    "CUSTODIAN_INELIGIBLE": "This member cannot be the assigned driver of this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
+    "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
+    "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
+    "ISSUE_SEVERITY_ALREADY_SET": "This problem is already marked that way. Refresh the page.",
+    "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
     "notify": {
       "success": {
         "registered": "Asset registered",
         "commissioned": "Asset commissioned",
-        "assigned": "Asset assigned"
+        "assigned": "Asset assigned",
+        "custodianChanged": "Assigned driver changed"
       }
     },
     "eyebrow": "Operational fleet",
-    "title": "Your assets",
+    "title": "Assets",
     "subtitle": "Track every vehicle from registration through retirement.",
-    "register": "New asset",
     "searchLabel": "Search assets",
     "searchPlaceholder": "Code, plate or model…",
     "filterLabel": "Filter assets",
@@ -173,7 +220,9 @@
     "metrics": {
       "total": "Total",
       "inService": "In service",
-      "attention": "Attention"
+      "attention": "Attention",
+      "attentionHint": "Grounded, in maintenance, retired or written off",
+      "attentionHintNoGrounding": "In maintenance, retired or written off"
     },
     "status": {
       "REGISTERED": "Registered",
@@ -186,7 +235,6 @@
     "emptyEyebrow": "Your fleet starts here",
     "emptyTitle": "Register your first vehicle",
     "emptyHint": "Add a truck, trailer, bus, or minibus. Its trustworthy history starts building from day one.",
-    "emptyAction": "Register an asset",
     "loading": "Loading assets…",
     "noResultsTitle": "No assets found",
     "noResultsHint": "Try another search or clear the filters.",
@@ -217,7 +265,6 @@
     },
     "form": {
       "eyebrow": "New registration",
-      "title": "Register an asset",
       "assetCode": "Asset code",
       "assetClass": "Asset class",
       "branch": "Branch",
@@ -247,8 +294,6 @@
         "lineType": "Line type"
       },
       "choose": "Choose…",
-      "submit": "Register asset",
-      "submitting": "Registering…",
       "cancel": "Cancel",
       "fieldErrors": {
         "required": "This field is required.",
@@ -257,14 +302,10 @@
       },
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
-      "acquisitionAmount": "Acquisition amount (XAF)"
+      "acquisitionAmount": "Acquisition amount (FCFA)"
     },
     "actions": {
-      "commission": "Commission",
-      "assign": "Assign",
       "assignTo": "Assign to branch",
-      "confirm": "Confirm",
-      "working": "Working…",
       "close": "Close",
       "reload": "Refresh",
       "conflictTitle": "Modified elsewhere",
@@ -273,7 +314,8 @@
       "approvalBody": "A transfer to another branch needs an approval. That step arrives with the approval flow.",
       "open": "Open asset record",
       "commissionHint": "Puts the asset into service. Its operating history starts counting from here.",
-      "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them."
+      "assignHint": "Moves the asset to another branch. Records already booked stay with the branch that made them.",
+      "custodianHint": "Names the person who regularly drives the asset."
     },
     "columns": {
       "asset": "Asset",
@@ -283,21 +325,22 @@
       "registration": "Plate"
     }
   },
-  "more": {
-    "title": "More",
-    "signedInAs": "Signed in as {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "mySettings": "My settings",
+    "signOut": "Sign out"
+  },
+  "mySettings": {
+    "title": "My settings",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Language",
-    "theme": {
-      "label": "Theme",
+    "appearance": {
+      "label": "Appearance",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
-    },
-    "manage": "Manage",
-    "persons": "People",
-    "users": "Users",
-    "branches": "Branches",
-    "logout": "Sign out"
+      "system": "Same as phone"
+    }
   },
   "form": {
     "errors": {
@@ -305,12 +348,14 @@
       "number": "Please enter a number.",
       "min": "Must be at least {min}.",
       "max": "Must not exceed {max}.",
-      "invalid": "Invalid value."
+      "invalid": "Invalid value.",
+      "tooShort": "At least {min} characters.",
+      "tooLong": "At most {max} characters."
     }
   },
   "fileUpload": {
     "dropzone": "Drop files here or click to choose",
-    "remove": "Remove",
+    "removeFile": "Remove {name}",
     "uploading": "Uploading…",
     "error": "Upload failed: {message}",
     "fileSize": "{value} {unit}",
@@ -332,10 +377,8 @@
     "link": "Documents",
     "title": "Asset documents",
     "add": "Add a document",
-    "addTitle": "New document",
     "renew": "Renew",
     "renewTitle": "Renew {name}",
-    "save": "Save",
     "loading": "Loading…",
     "loadFailed": "We couldn't load this asset's documents.",
     "typesFailed": "We couldn't load document types. Retry this page.",
@@ -364,43 +407,63 @@
         "generic": "Action completed",
         "approved": "Entry approved",
         "rejected": "Entry rejected",
-        "reversed": "Entry reversed",
+        "reversed": "Entry cancelled",
         "locked": "Period locked",
         "reopened": "Period reopened",
-        "posted": "Transaction recorded and posted",
-        "submitted": "Transaction sent for approval",
-        "recorded": "Transaction recorded"
+        "posted": "Entry recorded and posted",
+        "submitted": "Entry sent for approval",
+        "recorded": "Entry recorded",
+        "updated": "Entry updated, still awaiting approval",
+        "updatedPosted": "Entry updated and posted"
       },
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
         "EVIDENCE_MISSING": "Missing evidence: this category requires supporting documentation or a photo.",
-        "LATE_POSTING": "This transaction was posted to a previous accounting period.",
+        "LATE_POSTING": "This entry was posted to a previous accounting period.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
       },
       "errors": {
         "generic": "The action failed. Please try again. ({code})",
         "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
         "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
-        "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
+        "ENTRY_ALREADY_REVERSED": "This entry has already been cancelled.",
+        "ENTRY_IS_REVERSAL": "This entry is itself a cancellation and cannot be cancelled. To undo it, record the original entry again.",
         "PERIOD_LOCKED": "This period is locked. No postings are possible."
       }
     },
     "navigation": {
-      "label": "Finance sections",
-      "record": "Record",
-      "entries": "Entries",
-      "approvals": "Approvals",
-      "periods": "Periods",
-      "approvalsBadge": "{count, plural, one {# pending approval} other {# pending approvals}}"
+      "record": "Record"
+    },
+    "money": {
+      "lead": {
+        "both": "Every expense and revenue. {open} is open; {locked} is locked.",
+        "open": "Every expense and revenue. {open} is open.",
+        "none": "Every expense and revenue."
+      },
+      "tiles": {
+        "out": "Out in {month}",
+        "in": "In in {month}",
+        "waiting": "Waiting your approval",
+        "waitingHint": "{amount} · oldest {age}",
+        "missing": "Missing receipt",
+        "missingHint": "Oldest {date}"
+      },
+      "lens": {
+        "waiting": "Waiting approval",
+        "out": "Out this month",
+        "in": "In this month",
+        "missing": "Missing receipt",
+        "clear": "Clear filter: {name}"
+      }
     },
     "record": {
-      "title": "Record a transaction",
+      "title": "Record an entry",
       "expenseLabel": "Expense",
       "revenueLabel": "Revenue",
       "categoryLabel": "Category",
       "chooseCategory": "Choose a category…",
       "categoriesFailed": "We couldn't load categories. Retry this page.",
-      "amountLabel": "Amount (XAF)",
+      "amountLabel": "Amount (FCFA)",
       "amountPlaceholder": "0",
       "paymentMethodLabel": "Payment method",
       "paymentMethods": {
@@ -414,32 +477,31 @@
       "counterpartyLabel": "Counterparty (optional)",
       "counterpartyPlaceholder": "Vendor, customer…",
       "descriptionLabel": "Description (optional)",
-      "descriptionPlaceholder": "Transaction details…",
+      "descriptionPlaceholder": "Entry details…",
       "paymentRefLabel": "Payment reference (optional)",
       "paymentRefPlaceholder": "Receipt #, Transfer #…",
       "assetLabel": "Asset (optional)",
       "assetPlaceholder": "Assign to a vehicle…",
       "evidenceLabel": "Supporting document (optional)",
-      "submit": "Record",
-      "submitting": "Recording…",
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch…",
       "branchesFailed": "We couldn't load branches. Retry this page."
     },
     "entries": {
-      "title": "Entries",
+      "title": "Money",
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "retry": "Try again",
       "empty": "No entries recorded yet.",
       "branchEmpty": "No entry recorded for this branch.",
+      "ownScope": "Only the entries you recorded appear here.",
+      "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
-      "recordAction": "Record an entry",
       "status": {
-        "SUBMITTED": "Pending",
+        "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
         "REJECTED": "Rejected",
-        "REVERSED": "Reversed"
+        "REVERSED": "Cancelled"
       },
       "detail": {
         "title": "Entry detail",
@@ -449,9 +511,13 @@
         "status": "Status",
         "category": "Category",
         "amount": "Amount",
+        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue cancellation} EXPENSE_REVERSAL {Expense cancellation} other {Expense}}",
         "date": "Economic date",
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
+        "linkedTo": "Linked to",
+        "workOrderLink": "Work order {ref}",
+        "tripLink": "Activity {number}",
         "paymentMethod": "Payment method",
         "description": "Description",
         "paymentReference": "Payment reference",
@@ -459,44 +525,73 @@
         "postings": "Posting lines",
         "asset": "Asset",
         "postingAmount": "Amount",
-        "reversalChain": "Reversal chain",
-        "reversesEntry": "Reverses entry",
-        "reversedByEntry": "Reversed by entry",
-        "reverseAction": "Reverse",
+        "reversalChain": "Cancellation",
+        "reversesEntry": "Cancellation of entry {number}",
+        "reversedByEntry": "Cancelled by entry {number}",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
-        "breadcrumb": "Detail"
+        "breadcrumb": "Detail",
+        "editAction": "Edit",
+        "receipt": "Receipt",
+        "noReceiptFile": "No file on this entry.",
+        "evidence": {
+          "SUPPLIED": "Receipt on file",
+          "PAYMENT_REFERENCE": "Payment reference",
+          "NOT_EXPECTED": "No receipt expected",
+          "NOT_SUPPLIED": "No receipt"
+        },
+        "evidenceVia": {
+          "RECORDED": "Recorded with the entry · {date} · {name}",
+          "ATTACHED": "Attached later · {date} · {name}"
+        },
+        "cancellationReason": "Reason"
       },
       "viewer": {
         "description": "Economic date {date}",
         "fullScreen": "Open full screen"
       },
       "reversal": {
-        "title": "Reverse entry",
-        "reasonLabel": "Reason for reversal",
-        "reasonPlaceholder": "Explain why this entry is being reversed…",
-        "cancel": "Cancel",
-        "submit": "Reverse",
-        "submitting": "Reversing…",
-        "success": "Entry reversed",
-        "successDesc": "The reversal entry has been created successfully."
+        "reasonLabel": "Why cancel this entry?",
+        "otherLabel": "Say why",
+        "otherPlaceholder": "What happened?",
+        "description": "The entry stays in the books, marked Cancelled. A cancellation line takes its amount out of the totals.",
+        "recordAgainTitle": "Entry cancelled",
+        "recordAgainBody": "Record it again with the right details. The form opens filled in from the cancelled entry.",
+        "recordAgain": "Record again",
+        "done": "Done"
       },
       "filters": {
         "status": "Status",
+        "ledger": "Posted and cancelled",
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
         "assetOption": "{code} — {name}"
+      },
+      "events": {
+        "cancelledIn": "Cancelled in {month}",
+        "cancellationBadge": "Cancellation",
+        "cancellationOf": "Cancellation of entry {number} ({month})",
+        "cancellationOfEntry": "Cancellation of entry {number}",
+        "showCancellation": "Show cancellation",
+        "hideCancellation": "Hide cancellation",
+        "cancellationEntry": "Cancellation entry {number}",
+        "cancelledByOn": "Cancelled by {name} on {date}",
+        "cancelledOn": "Cancelled on {date}",
+        "reason": "Reason: {reason}",
+        "countsZero": "Counts as 0 in the totals",
+        "countsHere": "Still counts in {month}: the cancellation subtracts in {cancelMonth}",
+        "booksView": "Show every line in the books"
       }
     },
     "approvals": {
-      "title": "Approvals",
       "loading": "Loading…",
       "loadFailed": "We couldn't load approvals. Please retry.",
       "retry": "Try again",
       "empty": "No entries awaiting approval.",
       "columns": {
-        "actions": "Actions",
-        "branch": "Branch"
+        "branch": "Branch",
+        "submittedAt": "Submitted",
+        "decision": "Decision"
       },
       "filters": {
         "branch": "Branch",
@@ -504,11 +599,6 @@
       },
       "branchEmpty": "Nothing awaiting approval for {branch}.",
       "outsideBranch": "{count, plural, one {+# pending in another branch} other {+# pending in other branches}}",
-      "makerGuard": "Your submission — another approver must decide",
-      "approve": "Approve",
-      "reject": "Reject",
-      "approveTitle": "Approve entry",
-      "rejectTitle": "Reject entry",
       "noteLabel": "Note",
       "optional": "(optional)",
       "notePlaceholder": "Add a note…",
@@ -517,12 +607,13 @@
       "approved": "Entry approved",
       "rejected": "Entry rejected",
       "warningsLabel": "Notices",
-      "cancel": "Cancel",
-      "submitting": "Working…",
-      "done": "Close"
+      "done": "Close",
+      "noReceipt": "no receipt",
+      "decideRow": "{action} {number}"
     },
     "periods": {
-      "title": "Period management",
+      "title": "Accounting months",
+      "lead": "Each month takes entries until finance locks it. Late corrections go into the open month.",
       "columns": {
         "period": "Period",
         "status": "Status",
@@ -536,24 +627,27 @@
       "statusOpen": "Open",
       "statusLocked": "Locked since {date}",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "lock": "Lock",
-      "reopen": "Reopen",
-      "lockTitle": "Lock period",
-      "reopenTitle": "Reopen period",
       "lockExplanation": "Once locked, no entries can be created for this period.",
       "reasonLabel": "Reason for reopening",
       "reasonPlaceholder": "Explain why this period needs to be reopened…",
       "cancel": "Cancel",
-      "submitting": "Submitting…",
       "locked": "Period locked",
       "reopened": "Period reopened",
       "warningsLabel": "Warnings",
       "warningSubmittedEntries": "This period contains entries awaiting approval.",
       "done": "Close"
+    },
+    "edit": {
+      "title": "Edit entry {number}",
+      "description": "You can change it until someone approves or rejects it. The approver will see what you changed.",
+      "decidedTitle": "This entry has already been decided",
+      "decidedBody": "An approver approved or rejected it while you were editing. Your changes were not saved.",
+      "branchUnknown": "The branch it was recorded in"
     }
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "howCalculated": "How this is calculated"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
@@ -563,6 +657,9 @@
     "view": "View",
     "columns": "Columns",
     "clearFilters": "Clear filters",
+    "filters": "{count, plural, =0 {Filters} other {Filters (#)}}",
+    "filtersTitle": "Filters",
+    "showResults": "Show results",
     "filterAll": "All",
     "rowsPerPage": "Rows per page",
     "pageOf": "Page {page} of {pages}",
@@ -592,19 +689,25 @@
     "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
-    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated."
+    "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
+    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open."
   },
   "activities": {
     "title": "Activities",
     "loadFailed": "We couldn't load activities. Please retry.",
     "loading": "Loading activities…",
     "retry": "Try again",
-    "emptyHint": "No activities yet. Recorded trip sheets will appear here.",
+    "emptyHint": "No activities yet. Recorded sheets will appear here.",
     "branchEmptyHint": "No activity for this branch.",
     "loadMore": "Load more",
     "status": {
-      "OPEN": "Open",
+      "OPEN": "On the road",
       "CLOSED": "Closed"
+    },
+    "state": {
+      "onTheRoad": "On the road",
+      "closed": "Closed",
+      "closedWithGaps": "{count, plural, one {Closed, # gap} other {Closed, # gaps}}"
     },
     "completeness": {
       "COMPLETE": "Complete",
@@ -650,13 +753,13 @@
       "OTHER": "Other"
     },
     "detail": {
+      "breadcrumb": "Activity",
       "loading": "Loading activity…",
       "loadFailed": "We couldn't load this activity.",
       "summary": "Summary",
       "clientReference": "Client ref.",
       "endedAt": "Ended",
       "assets": "Assets and crew",
-      "stillRunning": "still running",
       "legs": "Legs",
       "money": "Revenue and costs",
       "km": "{count} km",
@@ -664,7 +767,6 @@
       "overview": {
         "started": "Started",
         "ended": "Ended",
-        "running": "Running",
         "net": "Net",
         "postedOnly": "posted lines only",
         "legs": "Legs"
@@ -706,30 +808,21 @@
         "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
-        "pendingHint": "Lines awaiting approval are listed but stay out of the net."
+        "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
+        "ownOnly": "Only the entries you recorded on this activity.",
+        "branchOnly": "Only the entries of your branches on this activity."
       }
     },
     "actions": {
-      "close": "Close",
-      "reopen": "Reopen",
-      "substitute": "Substitute asset",
-      "cancel": "Cancel",
-      "submitting": "Submitting…",
       "choose": "Choose",
-      "closeTitle": "Close the activity",
       "closeHint": "Anything missing is flagged on the record, never invented.",
-      "closeSubmit": "Confirm closing",
       "endedAt": "End date and time",
       "endedAtOptional": "End date and time (optional)",
       "note": "Note (optional)",
-      "reopenTitle": "Reopen the activity",
       "reopenHint": "Reopening clears the completeness verdict. The reason stays in the audit trail.",
-      "reopenSubmit": "Confirm reopening",
       "reason": "Reason",
       "reasonPlaceholder": "Why reopen this activity?",
-      "substituteTitle": "Substitute asset",
       "substituteHint": "The outgoing asset stops at the handover; the replacement carries on from there.",
-      "substituteSubmit": "Confirm substitution",
       "outgoing": "Outgoing asset",
       "incoming": "Replacement asset",
       "handoverAt": "Handover date and time",
@@ -738,10 +831,7 @@
       "substituteReason": "Reason (optional)",
       "assetOption": "{code} — {name}",
       "segmentOption": "{code} — {role}",
-      "addLeg": "Add leg",
-      "addLegTitle": "Add a leg",
       "addLegHint": "Leg no. {legNo} of this activity.",
-      "addLegSubmit": "Record the leg",
       "legOrigin": "From",
       "legDestination": "To",
       "legDepartedAt": "Departure time (optional)",
@@ -749,17 +839,11 @@
       "legDistanceKm": "Distance in km (optional)",
       "legLoadState": "Load (optional)",
       "legSegment": "Asset on this leg (optional)",
-      "addReading": "Record reading",
-      "addReadingTitle": "Record a meter reading",
       "addReadingHint": "A reading stays as it was captured; a correction adds a new row.",
-      "addReadingSubmit": "Record the reading",
       "readingAsset": "Asset",
       "readingType": "Unit",
       "readingValue": "Value",
       "readingObservedAt": "Reading date and time",
-      "addExpense": "Record expense",
-      "addExpenseTitle": "Expense on this activity",
-      "addExpenseSubmit": "Record the expense",
       "addExpenseHint": "The expense is attributed to this activity and to the chosen asset.",
       "expenseCategory": "Category",
       "expenseAmount": "Amount",
@@ -776,8 +860,7 @@
         "searchPlaceholder": "Name or staff number…",
         "loading": "Loading people…",
         "loadFailed": "We couldn't load the people list.",
-        "empty": "No person found.",
-        "new": "New person"
+        "empty": "No person found."
       },
       "place": {
         "placeholder": "Town or place",
@@ -787,17 +870,13 @@
       }
     },
     "registerPerson": {
-      "title": "New person",
       "description": "Register a driver, conductor or mechanic without leaving the sheet.",
       "nameLabel": "Full name",
       "namePlaceholder": "e.g. Amadou Bello",
       "roleLabel": "Usual role",
       "rolePlaceholder": "Choose a role",
       "phoneLabel": "Phone",
-      "phonePlaceholder": "6 XX XX XX XX",
-      "submit": "Register",
-      "submitting": "Registering…",
-      "cancel": "Cancel"
+      "phonePlaceholder": "6 XX XX XX XX"
     },
     "notify": {
       "success": {
@@ -827,11 +906,8 @@
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
     },
     "record": {
-      "title": "Record a sheet",
-      "subtitle": "Work down the paper trip sheet. Anything it does not say can stay empty.",
+      "subtitle": "Work down the paper sheet from top to bottom. Anything it does not say can stay empty.",
       "templateLegend": "Sheet type",
-      "journeyTab": "Journey",
-      "haulageTab": "Haulage job",
       "sections": {
         "references": "References",
         "vehicle": "Vehicle and meters",
@@ -947,7 +1023,7 @@
         "expense": "Expense",
         "categoryLabel": "Category",
         "chooseCategory": "Choose a category",
-        "amountLabel": "Amount (XAF)",
+        "amountLabel": "Amount (FCFA)",
         "amountPlaceholder": "e.g. 125 000",
         "amountRequired": "Enter an amount above zero.",
         "paymentMethodLabel": "Payment method",
@@ -962,7 +1038,7 @@
         "personLabel": "Person (optional)",
         "choosePerson": "No person",
         "attributeLabel": "Charge to this activity",
-        "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet.",
+        "attributeHint": "Clear this when the money belongs to the asset rather than the activity: a repair stays off the sheet.",
         "rowAttribute": "Charge line {position} to this activity",
         "rowDirection": "Direction of line {position}",
         "rowCategory": "Category of line {position}",
@@ -980,16 +1056,196 @@
           "BANK": "Bank",
           "OTHER": "Other"
         }
+      }
+    },
+    "subtitle": "Every activity your fleet runs, from start to close.",
+    "metrics": {
+      "thisWeek": "This week",
+      "thisWeekHint": "Started since Monday",
+      "incomplete": "Incomplete data",
+      "incompleteHint": "Closed with exceptions",
+      "weekKm": "Km this week",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "From the legs recorded"
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance",
+    "retry": "Retry",
+    "filters": {
+      "all": "All"
+    },
+    "workOrders": {
+      "tab": "Work orders",
+      "newHint": "Open a work order on an asset, with or without a problem behind it.",
+      "loading": "Loading work orders…",
+      "loadFailed": "Could not load the work orders. Please try again.",
+      "emptyHint": "No work orders yet. Repairs opened here will show up in this list.",
+      "branchEmptyHint": "No work orders for this branch.",
+      "filteredEmpty": "No work orders with this status.",
+      "filters": {
+        "status": "Status"
       },
-      "submit": "Record sheet",
-      "submitting": "Recording…",
-      "submitAndClose": "Record and close",
-      "closingSubmitting": "Closing…"
+      "columns": {
+        "reference": "No.",
+        "asset": "Asset",
+        "branch": "Branch",
+        "description": "Description",
+        "expectedCost": "Expected cost",
+        "actualCost": "Actual cost",
+        "status": "Status"
+      },
+      "status": {
+        "SUBMITTED": "Submitted",
+        "APPROVED": "Approved",
+        "COMPLETION_SUBMITTED": "Completion submitted",
+        "COMPLETED": "Completed",
+        "REJECTED": "Rejected",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "issues": {
+      "tab": "Problems",
+      "newHint": "Describe the fault found on the asset. A safety-critical problem grounds the asset immediately.",
+      "loading": "Loading problems…",
+      "loadFailed": "Could not load the problems. Please try again.",
+      "emptyHint": "No problems yet. Faults reported here will show up in this list.",
+      "branchEmptyHint": "No problems for this branch.",
+      "filteredEmpty": "No problems with this status.",
+      "safetyCritical": "Safety",
+      "unavailable": "Grounded",
+      "noWorkOrder": "None",
+      "filters": {
+        "status": "Status"
+      },
+      "status": {
+        "OPEN": "Open",
+        "RESOLVED": "Resolved",
+        "DISMISSED": "Dismissed"
+      },
+      "columns": {
+        "asset": "Asset",
+        "description": "Description",
+        "safety": "State",
+        "status": "Status",
+        "category": "Category",
+        "reportedAt": "Reported",
+        "workOrders": "Work orders"
+      }
+    },
+    "fields": {
+      "asset": "Asset",
+      "choose": "Choose",
+      "description": "Description",
+      "category": "Category",
+      "categoryPlaceholder": "Brakes, tyres, engine…",
+      "safetyCritical": "Safety-critical",
+      "safetyCriticalHint": "The asset is grounded from the moment this is filed until it is returned to service.",
+      "issue": "Problem",
+      "issueHint": "With no problem linked, the work order is preventive.",
+      "preventive": "Preventive",
+      "expectedCost": "Expected cost",
+      "summary": "Work summary",
+      "resolveLinkedIssue": "Resolve the linked problem",
+      "resolveLinkedIssueHint": "Untick it if the work is done but the problem remains.",
+      "reason": "Reason",
+      "cancelReason": "Cancellation reason",
+      "rejectReason": "Rejection reason",
+      "completionRejectReason": "Why the completion was rejected",
+      "note": "Note",
+      "photos": "Photos (optional)",
+      "overrideReason": "Why no work order was needed",
+      "overrideReasonHint": "The problem was closed without a completed work order. This reason stays on the audit trail."
+    },
+    "actions": {
+      "approveHint": "You authorize the expected spend. The work order moves into repair.",
+      "rejectHint": "You refuse the expected spend. The rejection is final and the reason stays on the audit trail.",
+      "approveCompletionHint": "You accept the declared actual costs. The work order is completed.",
+      "rejectCompletionHint": "The work stays open. The workshop sees the reason and can declare completion again.",
+      "cancelWorkOrderHint": "The work order is abandoned. The reason stays on the audit trail.",
+      "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem.",
+      "releaseSubject": "Work order {reference}",
+      "resolveIssueHint": "The problem has been dealt with, for example fixed on the spot. Resolving does not lift a grounding: only a return to service does.",
+      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail.",
+      "raiseSeverityHint": "The vehicle is grounded as soon as you save, and stays grounded until a manager releases it to service.",
+      "lowerSeverityHint": "The vehicle stays grounded: releasing it to service is a separate step. The reason stays on the audit trail."
+    },
+    "close": {
+      "hint": "Say what was done and what the repair cost.",
+      "costSection": "Repair cost",
+      "loading": "Loading costs already recorded…",
+      "costsFailed": "Couldn't read the costs already recorded. Try again.",
+      "recorded": "Already recorded: {amount} ({count, plural, one {# line} other {# lines}})",
+      "anythingElse": "Anything else to add?",
+      "nothingMore": "No, that's all",
+      "addMore": "Yes, add a cost",
+      "invoicePending": "Invoice not received yet",
+      "noCost": "No cost",
+      "alternatives": "Other answers",
+      "costQuestion": "How much did the repair cost?",
+      "noCostChosen": "No cost: warranty or in-house work.",
+      "invoicePendingChosen": "The work closes now; the invoice is added when it arrives.",
+      "enterAmount": "Enter an amount",
+      "amountQuestion": "How much did the repair cost?",
+      "amountToAdd": "Amount to add",
+      "lineAmount": "Amount",
+      "expectedHint": "Expected: {amount}",
+      "prefilled": "{category} · {date}",
+      "category": "Category",
+      "lineNote": "Detail (optional)",
+      "lineNotePlaceholder": "Parts, labour…",
+      "receipt": "Receipt photo (optional)",
+      "removeLine": "Remove line",
+      "addLine": "Add a line"
+    },
+    "detail": {
+      "chronologie": "Chronology",
+      "chronologieEmpty": "No events recorded.",
+      "recordedAt": "Recorded {date}",
+      "costLines": "Posted costs",
+      "costLinesEmpty": "No costs posted against this work order.",
+      "pendingCostLines": "Costs awaiting review",
+      "pendingCostLinesHint": "Recorded but not yet spent: they are not counted in the posted costs.",
+      "loading": "Loading the chronology…",
+      "loadFailed": "Could not load the chronology. Please try again.",
+      "preventive": "Preventive — no problem",
+      "linkedIssue": "Linked problem",
+      "unavailableTitle": "Asset grounded",
+      "unavailableHint": "Only a return to service reopens availability."
+    },
+    "notify": {
+      "success": {
+        "issueReported": "Problem reported",
+        "issueResolved": "Problem resolved",
+        "issueDismissed": "Problem dismissed",
+        "workOrderCreated": "Work order opened",
+        "workOrderApproved": "Work order approved",
+        "workOrderRejected": "Work order rejected",
+        "workOrderClosed": "Work completed",
+        "workOrderClosedSentOn": "Work completed. Sent for review.",
+        "completionApproved": "Completion approved",
+        "completionRejected": "Completion rejected",
+        "workOrderCancelled": "Work order cancelled",
+        "assetReleased": "Asset returned to service",
+        "severityRaised": "Marked as safety-critical. The vehicle is grounded.",
+        "severityLowered": "Safety-critical mark removed"
+      }
+    },
+    "subtitle": "Problems reported and work orders, from report to repair.",
+    "metrics": {
+      "newProblems": "New problems",
+      "newProblemsHint": "{count, plural, =0 {None safety critical} one {# safety critical} other {# safety critical}}",
+      "grounded": "Grounded",
+      "groundedHint": "Must not be driven",
+      "inProgress": "Work orders in progress",
+      "inProgressHint": "Approved, not yet finished",
+      "repairDays": "Average days to repair",
+      "repairDaysValue": "{days, number} d",
+      "repairDaysHint": "{count, plural, =0 {No repair in the last {window} days} one {# repair in the last {window} days} other {# repairs in the last {window} days}}"
     }
   },
   "persons": {
     "title": "People",
-    "register": "Add a person",
     "searchPlaceholder": "Search a name",
     "branchLabel": "Branch",
     "branchPlaceholder": "Choose a branch",
@@ -1014,7 +1270,8 @@
       "MECHANIC": "Mechanic",
       "CLERK": "Clerk",
       "OTHER": "Other"
-    }
+    },
+    "lead": "The people your fleet works with: drivers, mechanics and crew. A person can drive without signing in."
   },
   "users": {
     "title": "Users",
@@ -1035,12 +1292,12 @@
       "DEACTIVATED": "Deactivated"
     },
     "roles": {
+      "DIRECTOR": "Director",
       "ADMIN": "Administrator",
-      "OPS_MANAGER": "Operations manager",
-      "FIELD_SUBMITTER": "Field submitter",
-      "MAINTENANCE": "Maintenance",
-      "FINANCE_APPROVER": "Finance approver",
-      "EXECUTIVE_VIEWER": "Executive (read-only)"
+      "FINANCE": "Finance",
+      "CASHIER": "Cashier",
+      "TECHNICIAN": "Technician",
+      "DRIVER": "Driver"
     },
     "filters": {
       "status": "Status",
@@ -1048,10 +1305,7 @@
       "includeDeactivated": "Include deactivated"
     },
     "add": {
-      "open": "Add user",
-      "title": "Add a user",
-      "description": "Create access for a member of your team. Hand them their username and PIN yourself: neither is sent anywhere.",
-      "submit": "Add"
+      "description": "Create access for a member of your team. Hand them their username and PIN yourself: neither is sent anywhere."
     },
     "form": {
       "displayName": "Full name",
@@ -1064,28 +1318,28 @@
       "confirmPin": "Confirm PIN",
       "pinMismatch": "The two PINs do not match.",
       "pinTooShort": "The PIN must be at least {min} digits.",
-      "cancel": "Cancel",
-      "submitting": "Sending…"
+      "cancel": "Cancel"
     },
     "actions": {
-      "role": "Change role",
       "roleHint": "Role and branch scope for {name}.",
-      "roleConfirm": "Save",
-      "pin": "Reset PIN",
       "pinHint": "Set a new PIN for {name}. This also unlocks the account and ends their open sessions.",
-      "pinConfirm": "Reset",
-      "deactivate": "Deactivate",
       "deactivateHint": "{name} will no longer be able to sign in. Their history is kept and the account can be reactivated.",
-      "deactivateConfirm": "Deactivate",
-      "reactivate": "Reactivate",
       "reactivateHint": "{name} will be able to sign in again with their current PIN.",
-      "reactivateConfirm": "Reactivate",
       "conflictTitle": "This record changed",
       "conflictBody": "Someone edited this user while you were working. Reload the list and start again.",
-      "reload": "Reload",
-      "pinResetTitle": "PIN reset",
+      "reload": "Reload"
+    },
+    "notify": {
+      "success": {
+        "added": "User added: {name}",
+        "roleChanged": "Role updated: {name}",
+        "pinReset": "PIN reset: {name}",
+        "deactivated": "User deactivated: {name}",
+        "reactivated": "User reactivated: {name}"
+      },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
-    }
+    },
+    "lead": "Who can sign in, with which role and in which branches."
   },
   "branches": {
     "title": "Branches",
@@ -1104,10 +1358,7 @@
       "inactive": "Deactivated"
     },
     "add": {
-      "open": "New branch",
-      "title": "New branch",
-      "description": "Create a branch in your workspace. It becomes available in the forms and in user scope straight away.",
-      "submit": "Create"
+      "description": "Create a branch in your workspace. It becomes available in the forms and in user scope straight away."
     },
     "form": {
       "code": "Code",
@@ -1116,23 +1367,28 @@
       "nameTooLong": "The name must be at most {max} characters.",
       "name": "Name",
       "timezone": "Time zone",
-      "cancel": "Cancel",
-      "submitting": "Sending…"
+      "cancel": "Cancel"
     },
     "actions": {
-      "rename": "Rename",
       "renameHint": "New name for “{name}”. The code stays as it is.",
-      "renameConfirm": "Save",
-      "deactivate": "Deactivate",
       "deactivateHint": "No new operation will be able to target “{name}”. Existing records and history are kept.",
-      "deactivateConfirm": "Deactivate",
-      "reactivate": "Reactivate",
       "reactivateHint": "“{name}” will be able to receive operations again.",
-      "reactivateConfirm": "Reactivate",
       "conflictTitle": "This branch changed",
       "conflictBody": "Someone edited this branch while you were working. Reload the list and start again.",
       "reload": "Reload"
-    }
+    },
+    "notify": {
+      "success": {
+        "created": "Branch created: {name}",
+        "renamed": "Branch renamed: {name}",
+        "deactivated": "Branch deactivated: {name}",
+        "reactivated": "Branch reactivated: {name}"
+      },
+      "info": {
+        "switched": "You are viewing: {branch}"
+      }
+    },
+    "lead": "Branches group vehicles, people and money by site. Each user sees the branches they are given."
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -1170,13 +1426,17 @@
       "empty": "No detailed changes",
       "none": "—",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "lines": "{count, plural, one {# line} other {# lines}}, {total}",
+      "linesCount": "{count, plural, one {# line} other {# lines}}",
+      "unavailable": "Not available"
     },
     "event": {
+      "other": "Other change",
       "activity-created": "Activity created",
       "activity-closed": "Activity closed",
       "activity-reopened": "Activity reopened",
-      "activity-sheet_recorded": "Trip sheet recorded",
+      "activity-sheet_recorded": "Sheet recorded",
       "activity-asset_substituted": "Asset substituted",
       "movement_leg-recorded": "Leg recorded",
       "meter_reading-recorded": "Meter reading recorded",
@@ -1191,8 +1451,8 @@
       "financial_entry-submitted": "Entry submitted for approval",
       "financial_entry-approved": "Entry approved",
       "financial_entry-rejected": "Entry rejected",
-      "financial_entry-reversed": "Entry reversed",
-      "financial_entry-reversal_posted": "Reversal posted",
+      "financial_entry-reversed": "Entry cancelled",
+      "financial_entry-reversal_posted": "Cancellation posted",
       "posting_period-locked": "Period locked",
       "posting_period-reopened": "Period reopened",
       "approval-threshold-updated": "Approval threshold updated",
@@ -1204,7 +1464,30 @@
       "module-disabled": "Module disabled",
       "template_preset-materialized": "Business preset enabled",
       "template_preset-disabled": "Business preset disabled",
-      "workspace-provisioned": "Workspace provisioned"
+      "workspace-provisioned": "Workspace provisioned",
+      "operational_issue-reported": "Problem reported",
+      "operational_issue-resolved": "Problem resolved",
+      "operational_issue-dismissed": "Problem dismissed",
+      "work_order-created": "Work order created",
+      "work_order-submitted": "Work order submitted",
+      "work_order-approved": "Work order approved",
+      "work_order-rejected": "Work order rejected",
+      "work_order-completion_submitted": "Completion submitted for approval",
+      "work_order-completed": "Work order completed",
+      "work_order-completion_approved": "Completion approved",
+      "work_order-completion_rejected": "Completion rejected",
+      "work_order-cancelled": "Work order cancelled",
+      "work_order-asset_released": "Asset returned to service",
+      "work_order-opened": "Work order opened",
+      "work_order-closure_submitted": "Closure declared",
+      "work_order-closed": "Work order closed",
+      "work_order-closure_approved": "Closure validated",
+      "asset_availability-opened": "Asset grounded",
+      "asset_availability-closed": "Grounding lifted",
+      "financial_entry-updated": "Entry edited",
+      "operational_issue-severity_raised": "Marked safety-critical",
+      "operational_issue-severity_lowered": "Safety-critical mark removed",
+      "note-acknowledged": "Note marked as seen"
     },
     "field": {
       "status": "status",
@@ -1252,7 +1535,7 @@
       "model": "model",
       "lifecycleStatus": "lifecycle status",
       "commissionedAt": "commissioned",
-      "custodianMembershipId": "custodian",
+      "custodianMembershipId": "assigned driver",
       "membershipId": "member",
       "personCode": "staff number",
       "displayName": "name",
@@ -1307,12 +1590,13 @@
       "paymentReference": "payment reference",
       "sourceReference": "source reference",
       "approvalNote": "approval note",
-      "reversesEntryId": "reversed entry",
-      "reversedByEntryId": "reversal entry",
+      "reversesEntryId": "cancelled entry",
+      "reversedByEntryId": "cancellation",
       "loadState": "load state",
       "passengerCount": "passenger count",
       "commandType": "command",
       "branch": "branch",
+      "branches": "branches",
       "defaultCurrency": "default currency",
       "defaultLocale": "default language",
       "disabledModules": "disabled modules",
@@ -1323,7 +1607,1196 @@
       "timezone": "timezone",
       "moduleCode": "module",
       "updatedAt": "updated",
-      "presetCode": "business preset"
+      "presetCode": "business preset",
+      "expectedCostMinor": "expected cost",
+      "actualCostMinor": "actual cost",
+      "declaredCostMinor": "declared cost",
+      "costOutcome": "cost at close",
+      "summary": "work summary",
+      "completedAt": "work completed",
+      "cancelReason": "cancellation reason",
+      "cancelledAt": "cancelled",
+      "closedByCommandId": "closing command",
+      "issueId": "problem",
+      "openedByIssueId": "originating problem",
+      "openedAt": "opened",
+      "reportedAt": "reported",
+      "safetyCritical": "safety-critical",
+      "category": "category",
+      "resolveLinkedIssue": "resolve linked problem",
+      "rejectReason": "rejection reason",
+      "rejectedAt": "rejected",
+      "completionRejectReason": "completion rejection reason",
+      "overrideReason": "override reason",
+      "availabilityIntervalId": "grounding",
+      "releasedAt": "returned to service",
+      "releaseNote": "release note",
+      "resolvedAt": "resolved",
+      "resolutionNote": "resolution note",
+      "resolvedByWorkOrderId": "resolved by work order",
+      "dismissedAt": "dismissed",
+      "dismissReason": "dismissal reason",
+      "defaultSafetyCritical": "safety-critical by default",
+      "postings": "posting lines",
+      "reasonCode": "reason",
+      "artifactIds": "files",
+      "body": "note"
+    },
+    "code": {
+      "entryDirection": {
+        "EXPENSE": "Expense",
+        "REVENUE": "Revenue"
+      },
+      "estimateStatus": {
+        "ACTUAL": "Actual amount",
+        "ESTIMATED": "Estimate"
+      },
+      "periodStatus": {
+        "OPEN": "Open",
+        "LOCKED": "Locked"
+      },
+      "costOutcome": {
+        "LINES": "Costs posted as lines",
+        "NO_COST": "No cost",
+        "INVOICE_PENDING": "Invoice not received yet"
+      },
+      "module": {
+        "CORE": "Core",
+        "ASSETS": "Fleet",
+        "DOCUMENTS": "Documents",
+        "FINANCE": "Finance",
+        "ACTIVITIES": "Activities",
+        "MAINTENANCE": "Maintenance"
+      },
+      "categoryKind": {
+        "ASSET_CLASS": "Asset class",
+        "ACTIVITY_TYPE": "Activity type",
+        "REVENUE_CATEGORY": "Revenue category",
+        "EXPENSE_CATEGORY": "Expense category",
+        "DOCUMENT_TYPE": "Document type",
+        "ISSUE_TYPE": "Problem type"
+      },
+      "evidencePolicy": {
+        "RECEIPT_EXPECTED": "Receipt expected",
+        "NO_RECEIPT_EXPECTED": "No receipt expected"
+      }
+    }
+  },
+  "dateField": {
+    "placeholderDate": "mm/dd/yyyy",
+    "placeholderDateTime": "mm/dd/yyyy hh:mm",
+    "openCalendar": "Open calendar",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "time": "Time",
+    "done": "Done",
+    "invalidDate": "Date not recognised. Write it like this: {example}",
+    "invalidDateTime": "Date and time not recognised. Write them like this: {example}",
+    "tooEarly": "No earlier than {min}.",
+    "tooLate": "No later than {max}."
+  },
+  "calendar": {
+    "previousYear": "Previous year",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "nextYear": "Next year"
+  },
+  "datePicker": {
+    "placeholder": "Pick a date",
+    "clear": "Clear"
+  },
+  "commandForm": {
+    "cancel": "Cancel",
+    "submitting": "Saving…",
+    "close": "Close",
+    "reload": "Refresh",
+    "backTo": "Back to {record}",
+    "conflictTitle": "Modified elsewhere",
+    "conflictBody": "Someone else changed this record. Refresh, review, then reapply your action.",
+    "approvalTitle": "Approval required",
+    "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
+    "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
+    "issue": "{field}: {message}",
+    "discardTitle": "Discard this form?",
+    "discardBody": "What you typed will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
+  },
+  "commands": {
+    "register-asset": {
+      "label": "Register an asset",
+      "submit": "Register asset",
+      "submitting": "Registering…"
+    },
+    "add-or-renew-document": {
+      "label": "Add a document",
+      "submit": "Save document",
+      "submitting": "Saving…",
+      "short": "Document",
+      "renew": {
+        "label": "Renew document",
+        "short": "Renew",
+        "submit": "Save renewal"
+      }
+    },
+    "assign-asset": {
+      "label": "Transfer home branch",
+      "submit": "Transfer home branch",
+      "submitting": "Transferring…",
+      "short": "Transfer",
+      "custodian": {
+        "label": "Change assigned driver",
+        "short": "Assigned driver",
+        "submit": "Change assigned driver"
+      }
+    },
+    "register-person": {
+      "label": "Add a person",
+      "submit": "Register person",
+      "submitting": "Registering…"
+    },
+    "create-activity": {
+      "label": "Create an activity",
+      "submit": "Create activity",
+      "submitting": "Creating…"
+    },
+    "record-movement-leg": {
+      "label": "Add a leg",
+      "submit": "Record the leg",
+      "submitting": "Recording…"
+    },
+    "record-meter-reading": {
+      "label": "Record odometer",
+      "submit": "Record the reading",
+      "submitting": "Recording…",
+      "short": "Odometer"
+    },
+    "substitute-asset": {
+      "label": "Substitute asset",
+      "submit": "Substitute asset",
+      "submitting": "Substituting…"
+    },
+    "record-journey-sheet": {
+      "label": "Record a sheet",
+      "submit": "Record sheet",
+      "submitting": "Recording…",
+      "short": "Sheet",
+      "close": {
+        "label": "Record and close",
+        "submit": "Record and close",
+        "submitting": "Closing…"
+      }
+    },
+    "record-haulage-job-sheet": {
+      "label": "Record a sheet",
+      "submit": "Record sheet",
+      "submitting": "Recording…"
+    },
+    "record-expense": {
+      "label": "Record expense",
+      "submit": "Record the expense",
+      "submitting": "Recording…",
+      "short": "Expense",
+      "fuel": {
+        "label": "Log fuel",
+        "short": "Fuel",
+        "submit": "Save fuel"
+      }
+    },
+    "record-revenue": {
+      "label": "Record revenue",
+      "submit": "Record the revenue",
+      "submitting": "Recording…",
+      "short": "Revenue"
+    },
+    "report-issue": {
+      "label": "Report a problem",
+      "submit": "Report the problem",
+      "submitting": "Reporting…",
+      "short": "Problem"
+    },
+    "resolve-issue": {
+      "label": "Mark resolved",
+      "submit": "Mark resolved",
+      "submitting": "Saving…"
+    },
+    "create-work-order": {
+      "label": "Create work order",
+      "submit": "Create the work order",
+      "submitting": "Creating…",
+      "short": "Work order"
+    },
+    "complete-work-order": {
+      "label": "Complete work",
+      "submit": "Complete work",
+      "submitting": "Submitting…",
+      "short": "Complete"
+    },
+    "add-note": {
+      "label": "Add note",
+      "submit": "Add the note",
+      "submitting": "Saving…",
+      "short": "Note"
+    },
+    "attach-evidence": {
+      "label": "Attach receipt",
+      "submit": "Attach the receipt",
+      "submitting": "Attaching…",
+      "short": "Receipt"
+    },
+    "close-activity": {
+      "label": "Close the activity",
+      "submit": "Close the activity",
+      "submitting": "Closing…"
+    },
+    "reopen-activity": {
+      "label": "Reopen the activity",
+      "submit": "Reopen the activity",
+      "submitting": "Reopening…"
+    },
+    "commission-asset": {
+      "label": "Commission",
+      "submit": "Commission",
+      "submitting": "Commissioning…",
+      "short": "Commission"
+    },
+    "approve-entry": {
+      "label": "Approve entry",
+      "submit": "Approve entry",
+      "submitting": "Approving…"
+    },
+    "reject-entry": {
+      "label": "Reject entry",
+      "submit": "Reject entry",
+      "submitting": "Rejecting…",
+      "dismiss": "Keep entry"
+    },
+    "reverse-entry": {
+      "label": "Cancel entry",
+      "submit": "Cancel entry",
+      "submitting": "Cancelling…",
+      "short": "Cancel entry",
+      "dismiss": "Keep entry"
+    },
+    "lock-period": {
+      "label": "Lock period",
+      "submit": "Lock period",
+      "submitting": "Locking…"
+    },
+    "reopen-period": {
+      "label": "Reopen period",
+      "submit": "Reopen period",
+      "submitting": "Reopening…"
+    },
+    "enable-module": {
+      "label": "Enable module",
+      "submit": "Enable module",
+      "submitting": "Enabling…"
+    },
+    "disable-module": {
+      "label": "Disable module",
+      "submit": "Disable module",
+      "submitting": "Disabling…"
+    },
+    "update-approval-threshold": {
+      "label": "Change approval thresholds",
+      "submit": "Save thresholds",
+      "submitting": "Saving…"
+    },
+    "create-category": {
+      "label": "Create a category",
+      "submit": "Create category",
+      "submitting": "Creating…"
+    },
+    "relabel-category": {
+      "label": "Rename category",
+      "submit": "Rename category",
+      "submitting": "Saving…"
+    },
+    "deactivate-category": {
+      "label": "Deactivate category",
+      "submit": "Deactivate category",
+      "submitting": "Deactivating…"
+    },
+    "reactivate-category": {
+      "label": "Reactivate category",
+      "submit": "Reactivate category",
+      "submitting": "Reactivating…"
+    },
+    "set-template-preset": {
+      "label": "Choose templates",
+      "submit": "Save templates",
+      "submitting": "Saving…"
+    },
+    "create-branch": {
+      "label": "Create a branch",
+      "submit": "Create branch",
+      "submitting": "Creating…"
+    },
+    "rename-branch": {
+      "label": "Rename branch",
+      "submit": "Rename branch",
+      "submitting": "Saving…"
+    },
+    "set-branch-status": {
+      "label": "Change branch status",
+      "submit": "Change status",
+      "submitting": "Saving…",
+      "deactivate": {
+        "label": "Deactivate branch",
+        "submit": "Deactivate branch",
+        "submitting": "Deactivating…"
+      },
+      "reactivate": {
+        "label": "Reactivate branch",
+        "submit": "Reactivate branch",
+        "submitting": "Reactivating…"
+      }
+    },
+    "add-member": {
+      "label": "Add a user",
+      "submit": "Add user",
+      "submitting": "Adding…"
+    },
+    "update-member-role": {
+      "label": "Change role",
+      "submit": "Save role",
+      "submitting": "Saving…"
+    },
+    "deactivate-member": {
+      "label": "Deactivate user",
+      "submit": "Deactivate user",
+      "submitting": "Deactivating…"
+    },
+    "reactivate-member": {
+      "label": "Reactivate user",
+      "submit": "Reactivate user",
+      "submitting": "Reactivating…"
+    },
+    "reset-member-pin": {
+      "label": "Reset PIN",
+      "submit": "Reset PIN",
+      "submitting": "Resetting…"
+    },
+    "cancel-work-order": {
+      "label": "Cancel work order",
+      "submit": "Cancel work order",
+      "submitting": "Cancelling…",
+      "short": "Cancel order",
+      "dismiss": "Keep work order"
+    },
+    "release-asset-to-service": {
+      "label": "Release to service",
+      "submit": "Release to service",
+      "submitting": "Releasing…",
+      "short": "Release"
+    },
+    "update-asset-details": {
+      "label": "Edit details",
+      "submit": "Save details",
+      "submitting": "Saving…"
+    },
+    "approve-work-order": {
+      "label": "Authorize work order",
+      "submit": "Authorize work order",
+      "submitting": "Authorizing…",
+      "short": "Authorize"
+    },
+    "approve-work-order-closure": {
+      "label": "Sign off the work",
+      "submit": "Sign off the work",
+      "submitting": "Signing off…",
+      "short": "Sign off"
+    },
+    "reject-work-order": {
+      "label": "Reject work order",
+      "submit": "Reject work order",
+      "submitting": "Rejecting…",
+      "dismiss": "Keep work order"
+    },
+    "reject-work-order-completion": {
+      "label": "Reject the completion",
+      "submit": "Reject the completion",
+      "submitting": "Rejecting…",
+      "dismiss": "Back"
+    },
+    "dismiss-issue": {
+      "label": "Dismiss the problem",
+      "submit": "Dismiss the problem",
+      "submitting": "Dismissing…",
+      "dismiss": "Keep it open"
+    },
+    "update-pending-entry": {
+      "label": "Edit entry",
+      "submit": "Save changes",
+      "submitting": "Saving…"
+    },
+    "acknowledge-approval-rules": {
+      "label": "Confirm you read the approval rules",
+      "short": "Rules read",
+      "submit": "Got it",
+      "submitting": "Saving…",
+      "dismiss": "Later"
+    },
+    "change-issue-severity": {
+      "label": "Mark as safety-critical",
+      "submit": "Mark as safety-critical",
+      "submitting": "Saving…",
+      "lower": {
+        "label": "Remove the safety-critical mark",
+        "submit": "Remove the mark",
+        "dismiss": "Keep the mark"
+      }
+    },
+    "acknowledge-note": {
+      "label": "Mark as seen",
+      "submit": "Mark as seen",
+      "submitting": "Saving…"
+    }
+  },
+  "vehicle": {
+    "forms": {
+      "pinnedVehicle": "Vehicle",
+      "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
+      "fuel": {
+        "description": "Records the fuel expense, then the odometer if you enter it.",
+        "amount": "Amount paid (FCFA)",
+        "when": "Date and time",
+        "station": "Station (optional)",
+        "odometer": "Odometer in km (optional)",
+        "receipt": "Receipt photo (optional)",
+        "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
+        "readingSaved": "Odometer reading saved"
+      },
+      "note": {
+        "description": "A remark on the vehicle's history. Notes are never edited; a correction is another note.",
+        "label": "Note",
+        "placeholder": "What should others know about this vehicle?"
+      },
+      "evidence": {
+        "description": "Adds proof to this entry. The entry itself is not edited.",
+        "entry": "Entry",
+        "files": "Photo or PDF",
+        "hint": "Add at least one file."
+      },
+      "custodian": {
+        "label": "New assigned driver",
+        "choose": "Choose a member",
+        "none": "Nobody (clear the assigned driver)",
+        "current": "Current: {name}.",
+        "currentNone": "Currently nobody.",
+        "hint": "Only workspace members whose branches cover this vehicle can be its assigned driver. A driver without a login is not offered.",
+        "empty": "No member can be this vehicle's assigned driver yet."
+      }
+    },
+    "page": {
+      "notFound": "This vehicle does not exist or is outside your branches."
+    },
+    "severity": {
+      "CRITICAL": "Urgent",
+      "WARNING": "Soon",
+      "INFO": "For information"
+    },
+    "tabs": {
+      "label": "Vehicle sections",
+      "now": "Overview",
+      "maintenance": "Maintenance",
+      "money": "Money",
+      "trips": "Activities",
+      "documents": "Documents",
+      "history": "History",
+      "details": "Details",
+      "toDoCount": "{count, plural, one {thing to do} other {things to do}}",
+      "needsYou": "Needs you"
+    },
+    "header": {
+      "home": "Home: {branch}",
+      "noPlate": "No plate",
+      "moreActions": "More actions"
+    },
+    "facts": {
+      "custodian": "Assigned driver {name}",
+      "nobody": "none",
+      "reading": "{readingType, select, HOURS {Hour meter} other {Odometer}} {value}, {ago}",
+      "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
+      "noReading": "No odometer reading yet",
+      "locationNoReport": "Location: no report",
+      "lifecycleSince": "{status} since {since}"
+    },
+    "details": {
+      "rightNow": "Right now",
+      "vehicle": "Vehicle",
+      "specifications": "Specifications",
+      "availability": "Availability",
+      "available": "Available",
+      "availableSince": "Available since {date}",
+      "groundedSince": "Grounded since {date}",
+      "notAssessed": "Not assessed: the maintenance module is off",
+      "lifecycle": "Lifecycle",
+      "lifecycleSince": "{status} since {date}",
+      "homeBranch": "Home branch",
+      "homeBranchValue": "{branch}, administrative home",
+      "custodian": "Assigned driver",
+      "custodianSince": "{name} since {date}",
+      "custodianInactive": "Access deactivated",
+      "nobodyAssigned": "Nobody assigned",
+      "reportedLocation": "Reported location",
+      "reportedLocationNone": "No report. Locations are reported by people, not GPS.",
+      "odometer": "Odometer",
+      "readingMeta": "{date} · {source} · {by}",
+      "fleetCode": "Fleet code",
+      "plate": "Plate",
+      "makeModel": "Make and model",
+      "year": "Year",
+      "class": "Class",
+      "chassis": "Chassis number",
+      "acquired": "Acquired",
+      "acquiredWithAmount": "{date} · {amount}",
+      "notRecorded": "Not recorded",
+      "noSpecifications": "No specifications for this template.",
+      "edit": {
+        "tooltip": "Edit vehicle details",
+        "cancel": "Cancel",
+        "make": "Make",
+        "model": "Model",
+        "acquisitionDate": "Acquisition date",
+        "acquisitionAmount": "Acquisition amount",
+        "ownActions": "Changed through its own actions",
+        "conflict": "Someone else changed this vehicle. Reload to see their changes.",
+        "reload": "Reload",
+        "disposed": "{status, select, SOLD {This vehicle is sold; its details can't be changed.} RETIRED {This vehicle is retired; its details can't be changed.} other {This vehicle is written off; its details can't be changed.}}",
+        "errors": {
+          "yearRange": "Enter a year between {min} and {max}.",
+          "dateInFuture": "The acquisition date can't be in the future.",
+          "amountWhole": "Enter the amount in whole francs, without decimals.",
+          "amountNeedsDate": "Add the acquisition date to record an amount.",
+          "chassisTooLong": "The chassis number is too long ({max} characters at most).",
+          "notANumber": "Enter a number.",
+          "fixFields": "Fix the fields in red, then save again."
+        }
+      }
+    },
+    "status": {
+      "grounded": {
+        "lead": "{days, plural, =0 {Grounded since today} one {Grounded since yesterday} other {Grounded for # days}} — reported: “{report}”.",
+        "noWorkOrder": "Nobody has planned the repair yet: problem {issue} has no work order.",
+        "repairRefused": "The repair was refused ({workOrder}); nobody has planned another yet.",
+        "awaitingAuthorization": "The repair ({workOrder}) is waiting for a manager to authorize it.",
+        "inProgress": "Waiting on the workshop to finish the repair ({workOrder}).",
+        "completionSentBack": "The completion of {workOrder} was sent back; waiting on the workshop to finish it.",
+        "awaitingSignOff": "The repair is done; waiting on a manager to sign off {workOrder}.",
+        "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
+        "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
+        "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
+        "doNotDrive": "Do not drive it until a manager releases it to service."
+      },
+      "repairedLead": "Repair done — waiting for release to service.",
+      "available": {
+        "lead": "Available.",
+        "sinceAndTrip": "In service since {since}; last activity {lastTrip}.",
+        "sinceNoTrips": "In service since {since}; no activities yet.",
+        "lastTripOnly": "Last activity {lastTrip}.",
+        "noTrips": "No activities yet."
+      },
+      "notAssessed": {
+        "lead": "Availability not assessed.",
+        "follow": "The maintenance module is off, so nobody records whether this vehicle may be used."
+      },
+      "registered": {
+        "lead": "Registered, not in service yet.",
+        "follow": "Commission it to start its operating history."
+      },
+      "disposed": {
+        "lead": "{status, select, SOLD {Sold.} RETIRED {Retired.} other {Written off.}}",
+        "follow": "Its history stays readable; nothing new can be recorded."
+      },
+      "alsoDocumentExpired": "Also: {document} expired on {date}.",
+      "openRecord": "{kind, select, work_order {Open work order {ref}} issue {Open problem {ref}} other {Open}}",
+      "lockedCaption": "{step} · {reason}"
+    },
+    "steps": {
+      "review-entry": "Review"
+    },
+    "locked": {
+      "needsAuthorization": "Needs a manager to authorize {ref} first.",
+      "needsCompletion": "Needs {ref} completed first.",
+      "needsSignOff": "Needs {ref} signed off.",
+      "needsAll": "Needs {ref} authorized and completed.",
+      "needsWorkOrder": "Needs a completed work order, or the problem closed.",
+      "makerCannotApprove": "You created {ref}; someone else authorizes it.",
+      "completerCannotSignOff": "You completed {ref}; someone else signs it off.",
+      "youRecordedIt": "You recorded it; someone else reviews it.",
+      "directionDecides": "Above your approval band: the Director decides.",
+      "selfReleaseForbidden": "You vouched for the repair of a safety-critical problem; someone else releases the vehicle.",
+      "humanOnly": "Only a person can release a vehicle to service.",
+      "notGrounded": "The vehicle is not grounded.",
+      "noWorkOrderInProgress": "No work order in progress.",
+      "noOpenWorkOrder": "No open work order.",
+      "nothingAwaitingAuthorization": "Nothing waiting for authorization.",
+      "nothingAwaitingSignOff": "No completed work waiting for sign-off.",
+      "nothingAwaitingReview": "Nothing waiting for review.",
+      "noEntryMissingReceipt": "No entry is missing a receipt.",
+      "nothingToRenew": "No document is expired or expiring. Renew one from Documents.",
+      "noRevenueCategory": "No revenue category is set up for this workspace.",
+      "alreadyInService": "Already in service.",
+      "vehicleDisposed": "The vehicle has left the fleet; nothing new can be recorded."
+    },
+    "waiting": {
+      "label": "Waiting on",
+      "others": "Waiting on others",
+      "finance": "Finance",
+      "workshop": "The workshop",
+      "manager": "A manager",
+      "operations": "Operations",
+      "recorder": "Whoever recorded it",
+      "team": "The team"
+    },
+    "now": {
+      "todo": {
+        "title": "To do",
+        "description": "What needs you on this vehicle, most urgent first.",
+        "descriptionBesides": "Besides the repair above, what needs you on this vehicle.",
+        "emptyTitle": "Nothing needs you right now.",
+        "emptyTitleBesides": "Nothing else needs you on this vehicle.",
+        "emptyHint": "When something does, it shows up here with one button to handle it.",
+        "loadFailed": "We couldn't load what needs you on this vehicle."
+      },
+      "month": {
+        "description": "This vehicle's share",
+        "posted": "Posted expenses",
+        "postedHint": "Posted is not the same as paid",
+        "review": "Awaiting review",
+        "reviewHint": "{count, plural, one {# entry, not counted in posted} other {# entries, not counted in posted}}",
+        "missing": "Missing receipts",
+        "missingHint": "Recorded without proof",
+        "seeMoney": "See money"
+      },
+      "recent": {
+        "title": "Recent",
+        "seeAll": "See all history",
+        "meta": "{name} · {date}"
+      }
+    },
+    "attention": {
+      "ISSUE_UNPLANNED": {
+        "title": "Problem {ref} has no work order",
+        "detail": "{description}"
+      },
+      "ISSUE_OPEN_WHILE_AVAILABLE": {
+        "title": "Problem {ref} is still open",
+        "detail": "{description}. The vehicle was released; resolve or dismiss the problem."
+      },
+      "WORK_ORDER_AWAITING_AUTHORIZATION": {
+        "title": "{ref} awaiting authorization",
+        "detail": "{description}",
+        "detailWithCost": "{description} · {expected} expected"
+      },
+      "WORK_ORDER_IN_PROGRESS": {
+        "title": "{ref} in progress",
+        "detail": "{description}",
+        "detailSentBack": "Completion sent back: {reason}"
+      },
+      "WORK_ORDER_AWAITING_SIGN_OFF": {
+        "title": "{ref} awaiting sign-off",
+        "detail": "{description}",
+        "detailCosts": "{actual} actual vs {expected} expected",
+        "detailActual": "{actual} actual"
+      },
+      "ASSET_AWAITING_RELEASE": {
+        "title": "Ready to release to service",
+        "detail": "{override, select, yes {The problem was closed without a repair; the release needs a reason.} other {The repair is completed.}}"
+      },
+      "DOCUMENT_EXPIRED": {
+        "title": "{type} expired",
+        "detail": "Expired on {date}."
+      },
+      "DOCUMENT_EXPIRING": {
+        "title": "{type} expires in {days, plural, one {# day} other {# days}}",
+        "detail": "Valid until {date}."
+      },
+      "ENTRY_AWAITING_REVIEW": {
+        "title": "{category} awaiting review",
+        "detail": "{ref} · {amount}, recorded by {name}."
+      },
+      "ENTRY_EVIDENCE_MISSING": {
+        "title": "Receipt missing",
+        "detail": "{ref} · {amount}, recorded by {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note from Direction · {name} · {when}",
+        "badge": "Note from Direction"
+      }
+    },
+    "maintenance": {
+      "title": "Maintenance",
+      "description": "Problems reported on this vehicle, and the work orders that fix them.",
+      "loading": "Loading maintenance…",
+      "loadFailed": "We couldn't load the maintenance records.",
+      "workOrders": "Work orders",
+      "workOrdersHint": "Work in progress. Parts and labour are recorded as entries linked to the order.",
+      "workOrdersEmpty": "No work in progress. Plan one from a reported problem when something needs fixing.",
+      "newProblems": "New problems",
+      "newProblemsHint": "Reported, but not planned into a work order yet.",
+      "newProblemsEmpty": "No new problems. Report one if something is wrong.",
+      "done": "Done",
+      "doneSummary": "{workOrders, plural, one {# work order} other {# work orders}}, {problems, plural, one {# closed problem} other {# closed problems}}",
+      "nextStepYours": "Next step is yours",
+      "notPlanned": "Not planned yet",
+      "inWorkOrder": "In a work order",
+      "fromProblem": "from problem {ref}",
+      "planned": "{amount} planned",
+      "noEstimate": "No estimate",
+      "overBudget": "+{percent}%",
+      "doneOn": "Done {date}",
+      "cancelledOn": "Cancelled {date}",
+      "refusedOn": "Refused {date}",
+      "openedOn": "Opened {date}",
+      "reported": "reported",
+      "safetyCritical": "Safety-critical"
+    },
+    "money": {
+      "title": "Money",
+      "titleFor": "Money · {period}",
+      "description": "This vehicle's share of each entry. Awaiting review is never added to posted; posted is not paid.",
+      "periodLabel": "Month",
+      "periodPrev": "Previous month",
+      "periodNext": "Next month",
+      "loading": "Loading money…",
+      "loadFailed": "We couldn't load this vehicle's money.",
+      "posted": "Posted expenses",
+      "postedHint": "All layers · posted is not paid",
+      "postedBasis": "By posting period: what the books say for this month.",
+      "economicBasis": "By economic month: when the money was spent.",
+      "review": "Awaiting review",
+      "reviewHint": "{count, plural, one {# entry · not in posted} other {# entries · not in posted}}",
+      "missing": "Missing receipts",
+      "missingHint": "Recorded without proof",
+      "revenue": "Posted revenue",
+      "revenueHint": "Posted is not cash received",
+      "entryCount": "{count, plural, one {# entry} other {# entries}}",
+      "byCategory": "Spending by category",
+      "byCategoryHint": "Posted, {period}",
+      "lastSixMonths": "Last 6 months",
+      "lastSixMonthsHint": "Posted entries by posting period",
+      "totalPosted": "Total posted",
+      "noPostedExpenses": "No posted expenses this month.",
+      "expenses": "Expenses",
+      "revenueLegend": "Revenue",
+      "monthBar": "{month}: expenses {expenses}, revenue {revenue}",
+      "entries": "Entries",
+      "entriesHint": "Nothing is edited: a cancellation in the same month folds under its entry; one from a later month is listed in that month.",
+      "filterLabel": "Show entries",
+      "filters": {
+        "posted": "Posted",
+        "expenses": "Expenses",
+        "revenue": "Revenue",
+        "review": "Awaiting review",
+        "rejected": "Rejected",
+        "missing": "Missing receipt"
+      },
+      "noEntries": "No entries match this filter.",
+      "forTrip": "for activity {number}",
+      "forWorkOrder": "for work order {ref}",
+      "ofEntry": "of a {amount} entry",
+      "lifetime": "Lifetime, all posted entries since registration: revenue {revenue} · expenses {expenses} · net {net}. Recorded figures, not cash paid or profit."
+    },
+    "layers": {
+      "DIRECT": "Direct",
+      "MAINTENANCE": "Maintenance",
+      "OWNERSHIP": "Ownership",
+      "SHARED": "Shared"
+    },
+    "evidence": {
+      "SUPPLIED": "Receipt on file",
+      "PAYMENT_REFERENCE": "Payment reference",
+      "NOT_EXPECTED": "No receipt expected",
+      "NOT_SUPPLIED": "No receipt"
+    },
+    "trips": {
+      "title": "Activities",
+      "description": "Activities with this vehicle",
+      "descriptionWithKm": "Activities with this vehicle · {km, number} km recorded",
+      "empty": "No activities yet. Start one when the vehicle leaves the depot.",
+      "loading": "Loading…",
+      "loadFailed": "We couldn't load the activities.",
+      "route": "{from} → {to}",
+      "tripNumber": "Activity {number}",
+      "km": "{value, number} km",
+      "startedAt": "Started {time}",
+      "endedAt": "Ended {time}",
+      "customer": "Customer",
+      "none": "None",
+      "driver": "Driver",
+      "started": "Started",
+      "ended": "Ended",
+      "distance": "Distance",
+      "distanceUnknown": "Known when closed",
+      "gapsNote": "Closed with {count, plural, one {# gap} other {# gaps}}. Reports show the gaps; they never fill them in.",
+      "linkedMoney": "Linked money",
+      "wholeTrip": "Whole-activity amounts",
+      "noMoney": "No entries linked to this activity yet.",
+      "noOwnMoney": "You have not recorded any entry on this activity.",
+      "noBranchMoney": "No entry from your branches on this activity yet.",
+      "odometer": "Odometer",
+      "noReadings": "No start or end reading for this vehicle.",
+      "readingLine": "{source} · {date}",
+      "openFull": "Open the full activity"
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Expiry dates drive reminders. Renewing keeps every earlier version.",
+      "empty": "No documents yet. Add the insurance and the inspection so expiry reminders work.",
+      "expired": "Expired",
+      "expiresIn": "{count, plural, =0 {Expires today} one {Expires in # day} other {Expires in # days}}",
+      "valid": "Valid",
+      "noExpiry": "No expiry date",
+      "noNumber": "No number",
+      "earlierKept": "{count, plural, one {# earlier version kept} other {# earlier versions kept}}",
+      "firstVersion": "First version",
+      "scanOnFile": "Scan on file",
+      "noScan": "No scan on file",
+      "validUntilShort": "valid until",
+      "validUntil": "Valid until {date}",
+      "expiredOn": "{type} expired on {date}.",
+      "supersededNote": "This version was replaced by a renewal. It is kept unchanged.",
+      "superseded": "Replaced",
+      "scan": "Scan",
+      "filesOnFile": "{count, plural, one {# file on file} other {# files on file}}",
+      "earlierVersions": "Earlier versions",
+      "renewKeeps": "Renewing creates a new version and keeps this one.",
+      "fileNumber": "File {number}"
+    },
+    "readings": {
+      "title": "Odometer readings",
+      "eyebrow": "Odometer",
+      "description": "Readings are never edited; a lower value is kept with a warning.",
+      "empty": "No readings yet.",
+      "meta": "{source} · {name} · {date}",
+      "superseded": "Corrected by a later reading.",
+      "supersededBecause": "Corrected: {reason}",
+      "delta": "{delta, number, ::sign-always} {readingType, select, HOURS {h} other {km}}",
+      "source": {
+        "ACTIVITY_START": "Activity start",
+        "ACTIVITY_END": "Activity end",
+        "SUBSTITUTION": "Substitution",
+        "MANUAL": "Manual reading",
+        "WORK_ORDER": "Workshop"
+      }
+    },
+    "history": {
+      "title": "History",
+      "description": "Everything recorded on this vehicle. Nothing is edited away: corrections appear next to the original.",
+      "filterLabel": "Show events",
+      "filters": {
+        "ALL": "All",
+        "MAINTENANCE": "Maintenance",
+        "MONEY": "Money",
+        "TRIPS": "Activities",
+        "DOCUMENTS": "Documents",
+        "READINGS": "Readings",
+        "ASSIGNMENTS": "Assignments",
+        "LIFECYCLE": "Lifecycle",
+        "NOTES": "Notes"
+      },
+      "loading": "Loading history…",
+      "loadFailed": "We couldn't load the history.",
+      "empty": "Nothing of this kind recorded yet.",
+      "loadMore": "Load more",
+      "open": "Open",
+      "event": {
+        "asset-registered": "Vehicle registered",
+        "asset-commissioned": "Put into service",
+        "asset-assigned": "{change, select, branch {Moved to branch {branch}} custodian {Assigned driver changed to {custodian}} cleared {Assigned driver removed} other {Assignment changed}}",
+        "activity-created": "Activity {number} started",
+        "activity-closed": "Activity {number} closed",
+        "activity-reopened": "Activity {number} reopened",
+        "activity-sheet_recorded": "Sheet {number} recorded",
+        "activity-asset_substituted": "Vehicle substituted on activity {number}",
+        "movement_leg-recorded": "Leg recorded on activity {number}",
+        "meter_reading-recorded": "{readingType, select, HOURS {Hour meter {value, number} h} other {Odometer {value, number} km}}",
+        "meter_reading-corrected": "{readingType, select, HOURS {Hour meter corrected to {value, number} h} other {Odometer corrected to {value, number} km}}",
+        "document-added": "{type} added",
+        "document-renewed": "{type} renewed",
+        "financial_entry-posted": "Entry posted",
+        "financial_entry-submitted": "Entry recorded, awaiting review",
+        "financial_entry-approved": "Entry approved",
+        "financial_entry-rejected": "Entry rejected",
+        "financial_entry-reversed": "Entry cancelled",
+        "financial_entry-reversal_posted": "Cancellation posted",
+        "financial_entry-evidence_attached": "{count, plural, one {Receipt attached} other {# files attached}}",
+        "operational_issue-reported": "Problem reported",
+        "operational_issue-resolved": "Problem resolved",
+        "operational_issue-dismissed": "Problem dismissed",
+        "work_order-created": "Work order opened",
+        "work_order-submitted": "Work order submitted for authorization",
+        "work_order-approved": "Work order authorized",
+        "work_order-rejected": "Work order refused",
+        "work_order-completion_submitted": "Work declared complete, awaiting sign-off",
+        "work_order-completed": "Work completed",
+        "work_order-completion_approved": "Work signed off",
+        "work_order-completion_rejected": "Completion sent back",
+        "work_order-cancelled": "Work order cancelled",
+        "work_order-asset_released": "Released to service",
+        "asset_availability-opened": "Grounded",
+        "asset_availability-closed": "Grounding lifted",
+        "note-added": "Note added",
+        "financial_entry-updated": "Entry edited before review",
+        "asset-details_updated": "Details edited",
+        "operational_issue-severity_raised": "Problem marked safety-critical",
+        "operational_issue-severity_lowered": "Safety-critical mark removed from a problem",
+        "note-acknowledged": "Note marked as seen"
+      },
+      "change": "{field}: {before} → {after}"
+    },
+    "panel": {
+      "loading": "Loading…",
+      "notFound": "Not available",
+      "notFoundHint": "This record does not exist, is outside your branches, or is not something your role reads.",
+      "retry": "Try again",
+      "backTo": "{kind, select, work_order {Back to work order {ref}} issue {Back to problem {ref}} entry {Back to the entry} trip {Back to the activity} document {Back to the document} note {Back to the note} other {Back to the readings}}",
+      "workOrderTitle": "Work order {ref}",
+      "workOrderEyebrow": "Work order {ref}",
+      "issueTitle": "Problem {ref}",
+      "issueEyebrow": "Problem {ref}",
+      "entryTitle": "Entry",
+      "entryEyebrow": "{direction, select, REVENUE {Revenue {number}} other {Expense {number}}}",
+      "tripTitle": "Activity",
+      "tripEyebrow": "Activity {number} · {type}",
+      "documentTitle": "Document",
+      "documentEyebrow": "Document",
+      "noteEyebrow": "Note",
+      "noteBy": "Note by {name}",
+      "noteAppendOnly": "Notes are never edited. A correction is another note.",
+      "fromProblem": "From problem {ref}",
+      "keepsGrounded": "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
+      "keepsGroundedUntilRelease": "The work is done, but the vehicle stays grounded until a manager releases it to service.",
+      "completionSentBack": "Completion sent back: {reason}",
+      "opened": "Opened",
+      "atBy": "{date} by {name}",
+      "expectedCost": "Expected cost",
+      "actualCost": "Actual cost",
+      "actualCostLater": "Set when the work is completed",
+      "invoicePending": "Invoice not received yet",
+      "noCost": "No cost",
+      "completed": "Completed",
+      "whatWasDone": "What was done",
+      "reason": "Reason",
+      "costs": "Costs",
+      "category": "Category",
+      "reported": "Reported",
+      "photos": "Photos",
+      "photoCount": "{count, plural, =0 {None} one {# photo} other {# photos}}",
+      "workOrders": "Work orders",
+      "noneYet": "None yet",
+      "resolution": "Resolution",
+      "safetyCriticalNote": "Safety-critical reports ground the vehicle the moment they are recorded. Only a manager can release it.",
+      "date": "Date",
+      "costType": "Cost type",
+      "thisVehicle": "This vehicle",
+      "wholeEntry": "Whole entry",
+      "notShared": "Same, not shared",
+      "sharedWith": "{amount}, shared with other vehicles",
+      "paidTo": "Paid to",
+      "recordedBy": "Recorded by",
+      "postingPeriod": "Posting period",
+      "notPosted": "Not posted",
+      "reverses": "Cancels",
+      "reversedBy": "Cancelled by",
+      "openOriginal": "The original entry",
+      "openReversal": "The cancellation",
+      "awaitingReviewNote": "Awaiting review: not counted in posted totals until approved. Whoever recorded it can edit it until then, but cannot approve it.",
+      "postedNotPaid": "Posted means recorded in the books, not paid. A mistake is corrected by cancelling the entry; the original stays.",
+      "receipt": "Receipt",
+      "noFiles": "No file on this entry.",
+      "evidenceVia": {
+        "RECORDED": "Recorded with the entry · {date} · {name}",
+        "ATTACHED": "Attached later · {date} · {name}"
+      },
+      "openFile": "Open the file",
+      "openFullEntry": "Open the full entry",
+      "waitingOn": {
+        "authorization": "Waiting on a manager to authorize the spending.",
+        "completion": "Waiting on the workshop to complete the work.",
+        "signOff": "Waiting on a manager to sign off the work and its cost.",
+        "release": "Waiting on a manager to release the vehicle to service.",
+        "planning": "Waiting on the workshop to plan a work order.",
+        "entryReview": "Waiting on finance to review it. Until then it is not counted in posted totals.",
+        "entryReceipt": "Waiting on {name} to attach the receipt.",
+        "documentRenewal": "Waiting on operations to renew it."
+      },
+      "photoNumber": "Photo {number}",
+      "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again.",
+      "directionNoteEyebrow": "Note from Direction",
+      "notSeenYet": "Nobody has marked it as seen yet. It stays in the vehicle's To do list until someone does.",
+      "seenBy": "Seen by {name} on {date}",
+      "acknowledgeHint": "Tells Direction you have read this note. It leaves the To do list; your name and the time stay on the note."
+    },
+    "rows": {
+      "actionsFor": "Actions for {record}"
+    },
+    "bar": {
+      "label": "Quick actions",
+      "more": "More"
+    },
+    "notify": {
+      "success": {
+        "noteAdded": "Note added",
+        "evidenceAttached": "Receipt attached",
+        "detailsSaved": "Vehicle details saved.",
+        "noteAcknowledged": "Marked as seen"
+      },
+      "info": {
+        "nothingToSave": "Nothing to save: no changes."
+      }
+    },
+    "actions": {
+      "log-fuel": {
+        "description": "Fuel paid for this vehicle, with the odometer if you read it. The expense is saved first."
+      },
+      "record-expense": {
+        "description": "Any cost for this vehicle. Above the threshold it waits for finance review."
+      },
+      "attach-evidence": {
+        "description": "Adds proof to an entry recorded without it. The entry itself is not edited."
+      },
+      "record-reading": {
+        "description": "A standalone reading. A value lower than the last is kept with a warning, never refused."
+      },
+      "add-note": {
+        "description": "A short remark on the vehicle's history. Notes are never edited."
+      },
+      "report-issue": {
+        "description": "Something is wrong with the vehicle. Safety-critical grounds it at once."
+      },
+      "create-work-order": {
+        "description": "Plan the repair and its expected cost, from a reported problem or as preventive work."
+      },
+      "approve-work-order": {
+        "description": "Finance authorizes the spending before work starts. Whoever created it cannot authorize it."
+      },
+      "complete-work-order": {
+        "description": "Say what was done and what it cost."
+      },
+      "approve-completion": {
+        "description": "Checks the completed work and its actual cost. Whoever completed it cannot sign it off."
+      },
+      "cancel-work-order": {
+        "description": "Stop a work order that is no longer needed. A reason is required."
+      },
+      "release": {
+        "description": "Ends the grounding once the repair is completed. After a safety-critical problem, whoever vouched for the repair cannot release."
+      },
+      "start-trip": {
+        "description": "Opens the sheet with this vehicle as the main vehicle."
+      },
+      "change-custodian": {
+        "description": "The person who regularly drives the vehicle. Each activity can still name another driver."
+      },
+      "transfer-branch": {
+        "description": "Moves the vehicle's home branch for good. Past records stay with the branch that made them."
+      },
+      "add-document": {
+        "description": "Insurance, inspection, permits. A missing expiry date shows as unknown, never as valid."
+      },
+      "renew-document": {
+        "description": "Records the new version of a document. The old one is kept."
+      },
+      "record-revenue": {
+        "description": "Freight or fares earned with this vehicle."
+      },
+      "review-entry": {
+        "label": "Review entry",
+        "short": "Review",
+        "description": "Approve or reject an entry waiting for review. Whoever recorded it cannot approve it."
+      },
+      "reverse-entry": {
+        "description": "Posted money is never edited: cancelling adds a line that takes it out, and both stay. Pick the entry in Money."
+      },
+      "commission": {
+        "description": "From registered to in service: the operating history starts here."
+      },
+      "groups": {
+        "capture": "Capture",
+        "maintenance": "Maintenance",
+        "operations": "Operations",
+        "documents": "Documents",
+        "money": "Money",
+        "lifecycle": "Lifecycle"
+      },
+      "all": {
+        "title": "All actions",
+        "description": "Everything you can do on {vehicle}, by area.",
+        "search": "Search actions",
+        "searchPlaceholder": "Search, e.g. fuel, renew, sign off",
+        "noMatch": "No action matches “{query}”."
+      }
+    }
+  },
+  "approvalRules": {
+    "notice": {
+      "title": "The approval rules have changed",
+      "changedBy": "{name} changed them on {date}.",
+      "changedByRoutiq": "ROUTIQ updated them on {date}.",
+      "failed": "Your confirmation could not be saved. Try again."
+    },
+    "chain": {
+      "record-expense": "Your expenses",
+      "record-revenue": "Your revenue"
+    },
+    "step": "{bound, select, upTo {Up to {amount}} above {Above {amount}} other {Any amount}}: {outcome, select, POSTS_DIRECTLY {posts directly} FINANCE_APPROVES {Finance approves} FINANCE_PEER_APPROVES {another Finance member or Direction approves} DIRECTION_APPROVES {Direction approves} other {waits for approval}}",
+    "hint": {
+      "posts": "Your entries post directly at any amount.",
+      "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}.",
+      "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}."
+    }
+  },
+  "reasonCodes": {
+    "ENTERED_TWICE": "Entered twice",
+    "DID_NOT_HAPPEN": "Didn't happen",
+    "WRONG_DETAILS": "Wrong details, to record again",
+    "OTHER": "Other"
+  },
+  "settings": {
+    "title": "Company settings",
+    "description": "Rules that apply to everyone in the company. Only Direction can change them.",
+    "retry": "Try again",
+    "approvals": {
+      "title": "Approvals",
+      "description": "Up to which amount a money entry posts without review, and who decides it above that.",
+      "loading": "Loading the approval rules",
+      "loadFailed": "The approval rules could not be loaded.",
+      "chainLabel": "The approval chain",
+      "noBands": "This company's approval rules were set by hand, so they can't be changed here. Contact ROUTIQ support.",
+      "byRole": "What each role's own entries meet",
+      "byRoleHint": "Nobody approves their own entry, and Direction's own entries always post.",
+      "kind": {
+        "record-expense": "Expenses",
+        "record-revenue": "Revenue"
+      },
+      "roleKind": "{role}: {kind}",
+      "overrides": "Exceptions for a branch or a category",
+      "overridesHint": "These keep their own amounts when you change the thresholds.",
+      "override": "{kind, select, record-expense {Expenses} record-revenue {Revenue} other {Decisions}}, {scope}: {role} {bounded, select, yes {up to {amount}} other {at any amount}}",
+      "form": {
+        "description": "Applies to every branch, from the next entry on.",
+        "recording": "Posts directly up to",
+        "recordingHint": "Entries up to this amount post without review.",
+        "ceiling": "Finance approves up to",
+        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only Direction decides.",
+        "whole": "Enter the amount in whole francs, without decimals.",
+        "belowCeiling": "Keep this below the amount Finance approves up to.",
+        "unchanged": "Change an amount to save.",
+        "afterSaving": "After saving",
+        "whoIsTold": "{roles} members will see the new rules on their next screen.",
+        "conflictTitle": "The thresholds changed while you were editing",
+        "conflictBody": "Someone else saved new thresholds. Refresh to see them, then make your change again."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Approval thresholds saved"
+      }
     }
   }
 }

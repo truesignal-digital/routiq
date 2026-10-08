@@ -1,9 +1,27 @@
-import { formatXAF } from "@routiq/domain";
 import { i18n } from "../i18n/index.js";
+
+export type MoneyDirection = "REVENUE" | "EXPENSE";
+
+/**
+ * Where an amount is read decides its sign, so the same entry never reads "+"
+ * on one screen and "−" on another:
+ * - `ledger`: revenue and expenses side by side (lists, trip and vehicle money,
+ *   history). Revenue reads "+", expense "−", from the direction; a reversal's
+ *   negative amount flips it.
+ * - `net`: a balance already signed as revenue − expenses. "+" or "−", bare at zero.
+ * - `record`: one record's own amount (its page, the approvals row). Unsigned;
+ *   the screen says the direction in words.
+ * With no sign asked for, only a negative amount is signed: a total of one
+ * kind can go below zero once a reversal posts into a later period.
+ */
+export type MoneySign =
+  | { context: "ledger"; direction: MoneyDirection }
+  | { context: "net" }
+  | { context: "record" };
 
 type FormatMoneyOptions = {
   currency?: string | null;
-  signDisplay?: Intl.NumberFormatOptions["signDisplay"] | null;
+  sign?: MoneySign;
   locale?: string | null;
 };
 
@@ -12,8 +30,10 @@ type LocalizedLabels = {
   labelEn?: string | null;
 };
 
+const MINUS = "\u2212";
+
 function normalizeMoneySpacing(value: string): string {
-  return value.replace(/ /g, " ");
+  return value.replace(/\u202f/g, " ");
 }
 
 export function formatMoney(
@@ -22,29 +42,89 @@ export function formatMoney(
 ): string {
   if (minor == null || options == null) return "";
 
-  const {
-    currency = "XAF",
-    signDisplay,
-    locale = i18n.resolvedLanguage,
-  } = options;
+  const { currency = "XAF", sign, locale = i18n.resolvedLanguage } = options;
   if (currency == null) return "";
 
-  const formatted =
-    currency === "XAF"
-      ? (() => {
-          const xafOpts: { locale?: string; signDisplay?: Intl.NumberFormatOptions["signDisplay"] } = {};
-          if (locale) xafOpts.locale = locale;
-          if (signDisplay) xafOpts.signDisplay = signDisplay;
-          return formatXAF(minor, xafOpts);
-        })()
-      : new Intl.NumberFormat(locale ?? undefined, {
-          style: "currency",
-          currency,
-          maximumFractionDigits: 0,
-          ...(signDisplay == null ? {} : { signDisplay }),
-        }).format(minor);
+  const value =
+    sign?.context === "ledger" ? (sign.direction === "REVENUE" ? minor : -minor) : minor;
+  const formatted = new Intl.NumberFormat(locale ?? undefined, {
+    style: "currency",
+    currency,
+    // XAF has exponent 0; every currency here is shown in whole units.
+    maximumFractionDigits: 0,
+    signDisplay: sign === undefined ? "negative" : sign.context === "record" ? "never" : "exceptZero",
+  }).format(value);
 
-  return normalizeMoneySpacing(formatted);
+  // One minus sign in every language: Intl gives a hyphen in English.
+  return normalizeMoneySpacing(formatted).replace("-", MINUS);
+}
+
+const plainSpaces = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
+
+/**
+ * A whole amount laid out the way `formatMoney` shows it, taken apart: the
+ * grouped figure and the currency symbol, and which comes first. An amount
+ * input uses it to look exactly like the figure it edits.
+ */
+export function moneyAmountParts(
+  minor: number | null,
+  options: { currency?: string; locale?: string | undefined } = {},
+): { amount: string; symbol: string; symbolFirst: boolean } {
+  const currency = options.currency ?? "XAF";
+  const parts = new Intl.NumberFormat(options.locale ?? i18n.resolvedLanguage, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).formatToParts(minor ?? 0);
+  const symbolAt = parts.findIndex((part) => part.type === "currency");
+  const integerAt = parts.findIndex((part) => part.type === "integer");
+  return {
+    amount:
+      minor === null
+        ? ""
+        : plainSpaces(
+            parts
+              .filter((part) => part.type === "integer" || part.type === "group")
+              .map((part) => part.value)
+              .join(""),
+          ),
+    symbol: parts[symbolAt]?.value ?? currency,
+    symbolFirst: symbolAt !== -1 && symbolAt < integerAt,
+  };
+}
+
+export type WholeAmount =
+  | { kind: "empty" }
+  | { kind: "invalid" }
+  | { kind: "amount"; minor: number };
+
+/**
+ * A typed amount in whole units (XAF has exponent 0), in the reader's
+ * grouping: "45,000,000" in English, "45 000 000" in French, where
+ * "45.000.000" is also how people write it. A decimal part is invalid, never
+ * rounded away.
+ */
+export function parseWholeAmount(text: string, locale?: string): WholeAmount {
+  const trimmed = plainSpaces(text).trim();
+  if (trimmed === "") return { kind: "empty" };
+  const resolved = locale ?? i18n.resolvedLanguage;
+  const group = plainSpaces(
+    new Intl.NumberFormat(resolved).formatToParts(1_000_000).find((part) => part.type === "group")?.value ?? ",",
+  );
+  let digits = trimmed.replace(/ /g, "");
+  if (group.trim() !== "") {
+    if (digits.includes(group)) {
+      // "4,5" in English is not 45: a separator only counts between groups of three.
+      const groups = digits.split(group);
+      if (!/^\d{1,3}$/.test(groups[0] ?? "") || groups.slice(1).some((g) => !/^\d{3}$/.test(g))) {
+        return { kind: "invalid" };
+      }
+      digits = groups.join("");
+    }
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(digits)) digits = digits.replace(/\./g, "");
+  if (!/^\d+$/.test(digits)) return { kind: "invalid" };
+  const minor = Number(digits);
+  return Number.isSafeInteger(minor) ? { kind: "amount", minor } : { kind: "invalid" };
 }
 
 function toDate(value: string | Date | null | undefined): Date | null {
@@ -53,6 +133,7 @@ function toDate(value: string | Date | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/** Calendar dates retain their day; timestamps use the viewer's time zone. */
 export function formatDate(iso: string | null | undefined, locale?: string): string {
   if (iso == null) return "";
 
@@ -61,7 +142,19 @@ export function formatDate(iso: string | null | undefined, locale?: string): str
 
   return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
     dateStyle: "short",
+    // ISO date-only strings parse at UTC midnight, but are not instants to shift.
+    ...(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? { timeZone: "UTC" } : {}),
   }).format(date);
+}
+
+/** "septembre 2026" for the period "2026-09": a posting month in words. */
+export function formatMonth(periodCode: string | null | undefined, locale?: string): string {
+  if (periodCode == null || !/^\d{4}-\d{2}$/.test(periodCode)) return periodCode ?? "";
+  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${periodCode}-15T00:00:00Z`));
 }
 
 /** "31 juillet 2026" — the heading a day's worth of history sits under. */

@@ -227,7 +227,7 @@ export function FileUpload({
             )}
             <button
               type="button"
-              aria-label={`${t("fileUpload.remove")} ${item.file.name}`}
+              aria-label={t("fileUpload.removeFile", { name: item.file.name })}
               className="grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               onClick={() => removeFile(item)}
             >

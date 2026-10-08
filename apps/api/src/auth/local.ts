@@ -76,18 +76,7 @@ export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginRe
     };
   }
 
-  if (!(await verifyPin(input.pin, row.credential.pinHash))) {
-    const failedAttempts = row.credential.failedAttempts + 1;
-    await db
-      .update(credentials)
-      .set(
-        failedAttempts >= MAX_PIN_ATTEMPTS
-          ? { failedAttempts: 0, lockedUntil: new Date(now + PIN_LOCKOUT_MS) }
-          : { failedAttempts },
-      )
-      .where(eq(credentials.id, row.credential.id));
-    return { ok: false as const, code: "AUTH_INVALID_CREDENTIALS" as const };
-  }
+  const pinMatches = await verifyPin(input.pin, row.credential.pinHash);
 
   /**
    * The PIN was verified against a row read outside any transaction, and
@@ -97,9 +86,11 @@ export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginRe
    * opens anything, which is exactly what resetting a forgotten or leaked PIN
    * is meant to end.
    *
-   * So the session is minted under a row lock on the credential, after
-   * re-reading it. `SELECT ... FOR UPDATE` closes the window rather than
-   * narrowing it: the reset's UPDATE of that row either lands before this lock
+   * Both failed attempts and successful logins commit under the same credential
+   * row lock. Re-read the counter and lockout after PIN verification so concurrent
+   * failures cannot lose increments and a correct PIN cannot clear a new lockout.
+   * Hashing stays outside the transaction. `SELECT ... FOR UPDATE` closes the reset
+   * window rather than narrowing it: the reset's UPDATE of that row either lands before this lock
    * is taken, in which case the re-read sees a different `pin_hash` and the
    * login fails, or it waits behind this transaction and then deletes the
    * session this one just minted. Either order leaves no session standing on
@@ -108,7 +99,7 @@ export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginRe
    * Lock order matches the reset command's — credential first, then sessions —
    * so the two cannot deadlock.
    */
-  const session = await db.transaction(async (tx) => {
+  return db.transaction(async (tx): Promise<LoginResult> => {
     const [current] = await tx
       .select()
       .from(credentials)
@@ -116,7 +107,29 @@ export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginRe
       .for("update");
 
     if (!current || current.disabledAt || current.pinHash !== row.credential.pinHash) {
-      return null;
+      return { ok: false, code: "AUTH_INVALID_CREDENTIALS" };
+    }
+
+    const commitTime = Date.now();
+    if (current.lockedUntil && current.lockedUntil.getTime() > commitTime) {
+      return {
+        ok: false,
+        code: "AUTH_LOCKED",
+        retryAfterSeconds: Math.ceil((current.lockedUntil.getTime() - commitTime) / 1000),
+      };
+    }
+
+    if (!pinMatches) {
+      const failedAttempts = current.failedAttempts + 1;
+      await tx
+        .update(credentials)
+        .set(
+          failedAttempts >= MAX_PIN_ATTEMPTS
+            ? { failedAttempts: 0, lockedUntil: new Date(commitTime + PIN_LOCKOUT_MS) }
+            : { failedAttempts },
+        )
+        .where(eq(credentials.id, current.id));
+      return { ok: false, code: "AUTH_INVALID_CREDENTIALS" };
     }
 
     if (current.failedAttempts > 0 || current.lockedUntil) {
@@ -126,14 +139,12 @@ export async function loginWithPin(db: Db, input: LoginRequest): Promise<LoginRe
         .where(eq(credentials.id, current.id));
     }
 
-    return createSessionIn(tx, {
+    const session = await createSessionIn(tx, {
       principalId: current.principalId,
       workspaceId: row.workspaceId,
     });
+    return { ok: true, session };
   });
-
-  if (!session) return { ok: false as const, code: "AUTH_INVALID_CREDENTIALS" as const };
-  return { ok: true as const, session };
 }
 
 /** Local implementation of the identity seam: opaque tokens in the sessions table. */

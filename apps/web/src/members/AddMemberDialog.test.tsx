@@ -7,7 +7,23 @@ import type { AddMemberPayload, CommandSubmission } from "@routiq/contracts";
 import "../i18n/index.js";
 import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
+import { openSelect } from "../test-select.js";
+import type { MemberActor } from "./permissions.js";
 import { AddMemberDialog } from "./AddMemberDialog.js";
+
+const toast = vi.hoisted(() => ({ add: vi.fn() }));
+vi.mock("@/components/ui/toast.js", () => ({ toast }));
+
+/** Success is one toast, and nothing in the dialog repeats it. */
+function expectOneSuccessToast(title: string, description?: string) {
+  expect(toast.add).toHaveBeenCalledTimes(1);
+  expect(toast.add).toHaveBeenCalledWith({
+    type: "success",
+    title,
+    ...(description === undefined ? {} : { description }),
+  });
+  expect(screen.queryByRole("status")).toBeNull();
+}
 
 const sessionIdentity = { username: "amina", workspaceSlug: "sotrafret" };
 
@@ -15,6 +31,17 @@ const branches = [
   { id: "branch-dla", name: "Douala" },
   { id: "branch-yde", name: "Yaoundé" },
 ];
+
+const director: MemberActor = {
+  principalId: "99999999-9999-4999-8999-999999999999",
+  role: "DIRECTOR",
+  branchScope: "ALL",
+};
+const doualaAdmin: MemberActor = {
+  principalId: "88888888-8888-4888-8888-888888888888",
+  role: "ADMIN",
+  branchScope: ["branch-dla"],
+};
 
 const committed: SubmitResult = {
   ok: true,
@@ -40,7 +67,7 @@ function fakeClient(
   };
 }
 
-function renderDialog(client: CommandClient, onAdded = vi.fn()) {
+function renderDialog(client: CommandClient, onAdded = vi.fn(), actor: MemberActor = director) {
   const onOpenChange = vi.fn();
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -48,6 +75,7 @@ function renderDialog(client: CommandClient, onAdded = vi.fn()) {
         open
         onOpenChange={onOpenChange}
         branches={branches}
+        actor={actor}
         onAdded={onAdded}
         client={client}
       />
@@ -58,6 +86,7 @@ function renderDialog(client: CommandClient, onAdded = vi.fn()) {
 
 /** Fills every required field; the caller overrides what its case is about. */
 async function fillForm(overrides: Partial<Record<string, string>> = {}) {
+  const user = userEvent.setup();
   await userEvent.type(
     screen.getByLabelText("Nom complet"),
     overrides["displayName"] ?? "Estelle Ngo",
@@ -66,8 +95,8 @@ async function fillForm(overrides: Partial<Record<string, string>> = {}) {
     screen.getByLabelText("Identifiant de connexion"),
     overrides["username"] ?? "estelle",
   );
-  await userEvent.click(screen.getByRole("combobox", { name: "Rôle" }));
-  await userEvent.click(await screen.findByRole("option", { name: "Agent de terrain" }));
+  await openSelect(user, screen.getByRole("combobox", { name: "Rôle" }));
+  await user.click(await screen.findByRole("option", { name: overrides["role"] ?? "Chauffeur" }));
   await userEvent.type(screen.getByLabelText("Code PIN"), overrides["pin"] ?? "4821");
   await userEvent.type(
     screen.getByLabelText("Confirmer le code PIN"),
@@ -95,21 +124,23 @@ describe("AddMemberDialog", () => {
     const { onAdded, onOpenChange } = renderDialog(client);
 
     await fillForm();
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     const submission = client.seen[0]!;
     expect(submission.name).toBe("add-member");
+    expect(submission.version).toBe(2);
     expect(submission.payload).toMatchObject({
       displayName: "Estelle Ngo",
       username: "estelle",
-      role: "FIELD_SUBMITTER",
+      role: "DRIVER",
       branchScope: "ALL",
       pin: "4821",
     });
     expect(submission.payload.principalId).toMatch(/^[0-9a-f-]{36}$/);
     expect(onAdded).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+    expectOneSuccessToast("Utilisateur ajouté : Estelle Ngo");
   });
 
   it("narrows the new member to the branches picked, by id", async () => {
@@ -119,7 +150,7 @@ describe("AddMemberDialog", () => {
     await fillForm();
     await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Yaoundé" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload.branchScope).toEqual(["branch-dla", "branch-yde"]);
@@ -130,13 +161,14 @@ describe("AddMemberDialog", () => {
     const { onOpenChange } = renderDialog(client);
 
     await fillForm();
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     expect(
       await screen.findByText("Ce nom d'utilisateur est déjà pris dans votre espace."),
     ).toBeTruthy();
     // The form stays open on the field that has to change.
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(toast.add).not.toHaveBeenCalled();
   });
 
   it("refuses two PINs that disagree before anything is sent", async () => {
@@ -144,7 +176,7 @@ describe("AddMemberDialog", () => {
     renderDialog(client);
 
     await fillForm({ pin: "4821", confirmPin: "4822" });
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     expect(await screen.findByText("Les deux codes ne correspondent pas.")).toBeTruthy();
     expect(client.seen).toHaveLength(0);
@@ -157,11 +189,44 @@ describe("AddMemberDialog", () => {
     await fillForm();
     expect(screen.getByLabelText("Code PIN").getAttribute("type")).toBe("password");
 
-    await userEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
     await waitFor(() => expect(client.seen).toHaveLength(1));
 
     // Not in a field, not in a confirmation, not anywhere: the PIN leaves this
     // dialog only inside the command.
     expect(document.body.innerHTML).not.toContain("4821");
+    expect(JSON.stringify(toast.add.mock.calls)).not.toContain("4821");
+  });
+
+  it("offers the Director every role but Direction", async () => {
+    renderDialog(fakeClient(committed));
+    await openSelect(userEvent.setup(), screen.getByRole("combobox", { name: "Rôle" }));
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
+      "Administrateur",
+      "Finance",
+      "Caissier / Caissière",
+      "Technicien",
+      "Chauffeur",
+    ]);
+  });
+
+  it("offers an Administrateur the three field roles, in their own branches only", async () => {
+    const client = fakeClient(committed);
+    renderDialog(client, vi.fn(), doualaAdmin);
+    await openSelect(userEvent.setup(), screen.getByRole("combobox", { name: "Rôle" }));
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
+      "Chauffeur",
+      "Technicien",
+      "Caissier / Caissière",
+    ]);
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("checkbox", { name: "Toutes les agences" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Yaoundé" })).toBeNull();
+
+    await fillForm({ role: "Caissier / Caissière" });
+    await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
+    await waitFor(() => expect(client.seen).toHaveLength(1));
+    expect(client.seen[0]!.payload).toMatchObject({ role: "CASHIER", branchScope: ["branch-dla"] });
   });
 });

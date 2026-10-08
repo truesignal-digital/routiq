@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
   AssetLifecycleStatus,
@@ -8,15 +8,13 @@ import type {
   Role,
 } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  CommandForm,
+  useCommandSubmission,
+  type CommandFormBack,
+  type CommandSurface,
+} from "@/components/command-form.js";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -25,16 +23,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ErrorBanner } from "@/components/error-banner.js";
 import { useMeContext } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
+import { useCommandLabel, type CommandLabelRef } from "../commands/labels.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
-import { canManageAssets } from "./permissions.js";
+import { canCommissionAsset, canTransferAsset } from "./permissions.js";
 import { useAssetRegistrationReference } from "./reference.js";
 
-export type AssetActionKey = "commission" | "assign";
+/**
+ * `assign` moves the vehicle to another branch; `custodian` names who answers
+ * for it. Both are `assign-asset` — one form per question, so a custodian
+ * change never shows a branch picker.
+ */
+export type AssetActionKey = "commission" | "assign" | "custodian";
+
+/** The command each action sends, whose words name it on every surface. */
+export const ASSET_ACTION_COMMANDS: Record<AssetActionKey, CommandLabelRef> = {
+  commission: "commission-asset",
+  assign: "assign-asset",
+  custodian: { command: "assign-asset", intent: "custodian" },
+};
 
 /** The fields an action needs, so a list row and a detail page both qualify. */
 export interface AssetActionTarget {
@@ -59,43 +69,62 @@ export function assetActions(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): AssetActionKey[] {
-  if (!canManageAssets(role, enabledModules)) return [];
   if (DISPOSED.includes(asset.lifecycleStatus)) return [];
-  return asset.lifecycleStatus === "REGISTERED"
-    ? ["commission", "assign"]
-    : ["assign"];
+  // role-config: each action follows its command's default rules, so a role the
+  // server would refuse is never offered the button.
+  const actions: AssetActionKey[] = [];
+  if (asset.lifecycleStatus === "REGISTERED" && canCommissionAsset(role, enabledModules)) {
+    actions.push("commission");
+  }
+  if (canTransferAsset(role, enabledModules)) actions.push("assign");
+  return actions;
 }
 
-/** How a submitted action ended, when it did not simply commit. */
-type Outcome =
-  | { kind: "form" }
-  | { kind: "conflict" }
-  | { kind: "approval" }
-  | { kind: "error"; code: string };
+/**
+ * The custodian picker arrives with its candidates read. Until then the assign
+ * form takes it as a slot: the host renders the field and hands over what it
+ * adds to `assign-asset`, so the command stays one call either way.
+ */
+export interface CustodianSlot {
+  field: ReactNode;
+  /** Undefined until something is chosen. */
+  value: Pick<AssignAssetPayload, "custodianMembershipId"> | undefined;
+}
+
+export interface AssetActionFormProps {
+  surface: CommandSurface;
+  asset: AssetActionTarget;
+  action: AssetActionKey;
+  client?: CommandClient | undefined;
+  back?: CommandFormBack | undefined;
+  custodian?: CustodianSlot | undefined;
+  /** After the command committed and the asset reads were refreshed. */
+  onDone?: (() => void) | undefined;
+  onDismiss: () => void;
+}
 
 /**
  * One asset command, asked for and answered in place. A conflict or a pending
  * approval replaces the form instead of firing a toast: both are answers about
- * this asset that the operator has to read before the dialog goes away.
+ * this asset that the operator has to read before the form goes away.
  */
-export function AssetActionDialog({
+export function AssetActionForm({
+  surface,
   asset,
   action,
   client = commandClient,
+  back,
+  custodian,
+  onDone,
   onDismiss,
-}: {
-  asset: AssetActionTarget;
-  action: AssetActionKey;
-  client?: CommandClient;
-  onDismiss: () => void;
-}) {
+}: AssetActionFormProps) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
   const reference = useAssetRegistrationReference();
+  const submission = useCommandSubmission();
 
-  const [outcome, setOutcome] = useState<Outcome>({ kind: "form" });
-  const [submitting, setSubmitting] = useState(false);
   const [branchCode, setBranchCode] = useState("");
   const commissionIntent = useRef<
     CommandIntent<CommissionAssetPayload> | undefined
@@ -109,49 +138,53 @@ export function AssetActionDialog({
       queryKey: ["ws", session?.workspaceSlug, "assets"],
     });
 
-  const ready = !submitting && (action === "commission" || branchCode !== "");
+  const custodianValue = custodian?.value;
+  const ready =
+    action === "commission" ||
+    (action === "assign" && branchCode !== "") ||
+    custodianValue !== undefined;
 
   async function submit() {
     if (!ready) return;
-    setSubmitting(true);
 
     // Both commands check the version of the row as it was rendered, so a stale
     // card can never overwrite someone else's change.
-    let result;
-    if (action === "commission") {
-      commissionIntent.current ??= createCommandIntent(
-        client,
-        "commission-asset",
-        1,
-      );
-      result = await commissionIntent.current.submit(
-        { assetId: asset.id },
-        { expectedVersion: asset.rowVersion },
-      );
-    } else {
+    const result = await submission.run(() => {
+      if (action === "commission") {
+        commissionIntent.current ??= createCommandIntent(
+          client,
+          "commission-asset",
+          1,
+        );
+        return commissionIntent.current.submit(
+          { assetId: asset.id },
+          { expectedVersion: asset.rowVersion },
+        );
+      }
       assignIntent.current ??= createCommandIntent(client, "assign-asset", 1);
-      result = await assignIntent.current.submit(
-        { assetId: asset.id, branchCode },
+      return assignIntent.current.submit(
+        {
+          assetId: asset.id,
+          ...(branchCode === "" ? {} : { branchCode }),
+          ...custodianValue,
+        },
         { expectedVersion: asset.rowVersion },
       );
-    }
+    });
 
-    setSubmitting(false);
-
-    if (result.ok) {
-      notifyCommandSuccess(
-        "assets",
-        action === "commission" ? "commissioned" : "assigned",
-        result.outcome.warnings,
-      );
-      await invalidateAssets();
-      onDismiss();
-      return;
-    }
-
-    if (result.code === "VERSION_CONFLICT") setOutcome({ kind: "conflict" });
-    else if (result.code === "APPROVAL_REQUIRED") setOutcome({ kind: "approval" });
-    else setOutcome({ kind: "error", code: result.code });
+    if (!result.ok) return;
+    notifyCommandSuccess(
+      "assets",
+      action === "commission"
+        ? "commissioned"
+        : action === "custodian"
+          ? "custodianChanged"
+          : "assigned",
+      result.outcome.warnings,
+    );
+    await invalidateAssets();
+    onDone?.();
+    onDismiss();
   }
 
   async function reload() {
@@ -160,95 +193,75 @@ export function AssetActionDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onDismiss()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t(`assets.actions.${action}`)}</DialogTitle>
-          <DialogDescription>
-            {t(`assets.actions.${action}Hint`)}
-          </DialogDescription>
-        </DialogHeader>
-
-        {outcome.kind === "conflict" ? (
-          <>
-            <div
-              role="alert"
-              className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning-foreground"
+    <CommandForm
+      surface={surface}
+      title={label(ASSET_ACTION_COMMANDS[action])}
+      description={t(`assets.actions.${action}Hint`)}
+      back={back}
+      error={submission.error}
+      conflict={{
+        title: t("assets.actions.conflictTitle"),
+        body: t("assets.actions.conflictBody"),
+      }}
+      approval={{
+        title: t("assets.actions.approvalTitle"),
+        body: t("assets.actions.approvalBody"),
+      }}
+      onReload={reload}
+      command={ASSET_ACTION_COMMANDS[action]}
+      ready={ready}
+      submitting={submission.submitting}
+      onSubmit={() => void submit()}
+      onDismiss={onDismiss}
+    >
+      {action === "assign" && (
+        <div className="flex flex-col gap-2">
+          <Label>{t("assets.actions.assignTo")}</Label>
+          <Select
+            value={branchCode || null}
+            onValueChange={(value) => setBranchCode(value ?? "")}
+          >
+            <SelectTrigger
+              className="w-full"
+              aria-label={t("assets.actions.assignTo")}
             >
-              <p className="font-semibold">{t("assets.actions.conflictTitle")}</p>
-              <p className="mt-1">{t("assets.actions.conflictBody")}</p>
-            </div>
-            <DialogFooter>
-              <Button className="min-h-11" onClick={() => void reload()}>
-                {t("assets.actions.reload")}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : outcome.kind === "approval" ? (
-          <>
-            <div
-              role="status"
-              className="rounded-lg bg-info/10 px-3 py-2 text-sm text-info-foreground"
-            >
-              <p className="font-semibold">{t("assets.actions.approvalTitle")}</p>
-              <p className="mt-1">{t("assets.actions.approvalBody")}</p>
-            </div>
-            <DialogFooter>
-              <Button className="min-h-11" onClick={onDismiss}>
-                {t("assets.actions.close")}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <>
-            {outcome.kind === "error" && <ErrorBanner code={outcome.code} />}
+              <SelectValue placeholder={t("assets.form.choose")} />
+            </SelectTrigger>
+            <SelectContent>
+              {(reference.data?.branches ?? []).map((branch) => (
+                <SelectItem key={branch.code} value={branch.code}>
+                  {branch.name} ({branch.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {action !== "commission" && custodian?.field}
+    </CommandForm>
+  );
+}
 
-            {action === "assign" && (
-              <div className="flex flex-col gap-2">
-                <Label>{t("assets.actions.assignTo")}</Label>
-                <Select
-                  value={branchCode || null}
-                  onValueChange={(value) => setBranchCode(value ?? "")}
-                >
-                  <SelectTrigger
-                    className="w-full"
-                    aria-label={t("assets.actions.assignTo")}
-                  >
-                    <SelectValue placeholder={t("assets.form.choose")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(reference.data?.branches ?? []).map((branch) => (
-                      <SelectItem key={branch.code} value={branch.code}>
-                        {branch.name} ({branch.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                className="min-h-11 flex-1 sm:flex-none"
-                onClick={onDismiss}
-              >
-                {t("assets.form.cancel")}
-              </Button>
-              <Button
-                className="min-h-11 flex-1 sm:flex-none"
-                disabled={!ready}
-                onClick={() => void submit()}
-              >
-                {submitting
-                  ? t("assets.actions.working")
-                  : t("assets.actions.confirm")}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+/** The asset list opens the form above in the side panel: it records a fact. */
+export function AssetActionDialog({
+  asset,
+  action,
+  client = commandClient,
+  onDismiss,
+}: {
+  asset: AssetActionTarget;
+  action: AssetActionKey;
+  client?: CommandClient;
+  onDismiss: () => void;
+}) {
+  return (
+    <AssetActionForm
+      surface="sheet"
+      asset={asset}
+      action={action}
+      client={client}
+      onDismiss={onDismiss}
+    />
   );
 }
 
@@ -264,6 +277,7 @@ export function AssetActions({
   client?: CommandClient;
 }) {
   const { t } = useTranslation();
+  const label = useCommandLabel();
   const me = useMeContext();
   const [open, setOpen] = useState<AssetActionKey>();
 
@@ -279,10 +293,9 @@ export function AssetActions({
           <Button
             key={action}
             variant={action === "commission" ? "default" : "outline"}
-            className="min-h-9"
             onClick={() => setOpen(action)}
           >
-            {t(`assets.actions.${action}`)}
+            {label(ASSET_ACTION_COMMANDS[action])}
           </Button>
         ))}
       </div>

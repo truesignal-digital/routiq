@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ACTIVITY_COMPLETENESS_CODES } from "../errors.js";
+import { entryCancellation } from "./finance.js";
 import { listQuery, listResponse } from "./list.js";
 
 export const activityStatuses = ["OPEN", "CLOSED"] as const;
@@ -51,6 +52,14 @@ export const activityListItem = z.object({
   primaryAssetCode: z.string().nullable(),
   legCount: z.number().int().nonnegative(),
   crewCount: z.number().int().nonnegative(),
+  /** Where the first leg set out from (place name, else the typed text); null without legs. */
+  originName: z.string().nullable(),
+  /** Where the last leg arrived. */
+  destinationName: z.string().nullable(),
+  /** Sum of the legs' kilometres; null when no leg carries one. */
+  distanceKm: z.number().int().nonnegative().nullable(),
+  /** The first DRIVER added to the crew (by name among those added together); null without one. */
+  driverName: z.string().nullable(),
 });
 
 export const activityListResponse = listResponse(activityListItem);
@@ -112,8 +121,14 @@ export const activityFinancialEntryRead = z.object({
   entryNumber: z.string(),
   direction: z.enum(["REVENUE", "EXPENSE"]),
   categoryCode: z.string(),
+  categoryLabelFr: z.string(),
+  categoryLabelEn: z.string(),
   amountMinor: z.number().int(),
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]),
+  /** Set on a cancellation: the entry it cancels, so the card can fold the pair (#427). */
+  reversesEntryId: z.uuid().nullable(),
+  /** On an original: its posted cancellation. A trip's money is one window, so always folded. */
+  cancelledBy: entryCancellation.nullable(),
 });
 
 export const activityDetail = activityListItem.extend({
@@ -129,12 +144,24 @@ export const activityDetail = activityListItem.extend({
   createdAt: z.iso.datetime(),
   /** §3.4 provenance: the command that first wrote the row, shown on the record. */
   createdByCommandId: z.uuid().nullable(),
+  /**
+   * Who initiated that command. A DRIVER closes, and swaps the vehicle on,
+   * only the trips they recorded (OWN_RECORDS_ONLY); the screen reads this to
+   * offer those actions only where they will pass.
+   */
+  recordedByPrincipalId: z.uuid().nullable(),
   rowVersion: z.number().int().positive(),
   segments: z.array(activitySegmentRead),
   crew: z.array(activityCrewRead),
   legs: z.array(activityLegRead),
   readings: z.array(activityReadingRead),
-  financialEntries: z.array(activityFinancialEntryRead),
+  /**
+   * The trip's entries with their amounts, as many as the caller's money
+   * scope reads (a driver's own, #264). Null when the caller reads no entries
+   * (`canReadEntries`) or FINANCE is off (#103): hidden, never an empty list
+   * that would claim the trip had no money.
+   */
+  financialEntries: z.array(activityFinancialEntryRead).nullable(),
 });
 
 const queryBoolean = z
@@ -178,3 +205,27 @@ export type ActivityDetail = z.infer<typeof activityDetail>;
 export type PersonListQuery = z.infer<typeof personListQuery>;
 export type PersonListItem = z.infer<typeof personListItem>;
 export type PlaceListItem = z.infer<typeof placeListItem>;
+
+/** Narrows the trip counts like the list: inside the caller's scope, never wider. */
+export const activitySummaryQuery = z.object({
+  branchId: z.uuid().optional(),
+});
+
+/**
+ * The Trips overview, counted in SQL over the caller's workspace and branch
+ * scope. `week` is the current business week (Monday to Sunday, workspace
+ * time zone) that `thisWeek` and `weekKm` cover, so a tile can filter the list
+ * to exactly the days it counted. `open` and `incomplete` are all-time and
+ * equal what `status=OPEN` and `completeness=COMPLETE_WITH_EXCEPTIONS` list.
+ * `weekKm` sums the legs that carry a distance; null when none does.
+ */
+export const activitySummary = z.object({
+  week: z.object({ from: z.iso.date(), to: z.iso.date() }),
+  thisWeek: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  incomplete: z.number().int().nonnegative(),
+  weekKm: z.number().int().nonnegative().nullable(),
+});
+
+export type ActivitySummaryQuery = z.infer<typeof activitySummaryQuery>;
+export type ActivitySummary = z.infer<typeof activitySummary>;
