@@ -906,8 +906,9 @@ function DataTablePhoneRow<TData>({
               <div
                 data-slot="data-table-row-status"
                 // Badges and buttons are one-line pills elsewhere; here they wrap
-                // too, so nothing pokes out over the title.
-                className="flex max-w-full min-w-0 flex-col items-end gap-1 text-left text-xs wrap-anywhere text-muted-foreground [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:whitespace-normal"
+                // too, so nothing pokes out over the title. A wrapped button
+                // grows from its 44 px touch target, never below it.
+                className="flex max-w-full min-w-0 flex-col items-end gap-1 text-left text-xs wrap-anywhere text-muted-foreground [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:py-1 [&_[data-slot=button]]:whitespace-normal"
               >
                 {status.map(({ cell, content }) => (
                   <span key={cell.id}>{content}</span>

@@ -352,6 +352,9 @@ describe("DataTable", () => {
           "wrap-anywhere",
           "[&_[data-slot=badge]]:whitespace-normal",
           "[&_[data-slot=button]]:whitespace-normal",
+          // h-auto lets a wrapped button grow; min-h-11 keeps the 44 px target.
+          "[&_[data-slot=button]]:h-auto",
+          "[&_[data-slot=button]]:min-h-11",
         ]),
       );
       expect(slotText(row, "title")).toEqual(["#14"]);
