@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       reseed:
-        description: "Re-run the transports-ngwa demo seed after deploying"
+        description: "Re-run the demo seed (transports-ngwa and littoral-voyages) after deploying"
         type: boolean
         default: false
 
