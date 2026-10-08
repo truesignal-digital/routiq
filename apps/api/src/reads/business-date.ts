@@ -40,3 +40,15 @@ export function addDays(isoDate: string, delta: number): string {
 export function dayWindow(endDate: string, days: number): string[] {
   return Array.from({ length: days }, (_, i) => addDays(endDate, i - days + 1));
 }
+
+/** The Monday-to-Sunday week holding `isoDate`, as two ISO dates. */
+export function isoWeek(isoDate: string): { from: string; to: string } {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`not an ISO date: ${isoDate}`);
+  }
+  // getUTCDay: Sunday 0 … Saturday 6; Monday starts the week.
+  const sinceMonday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+  const from = addDays(isoDate, -sinceMonday);
+  return { from, to: addDays(from, 6) };
+}

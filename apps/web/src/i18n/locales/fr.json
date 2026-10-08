@@ -67,6 +67,10 @@
       "daily": "Au quotidien",
       "company": "Entreprise"
     },
+    "bottomBar": {
+      "label": "Raccourcis",
+      "menu": "Menu"
+    },
     "branch": {
       "label": "Agence courante",
       "all": "Toutes mes agences",
@@ -586,6 +590,7 @@
     },
     "periods": {
       "title": "Gestion des périodes",
+      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -618,7 +623,8 @@
     }
   },
   "common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "howCalculated": "Mode de calcul"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
@@ -628,6 +634,9 @@
     "view": "Affichage",
     "columns": "Colonnes",
     "clearFilters": "Effacer les filtres",
+    "filters": "{count, plural, =0 {Filtres} other {Filtres (#)}}",
+    "filtersTitle": "Filtres",
+    "showResults": "Voir les résultats",
     "filterAll": "Tous",
     "rowsPerPage": "Lignes par page",
     "pageOf": "Page {page} sur {pages}",
@@ -1025,6 +1034,16 @@
           "OTHER": "Autre"
         }
       }
+    },
+    "subtitle": "Chaque activité de votre flotte, du départ à la clôture.",
+    "metrics": {
+      "thisWeek": "Cette semaine",
+      "thisWeekHint": "Démarrage depuis lundi",
+      "incomplete": "Données incomplètes",
+      "incompleteHint": "Clôture avec exceptions",
+      "weekKm": "Km cette semaine",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "Selon les étapes saisies"
     }
   },
   "maintenance": {
@@ -1184,6 +1203,18 @@
         "workOrderCancelled": "Ordre de travail annulé",
         "assetReleased": "Actif remis en service"
       }
+    },
+    "subtitle": "Problèmes signalés et ordres de travail, de la déclaration à la réparation.",
+    "metrics": {
+      "newProblems": "Nouveaux problèmes",
+      "newProblemsHint": "{count, plural, =0 {Aucun critique pour la sécurité} one {# critique pour la sécurité} other {# critiques pour la sécurité}}",
+      "grounded": "Immobilisés",
+      "groundedHint": "Ne doivent pas rouler",
+      "inProgress": "Ordres de travail en cours",
+      "inProgressHint": "Approuvés, pas encore terminés",
+      "repairDays": "Durée moyenne de réparation",
+      "repairDaysValue": "{days, number} j",
+      "repairDaysHint": "{count, plural, =0 {Aucune réparation sur {window} jours} one {# réparation sur {window} jours} other {# réparations sur {window} jours}}"
     }
   },
   "persons": {
@@ -1212,7 +1243,8 @@
       "MECHANIC": "Mécanicien",
       "CLERK": "Agent",
       "OTHER": "Autre"
-    }
+    },
+    "lead": "Les personnes avec qui votre flotte travaille : chauffeurs, mécaniciens, équipage. Une personne peut conduire sans se connecter."
   },
   "users": {
     "title": "Utilisateurs",
@@ -1279,7 +1311,8 @@
         "reactivated": "Utilisateur réactivé : {name}"
       },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
-    }
+    },
+    "lead": "Qui peut se connecter, avec quel rôle et dans quelles agences."
   },
   "branches": {
     "title": "Agences",
@@ -1327,7 +1360,8 @@
       "info": {
         "switched": "Vous consultez : {branch}"
       }
-    }
+    },
+    "lead": "Les agences regroupent les véhicules, le personnel et l'argent par site. Chaque utilisateur voit les agences qui lui sont confiées."
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -1371,6 +1405,7 @@
       "unavailable": "Non disponible"
     },
     "event": {
+      "other": "Autre modification",
       "activity-created": "Activité créée",
       "activity-closed": "Activité clôturée",
       "activity-reopened": "Activité rouverte",
@@ -2301,7 +2336,6 @@
       "revenue": "Recettes comptabilisées",
       "revenueHint": "Comptabilisé n'est pas encaissé",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "howCalculated": "Mode de calcul",
       "byCategory": "Dépenses par catégorie",
       "byCategoryHint": "Comptabilisé, {period}",
       "lastSixMonths": "6 derniers mois",

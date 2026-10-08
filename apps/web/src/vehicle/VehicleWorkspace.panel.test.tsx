@@ -66,6 +66,15 @@ it("opens a record from the URL and keeps it across a reload", async () => {
   expect(await screen.findByRole("dialog", { name: "Brake repair: replace pads and air valve" })).toBeTruthy();
 });
 
+it.each([
+  ["work order", `panel=work_order:${WORK_ORDER_ID}`, /Brake repair/],
+  ["problem", `panel=issue:${ISSUE_ID}`, /Kekem/],
+] as const)("offers the same History button on the %s panel (#308)", async (_kind, panelParam, name) => {
+  await openVehicle(`/assets/${ASSET_ID}/maintenance?${panelParam}`, scenario);
+  const panel = await screen.findByRole("dialog", { name });
+  expect(within(panel).getByRole("button", { name: "History" })).toBeTruthy();
+});
+
 it("follows a reference by pushing history, so Back returns to the record", async () => {
   const { history } = await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, scenario);
   const user = userEvent.setup();
@@ -307,6 +316,8 @@ describe("a problem reported before it was recorded (#396)", () => {
         eventId: "00000000-0000-4000-8000-0000000000c3",
         kind: "operational_issue.reported",
         occurredAt: "2026-09-22T09:24:00.000Z",
+        note: null,
+        noteCode: null,
         actor: actor(OTHER_ID, "Sali"),
       },
     ],

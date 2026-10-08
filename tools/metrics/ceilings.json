@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 575969,
+    "ceiling": 579404,
     "raises": [
       {
         "date": "2026-10-06",
@@ -101,13 +101,31 @@
       {
         "date": "2026-10-08",
         "from": 574681,
-        "to": 575969,
-        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop 0fafed81) (re-recorded on develop e2914d92)"
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 575551,
+        "to": 576243,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 576243,
+        "to": 578177,
+        "reason": "Overview tiles (#302): Trucks, Trips and Maintenance tiles with two summary hooks and URL-backed list filters, plus Home and the truck's Money tab on MetricStrip (link, secondary link, info tooltip, unit); re-recorded on develop 0fafed81 (re-recorded on develop 5a2d2c16)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 578177,
+        "to": 579404,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop f8796dc8)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21891,
+    "ceiling": 22136,
     "raises": [
       {
         "date": "2026-10-06",
@@ -132,11 +150,23 @@
         "from": 21741,
         "to": 21891,
         "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21891,
+        "to": 21973,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21973,
+        "to": 22136,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 575969,
+    "ceiling": 579404,
     "raises": [
       {
         "date": "2026-10-06",
@@ -237,8 +267,26 @@
       {
         "date": "2026-10-08",
         "from": 574681,
-        "to": 575969,
-        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop 0fafed81) (re-recorded on develop e2914d92)"
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 575551,
+        "to": 576243,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 576243,
+        "to": 578177,
+        "reason": "Overview tiles (#302): Trucks, Trips and Maintenance tiles with two summary hooks and URL-backed list filters, plus Home and the truck's Money tab on MetricStrip (link, secondary link, info tooltip, unit); re-recorded on develop 0fafed81 (re-recorded on develop 5a2d2c16)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 578177,
+        "to": 579404,
+        "reason": "#98: Direction notes in the To-do, the Mark as seen form and fr/en strings (+1.2 kB gzip); the locales ship in the first load (re-recorded on develop f8796dc8)"
       }
     ]
   }

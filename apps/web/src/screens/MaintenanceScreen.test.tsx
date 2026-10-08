@@ -17,6 +17,7 @@ import type {
   UseIssuesParams,
   UseWorkOrdersParams,
 } from "../maintenance/useMaintenance.js";
+import { applyNavigate, useTestSearch } from "../test-router.js";
 
 const WORK_ORDER_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 const ISSUE_ID = "5e6f7a8b-0000-4000-8000-000000000002";
@@ -30,6 +31,10 @@ const mocks = vi.hoisted(() => ({
   language: "en",
 }));
 
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => applyNavigate,
+  useSearch: () => useTestSearch(),
+}));
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
 
 vi.mock("../commands/instance.js", () => ({
@@ -89,6 +94,19 @@ let detail: WorkOrderDetail;
 let issueRows: IssueListItem[];
 
 vi.mock("../maintenance/useMaintenance.js", () => ({
+  useMaintenanceSummary: () => ({
+    data: {
+      openIssues: 2,
+      openSafetyCritical: 1,
+      grounded: 1,
+      approvedWorkOrders: 1,
+      averageRepairDays: 3.5,
+      repairsCounted: 4,
+      repairWindowDays: 90,
+    },
+    isPending: false,
+    isError: false,
+  }),
   maintenanceQueryKey: (slug: string | undefined) => ["ws", slug, "maintenance"],
   useWorkOrders: (params: UseWorkOrdersParams) => {
     const previous = issuedQueries[issuedQueries.length - 1];
@@ -175,6 +193,8 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
         eventId: "aaaa0001-0000-4000-8000-000000000001",
         kind: "work_order.created",
         occurredAt: "2026-08-01T08:00:00.000Z",
+        note: null,
+        noteCode: null,
         actor: {
           principalId: "bbbb0001-0000-4000-8000-000000000001",
           displayName: "Amina Njoya",

@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { DashboardResponse } from "@routiq/contracts";
 import { DataTable } from "@/components/data-table";
+import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import {
@@ -14,9 +16,12 @@ import {
 } from "@/components/ui/card";
 import { useMeContext } from "@/auth/me.js";
 import { ChartAreaInteractive, type ChartRange } from "@/dashboard/ChartAreaInteractive.js";
-import { SectionCards } from "@/dashboard/SectionCards.js";
 import { useDashboard } from "@/dashboard/useDashboard.js";
-import { canOpenEntriesList } from "@/dashboard/cards.js";
+import {
+  canOpenEntriesList,
+  visibleDashboardCards,
+  type DashboardCardKey,
+} from "@/dashboard/cards.js";
 import { canReadFinance } from "@/finance/permissions.js";
 import {
   useFinanceEntryColumns,
@@ -61,7 +66,11 @@ export function DashboardScreen() {
       )}
 
       <div className="mt-6 flex flex-col gap-6">
-        <SectionCards data={dashboard.data} isPending={dashboard.isPending} />
+        <HomeTiles
+          data={dashboard.data}
+          isPending={dashboard.isPending}
+          isError={dashboard.isError}
+        />
 
         {showChart && (
           <ChartAreaInteractive
@@ -86,6 +95,118 @@ export function DashboardScreen() {
       </div>
     </PageContainer>
   );
+}
+
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+/**
+ * Home's tiles: server aggregates from `/v1/dashboard`, one per card the role
+ * and modules allow. Each opens the list its number comes from.
+ */
+function HomeTiles({
+  data,
+  isPending,
+  isError,
+}: {
+  data: DashboardResponse | undefined;
+  isPending: boolean;
+  isError: boolean;
+}) {
+  const { t } = useTranslation();
+  const me = useMeContext();
+  const entriesReachable = canOpenEntriesList(me?.role, me?.enabledModules);
+  const tiles = metricTiles(
+    visibleDashboardCards(me?.role, me?.enabledModules).map((key) =>
+      homeTile(key, data, entriesReachable, t),
+    ),
+  );
+  if (tiles === undefined) return null;
+  return (
+    <MetricStrip
+      tiles={tiles}
+      isPending={isPending}
+      isError={isError}
+      className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
+    />
+  );
+}
+
+function homeTile(
+  key: DashboardCardKey,
+  data: DashboardResponse | undefined,
+  entriesReachable: boolean,
+  t: Translate,
+): MetricTile {
+  const base = { id: key, label: t(`home.cards.${key}.title`) };
+
+  if (key === "pendingApprovals") {
+    const link = { to: "/finance/approvals" };
+    // Null only when the API withholds finance from this caller; the tile is
+    // gated to approvers, so this is the brief window before /v1/me agrees.
+    if (data === undefined || data.pendingApprovals === null) {
+      return {
+        ...base,
+        link,
+        value: null,
+        ...(data === undefined ? {} : { hint: t("home.cards.financeUnavailable") }),
+      };
+    }
+    const { count, outsideBranchCount } = data.pendingApprovals;
+    return {
+      ...base,
+      link,
+      value: String(count),
+      hint: t("home.cards.pendingApprovals.description", { count }),
+      // The count follows the shell's agency, so the tile says what that
+      // narrowing leaves out. Widened on arrival: the queue would otherwise
+      // preset itself to the very agency this line is counting around.
+      ...(outsideBranchCount === 0
+        ? {}
+        : {
+            secondary: {
+              label: t("home.cards.pendingApprovals.outsideBranch", { count: outsideBranchCount }),
+              to: "/finance/approvals",
+              search: { branch: "all" },
+            },
+          }),
+    };
+  }
+
+  if (key === "assets") {
+    return {
+      ...base,
+      link: { to: "/assets" },
+      value: data === undefined ? null : String(data.assets.byStatus.IN_SERVICE),
+      ...(data === undefined
+        ? {}
+        : { hint: t("home.cards.assets.description", { count: data.assets.total }) }),
+    };
+  }
+
+  const openPeriod = data?.openPeriod;
+  const direction = key === "openPeriodExpense" ? "EXPENSE" : "REVENUE";
+  const link = entriesReachable
+    ? {
+        link: {
+          to: "/finance/entries",
+          search: { periodCode: openPeriod?.periodCode, status: "LEDGER", direction },
+        },
+      }
+    : {};
+  if (data === undefined) return { ...base, ...link, value: null };
+  // No open period means nothing has been posted yet: a dash, never a zero,
+  // because a zero would claim the period balanced (§3.4).
+  if (openPeriod == null) {
+    return { ...base, ...link, value: null, hint: t("home.cards.noOpenPeriod") };
+  }
+  const minor =
+    key === "openPeriodExpense" ? openPeriod.postedExpenseMinor : openPeriod.postedRevenueMinor;
+  return {
+    ...base,
+    ...link,
+    ...moneyMetric(minor, openPeriod.currency),
+    hint: t("home.cards.periodDescription", { period: openPeriod.periodCode }),
+  };
 }
 
 /**
