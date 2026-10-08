@@ -43,7 +43,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (shown !== String(body.waiting.count)) throw new Error(`waiting tile shows ${shown}, API says ${body.waiting.count}`);
   await waitingTile.click();
   await page.waitForURL((url) => url.searchParams.get("view") === "waiting");
-  const row = page.getByRole("row").filter({ hasText: entry.entryNumber });
+  // A table row on desktop, a list row on a phone (#300).
+  const row = page.locator("tr, [data-slot='data-table-row']").filter({ hasText: entry.entryNumber, visible: true });
   await row.waitFor();
   await quiet();
   await shot("waiting-view", {
@@ -85,7 +86,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
       : `The old /finance/approvals link lands on the same waiting view, ${second.entryNumber} next`,
   });
 
-  await page.getByRole("link", { name: t("Mois comptables", "Accounting months") }).click();
+  // The header's link, not the Company row of the same name in the sidebar.
+  await page.getByRole("main").getByRole("link", { name: t("Mois comptables", "Accounting months") }).click();
   await page.getByRole("heading", { level: 1, name: t("Mois comptables", "Accounting months") }).waitFor();
   await quiet();
   await shot("accounting-months", { caption: "Accounting months is one click from the Money header, titled the same" });

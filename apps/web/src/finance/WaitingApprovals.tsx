@@ -371,7 +371,9 @@ function RowDecision({
   const { approve, submitting } = useApproveEntry();
 
   return (
-    <span className="flex items-center justify-end gap-2">
+    // Wraps on a phone, where the row's end column has half the width: the
+    // two buttons stack instead of spilling over the entry number.
+    <span className="flex flex-wrap items-center justify-end gap-2">
       <Button
         type="button"
         variant="outline"
