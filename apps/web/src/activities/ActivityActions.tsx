@@ -8,7 +8,6 @@ import type {
   ActivityDetail,
   closeActivityPayload,
   LegEndpoint,
-  recordExpensePayload,
   recordMovementLegPayload,
   reopenActivityPayload,
   substituteAssetPayload,
@@ -19,7 +18,6 @@ import {
   type CommandFormProps,
 } from "@/components/command-form.js";
 import { Button } from "@/components/ui/button";
-import { MoneyInput } from "@/components/money-input.js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,16 +34,14 @@ import { useMeContext } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { useCategories } from "../documents/useCategories.js";
-import { parseMoneyXaf } from "../finance/model.js";
-import { localizedLabel } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
 import { canCloseActivity, canRecordActivities, canReopenActivity } from "./permissions.js";
-import { localToIso, todayLocal, wholeNumber } from "./local-time.js";
+import { localToIso, wholeNumber } from "./local-time.js";
 import { PlaceEndpointField } from "./PlaceEndpointField.js";
 import { ReadingForm, type ReadingAssetChoice } from "./ReadingForm.js";
-import { LOAD_STATES, PAYMENT_METHODS } from "./sheet/form.js";
+import { RecordEntryForm } from "../finance/RecordEntryForm.js";
+import { LOAD_STATES } from "./sheet/form.js";
 
 export { localOffsetMinutes, toOffsetIso } from "./local-time.js";
 
@@ -53,7 +49,6 @@ type ClosePayload = z.infer<typeof closeActivityPayload>;
 type ReopenPayload = z.infer<typeof reopenActivityPayload>;
 type SubstitutePayload = z.infer<typeof substituteAssetPayload>;
 type LegPayload = z.infer<typeof recordMovementLegPayload>;
-type ExpensePayload = z.infer<typeof recordExpensePayload>;
 type Segment = ActivityDetail["segments"][number];
 
 /** Every activity write moves the same detail and list reads; one prefix covers both. */
@@ -75,10 +70,12 @@ function useActivityCommit() {
 }
 
 /**
- * The trip's own dialogs: the activities wording on the shared form shell,
- * with a conflict refreshing the trip before the dialog closes.
+ * The trip's own forms: the activities wording on the shared form shell,
+ * with a conflict refreshing the trip before the form closes. Facts (a leg, a
+ * substitute) open in the side panel; decisions (close, reopen) in a dialog.
  */
-function ActivityDialog({
+function ActivityForm({
+  surface,
   onDismiss,
   onReload,
   ...props
@@ -86,6 +83,7 @@ function ActivityDialog({
   CommandFormProps,
   "surface" | "title" | "onReload"
 > & {
+  surface: "sheet" | "dialog";
   title: string;
   onReload: () => Promise<unknown>;
   children: ReactNode;
@@ -93,7 +91,7 @@ function ActivityDialog({
   return (
     <CommandForm
       {...props}
-      surface="dialog"
+      surface={surface}
       onReload={async () => {
         await onReload();
         onDismiss();
@@ -217,13 +215,13 @@ export function ActivityActions({
       </div>
 
       {panel === "close" && (
-        <CloseDialog activity={activity} client={client} onDismiss={dismiss} />
+        <CloseTripDialog activity={activity} client={client} onDismiss={dismiss} />
       )}
       {panel === "reopen" && (
-        <ReopenDialog activity={activity} client={client} onDismiss={dismiss} />
+        <ReopenTripDialog activity={activity} client={client} onDismiss={dismiss} />
       )}
       {panel === "substitute" && (
-        <SubstituteDialog
+        <SubstituteForm
           activity={activity}
           segments={openSegments}
           client={client}
@@ -231,7 +229,7 @@ export function ActivityActions({
         />
       )}
       {panel === "leg" && (
-        <LegDialog
+        <LegForm
           activity={activity}
           segments={openSegments}
           client={client}
@@ -240,7 +238,7 @@ export function ActivityActions({
       )}
       {panel === "reading" && (
         <ReadingForm
-          surface="dialog"
+          surface="sheet"
           assets={assets}
           activityId={activity.id}
           client={client}
@@ -248,9 +246,10 @@ export function ActivityActions({
         />
       )}
       {panel === "expense" && (
-        <ExpenseDialog
+        <TripExpenseForm
           activity={activity}
           assets={assets}
+          running={openSegments}
           client={client}
           onDismiss={dismiss}
         />
@@ -259,7 +258,7 @@ export function ActivityActions({
   );
 }
 
-function CloseDialog({
+function CloseTripDialog({
   activity,
   client,
   onDismiss,
@@ -308,7 +307,8 @@ function CloseDialog({
   }
 
   return (
-    <ActivityDialog
+    <ActivityForm
+      surface="dialog"
       title={label("close-activity")}
       description={t("activities.actions.closeHint")}
       error={submission.error}
@@ -344,11 +344,11 @@ function CloseDialog({
         />
       </div>
 
-    </ActivityDialog>
+    </ActivityForm>
   );
 }
 
-function ReopenDialog({
+function ReopenTripDialog({
   activity,
   client,
   onDismiss,
@@ -391,7 +391,8 @@ function ReopenDialog({
   }
 
   return (
-    <ActivityDialog
+    <ActivityForm
+      surface="dialog"
       title={label("reopen-activity")}
       description={t("activities.actions.reopenHint")}
       error={submission.error}
@@ -415,7 +416,7 @@ function ReopenDialog({
         />
       </div>
 
-    </ActivityDialog>
+    </ActivityForm>
   );
 }
 
@@ -459,7 +460,7 @@ function useAssetOptions(
   );
 }
 
-function SubstituteDialog({
+function SubstituteForm({
   activity,
   segments,
   client,
@@ -559,7 +560,8 @@ function SubstituteDialog({
   }
 
   return (
-    <ActivityDialog
+    <ActivityForm
+      surface="sheet"
       title={label("substitute-asset")}
       description={t("activities.actions.substituteHint")}
       error={submission.error}
@@ -674,11 +676,11 @@ function SubstituteDialog({
         />
       </div>
 
-    </ActivityDialog>
+    </ActivityForm>
   );
 }
 
-function LegDialog({
+function LegForm({
   activity,
   segments,
   client,
@@ -751,7 +753,8 @@ function LegDialog({
   }
 
   return (
-    <ActivityDialog
+    <ActivityForm
+      surface="sheet"
       title={label("record-movement-leg")}
       description={t("activities.actions.addLegHint", { legNo: nextLegNo })}
       error={submission.error}
@@ -877,227 +880,49 @@ function LegDialog({
         </div>
       )}
 
-    </ActivityDialog>
+    </ActivityForm>
   );
 }
 
-function ExpenseDialog({
+/**
+ * A mid-trip expense is the same form as every other expense: RecordEntryForm
+ * in the side panel, its line charged to the truck and to this trip.
+ */
+function TripExpenseForm({
   activity,
   assets,
+  running,
   client,
   onDismiss,
 }: {
   activity: ActivityDetail;
   assets: readonly AssetChoice[];
+  running: readonly Segment[];
   client: CommandClient;
   onDismiss: () => void;
 }) {
-  const { t } = useTranslation();
-  const label = useCommandLabel();
-  const { commit, invalidate } = useActivityCommit();
-  const submission = useCommandSubmission();
-  const categoriesQuery = useCategories("EXPENSE_CATEGORY");
-
-  const entryId = useRef(crypto.randomUUID());
-  const [categoryCode, setCategoryCode] = useState("");
-  const [amountInput, setAmountInput] = useState("");
-  const [economicDate, setEconomicDate] = useState(() => todayLocal());
-  const [paymentMethod, setPaymentMethod] =
-    useState<(typeof PAYMENT_METHODS)[number]>("CASH");
-  const [counterpartyName, setCounterpartyName] = useState("");
-  const [description, setDescription] = useState("");
-  const [assetId, setAssetId] = useState(assets[0]?.assetId ?? "");
-  const intent = useRef<CommandIntent<ExpensePayload> | undefined>(undefined);
-
-  const amountMinor = parseMoneyXaf(amountInput);
-  const ready =
-    categoryCode !== "" &&
-    amountMinor !== null &&
-    amountMinor > 0 &&
-    economicDate !== "";
-
-  async function submit() {
-    if (!ready || amountMinor === null) return;
-
-    const trimmedCounterparty = counterpartyName.trim();
-    const trimmedDescription = description.trim();
-    const payload: ExpensePayload = {
-      entryId: entryId.current,
-      branchCode: activity.branchCode,
-      categoryCode,
-      economicDate,
-      // XAF has exponent 0: what the operator typed is already minor units.
-      amountMinor,
-      currency: "XAF",
-      paymentMethod,
-      estimateStatus: "ACTUAL",
-      ...(trimmedCounterparty === ""
-        ? {}
-        : { counterpartyName: trimmedCounterparty }),
-      ...(trimmedDescription === "" ? {} : { description: trimmedDescription }),
-      postings: [
-        {
-          amountMinor,
-          assetAttribution: "DIRECT",
-          // Two dimensions on one line: the truck that spent it and the trip it
-          // was spent on.
-          activityId: activity.id,
-          ...(assetId === "" ? {} : { assetId }),
-        },
-      ],
-    };
-
-    intent.current ??= createCommandIntent<ExpensePayload>(
-      client,
-      "record-expense",
-      1,
-    );
-    const current = intent.current;
-    const result = await submission.run(() => current.submit(payload));
-    if (!result.ok) return;
-    // Above the tenant's threshold the entry lands SUBMITTED, not POSTED. That
-    // is the approval rule working, so the toast reports it instead of hiding it.
-    await commit(
-      result.outcome.recordStatus === "SUBMITTED"
-        ? "expenseSubmitted"
-        : "expenseRecorded",
-      result.outcome.warnings,
-    );
-    onDismiss();
-  }
+  const { invalidate } = useActivityCommit();
+  // The truck on the road spends the money: the one running segment's, or the
+  // trip's only truck. Otherwise the operator picks it.
+  const runningAssetId = running.length === 1 ? running[0]?.assetId : undefined;
+  const only =
+    assets.find((choice) => choice.assetId === runningAssetId) ??
+    (assets.length === 1 ? assets[0] : undefined);
 
   return (
-    <ActivityDialog
-      title={label("record-expense")}
-      description={t("activities.actions.addExpenseHint")}
-      error={submission.error}
-      command="record-expense"
-      ready={ready}
-      submitting={submission.submitting}
-      onSubmit={() => void submit()}
-      onReload={invalidate}
+    <RecordEntryForm
+      surface="sheet"
+      initialDirection="EXPENSE"
+      lockDirection
+      {...(only === undefined ? {} : { pinnedAssetId: only.assetId, pinnedAssetLabel: only.assetCode })}
+      link={{ activityId: activity.id }}
+      defaultBranchCode={activity.branchCode}
+      client={client}
+      onRecorded={() => {
+        void invalidate();
+        onDismiss();
+      }}
       onDismiss={onDismiss}
-    >
-      <div className="flex flex-col gap-2">
-        <Label>{t("activities.actions.expenseCategory")}</Label>
-        <Select
-          value={categoryCode || null}
-          onValueChange={(value) => setCategoryCode(value ?? "")}
-          disabled={categoriesQuery.isPending || categoriesQuery.isError}
-        >
-          <SelectTrigger
-            className="w-full"
-            aria-label={t("activities.actions.expenseCategory")}
-          >
-            <SelectValue placeholder={t("activities.actions.choose")} />
-          </SelectTrigger>
-          <SelectContent>
-            {(categoriesQuery.data ?? []).map((category) => (
-              <SelectItem key={category.code} value={category.code}>
-                {localizedLabel(category)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="activity-expense-amount">
-            {t("activities.actions.expenseAmount")}
-          </Label>
-          <MoneyInput
-            id="activity-expense-amount"
-            aria-label={t("activities.actions.expenseAmount")}
-            value={amountInput}
-            onValueChange={setAmountInput}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="activity-expense-date">
-            {t("activities.actions.expenseEconomicDate")}
-          </Label>
-          <DateField
-            id="activity-expense-date"
-            value={economicDate}
-            onChange={setEconomicDate}
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label>{t("activities.actions.expensePaymentMethod")}</Label>
-          <Select
-            value={paymentMethod}
-            onValueChange={(value) => {
-              if (value)
-                setPaymentMethod(value as (typeof PAYMENT_METHODS)[number]);
-            }}
-          >
-            <SelectTrigger
-              className="w-full"
-              aria-label={t("activities.actions.expensePaymentMethod")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAYMENT_METHODS.map((method) => (
-                <SelectItem key={method} value={method}>
-                  {t(`activities.record.entries.paymentMethods.${method}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label>{t("activities.actions.expenseAsset")}</Label>
-          <Select
-            value={assetId || null}
-            onValueChange={(value) => setAssetId(value ?? "")}
-          >
-            <SelectTrigger
-              className="w-full"
-              aria-label={t("activities.actions.expenseAsset")}
-            >
-              <SelectValue placeholder={t("activities.actions.choose")} />
-            </SelectTrigger>
-            <SelectContent>
-              {assets.map((asset) => (
-                <SelectItem key={asset.assetId} value={asset.assetId}>
-                  {asset.assetCode}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="activity-expense-counterparty">
-          {t("activities.actions.expenseCounterparty")}
-        </Label>
-        <Input
-          id="activity-expense-counterparty"
-          type="text"
-          maxLength={160}
-          value={counterpartyName}
-          onChange={(event) => setCounterpartyName(event.target.value)}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="activity-expense-description">
-          {t("activities.actions.expenseDescription")}
-        </Label>
-        <Textarea
-          id="activity-expense-description"
-          maxLength={500}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-      </div>
-
-    </ActivityDialog>
+    />
   );
 }

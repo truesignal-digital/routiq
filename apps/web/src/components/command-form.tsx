@@ -1,4 +1,15 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+} from "react"
 import { ArrowLeft } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -58,6 +69,8 @@ type CommandFormChrome =
 
 export type CommandFormProps = CommandFormChrome & {
   description?: string | undefined
+  /** Sheet only: repeating rows (cost lines) take the 560 px Line items width. */
+  width?: FormPanelWidth | undefined
   /** Panel only: the record this form belongs to. */
   back?: CommandFormBack | undefined
   /**
@@ -151,21 +164,213 @@ export function CommandForm(props: CommandFormProps) {
 }
 
 function CommandFormSheet(props: CommandFormProps) {
+  return (
+    <FormPanel onClose={props.onDismiss} width={props.width} className={props.className}>
+      <CommandFormPanel {...props} />
+    </FormPanel>
+  )
+}
+
+export type FormPanelWidth = "record" | "line-items"
+
+/**
+ * The side panel's frame: a right sheet on desktop (440 px, 560 for Line
+ * items), a bottom sheet on phone. Shared by every surface that hosts a form
+ * in a sheet, so they all have one width and one close rule.
+ */
+export function formPanelClassName(
+  isMobile: boolean,
+  width: FormPanelWidth = "record",
+): string {
+  return cn(
+    "gap-0 overflow-y-auto",
+    isMobile
+      ? "h-[92dvh] max-h-[92dvh] rounded-t-xl"
+      : width === "line-items"
+        ? "data-[side=right]:w-full data-[side=right]:sm:max-w-[560px]"
+        : "data-[side=right]:w-full data-[side=right]:sm:max-w-[440px]",
+  )
+}
+
+interface DiscardGuard {
+  markTyped: () => void
+  clear: () => void
+  /** Runs `leave` now, or once the operator agrees to lose what they typed. */
+  confirm: (leave: () => void) => void
+}
+
+const DiscardGuardContext = createContext<DiscardGuard | undefined>(undefined)
+
+/**
+ * Closing a form with typed data asks first. The host owning the sheet holds
+ * the guard; the form marks it on any input and asks it before Cancel.
+ */
+export function useDiscardGuard() {
+  const typed = useRef(false)
+  const [leaving, setLeaving] = useState<(() => void) | undefined>()
+  const guard = useMemo<DiscardGuard>(
+    () => ({
+      markTyped: () => {
+        typed.current = true
+      },
+      clear: () => {
+        typed.current = false
+      },
+      confirm: (leave) => {
+        if (typed.current) setLeaving(() => leave)
+        else leave()
+      },
+    }),
+    [],
+  )
+  const dialog =
+    leaving === undefined ? null : (
+      <DiscardDialog
+        onKeep={() => setLeaving(undefined)}
+        onDiscard={() => {
+          typed.current = false
+          setLeaving(undefined)
+          leaving()
+        }}
+      />
+    )
+  return { guard, dialog }
+}
+
+/** Wraps a sheet's content so the forms inside it report typing to the guard. */
+export function DiscardGuardScope({
+  guard,
+  children,
+}: {
+  guard: DiscardGuard
+  children: ReactNode
+}) {
+  return (
+    <DiscardGuardContext.Provider value={guard}>
+      <div className="contents" onInput={guard.markTyped}>
+        {children}
+      </div>
+    </DiscardGuardContext.Provider>
+  )
+}
+
+/** Cancel inside a guarded sheet asks before it drops typed data. */
+export function useGuardedDismiss(onDismiss: () => void): () => void {
+  const guard = useContext(DiscardGuardContext)
+  return () => (guard === undefined ? onDismiss() : guard.confirm(onDismiss))
+}
+
+/**
+ * The Decision dialog every guarded close asks: the dismiss button keeps the
+ * form, the destructive one repeats its verb.
+ */
+function DiscardDialog({
+  onKeep,
+  onDiscard,
+}: {
+  onKeep: () => void
+  onDiscard: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <Dialog open onOpenChange={(open) => !open && onKeep()}>
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>{t("commandForm.discardTitle")}</DialogTitle>
+          <DialogDescription>{t("commandForm.discardBody")}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex-row justify-end">
+          <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={onKeep}>
+            {t("commandForm.keepEditing")}
+          </Button>
+          <Button type="button" variant="destructive" className="flex-1 sm:flex-none" onClick={onDiscard}>
+            {t("commandForm.discard")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * A form in the side panel, for forms that render their own fields and
+ * footer. `onClose` runs when the operator closes the sheet (×, Escape, the
+ * backdrop), after the discard question when something was typed.
+ */
+export function FormPanel({
+  open = true,
+  onClose,
+  width,
+  className,
+  children,
+}: {
+  open?: boolean | undefined
+  onClose: () => void
+  width?: FormPanelWidth | undefined
+  className?: string | undefined
+  children: ReactNode
+}) {
   const isMobile = useIsMobile()
+  const { guard, dialog } = useDiscardGuard()
+
+  // Each opening starts clean: what was typed last time is gone.
+  useEffect(() => {
+    if (open) guard.clear()
+  }, [open, guard])
 
   return (
-    <Sheet open onOpenChange={(open) => !open && props.onDismiss()}>
+    <Sheet open={open} onOpenChange={(next) => !next && guard.confirm(onClose)}>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
-        className={cn(
-          "gap-0 overflow-y-auto",
-          isMobile ? "max-h-[92vh] rounded-t-xl" : "data-[side=right]:sm:max-w-lg",
-          props.className,
-        )}
+        className={cn(formPanelClassName(isMobile, width), className)}
       >
-        <CommandFormPanel {...props} />
+        <DiscardGuardScope guard={guard}>{children}</DiscardGuardScope>
+        {dialog}
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** The header every panel form opens with: verb title, one-line description. */
+export function FormPanelHeader({
+  title,
+  description,
+}: {
+  title: ReactNode
+  description?: ReactNode | undefined
+}) {
+  return (
+    <div className="border-b px-4 pt-3 pb-4 pr-12">
+      <SheetTitle className="text-lg leading-snug font-semibold">{title}</SheetTitle>
+      {description !== undefined && (
+        <SheetDescription className="mt-1">{description}</SheetDescription>
+      )}
+    </div>
+  )
+}
+
+/** Cancel in a panel form's footer: asks before it drops typed data. */
+export function FormPanelCancel({
+  onDismiss,
+  children,
+}: {
+  onDismiss: () => void
+  children: ReactNode
+}) {
+  const dismiss = useGuardedDismiss(onDismiss)
+  return (
+    <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={dismiss}>
+      {children}
+    </Button>
+  )
+}
+
+/** The panel's sticky footer: cancel, then submit last. */
+export function FormPanelFooter({ children }: { children: ReactNode }) {
+  return (
+    <SheetFooter className="sticky bottom-0 z-20 flex-row justify-end gap-2 border-t bg-popover">
+      {children}
+    </SheetFooter>
   )
 }
 
@@ -207,6 +412,10 @@ function CommandFormBody(props: CommandFormProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const { surface, error, ready, submitting, onSubmit, onDismiss } = props
   const outcome = outcomeOf(error)
+  const guard = useContext(DiscardGuardContext)
+  const dismiss = useGuardedDismiss(onDismiss)
+  // A record panel keeps its guard after this form goes back to the record.
+  useEffect(() => () => guard?.clear(), [guard])
   // A dialog or a sheet takes the class on its overlay; a page or a panel
   // page has only the form to put it on.
   const bodyClassName =
@@ -319,7 +528,7 @@ function CommandFormBody(props: CommandFormProps) {
       type="button"
       variant="outline"
       className={surface === "page" ? undefined : "flex-1 sm:flex-none"}
-      onClick={onDismiss}
+      onClick={dismiss}
     >
       {props.cancelLabel ?? label(props.command, "dismiss")}
     </Button>
@@ -446,11 +655,7 @@ function Footer({
     return <DialogFooter className="flex-row justify-end">{children}</DialogFooter>
   }
   if (surface === "page") return <div className="flex gap-2">{children}</div>
-  return (
-    <SheetFooter className="sticky bottom-0 z-20 flex-row gap-2 border-t bg-popover">
-      {children}
-    </SheetFooter>
-  )
+  return <FormPanelFooter>{children}</FormPanelFooter>
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 574502,
+    "ceiling": 574681,
     "raises": [
       {
         "date": "2026-10-06",
@@ -91,6 +91,12 @@
         "from": 573396,
         "to": 574502,
         "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
       }
     ]
   },
@@ -124,7 +130,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 574502,
+    "ceiling": 574681,
     "raises": [
       {
         "date": "2026-10-06",
@@ -215,6 +221,12 @@
         "from": 573396,
         "to": 574502,
         "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
       }
     ]
   }

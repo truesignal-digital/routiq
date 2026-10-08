@@ -242,7 +242,7 @@ export function AssetActionForm({
   );
 }
 
-/** The asset list and the asset page open the form above as a dialog. */
+/** The asset list opens the form above in the side panel: it records a fact. */
 export function AssetActionDialog({
   asset,
   action,
@@ -256,7 +256,7 @@ export function AssetActionDialog({
 }) {
   return (
     <AssetActionForm
-      surface="dialog"
+      surface="sheet"
       asset={asset}
       action={action}
       client={client}
