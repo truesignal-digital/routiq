@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DEMO_ACCOUNTS, DEMO_WORKSPACE } from "./accounts.js";
+import { DEMO_ACCOUNTS, DEMO_WORKSPACE, PASSENGER_WORKSPACE } from "./accounts.js";
 import { isAlive, httpStatus, listenerPid, portInUse, processGroupOf, run, startDetached, stopGroup, waitFor } from "./proc.js";
 import { renderCompose, renderViteConfig, storageImageFrom } from "./render.js";
 import {
@@ -118,7 +118,7 @@ export async function up(slot: number, reseed: boolean, built = false): Promise<
   const existing = readState(slot);
   if (existing !== undefined && isAlive(existing.pids.api) && isAlive(existing.pids.web)) {
     if (reseed) {
-      say(`slot ${slot} is up; reseeding the demo workspace (seed-demo --reset)`);
+      say(`slot ${slot} is up; reseeding the demo workspaces (seed-demo --reset)`);
       seed(existing, true);
       say(`reseeded. Log: ${existing.logs.seed}`);
     } else {
@@ -195,7 +195,7 @@ export async function up(slot: number, reseed: boolean, built = false): Promise<
   say(`api up (migrated at boot): ${state.urls.api}  pid ${state.pids.api}`);
 
   seed(state, false);
-  say(`demo workspace seeded: ${DEMO_WORKSPACE}. Log: ${state.logs.seed}`);
+  say(`demo workspaces seeded: ${DEMO_WORKSPACE}, ${PASSENGER_WORKSPACE}. Log: ${state.logs.seed}`);
 
   if (built) {
     say("building the web app for this slot (vite build)…");
@@ -326,12 +326,12 @@ export async function doctor(slot: number): Promise<boolean> {
       },
     },
     ...DEMO_ACCOUNTS.map((account) => ({
-      label: `login ${account.username} (${account.role})`,
+      label: `login ${account.workspace}/${account.username} (${account.role})`,
       run: async () => {
         const res = await fetch(`${state.urls.web}/v1/auth/login`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ workspaceSlug: DEMO_WORKSPACE, username: account.username, pin: account.pin }),
+          body: JSON.stringify({ workspaceSlug: account.workspace, username: account.username, pin: account.pin }),
           signal: AbortSignal.timeout(5000),
         });
         const body = (await res.json()) as { token?: unknown };

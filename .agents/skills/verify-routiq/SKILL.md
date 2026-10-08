@@ -5,7 +5,7 @@ description: "Run the real ROUTIQ app (Postgres, S3 storage, Fastify API, Vite w
 
 # Verify ROUTIQ
 
-`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa demo workspace, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature.
+`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa and Littoral Voyages demo workspaces, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature.
 
 Never touch the owner's dev stack: Postgres on 5435 with volume `routiq_pgdata`, the API on 3001, web on 5173, the demo box on 8080. The CLI refuses those ports and only ever removes `routiq-verify-N` compose projects.
 
@@ -26,7 +26,7 @@ pnpm verify up                       # slot 1; pick another with --slot N (0-99)
 Slot N owns ports 24000+10N: Postgres +0, storage +1, API +2, web +3. Slot 1 is web `http://127.0.0.1:24013`, API `http://127.0.0.1:24012`. Ready means `up` printed `web up, proxying /v1 to the slot API`; it takes about 15 s warm. PIDs, ports and log paths are in `.verify/slots/N/state.json`.
 
 - `pnpm verify up --built` builds the web app and serves the build with `vite preview` (same port, same `/v1` proxy), so load times match a deployed app. `pnpm perf` needs it; the dev server's unbundled cold load says nothing about users. Rebuild by `down` then `up --built` after web changes.
-- Already up: `up` says so and does nothing. `pnpm verify up --reseed` resets the demo workspace (`seed-demo --reset`) on a running slot; do this between runs that mutate data.
+- Already up: `up` says so and does nothing. `pnpm verify up --reseed` resets both demo workspaces (`seed-demo --reset`) on a running slot; do this between runs that mutate data.
 - A port in use means another checkout holds that slot. Pick another `--slot`; never kill its processes.
 - Two checkouts can run at once on different slots. Code changes in this checkout reload in the web app (Vite HMR); API changes need `down` then `up`.
 
@@ -67,7 +67,18 @@ Every drive logs in through the real form (Workspace `transports-ngwa`, Username
 | `driver` (`field`) | sali | 333333 | DRIVER (Chauffeur) | all |
 | `driver-yde` | patrice | 444444 | DRIVER | YDE only (sees no trucks) |
 
-Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do what: `docs/reference/roles-and-access.md`.
+The seed also creates a passenger company, `littoral-voyages` (Littoral Voyages, PASSENGER_TRANSPORT, branches DLA and YDE), from `apps/api/scripts/seed-demo-passenger.ts`. Its accounts log in to that workspace automatically:
+
+| `--role` | User | PIN | Role | Branches |
+|---|---|---|---|---|
+| `passenger-director` | josiane | 101010 | DIRECTOR | all |
+| `passenger-admin` | paul | 202020 | ADMIN | all |
+| `passenger-finance` | aline | 404040 | FINANCE | all |
+| `passenger-cashier` | grace | 606060 | CASHIER | DLA only |
+| `passenger-technician` | bertrand | 505050 | TECHNICIAN | all |
+| `passenger-driver` | eric | 303030 | DRIVER | all |
+
+Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare role code picks the trucking account. Who may do what: `docs/reference/roles-and-access.md`.
 
 **Language.** The app starts in French. A choice made on More is stored per device in `localStorage["routiq-language"]` and survives full loads (#127). `--lang en` switches through the UI (Plus → English) after login, so every run starts from a clean browser and proves the switch. Navigate by clicking or with `ctx.nav(route)`; `page.goto` is fine for deep links now that the choice persists.
 
