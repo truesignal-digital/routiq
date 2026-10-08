@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 581936,
+    "ceiling": 583829,
     "raises": [
       {
         "date": "2026-10-06",
@@ -133,11 +133,17 @@
         "from": 580712,
         "to": 581936,
         "reason": "#96: change-issue-severity form, steps and fr/en strings, +1256 B gzip measured on top of develop after #92; the locales ship in the first load (re-recorded on develop 716bfedd)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 581936,
+        "to": 583829,
+        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22136,
+    "ceiling": 22212,
     "raises": [
       {
         "date": "2026-10-06",
@@ -174,11 +180,17 @@
         "from": 21973,
         "to": 22136,
         "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 22136,
+        "to": 22212,
+        "reason": "#322: navigation count badge and rail dot styles on the sidebar and phone bottom bar, about 80 B gzip (re-recorded on develop 6444c6bf)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 581936,
+    "ceiling": 583829,
     "raises": [
       {
         "date": "2026-10-06",
@@ -311,6 +323,12 @@
         "from": 580712,
         "to": 581936,
         "reason": "#96: change-issue-severity form, steps and fr/en strings, +1256 B gzip measured on top of develop after #92; the locales ship in the first load (re-recorded on develop 716bfedd)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 581936,
+        "to": 583829,
+        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
       }
     ]
   }

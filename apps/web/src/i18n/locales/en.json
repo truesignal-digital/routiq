@@ -63,6 +63,11 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "counts": {
+      "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
+      "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
+      "tooltip": "{label}: {waiting}"
+    },
     "groups": {
       "daily": "Daily work",
       "company": "Company"

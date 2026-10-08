@@ -47,7 +47,12 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     return nav.evaluate((root) =>
       [...root.querySelectorAll("[data-sidebar='group']")].map((group) => ({
         heading: group.querySelector("[data-sidebar='group-label']")?.textContent?.trim() ?? "",
-        rows: [...group.querySelectorAll("a")].map((a) => a.textContent?.trim() ?? ""),
+        // A row's own words: not its count link (#322), not the rail's dot.
+        rows: [...group.querySelectorAll("a:not([data-nav-count])")].map((a) => {
+          const row = a.cloneNode(true) as Element;
+          row.querySelectorAll("[data-nav-count-dot]").forEach((dot) => dot.remove());
+          return row.textContent?.trim() ?? "";
+        }),
       })),
     );
   };

@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useMeContext } from "../auth/me.js";
 import { NameMenu } from "./NameMenu.js";
+import { NavCountDot, NavCountLink } from "./NavCount.js";
 import { activeSection, visibleSectionGroups } from "./sections.js";
+import { useNavCounts } from "./useNavCounts.js";
 
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
 const MENU_BUTTON = "min-h-11 md:min-h-8";
@@ -30,6 +32,7 @@ export function AppSidebar() {
   const railOnly = state === "collapsed" && !isMobile;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const groups = visibleSectionGroups(me?.role, me?.enabledModules);
+  const counts = useNavCounts();
   const active = activeSection(
     groups.flatMap((group) => group.sections),
     pathname,
@@ -72,20 +75,34 @@ export function AppSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {group.sections.map(({ key, to, labelKey, icon: Icon }) => {
+                  {group.sections.map(({ key, to, labelKey, icon: Icon, count }) => {
                     const label = t(labelKey);
+                    const waiting = count === undefined ? undefined : counts[count.key];
                     return (
                       <SidebarMenuItem key={key}>
                         <SidebarMenuButton
                           isActive={active?.key === key}
-                          tooltip={label}
+                          tooltip={
+                            count === undefined || waiting === undefined
+                              ? label
+                              : t("shell.counts.tooltip", {
+                                  label,
+                                  waiting: t(count.labelKey, { count: waiting }),
+                                })
+                          }
                           className={MENU_BUTTON}
                           onClick={closeOnMobile}
                           render={<Link to={to} />}
                         >
                           <Icon aria-hidden />
                           <span>{label}</span>
+                          {count !== undefined && waiting !== undefined && (
+                            <NavCountDot count={count} value={waiting} />
+                          )}
                         </SidebarMenuButton>
+                        {count !== undefined && waiting !== undefined && (
+                          <NavCountLink count={count} value={waiting} onNavigate={closeOnMobile} />
+                        )}
                       </SidebarMenuItem>
                     );
                   })}
