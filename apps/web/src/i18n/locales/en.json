@@ -1372,6 +1372,7 @@
       "unavailable": "Not available"
     },
     "event": {
+      "other": "Other change",
       "activity-created": "Activity created",
       "activity-closed": "Activity closed",
       "activity-reopened": "Activity reopened",
