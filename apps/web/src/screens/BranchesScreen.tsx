@@ -130,6 +130,7 @@ export function BranchesScreen() {
           </Button>
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("branches.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions

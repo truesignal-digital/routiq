@@ -1,5 +1,9 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import type { ActivityDetail, ActivityListResponse } from "@routiq/contracts";
+import type {
+  ActivityDetail,
+  ActivityListResponse,
+  ActivitySummary,
+} from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
 
@@ -94,6 +98,59 @@ export function useActivity(activityId: string) {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
       return fetchActivity(token, activityId, signal);
+    },
+  });
+}
+
+function isActivitySummary(value: unknown): value is ActivitySummary {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  const week = record["week"];
+  const km = record["weekKm"];
+  return (
+    typeof week === "object" &&
+    week !== null &&
+    typeof (week as Record<string, unknown>)["from"] === "string" &&
+    typeof (week as Record<string, unknown>)["to"] === "string" &&
+    typeof record["thisWeek"] === "number" &&
+    typeof record["open"] === "number" &&
+    typeof record["incomplete"] === "number" &&
+    (km === null || typeof km === "number")
+  );
+}
+
+export async function fetchActivitySummary(
+  token: string,
+  params: { branchId?: string } = {},
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ActivitySummary> {
+  const query = params.branchId === undefined ? "" : `?branchId=${encodeURIComponent(params.branchId)}`;
+  const response = await fetchImpl(`/v1/activities/summary${query}`, {
+    headers: { authorization: `Bearer ${token}` },
+    ...(signal === undefined ? {} : { signal }),
+  });
+  if (!response.ok) throw new Error(`ACTIVITY_SUMMARY_${response.status}`);
+  const body: unknown = await response.json();
+  if (!isActivitySummary(body)) throw new Error("ACTIVITY_SUMMARY_INVALID_RESPONSE");
+  return body;
+}
+
+/**
+ * The Trips overview counts, from the server. Under the activities key, so a
+ * trip write that refreshes the list refreshes the tiles too.
+ */
+export function useActivitySummary() {
+  const session = useActiveSession();
+  const params = useBranchScopedParams({});
+
+  return useQuery<ActivitySummary>({
+    queryKey: ["ws", session?.workspaceSlug, "activities", "summary", params],
+    enabled: session !== undefined,
+    queryFn: ({ signal }) => {
+      const token = sessionStore.getToken();
+      if (token === undefined) throw new Error("AUTH_REQUIRED");
+      return fetchActivitySummary(token, params, signal);
     },
   });
 }
