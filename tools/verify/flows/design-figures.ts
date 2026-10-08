@@ -22,7 +22,10 @@ async function typeOffenders(page: Page): Promise<{ mono: Offender[]; uppercase:
     const describe = (el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent ?? "").trim().slice(0, 40) });
     return {
       mono: leaves.filter((el) => /mono|courier|consolas|menlo/i.test(getComputedStyle(el).fontFamily)).map(describe),
-      uppercase: leaves.filter((el) => getComputedStyle(el).textTransform === "uppercase").map(describe),
+      // The wordmark sets the product name in wide caps; it is the logo, not a label (DS-4 exempts components/brand/).
+      uppercase: leaves
+        .filter((el) => getComputedStyle(el).textTransform === "uppercase" && !el.closest('[data-slot="routiq-wordmark"]'))
+        .map(describe),
     };
   })()`);
 }
