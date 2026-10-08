@@ -93,7 +93,7 @@ export function PersonsScreen() {
         enableSorting: true,
         meta: { phone: "meta", label: t("persons.columns.personCode") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {row.original.personCode ?? "—"}
           </span>
         ),

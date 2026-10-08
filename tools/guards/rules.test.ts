@@ -292,6 +292,65 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "DS-1",
+    // An amount was monospace in Finance and proportional on the vehicle (#310).
+    bad: [
+      file("apps/web/src/finance/entryColumns.tsx", '<span className="text-right font-mono font-semibold">{amount}</span>'),
+      file("apps/web/src/components/ui/chart.tsx", '<span className="font-mono font-medium tabular-nums">'),
+      file("apps/web/src/components/metric-strip.tsx", 'className="font-[family-name:var(--font-mono)] text-2xl"'),
+      file("apps/web/src/screens/X.css", ".plate { font-family: ui-monospace, monospace; }"),
+    ],
+    good: [
+      file("apps/web/src/finance/entryColumns.tsx", '<span className="text-right font-semibold tabular-nums">{amount}</span>'),
+      file("apps/web/src/finance/entryColumns.test.tsx", 'expect(cell.className).not.toContain("font-mono");'),
+      // A chart curve type is not a font.
+      file("apps/web/src/dashboard/ChartAreaInteractive.tsx", '<Area type="monotone" dataKey="cost" />'),
+    ],
+  },
+  {
+    id: "DS-2",
+    bad: [
+      file("apps/web/src/vehicle/tabs/MoneyTab.tsx", '<path fill="#3072c7" d={d} />'),
+      file("apps/web/src/screens/X.tsx", '<div className="bg-[#192c45] text-white" />'),
+      file("apps/web/src/dashboard/Chart.tsx", 'const stroke = "rgb(48 114 199)";'),
+      file("apps/web/src/dashboard/Chart.tsx", "style={{ color: 'oklch(0.55 0.15 256)' }}"),
+      file("apps/web/src/screens/X.css", ".x { color: hsl(210 50% 40%); }"),
+    ],
+    good: [
+      file("apps/web/src/vehicle/tabs/MoneyTab.tsx", '<path className="fill-primary" d={d} />'),
+      file("apps/web/src/dashboard/Chart.tsx", 'const stroke = "var(--color-chart-1)";'),
+      // Issue references are not colours, in comments or out of them.
+      file("apps/web/src/shell/AppShell.tsx", "  min-content width widens the whole page (#450). */}\nconst why = \"see #422\";"),
+      // shadcn's chart selects recharts' own default strokes to restyle them.
+      file("apps/web/src/components/ui/chart.tsx", "\"[&_.recharts-dot[stroke='#fff']]:stroke-transparent\""),
+      // The token files: styles.css, and the meta theme-color mirror that cannot read CSS.
+      file("apps/web/src/styles.css", ":root { --background: oklch(1 0 0); }"),
+      file("apps/web/src/lib/theme.ts", 'light: "#ffffff",'),
+      // The logo's masks cut holes in pure black and white: geometry, not colour.
+      file("apps/web/src/components/brand/routiq-logo.tsx", '<rect width="100" height="100" fill="#fff" />'),
+    ],
+  },
+  {
+    id: "DS-4",
+    bad: [
+      file("apps/web/src/finance/EntrySummary.tsx", '<dt className="text-xs font-semibold uppercase text-muted-foreground">'),
+      file("apps/web/src/finance/EntryStatusBadge.tsx", '<Badge className="uppercase tracking-wide">{label}</Badge>'),
+      file("apps/web/src/screens/X.css", ".eyebrow { text-transform: uppercase; }"),
+      // The overview tile labels rendered "WAITING YOUR APPROVAL" beside sentence-case Home cards.
+      file("apps/web/src/components/metric-strip.tsx", '<dt className="text-xs font-medium tracking-wide uppercase">'),
+      file("apps/web/src/vehicle/header/IdentityStrip.tsx", "<span style={{ textTransform: \"uppercase\" }}>{plate}</span>"),
+      file("apps/web/src/screens/X.css", ".label { font-variant: small-caps; }"),
+    ],
+    good: [
+      file("apps/web/src/finance/EntrySummary.tsx", '<dt className="text-xs font-medium text-muted-foreground">'),
+      file("apps/web/src/finance/EntryStatusBadge.test.tsx", 'expect(badge.className).not.toContain("uppercase");'),
+      // A code the user types is capitalised in the value, not by CSS.
+      file("apps/web/src/branches/CreateBranchDialog.tsx", "field.onChange(event.target.value.toUpperCase())"),
+      // The wordmark sets the product name in wide caps; it is the logo, not a label.
+      file("apps/web/src/components/brand/routiq-logo.tsx", 'className={cn("tracking-[0.16em] uppercase", className)}'),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],
@@ -388,6 +447,12 @@ describe.each(CASES)("rule $id", ({ id, bad, good }) => {
 
   it("allows the paved path", () => {
     expect(rule(id).check(good)).toEqual([]);
+  });
+});
+
+describe.each(CASES.filter((c) => c.id.startsWith("DS-")))("design rule $id", ({ id, bad }) => {
+  it.each(bad.map((source) => [source.content, source]))("catches %s on its own", (_, source) => {
+    expect(rule(id).check([source]).length).toBeGreaterThan(0);
   });
 });
 
