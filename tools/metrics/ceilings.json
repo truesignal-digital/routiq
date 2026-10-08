@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 564537,
+    "ceiling": 574681,
     "raises": [
       {
         "date": "2026-10-06",
@@ -65,13 +65,43 @@
       {
         "date": "2026-10-07",
         "from": 564245,
-        "to": 564537,
-        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form"
+        "to": 567875,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 567875,
+        "to": 568158,
+        "reason": "Role-grouped sidebar (#312): section groups, role read predicates, Company rows and kit icons"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 568158,
+        "to": 571979,
+        "reason": "#354: Company settings Approvals section (two bands, each role's chain in words, exceptions, last change, MoneyInput sheet), update-approval-threshold v2 contract and the shared band rule, about 3.8 kB gzip measured on top of develop b0ccefb; about 19 ms on a pilot phone at about 5 ms per kB until routes load on demand (#488) (re-recorded on develop 0fafed81) (re-recorded on develop 6171fdde)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 571979,
+        "to": 573396,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574502,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21571,
+    "ceiling": 21891,
     "raises": [
       {
         "date": "2026-10-06",
@@ -84,11 +114,23 @@
         "from": 21493,
         "to": 21571,
         "reason": "#470: dialogs capped at the window height with a scrolling body between a fixed title and footer (DialogContent max height, CommandForm dialog grid), about 80 B JS and 80 B CSS gzip measured on top of develop bc2e4d7b; under 1 ms on a pilot phone"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21571,
+        "to": 21741,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21741,
+        "to": 21891,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 564537,
+    "ceiling": 574681,
     "raises": [
       {
         "date": "2026-10-06",
@@ -153,8 +195,38 @@
       {
         "date": "2026-10-07",
         "from": 564245,
-        "to": 564537,
-        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form"
+        "to": 567875,
+        "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 567875,
+        "to": 568158,
+        "reason": "Role-grouped sidebar (#312): section groups, role read predicates, Company rows and kit icons"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 568158,
+        "to": 571979,
+        "reason": "#354: Company settings Approvals section (two bands, each role's chain in words, exceptions, last change, MoneyInput sheet), update-approval-threshold v2 contract and the shared band rule, about 3.8 kB gzip measured on top of develop b0ccefb; about 19 ms on a pilot phone at about 5 ms per kB until routes load on demand (#488) (re-recorded on develop 0fafed81) (re-recorded on develop 6171fdde)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 571979,
+        "to": 573396,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574502,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
       }
     ]
   }

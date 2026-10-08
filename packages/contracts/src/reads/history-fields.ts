@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CATEGORY_KINDS, EVIDENCE_POLICIES, PROFITABILITY_LAYERS } from "../commands/categories.js";
 import { WORK_ORDER_COST_OUTCOMES } from "../commands/complete-work-order.js";
+import { CANCELLATION_REASON_CODES } from "../commands/reverse-entry.js";
 import { APPROVAL_THRESHOLD_COMMAND_TYPES } from "../commands/update-approval-threshold.js";
 import { moneyMinor } from "../envelope.js";
 import { ACTIVITY_COMPLETENESS_CODES } from "../errors.js";
@@ -36,6 +37,7 @@ export const HISTORY_CODE_SETS = {
   entryDirection: financialEntryListItem.shape.direction.options,
   paymentMethod: financialEntryListItem.shape.paymentMethod.options,
   estimateStatus: financialEntryListItem.shape.estimateStatus.options,
+  cancellationReason: CANCELLATION_REASON_CODES,
   periodStatus: periodRead.shape.status.options,
   workOrderStatus: workOrderStatuses,
   costOutcome: WORK_ORDER_COST_OUTCOMES,
@@ -228,6 +230,7 @@ export const HISTORY_FIELD_SHAPES: FieldShapes = {
     postings: "LINES",
     approvalNote: "VALUE",
     rejectedReason: "VALUE",
+    reasonCode: { code: "cancellationReason" },
     reason: "VALUE",
     reversesEntryId: { name: "entry" },
     reversedByEntryId: { name: "entry" },

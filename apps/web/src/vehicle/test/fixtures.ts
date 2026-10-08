@@ -53,6 +53,8 @@ export function me(role: Role, modules: ModuleCode[] = ALL_MODULES): MeContext {
     principalId: ME_ID,
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-000000000003",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules: modules,
@@ -324,6 +326,7 @@ export function entryDetail(overrides: Partial<FinancialEntryDetail> = {}): Fina
     sourceReference: null,
     rejectedReason: null,
     reversedByEntryId: null,
+    cancellation: null,
     postings: [
       {
         lineNo: 1,
@@ -422,6 +425,7 @@ export function historyItem(overrides: Partial<VehicleHistoryItem> = {}): Vehicl
     currency: null,
     params: { description: "Brake pressure warning on the Kekem descent", safetyCritical: true },
     note: null,
+    noteCode: null,
     ...overrides,
   };
 }

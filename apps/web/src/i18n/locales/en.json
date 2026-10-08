@@ -2,11 +2,14 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "ROUTIQ logo",
+    "poweredBy": "powered by ROUTIQ"
+  },
   "nav": {
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More",
     "activities": "Activities",
     "maintenance": "Maintenance"
   },
@@ -60,6 +63,10 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "groups": {
+      "daily": "Daily work",
+      "company": "Company"
+    },
     "branch": {
       "label": "Current branch",
       "all": "All my branches",
@@ -134,8 +141,8 @@
     "DOCUMENT_ALREADY_SUPERSEDED": "This document was already renewed. Renew the latest version.",
     "POSTINGS_SUM_MISMATCH": "The posting lines do not add up to the entry amount.",
     "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
-    "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
-    "ENTRY_IS_REVERSAL": "This entry is itself a reversal and cannot be reversed. To undo it, record the original entry again.",
+    "ENTRY_ALREADY_REVERSED": "This entry has already been cancelled.",
+    "ENTRY_IS_REVERSAL": "This entry is itself a cancellation and cannot be cancelled. To undo it, record the original entry again.",
     "PERIOD_LOCKED": "This period is locked. No postings are possible.",
     "CATEGORY_KIND_MISMATCH": "The selected category does not match the entry type (revenue / expense).",
     "ACTIVITY_CLOSE_BLOCKED": "Cannot close: the actual dates or at least one assigned asset are missing.",
@@ -173,7 +180,8 @@
     "CUSTODIAN_INELIGIBLE": "This member cannot be the assigned driver of this vehicle: their access is deactivated or their branches do not cover the vehicle's branch.",
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
-    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator."
+    "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
     "notify": {
@@ -185,7 +193,7 @@
       }
     },
     "eyebrow": "Operational fleet",
-    "title": "Your assets",
+    "title": "Assets",
     "subtitle": "Track every vehicle from registration through retirement.",
     "searchLabel": "Search assets",
     "searchPlaceholder": "Code, plate or model…",
@@ -305,21 +313,22 @@
       "registration": "Plate"
     }
   },
-  "more": {
-    "title": "More",
-    "signedInAs": "Signed in as {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "mySettings": "My settings",
+    "signOut": "Sign out"
+  },
+  "mySettings": {
+    "title": "My settings",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Language",
-    "theme": {
-      "label": "Theme",
+    "appearance": {
+      "label": "Appearance",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
-    },
-    "manage": "Manage",
-    "persons": "People",
-    "users": "Users",
-    "branches": "Branches",
-    "logout": "Sign out"
+      "system": "Same as phone"
+    }
   },
   "form": {
     "errors": {
@@ -386,7 +395,7 @@
         "generic": "Action completed",
         "approved": "Entry approved",
         "rejected": "Entry rejected",
-        "reversed": "Entry reversed",
+        "reversed": "Entry cancelled",
         "locked": "Period locked",
         "reopened": "Period reopened",
         "posted": "Entry recorded and posted",
@@ -405,8 +414,8 @@
         "generic": "The action failed. Please try again. ({code})",
         "INVALID_STATE_TRANSITION": "This action is not possible in the record's current state.",
         "MAKER_CANNOT_APPROVE": "You cannot approve an entry you created yourself.",
-        "ENTRY_ALREADY_REVERSED": "This entry has already been reversed.",
-        "ENTRY_IS_REVERSAL": "This entry is itself a reversal and cannot be reversed. To undo it, record the original entry again.",
+        "ENTRY_ALREADY_REVERSED": "This entry has already been cancelled.",
+        "ENTRY_IS_REVERSAL": "This entry is itself a cancellation and cannot be cancelled. To undo it, record the original entry again.",
         "PERIOD_LOCKED": "This period is locked. No postings are possible."
       }
     },
@@ -450,7 +459,7 @@
       "branchesFailed": "We couldn't load branches. Retry this page."
     },
     "entries": {
-      "title": "Entries",
+      "title": "Money",
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "retry": "Try again",
@@ -463,7 +472,7 @@
         "SUBMITTED": "Awaiting review",
         "POSTED": "Posted",
         "REJECTED": "Rejected",
-        "REVERSED": "Reversed"
+        "REVERSED": "Cancelled"
       },
       "detail": {
         "title": "Entry detail",
@@ -473,7 +482,7 @@
         "status": "Status",
         "category": "Category",
         "amount": "Amount",
-        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue reversal} EXPENSE_REVERSAL {Expense reversal} other {Expense}}",
+        "amountKind": "{kind, select, REVENUE {Revenue} REVENUE_REVERSAL {Revenue cancellation} EXPENSE_REVERSAL {Expense cancellation} other {Expense}}",
         "date": "Economic date",
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
@@ -487,9 +496,9 @@
         "postings": "Posting lines",
         "asset": "Asset",
         "postingAmount": "Amount",
-        "reversalChain": "Reversal chain",
-        "reversesEntry": "Reverses entry {number}",
-        "reversedByEntry": "Reversed by entry {number}",
+        "reversalChain": "Cancellation",
+        "reversesEntry": "Cancellation of entry {number}",
+        "reversedByEntry": "Cancelled by entry {number}",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
         "breadcrumb": "Detail",
@@ -505,21 +514,26 @@
         "evidenceVia": {
           "RECORDED": "Recorded with the entry · {date} · {name}",
           "ATTACHED": "Attached later · {date} · {name}"
-        }
+        },
+        "cancellationReason": "Reason"
       },
       "viewer": {
         "description": "Economic date {date}",
         "fullScreen": "Open full screen"
       },
       "reversal": {
-        "reasonLabel": "Reason for reversal",
-        "reasonPlaceholder": "Explain why this entry is being reversed…",
-        "success": "Entry reversed",
-        "successDesc": "The reversal entry has been created successfully."
+        "reasonLabel": "Why cancel this entry?",
+        "otherLabel": "Say why",
+        "otherPlaceholder": "What happened?",
+        "description": "The entry stays in the books, marked Cancelled. A cancellation line takes its amount out of the totals.",
+        "recordAgainTitle": "Entry cancelled",
+        "recordAgainBody": "Record it again with the right details. The form opens filled in from the cancelled entry.",
+        "recordAgain": "Record again",
+        "done": "Done"
       },
       "filters": {
         "status": "Status",
-        "ledger": "Posted and reversed",
+        "ledger": "Posted and cancelled",
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
         "assetOption": "{code} — {name}"
@@ -1373,8 +1387,8 @@
       "financial_entry-submitted": "Entry submitted for approval",
       "financial_entry-approved": "Entry approved",
       "financial_entry-rejected": "Entry rejected",
-      "financial_entry-reversed": "Entry reversed",
-      "financial_entry-reversal_posted": "Reversal posted",
+      "financial_entry-reversed": "Entry cancelled",
+      "financial_entry-reversal_posted": "Cancellation posted",
       "posting_period-locked": "Period locked",
       "posting_period-reopened": "Period reopened",
       "approval-threshold-updated": "Approval threshold updated",
@@ -1509,8 +1523,8 @@
       "paymentReference": "payment reference",
       "sourceReference": "source reference",
       "approvalNote": "approval note",
-      "reversesEntryId": "reversed entry",
-      "reversedByEntryId": "reversal entry",
+      "reversesEntryId": "cancelled entry",
+      "reversedByEntryId": "cancellation",
       "loadState": "load state",
       "passengerCount": "passenger count",
       "commandType": "command",
@@ -1557,6 +1571,7 @@
       "dismissReason": "dismissal reason",
       "defaultSafetyCritical": "safety-critical by default",
       "postings": "posting lines",
+      "reasonCode": "reason",
       "artifactIds": "files",
       "body": "note"
     },
@@ -1790,10 +1805,10 @@
       "dismiss": "Keep entry"
     },
     "reverse-entry": {
-      "label": "Reverse entry",
-      "submit": "Reverse entry",
-      "submitting": "Reversing…",
-      "short": "Reverse",
+      "label": "Cancel entry",
+      "submit": "Cancel entry",
+      "submitting": "Cancelling…",
+      "short": "Cancel entry",
       "dismiss": "Keep entry"
     },
     "lock-period": {
@@ -1817,8 +1832,8 @@
       "submitting": "Disabling…"
     },
     "update-approval-threshold": {
-      "label": "Change approval threshold",
-      "submit": "Save threshold",
+      "label": "Change approval thresholds",
+      "submit": "Save thresholds",
       "submitting": "Saving…"
     },
     "create-category": {
@@ -2420,8 +2435,8 @@
         "financial_entry-submitted": "Entry recorded, awaiting review",
         "financial_entry-approved": "Entry approved",
         "financial_entry-rejected": "Entry rejected",
-        "financial_entry-reversed": "Entry reversed",
-        "financial_entry-reversal_posted": "Reversal posted",
+        "financial_entry-reversed": "Entry cancelled",
+        "financial_entry-reversal_posted": "Cancellation posted",
         "financial_entry-evidence_attached": "{count, plural, one {Receipt attached} other {# files attached}}",
         "operational_issue-reported": "Problem reported",
         "operational_issue-resolved": "Problem resolved",
@@ -2496,12 +2511,12 @@
       "recordedBy": "Recorded by",
       "postingPeriod": "Posting period",
       "notPosted": "Not posted",
-      "reverses": "Reverses",
-      "reversedBy": "Reversed by",
+      "reverses": "Cancels",
+      "reversedBy": "Cancelled by",
       "openOriginal": "The original entry",
-      "openReversal": "The reversal",
+      "openReversal": "The cancellation",
       "awaitingReviewNote": "Awaiting review: not counted in posted totals until approved. Whoever recorded it can edit it until then, but cannot approve it.",
-      "postedNotPaid": "Posted means recorded in the books, not paid. A mistake is corrected by a reversal; the original stays.",
+      "postedNotPaid": "Posted means recorded in the books, not paid. A mistake is corrected by cancelling the entry; the original stays.",
       "receipt": "Receipt",
       "noFiles": "No file on this entry.",
       "evidenceVia": {
@@ -2601,7 +2616,7 @@
         "description": "Approve or reject an entry waiting for review. Whoever recorded it cannot approve it."
       },
       "reverse-entry": {
-        "description": "Posted money is never edited: a reversal cancels it and both stay. Pick the entry in Money."
+        "description": "Posted money is never edited: cancelling adds a line that takes it out, and both stay. Pick the entry in Money."
       },
       "commission": {
         "description": "From registered to in service: the operating history starts here."
@@ -2639,6 +2654,54 @@
       "posts": "Your entries post directly at any amount.",
       "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}.",
       "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}."
+    }
+  },
+  "reasonCodes": {
+    "ENTERED_TWICE": "Entered twice",
+    "DID_NOT_HAPPEN": "Didn't happen",
+    "WRONG_DETAILS": "Wrong details, to record again",
+    "OTHER": "Other"
+  },
+  "settings": {
+    "title": "Company settings",
+    "description": "Rules that apply to everyone in the company. Only Direction can change them.",
+    "retry": "Try again",
+    "approvals": {
+      "title": "Approvals",
+      "description": "Up to which amount a money entry posts without review, and who decides it above that.",
+      "loading": "Loading the approval rules",
+      "loadFailed": "The approval rules could not be loaded.",
+      "chainLabel": "The approval chain",
+      "noBands": "This company's approval rules were set by hand, so they can't be changed here. Contact ROUTIQ support.",
+      "byRole": "What each role's own entries meet",
+      "byRoleHint": "Nobody approves their own entry, and Direction's own entries always post.",
+      "kind": {
+        "record-expense": "Expenses",
+        "record-revenue": "Revenue"
+      },
+      "roleKind": "{role}: {kind}",
+      "overrides": "Exceptions for a branch or a category",
+      "overridesHint": "These keep their own amounts when you change the thresholds.",
+      "override": "{kind, select, record-expense {Expenses} record-revenue {Revenue} other {Decisions}}, {scope}: {role} {bounded, select, yes {up to {amount}} other {at any amount}}",
+      "form": {
+        "description": "Applies to every branch, from the next entry on.",
+        "recording": "Posts directly up to",
+        "recordingHint": "Entries up to this amount post without review.",
+        "ceiling": "Finance approves up to",
+        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only Direction decides.",
+        "whole": "Enter the amount in whole francs, without decimals.",
+        "belowCeiling": "Keep this below the amount Finance approves up to.",
+        "unchanged": "Change an amount to save.",
+        "afterSaving": "After saving",
+        "whoIsTold": "{roles} members will see the new rules on their next screen.",
+        "conflictTitle": "The thresholds changed while you were editing",
+        "conflictBody": "Someone else saved new thresholds. Refresh to see them, then make your change again."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Approval thresholds saved"
+      }
     }
   }
 }

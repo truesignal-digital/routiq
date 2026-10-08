@@ -32,7 +32,7 @@ Every feature PR links a walkthrough video (see the definition of done in the ro
 
 When you record one:
 
-- Switch the app to English first (More → Language) and write captions in English. The choice is stored per device (`localStorage["routiq-language"]`, #127), so it survives reloads; a fresh browser context starts in French.
+- Switch the app to English first (name menu → My settings → Language) and write captions in English. The choice is stored per device (`localStorage["routiq-language"]`, #127), so it survives reloads; a fresh browser context starts in French.
 - Match buttons by exact name. "Reverse", for example, also matches the "Reverses entry #…" link.
 - Do a dry run with a screenshot per step, reset the database between runs, and check the frames before uploading.
 - While you click through, note anything else that looks wrong and file it as its own issue.
