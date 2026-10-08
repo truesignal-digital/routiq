@@ -859,52 +859,64 @@ function DataTablePhoneRow<TData>({
     >
       {selectionCell &&
         flexRender(selectionCell.column.columnDef.cell, selectionCell.getContext())}
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div data-slot="data-table-row-title" className="min-w-0 truncate text-sm font-semibold">
-          {title.map(({ cell, content }) => (
-            <span key={cell.id}>{renderCell(cell, content)}</span>
-          ))}
-        </div>
-        {meta.length > 0 && (
-          <div
-            data-slot="data-table-row-meta"
-            // Cells laid out for the table (flex stacks, wrapping text) still
-            // read as one line here, cut with an ellipsis.
-            className="min-w-0 truncate text-xs text-muted-foreground [&_*]:inline [&_*]:whitespace-nowrap"
-          >
-            {meta.map(({ cell, content }, index) => (
-              <span key={cell.id}>
-                {index > 0 && <span aria-hidden> · </span>}
-                {content}
-              </span>
+      {/*
+        The end column may take at most half of the space between the checkbox
+        and the ⋯ menu, so a long status (a cancellation's reason, a month
+        name) wraps there instead of squeezing the title to zero width (#300).
+      */}
+      <div data-slot="data-table-row-body" className="flex min-w-0 flex-1 items-center gap-3">
+        <div data-slot="data-table-row-main" className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div data-slot="data-table-row-title" className="min-w-0 truncate text-sm font-semibold">
+            {title.map(({ cell, content }) => (
+              <span key={cell.id}>{renderCell(cell, content)}</span>
             ))}
+          </div>
+          {meta.length > 0 && (
+            <div
+              data-slot="data-table-row-meta"
+              // Cells laid out for the table (flex stacks, wrapping text) still
+              // read as one line here, cut with an ellipsis.
+              className="min-w-0 truncate text-xs text-muted-foreground [&_*]:inline [&_*]:whitespace-nowrap"
+            >
+              {meta.map(({ cell, content }, index) => (
+                <span key={cell.id}>
+                  {index > 0 && <span aria-hidden> · </span>}
+                  {content}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {(value.length > 0 || status.length > 0) && (
+          <div
+            data-slot="data-table-row-end"
+            className="flex max-w-1/2 min-w-0 flex-col items-end gap-1 text-right"
+          >
+            {value.length > 0 && (
+              <div
+                data-slot="data-table-row-value"
+                className="text-sm font-semibold whitespace-nowrap tabular-nums"
+              >
+                {value.map(({ cell, content }) => (
+                  <span key={cell.id}>{content}</span>
+                ))}
+              </div>
+            )}
+            {status.length > 0 && (
+              <div
+                data-slot="data-table-row-status"
+                // Badges and buttons are one-line pills elsewhere; here they wrap
+                // too, so nothing pokes out over the title.
+                className="flex max-w-full min-w-0 flex-col items-end gap-1 text-left text-xs wrap-anywhere text-muted-foreground [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:whitespace-normal"
+              >
+                {status.map(({ cell, content }) => (
+                  <span key={cell.id}>{content}</span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
-      {(value.length > 0 || status.length > 0) && (
-        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
-          {value.length > 0 && (
-            <div
-              data-slot="data-table-row-value"
-              className="text-sm font-semibold whitespace-nowrap tabular-nums"
-            >
-              {value.map(({ cell, content }) => (
-                <span key={cell.id}>{content}</span>
-              ))}
-            </div>
-          )}
-          {status.length > 0 && (
-            <div
-              data-slot="data-table-row-status"
-              className="flex flex-col items-end gap-1 text-xs text-muted-foreground"
-            >
-              {status.map(({ cell, content }) => (
-                <span key={cell.id}>{content}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       {actions}
     </li>
   );

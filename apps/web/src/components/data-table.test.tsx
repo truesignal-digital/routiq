@@ -314,6 +314,49 @@ describe("DataTable", () => {
       expect(menu.className).toContain("size-11");
     });
 
+    // A folded cancellation puts its reason and who/when in the status cell
+    // (#478). Before this, the end column kept its intrinsic width and pushed
+    // the title to 0 px at 390 px. jsdom has no layout, so this locks the
+    // classes that bound the column; the widths themselves were measured in a
+    // real browser (PR #512 fix evidence).
+    it("caps the end column at half the row body so a long status wraps under it", () => {
+      mockDesktop(false);
+      const longStatus = `Cancelled. Reason: ${"entered twice with the wrong truck ".repeat(4)}`;
+      const { container } = render(
+        <DataTable
+          columns={entryColumns}
+          data={[{ ...entries[0]!, status: longStatus }]}
+          rowActions={() => [{ key: "open", label: "Open", onSelect: vi.fn() }]}
+        />,
+      );
+
+      const row = phoneRows(container)[0]!;
+      const body = row.querySelector<HTMLElement>('[data-slot="data-table-row-body"]')!;
+      const main = row.querySelector<HTMLElement>('[data-slot="data-table-row-main"]')!;
+      const end = row.querySelector<HTMLElement>('[data-slot="data-table-row-end"]')!;
+      const value = row.querySelector<HTMLElement>('[data-slot="data-table-row-value"]')!;
+      const status = row.querySelector<HTMLElement>('[data-slot="data-table-row-status"]')!;
+
+      // The half is measured without the ⋯ menu: title and end column share a
+      // body that the 44 px menu sits beside.
+      expect([...body.children]).toEqual([main, end]);
+      expect(row.lastElementChild).toBe(within(row).getByRole("button", { name: "Actions" }));
+      expect(body.className.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "flex-1"]));
+      expect(main.className.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "flex-1"]));
+      expect(end.className.split(" ")).toEqual(expect.arrayContaining(["max-w-1/2", "min-w-0"]));
+      expect(end.className).not.toContain("shrink-0");
+      expect(value.className).toContain("whitespace-nowrap");
+      expect(status.className.split(" ")).toEqual(
+        expect.arrayContaining([
+          "min-w-0",
+          "wrap-anywhere",
+          "[&_[data-slot=badge]]:whitespace-normal",
+          "[&_[data-slot=button]]:whitespace-normal",
+        ]),
+      );
+      expect(slotText(row, "title")).toEqual(["#14"]);
+    });
+
     it("pages a keyset read in the phone layout", async () => {
       mockDesktop(false);
       const onLoadMore = vi.fn();
