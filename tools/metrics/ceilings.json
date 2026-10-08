@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 580712,
+    "ceiling": 581936,
     "raises": [
       {
         "date": "2026-10-06",
@@ -127,6 +127,12 @@
         "from": 579404,
         "to": 580712,
         "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop f2778c2b)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 580712,
+        "to": 581936,
+        "reason": "#96: change-issue-severity form, steps and fr/en strings, +1256 B gzip measured on top of develop after #92; the locales ship in the first load (re-recorded on develop 716bfedd)"
       }
     ]
   },
@@ -172,7 +178,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 580712,
+    "ceiling": 581936,
     "raises": [
       {
         "date": "2026-10-06",
@@ -299,6 +305,12 @@
         "from": 579404,
         "to": 580712,
         "reason": "Money page (#314): summary tiles, waiting view with row decisions and the approvals redirect, net of FinanceNav and the Approvals screen removed (re-recorded on develop f2778c2b)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 580712,
+        "to": 581936,
+        "reason": "#96: change-issue-severity form, steps and fr/en strings, +1256 B gzip measured on top of develop after #92; the locales ship in the first load (re-recorded on develop 716bfedd)"
       }
     ]
   }

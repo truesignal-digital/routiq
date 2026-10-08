@@ -177,7 +177,8 @@ describe("routiq_app grants", () => {
     expect(issues?.has("DELETE")).toBe(false);
 
     // #28: a signalement's status moves once — resolved or dismissed — and the
-    // report itself never does, so UPDATE reaches only the status columns.
+    // report itself never does, so UPDATE reaches only the status columns, and
+    // the safety-critical mark while the problem is open (#96).
     const issueColumnGrants = await ctx.db.execute(sql`
       select column_name
       from information_schema.role_column_grants
@@ -196,6 +197,7 @@ describe("routiq_app grants", () => {
       "resolution_note",
       "resolved_at",
       "row_version",
+      "safety_critical",
       "status",
     ]);
 

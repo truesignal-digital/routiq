@@ -201,6 +201,12 @@ export const COMMAND_ERROR_CODES = [
    */
   "CUSTODIAN_INELIGIBLE",
   /**
+   * A severity change that would change nothing (#96): marking safety-critical
+   * a problem already marked so, or taking the mark off one that has none. The
+   * caller's screen is stale.
+   */
+  "ISSUE_SEVERITY_ALREADY_SET",
+  /**
    * Acknowledging a note that is not Direction's (#98). Only Direction's notes
    * wait in the To-do for someone to say they saw them.
    */

@@ -8,6 +8,7 @@ import {
   entrySteps,
   groundingFacts,
   groundingStep,
+  issueSteps,
   releaseBlocker,
   situationOf,
   tabMarkers,
@@ -546,6 +547,47 @@ describe("an entry's steps", () => {
     expect(keys(entry(), "ADMIN")).toEqual(["attach-evidence"]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "ADMIN")).toEqual([]);
     expect(keys(entry(), "DIRECTOR")).toEqual(["attach-evidence", "approve-entry", "reject-entry"]);
+  });
+});
+
+describe("the safety-critical mark on a problem (#96)", () => {
+  const issueKeys = (role: Role, issue: { status?: "OPEN" | "RESOLVED" | "DISMISSED"; safetyCritical: boolean }) =>
+    issueSteps(
+      { id: ISSUE_ID, status: issue.status ?? "OPEN", safetyCritical: issue.safetyCritical, planned: true },
+      viewer(role),
+    ).offered.map((offered) => offered.step.key);
+
+  it.each(ROLES)("offers Mark as safety-critical to the roles that report problems: %s", (role) => {
+    const offers = issueKeys(role, { safetyCritical: false }).includes("raise-severity");
+    expect(offers).toBe(["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"].includes(role));
+  });
+
+  it.each(ROLES)("offers taking the mark off to the managers only: %s", (role) => {
+    const offers = issueKeys(role, { safetyCritical: true }).includes("lower-severity");
+    expect(offers).toBe(["DIRECTOR", "ADMIN"].includes(role));
+  });
+
+  it("offers the step that changes the mark, never the one that would change nothing", () => {
+    expect(issueKeys("ADMIN", { safetyCritical: true })).not.toContain("raise-severity");
+    expect(issueKeys("ADMIN", { safetyCritical: false })).not.toContain("lower-severity");
+  });
+
+  it("offers neither once the problem is closed", () => {
+    for (const status of ["RESOLVED", "DISMISSED"] as const) {
+      for (const safetyCritical of [true, false]) {
+        const keys = issueKeys("ADMIN", { status, safetyCritical });
+        expect(keys).not.toContain("raise-severity");
+        expect(keys).not.toContain("lower-severity");
+      }
+    }
+  });
+
+  it("keeps the mark out of the driver's headline", () => {
+    const steps = issueSteps(
+      { id: ISSUE_ID, status: "OPEN", safetyCritical: false, planned: false },
+      viewer("DRIVER"),
+    );
+    expect(token(steps.primary)).toBe("none");
   });
 });
 
