@@ -66,7 +66,10 @@ export function AppSidebar() {
         <nav aria-label={t("shell.navLabel")}>
           {groups.map((group) => (
             <SidebarGroup key={group.key}>
-              <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+              {/* The rail fades the label and slides it over the row above; it must not catch that row's pointer. */}
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:pointer-events-none">
+                {t(group.labelKey)}
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.sections.map(({ key, to, labelKey, icon: Icon }) => {
