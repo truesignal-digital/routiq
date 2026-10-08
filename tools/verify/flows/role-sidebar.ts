@@ -14,6 +14,7 @@ const EXPECTED: Record<string, { daily: readonly [string, string][]; company: re
       ["Personnel", "People"],
       ["Utilisateurs", "Users"],
       ["Agences", "Branches"],
+      ["Mois comptables", "Accounting months"],
       ["Paramètres de l'entreprise", "Company settings"],
     ],
   },
@@ -23,7 +24,7 @@ const EXPECTED: Record<string, { daily: readonly [string, string][]; company: re
   },
   FINANCE: {
     daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Argent", "Money"]],
-    company: [["Personnel", "People"]],
+    company: [["Personnel", "People"], ["Mois comptables", "Accounting months"]],
   },
   CASHIER: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Argent", "Money"]], company: [] },
   TECHNICIAN: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Maintenance", "Maintenance"]], company: [] },

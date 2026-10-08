@@ -24,7 +24,7 @@ interface PageTrail {
  * longer include Saisie, but a breadcrumb has to name whatever page you are
  * actually looking at.
  */
-const PAGE_TRAILS: readonly PageTrail[] = [
+export const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
   // The vehicle workspace: its sections are tabs on one record, so every
   // section shares the record's crumb and the tabs say where you are.
@@ -39,19 +39,18 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "activities.detail.breadcrumb", record: true }],
   },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
-  { pattern: "/finance/entries", trail: [{ labelKey: "finance.navigation.entries" }] },
+  // The page title keys, so the Money and Accounting months rows name these pages once.
+  { pattern: "/finance/entries", trail: [{ labelKey: "finance.entries.title" }] },
   {
     pattern: "/finance/entries/$entryId",
     trail: [
-      { labelKey: "finance.navigation.entries", to: "/finance/entries" },
+      { labelKey: "finance.entries.title", to: "/finance/entries" },
       { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
   },
-  {
-    pattern: "/finance/approvals",
-    trail: [{ labelKey: "finance.navigation.approvals" }],
-  },
-  { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
+  // Redirects to the waiting view; named the same in case a frame renders first.
+  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
+  { pattern: "/finance/periods", trail: [{ labelKey: "finance.periods.title" }] },
   { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },

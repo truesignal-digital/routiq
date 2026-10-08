@@ -71,10 +71,6 @@ vi.mock("./FinanceEntriesScreen.js", () => ({
   FinanceEntriesScreen: () => createElement("div", { "data-testid": "entries-list" }),
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({
-  FinanceNav: () => null,
-}));
-
 vi.mock("../approval-rules/useApprovalChain.js", () => ({
   useApprovalChain: () => ({ data: undefined }),
 }));
