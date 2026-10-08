@@ -46,7 +46,7 @@ function buildColumns(
         return (
           <span className="flex min-w-0 flex-col">
             <span className="truncate">{name}</span>
-            <span className="truncate font-mono text-xs text-muted-foreground uppercase">
+            <span className="truncate tabular-nums text-xs text-muted-foreground">
               {row.original.assetCode}
             </span>
           </span>
@@ -79,7 +79,7 @@ function buildColumns(
       header: t("assets.columns.registration"),
       meta: { phone: "hidden", label: t("assets.columns.registration") },
       cell: ({ row }) => (
-        <span className="font-mono whitespace-nowrap">
+        <span className="tabular-nums whitespace-nowrap">
           {row.original.registrationNumber ?? "—"}
         </span>
       ),

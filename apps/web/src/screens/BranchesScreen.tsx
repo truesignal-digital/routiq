@@ -71,7 +71,7 @@ export function BranchesScreen() {
         enableSorting: true,
         meta: { phone: "title", label: t("branches.columns.code") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">{row.original.code}</span>
+          <span className="tabular-nums whitespace-nowrap">{row.original.code}</span>
         ),
       },
       {

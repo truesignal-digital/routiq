@@ -25,7 +25,7 @@ function AssetCell({
 }) {
   return (
     <span className="flex flex-col">
-      <span className="font-mono whitespace-nowrap">{asset.assetCode}</span>
+      <span className="tabular-nums whitespace-nowrap">{asset.assetCode}</span>
       {asset.registrationNumber !== null && (
         <span className="text-xs text-muted-foreground">{asset.registrationNumber}</span>
       )}
@@ -47,7 +47,7 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
           label: t("maintenance.workOrders.columns.reference"),
         },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {workOrderReference(row.original.id)}
           </span>
         ),

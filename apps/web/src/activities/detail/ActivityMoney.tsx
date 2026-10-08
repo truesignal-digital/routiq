@@ -82,7 +82,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
                 className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm transition hover:bg-foreground/[0.04]"
               >
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono">{entry.entryNumber}</span>
+                  <span className="tabular-nums">{entry.entryNumber}</span>
                   <span className="text-muted-foreground">
                     {localizedLabel(
                       { labelFr: entry.categoryLabelFr, labelEn: entry.categoryLabelEn },
@@ -125,7 +125,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <dt className="text-sm font-medium">
               <span>{t("activities.detail.moneySummary.net")}</span>
-              <span className="ml-2 text-muted-foreground text-xs uppercase tracking-wide">
+              <span className="ml-2 text-muted-foreground text-xs">
                 {t("activities.detail.moneySummary.postedOnly")}
               </span>
             </dt>
