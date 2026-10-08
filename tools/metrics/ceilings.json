@@ -143,7 +143,7 @@
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22136,
+    "ceiling": 22212,
     "raises": [
       {
         "date": "2026-10-06",
@@ -180,6 +180,12 @@
         "from": 21973,
         "to": 22136,
         "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 22136,
+        "to": 22212,
+        "reason": "#322: navigation count badge and rail dot styles on the sidebar and phone bottom bar, about 80 B gzip (re-recorded on develop 6444c6bf)"
       }
     ]
   },
