@@ -4,8 +4,9 @@ import type { DataTableColumn } from "@/components/data-table.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
 import { EntryLinks } from "@/finance/EntryLinks.js";
-import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
+import { EntryEventStatus, foldedAmountClass, isFolded } from "@/finance/EntryCancellation.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
+import { cn } from "@/lib/utils.js";
 
 export type FinanceEntryColumnId =
   | "entryNumber"
@@ -46,8 +47,8 @@ function buildColumns(
       header: t("finance.entries.detail.status"),
       meta: { phone: "status", label: t("finance.entries.detail.status") },
       cell: ({ row }) => (
-        <div className="flex flex-wrap items-center gap-2">
-          <EntryStatusBadge status={row.original.status} />
+        <div className="flex flex-wrap items-start gap-2">
+          <EntryEventStatus entry={row.original} />
           {row.original.isLatePosting && (
             <StatusBadge tone="warning">
               {t("finance.entries.detail.latePosting")}
@@ -88,11 +89,19 @@ function buildColumns(
       enableSorting: true,
       meta: { phone: "value", label: t("finance.entries.detail.amount") },
       cell: ({ row }) => (
-        <span className="text-right font-mono font-semibold whitespace-nowrap">
+        <span
+          className={cn(
+            "text-right font-mono font-semibold whitespace-nowrap",
+            foldedAmountClass(row.original),
+          )}
+        >
           {formatMoney(row.original.amountMinor, {
             currency: row.original.currency,
             sign: { context: "ledger", direction: row.original.direction },
           })}
+          {isFolded(row.original) && (
+            <span className="sr-only"> {t("finance.entries.events.countsZero")}</span>
+          )}
         </span>
       ),
     },

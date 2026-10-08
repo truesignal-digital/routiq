@@ -60,6 +60,7 @@ function event(overrides: Partial<HistoryItem> = {}): HistoryItem {
     },
     changedFields: ["status", "rowVersion"],
     note: null,
+    noteCode: null,
     ...overrides,
   };
 }
@@ -202,6 +203,24 @@ describe("record history sheet", () => {
     await openSheet();
 
     expect(screen.getByText("Kilométrage saisi à l'envers")).toBeTruthy();
+  });
+
+  it("words a listed cancellation reason instead of showing its code (#426)", async () => {
+    stubHistory([event({ eventType: "financial_entry.reversed", note: null, noteCode: "WRONG_DETAILS" })]);
+    await openSheet();
+
+    const line = screen.getByText("Entry cancelled").closest("p");
+    expect(line?.textContent).toContain("Wrong details, to record again");
+    expect(line?.textContent).not.toContain("WRONG_DETAILS");
+  });
+
+  it("shows the person's own words for Other", async () => {
+    stubHistory([event({ eventType: "financial_entry.reversed", note: "Carte remboursée", noteCode: "OTHER" })]);
+    await openSheet();
+
+    const line = screen.getByText("Entry cancelled").closest("p");
+    expect(line?.textContent).toContain("Carte remboursée");
+    expect(line?.textContent).not.toContain("Other");
   });
 
   it("reads as one line: who, what, and the motif", async () => {

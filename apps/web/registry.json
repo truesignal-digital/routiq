@@ -383,6 +383,21 @@
       ]
     },
     {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "files": [
+        {
+          "path": "src/components/ui/radio-group.tsx",
+          "type": "registry:file",
+          "target": "components/ui/radio-group.tsx"
+        }
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@base-ui/react"
+      ]
+    },
+    {
       "name": "checkbox",
       "type": "registry:ui",
       "files": [
@@ -993,6 +1008,23 @@
       ],
       "dependencies": [
         "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "routiq-logo",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/brand/routiq-logo.tsx",
+          "type": "registry:file",
+          "target": "components/brand/routiq-logo.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
         "react-i18next"
       ]
     },

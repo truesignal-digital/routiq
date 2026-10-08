@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FinancialEntryListItem, FinancialEntryListResponse } from "@routiq/contracts";
-import { validateReversalReason } from "./model.js";
+import { cancellationPayload } from "./model.js";
 import { canReverseEntry } from "./permissions.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
 
@@ -25,6 +25,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: null,
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
       {
@@ -45,6 +47,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: "2026-07-25T10:30:00Z",
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
       {
@@ -65,6 +69,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: null,
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
       {
@@ -85,6 +91,8 @@ describe("FinanceEntries - List rendering", () => {
         postedAt: "2026-07-23T14:00:00Z",
         rowVersion: 1,
         reversesEntryId: null,
+        cancelledBy: null,
+        cancels: null,
         ...entryVehicleFields,
       },
     ];
@@ -121,6 +129,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-26T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
         {
@@ -141,6 +151,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-25T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
       ],
@@ -167,6 +179,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-24T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
         {
@@ -187,6 +201,8 @@ describe("FinanceEntries - Pagination", () => {
           postedAt: "2026-07-23T10:00:00Z",
           rowVersion: 1,
           reversesEntryId: null,
+          cancelledBy: null,
+          cancels: null,
           ...entryVehicleFields,
         },
       ],
@@ -223,11 +239,13 @@ describe("FinanceEntries - Reversal permissions", () => {
     expect(canReverseEntry(undefined, { status: "POSTED", reversesEntryId: null })).toBe(false);
   });
 
-  it("reversal reason is required and bounded per the contract", () => {
-    expect(validateReversalReason("")).toBe(false);
-    expect(validateReversalReason("   ")).toBe(false);
-    expect(validateReversalReason("Incorrect amount recorded")).toBe(true);
-    expect(validateReversalReason("a".repeat(500))).toBe(true);
-    expect(validateReversalReason("a".repeat(501))).toBe(false);
+  it("cancellation reason: a listed code, words only for Other and bounded per the contract", () => {
+    expect(cancellationPayload(undefined, "")).toBeUndefined();
+    expect(cancellationPayload("ENTERED_TWICE", "ignored")).toEqual({ reasonCode: "ENTERED_TWICE" });
+    expect(cancellationPayload("OTHER", "")).toBeUndefined();
+    expect(cancellationPayload("OTHER", "   ")).toBeUndefined();
+    expect(cancellationPayload("OTHER", " Card refunded ")).toEqual({ reasonCode: "OTHER", reasonText: "Card refunded" });
+    expect(cancellationPayload("OTHER", "a".repeat(500))).toBeDefined();
+    expect(cancellationPayload("OTHER", "a".repeat(501))).toBeUndefined();
   });
 });

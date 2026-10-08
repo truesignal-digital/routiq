@@ -8,7 +8,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("link", { name: t("Camions", "Trucks") }).click();
-  await page.getByRole("heading", { name: t("Vos camions", "Your trucks") }).waitFor();
+  await page.getByRole("heading", { name: t("Camions", "Trucks"), level: 1 }).waitFor();
   await quiet();
   await shot("trucks-list", { caption: "Trucks list" });
 

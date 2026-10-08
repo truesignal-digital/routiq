@@ -52,9 +52,11 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "finance.navigation.approvals" }],
   },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
+  { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
   { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },
+  { pattern: "/more/company", trail: [{ labelKey: "settings.title" }] },
 ];
 
 function segments(path: string): string[] {
@@ -81,17 +83,18 @@ export function breadcrumbTrail(
   pathname: string,
   recordLabel?: string,
 ): Crumb[] {
-  const crumbs: Crumb[] = [{ labelKey: "nav.home", to: "/" }];
+  const crumbs: Crumb[] = [{ labelKey: "home.title", to: "/" }];
 
   const section = activeSection(sections, pathname);
   // The home section is the crumb we just seeded; anything else nests under it.
   if (section !== undefined && section.key !== "home") {
-    crumbs.push({ labelKey: `nav.${section.key}`, to: section.to });
+    crumbs.push({ labelKey: section.labelKey, to: section.to });
   }
 
   const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
   if (page !== undefined) {
-    crumbs.push(...page.trail);
+    // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
+    crumbs.push(...page.trail.filter((crumb) => crumb.labelKey !== section?.labelKey));
   }
 
   const last = crumbs[crumbs.length - 1];

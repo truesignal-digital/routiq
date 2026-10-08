@@ -20,6 +20,7 @@ import {
 import type { TenantTx } from "../db/tenant.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import { LEDGER_ENTRY_STATUSES } from "./dashboard.js";
+import { foldedCancellationSql } from "./entry-cancellation.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { monthBounds } from "./finance.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
@@ -103,8 +104,9 @@ async function loadFinance(
   const pendingSet = [...lines, ...economicMonth, eq(financialEntries.status, "SUBMITTED")];
   const rejectedSet = [...lines, ...economicMonth, eq(financialEntries.status, "REJECTED")];
 
+  const eventCount = sql<number>`count(distinct ${financialEntries.id}) filter (where not ${foldedCancellationSql(auth, periodCode)})::int`;
   const [posted] = await tx
-    .select({ expenseMinor: expenseSum, revenueMinor: revenueSum, entryCount })
+    .select({ expenseMinor: expenseSum, revenueMinor: revenueSum, entryCount, eventCount })
     .from(financialPostings)
     .innerJoin(financialEntries, entryJoin)
     .innerJoin(postingPeriods, periodJoin)
@@ -187,6 +189,7 @@ async function loadFinance(
       expenseMinor: minor(posted?.expenseMinor),
       revenueMinor: minor(posted?.revenueMinor),
       entryCount: posted?.entryCount ?? 0,
+      eventCount: posted?.eventCount ?? 0,
     },
     pending: {
       basis: "ECONOMIC_MONTH",

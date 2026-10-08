@@ -83,6 +83,8 @@ const approver: MeContext = {
   principalId: "p",
   principalType: "HUMAN",
   membershipId: "m",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
   role: "FINANCE",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],

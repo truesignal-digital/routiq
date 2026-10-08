@@ -33,6 +33,7 @@ const item = {
   },
   changedFields: ["status", "completeness"],
   note: "Feuille de route corrigée par le bureau",
+  noteCode: null,
 };
 
 describe("history item contract", () => {
@@ -47,6 +48,7 @@ describe("history item contract", () => {
       actor: { principalId: null, displayName: null, scope: "PLATFORM" },
       changedFields: [],
       note: null,
+      noteCode: null,
     };
     expect(historyItem.parse(platformItem)).toEqual(platformItem);
   });
