@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PoweredByRoutiq, RoutiqLogo, useCompanyLogo } from "@/components/brand/routiq-logo";
 import {
   Sidebar,
   SidebarContent,
@@ -25,7 +25,9 @@ const MENU_BUTTON = "min-h-11 md:min-h-8";
 export function AppSidebar() {
   const { t } = useTranslation();
   const me = useMeContext();
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const companyLogo = useCompanyLogo();
+  const railOnly = state === "collapsed" && !isMobile;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const groups = visibleSectionGroups(me?.role, me?.enabledModules);
   const active = activeSection(
@@ -46,16 +48,15 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="group-data-[collapsible=icon]:p-1.5!"
+              className="group-data-[collapsible=icon]:p-1!"
               onClick={closeOnMobile}
               render={<Link to="/" />}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
-                <Truck className="size-5" strokeWidth={1.8} aria-hidden />
-              </span>
-              <span className="font-heading text-base font-semibold tracking-tight">
-                {t("app.name")}
-              </span>
+              <RoutiqLogo
+                markClassName="size-8! group-data-[collapsible=icon]:size-6!"
+                markTitle={railOnly ? t("brand.mark") : undefined}
+                wordmarkClassName="text-base group-data-[collapsible=icon]:hidden"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -94,6 +95,9 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem className="px-2 group-data-[collapsible=icon]:hidden">
+            <PoweredByRoutiq companyLogo={companyLogo} />
+          </SidebarMenuItem>
           <NameMenu />
         </SidebarMenu>
       </SidebarFooter>
