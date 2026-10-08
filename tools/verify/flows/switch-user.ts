@@ -18,10 +18,10 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(viewer.pin);
   await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
   await page.waitForURL((url) => url.pathname === "/");
-  await page.locator('[data-slot="kpi-card"]').first().waitFor();
+  await page.locator('[data-slot="metric-tile"]').first().waitFor();
   await quiet();
   await shot(`home-as-${viewer.username}`, { caption: `Signed in again as ${viewer.username}, with that role's Home` });
-  if ((await page.locator('[data-kpi="pendingApprovals"]').count()) !== 0) throw new Error("the cashier sees the approvals card");
+  if ((await page.locator('[data-metric="pendingApprovals"]').count()) !== 0) throw new Error("the cashier sees the approvals card");
 
   const me = await apiGet("/v1/me");
   const role = (me.body as { role?: string }).role;

@@ -593,6 +593,7 @@
     },
     "periods": {
       "title": "Period management",
+      "lead": "Each month takes entries until finance locks it. Late corrections go into the open month.",
       "columns": {
         "period": "Period",
         "status": "Status",
@@ -625,7 +626,8 @@
     }
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "howCalculated": "How this is calculated"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
@@ -1035,6 +1037,16 @@
           "OTHER": "Other"
         }
       }
+    },
+    "subtitle": "Every activity your fleet runs, from start to close.",
+    "metrics": {
+      "thisWeek": "This week",
+      "thisWeekHint": "Started since Monday",
+      "incomplete": "Incomplete data",
+      "incompleteHint": "Closed with exceptions",
+      "weekKm": "Km this week",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "From the legs recorded"
     }
   },
   "maintenance": {
@@ -1194,6 +1206,18 @@
         "workOrderCancelled": "Work order cancelled",
         "assetReleased": "Asset returned to service"
       }
+    },
+    "subtitle": "Problems reported and work orders, from report to repair.",
+    "metrics": {
+      "newProblems": "New problems",
+      "newProblemsHint": "{count, plural, =0 {None safety critical} one {# safety critical} other {# safety critical}}",
+      "grounded": "Grounded",
+      "groundedHint": "Must not be driven",
+      "inProgress": "Work orders in progress",
+      "inProgressHint": "Approved, not yet finished",
+      "repairDays": "Average days to repair",
+      "repairDaysValue": "{days, number} d",
+      "repairDaysHint": "{count, plural, =0 {No repair in the last {window} days} one {# repair in the last {window} days} other {# repairs in the last {window} days}}"
     }
   },
   "persons": {
@@ -1222,7 +1246,8 @@
       "MECHANIC": "Mechanic",
       "CLERK": "Clerk",
       "OTHER": "Other"
-    }
+    },
+    "lead": "The people your fleet works with: drivers, mechanics and crew. A person can drive without signing in."
   },
   "users": {
     "title": "Users",
@@ -1289,7 +1314,8 @@
         "reactivated": "User reactivated: {name}"
       },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
-    }
+    },
+    "lead": "Who can sign in, with which role and in which branches."
   },
   "branches": {
     "title": "Branches",
@@ -1337,7 +1363,8 @@
       "info": {
         "switched": "You are viewing: {branch}"
       }
-    }
+    },
+    "lead": "Branches group vehicles, people and money by site. Each user sees the branches they are given."
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -2300,7 +2327,6 @@
       "revenue": "Posted revenue",
       "revenueHint": "Posted is not cash received",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "howCalculated": "How this is calculated",
       "byCategory": "Spending by category",
       "byCategoryHint": "Posted, {period}",
       "lastSixMonths": "Last 6 months",

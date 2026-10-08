@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { FilePlus2, Maximize2, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +12,7 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
+import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -21,7 +22,7 @@ import {
   type ActivityColumnId,
 } from "@/activities/activityColumns.js";
 import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
-import { useActivities } from "@/activities/useActivities.js";
+import { useActivities, useActivitySummary } from "@/activities/useActivities.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
@@ -30,6 +31,11 @@ import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNoti
 
 const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
 const COMPLETENESS_OPTIONS = ["COMPLETE", "COMPLETE_WITH_EXCEPTIONS"] as const;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The filters the overview tiles set, kept in the URL so a tile's view is a link (#302). */
+const URL_FILTERS = ["status", "completeness", "from", "to"] as const;
+type UrlFilters = Partial<Record<(typeof URL_FILTERS)[number], string>>;
 
 /** Module-level so the column memo holds across renders. */
 const LIST_COLUMNS: readonly ActivityColumnId[] = [
@@ -61,7 +67,47 @@ export function ActivitiesScreen() {
   // workspaces are intentionally small enough for that tradeoff.
   const assetOptions = useAssetOptions();
 
-  const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
+  const urlSearch = useSearch({ from: "/app/activities" });
+  const [localFilters, setLocalFilters] = useState<DataTableFilterValues>({});
+  const filterValues = useMemo<DataTableFilterValues>(() => {
+    const values: DataTableFilterValues = { ...localFilters };
+    for (const key of URL_FILTERS) {
+      const value = urlSearch[key];
+      if (value !== undefined) values[key] = value;
+    }
+    return values;
+  }, [localFilters, urlSearch]);
+
+  const setUrlFilters = (next: UrlFilters) =>
+    void navigate({
+      to: "/activities",
+      replace: true,
+      search: {
+        status: STATUS_OPTIONS.find((option) => option === next.status),
+        completeness: COMPLETENESS_OPTIONS.find((option) => option === next.completeness),
+        from: next.from !== undefined && ISO_DATE.test(next.from) ? next.from : undefined,
+        to: next.to !== undefined && ISO_DATE.test(next.to) ? next.to : undefined,
+      },
+    });
+
+  const setFilterValues = (
+    update: DataTableFilterValues | ((values: DataTableFilterValues) => DataTableFilterValues),
+  ) => {
+    const values = typeof update === "function" ? update(filterValues) : update;
+    const local: DataTableFilterValues = { ...values };
+    const url: UrlFilters = {};
+    for (const key of URL_FILTERS) {
+      const value = local[key];
+      delete local[key];
+      if (value !== undefined && value !== "") url[key] = value;
+    }
+    setLocalFilters(local);
+    if (URL_FILTERS.some((key) => (url[key] ?? "") !== (urlSearch[key] ?? ""))) {
+      setUrlFilters(url);
+    }
+  };
+
+  const summaryQuery = useActivitySummary();
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const sort = toSortParam(sorting);
@@ -152,6 +198,56 @@ export function ActivitiesScreen() {
     [activityTypesQuery.data, assetOptions, i18n.language, filterValues, t],
   );
 
+  const tiles = useMemo<MetricTiles>(() => {
+    const counts = summaryQuery.data;
+    const week = counts?.week;
+    const onWeek =
+      week !== undefined &&
+      urlSearch.from === week.from &&
+      urlSearch.to === week.to &&
+      urlSearch.status === undefined &&
+      urlSearch.completeness === undefined;
+    const only = (filter: UrlFilters, active: boolean) => () =>
+      setUrlFilters(active ? {} : filter);
+    const onOpen = urlSearch.status === "OPEN" && urlSearch.from === undefined;
+    const onIncomplete =
+      urlSearch.completeness === "COMPLETE_WITH_EXCEPTIONS" && urlSearch.from === undefined;
+    return [
+      {
+        label: t("activities.metrics.thisWeek"),
+        value: counts === undefined ? null : String(counts.thisWeek),
+        hint: t("activities.metrics.thisWeekHint"),
+        selected: onWeek,
+        ...(week === undefined
+          ? {}
+          : { onSelect: only({ from: week.from, to: week.to }, onWeek) }),
+      },
+      {
+        label: t("activities.status.OPEN"),
+        value: counts === undefined ? null : String(counts.open),
+        selected: onOpen,
+        onSelect: only({ status: "OPEN" }, onOpen),
+      },
+      {
+        label: t("activities.metrics.incomplete"),
+        value: counts === undefined ? null : String(counts.incomplete),
+        tone: "warning",
+        hint: t("activities.metrics.incompleteHint"),
+        selected: onIncomplete,
+        onSelect: only({ completeness: "COMPLETE_WITH_EXCEPTIONS" }, onIncomplete),
+      },
+      {
+        label: t("activities.metrics.weekKm"),
+        value:
+          counts === undefined || counts.weekKm === null
+            ? null
+            : t("activities.metrics.weekKmValue", { km: counts.weekKm }),
+        hint: t("activities.metrics.weekKmHint"),
+      },
+    ];
+    // setUrlFilters closes over navigate only.
+  }, [summaryQuery.data, t, urlSearch]);
+
   const columns = useActivityColumns(LIST_COLUMNS);
   const allActivities = activitiesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
@@ -181,6 +277,17 @@ export function ActivitiesScreen() {
             </Button>
           ) : undefined
         }
+      />
+
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+        {t("activities.subtitle")}
+      </p>
+
+      <MetricStrip
+        className="mt-6"
+        tiles={tiles}
+        isPending={summaryQuery.isPending}
+        isError={summaryQuery.isError}
       />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">

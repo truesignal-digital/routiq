@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import {
   ArrowLeftRight,
@@ -71,7 +71,30 @@ export function AssetsStub() {
   // module is on, so the hint says which set the number covers.
   const groundingCounted = me?.enabledModules.includes("MAINTENANCE") ?? false;
 
-  const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
+  // The status bucket lives in the URL, where the tiles put it (#302); the
+  // other toolbar filters stay local to the visit.
+  const urlSearch = useSearch({ from: "/app/assets" });
+  const [localFilters, setLocalFilters] = useState<DataTableFilterValues>({});
+  const filterValues = useMemo<DataTableFilterValues>(
+    () => ({
+      ...localFilters,
+      ...(urlSearch.status === undefined ? {} : { status: urlSearch.status }),
+    }),
+    [localFilters, urlSearch.status],
+  );
+  const setStatus = (status: string | undefined) =>
+    void navigate({
+      to: "/assets",
+      replace: true,
+      search: { status: STATUS_OPTIONS.find((option) => option === status) },
+    });
+  const setFilterValues = (values: DataTableFilterValues) => {
+    const { status, ...rest } = values;
+    setLocalFilters(rest);
+    if ((status ?? "") !== (urlSearch.status ?? "")) {
+      setStatus(status === "" ? undefined : status);
+    }
+  };
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [pending, setPending] = useState<{
@@ -151,15 +174,23 @@ export function AssetsStub() {
       {
         label: t("assets.metrics.total"),
         value: counts === undefined ? null : String(counts.total),
+        selected: urlSearch.status === undefined,
+        onSelect: () => setStatus(undefined),
       },
       {
         label: t("assets.metrics.inService"),
         value: counts === undefined ? null : String(counts.inService),
+        selected: urlSearch.status === "IN_SERVICE",
+        onSelect: () =>
+          setStatus(urlSearch.status === "IN_SERVICE" ? undefined : "IN_SERVICE"),
       },
       {
         label: t("assets.metrics.attention"),
         value: counts === undefined ? null : String(counts.attention),
         tone: "warning",
+        selected: urlSearch.status === "ATTENTION",
+        onSelect: () =>
+          setStatus(urlSearch.status === "ATTENTION" ? undefined : "ATTENTION"),
         hint: t(
           groundingCounted
             ? "assets.metrics.attentionHint"
@@ -167,7 +198,7 @@ export function AssetsStub() {
         ),
       },
     ];
-  }, [summaryQuery.data, t, groundingCounted]);
+  }, [summaryQuery.data, t, groundingCounted, urlSearch.status]);
 
   if (me !== undefined && !canView) {
     return (

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 578020,
+    "ceiling": 580059,
     "raises": [
       {
         "date": "2026-10-06",
@@ -113,8 +113,14 @@
       {
         "date": "2026-10-08",
         "from": 576243,
-        "to": 578020,
-        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 5a2d2c16)"
+        "to": 578177,
+        "reason": "Overview tiles (#302): Trucks, Trips and Maintenance tiles with two summary hooks and URL-backed list filters, plus Home and the truck's Money tab on MetricStrip (link, secondary link, info tooltip, unit); re-recorded on develop 0fafed81 (re-recorded on develop 5a2d2c16)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 578177,
+        "to": 580059,
+        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop f8796dc8)"
       }
     ]
   },
@@ -160,7 +166,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 578020,
+    "ceiling": 580059,
     "raises": [
       {
         "date": "2026-10-06",
@@ -273,8 +279,14 @@
       {
         "date": "2026-10-08",
         "from": 576243,
-        "to": 578020,
-        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 5a2d2c16)"
+        "to": 578177,
+        "reason": "Overview tiles (#302): Trucks, Trips and Maintenance tiles with two summary hooks and URL-backed list filters, plus Home and the truck's Money tab on MetricStrip (link, secondary link, info tooltip, unit); re-recorded on develop 0fafed81 (re-recorded on develop 5a2d2c16)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 578177,
+        "to": 580059,
+        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop f8796dc8)"
       }
     ]
   }

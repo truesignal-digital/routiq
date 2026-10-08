@@ -220,13 +220,13 @@ async function renderHome(me: MeContext) {
 /** The KPI value a card is currently showing, by its stable slot attribute. */
 function kpiValue(key: string): string | undefined {
   return document
-    .querySelector(`[data-kpi='${key}'] [data-slot='kpi-value']`)
+    .querySelector(`[data-metric='${key}'] [data-slot='metric-value']`)
     ?.textContent?.trim();
 }
 
 function kpiKeys(): string[] {
-  return [...document.querySelectorAll("[data-kpi]")].map(
-    (card) => card.getAttribute("data-kpi") ?? "",
+  return [...document.querySelectorAll("[data-slot='metric-tile'][data-metric]")].map(
+    (card) => card.getAttribute("data-metric") ?? "",
   );
 }
 
@@ -256,6 +256,19 @@ describe("DashboardScreen — KPI cards", () => {
     expect(kpiValue("openPeriodExpense")).toContain("450");
     expect(kpiValue("openPeriodRevenue")).toContain("1");
     expect(screen.getAllByText("Open period 2026-07").length).toBe(2);
+  });
+
+  it("renders the tiles through the shared metric strip, each opening its list (#302)", async () => {
+    installFetch();
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
+
+    await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
+    const strip = document.querySelector("[data-slot='metric-strip']");
+    expect(strip?.querySelectorAll("[data-slot='metric-tile']")).toHaveLength(4);
+    expect(document.querySelector("[data-slot='kpi-card']")).toBeNull();
+    expect(
+      document.querySelector("[data-metric='assets'] [data-slot='metric-link']")?.getAttribute("href"),
+    ).toBe("/assets");
   });
 
   it("shows skeletons rather than zeros while the aggregate is in flight", async () => {
@@ -314,7 +327,7 @@ describe("DashboardScreen — KPI cards", () => {
     await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
     await waitFor(() => expect(kpiValue("pendingApprovals")).toBe("3"));
-    expect(document.querySelector("[data-slot='kpi-secondary']")).toBeNull();
+    expect(document.querySelector("[data-slot='metric-secondary']")).toBeNull();
   });
 
   it("phrases an empty approvals queue rather than pluralizing zero", async () => {
