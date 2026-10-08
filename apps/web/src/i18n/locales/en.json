@@ -1652,7 +1652,11 @@
     "approvalTitle": "Approval required",
     "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
     "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
-    "issue": "{field}: {message}"
+    "issue": "{field}: {message}",
+    "discardTitle": "Discard this form?",
+    "discardBody": "What you typed will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
   },
   "commands": {
     "register-asset": {

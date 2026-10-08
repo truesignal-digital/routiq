@@ -1652,7 +1652,11 @@
     "approvalTitle": "Approbation requise",
     "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié.",
     "issues": "{count, plural, one {# point à corriger} other {# points à corriger}}",
-    "issue": "{field} : {message}"
+    "issue": "{field} : {message}",
+    "discardTitle": "Abandonner ce formulaire ?",
+    "discardBody": "Ce que vous avez saisi sera perdu.",
+    "keepEditing": "Continuer la saisie",
+    "discard": "Abandonner"
   },
   "commands": {
     "register-asset": {
