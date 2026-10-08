@@ -107,7 +107,7 @@ What is on the demo now:
 - **Approval chain by amount.** Small entries post directly. Mid-size ones wait for Finance. Large ones wait for Direction.
 - **Cancel entry** with a reason, and **Record again** when the details were wrong.
 - **Work orders with costs.** Costs are booked on the work order and go through the same approval chain. Closing a work order can record its cost in the same step.
-- **Vehicle workspace.** Each truck or vehicle page has tabs: **Overview**, **Maintenance**, **Money**, **Trips**, **Documents**, **History**, **Details**, plus **More actions** for everything you can do on it.
+- **Vehicle workspace.** Each truck or vehicle page has tabs: **Overview**, **Maintenance**, **Money**, **Trips**, **Documents**, **History**, **Details**, plus **More actions** for everything you can do on it. Tabs follow your role: Driver, Technician and Cashier have no **Money** tab, and Cashier has no **Documents**.
 - **Record history in words.** History reads as sentences ("Registration added, Boris, 10/8/26"), not codes.
 - **A passenger company.** Littoral Voyages runs coaches and minibuses with its own words.
 
@@ -151,10 +151,10 @@ Rules to know:
 - **Direction's own entries** post directly at any amount.
 - **Approve or reject.** Approvers open **Money** and click the count "N expenses waiting for your approval" in the sidebar. Each row has **Reject entry** and **Approve entry**. Rejecting needs a **Rejection reason**, which the author then sees.
 - **Edit while it waits.** The author can use **Edit entry** on their own entry while it is **Awaiting review**. Nobody else can.
-- **Cancel entry** [Annuler l'écriture] is for Director and Finance, on a **Posted** entry. Open the entry, click **Open full screen**, then **Cancel entry**. Pick a reason: **Entered twice**, **Didn't happen**, **Wrong details, to record again**, or **Other** (with text). The entry stays in the books as **Cancelled** and a cancellation line takes its amount out of the totals. With **Wrong details**, a **Record again** button opens a prefilled form. The new entry follows the normal approval rules.
-- **Thresholds.** Direction opens **Company settings** [Paramètres de l'entreprise] → **Approvals** → **Change approval thresholds**. Two fields: **Posts directly up to** and **Finance approves up to**. **Save thresholds** applies them from the next entry on. Everyone else sees a notice, "The approval rules have changed", with a **Got it** button.
-- **Accounting months** [Mois comptables]. Finance and Direction can **Lock period**. Only Direction can reopen a month, with a reason. An entry dated in a locked month posts into the current month instead, keeping its own date.
-- **Receipts.** Add a file when you record (**Supporting document (optional)**) or later with **Attach receipt**. The **Missing receipt** tile on Money lists entries without one. A Mobile Money, Orange Money or bank reference also counts as proof.
+- **Cancel entry** [Annuler l'écriture] is for Director and Finance, on a **Posted** entry. On **Money**, use the row's **⋯** menu → **Cancel entry**, or open the entry, click **Open full screen**, then **Cancel entry**. Pick a reason: **Entered twice**, **Didn't happen**, **Wrong details, to record again**, or **Other** (with text). The entry stays in the books as **Cancelled** and a cancellation line takes its amount out of the totals. With **Wrong details**, a **Record again** button opens a prefilled form. The new entry follows the normal approval rules.
+- **Thresholds.** Direction opens **Company settings** [Paramètres de l'entreprise] → **Approvals** → **Change approval thresholds**. Two fields: **Posts directly up to** and **Finance approves up to**. **Save thresholds** applies them at once, also to entries already waiting: lowering **Finance approves up to** moves bigger waiting entries to Direction. Everyone else sees a notice, "The approval rules have changed", with a **Got it** button.
+- **Accounting months** [Mois comptables]. Finance and Direction can **Lock period**. Only Direction can reopen a month, with a reason. An entry dated in a locked month posts into the current month instead, keeping its own date. If the current month is locked too, the entry is refused.
+- **Receipts.** Add a file when you record (**Supporting document (optional)**) or later with **Attach receipt**. The **Missing receipt** tile on Money lists entries without one, except categories that need no receipt (parking, driver allowance, tolls). A Mobile Money, Orange Money or bank reference also counts as proof.
 
 ## How a work order moves
 
@@ -189,7 +189,7 @@ Rules to know:
 - **Safety-critical** [Sécurité] grounds the vehicle the moment the problem is reported. The vehicle page turns red and says how long it has been grounded.
 - **Costs are ordinary expenses.** Open the work order from the vehicle page (**Maintenance** tab, or the work-order link in the red banner) and use **Record expense**. Up to 100,000 posts directly; above that it waits for Finance or Direction like any expense. A work order takes costs only, never revenue.
 - Finance, Cashier and Driver can open a work order but have no **Record expense** on it. Drivers see its amounts as "—".
-- **Complete work** [Terminer les travaux] asks for a **Work summary** and the cost: **No, that's all**, **Yes, add a cost**, or **Invoice not received yet**. **Resolve the linked problem** is ticked by default.
+- **Complete work** [Terminer les travaux] asks for a **Work summary** and the cost. If the work order already has posted costs: **No, that's all**, **Yes, add a cost**, or **Invoice not received yet**. If it has none yet, it asks for an amount and offers **No cost** or **Invoice not received yet**. **Resolve the linked problem** is ticked by default.
 - After completion the vehicle stays grounded. Its page shows, in amber, **Repair done — waiting for release to service.**
 - **Release to service** [Remettre en service] is for Director and Administrator. On a safety-critical repair, the person who completed the work cannot also release the vehicle.
 
@@ -293,7 +293,7 @@ Each scenario lists the trucking user. For Littoral Voyages, swap users with the
 - **Log in as:** `sali` / `eric`.
 - **Steps:** **Trucks** [Camions] → VH001 (passenger: **Vehicles** [Véhicules] → the Toyota Coaster) → **Report a problem**. Category Brakes, a short description, tick **Safety-critical**. **Report the problem**.
 - ✅ **Expected:** a red banner: grounded, with your description. **Maintenance** shows one more new problem for `boris` and `herve`. The **Trucks** list counts it under **Attention**.
-- **Try to break it:** report a second safety-critical problem on the same truck. Report a non-critical one (the truck should stay available). Log in as `nadege`: no **Report a problem**.
+- **Try to break it:** report a second safety-critical problem on the same truck. Report a non-critical one on another truck (it should stay available). On a truck that is already grounded, it stays grounded. Log in as `nadege`: no **Report a problem**.
 
 ### 10. Work order and its cost
 
@@ -304,7 +304,7 @@ Each scenario lists the trucking user. For Littoral Voyages, swap users with the
   2. `herve`: **Trucks** → VH001 → **Maintenance** tab → open the work order → **Record expense**. Category Repairs, amount 234,567. Save.
   3. `nadege`: approve that entry from her waiting list.
   4. `nadege`, `clarisse`, `sali`: open the same work order from VH001.
-  On Littoral Voyages, use the Toyota Coaster's door-seal problem, or the minibus work order that is already **Approved**.
+  On Littoral Voyages, use the Toyota Coaster's door-seal problem, or the minibus work order that is already **Approved** (the minibus is in Yaoundé, so `grace`, a Douala cashier, cannot open it: that is expected).
 - ✅ **Expected:** the work order is **Approved**. Hervé's cost shows under **Costs awaiting review**, then under posted costs once Nadège approves it. Finance, Cashier and Driver see no **Record expense** on the work order.
 - **Try to break it:** as `herve`, try to record a cost from **Money** (no Money page) or with no work order. As `boris`, look for a **Revenue** option on the work order.
 
@@ -365,7 +365,7 @@ Report these only if they behave differently from what is written here.
 - **#531.** A work order closed with **Invoice not received yet** cannot receive its invoice later. The app refuses any cost on a **Completed** work order, even though the form says "the invoice is added when it arrives". When you know the cost, choose **Yes, add a cost**.
 - **#532.** A Driver can add revenue on a trip sheet, although drivers are meant to record expenses only. The owner is deciding. For now, driver revenue from a sheet waits for approval at any amount.
 - **#534.** The amount hint in the recording form names the first approver only. A 1,500,000 expense still says "waits for Finance" although Direction decides. The late-posting notice says "posted to a previous accounting period" when the entry actually lands in the current month.
-- **Cancel entry** appears only on the full-screen entry page, not in the side panel.
+- **Cancel entry** is not in the entry's side panel. Use the row's **⋯** menu on **Money**, or the full-screen entry page.
 - On the **Maintenance** page, the work-order panel has no **Record expense**. Book costs from the vehicle page.
 - Nothing is saved while offline. If the network drops, the form shows an error; record it again when you are back online.
 - One file attached to a trip sheet counts as the receipt for every entry that sheet created.
