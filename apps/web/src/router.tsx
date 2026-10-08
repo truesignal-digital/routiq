@@ -5,14 +5,22 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
-import { financialEntryFilters, VEHICLE_HISTORY_KINDS } from "@routiq/contracts";
+import {
+  activityCompleteness,
+  activityStatus,
+  financialEntryFilters,
+  issueStatus,
+  VEHICLE_HISTORY_KINDS,
+  workOrderStatus,
+} from "@routiq/contracts";
 import { sessionStore } from "./auth/store.js";
 import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
 import { AssetsStub } from "./screens/AssetsStub.js";
 import { BranchesScreen } from "./screens/BranchesScreen.js";
+import { CompanySettingsScreen } from "./screens/CompanySettingsScreen.js";
 import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
-import { MoreStub } from "./screens/MoreStub.js";
+import { MySettingsScreen } from "./screens/MySettingsScreen.js";
 import { PersonsScreen } from "./screens/PersonsScreen.js";
 import { UsersScreen } from "./screens/UsersScreen.js";
 import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
@@ -22,7 +30,6 @@ import { MaintenanceScreen } from "./screens/MaintenanceScreen.js";
 import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
 import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
 import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
-import { FinanceApprovalsScreen } from "./screens/FinanceApprovalsScreen.js";
 import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
 import { AppShell } from "./shell/AppShell.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
@@ -67,6 +74,11 @@ const indexRoute = createRoute({
 const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
+  // The overview tiles filter the list through the URL, so a tile's view is a
+  // link that survives reload and back (#302).
+  validateSearch: z.object({
+    status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
+  }),
   component: AssetsStub,
 });
 
@@ -157,13 +169,26 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
-  validateSearch: financialEntryFilters.omit({ branchId: true }),
+  // `view=waiting` is the "Waiting your approval" view (#314), beside the
+  // read's own events / books views (#427). `branch=all` arrives from an
+  // overflow line that has already named the work outside the shell's agency,
+  // so the queue opens widened.
+  validateSearch: financialEntryFilters.omit({ branchId: true }).extend({
+    view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
+    branch: z.literal("all").optional().catch(undefined),
+  }),
   component: FinanceEntriesScreen,
 });
 
 const activitiesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities",
+  validateSearch: z.object({
+    status: activityStatus.optional().catch(undefined),
+    completeness: activityCompleteness.optional().catch(undefined),
+    from: z.iso.date().optional().catch(undefined),
+    to: z.iso.date().optional().catch(undefined),
+  }),
   component: ActivitiesScreen,
 });
 
@@ -190,6 +215,11 @@ const activityDetailRoute = createRoute({
 const maintenanceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/maintenance",
+  validateSearch: z.object({
+    tab: z.enum(["work-orders", "issues"]).optional().catch(undefined),
+    status: workOrderStatus.optional().catch(undefined),
+    issueStatus: issueStatus.optional().catch(undefined),
+  }),
   component: MaintenanceScreen,
 });
 
@@ -202,14 +232,19 @@ const financeEntryDetailRoute = createRoute({
   component: FinanceEntryDetailScreen,
 });
 
+// The Approvals page became the Money page's waiting view (#314). Old links,
+// notifications and the dashboard keep landing on the same work.
 const financeApprovalsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/approvals",
-  // The dashboard's overflow line sends an approver to the queue already
-  // widened; without it the queue presets itself to the shell's agency, which
-  // is exactly the narrowing that line is reporting around.
-  validateSearch: z.object({ branch: z.literal("all").optional() }),
-  component: FinanceApprovalsScreen,
+  validateSearch: z.object({ branch: z.literal("all").optional().catch(undefined) }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/finance/entries",
+      search: { view: "waiting", ...(search.branch === "all" ? { branch: "all" } : {}) },
+      replace: true,
+    });
+  },
 });
 
 const financePeriodsRoute = createRoute({
@@ -218,13 +253,23 @@ const financePeriodsRoute = createRoute({
   component: FinancePeriodsScreen,
 });
 
+// The More page went with #316: personal settings live in the name menu.
+// Old links and bookmarks land on Home rather than on a missing page.
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
-  component: MoreStub,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
 
-// Under /more so the shell keeps the Plus tab lit while you administer.
+const mySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/my-settings",
+  component: MySettingsScreen,
+});
+
+// The administration pages keep their /more paths so existing links still work.
 const personsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/persons",
@@ -241,6 +286,12 @@ const branchesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/branches",
   component: BranchesScreen,
+});
+
+const companySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/company",
+  component: CompanySettingsScreen,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -270,9 +321,11 @@ const routeTree = rootRoute.addChildren([
     financeApprovalsRoute,
     financePeriodsRoute,
     moreRoute,
+    mySettingsRoute,
     personsRoute,
     usersRoute,
     branchesRoute,
+    companySettingsRoute,
   ]),
 ]);
 

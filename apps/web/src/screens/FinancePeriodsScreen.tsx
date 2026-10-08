@@ -1,12 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { formatDate } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
-import { DataTable, DataTableViewOptions } from "@/components/data-table";
+import {
+  DataTable,
+  DataTableViewOptions,
+  type DataTableColumn,
+} from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
@@ -47,7 +51,6 @@ import {
   reopenPeriodPayload,
   type PeriodRead,
 } from "@routiq/contracts";
-import { FinanceToolbar } from "@/finance/FinanceToolbar.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
 type LockPeriodPayloadType = z.infer<typeof lockPeriodPayload>;
@@ -85,13 +88,13 @@ export function FinancePeriodsScreen() {
   // Every column sorts. `/v1/finance/periods` is unpaginated — the whole list
   // is in memory — so ordering it client-side reorders all of the data, not a
   // loaded prefix. Newest period first is the default view.
-  const columns = useMemo<ColumnDef<PeriodRead>[]>(
+  const columns = useMemo<DataTableColumn<PeriodRead>[]>(
     () => [
       {
         accessorKey: "periodCode",
         header: t("finance.periods.columns.period"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("finance.periods.columns.period") },
+        meta: { phone: "title", label: t("finance.periods.columns.period") },
         cell: ({ row }) => (
           <span className="font-medium">{row.original.periodCode}</span>
         ),
@@ -100,7 +103,7 @@ export function FinancePeriodsScreen() {
         accessorKey: "status",
         header: t("finance.periods.columns.status"),
         enableSorting: true,
-        meta: { mobile: "secondary", label: t("finance.periods.columns.status") },
+        meta: { phone: "status", label: t("finance.periods.columns.status") },
         cell: ({ row }) =>
           row.original.status === "OPEN"
             ? t("finance.periods.statusOpen")
@@ -112,7 +115,7 @@ export function FinancePeriodsScreen() {
         accessorKey: "entryCount",
         header: t("finance.periods.columns.entries"),
         enableSorting: true,
-        meta: { mobile: "secondary", label: t("finance.periods.columns.entries") },
+        meta: { phone: "value", label: t("finance.periods.columns.entries") },
         cell: ({ row }) =>
           t("finance.periods.entryCount", { count: row.original.entryCount }),
       },
@@ -210,7 +213,8 @@ export function FinancePeriodsScreen() {
       <PageHeader
         title={t("finance.periods.title")}
       />
-      <FinanceToolbar>
+      <p className="mt-1 text-sm text-muted-foreground">{t("finance.periods.lead")}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         {!periodsQuery.isPending && !periodsQuery.isError && (
           <DataTableViewOptions
             columns={columns}
@@ -219,7 +223,7 @@ export function FinancePeriodsScreen() {
             primaryColumn={{ columnId: "periodCode" }}
           />
         )}
-      </FinanceToolbar>
+      </div>
 
       {periodsQuery.isPending ? (
         <LoadingState className="mt-6" label={t("finance.periods.loading")} />

@@ -31,6 +31,8 @@ export const APPEND_ONLY_TABLES = {
   commandSourceArtifacts: { update: [], delete: "never" },
   approvalRuleChanges: { update: [], delete: "never" },
   approvalRuleAcknowledgements: { update: [], delete: "never" },
+  /** Who saw a note from Direction (#98): never withdrawn, never edited. */
+  noteAcknowledgements: { update: [], delete: "never" },
   activityPeople: { update: [], delete: "never" },
   movementLegs: { update: [], delete: "never" },
   meterReadings: { update: ["superseded_by_id", "supersede_reason"], delete: "never" },

@@ -1,5 +1,5 @@
 import type { Page } from "playwright-core";
-import { openSidebar, type DriveScript } from "../browser.js";
+import { openSidebar, signOutThroughNameMenu, type DriveScript } from "../browser.js";
 import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
 
 /**
@@ -92,10 +92,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
 async function signInAs(page: Page, role: string) {
   const account = resolveAccount(role);
-  // On a phone Sign out sits in the menu sheet, outside its navigation landmark.
-  await openSidebar(page);
-  await page.getByRole("button", { name: /^(Se déconnecter|Sign out)$/ }).filter({ visible: true }).first().click();
-  await page.waitForURL((url) => url.pathname === "/login");
+  await signOutThroughNameMenu(page);
   await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);

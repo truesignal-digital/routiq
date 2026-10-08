@@ -58,6 +58,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
           principalId: "00000000-0000-4000-8000-000000000002",
           membershipId: "00000000-0000-4000-8000-000000000003",
           principalType: "HUMAN", role: "ADMIN", branchScope: [branchId],
+          displayName: "Sali Ahmadou", workspaceName: "Transports Ngwa",
           enabledModules: options.financeEnabled === false ? ["CORE"] : ["CORE", "FINANCE"],
           enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
         };
@@ -67,6 +68,12 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
         break;
       case "/v1/assets":
         body = { items: [], nextCursor: null };
+        break;
+      case "/v1/finance/summary":
+        body = {
+          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
+        };
         break;
       case "/v1/finance/entries":
         await options.waitForLedger;
@@ -105,20 +112,20 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
 }
 
 const languages = [
-  { locale: "en", entries: "Entries", record: "Record an entry", approvals: "Approvals", periods: "Periods", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
-  { locale: "fr-CM", entries: "Écritures", record: "Saisir une écriture", approvals: "Approbations", periods: "Périodes", fullScreen: "Ouvrir en plein écran", detail: "Détail de l'écriture", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
+  { locale: "en", money: "Money", waiting: "Waiting your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
+  { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "Détail de l'écriture", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
 ];
 const viewers = languages.flatMap((language) => [390, 1280].map((width) => ({ ...language, width })));
 
 // The Administrateur reads the books of their branches but takes no money
-// decision (ADR-0009): no approvals, no periods, no reversal.
+// decision (ADR-0009): no waiting view, no accounting months, no reversal.
 it.each(viewers)("lets the Administrateur inspect the ledger and entry without money decisions ($locale, $width px)", async (viewer) => {
   const { requests } = await openFinance("/finance/entries", viewer);
   const user = userEvent.setup();
   const entryButton = await screen.findByRole("button", { name: "FIN-EXEC" });
-  expect(screen.getByRole("tab", { name: viewer.entries })).toBeTruthy();
-  expect(screen.queryByRole("tab", { name: viewer.approvals })).toBeNull();
-  expect(screen.queryByRole("tab", { name: viewer.periods })).toBeNull();
+  expect(screen.getByRole("heading", { level: 1, name: viewer.money })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: viewer.waiting })).toBeNull();
+  expect(screen.queryByRole("link", { name: viewer.months })).toBeNull();
 
   await user.click(entryButton);
   const drawer = await screen.findByRole("dialog", { name: "FIN-EXEC" });
@@ -133,12 +140,12 @@ it.each(viewers)("lets the Administrateur inspect the ledger and entry without m
 it.each(viewers)("renders empty and error states without money decisions ($locale, $width px)", async (viewer) => {
   await openFinance("/finance/entries", { ...viewer, listState: "empty" });
   await screen.findByText(viewer.empty);
-  expect(screen.queryByRole("tab", { name: viewer.approvals })).toBeNull();
+  expect(screen.queryByRole("button", { name: viewer.waiting })).toBeNull();
   cleanup();
   client.clear();
   await openFinance("/finance/entries", { ...viewer, listState: "error" });
   await screen.findByText(viewer.error);
-  expect(screen.queryByRole("tab", { name: viewer.approvals })).toBeNull();
+  expect(screen.queryByRole("button", { name: viewer.waiting })).toBeNull();
 });
 
 it.each(viewers)("shows loading without a false denial or money decisions ($locale, $width px)", async (viewer) => {
@@ -147,7 +154,7 @@ it.each(viewers)("shows loading without a false denial or money decisions ($loca
   const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending });
   await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries")).toBe(true));
   expect(screen.getByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
-  expect(screen.queryByRole("tab", { name: viewer.periods })).toBeNull();
+  expect(screen.queryByRole("link", { name: viewer.months })).toBeNull();
   await act(async () => { release(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
 });

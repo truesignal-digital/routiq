@@ -7,7 +7,7 @@ import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { BranchProvider, branchStorageKey } from "../shell/branch-context.js";
-import { FinanceApprovalsScreen } from "./FinanceApprovalsScreen.js";
+import { WaitingApprovals } from "./WaitingApprovals.js";
 
 /** The queue's own search params; `?branch=all` arrives widened. */
 const search: { current: { branch?: string } } = { current: {} };
@@ -17,8 +17,6 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => search.current,
   Link: ({ children }: { children?: unknown }) => children,
 }));
-vi.mock("../finance/FinanceNav.js", () => ({ FinanceNav: () => null }));
-
 const DLA = { id: "00000000-0000-4000-8000-000000000020", code: "DLA", name: "Douala" };
 const YDE = { id: "00000000-0000-4000-8000-000000000021", code: "YDE", name: "Yaoundé" };
 
@@ -92,6 +90,8 @@ const approver: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
   role: "FINANCE",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
@@ -105,7 +105,7 @@ function renderScreen() {
     >
       <MeCtx.Provider value={approver}>
         <BranchProvider>
-          <FinanceApprovalsScreen />
+          <WaitingApprovals arrivingWidened={search.current.branch === "all"} />
         </BranchProvider>
       </MeCtx.Provider>
     </QueryClientProvider>,

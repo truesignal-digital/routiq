@@ -17,6 +17,7 @@ import type {
   ModuleCode,
   Role,
   WorkOrderStatus,
+  NoteDetail,
 } from "@routiq/contracts";
 import type { MeContext } from "../../auth/me.js";
 import { viewerOf, type Viewer } from "../model.js";
@@ -29,6 +30,7 @@ export const WORK_ORDER_ID = "00000000-0000-4000-8000-00000000d001";
 export const ENTRY_ID = "00000000-0000-4000-8000-00000000e001";
 export const DOCUMENT_ID = "00000000-0000-4000-8000-00000000f001";
 export const INTERVAL_ID = "00000000-0000-4000-8000-00000000a0a1";
+export const NOTE_ID = "00000000-0000-4000-8000-00000000a0b1";
 
 /** The principal the tests sign in as; `other` made everything else. */
 export const ME_ID = "00000000-0000-4000-8000-000000000002";
@@ -53,6 +55,8 @@ export function me(role: Role, modules: ModuleCode[] = ALL_MODULES): MeContext {
     principalId: ME_ID,
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-000000000003",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules: modules,
@@ -170,6 +174,7 @@ export function attention(
     DOCUMENT_EXPIRING: { entityType: "document", id: DOCUMENT_ID, number: "POL-448210", rowVersion: null },
     ENTRY_AWAITING_REVIEW: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00006", rowVersion: 1 },
     ENTRY_EVIDENCE_MISSING: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00006", rowVersion: 1 },
+    DIRECTION_NOTE: { entityType: "note", id: NOTE_ID, number: null, rowVersion: null },
   };
   return {
     code,
@@ -228,6 +233,8 @@ export function workOrderDetail(status: WorkOrderStatus, overrides: Partial<Work
         eventId: "00000000-0000-4000-8000-0000000000c2",
         kind: "work_order.created",
         occurredAt: "2026-09-22T18:05:00.000Z",
+        note: null,
+        noteCode: null,
         actor: actor(OTHER_ID, "Boris"),
       },
     ],
@@ -266,6 +273,8 @@ export function issueDetail(overrides: Partial<IssueDetail> = {}): IssueDetail {
         eventId: "00000000-0000-4000-8000-0000000000c3",
         kind: "operational_issue.reported",
         occurredAt: "2026-09-22T08:00:00.000Z",
+        note: null,
+        noteCode: null,
         actor: actor(OTHER_ID, "Sali"),
       },
     ],
@@ -424,6 +433,19 @@ export function historyItem(overrides: Partial<VehicleHistoryItem> = {}): Vehicl
     params: { description: "Brake pressure warning on the Kekem descent", safetyCritical: true },
     note: null,
     noteCode: null,
+    ...overrides,
+  };
+}
+
+export function noteDetail(overrides: Partial<NoteDetail> = {}): NoteDetail {
+  return {
+    id: NOTE_ID,
+    assetId: ASSET_ID,
+    body: "Why is this repair so expensive? Call me before paying the garage.",
+    author: actor(OTHER_ID, "Émilienne"),
+    authorRole: "DIRECTOR",
+    createdAt: "2026-09-24T07:30:00.000Z",
+    acknowledgement: null,
     ...overrides,
   };
 }

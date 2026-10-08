@@ -150,7 +150,7 @@ describe("record history sheet", () => {
     expect(lastEnabled()).toBe(true);
   });
 
-  it("labels a known event and falls back to the raw code for the rest", async () => {
+  it("labels a known event and words the rest as Other change (#308)", async () => {
     stubHistory([
       event(),
       event({
@@ -161,9 +161,10 @@ describe("record history sheet", () => {
     await openSheet();
 
     expect(screen.getByText("Activity closed")).toBeTruthy();
-    // The event vocabulary is open: an unlabelled code shows itself rather than
-    // inventing an English sentence.
-    expect(screen.getByText("widget.frobnicated")).toBeTruthy();
+    // The event vocabulary is open: an unlabelled code reads "Other change"
+    // and never shows itself raw.
+    expect(screen.getByText("Other change")).toBeTruthy();
+    expect(screen.queryByText("widget.frobnicated")).toBeNull();
   });
 
   it("names ROUTIQ as the actor on a platform event", async () => {
@@ -209,7 +210,7 @@ describe("record history sheet", () => {
     stubHistory([event({ eventType: "financial_entry.reversed", note: null, noteCode: "WRONG_DETAILS" })]);
     await openSheet();
 
-    const line = screen.getByText("Entry cancelled").closest("p");
+    const line = screen.getByText("Entry cancelled").closest("li");
     expect(line?.textContent).toContain("Wrong details, to record again");
     expect(line?.textContent).not.toContain("WRONG_DETAILS");
   });
@@ -218,16 +219,16 @@ describe("record history sheet", () => {
     stubHistory([event({ eventType: "financial_entry.reversed", note: "Carte remboursée", noteCode: "OTHER" })]);
     await openSheet();
 
-    const line = screen.getByText("Entry cancelled").closest("p");
+    const line = screen.getByText("Entry cancelled").closest("li");
     expect(line?.textContent).toContain("Carte remboursée");
     expect(line?.textContent).not.toContain("Other");
   });
 
-  it("reads as one line: who, what, and the motif", async () => {
+  it("reads as one event: who, what, and the motif under the act", async () => {
     stubHistory([event({ note: "Fin de mission" })]);
     await openSheet();
 
-    const line = screen.getByText("Activity closed").closest("p");
+    const line = screen.getByText("Activity closed").closest("li");
     expect(line?.textContent).toContain("Amadou Bello");
     expect(line?.textContent).toContain("Fin de mission");
   });
@@ -264,7 +265,7 @@ describe("record history sheet", () => {
     await openSheet();
 
     // A reset is news; which credential columns it touched is not.
-    expect(screen.getByText("member.pin-reset")).toBeTruthy();
+    expect(screen.getByText("Other change")).toBeTruthy();
     expect(screen.queryByText("pinHash")).toBeNull();
     expect(screen.queryByText("failedAttempts")).toBeNull();
     expect(screen.queryByText("lockedUntil")).toBeNull();
@@ -316,7 +317,7 @@ describe("record history, changes only", () => {
     stubHistory([bookkeepingOnlyEvent()]);
     await openSheet();
 
-    expect(screen.queryByText("member.role-updated")).toBeNull();
+    expect(screen.queryByText("Other change")).toBeNull();
   });
 
   it("says so rather than looking empty when the filter hid everything", async () => {
@@ -340,7 +341,7 @@ describe("record history, changes only", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
 
     await userEvent.click(toggle);
-    expect(screen.getByText("member.role-updated")).toBeTruthy();
+    expect(screen.getByText("Other change")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Show all" }).getAttribute("aria-pressed"),
     ).toBe("true");
@@ -359,14 +360,14 @@ describe("record history, changes only", () => {
     ]);
     await openSheet();
 
-    expect(screen.getByText("widget.frobnicated")).toBeTruthy();
+    expect(screen.getByText("Other change")).toBeTruthy();
   });
 
   it("forgets show all once the sheet is closed and opened again", async () => {
     stubHistory([bookkeepingOnlyEvent()]);
     await openSheet();
     await userEvent.click(screen.getByRole("button", { name: "Show all" }));
-    expect(screen.getByText("member.role-updated")).toBeTruthy();
+    expect(screen.getByText("Other change")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() =>
@@ -374,7 +375,7 @@ describe("record history, changes only", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "History" }));
-    expect(screen.queryByText("member.role-updated")).toBeNull();
+    expect(screen.queryByText("Other change")).toBeNull();
   });
 });
 

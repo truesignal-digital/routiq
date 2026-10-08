@@ -4,11 +4,11 @@ import { Clock } from "lucide-react";
 import type { VehicleHistoryItem, VehicleHistoryKind } from "@routiq/contracts";
 import { FilterChips } from "@/components/filter-chips";
 import { RecordText } from "@/components/record-number";
-import { historyNote } from "@/components/record-history-sheet.js";
+import { historyNote, Timeline, type TimelineEvent } from "@/components/timeline.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatDayLong, formatMoney, localDayKey, type MoneySign } from "@/lib/format.js";
+import { formatMoney, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useVehicle, type VehicleGates } from "../context.js";
 import { describeEvent, type EventTone } from "../historyEvents.js";
@@ -41,25 +41,16 @@ function historyKinds(gates: VehicleGates): VehicleHistoryKind[] {
  * audit trail: corrections show as their own events beside the original.
  */
 export function HistoryTab() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { kind?: VehicleHistoryKind };
   const { asset, gates } = useVehicle();
   const kinds = historyKinds(gates);
   const kind = search.kind !== undefined && kinds.includes(search.kind) ? search.kind : undefined;
   const query = useAssetHistory(asset.id, kind, HISTORY_PAGE);
-  const locale = i18n.language;
+  const timelineEvent = useTimelineEvent();
 
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const groups: Array<{ key: string; items: VehicleHistoryItem[] }> = [];
-  for (const item of items) {
-    const key = localDayKey(item.occurredAt);
-    const last = groups[groups.length - 1];
-    if (last !== undefined && last.key === key) last.items.push(item);
-    else groups.push({ key, items: [item] });
-  }
-  const today = localDayKey(new Date());
-  const yesterday = localDayKey(new Date(Date.now() - 86_400_000));
 
   return (
     <section className="space-y-5">
@@ -90,26 +81,13 @@ export function HistoryTab() {
           retryLabel={t("vehicle.panel.retry")}
           onRetry={() => void query.refetch()}
         />
-      ) : groups.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState icon={<Clock className="size-6" aria-hidden />} message={t("vehicle.history.empty")} />
       ) : (
         <>
-          {groups.map((group) => (
-            <div key={group.key}>
-              <h3 className="mb-2 flex items-baseline gap-2 text-xs font-medium text-muted-foreground">
-                <span className="text-foreground">{formatDayLong(`${group.key}T12:00:00`, locale)}</span>
-                {group.key === today && <span>{t("history.today")}</span>}
-                {group.key === yesterday && <span>{t("history.yesterday")}</span>}
-              </h3>
-              <Card className="gap-0 py-0">
-                <ol className="divide-y">
-                  {group.items.map((item) => (
-                    <EventRow key={item.eventId} item={item} />
-                  ))}
-                </ol>
-              </Card>
-            </div>
-          ))}
+          <Card className="gap-0 px-4 py-4">
+            <Timeline groupByDay events={items.map((item) => timelineEvent(item))} />
+          </Card>
           {query.hasNextPage && (
             <Button
               variant="outline"
@@ -134,56 +112,48 @@ function historySign(item: VehicleHistoryItem): MoneySign {
     : { context: "record" };
 }
 
-function EventRow({ item }: { item: VehicleHistoryItem }) {
+/** One vehicle event on the shared timeline: its kind's icon, amount and record link. */
+function useTimelineEvent(): (item: VehicleHistoryItem) => TimelineEvent {
   const { t, i18n } = useTranslation();
   const { gates, panel } = useVehicle();
   const locale = i18n.language;
-  const view = describeEvent(item, t, locale, gates);
-  const note = historyNote(item, t);
-  const Icon = view.icon;
-  const actor =
-    item.actor.scope === "PLATFORM"
-      ? t("history.actor.platform")
-      : (item.actor.displayName ?? t("history.actor.unknown"));
 
-  return (
-    <li className="flex gap-3 px-4 py-3">
-      <span className={cn("mt-0.5 grid size-7 shrink-0 place-items-center rounded-md", EVENT_TONE_CLASS[view.tone])}>
-        <Icon className="size-3.5" aria-hidden />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3">
-          <p className="font-medium leading-snug">
-            <RecordText text={view.title} numbers={[view.titleNumber]} />
-          </p>
-          {item.amountMinor !== null && gates.entries && (
-            <span className={cn("shrink-0 text-sm tabular-nums", item.amountMinor < 0 && "text-muted-foreground")}>
-              {formatMoney(item.amountMinor, {
-                currency: item.currency ?? "XAF",
-                locale,
-                sign: historySign(item),
-              })}
-            </span>
-          )}
-        </div>
-        {view.detail !== null && <p className="mt-0.5 text-sm whitespace-pre-line text-muted-foreground">{view.detail}</p>}
-        {note !== null && <p className="mt-0.5 text-sm text-muted-foreground">{note}</p>}
-        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
-          <span>{actor}</span>
-          <Sep />
-          <time dateTime={item.occurredAt}>
-            {new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(item.occurredAt))}
-          </time>
-          {view.record !== null && (
-            <>
-              <Sep />
-              <LinkButton onClick={() => view.record !== null && panel.openRecord(view.record)}>
-                {t("vehicle.history.open")}
-              </LinkButton>
-            </>
-          )}
-        </p>
-      </div>
-    </li>
-  );
+  return (item) => {
+    const view = describeEvent(item, t, locale, gates);
+    const Icon = view.icon;
+    const record = view.record;
+    return {
+      id: item.eventId,
+      occurredAt: item.occurredAt,
+      actor: item.actor,
+      act: <RecordText text={view.title} numbers={[view.titleNumber]} />,
+      note: historyNote(item, t),
+      marker: (
+        <span className={cn("grid size-7 place-items-center rounded-md", EVENT_TONE_CLASS[view.tone])}>
+          <Icon className="size-3.5" />
+        </span>
+      ),
+      aside:
+        item.amountMinor !== null && gates.entries ? (
+          <span className={cn("shrink-0 text-sm tabular-nums", item.amountMinor < 0 && "text-muted-foreground")}>
+            {formatMoney(item.amountMinor, {
+              currency: item.currency ?? "XAF",
+              locale,
+              sign: historySign(item),
+            })}
+          </span>
+        ) : undefined,
+      detail:
+        view.detail === null ? undefined : (
+          <p className="mt-0.5 text-sm whitespace-pre-line text-muted-foreground">{view.detail}</p>
+        ),
+      meta:
+        record === null ? undefined : (
+          <>
+            <Sep />
+            <LinkButton onClick={() => panel.openRecord(record)}>{t("vehicle.history.open")}</LinkButton>
+          </>
+        ),
+    };
+  };
 }

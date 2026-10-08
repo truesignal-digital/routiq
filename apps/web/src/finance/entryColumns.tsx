@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataTableColumn } from "@/components/data-table.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
 import { EntryLinks } from "@/finance/EntryLinks.js";
@@ -31,13 +31,13 @@ export type FinanceEntryColumnId =
  */
 function buildColumns(
   t: (key: string) => string,
-): Record<FinanceEntryColumnId, ColumnDef<FinancialEntryListItem>> {
+): Record<FinanceEntryColumnId, DataTableColumn<FinancialEntryListItem>> {
   return {
     entryNumber: {
       accessorKey: "entryNumber",
       header: t("finance.entries.detail.entryNumber"),
       enableSorting: true,
-      meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
+      meta: { phone: "title", label: t("finance.entries.detail.entryNumber") },
       cell: ({ row }) => (
         <span className="tabular-nums whitespace-nowrap">{row.original.entryNumber}</span>
       ),
@@ -45,7 +45,7 @@ function buildColumns(
     status: {
       accessorKey: "status",
       header: t("finance.entries.detail.status"),
-      meta: { mobile: "primary", label: t("finance.entries.detail.status") },
+      meta: { phone: "status", label: t("finance.entries.detail.status") },
       cell: ({ row }) => (
         <div className="flex flex-wrap items-start gap-2">
           <EntryEventStatus entry={row.original} />
@@ -61,22 +61,22 @@ function buildColumns(
       accessorKey: "economicDate",
       header: t("finance.entries.detail.date"),
       enableSorting: true,
-      meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
+      meta: { phone: "meta", label: t("finance.entries.detail.date") },
       cell: ({ row }) => formatDate(row.original.economicDate),
     },
     postedAt: {
       accessorKey: "postedAt",
       header: t("finance.entries.detail.postingDate"),
       enableSorting: true,
-      // Off the mobile card: it is the read's default order, not something an
+      // Off the phone row: it is the read's default order, not something an
       // operator scans a phone for.
-      meta: { mobile: "hidden", label: t("finance.entries.detail.postingDate") },
+      meta: { phone: "hidden", label: t("finance.entries.detail.postingDate") },
       cell: ({ row }) => formatDate(row.original.postedAt),
     },
     category: {
       id: "category",
       header: t("finance.entries.detail.category"),
-      meta: { mobile: "primary", label: t("finance.entries.detail.category") },
+      meta: { phone: "meta", label: t("finance.entries.detail.category") },
       cell: ({ row }) => localizedLabel(row.original.category),
     },
     amount: {
@@ -87,7 +87,7 @@ function buildColumns(
       accessorKey: "amountMinor",
       header: t("finance.entries.detail.amount"),
       enableSorting: true,
-      meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
+      meta: { phone: "value", label: t("finance.entries.detail.amount") },
       cell: ({ row }) => (
         <span
           className={cn(
@@ -109,7 +109,7 @@ function buildColumns(
       accessorKey: "counterpartyName",
       header: t("finance.entries.detail.counterparty"),
       meta: {
-        mobile: "secondary",
+        phone: "meta",
         label: t("finance.entries.detail.counterparty"),
       },
       cell: ({ row }) => row.original.counterpartyName ?? "—",
@@ -117,7 +117,7 @@ function buildColumns(
     linkedTo: {
       id: "linkedTo",
       header: t("finance.entries.detail.linkedTo"),
-      meta: { mobile: "secondary", label: t("finance.entries.detail.linkedTo") },
+      meta: { phone: "hidden", label: t("finance.entries.detail.linkedTo") },
       cell: ({ row }) => <EntryLinks links={row.original.links} />,
     },
   };
@@ -129,7 +129,7 @@ function buildColumns(
  */
 export function useFinanceEntryColumns(
   ids: readonly FinanceEntryColumnId[],
-): ColumnDef<FinancialEntryListItem>[] {
+): DataTableColumn<FinancialEntryListItem>[] {
   const { t, i18n } = useTranslation();
 
   return useMemo(() => {

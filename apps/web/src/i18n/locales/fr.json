@@ -2,11 +2,14 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "Logo ROUTIQ",
+    "poweredBy": "propulsé par ROUTIQ"
+  },
   "nav": {
     "home": "Accueil",
     "assets": "Actifs",
     "finances": "Finances",
-    "more": "Plus",
     "activities": "Activités",
     "maintenance": "Maintenance"
   },
@@ -63,6 +66,10 @@
     "groups": {
       "daily": "Au quotidien",
       "company": "Entreprise"
+    },
+    "bottomBar": {
+      "label": "Raccourcis",
+      "menu": "Menu"
     },
     "branch": {
       "label": "Agence courante",
@@ -177,7 +184,10 @@
     "CUSTODIAN_INELIGIBLE": "Ce membre ne peut pas être le chauffeur attitré de ce véhicule : son accès est désactivé ou ses agences ne couvrent pas celle du véhicule.",
     "AUTH_FAILED": "Espace de travail, nom d'utilisateur ou code PIN incorrect.",
     "NOT_ENTRY_AUTHOR": "Seul l'auteur de cette écriture peut la modifier. Vous pouvez la rejeter.",
-    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur."
+    "OWN_RECORDS_ONLY": "Vous ne pouvez faire cela que sur ce que vous avez saisi vous-même. Demandez à un administrateur.",
+    "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
   },
   "assets": {
     "notify": {
@@ -309,21 +319,22 @@
       "registration": "Immatriculation"
     }
   },
-  "more": {
-    "title": "Plus",
-    "signedInAs": "Connecté en tant que {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# agence} other {# agences}}",
+    "mySettings": "Mes réglages",
+    "signOut": "Se déconnecter"
+  },
+  "mySettings": {
+    "title": "Mes réglages",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Langue",
-    "theme": {
-      "label": "Thème",
+    "appearance": {
+      "label": "Apparence",
       "light": "Clair",
       "dark": "Sombre",
-      "system": "Système"
-    },
-    "manage": "Gestion",
-    "persons": "Personnel",
-    "users": "Utilisateurs",
-    "branches": "Agences",
-    "logout": "Se déconnecter"
+      "system": "Comme le téléphone"
+    }
   },
   "form": {
     "errors": {
@@ -415,12 +426,29 @@
       }
     },
     "navigation": {
-      "label": "Sections financières",
-      "record": "Saisie",
-      "entries": "Écritures",
-      "approvals": "Approbations",
-      "periods": "Périodes",
-      "approvalsBadge": "{count, plural, one {# approbation en attente} other {# approbations en attente}}"
+      "record": "Saisie"
+    },
+    "money": {
+      "lead": {
+        "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
+        "open": "Toutes les dépenses et recettes. {open} est ouvert.",
+        "none": "Toutes les dépenses et recettes."
+      },
+      "tiles": {
+        "out": "Sorties en {month}",
+        "in": "Entrées en {month}",
+        "waiting": "En attente de votre approbation",
+        "waitingHint": "{amount} · la plus ancienne {age}",
+        "missing": "Justificatif manquant",
+        "missingHint": "Le plus ancien : {date}"
+      },
+      "lens": {
+        "waiting": "En attente d’approbation",
+        "out": "Sorties du mois",
+        "in": "Entrées du mois",
+        "missing": "Justificatif manquant",
+        "clear": "Retirer le filtre : {name}"
+      }
     },
     "record": {
       "title": "Saisir une écriture",
@@ -550,14 +578,14 @@
       }
     },
     "approvals": {
-      "title": "Approbations",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les approbations. Réessayez.",
       "retry": "Réessayer",
       "empty": "Aucune écriture en attente d'approbation.",
       "columns": {
         "branch": "Agence",
-        "submittedAt": "Soumis le"
+        "submittedAt": "Soumis le",
+        "decision": "Décision"
       },
       "filters": {
         "branch": "Agence",
@@ -565,8 +593,6 @@
       },
       "branchEmpty": "Aucune écriture en attente pour {branch}.",
       "outsideBranch": "{count, plural, one {+# en attente dans une autre agence} other {+# en attente dans d'autres agences}}",
-      "makerGuard": "Votre saisie — un autre approbateur doit décider",
-      "directionDecides": "La Direction décide",
       "noteLabel": "Remarque",
       "optional": "(optionnel)",
       "notePlaceholder": "Ajoutez une remarque…",
@@ -575,10 +601,13 @@
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
-      "done": "Fermer"
+      "done": "Fermer",
+      "noReceipt": "pas de justificatif",
+      "decideRow": "{action} {number}"
     },
     "periods": {
-      "title": "Gestion des périodes",
+      "title": "Mois comptables",
+      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -611,7 +640,8 @@
     }
   },
   "common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "howCalculated": "Mode de calcul"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
@@ -621,6 +651,9 @@
     "view": "Affichage",
     "columns": "Colonnes",
     "clearFilters": "Effacer les filtres",
+    "filters": "{count, plural, =0 {Filtres} other {Filtres (#)}}",
+    "filtersTitle": "Filtres",
+    "showResults": "Voir les résultats",
     "filterAll": "Tous",
     "rowsPerPage": "Lignes par page",
     "pageOf": "Page {page} sur {pages}",
@@ -1018,6 +1051,16 @@
           "OTHER": "Autre"
         }
       }
+    },
+    "subtitle": "Chaque activité de votre flotte, du départ à la clôture.",
+    "metrics": {
+      "thisWeek": "Cette semaine",
+      "thisWeekHint": "Démarrage depuis lundi",
+      "incomplete": "Données incomplètes",
+      "incompleteHint": "Clôture avec exceptions",
+      "weekKm": "Km cette semaine",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "Selon les étapes saisies"
     }
   },
   "maintenance": {
@@ -1177,6 +1220,18 @@
         "workOrderCancelled": "Ordre de travail annulé",
         "assetReleased": "Actif remis en service"
       }
+    },
+    "subtitle": "Problèmes signalés et ordres de travail, de la déclaration à la réparation.",
+    "metrics": {
+      "newProblems": "Nouveaux problèmes",
+      "newProblemsHint": "{count, plural, =0 {Aucun critique pour la sécurité} one {# critique pour la sécurité} other {# critiques pour la sécurité}}",
+      "grounded": "Immobilisés",
+      "groundedHint": "Ne doivent pas rouler",
+      "inProgress": "Ordres de travail en cours",
+      "inProgressHint": "Approuvés, pas encore terminés",
+      "repairDays": "Durée moyenne de réparation",
+      "repairDaysValue": "{days, number} j",
+      "repairDaysHint": "{count, plural, =0 {Aucune réparation sur {window} jours} one {# réparation sur {window} jours} other {# réparations sur {window} jours}}"
     }
   },
   "persons": {
@@ -1205,7 +1260,8 @@
       "MECHANIC": "Mécanicien",
       "CLERK": "Agent",
       "OTHER": "Autre"
-    }
+    },
+    "lead": "Les personnes avec qui votre flotte travaille : chauffeurs, mécaniciens, équipage. Une personne peut conduire sans se connecter."
   },
   "users": {
     "title": "Utilisateurs",
@@ -1272,7 +1328,8 @@
         "reactivated": "Utilisateur réactivé : {name}"
       },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
-    }
+    },
+    "lead": "Qui peut se connecter, avec quel rôle et dans quelles agences."
   },
   "branches": {
     "title": "Agences",
@@ -1320,7 +1377,8 @@
       "info": {
         "switched": "Vous consultez : {branch}"
       }
-    }
+    },
+    "lead": "Les agences regroupent les véhicules, le personnel et l'argent par site. Chaque utilisateur voit les agences qui lui sont confiées."
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -1364,6 +1422,7 @@
       "unavailable": "Non disponible"
     },
     "event": {
+      "other": "Autre modification",
       "activity-created": "Activité créée",
       "activity-closed": "Activité clôturée",
       "activity-reopened": "Activité rouverte",
@@ -1415,7 +1474,8 @@
       "work_order-closure_approved": "Clôture validée",
       "asset_availability-opened": "Actif immobilisé",
       "asset_availability-closed": "Immobilisation levée",
-      "financial_entry-updated": "Écriture modifiée"
+      "financial_entry-updated": "Écriture modifiée",
+      "note-acknowledged": "Note marquée comme vue"
     },
     "field": {
       "status": "statut",
@@ -1644,7 +1704,11 @@
     "approvalTitle": "Approbation requise",
     "approvalBody": "Cette action doit être approuvée avant de prendre effet. Rien n'a été modifié.",
     "issues": "{count, plural, one {# point à corriger} other {# points à corriger}}",
-    "issue": "{field} : {message}"
+    "issue": "{field} : {message}",
+    "discardTitle": "Abandonner ce formulaire ?",
+    "discardBody": "Ce que vous avez saisi sera perdu.",
+    "keepEditing": "Continuer la saisie",
+    "discard": "Abandonner"
   },
   "commands": {
     "register-asset": {
@@ -1823,8 +1887,8 @@
       "submitting": "Désactivation…"
     },
     "update-approval-threshold": {
-      "label": "Modifier le seuil d'approbation",
-      "submit": "Enregistrer le seuil",
+      "label": "Modifier les seuils d'approbation",
+      "submit": "Enregistrer les seuils",
       "submitting": "Enregistrement…"
     },
     "create-category": {
@@ -1961,6 +2025,11 @@
       "submit": "J'ai compris",
       "submitting": "Enregistrement…",
       "dismiss": "Plus tard"
+    },
+    "acknowledge-note": {
+      "label": "Marquer comme vu",
+      "submit": "Marquer comme vu",
+      "submitting": "Enregistrement…"
     }
   },
   "vehicle": {
@@ -2157,7 +2226,8 @@
       "workshop": "L'atelier",
       "manager": "Un responsable",
       "operations": "L'exploitation",
-      "recorder": "L'auteur de la saisie"
+      "recorder": "L'auteur de la saisie",
+      "team": "L'équipe"
     },
     "now": {
       "todo": {
@@ -2229,6 +2299,11 @@
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Reçu manquant",
         "detail": "{ref} · {amount}, saisie par {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note de la Direction · {name} · {when}",
+        "badge": "Note de la Direction"
       }
     },
     "maintenance": {
@@ -2278,7 +2353,6 @@
       "revenue": "Recettes comptabilisées",
       "revenueHint": "Comptabilisé n'est pas encaissé",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "howCalculated": "Mode de calcul",
       "byCategory": "Dépenses par catégorie",
       "byCategoryHint": "Comptabilisé, {period}",
       "lastSixMonths": "6 derniers mois",
@@ -2446,7 +2520,8 @@
         "asset_availability-closed": "Immobilisation levée",
         "note-added": "Note ajoutée",
         "financial_entry-updated": "Écriture modifiée avant examen",
-        "asset-details_updated": "Informations modifiées"
+        "asset-details_updated": "Informations modifiées",
+        "note-acknowledged": "Note marquée comme vue"
       },
       "change": "{field} : {before} → {after}"
     },
@@ -2527,7 +2602,11 @@
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
       "photoNumber": "Photo {number}",
-      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau."
+      "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau.",
+      "directionNoteEyebrow": "Note de la Direction",
+      "notSeenYet": "Personne ne l'a encore marquée comme vue. Elle reste dans la liste « À faire » du véhicule jusque-là.",
+      "seenBy": "Vu par {name} le {date}",
+      "acknowledgeHint": "Indique à la Direction que vous avez lu cette note. Elle quitte la liste « À faire » ; votre nom et l'heure restent sur la note."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"
@@ -2540,7 +2619,8 @@
       "success": {
         "noteAdded": "Note ajoutée",
         "evidenceAttached": "Reçu joint",
-        "detailsSaved": "Informations du véhicule enregistrées."
+        "detailsSaved": "Informations du véhicule enregistrées.",
+        "noteAcknowledged": "Marquée comme vue"
       },
       "info": {
         "nothingToSave": "Rien à enregistrer : aucun changement."
@@ -2652,5 +2732,47 @@
     "DID_NOT_HAPPEN": "N'a pas eu lieu",
     "WRONG_DETAILS": "Mauvais détails, à ressaisir",
     "OTHER": "Autre"
+  },
+  "settings": {
+    "title": "Paramètres de l'entreprise",
+    "description": "Des règles qui s'appliquent à toute l'entreprise. Seule la Direction peut les modifier.",
+    "retry": "Réessayer",
+    "approvals": {
+      "title": "Approbations",
+      "description": "Jusqu'à quel montant une saisie d'argent est enregistrée sans contrôle, et qui décide au-delà.",
+      "loading": "Chargement des règles d'approbation",
+      "loadFailed": "Les règles d'approbation n'ont pas pu être chargées.",
+      "chainLabel": "La chaîne d'approbation",
+      "noBands": "Les règles d'approbation de cette entreprise ont été réglées à la main ; elles ne se modifient pas ici. Contactez le support ROUTIQ.",
+      "byRole": "Ce que rencontrent les saisies de chaque rôle",
+      "byRoleHint": "Personne n'approuve sa propre saisie, et les saisies de la Direction sont toujours enregistrées directement.",
+      "kind": {
+        "record-expense": "Dépenses",
+        "record-revenue": "Recettes"
+      },
+      "roleKind": "{role} : {kind}",
+      "overrides": "Exceptions pour une agence ou une catégorie",
+      "overridesHint": "Elles gardent leurs propres montants quand vous modifiez les seuils.",
+      "override": "{kind, select, record-expense {Dépenses} record-revenue {Recettes} other {Décisions}}, {scope} : {role} {bounded, select, yes {jusqu'à {amount}} other {quel que soit le montant}}",
+      "form": {
+        "description": "S'applique à toutes les agences, dès la prochaine saisie.",
+        "recording": "Enregistré directement jusqu'à",
+        "recordingHint": "Les saisies jusqu'à ce montant sont enregistrées sans contrôle.",
+        "ceiling": "La Finance approuve jusqu'à",
+        "ceilingHint": "Au-delà du premier montant et jusqu'à celui-ci, la Finance décide. Au-delà, seule la Direction décide.",
+        "whole": "Saisissez le montant en francs entiers, sans décimales.",
+        "belowCeiling": "Gardez ce montant sous celui jusqu'auquel la Finance approuve.",
+        "unchanged": "Modifiez un montant pour enregistrer.",
+        "afterSaving": "Après l'enregistrement",
+        "whoIsTold": "Les membres {roles} verront les nouvelles règles sur leur prochain écran.",
+        "conflictTitle": "Les seuils ont changé pendant votre modification",
+        "conflictBody": "Quelqu'un d'autre a enregistré de nouveaux seuils. Actualisez pour les voir, puis refaites votre modification."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Seuils d'approbation enregistrés"
+      }
+    }
   }
 }

@@ -277,6 +277,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H18",
+    // From Maintenance, Report a problem was a centred dialog; from the truck, a panel.
+    bad: [
+      file("apps/web/src/maintenance/MaintenanceDialogs.tsx", 'export function ReportIssueDialog(props: DialogHost) {\n  return <ReportIssueForm surface="dialog" {...props} />;\n}'),
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<RecordEntryForm\n  surface="dialog"\n  editing={entry}\n/>'),
+      file("apps/web/src/activities/ActivityActions.tsx", 'function LegForm() {\n  const common = { surface: "dialog" as const };\n}'),
+    ],
+    good: [
+      file("apps/web/src/maintenance/MaintenanceDialogs.tsx", 'export function ReportIssueDialog(props: DialogHost) {\n  return <ReportIssueForm surface="sheet" {...props} />;\n}'),
+      file("apps/web/src/screens/FinanceApprovalsScreen.tsx", '<RejectEntryForm\n  surface="dialog"\n  entry={entry}\n/>'),
+      file("apps/web/src/activities/ActivityActions.tsx", 'function CloseTripDialog() {\n  return <ActivityForm\n    surface="dialog"\n  />;\n}'),
+      file("apps/web/src/components/command-form.tsx", '| { surface: "dialog" | "sheet" | "panel"; title: ReactNode }'),
+    ],
+  },
+  {
     id: "DS-1",
     // An amount was monospace in Finance and proportional on the vehicle (#310).
     bad: [

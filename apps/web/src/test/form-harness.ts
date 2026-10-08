@@ -17,6 +17,8 @@ export interface FormUnderTest {
   render(props: { client: CommandClient; onDismiss: () => void }): ReactElement;
   /** Checks the pinned context and the defaults the form opened with. */
   opened(): void | Promise<void>;
+  /** A form that opens filled (an edit of current values) empties its fields here, before the empty submit. */
+  empty?(user: UserEvent): Promise<void>;
   /** Fills every required field with valid values. */
   fill(user: UserEvent): Promise<void>;
   /** Exactly what a valid fill sends; asymmetric matchers for minted ids. */
@@ -84,6 +86,7 @@ export function describeCommandForm(name: string, form: FormUnderTest): void {
 
     it("shows what to fix when submitted empty, and sends nothing", async () => {
       const { client, user } = open();
+      await form.empty?.(user);
       await user.click(submit());
       const summary = await screen.findByRole("region", { name: /things? to fix/ });
       const [first] = within(summary).getAllByRole("button");

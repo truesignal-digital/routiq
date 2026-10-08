@@ -80,7 +80,22 @@ const occurredAtColumn: KeysetColumn = {
  * will put credential material in there, and nothing reaches a client from it
  * except a key named here.
  */
-const NOTE_STATE_KEYS = ["reason"] as const;
+const NOTE_STATE_KEYS = [
+  "reason",
+  // Decision notes the maintenance and finance commands write (#308).
+  "approvalNote",
+  "rejectReason",
+  "completionRejectReason",
+  "cancelReason",
+  "dismissReason",
+  "resolutionNote",
+  "releaseNote",
+  "overrideReason",
+  "rejectedReason",
+  "supersedeReason",
+  // The trip's close note.
+  "note",
+] as const;
 
 /** A reason picked from a list (#426): a code the client words, never shown raw. */
 const NOTE_CODE_STATE_KEYS = ["reasonCode"] as const;
