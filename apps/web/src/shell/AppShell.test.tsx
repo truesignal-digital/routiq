@@ -56,6 +56,8 @@ function membership(enabledModules: ModuleCode[]): MeContext {
     principalId: "22222222-2222-4222-8222-222222222222",
     principalType: "HUMAN",
     membershipId: "33333333-3333-4333-8333-333333333333",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role: "ADMIN",
     branchScope: "ALL",
     enabledModules,
@@ -88,7 +90,6 @@ const SCREEN_PATHS = [
   "/assets/new",
   "/finance/entries",
   "/finance/periods",
-  "/more",
 ] as const;
 
 let client = new QueryClient();
@@ -191,7 +192,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "More", "Users"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
   });
 
   it("groups the rows under Daily work and Company", async () => {
@@ -204,13 +205,13 @@ describe("AppShell (sidebar frame)", () => {
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "More", "Users"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "Users"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "More"]);
+    expect(navLinkNames()).toEqual(["Home"]);
   });
 
   it("marks the section owning the route active, and only that one", async () => {
@@ -317,7 +318,8 @@ describe("AppShell (sidebar frame)", () => {
   it("logs out from the sidebar footer, forgetting every read made under the session", async () => {
     await renderShell("/assets");
     client.setQueryData(["ws", session.workspaceSlug, "me"], me.current);
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Sali Ahmadou/ }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     expect(logout).toHaveBeenCalledWith(session);
     expect(client.getQueryCache().getAll()).toEqual([]);
     expect(await screen.findByText("login screen")).toBeTruthy();
@@ -327,13 +329,13 @@ describe("AppShell (sidebar frame)", () => {
     it("renames the chrome of a single-preset workspace", async () => {
       me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "More", "Users"]);
+      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "Users"]);
     });
 
     // Runs after the overlay above: also proves unmounting clears it.
     it("keeps the base vocabulary for a mixed fleet", async () => {
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "More", "Users"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
     });
   });
 
@@ -347,7 +349,7 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "More", "Users"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
     });
 
     it("closes the sheet after navigating", async () => {

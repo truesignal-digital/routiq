@@ -146,9 +146,9 @@ describe("breadcrumbTrail", () => {
       "finance.navigation.periods",
       undefined,
     ]);
-    expect(trailAt("/more")).toEqual([
+    expect(trailAt("/my-settings")).toEqual([
       ["home.title", "/"],
-      ["more.title", undefined],
+      ["mySettings.title", undefined],
     ]);
   });
 
@@ -179,7 +179,7 @@ describe("breadcrumbTrail", () => {
       "/finance/entries",
       "/finance/entries/abc",
       "/finance/record",
-      "/more",
+      "/my-settings",
     ]) {
       const trail = breadcrumbTrail(ALL, path);
       expect(trail.at(-1)?.to, path).toBeUndefined();

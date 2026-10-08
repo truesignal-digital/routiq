@@ -52,6 +52,7 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "finance.navigation.approvals" }],
   },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
+  { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
   { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },
