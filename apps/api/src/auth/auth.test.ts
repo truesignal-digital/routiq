@@ -58,6 +58,8 @@ describe("username/PIN login", () => {
       membershipId: member.membership.id,
       role: "DRIVER",
       branchScope: [ws.branch.id],
+      displayName: member.principal.displayName,
+      workspaceName: ws.workspace.name,
       enabledModules: [
         "CORE",
         "ASSETS",
@@ -119,6 +121,9 @@ describe("username/PIN login", () => {
     });
     expect(me.statusCode).toBe(200);
     expect(me.json().enabledPresets).toEqual(["TRUCKING"]);
+    // The shell names the person and the company, not the login and the slug.
+    expect(me.json().displayName).toBe("Awa Ndongo");
+    expect(me.json().workspaceName).toBe(`Transports ${slug}`);
   });
 
   it("rejects a wrong PIN with a stable code and no message text", async () => {

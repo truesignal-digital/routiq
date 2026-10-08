@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { DiscardGuardScope, formPanelClassName, useDiscardGuard } from "@/components/command-form.js";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import { useVehicle, type PanelForm } from "../context.js";
 import { recordReference, samePanel, type PanelRef } from "../model.js";
 import { DocumentRecord } from "./DocumentRecord.js";
@@ -27,16 +27,14 @@ export function RecordPanel() {
   const recordForm =
     form !== undefined && form.record !== undefined && samePanel(form.record, current) ? form : undefined;
   const open = current !== undefined || standalone !== undefined;
+  const { guard, dialog } = useDiscardGuard();
+  // Repeating cost lines take the Line items width, as they do from Maintenance.
+  const width = recordForm?.key === "complete-work-order" ? "line-items" : "record";
 
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && panel.close()}>
-      <SheetContent
-        side={isMobile ? "bottom" : "right"}
-        className={cn(
-          "gap-0 overflow-y-auto",
-          isMobile ? "max-h-[92vh] rounded-t-xl" : "data-[side=right]:sm:max-w-lg",
-        )}
-      >
+    <Sheet open={open} onOpenChange={(next) => !next && guard.confirm(panel.close)}>
+      <SheetContent side={isMobile ? "bottom" : "right"} className={formPanelClassName(isMobile, width)}>
+        <DiscardGuardScope guard={guard}>
         {standalone !== undefined ? (
           <StandaloneForm stepKey={standalone.key} />
         ) : current !== undefined ? (
@@ -54,6 +52,8 @@ export function RecordPanel() {
             <RecordView key={panelKey(current)} record={current} form={recordForm} />
           </>
         ) : null}
+        </DiscardGuardScope>
+        {dialog}
       </SheetContent>
     </Sheet>
   );

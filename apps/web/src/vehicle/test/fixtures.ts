@@ -55,6 +55,8 @@ export function me(role: Role, modules: ModuleCode[] = ALL_MODULES): MeContext {
     principalId: ME_ID,
     principalType: "HUMAN",
     membershipId: "00000000-0000-4000-8000-000000000003",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role,
     branchScope: "ALL",
     enabledModules: modules,

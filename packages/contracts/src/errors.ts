@@ -61,6 +61,11 @@ export const COMMAND_ERROR_CODES = [
   "POSTINGS_SUM_MISMATCH",
   "MAKER_CANNOT_APPROVE",
   /**
+   * `update-approval-threshold` v2 with a recording threshold at or above the
+   * Finance ceiling (#354): Finance would have no band left to decide.
+   */
+  "RECORDING_THRESHOLD_NOT_BELOW_CEILING",
+  /**
    * Editing a pending entry someone else recorded (#85). Only its author may
    * change it while it waits; anyone else with the right role rejects it.
    */

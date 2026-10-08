@@ -37,3 +37,38 @@ export type UpdateApprovalThresholdPayload = z.infer<
 export type UpdateApprovalThresholdCommand = z.infer<
   typeof updateApprovalThresholdCommand
 >;
+
+/**
+ * Version 2 moves the whole money chain at once (#354): the recording
+ * threshold, up to which an entry posts without review, and the Finance
+ * ceiling, up to which Finance decides a pending one. Above the ceiling only
+ * Direction decides. Both bands move in one transaction, so the chain is never
+ * seen half-changed. The envelope's `expectedVersion` is the `version` the
+ * approval-thresholds read returned.
+ */
+export const updateApprovalThresholdV2Payload = z.object({
+  recordingThresholdMinor: moneyMinor.min(0),
+  financeCeilingMinor: moneyMinor.min(1),
+});
+
+export const updateApprovalThresholdV2Command = z.object({
+  name: z.literal("update-approval-threshold"),
+  version: z.literal(2),
+  envelope: commandEnvelope,
+  payload: updateApprovalThresholdV2Payload,
+});
+
+/** Refused when the recording threshold is not below the Finance ceiling. */
+export const RECORDING_THRESHOLD_NOT_BELOW_CEILING = "RECORDING_THRESHOLD_NOT_BELOW_CEILING";
+
+/** The rule between the two bands, shared by the command and the settings form. */
+export function thresholdBandsProblem(
+  bands: UpdateApprovalThresholdV2Payload,
+): typeof RECORDING_THRESHOLD_NOT_BELOW_CEILING | undefined {
+  return bands.recordingThresholdMinor < bands.financeCeilingMinor
+    ? undefined
+    : RECORDING_THRESHOLD_NOT_BELOW_CEILING;
+}
+
+export type UpdateApprovalThresholdV2Payload = z.infer<typeof updateApprovalThresholdV2Payload>;
+export type UpdateApprovalThresholdV2Command = z.infer<typeof updateApprovalThresholdV2Command>;

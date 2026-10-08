@@ -2,11 +2,14 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "ROUTIQ logo",
+    "poweredBy": "powered by ROUTIQ"
+  },
   "nav": {
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More",
     "activities": "Activities",
     "maintenance": "Maintenance"
   },
@@ -60,6 +63,10 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "groups": {
+      "daily": "Daily work",
+      "company": "Company"
+    },
     "branch": {
       "label": "Current branch",
       "all": "All my branches",
@@ -175,7 +182,8 @@
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
     "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
     "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
-    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen."
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
     "notify": {
@@ -187,7 +195,7 @@
       }
     },
     "eyebrow": "Operational fleet",
-    "title": "Your assets",
+    "title": "Assets",
     "subtitle": "Track every vehicle from registration through retirement.",
     "searchLabel": "Search assets",
     "searchPlaceholder": "Code, plate or model…",
@@ -307,21 +315,22 @@
       "registration": "Plate"
     }
   },
-  "more": {
-    "title": "More",
-    "signedInAs": "Signed in as {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "mySettings": "My settings",
+    "signOut": "Sign out"
+  },
+  "mySettings": {
+    "title": "My settings",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Language",
-    "theme": {
-      "label": "Theme",
+    "appearance": {
+      "label": "Appearance",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
-    },
-    "manage": "Manage",
-    "persons": "People",
-    "users": "Users",
-    "branches": "Branches",
-    "logout": "Sign out"
+      "system": "Same as phone"
+    }
   },
   "form": {
     "errors": {
@@ -452,7 +461,7 @@
       "branchesFailed": "We couldn't load branches. Retry this page."
     },
     "entries": {
-      "title": "Entries",
+      "title": "Money",
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "retry": "Try again",
@@ -1643,7 +1652,11 @@
     "approvalTitle": "Approval required",
     "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
     "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
-    "issue": "{field}: {message}"
+    "issue": "{field}: {message}",
+    "discardTitle": "Discard this form?",
+    "discardBody": "What you typed will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
   },
   "commands": {
     "register-asset": {
@@ -1822,8 +1835,8 @@
       "submitting": "Disabling…"
     },
     "update-approval-threshold": {
-      "label": "Change approval threshold",
-      "submit": "Save threshold",
+      "label": "Change approval thresholds",
+      "submit": "Save thresholds",
       "submitting": "Saving…"
     },
     "create-category": {
@@ -2668,5 +2681,47 @@
     "DID_NOT_HAPPEN": "Didn't happen",
     "WRONG_DETAILS": "Wrong details, to record again",
     "OTHER": "Other"
+  },
+  "settings": {
+    "title": "Company settings",
+    "description": "Rules that apply to everyone in the company. Only Direction can change them.",
+    "retry": "Try again",
+    "approvals": {
+      "title": "Approvals",
+      "description": "Up to which amount a money entry posts without review, and who decides it above that.",
+      "loading": "Loading the approval rules",
+      "loadFailed": "The approval rules could not be loaded.",
+      "chainLabel": "The approval chain",
+      "noBands": "This company's approval rules were set by hand, so they can't be changed here. Contact ROUTIQ support.",
+      "byRole": "What each role's own entries meet",
+      "byRoleHint": "Nobody approves their own entry, and Direction's own entries always post.",
+      "kind": {
+        "record-expense": "Expenses",
+        "record-revenue": "Revenue"
+      },
+      "roleKind": "{role}: {kind}",
+      "overrides": "Exceptions for a branch or a category",
+      "overridesHint": "These keep their own amounts when you change the thresholds.",
+      "override": "{kind, select, record-expense {Expenses} record-revenue {Revenue} other {Decisions}}, {scope}: {role} {bounded, select, yes {up to {amount}} other {at any amount}}",
+      "form": {
+        "description": "Applies to every branch, from the next entry on.",
+        "recording": "Posts directly up to",
+        "recordingHint": "Entries up to this amount post without review.",
+        "ceiling": "Finance approves up to",
+        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only Direction decides.",
+        "whole": "Enter the amount in whole francs, without decimals.",
+        "belowCeiling": "Keep this below the amount Finance approves up to.",
+        "unchanged": "Change an amount to save.",
+        "afterSaving": "After saving",
+        "whoIsTold": "{roles} members will see the new rules on their next screen.",
+        "conflictTitle": "The thresholds changed while you were editing",
+        "conflictBody": "Someone else saved new thresholds. Refresh to see them, then make your change again."
+      }
+    },
+    "notify": {
+      "success": {
+        "thresholdsSaved": "Approval thresholds saved"
+      }
+    }
   }
 }
