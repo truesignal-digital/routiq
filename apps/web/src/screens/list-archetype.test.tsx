@@ -132,6 +132,8 @@ function renderList(Screen: ComponentType) {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE"],
     enabledPresets: ["TRUCKING"],
+    displayName: "Emilienne Ngo",
+    workspaceName: "Transports Ngwa",
   };
   return render(
     <QueryClientProvider
