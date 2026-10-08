@@ -29,7 +29,8 @@ it("never renders or reads as the previous member after an account switch", asyn
   // The admin's Home reads the books.
   await waitFor(() => expect(financeReads(recorded, 0)).not.toEqual([]));
 
-  await user.click(await screen.findByRole("button", { name: "Sign out" }));
+  await user.click(await screen.findByRole("button", { name: /^Sali Ahmadou/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
   const signIn = await screen.findByRole("button", { name: "Sign in" });
   const from = recorded.requests.length;
   await user.clear(screen.getByLabelText("Workspace"));

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 568840,
+    "ceiling": 575406,
     "raises": [
       {
         "date": "2026-10-06",
@@ -77,13 +77,37 @@
       {
         "date": "2026-10-07",
         "from": 568158,
-        "to": 568840,
-        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars"
+        "to": 571979,
+        "reason": "#354: Company settings Approvals section (two bands, each role's chain in words, exceptions, last change, MoneyInput sheet), update-approval-threshold v2 contract and the shared band rule, about 3.8 kB gzip measured on top of develop b0ccefb; about 19 ms on a pilot phone at about 5 ms per kB until routes load on demand (#488) (re-recorded on develop 0fafed81) (re-recorded on develop 6171fdde)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 571979,
+        "to": 573396,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574502,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574681,
+        "to": 575406,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop db40ba03)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21841,
+    "ceiling": 21891,
     "raises": [
       {
         "date": "2026-10-06",
@@ -106,13 +130,13 @@
       {
         "date": "2026-10-07",
         "from": 21741,
-        "to": 21841,
-        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars"
+        "to": 21891,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 568840,
+    "ceiling": 575406,
     "raises": [
       {
         "date": "2026-10-06",
@@ -189,8 +213,32 @@
       {
         "date": "2026-10-07",
         "from": 568158,
-        "to": 568840,
-        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars"
+        "to": 571979,
+        "reason": "#354: Company settings Approvals section (two bands, each role's chain in words, exceptions, last change, MoneyInput sheet), update-approval-threshold v2 contract and the shared band rule, about 3.8 kB gzip measured on top of develop b0ccefb; about 19 ms on a pilot phone at about 5 ms per kB until routes load on demand (#488) (re-recorded on develop 0fafed81) (re-recorded on develop 6171fdde)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 571979,
+        "to": 573396,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574502,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574681,
+        "to": 575406,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop db40ba03)"
       }
     ]
   }

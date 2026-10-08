@@ -10,7 +10,12 @@ import { openSidebar, type DriveScript } from "../browser.js";
 const EXPECTED: Record<string, { daily: readonly [string, string][]; company: readonly [string, string][] }> = {
   DIRECTOR: {
     daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
-    company: [["Personnel", "People"], ["Utilisateurs", "Users"], ["Agences", "Branches"]],
+    company: [
+      ["Personnel", "People"],
+      ["Utilisateurs", "Users"],
+      ["Agences", "Branches"],
+      ["Paramètres de l'entreprise", "Company settings"],
+    ],
   },
   ADMIN: {
     daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
@@ -34,7 +39,6 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     if (!ok) failures.push(what);
   };
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
-  const more = t("Plus", "More");
 
   const readSidebar = async () => {
     const nav = await openSidebar(page);
@@ -55,7 +59,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     { heading: t("Au quotidien", "Daily work"), rows: daily },
     ...(company.length > 0 ? [{ heading: t("Entreprise", "Company"), rows: company }] : []),
   ];
-  const got = groups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== more) }));
+  const got = groups;
   check(JSON.stringify(got) === JSON.stringify(want), `${account.role} sidebar ${JSON.stringify(got)} matches the role table`);
   await shot(`${account.role.toLowerCase()}-sidebar`, {
     caption: `${account.role}: ${daily.join(", ")}${company.length > 0 ? ` | Company: ${company.join(", ")}` : ""}`,

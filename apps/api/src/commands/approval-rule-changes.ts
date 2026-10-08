@@ -25,21 +25,23 @@ const CHAINS_MOVED: Readonly<Record<string, readonly ApprovalChainCommandType[]>
 };
 
 /**
- * Notes a change to the entry chain so the members it moves are told (#422).
+ * The roles a threshold on these command types moves, and so tells (#422).
  * Direction is left out: its own entries post at any amount, so no band moves
  * them, and the change is Direction's to make.
  */
+export function rolesMovedBy(commandTypes: readonly string[]): Role[] {
+  const chains = commandTypes.flatMap((commandType) => CHAINS_MOVED[commandType] ?? []);
+  return [...new Set(chains.flatMap(entryRecorderRoles))].filter((role) => role !== "DIRECTOR");
+}
+
+/** Notes a change to the entry chain so the members it moves are told (#422). */
 export async function recordApprovalRuleChange(
   tx: Tx,
   ctx: CommandContext,
   commandId: string,
-  commandType: string,
+  commandType: string | readonly string[],
 ): Promise<void> {
-  const chains = CHAINS_MOVED[commandType];
-  if (chains === undefined) return;
-  const affectedRoles = [...new Set(chains.flatMap(entryRecorderRoles))].filter(
-    (role) => role !== "DIRECTOR",
-  );
+  const affectedRoles = rolesMovedBy(typeof commandType === "string" ? [commandType] : commandType);
   if (affectedRoles.length === 0) return;
   await tx.insert(approvalRuleChanges).values({
     workspaceId: ctx.workspaceId,
