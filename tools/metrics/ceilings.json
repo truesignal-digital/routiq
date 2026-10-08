@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 573818,
+    "ceiling": 576243,
     "raises": [
       {
         "date": "2026-10-06",
@@ -83,13 +83,37 @@
       {
         "date": "2026-10-07",
         "from": 571979,
-        "to": 573818,
-        "reason": "Navigation counts in the sidebar (#322): the server-count hook, useQueries, the count link and dot, fr/en plural strings"
+        "to": 573396,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574502,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574681,
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 575551,
+        "to": 576243,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 21741,
+    "ceiling": 22136,
     "raises": [
       {
         "date": "2026-10-06",
@@ -108,11 +132,29 @@
         "from": 21571,
         "to": 21741,
         "reason": "Cancel entry (#426): reason picked from a short list (RadioGroup primitive, v2 contract, Record again pre-filled, cancellation reason words in fr/en and in history); +3547 B gzip measured on top of develop b0ccefb6, under 18 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 98564000)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 21741,
+        "to": 21891,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21891,
+        "to": 21973,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 21973,
+        "to": 22136,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 573818,
+    "ceiling": 576243,
     "raises": [
       {
         "date": "2026-10-06",
@@ -195,8 +237,32 @@
       {
         "date": "2026-10-07",
         "from": 571979,
-        "to": 573818,
-        "reason": "Navigation counts in the sidebar (#322): the server-count hook, useQueries, the count link and dot, fr/en plural strings"
+        "to": 573396,
+        "reason": "#316 name menu, My settings page and the /v1/me names contract (+1.2 kB gzip); the More page it replaces was smaller (re-recorded on develop 6171fdde) (re-recorded on develop ac60e1b7)"
+      },
+      {
+        "date": "2026-10-07",
+        "from": 573396,
+        "to": 574502,
+        "reason": "ROUTIQ logo (#320): brand mark component, powered-by slot and brand token on the sidebar and sign-in page (re-recorded on develop efe23962)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574502,
+        "to": 574681,
+        "reason": "#296: the side panel's discard question and FormPanel frame, shared by every create form (re-recorded on develop 38c00b8c)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 574681,
+        "to": 575551,
+        "reason": "#300 phone list rows and the Filters sheet in DataTable (+805 B gzip) (re-recorded on develop 38c00b8c) (re-recorded on develop db40ba03)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 575551,
+        "to": 576243,
+        "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
       }
     ]
   }

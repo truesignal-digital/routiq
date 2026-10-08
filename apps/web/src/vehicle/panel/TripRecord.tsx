@@ -15,6 +15,7 @@ import { CancellationDetails, foldedAmountClass, foldTripEntries } from "@/finan
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { cn } from "@/lib/utils.js";
 import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 export function TripRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { gates } = useVehicle();
@@ -123,6 +124,9 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
         >
           {t("vehicle.trips.openFull")}
         </Link>
+        <div>
+          <RecordHistorySheet entityType="activity" entityId={trip.id} />
+        </div>
       </div>
       <PanelFooter steps={steps} onStep={panel.openStep} />
     </>

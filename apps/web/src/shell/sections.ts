@@ -2,7 +2,6 @@ import {
   Banknote,
   Building,
   House,
-  Menu,
   Route,
   ShieldUser,
   SlidersHorizontal,
@@ -123,7 +122,6 @@ const ALL_SECTIONS: readonly ShellSection[] = [
       search: { branch: "all" },
     },
   },
-  { key: "more", group: "daily", labelKey: "more.title", to: "/more", icon: Menu },
   {
     key: "persons",
     group: "company",

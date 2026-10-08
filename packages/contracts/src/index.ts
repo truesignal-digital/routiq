@@ -45,6 +45,7 @@ export * from "./commands/queueability.js";
 export * from "./commands/members.js";
 export * from "./reads/members.js";
 export * from "./reads/branches.js";
+export * from "./reads/me.js";
 export * from "./commands/report-issue.js";
 export * from "./commands/create-work-order.js";
 export * from "./commands/approve-work-order.js";

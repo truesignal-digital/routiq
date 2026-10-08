@@ -158,6 +158,8 @@ describe("the status sentence and the step beside it, per role", () => {
       kind,
       occurredAt: `2026-09-24T10:${String(minute).padStart(2, "0")}:00.000Z`,
       actor: actor(ME_ID, "Hervé"),
+      note: null,
+      noteCode: null,
     });
     const direct = workOrderDetail("COMPLETED", {
       chronologie: [event("work_order.created", 1), event("work_order.approved", 2), event("work_order.completed", 3)],

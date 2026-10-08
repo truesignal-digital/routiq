@@ -12,7 +12,7 @@ configure({ asyncUtilTimeout: 10_000 });
 
 /**
  * jsdom ships no `matchMedia`, and the responsive components lean on it —
- * `useIsMobile` calls it on mount, the DataTable picks table-vs-cards with it.
+ * `useIsMobile` calls it on mount, the DataTable picks table-vs-list-rows with it.
  * The stub answers `min-width`/`max-width` queries against jsdom's own window
  * (1024px), so every component reaches the same verdict: desktop. Tests that
  * want the phone layout keep overriding `window.matchMedia` themselves.

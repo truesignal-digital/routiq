@@ -39,7 +39,6 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     if (!ok) failures.push(what);
   };
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
-  const more = t("Plus", "More");
 
   const readSidebar = async () => {
     const nav = await openSidebar(page);
@@ -65,7 +64,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     { heading: t("Au quotidien", "Daily work"), rows: daily },
     ...(company.length > 0 ? [{ heading: t("Entreprise", "Company"), rows: company }] : []),
   ];
-  const got = groups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== more) }));
+  const got = groups;
   check(JSON.stringify(got) === JSON.stringify(want), `${account.role} sidebar ${JSON.stringify(got)} matches the role table`);
   await shot(`${account.role.toLowerCase()}-sidebar`, {
     caption: `${account.role}: ${daily.join(", ")}${company.length > 0 ? ` | Company: ${company.join(", ")}` : ""}`,

@@ -41,6 +41,8 @@ function membership(role: Role, enabledModules: ModuleCode[] = EVERY): MeContext
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING"],
+    displayName: "Emilienne Ngo",
+    workspaceName: "Transports Ngwa",
   };
 }
 

@@ -2,11 +2,14 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "ROUTIQ logo",
+    "poweredBy": "powered by ROUTIQ"
+  },
   "nav": {
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More",
     "activities": "Activities",
     "maintenance": "Maintenance"
   },
@@ -68,6 +71,10 @@
     "groups": {
       "daily": "Daily work",
       "company": "Company"
+    },
+    "bottomBar": {
+      "label": "Shortcuts",
+      "menu": "Menu"
     },
     "branch": {
       "label": "Current branch",
@@ -315,21 +322,22 @@
       "registration": "Plate"
     }
   },
-  "more": {
-    "title": "More",
-    "signedInAs": "Signed in as {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "mySettings": "My settings",
+    "signOut": "Sign out"
+  },
+  "mySettings": {
+    "title": "My settings",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Language",
-    "theme": {
-      "label": "Theme",
+    "appearance": {
+      "label": "Appearance",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
-    },
-    "manage": "Manage",
-    "persons": "People",
-    "users": "Users",
-    "branches": "Branches",
-    "logout": "Sign out"
+      "system": "Same as phone"
+    }
   },
   "form": {
     "errors": {
@@ -627,6 +635,9 @@
     "view": "View",
     "columns": "Columns",
     "clearFilters": "Clear filters",
+    "filters": "{count, plural, =0 {Filters} other {Filters (#)}}",
+    "filtersTitle": "Filters",
+    "showResults": "Show results",
     "filterAll": "All",
     "rowsPerPage": "Rows per page",
     "pageOf": "Page {page} of {pages}",
@@ -1370,6 +1381,7 @@
       "unavailable": "Not available"
     },
     "event": {
+      "other": "Other change",
       "activity-created": "Activity created",
       "activity-closed": "Activity closed",
       "activity-reopened": "Activity reopened",
@@ -1650,7 +1662,11 @@
     "approvalTitle": "Approval required",
     "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
     "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
-    "issue": "{field}: {message}"
+    "issue": "{field}: {message}",
+    "discardTitle": "Discard this form?",
+    "discardBody": "What you typed will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
   },
   "commands": {
     "register-asset": {

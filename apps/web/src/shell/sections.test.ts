@@ -5,7 +5,6 @@ import {
   Banknote,
   Building,
   House,
-  Menu,
   Route,
   ShieldUser,
   SlidersHorizontal,
@@ -30,12 +29,12 @@ function activeKey(pathname: string): string | undefined {
   return activeSection(ALL, pathname)?.key;
 }
 
-/** Rows per group, by key; `more` is the personal page #316 removes. */
+/** Rows per group, by key. */
 function sidebar(role: Role, modules: ModuleCode[] = EVERY) {
   return Object.fromEntries(
     visibleSectionGroups(role, modules).map((group) => [
       group.key,
-      group.sections.map((section) => section.key).filter((key) => key !== "more"),
+      group.sections.map((section) => section.key),
     ]),
   );
 }
@@ -113,7 +112,7 @@ describe("each role's sidebar (#312)", () => {
   });
 
   it("while membership is loading shows only rows no module or role decides", () => {
-    expect(visibleSections(undefined, undefined).map((s) => s.key)).toEqual(["home", "more"]);
+    expect(visibleSections(undefined, undefined).map((s) => s.key)).toEqual(["home"]);
   });
 
   it("home leads the nav for every role and module combination", () => {
@@ -133,7 +132,6 @@ describe("row label = page title (#312)", () => {
     activities: "screens/ActivitiesScreen.tsx",
     maintenance: "screens/MaintenanceScreen.tsx",
     finances: "screens/FinanceEntriesScreen.tsx",
-    more: "screens/MoreStub.tsx",
     persons: "screens/PersonsScreen.tsx",
     users: "screens/UsersScreen.tsx",
     branches: "screens/BranchesScreen.tsx",
@@ -152,7 +150,6 @@ describe("isSectionActive (exact-or-child)", () => {
   it("matches the section's own route", () => {
     expect(activeKey("/assets")).toBe("assets");
     expect(activeKey("/maintenance")).toBe("maintenance");
-    expect(activeKey("/more")).toBe("more");
   });
 
   it("home owns the landing route only, never every route beneath it", () => {
@@ -214,7 +211,6 @@ describe("row icons follow the consistency kit", () => {
     activities: ["route", Route],
     maintenance: ["wrench", Wrench],
     finances: ["money", Banknote],
-    more: ["menu", Menu],
     persons: ["user", UserRound],
     users: [undefined, ShieldUser],
     branches: ["building", Building],

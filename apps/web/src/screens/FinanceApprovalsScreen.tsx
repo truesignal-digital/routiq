@@ -3,13 +3,14 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Building2, Check, ClipboardCheck, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
-import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { useMeContext } from "@/auth/me.js";
 import {
   DataTable,
   DataTableViewOptions,
   type DataTableFilter,
   type DataTableFilterValues,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -104,13 +105,13 @@ export function FinanceApprovalsScreen() {
 
   // The read declares `sortFields`, so the sortable headers below drive it
   // rather than reordering the loaded page.
-  const columns = useMemo<ColumnDef<PendingApprovalItem>[]>(
+  const columns = useMemo<DataTableColumn<PendingApprovalItem>[]>(
     () => [
       {
         accessorKey: "entryNumber",
         header: t("finance.entries.detail.entryNumber"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
+        meta: { phone: "title", label: t("finance.entries.detail.entryNumber") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap tabular-nums">
             {row.original.entryNumber}
@@ -123,7 +124,7 @@ export function FinanceApprovalsScreen() {
         // A row that offers no decision says who makes it here, so hiding the
         // column would leave an empty ⋯ unexplained.
         enableHiding: false,
-        meta: { mobile: "primary", label: t("finance.entries.detail.status") },
+        meta: { phone: "status", label: t("finance.entries.detail.status") },
         cell: ({ row }) => {
           const decider = isOwnSubmission(
             row.original.submittedByPrincipalId,
@@ -151,7 +152,7 @@ export function FinanceApprovalsScreen() {
         accessorKey: "economicDate",
         header: t("finance.entries.detail.date"),
         enableSorting: false,
-        meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
+        meta: { phone: "meta", label: t("finance.entries.detail.date") },
         cell: ({ row }) => formatDate(row.original.economicDate),
       },
       {
@@ -160,7 +161,7 @@ export function FinanceApprovalsScreen() {
         enableSorting: true,
         // A phone row shows values without headings, so a second bare date
         // there would read as the economic one.
-        meta: { mobile: "hidden", label: t("finance.approvals.columns.submittedAt") },
+        meta: { phone: "hidden", label: t("finance.approvals.columns.submittedAt") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
       },
       {
@@ -169,7 +170,12 @@ export function FinanceApprovalsScreen() {
         id: "branch",
         header: t("finance.approvals.columns.branch"),
         enableSorting: false,
-        meta: { mobile: "secondary", label: t("finance.approvals.columns.branch") },
+        meta: {
+          phone: "meta",
+          label: t("finance.approvals.columns.branch"),
+          phoneText: (item) =>
+            branchOptions.find((branch) => branch.id === item.branchId)?.name ?? null,
+        },
         cell: ({ row }) => (
           <StatusBadge tone="neutral" icon={Building2}>
             {branchOptions.find((branch) => branch.id === row.original.branchId)
@@ -180,7 +186,7 @@ export function FinanceApprovalsScreen() {
       {
         id: "category",
         header: t("finance.entries.detail.category"),
-        meta: { mobile: "primary", label: t("finance.entries.detail.category") },
+        meta: { phone: "meta", label: t("finance.entries.detail.category") },
         cell: ({ row }) => (
           <span className="whitespace-normal">{localizedLabel(row.original.category)}</span>
         ),
@@ -192,7 +198,15 @@ export function FinanceApprovalsScreen() {
         accessorKey: "amountMinor",
         header: t("finance.entries.detail.amount"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
+        meta: {
+          phone: "value",
+          label: t("finance.entries.detail.amount"),
+          phoneText: (item) =>
+            formatMoney(item.amountMinor, {
+              currency: item.currency,
+              sign: { context: "record" },
+            }),
+        },
         cell: ({ row }) => (
           <span className="flex flex-col">
             <span className="font-semibold whitespace-nowrap tabular-nums">
@@ -211,7 +225,7 @@ export function FinanceApprovalsScreen() {
         accessorKey: "counterpartyName",
         header: t("finance.entries.detail.counterparty"),
         meta: {
-          mobile: "secondary",
+          phone: "meta",
           label: t("finance.entries.detail.counterparty"),
         },
         cell: ({ row }) => (
