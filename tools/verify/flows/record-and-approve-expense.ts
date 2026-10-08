@@ -1,5 +1,5 @@
 import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
-import { openSidebar, type DriveScript } from "../browser.js";
+import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 interface HistoryItem {
   eventType: string;
@@ -55,8 +55,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   });
 
   const finance = resolveAccount("finance");
-  await openSidebar(page);
-  await page.getByRole("button", { name: t("Se déconnecter", "Sign out") }).locator("visible=true").first().click();
+  await signOutThroughNameMenu(page);
   await page.waitForURL((url) => url.pathname === "/login");
   await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(finance.username);
