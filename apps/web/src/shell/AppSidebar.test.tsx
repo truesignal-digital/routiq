@@ -208,3 +208,15 @@ describe("sign out lives in one place", () => {
     expect(users).toEqual(["auth/sign-out.ts", "shell/NameMenu.tsx"]);
   });
 });
+
+describe("group labels on the collapsed rail", () => {
+  it("let the pointer through to the row underneath", async () => {
+    renderSidebar(member("DIRECTOR", "ALL"), { collapsed: true });
+    await screen.findByRole("navigation", { name: "Navigation" });
+    const labels = document.querySelectorAll('[data-slot="sidebar-group-label"]');
+    expect(labels.length).toBeGreaterThan(1);
+    for (const label of labels) {
+      expect(label.className).toContain("group-data-[collapsible=icon]:pointer-events-none");
+    }
+  });
+});
