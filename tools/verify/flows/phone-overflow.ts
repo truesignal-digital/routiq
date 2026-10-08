@@ -1,5 +1,5 @@
 import type { Page } from "playwright-core";
-import { DEMO_ACCOUNTS, DEMO_WORKSPACE, type DemoAccount } from "../accounts.js";
+import { TRUCKING_ACCOUNTS, type DemoAccount } from "../accounts.js";
 import { signOutThroughNameMenu, type DriveContext, type DriveScript } from "../browser.js";
 
 /**
@@ -122,7 +122,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
     if (!new URL(page.url()).pathname.startsWith("/login")) {
       await signOutThroughNameMenu(page);
     }
-    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(account.workspace);
     await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
     await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);
     await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
@@ -136,7 +136,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
     await page.getByRole("heading", { name: lang === "en" ? "Language" : "Langue" }).waitFor({ timeout: 10_000 });
   };
 
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of TRUCKING_ACCOUNTS) {
     await signIn(account);
     for (const lang of ["fr", "en"] as const) {
       await chooseLanguage(lang);

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, renameSync, readdirSync, writeFileSync } from "n
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright-core";
-import { DEMO_WORKSPACE, resolveAccount, type DemoAccount } from "./accounts.js";
+import { resolveAccount, type DemoAccount } from "./accounts.js";
 import { startCast, type Cast } from "./cast.js";
 import type { DriveOptions, Lang } from "./args.js";
 import { REPO_ROOT } from "./slot.js";
@@ -237,7 +237,7 @@ export function captionFromLabel(label: string): string {
 
 async function loginThroughUi(page: Page, state: SlotState, account: DemoAccount, rec: Recorder): Promise<void> {
   await page.goto(`${state.urls.web}/login`);
-  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(account.workspace);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);
   await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();

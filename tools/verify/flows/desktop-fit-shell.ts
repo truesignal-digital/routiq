@@ -1,5 +1,5 @@
 import type { Page } from "playwright-core";
-import { DEMO_ACCOUNTS, DEMO_WORKSPACE, type DemoAccount } from "../accounts.js";
+import { DEMO_ACCOUNTS, type DemoAccount } from "../accounts.js";
 import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 /**
@@ -105,7 +105,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
     if (!new URL(page.url()).pathname.startsWith("/login")) {
       await signOutThroughNameMenu(page);
     }
-    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(account.workspace);
     await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
     await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);
     await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
