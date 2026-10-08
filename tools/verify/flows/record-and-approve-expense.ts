@@ -1,4 +1,4 @@
-import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
+import { resolveAccount } from "../accounts.js";
 import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 interface HistoryItem {
@@ -57,7 +57,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   const finance = resolveAccount("finance");
   await signOutThroughNameMenu(page);
   await page.waitForURL((url) => url.pathname === "/login");
-  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(finance.workspace);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(finance.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(finance.pin);
   await page.waitForTimeout(400);

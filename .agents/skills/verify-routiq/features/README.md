@@ -6,6 +6,7 @@ This directory is the maintained source for verifying what a ROUTIQ user can do.
 
 - A slot started by this run: `pnpm verify up --slot N`, then `pnpm verify doctor --slot N` all PASS.
 - The demo workspace `transports-ngwa` as seeded: branches DLA (Douala), YDE, BAF; trucks VH001 and VH003 in service, trailer TR001; VH003 grounded by a safety-critical brake problem with an approved work order; two expenses pending approval; three trips.
+- The passenger workspace `littoral-voyages` (`apps/api/scripts/seed-demo-passenger.ts`): branches DLA, YDE; coach LT 731 CE (70 seats), Coaster CE 214 LT (30), minibus CE 908 YD (22) grounded by a safety-critical steering problem with an approved work order and a 185 000 XAF cost awaiting Finance; one closed and one open Douala → Yaoundé voyage; entries in each approval band (posted, awaiting Finance, awaiting Direction) and one fuel entry with its receipt missing. Sign in with `--role passenger-<role>`.
 - After any recipe that mutates data, `pnpm verify up --slot N --reseed` before the next run that needs the seed state.
 - Never drive an instance that was not started by this run.
 

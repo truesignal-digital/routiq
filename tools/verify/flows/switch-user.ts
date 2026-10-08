@@ -1,5 +1,5 @@
 import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
-import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
+import { resolveAccount } from "../accounts.js";
 
 /**
  * Role switching: sign out of the current account and sign in as the cashier,
@@ -13,7 +13,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
   await page.waitForURL((url) => url.pathname === "/login");
   await shot("signed-out", { caption: "Signed out: back on the sign-in screen" });
 
-  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(viewer.workspace);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(viewer.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(viewer.pin);
   await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
