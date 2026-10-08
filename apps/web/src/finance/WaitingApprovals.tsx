@@ -3,12 +3,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { Building2, ClipboardCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
-import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { useMeContext } from "@/auth/me.js";
 import {
   DataTable,
   type DataTableFilter,
   type DataTableFilterValues,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -116,13 +117,13 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
 
   // The read declares `sortFields`, so the sortable headers below drive it
   // rather than reordering the loaded page.
-  const columns = useMemo<ColumnDef<PendingApprovalItem>[]>(
+  const columns = useMemo<DataTableColumn<PendingApprovalItem>[]>(
     () => [
       {
         accessorKey: "entryNumber",
         header: t("finance.entries.detail.entryNumber"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("finance.entries.detail.entryNumber") },
+        meta: { phone: "title", label: t("finance.entries.detail.entryNumber") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap tabular-nums">
             {row.original.entryNumber}
@@ -133,7 +134,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         accessorKey: "economicDate",
         header: t("finance.entries.detail.date"),
         enableSorting: false,
-        meta: { mobile: "secondary", label: t("finance.entries.detail.date") },
+        meta: { phone: "meta", label: t("finance.entries.detail.date") },
         cell: ({ row }) => formatDate(row.original.economicDate),
       },
       {
@@ -142,7 +143,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         enableSorting: true,
         // A phone row shows values without headings, so a second bare date
         // there would read as the economic one.
-        meta: { mobile: "hidden", label: t("finance.approvals.columns.submittedAt") },
+        meta: { phone: "hidden", label: t("finance.approvals.columns.submittedAt") },
         cell: ({ row }) => formatDate(row.original.submittedAt),
       },
       {
@@ -151,7 +152,12 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         id: "branch",
         header: t("finance.approvals.columns.branch"),
         enableSorting: false,
-        meta: { mobile: "secondary", label: t("finance.approvals.columns.branch") },
+        meta: {
+          phone: "meta",
+          label: t("finance.approvals.columns.branch"),
+          phoneText: (item) =>
+            branchOptions.find((branch) => branch.id === item.branchId)?.name ?? null,
+        },
         cell: ({ row }) => (
           <StatusBadge tone="neutral" icon={Building2}>
             {branchOptions.find((branch) => branch.id === row.original.branchId)
@@ -162,7 +168,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
       {
         id: "category",
         header: t("finance.entries.detail.category"),
-        meta: { mobile: "secondary", label: t("finance.entries.detail.category") },
+        meta: { phone: "meta", label: t("finance.entries.detail.category") },
         cell: ({ row }) => (
           <span className="whitespace-normal">
             {localizedLabel(row.original.category)}
@@ -185,7 +191,15 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         accessorKey: "amountMinor",
         header: t("finance.entries.detail.amount"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("finance.entries.detail.amount") },
+        meta: {
+          phone: "value",
+          label: t("finance.entries.detail.amount"),
+          phoneText: (item) =>
+            formatMoney(item.amountMinor, {
+              currency: item.currency,
+              sign: { context: "record" },
+            }),
+        },
         cell: ({ row }) => (
           <span className="flex flex-col">
             <span className="font-semibold whitespace-nowrap tabular-nums">
@@ -204,7 +218,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         accessorKey: "counterpartyName",
         header: t("finance.entries.detail.counterparty"),
         meta: {
-          mobile: "secondary",
+          phone: "meta",
           label: t("finance.entries.detail.counterparty"),
         },
         cell: ({ row }) => (
@@ -216,7 +230,8 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         header: () => <span className="sr-only">{t("finance.approvals.columns.decision")}</span>,
         enableHiding: false,
         enableSorting: false,
-        meta: { mobile: "primary", label: t("finance.approvals.columns.decision") },
+        // On a phone the buttons sit under the amount, each a 44 px target.
+        meta: { phone: "status", label: t("finance.approvals.columns.decision") },
         cell: ({ row }) => (
           <RowDecision entry={row.original} onReject={() => openReject(row.original)} />
         ),

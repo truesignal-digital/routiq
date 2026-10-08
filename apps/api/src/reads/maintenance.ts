@@ -3,13 +3,15 @@ import {
   issueDetail,
   issueListQuery,
   issueListResponse,
+  maintenanceSummary,
+  maintenanceSummaryQuery,
   workOrderDetail,
   workOrderListQuery,
   workOrderListResponse,
   type HistoryActor,
   type ListSort,
 } from "@routiq/contracts";
-import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -33,6 +35,7 @@ import {
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { lastEventActors, toActor } from "./actors.js";
+import { noteCodeSql, noteSql } from "./history.js";
 import { commandArtifacts } from "./record-artifacts.js";
 import { invalidRequest, notFound, sendReadFailure } from "./read-gate.js";
 import {
@@ -53,6 +56,9 @@ import { ANY_ROLE, defineRead } from "./define-read.js";
  * offers the client a sort. The cursor still carries the ordering, because
  * `decodeKeysetCursor` refuses a boundary minted under any other one.
  */
+/** How far back "average days to repair" looks: a quarter of completions. */
+const REPAIR_WINDOW_DAYS = 90;
+
 const workOrderSort: ListSort<"createdAt"> = {
   field: "createdAt",
   direction: "desc",
@@ -138,6 +144,92 @@ export function registerMaintenanceReadRoutes(
    * so the branch lens — and the `branchId` filter — resolve through the asset,
    * which is why every query in this file joins the fleet.
    */
+  /**
+   * The Maintenance overview. Every count runs over assets in the caller's
+   * branch scope (a work order or an issue has no branch of its own), so the
+   * tiles cover exactly what the two lists under them can show.
+   */
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/maintenance/summary", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, reply, auth, read }) => {
+      try {
+        const parsedQuery = maintenanceSummaryQuery.safeParse(req.query);
+        if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        const { branchId } = parsedQuery.data;
+
+        const assetConditions: SQL[] = [eq(assets.workspaceId, auth.workspaceId)];
+        if (auth.branchScope !== "ALL") {
+          assetConditions.push(inArray(assets.branchId, auth.branchScope));
+        }
+        if (branchId) assetConditions.push(eq(assets.branchId, branchId));
+        const scopedAssetIds = sql`(select ${assets.id} from ${assets} where ${and(...assetConditions)})`;
+
+        const [counts] = await read((tx) =>
+          tx.execute<{
+            open_issues: number;
+            open_safety_critical: number;
+            grounded: number;
+            approved_work_orders: number;
+            average_repair_days: string | null;
+            repairs_counted: number;
+          }>(sql`
+            select
+              (select count(*)::int from ${operationalIssues}
+                where ${operationalIssues.workspaceId} = ${auth.workspaceId}
+                  and ${operationalIssues.status} = 'OPEN'
+                  and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_issues,
+              (select count(*)::int from ${operationalIssues}
+                where ${operationalIssues.workspaceId} = ${auth.workspaceId}
+                  and ${operationalIssues.status} = 'OPEN'
+                  and ${operationalIssues.safetyCritical}
+                  and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_safety_critical,
+              (select count(distinct ${assetAvailabilityIntervals.assetId})::int
+                from ${assetAvailabilityIntervals}
+                where ${assetAvailabilityIntervals.workspaceId} = ${auth.workspaceId}
+                  and ${assetAvailabilityIntervals.closedAt} is null
+                  and ${assetAvailabilityIntervals.assetId} in ${scopedAssetIds}) as grounded,
+              (select count(*)::int from ${workOrders}
+                where ${workOrders.workspaceId} = ${auth.workspaceId}
+                  and ${workOrders.status} = 'APPROVED'
+                  and ${workOrders.assetId} in ${scopedAssetIds}) as approved_work_orders,
+              repairs.average_repair_days,
+              repairs.repairs_counted
+            from (
+              select
+                round(avg(extract(epoch from (${workOrders.completedAt} - ${commands.executedAt})) / 86400)::numeric, 1)::text
+                  as average_repair_days,
+                count(*)::int as repairs_counted
+              from ${workOrders}
+              inner join ${commands} on ${commands.id} = ${workOrders.createdByCommandId}
+              where ${workOrders.workspaceId} = ${auth.workspaceId}
+                and ${workOrders.status} = 'COMPLETED'
+                and ${workOrders.completedAt} >= now() - make_interval(days => ${REPAIR_WINDOW_DAYS}::int)
+                and ${workOrders.assetId} in ${scopedAssetIds}
+            ) as repairs
+          `),
+        ).then((result) => result.rows);
+
+        return maintenanceSummary.parse({
+          openIssues: counts?.open_issues ?? 0,
+          openSafetyCritical: counts?.open_safety_critical ?? 0,
+          grounded: counts?.grounded ?? 0,
+          approvedWorkOrders: counts?.approved_work_orders ?? 0,
+          averageRepairDays:
+            counts?.average_repair_days == null ? null : Number(counts.average_repair_days),
+          repairsCounted: counts?.repairs_counted ?? 0,
+          repairWindowDays: REPAIR_WINDOW_DAYS,
+        });
+      } catch (error) {
+        req.log.error({ err: error }, "maintenance summary read failed");
+        return reply.status(500).send({ error: { code: "READ_FAILED" } });
+      }
+    },
+  );
+
   defineRead(
     app,
     { db, requireAuth },
@@ -411,6 +503,8 @@ export function registerMaintenanceReadRoutes(
               eventId: auditEvents.id,
               kind: auditEvents.eventType,
               occurredAt: auditEvents.occurredAt,
+              note: noteSql(),
+              noteCode: noteCodeSql(),
               scope: auditEvents.scope,
               // The generated masking column, not `actor_principal_id`: it is
               // NULL for PLATFORM events, so the principals join finds nothing
@@ -534,6 +628,8 @@ export function registerMaintenanceReadRoutes(
             eventId: event.eventId,
             kind: event.kind,
             occurredAt: event.occurredAt.toISOString(),
+            note: event.note,
+            noteCode: event.noteCode,
             actor: {
               principalId: event.actorPrincipalId,
               displayName: event.actorDisplayName,
@@ -837,6 +933,8 @@ export function registerMaintenanceReadRoutes(
               eventId: auditEvents.id,
               kind: auditEvents.eventType,
               occurredAt: auditEvents.occurredAt,
+              note: noteSql(),
+              noteCode: noteCodeSql(),
               scope: auditEvents.scope,
               principalId: auditEvents.tenantActorPrincipalId,
               displayName: principals.displayName,
@@ -882,6 +980,8 @@ export function registerMaintenanceReadRoutes(
               eventId: event.eventId,
               kind: event.kind,
               occurredAt: event.occurredAt.toISOString(),
+              note: event.note,
+              noteCode: event.noteCode,
               actor: toActor(event),
             })),
             artifactCount: artifacts.length,

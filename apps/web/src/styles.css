@@ -47,6 +47,7 @@
     --color-info-foreground: var(--info-foreground);
     --color-signal: var(--signal);
     --color-signal-foreground: var(--signal-foreground);
+    --color-brand: var(--brand);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -97,6 +98,8 @@
     --info-foreground: oklch(0.25 0.05 245);
     --signal: oklch(0.79 0.165 82);
     --signal-foreground: oklch(0.19 0.025 82);
+    /* The pin in the ROUTIQ mark; only components/brand/ may use it. */
+    --brand: oklch(0.555 0.148 256);
 }
 
 /* `lib/theme.ts` puts this class on <html> from the stored preference. */
@@ -140,6 +143,7 @@
     --info-foreground: oklch(0.96 0.04 250);
     --signal: oklch(0.77 0.165 82);
     --signal-foreground: oklch(0.94 0.02 82);
+    --brand: oklch(0.68 0.135 254);
 }
 
 @layer base {

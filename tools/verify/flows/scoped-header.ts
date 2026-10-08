@@ -168,7 +168,7 @@ const flow: DriveScript = async ({ page, nav, shot, quiet, t, log, evidenceDir }
   const check = async (theme: "light" | "dark", scoped: boolean) => {
     const where = `${size} ${theme} ${scoped ? BRANCH : "all branches"}`;
     await nav(ROUTE);
-    await page.locator('[data-slot="kpi-card"]').first().waitFor({ timeout: 15_000 });
+    await page.locator('[data-slot="metric-tile"]').first().waitFor({ timeout: 15_000 });
     await quiet();
     await page.evaluate(() => window.scrollTo(0, 0));
     // The pointer still rests where the theme menu was, which can be over the

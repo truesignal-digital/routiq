@@ -99,6 +99,41 @@ function messageDescribing(label: string): string {
 }
 
 describe("CreateBranchDialog", () => {
+  it("opens in the side panel over the branch list (#296)", () => {
+    renderDialog(fakeClient(committed));
+
+    const panel = screen.getByRole("dialog");
+    expect(panel.getAttribute("data-slot")).toBe("sheet-content");
+    expect(panel.className).toContain("sm:max-w-[440px]");
+    // Submit is the last button in the footer.
+    const footer = Array.from(panel.querySelectorAll("[data-slot=sheet-footer] button"));
+    expect(footer.at(-1)?.textContent).toBe("Créer l'agence");
+  });
+
+  it("closes at once when nothing was typed", async () => {
+    const { onOpenChange } = renderDialog(fakeClient(committed));
+
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("asks before dropping a typed branch, as a Decision dialog", async () => {
+    const { onOpenChange } = renderDialog(fakeClient(committed));
+    await userEvent.type(screen.getByLabelText("Nom"), "Kribi");
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(await screen.findByRole("dialog", { name: "Abandonner ce formulaire ?" })).toBeTruthy();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Continuer la saisie" }));
+    expect((screen.getByLabelText("Nom") as HTMLInputElement).value).toBe("Kribi");
+
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Abandonner" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("sends create-branch with a client-generated id and the default time zone", async () => {
     const client = fakeClient(committed);
     const { onCreated, onOpenChange } = renderDialog(client);

@@ -13,7 +13,7 @@ import {
   type DataTableFilterOption,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { MetricStrip, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
+import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
@@ -88,7 +88,19 @@ function FinanceEntriesContent() {
 
   // Toolbar state keyed by the `useEntries` param it drives. `/v1/finance/entries`
   // does the filtering, so the table never narrows rows itself.
-  const search = useSearch({ from: "/app/finance/entries" });
+  // Not strict: /finance/record renders this list behind its record panel.
+  const routeSearch = useSearch({ strict: false });
+  // Narrowed to this list's values: other routes share these names with other
+  // values (the truck's Money tab has `evidence=missing`). Memoised so the
+  // filter effect below sees a stable object.
+  const search = useMemo(
+    () => ({
+      ...routeSearch,
+      status: STATUS_OPTIONS.find((status) => status === routeSearch.status),
+      evidence: routeSearch.evidence === "MISSING" ? ("MISSING" as const) : undefined,
+    }),
+    [routeSearch],
+  );
   const canApprove = canApproveEntries(me?.role, me?.enabledModules);
   // role-config: the waiting view is a decider's queue; anyone else sent to it
   // lands on the plain list rather than on an empty queue.
@@ -509,7 +521,7 @@ function MoneyTiles({
 
   const out: MetricTile = {
     label: t("finance.money.tiles.out", { month: monthLabel }),
-    value: money(summary?.outMinor),
+    ...moneyMetric(summary?.outMinor, summary?.currency),
     onSelect: select("out"),
     selected: current === "out",
   };
@@ -548,7 +560,7 @@ function MoneyTiles({
   };
   const incoming: MetricTile = {
     label: t("finance.money.tiles.in", { month: monthLabel }),
-    value: money(summary?.inMinor),
+    ...moneyMetric(summary?.inMinor, summary?.currency),
     onSelect: select("in"),
     selected: current === "in",
   };
