@@ -1,5 +1,7 @@
+import type { ComponentProps } from "react";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import type { SectionCount } from "./sections.js";
 
 /**
@@ -26,11 +28,24 @@ export function NavCountLink({
       data-nav-count={count.key}
       className="absolute inset-y-0 right-0 flex items-center rounded-md px-1.5 outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:hidden"
     >
-      {/* Red because a count only ever means the work waits on you (sidebar.html, Rules). */}
-      <span className="grid h-5 min-w-5 place-items-center rounded-md bg-destructive px-1.5 text-xs font-bold text-primary-foreground tabular-nums">
-        {value}
-      </span>
+      <NavCountBadge value={value} />
     </Link>
+  );
+}
+
+/** The red number, the same on a sidebar row and on a bottom bar place. */
+export function NavCountBadge({ value, className, ...props }: ComponentProps<"span"> & { value: number }) {
+  return (
+    // Red because a count only ever means the work waits on you (sidebar.html, Rules).
+    <span
+      {...props}
+      className={cn(
+        "grid h-5 min-w-5 place-items-center rounded-md bg-destructive px-1.5 text-xs font-bold text-primary-foreground tabular-nums",
+        className,
+      )}
+    >
+      {value}
+    </span>
   );
 }
 

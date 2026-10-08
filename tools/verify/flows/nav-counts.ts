@@ -5,10 +5,12 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * viewer, counted by the server. Checks each count against GET /v1/nav-counts,
  * opens Maintenance's count into the Problems tab, opens Money's count into the
  * approvals waiting view, approves one entry there and watches the count drop,
- * then collapses the rail on desktop to show the dot. Mutates the slot when
+ * then collapses the rail on desktop to show the dot. On phone it first checks
+ * the bottom bar's places against the same counts. Mutates the slot when
  * Money has a count; reset with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:nav-counts --role finance --lang en
  *      pnpm verify drive flow:nav-counts --role technician --lang en
+ *      pnpm verify drive flow:nav-counts --viewport 390x844 --lang en
  */
 type Counts = { moneyWaiting: number | null; maintenanceNew: number | null };
 
@@ -30,6 +32,32 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   await quiet();
   const counts = await serverCounts();
   log(`api: ${JSON.stringify(counts)}`);
+
+  // The bottom bar steps aside while the sidebar sheet is open, so read it first.
+  if (phone) {
+    const bar = page.getByRole("navigation", { name: t("Raccourcis", "Shortcuts") });
+    await bar.waitFor();
+    await page.waitForTimeout(400);
+    const places: Array<[keyof Counts, string]> = [
+      ["moneyWaiting", t("Argent", "Money")],
+      ["maintenanceNew", "Maintenance"],
+    ];
+    let onBar = 0;
+    for (const [key, label] of places) {
+      if ((await bar.getByRole("link", { name: label, exact: true }).count()) === 0) continue;
+      const badge = bar.locator(`[data-bar-count='${key}']`);
+      const value = (await badge.count()) === 0 ? 0 : Number((await badge.textContent())?.trim() ?? "0");
+      check(value === (counts[key] ?? 0), `bottom bar ${label}: shows ${value}, server counts ${counts[key]}`);
+      if (value > 0) {
+        onBar += 1;
+        const color = await badge.evaluate((el) => getComputedStyle(el).backgroundColor);
+        log(`bottom bar ${label} badge background ${color}`);
+      }
+    }
+    await shot(`${account.role.toLowerCase()}-bottom-bar-counts`, {
+      caption: `Phone bottom bar: ${onBar} place${onBar === 1 ? "" : "s"} carry the same red count as the sidebar`,
+    });
+  }
   const nav = await openSidebar(page);
   await page.waitForTimeout(400);
   for (const key of ["moneyWaiting", "maintenanceNew"] as const) {
@@ -47,6 +75,10 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     await page.waitForURL(/\/maintenance\?.*tab=issues/, { timeout: 10_000 });
     await quiet();
     check(page.url().includes("issueStatus=OPEN"), `Maintenance count opens ${new URL(page.url()).pathname}${new URL(page.url()).search}`);
+    // The URL is this PR's half; the screen reading it is #513's. Logged, not failed, until #513 lands.
+    const problemsTab = page.getByRole("tab", { name: t("Problèmes", "Problems") });
+    const selected = (await problemsTab.count()) > 0 && (await problemsTab.first().getAttribute("aria-selected")) === "true";
+    log(`${selected ? "PASS" : "PENDING #513"} Problems tab ${selected ? "is" : "is not"} selected after the count click`);
     await shot("maintenance-count-opens-problems", {
       caption: `The Maintenance count opens the Problems tab on the open ones: ${counts.maintenanceNew} new`,
     });

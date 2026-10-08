@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 576243,
+    "ceiling": 578020,
     "raises": [
       {
         "date": "2026-10-06",
@@ -109,6 +109,12 @@
         "from": 575551,
         "to": 576243,
         "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 576243,
+        "to": 578020,
+        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 5a2d2c16)"
       }
     ]
   },
@@ -154,7 +160,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 576243,
+    "ceiling": 578020,
     "raises": [
       {
         "date": "2026-10-06",
@@ -263,6 +269,12 @@
         "from": 575551,
         "to": 576243,
         "reason": "Phone bottom bar (#318): three places per role and Menu, panel-aware fixed bars (re-recorded on develop c4c26943)"
+      },
+      {
+        "date": "2026-10-08",
+        "from": 576243,
+        "to": 578020,
+        "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 5a2d2c16)"
       }
     ]
   }

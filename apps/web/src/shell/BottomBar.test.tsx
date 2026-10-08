@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { I18nextProvider } from "react-i18next";
@@ -53,9 +54,11 @@ async function renderBar(me: MeContext, path = "/") {
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   render(
-    <I18nextProvider i18n={i18n}>
-      <RouterProvider router={router} />
-    </I18nextProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <I18nextProvider i18n={i18n}>
+        <RouterProvider router={router} />
+      </I18nextProvider>
+    </QueryClientProvider>,
   );
   await screen.findByTestId("page");
   return screen.getByRole("navigation", { name: "Shortcuts" });
