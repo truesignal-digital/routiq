@@ -52,7 +52,7 @@ Each section is a route under `/assets/$assetId`, so the selected section, perio
 
 Phone: compact identity and section selector, readable record cards, full-screen capture. Desktop: line tabs, table and contextual drawer with full-detail escape. Load section records on demand rather than fetching every module on arrival. A long form must not lose a draft when a drawer closes or a route changes; #45 owns durable capture/recovery.
 
-Hide actions the actor cannot perform. An executive can inspect but cannot record, approve, reverse, lock or reopen periods. The UI uses current membership/module context; server authorization remains decisive. Command capabilities do not implicitly define read permission. Do not import the entire identity-capabilities candidate just to obtain a read gate (#47).
+Hide actions the actor cannot perform. Since ADR-0009 there is no read-only executive: Direction records, approves, cancels entries, creates work orders and releases vehicles; [roles-and-access](roles-and-access.md) has the full list. The UI uses current membership/module context; server authorization remains decisive. Command capabilities do not implicitly define read permission. Do not import the entire identity-capabilities candidate just to obtain a read gate (#47).
 
 ## Money: precise meanings
 
