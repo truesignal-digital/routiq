@@ -90,13 +90,14 @@ export const METRIC_LABELS: Record<keyof RunMetrics, string> = {
   apiRequests: "API requests",
   consoleErrors: "Console errors",
   failedRequests: "Failed requests",
+  expectedRefusals: "Expected refusals",
   layoutShifts: "Layout shifts",
   cumulativeLayoutShift: "Cumulative layout shift",
   domNodes: "DOM nodes at the end",
 };
 
 /**
- * Every metric is lower-is-better, so a negative delta is a win. Pass
+ * Except expected refusals (informational), every metric is lower-is-better, so a negative delta is a win. Pass
  * comparable = false when either run failed: the runs did different amounts of
  * work, so deltas are shown without a verdict.
  */
@@ -107,9 +108,9 @@ export function metricRows(
 ): Array<{ label: string; after: string; before?: string; delta?: string; tone: "ok" | "bad" | "same" }> {
   if (after === undefined) return [];
   return (Object.keys(METRIC_LABELS) as Array<keyof RunMetrics>).map((key) => {
-    const a = after[key];
-    const b = before?.[key];
-    const tone = b === undefined || a === b || !comparable ? "same" : a < b ? "ok" : "bad";
+    const a = after[key] ?? 0;
+    const b = before === undefined ? undefined : (before[key] ?? 0);
+    const tone = key === "expectedRefusals" || b === undefined || a === b || !comparable ? "same" : a < b ? "ok" : "bad";
     const round = (n: number) => String(Math.round(n * 10_000) / 10_000);
     return {
       label: METRIC_LABELS[key],

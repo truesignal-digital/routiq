@@ -311,3 +311,9 @@ describe("parseArgs", () => {
     expect(parseArgs(["drive", "flow:trips", "--reel"])).toMatchObject({ name: "drive", options: { reel: true } });
   });
 });
+
+
+it("shows expected refusals separately without a regression verdict", () => {
+  const rows = metricRows(metrics({ expectedRefusals: 2 }), metrics());
+  expect(rows.find((row) => row.label === "Expected refusals")).toMatchObject({ after: "2", before: "0", tone: "same" });
+});
