@@ -8,7 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatDateTime, localizedLabel } from "@/lib/format.js";
+import { formatDateTime, localizedLabel, notRecorded } from "@/lib/format.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { useVehicle } from "../context.js";
 import { RecordRow, RowIcon, RowMenu, Sep, TabHeader } from "../parts.js";
@@ -101,12 +101,12 @@ function TripsSection() {
                     <>
                       <div className="whitespace-nowrap">
                         {t("vehicle.trips.startedAt", {
-                          time: trip.startedAt === null ? "—" : formatDateTime(trip.startedAt, locale),
+                          time: trip.startedAt === null ? notRecorded(locale) : formatDateTime(trip.startedAt, locale),
                         })}
                       </div>
                       <div className="whitespace-nowrap text-xs text-muted-foreground">
                         {t("vehicle.trips.endedAt", {
-                          time: trip.endedAt === null ? "—" : formatDateTime(trip.endedAt, locale),
+                          time: trip.endedAt === null ? notRecorded(locale) : formatDateTime(trip.endedAt, locale),
                         })}
                       </div>
                     </>

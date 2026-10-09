@@ -248,3 +248,13 @@ export function formatPaymentMethod(
   }
   return i18nT(`finance.record.paymentMethods.${method.toLowerCase()}`);
 }
+
+/**
+ * The words for a value nobody recorded: "Non renseigné" / "Not recorded".
+ * Reports never invent a missing value, and a bare dash reads as a zero or a
+ * glitch, so every table, panel and timeline says it with this one key (#306).
+ * In JSX, `components/not-recorded.tsx` adds the muted look and an inline Add.
+ */
+export function notRecorded(locale?: string): string {
+  return locale === undefined ? i18n.t("common.notRecorded") : i18n.t("common.notRecorded", { lng: locale });
+}

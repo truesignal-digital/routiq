@@ -716,6 +716,23 @@
       "dependencies": ["@tanstack/react-router", "lucide-react", "react-i18next"]
     },
     {
+      "name": "not-recorded",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/not-recorded.tsx",
+          "type": "registry:file",
+          "target": "components/not-recorded.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
       "name": "provenance-stamp",
       "type": "registry:component",
       "files": [
