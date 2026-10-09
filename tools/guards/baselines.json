@@ -45,7 +45,6 @@
     "apps/web/src/maintenance/MaintenanceDialogs.tsx": 1,
     "apps/web/src/members/AddMemberDialog.tsx": 1,
     "apps/web/src/members/MemberActionDialog.tsx": 1,
-    "apps/web/src/vehicle/forms/LogFuelForm.tsx": 1,
     "apps/web/src/vehicle/panel/StandaloneForm.tsx": 1
   }
 }
