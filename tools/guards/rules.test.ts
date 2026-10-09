@@ -246,18 +246,25 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
-    id: "H18",
+    id: "H19",
     // Thirty lines printed a bare "—" for a missing plate, counterparty or cost (#306).
     bad: [
       file("apps/web/src/assets/assetColumns.tsx", '{row.original.registrationNumber ?? "—"}'),
       file("apps/web/src/maintenance/columns.tsx", '<span className="text-muted-foreground">—</span>'),
       file("apps/web/src/vehicle/tabs/TripsTab.tsx", "time: trip.startedAt === null ? '—' : formatDateTime(trip.startedAt, locale),"),
+      // Home's KPI error state, as Prettier wrapped it: the dash alone on its line.
+      file(
+        "apps/web/src/dashboard/SectionCards.tsx",
+        'return (\n    <div className="font-mono text-2xl tabular-nums text-muted-foreground">\n      —\n    </div>\n  );',
+      ),
+      file("apps/web/src/screens/X.tsx", "<span>\n  —\n</span>"),
     ],
     good: [
       file("apps/web/src/assets/assetColumns.tsx", "{row.original.registrationNumber ?? <NotRecorded />}"),
       file("apps/web/src/components/metric-strip.tsx", '<span role="img" aria-label={t("common.readFailed")}>—</span>'),
       file("apps/web/src/assets/assetColumns.test.tsx", 'expect(cell.textContent).not.toBe("—");'),
       file("apps/web/src/finance/EntrySummary.tsx", '{t("finance.entry.title", { number })} — {name}'),
+      file("apps/web/src/finance/EntrySummary.tsx", "<span>\n  {number} — {name}\n</span>"),
     ],
   },
   {

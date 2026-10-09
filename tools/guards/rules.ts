@@ -511,14 +511,21 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
-    id: "H18",
+    id: "H19",
     name: "no-bare-dash",
-    fix: 'A missing value is said in words: notRecorded() from lib/format.ts, or <NotRecorded /> (components/not-recorded.tsx) with onAdd when the viewer may fill it (#306). Never a bare "—". The one exception is MetricStrip\'s failed-read state.',
-    check: linesMatching(
-      // "—" as a whole string literal, or as the whole text of a JSX element.
-      /(["'`])\u2014\1|>\s*\u2014\s*</,
-      (path) => isWebProduction(path) && path !== "apps/web/src/components/metric-strip.tsx",
-    ),
+    fix: 'A missing value is said in words: notRecorded() from lib/format.ts, or <NotRecorded /> (components/not-recorded.tsx) with onAdd when the viewer may fill it (#306). A value the viewer may not read is left out. Never a bare "—". The one exception is MetricStrip\'s failed-read state.',
+    check: (files) => {
+      const scoped = files.filter(
+        (file) => isWebProduction(file.path) && file.path !== "apps/web/src/components/metric-strip.tsx",
+      );
+      return [
+        // "—" as a whole string literal.
+        ...linesMatching(/(["'`])\u2014\1/, () => true)(scoped),
+        // "—" as the whole text of a JSX element, or alone on a line as JSX
+        // text: Prettier puts it there once the element wraps.
+        ...scoped.flatMap((file) => matchFile(file, />\s*\u2014\s*<|^[ \t]*\u2014[ \t]*$/m)),
+      ];
+    },
   },
   {
     id: "H15",
