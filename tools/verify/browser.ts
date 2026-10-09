@@ -410,11 +410,11 @@ export async function drive(slot: number, targets: readonly string[], options: D
             await shot(item.route === "/" ? "home" : item.route);
           });
         } else {
-          const mod = (await import(pathToFileURL(item.file).href)) as { default?: DriveScript };
-          const script = mod.default;
-          if (typeof script !== "function") throw new Error(`${item.file} has no default export function`);
-          await runStep(`script ${path.relative(REPO_ROOT, item.file)}`, () =>
-            script({
+          await runStep(`script ${path.relative(REPO_ROOT, item.file)}`, async () => {
+            const mod = (await import(pathToFileURL(item.file).href)) as { default?: DriveScript };
+            const script = mod.default;
+            if (typeof script !== "function") throw new Error(`${item.file} has no default export function`);
+            await script({
               page,
               account,
               lang: options.lang,
@@ -429,8 +429,8 @@ export async function drive(slot: number, targets: readonly string[], options: D
                 say(`  ${line}`);
               },
               apiGet,
-            }),
-          );
+            });
+          });
         }
       }
     } catch {
