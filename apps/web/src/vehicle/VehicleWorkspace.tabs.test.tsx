@@ -513,11 +513,11 @@ describe("Maintenance and Trips", () => {
     if (!(open instanceof HTMLElement) || !(closed instanceof HTMLElement)) throw new Error("no trip rows");
 
     expect(within(open).getByText("On the road")).toBeTruthy();
-    expect(within(open).getByText("Ended —")).toBeTruthy();
+    expect(within(open).getByText("Ended: Not recorded")).toBeTruthy();
     expect(within(open).queryByText(/still open/i)).toBeNull();
 
     expect(within(closed).getByText("Closed")).toBeTruthy();
-    expect(within(closed).getByText(/^Ended \d/)).toBeTruthy();
+    expect(within(closed).getByText(/^Ended: \d/)).toBeTruthy();
     expect(within(closed).queryByText("On the road")).toBeNull();
   });
 
