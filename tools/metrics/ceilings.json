@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 682663,
+    "ceiling": 683447,
     "raises": [
       {
         "date": "2026-10-06",
@@ -175,6 +175,12 @@
         "from": 682090,
         "to": 682663,
         "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 682663,
+        "to": 683447,
+        "reason": "Planning read (#336): the planning contract, trip price and plan fields, the new trip statuses and their fr/en words ride in with @routiq/contracts, about 780 B gzip: about 4 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -232,7 +238,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 257700,
+    "ceiling": 258252,
     "raises": [
       {
         "date": "2026-10-06",
@@ -401,6 +407,12 @@
         "from": 256557,
         "to": 257700,
         "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 257700,
+        "to": 258252,
+        "reason": "Planning read (#336): the planning contract, trip price and plan fields, the new trip statuses and their fr/en words ride in with @routiq/contracts, about 550 B gzip: under 3 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
