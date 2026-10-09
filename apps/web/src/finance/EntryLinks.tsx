@@ -27,12 +27,14 @@ export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }
           search={{ panel: `work_order:${workOrderId}` }}
           className={LINK_CLASS}
         >
-          {t("finance.entries.detail.workOrderLink", { ref: recordReference(workOrderId) })}
+          <span>{t("finance.entries.detail.workOrderLink", { ref: recordReference(workOrderId) })}</span>
         </Link>
       )}
       {hasTrip && (
         <Link to="/activities/$activityId" params={{ activityId }} className={LINK_CLASS}>
-          <RecordText text={t("finance.entries.detail.tripLink", { number: activityNumber })} numbers={[activityNumber]} />
+          <span>
+            <RecordText text={t("finance.entries.detail.tripLink", { number: activityNumber })} numbers={[activityNumber]} />
+          </span>
         </Link>
       )}
     </span>
