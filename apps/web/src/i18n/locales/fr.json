@@ -419,7 +419,7 @@
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
         "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-        "LATE_POSTING": "Cette écriture a été comptabilisée dans une période précédente.",
+        "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
       "errors": {
@@ -680,7 +680,7 @@
   },
   "warnings": {
     "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
-    "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+    "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
     "PERIOD_HAS_SUBMITTED_ENTRIES": "Des écritures en attente d'approbation restent sur cette période.",
     "ACTIVITY_MISSING_START_READING": "Relevé compteur de départ manquant",
     "ACTIVITY_MISSING_END_READING": "Relevé compteur d'arrivée manquant",
@@ -901,7 +901,7 @@
         "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
         "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
         "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
-        "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+        "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée."
       },
       "pendingEntries": "{count, plural, one {# ligne en attente d'approbation} other {# lignes en attente d'approbation}}"
@@ -2749,6 +2749,7 @@
     "step": "{bound, select, upTo {Jusqu'à {amount}} above {Au-delà de {amount}} other {Tout montant}} : {outcome, select, POSTS_DIRECTLY {enregistrée directement} FINANCE_APPROVES {la Finance approuve} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction approuve} DIRECTION_APPROVES {la Direction approuve} other {attend une approbation}}",
     "hint": {
       "posts": "Vos saisies sont enregistrées directement, quel que soit le montant.",
+      "postsAt": "À ce montant, la saisie est enregistrée directement.",
       "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
       "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
     }

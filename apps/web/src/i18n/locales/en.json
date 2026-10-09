@@ -419,7 +419,7 @@
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
         "EVIDENCE_MISSING": "Missing evidence: this category requires supporting documentation or a photo.",
-        "LATE_POSTING": "This entry was posted to a previous accounting period.",
+        "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
       },
       "errors": {
@@ -680,7 +680,7 @@
   },
   "warnings": {
     "EVIDENCE_MISSING": "No receipt attached to this expense.",
-    "LATE_POSTING": "Posted late: the economic period was already closed.",
+    "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
     "PERIOD_HAS_SUBMITTED_ENTRIES": "Entries awaiting approval remain in this period.",
     "ACTIVITY_MISSING_START_READING": "Start meter reading missing",
     "ACTIVITY_MISSING_END_READING": "End meter reading missing",
@@ -901,7 +901,7 @@
         "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
         "METER_READING_DECREASED": "The reading is lower than the previous one",
         "EVIDENCE_MISSING": "No receipt attached to this expense.",
-        "LATE_POSTING": "Posted late: the economic period was already closed.",
+        "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
         "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts."
       },
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
@@ -2749,6 +2749,7 @@
     "step": "{bound, select, upTo {Up to {amount}} above {Above {amount}} other {Any amount}}: {outcome, select, POSTS_DIRECTLY {posts directly} FINANCE_APPROVES {Finance approves} FINANCE_PEER_APPROVES {another Finance member or Direction approves} DIRECTION_APPROVES {Direction approves} other {waits for approval}}",
     "hint": {
       "posts": "Your entries post directly at any amount.",
+      "postsAt": "At this amount, the entry posts directly.",
       "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}.",
       "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}."
     }

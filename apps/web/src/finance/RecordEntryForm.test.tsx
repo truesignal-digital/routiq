@@ -302,7 +302,11 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
       },
     });
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
-    expect(screen.getByText("Above FCFA 150,000, this entry waits for Finance.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+      ),
+    ).toBeTruthy();
 
     inPanel(
       <RecordEntryForm
@@ -313,7 +317,30 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
         onRecorded={vi.fn()}
       />,
     );
-    expect(screen.getByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("follows the typed amount to the band that decides it (#534)", async () => {
+    mocks.useApprovalChain.mockReturnValue({
+      data: { currency: "XAF", chains: [{ commandType: "record-expense", steps: steps(100_000) }], notice: null },
+    });
+    inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
+    const amount = screen.getByLabelText("Amount (FCFA)");
+
+    await userEvent.type(amount, "1500000");
+    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for Direction.")).toBeTruthy();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "250000");
+    expect(await screen.findByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "40000");
+    expect(await screen.findByText("At this amount, the entry posts directly.")).toBeTruthy();
   });
 
   it("tells Direction its entries post at any amount", () => {
