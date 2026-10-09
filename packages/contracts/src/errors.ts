@@ -216,6 +216,12 @@ export const COMMAND_ERROR_CODES = [
    * its author saying "seen" would take it out of the To-do unread.
    */
   "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE",
+  /**
+   * A planned trip naming a driver who cannot drive it (ADR-0012 §3):
+   * `metadata.reason` is INACTIVE (the person is no longer active) or
+   * NOT_A_DRIVER (their usual job is not Chauffeur).
+   */
+  "DRIVER_INELIGIBLE",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
@@ -246,6 +252,28 @@ export const COMMAND_WARNING_CODES = [
    * still needs resolving or dismissing.
    */
   "GROUNDING_ISSUE_STILL_OPEN",
+  /**
+   * The planned vehicle is on another planned or running trip whose booked
+   * window overlaps this one (ADR-0012 §4). Warn, don't block: two short runs
+   * fit in one day. `warningMetadata.VEHICLE_DOUBLE_BOOKED.tripIds` names them.
+   */
+  "VEHICLE_DOUBLE_BOOKED",
+  /** The same for the planned driver; `warningMetadata.DRIVER_DOUBLE_BOOKED.tripIds`. */
+  "DRIVER_DOUBLE_BOOKED",
+  /**
+   * The planned vehicle is grounded now (an open availability interval). The
+   * release, not the booking, is the safety gate, so the booking stands.
+   * Only while Maintenance is on.
+   */
+  "VEHICLE_GROUNDED",
+  /** A planned trip started with a vehicle or driver other than the plan (ADR-0012 §5). */
+  "TRIP_STARTED_OFF_PLAN",
+  /**
+   * An offline start replayed onto a trip the office had cancelled (ADR-0012
+   * §5). The truck left, so the trip is revived; this code is also kept on
+   * the trip's `discrepancy_codes`.
+   */
+  "TRIP_STARTED_AFTER_CANCELLATION",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];
@@ -266,6 +294,16 @@ export const ACTIVITY_COMPLETENESS_CODES = [
 ] as const satisfies readonly CommandWarningCode[];
 
 export type ActivityCompletenessCode = (typeof ACTIVITY_COMPLETENESS_CODES)[number];
+
+/**
+ * The warning codes a trip keeps forever on `activities.discrepancy_codes`
+ * (ADR-0012 §1, §5), the same one-vocabulary rule as completeness codes.
+ */
+export const TRIP_DISCREPANCY_CODES = [
+  "TRIP_STARTED_AFTER_CANCELLATION",
+] as const satisfies readonly CommandWarningCode[];
+
+export type TripDiscrepancyCode = (typeof TRIP_DISCREPANCY_CODES)[number];
 
 export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode;
 

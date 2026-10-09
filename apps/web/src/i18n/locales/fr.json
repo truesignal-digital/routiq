@@ -193,6 +193,7 @@
     "ISSUE_SEVERITY_ALREADY_SET": "Ce problème est déjà marqué ainsi. Actualisez la page.",
     "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue.",
+    "DRIVER_INELIGIBLE": "Cette personne ne peut pas conduire cette activité : elle n'est plus active, ou son poste habituel n'est pas chauffeur.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
   },
   "assets": {
@@ -690,7 +691,12 @@
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
     "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le problème qui l'avait immobilisé est encore ouvert."
+    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le problème qui l'avait immobilisé est encore ouvert.",
+    "VEHICLE_DOUBLE_BOOKED": "Ce véhicule est déjà prévu sur une autre activité au même moment.",
+    "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur une autre activité au même moment.",
+    "VEHICLE_GROUNDED": "Ce véhicule est immobilisé en ce moment. Il doit être remis en service avant de partir.",
+    "TRIP_STARTED_OFF_PLAN": "Démarré avec un autre véhicule ou un autre chauffeur que ceux prévus.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "Cette activité avait été annulée, mais elle a été démarrée hors connexion. Elle est de nouveau en cours."
   },
   "activities": {
     "title": "Activités",
@@ -1666,7 +1672,8 @@
         "DOCUMENTS": "Documents",
         "FINANCE": "Finances",
         "ACTIVITIES": "Activités",
-        "MAINTENANCE": "Maintenance"
+        "MAINTENANCE": "Maintenance",
+        "SCHEDULING": "Planification"
       },
       "categoryKind": {
         "ASSET_CLASS": "Classe d'actif",
@@ -1759,6 +1766,37 @@
       "label": "Créer une activité",
       "submit": "Créer l'activité",
       "submitting": "Création…"
+    },
+    "plan-trip": {
+      "label": "Planifier une activité",
+      "submit": "Planifier l'activité",
+      "submitting": "Planification…"
+    },
+    "assign-trip": {
+      "label": "Affecter véhicule et chauffeur",
+      "submit": "Enregistrer l'affectation",
+      "submitting": "Enregistrement…"
+    },
+    "reschedule-trip": {
+      "label": "Changer la date",
+      "submit": "Enregistrer la nouvelle date",
+      "submitting": "Enregistrement…"
+    },
+    "update-planned-trip": {
+      "label": "Modifier la réservation",
+      "submit": "Enregistrer les modifications",
+      "submitting": "Enregistrement…"
+    },
+    "cancel-planned-trip": {
+      "label": "Annuler l'activité",
+      "submit": "Annuler l'activité",
+      "submitting": "Annulation…",
+      "dismiss": "Garder l'activité"
+    },
+    "start-planned-trip": {
+      "label": "Démarrer l'activité",
+      "submit": "Démarrer l'activité",
+      "submitting": "Démarrage…"
     },
     "record-movement-leg": {
       "label": "Ajouter une étape",
