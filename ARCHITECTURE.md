@@ -73,10 +73,11 @@ Named command endpoints (not `PATCH /expenses/{id}`, not a generic `/execute`) b
 | **Person** | Driver, mechanic, clerk | May exist without a login (`membership_id` nullable) |
 | **Party** | Customer, vendor, supplier, buyer | Never conflated with Person |
 | **Asset** | Truck, trailer, bus, van | `lifecycle_status` separate from availability; capacity + template extras in validated JSONB |
-| **Activity** | Haulage job, scheduled journey, charter | The unit of work connecting movements, people, revenue, cost |
+| **Activity** | Haulage job, scheduled journey, charter | The unit of work connecting movements, people, revenue, cost. Lifecycle PLANNED → OPEN → CLOSED, or PLANNED → CANCELLED (ADR-0012); a booking is this record in PLANNED, never a second table |
 | **ActivityAssetSegment** | Which asset carried the activity, when | Roles: PRIMARY, TRAILER, SUBSTITUTE, RECOVERY. Substitution = end one segment, start another, meter readings at handover |
 | **ActivityPerson** | Crew participation | Driver, conductor, assistant, relief |
 | **MovementLeg** | Ordered leg of an activity | Origin/destination (place refs), departed/arrived, distance, load_state, passenger count. Points at its primary segment |
+| **TripDelivery** | Goods handed over on a trip | When, received by, optional photo (source artifact), optional leg. Append-only (`superseded_by_id`); never a status (ADR-0012) |
 | **MeterReading** | Immutable odometer/hours observation | Correction via `superseded_by_id` + reason; decreases warn, never silently accepted |
 | **AvailabilityInterval** | Downtime/availability history | One interval table; downtime is derived from it, never a hand-maintained total |
 | **FinancialEntry** | One economic fact (revenue or expense) | Header: category, dates, counterparty, amount, payment method, evidence, status |
@@ -125,7 +126,7 @@ What differs between the two presets is labels, categories, required fields, and
 
 ### 3.3a Module entitlements (feature flags per workspace)
 
-Application modules (§2) are also **entitlement units**. One `workspace_modules` table: `(workspace_id, module_code, enabled, enabled_at, enabled_by_command_id)`. Module codes are a fixed registry in code (`ASSETS`, `ACTIVITIES`, `FINANCE`, `MAINTENANCE`, `INVENTORY`, `DOCUMENTS`, `NOTIFICATIONS`, … future: `TICKETING`, `PAYROLL`, `GPS`), each declaring which commands, reports, and nav sections it owns.
+Application modules (§2) are also **entitlement units**. One `workspace_modules` table: `(workspace_id, module_code, enabled, enabled_at, enabled_by_command_id)`. Module codes are a fixed registry in code (`ASSETS`, `ACTIVITIES`, `FINANCE`, `MAINTENANCE`, `INVENTORY`, `DOCUMENTS`, `NOTIFICATIONS`, `SCHEDULING` (depends on `ACTIVITIES`, ADR-0012), … future: `TICKETING`, `PAYROLL`, `GPS`), each declaring which commands, reports, and nav sections it owns.
 
 - **Enforcement in one place:** the command pipeline (§5.3) gains one step after authorization — *module enabled for workspace* — and the read API filters reports/nav the same way. No per-feature `if` scattered through handlers.
 - **Enabling is a command** (`EnableModule` / `DisableModule`, admin role, audited) — so "turn ticketing on for this client" is one auditable action, and disabling hides UI without deleting data.
@@ -247,6 +248,9 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | AssignAsset (branch/custodian) | Auto; cross-branch transfer → 1 approval. A custodian must be an active member whose branch scope covers the vehicle's branch (`CUSTODIAN_INELIGIBLE`) |
 | **RecordJourneySheet** / **RecordHaulageJobSheet** | Auto — composite: one form emits activity + segments + crew + legs + readings atomically |
 | CreateActivity / RecordMovementLeg / SubstituteAsset | Auto (granular fallbacks for corrections) |
+| PlanTrip / AssignTrip / RescheduleTrip / UpdatePlannedTrip / CancelPlannedTrip | Auto (DIRECTOR, ADMIN); SCHEDULING module (ADR-0012). PLANNED trips only; edits carry `expectedVersion`; cancel needs a reason. Double-booking and a Grounded vehicle warn, a disposed vehicle or ineligible driver blocks. Plan queues offline; the rest never do |
+| StartPlannedTrip | Auto (DIRECTOR, ADMIN, DRIVER on own trips); a fact, queueable. Sets the actual start once and opens the first segment; an offline replay on a trip cancelled meanwhile starts it and flags the discrepancy (ADR-0012) |
+| RecordDelivery | Auto (DIRECTOR, ADMIN, DRIVER on own trips); a fact, queueable; OPEN trips only; does not change the status (ADR-0012) |
 | CloseActivity | Auto; sets completeness state, warnings not blocks |
 | ReopenActivity | 1 approval |
 | RecordRevenue / RecordExpense | **Auto-post below threshold; approval above** (thresholds per category/branch, tenant-editable; 100 000 XAF by default for every recording role except DIRECTOR, whose own entries post at any amount since no one is above it. Finance's and the Administrateur's own entries above the band wait like everyone else's: an Administrateur's goes to Finance up to its band, then to Direction; a Finance member's never to themselves, so in practice to Direction (#412, migration 0038)) |
@@ -314,7 +318,7 @@ The promise is **"capture safely now, validate and commit later"** — not an of
 
 - **Client:** installable PWA; Dexie/IndexedDB stores drafts, an outbox of immutable command envelopes (client UUIDs + idempotency keys), queued photo blobs, and a cached branch snapshot (that branch's assets, people, categories, open activities — a few KB, refetched wholesale; no change-feed cursors or sync protocol at MTP).
 - **Sync:** manual "Sync now" + auto on reconnect; upload blobs first (they're the bulk), then replay commands as independent idempotent calls; show pending/error counts; rejected commands stay local and exportable.
-- **Facts vs. decisions.** Physical facts captured offline (movements, expenses, stock issues, meter readings) are **accepted with a discrepancy flag** and routed to reconciliation — a part already left the shelf; the server doesn't get to reject reality. Decisions (approvals, locks, release-to-service, disposal, activity close) always require a server round trip.
+- **Facts vs. decisions.** Physical facts captured offline (movements, expenses, stock issues, meter readings, starting a planned trip, a delivery) are **accepted with a discrepancy flag** and routed to reconciliation — a part already left the shelf; the server doesn't get to reject reality. Decisions (approvals, locks, release-to-service, disposal, activity close, assigning, rescheduling or cancelling a planned trip) always require a server round trip.
 - **Auth:** admin-provisioned username/PIN (no email flows for field roles — clerks and drivers are phone-first, often on shared devices). Refresh-token validity ≥ 14 days (max plausible offline window). Server accepts command payloads in the previous schema version for at least that window.
 - **Durability:** request `navigator.storage.persist()` and surface the result; hard-cap the local photo queue with visible pressure warnings; Chrome-on-Android is the supported field browser; draft autosave applies to desktop clerks too (power cuts hit branch PCs mid-form).
 - **Numbering:** devices get pre-allocated branch-prefixed number ranges (e.g. `DLA-A-0001…0500`) so a clerk can write a job number on paper immediately, offline, without sync-time collisions.
