@@ -60,6 +60,7 @@ import {
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
 import { readableEntrySql } from "./money-scope.js";
+import { readableTripSql } from "./trip-scope.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -221,12 +222,7 @@ export function registerActivityReadRoutes(
             return { error: "VALIDATION_FAILED" as const };
           }
 
-          const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
-          ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          const conditions: SQL[] = [readableTripSql(auth)];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
           if (status) conditions.push(eq(activities.status, status));
           if (completeness) {
@@ -381,12 +377,9 @@ export function registerActivityReadRoutes(
           const timezone = workspace?.timezone ?? "Africa/Douala";
           const week = isoWeek(currentBusinessDate(new Date(), timezone));
 
-          // The same scope the list applies: session branches, then the
-          // optional branch inside them, never instead of them.
-          const conditions: SQL[] = [eq(activities.workspaceId, auth.workspaceId)];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          // The same scope the list applies: session branches and a driver's
+          // own trips, then the optional branch inside them, never instead.
+          const conditions: SQL[] = [readableTripSql(auth)];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
 
           // Week edges are local midnights, so a trip started at 00:30 Monday
@@ -449,13 +442,8 @@ export function registerActivityReadRoutes(
         const entriesVisible = canReadEntries(auth.role) && modules.has("FINANCE");
 
         const result = await read(async (tx) => {
-          const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
-            eq(activities.id, activityId),
-          ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          // Outside the caller's trips is the same 404 as no such trip.
+          const conditions: SQL[] = [eq(activities.id, activityId), readableTripSql(auth)];
 
           const [header] = await tx
             .select({
