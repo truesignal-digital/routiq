@@ -14,33 +14,41 @@ import {
   workOrderStatus,
 } from "@routiq/contracts";
 import { sessionStore } from "./auth/store.js";
-import { AssetRegisterScreen } from "./screens/AssetRegisterScreen.js";
-import { AssetsStub } from "./screens/AssetsStub.js";
-import { BranchesScreen } from "./screens/BranchesScreen.js";
-import { CompanySettingsScreen } from "./screens/CompanySettingsScreen.js";
-import { DashboardScreen } from "./screens/DashboardScreen.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
-import { MySettingsScreen } from "./screens/MySettingsScreen.js";
-import { PersonsScreen } from "./screens/PersonsScreen.js";
-import { UsersScreen } from "./screens/UsersScreen.js";
-import { FinanceRecordScreen } from "./screens/FinanceRecordScreen.js";
-import { FinanceEntriesScreen } from "./screens/FinanceEntriesScreen.js";
-import { ActivitiesScreen } from "./screens/ActivitiesScreen.js";
-import { MaintenanceScreen } from "./screens/MaintenanceScreen.js";
-import { ActivityDetailScreen } from "./screens/ActivityDetailScreen.js";
-import { ActivitySheetScreen } from "./screens/ActivitySheetScreen.js";
-import { FinanceEntryDetailScreen } from "./screens/FinanceEntryDetailScreen.js";
-import { FinancePeriodsScreen } from "./screens/FinancePeriodsScreen.js";
-import { AppShell } from "./shell/AppShell.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
-import { VehicleWorkspaceScreen } from "./vehicle/VehicleWorkspaceScreen.js";
-import { DetailsTab } from "./vehicle/tabs/DetailsTab.js";
-import { DocumentsTab } from "./vehicle/tabs/DocumentsTab.js";
-import { HistoryTab } from "./vehicle/tabs/HistoryTab.js";
-import { MaintenanceTab } from "./vehicle/tabs/MaintenanceTab.js";
-import { MoneyTab } from "./vehicle/tabs/MoneyTab.js";
-import { NowTab } from "./vehicle/tabs/NowTab.js";
-import { TripsTab } from "./vehicle/tabs/TripsTab.js";
+import { ScreenError, ScreenPending, SectionError, SectionPending, ShellPending } from "./shell/RoutePending.js";
+import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
+
+/**
+ * Every screen but sign-in loads on demand, so the first page a phone opens
+ * carries only the login screen (#480). Route definitions stay here: redirects
+ * and search validation run before a screen's code arrives.
+ */
+const AssetRegisterScreen = lazyScreen(() => import("./screens/AssetRegisterScreen.js"), "AssetRegisterScreen");
+const AssetsStub = lazyScreen(() => import("./screens/AssetsStub.js"), "AssetsStub");
+const BranchesScreen = lazyScreen(() => import("./screens/BranchesScreen.js"), "BranchesScreen");
+const CompanySettingsScreen = lazyScreen(() => import("./screens/CompanySettingsScreen.js"), "CompanySettingsScreen");
+const DashboardScreen = lazyScreen(() => import("./screens/DashboardScreen.js"), "DashboardScreen");
+const MySettingsScreen = lazyScreen(() => import("./screens/MySettingsScreen.js"), "MySettingsScreen");
+const PersonsScreen = lazyScreen(() => import("./screens/PersonsScreen.js"), "PersonsScreen");
+const UsersScreen = lazyScreen(() => import("./screens/UsersScreen.js"), "UsersScreen");
+const FinanceRecordScreen = lazyScreen(() => import("./screens/FinanceRecordScreen.js"), "FinanceRecordScreen");
+const FinanceEntriesScreen = lazyScreen(() => import("./screens/FinanceEntriesScreen.js"), "FinanceEntriesScreen");
+const ActivitiesScreen = lazyScreen(() => import("./screens/ActivitiesScreen.js"), "ActivitiesScreen");
+const MaintenanceScreen = lazyScreen(() => import("./screens/MaintenanceScreen.js"), "MaintenanceScreen");
+const ActivityDetailScreen = lazyScreen(() => import("./screens/ActivityDetailScreen.js"), "ActivityDetailScreen");
+const ActivitySheetScreen = lazyScreen(() => import("./screens/ActivitySheetScreen.js"), "ActivitySheetScreen");
+const FinanceEntryDetailScreen = lazyScreen(() => import("./screens/FinanceEntryDetailScreen.js"), "FinanceEntryDetailScreen");
+const FinancePeriodsScreen = lazyScreen(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
+const AppShell = lazyScreen(() => import("./shell/AppShell.js"), "AppShell");
+const VehicleWorkspaceScreen = lazyScreen(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
+const DetailsTab = lazyScreen(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
+const DocumentsTab = lazyScreen(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
+const HistoryTab = lazyScreen(() => import("./vehicle/tabs/HistoryTab.js"), "HistoryTab");
+const MaintenanceTab = lazyScreen(() => import("./vehicle/tabs/MaintenanceTab.js"), "MaintenanceTab");
+const MoneyTab = lazyScreen(() => import("./vehicle/tabs/MoneyTab.js"), "MoneyTab");
+const NowTab = lazyScreen(() => import("./vehicle/tabs/NowTab.js"), "NowTab");
+const TripsTab = lazyScreen(() => import("./vehicle/tabs/TripsTab.js"), "TripsTab");
 
 const rootRoute = createRootRoute();
 
@@ -63,6 +71,7 @@ const appRoute = createRoute({
     }
   },
   component: AppShell,
+  pendingComponent: ShellPending,
 });
 
 const indexRoute = createRoute({
@@ -112,12 +121,16 @@ const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
   component: NowTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const vehicleMaintenanceRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "maintenance",
   component: MaintenanceTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const vehicleMoneyRoute = createRoute({
@@ -129,12 +142,16 @@ const vehicleMoneyRoute = createRoute({
     evidence: z.literal("missing").optional().catch(undefined),
   }),
   component: MoneyTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const vehicleTripsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "trips",
   component: TripsTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 // The old asset documents screen lived at this same URL, so its links and its
@@ -143,6 +160,8 @@ const vehicleDocumentsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "documents",
   component: DocumentsTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const vehicleHistoryRoute = createRoute({
@@ -152,12 +171,16 @@ const vehicleHistoryRoute = createRoute({
     kind: z.enum(VEHICLE_HISTORY_KINDS).optional().catch(undefined),
   }),
   component: HistoryTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const vehicleDetailsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "details",
   component: DetailsTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const financeRecordRoute = createRoute({
@@ -329,7 +352,66 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+// Inside the shell a slow screen shows its skeleton in the content slot, and a
+// screen that cannot open shows a translated error with Retry in the same slot.
+export const router = createRouter({ routeTree, defaultPendingComponent: ScreenPending, defaultErrorComponent: ScreenError });
+
+// Every navigation is a fresh chance to fetch a screen whose code failed before.
+router.subscribe("onBeforeLoad", () => {
+  retryFailedScreens();
+});
+
+/**
+ * While someone types their PIN, fetch the shell and Home, so signing in does
+ * not wait on another download over a slow network.
+ */
+export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
+
+export function preloadAfterSignIn(): void {
+  for (const screen of AFTER_SIGN_IN) void screen.preload();
+}
+
+/** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
+export const SCREENS_BY_USE = [
+  AssetsStub,
+  VehicleWorkspaceScreen,
+  NowTab,
+  ActivitiesScreen,
+  FinanceEntriesScreen,
+  MaintenanceScreen,
+  ActivityDetailScreen,
+  FinanceEntryDetailScreen,
+  MaintenanceTab,
+  MoneyTab,
+  TripsTab,
+  DocumentsTab,
+  HistoryTab,
+  DetailsTab,
+  FinanceRecordScreen,
+  ActivitySheetScreen,
+  AssetRegisterScreen,
+  MySettingsScreen,
+  FinancePeriodsScreen,
+  PersonsScreen,
+  UsersScreen,
+  BranchesScreen,
+  CompanySettingsScreen,
+];
+
+/**
+ * Once the first screen after sign-in has settled, fetch the other screens'
+ * code one at a time, so moving around later does not wait on a download.
+ * Before each one it waits while `busy` says the app is loading something of
+ * its own, so on a slow connection a screen's data never queues behind code
+ * for screens nobody has opened yet. The shell and Home come first: a signed-in
+ * start on a deep link never ran `preloadAfterSignIn`.
+ */
+export async function preloadScreens(busy: () => boolean = () => false): Promise<void> {
+  for (const screen of [...AFTER_SIGN_IN, ...SCREENS_BY_USE]) {
+    while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
+    await screen.preload();
+  }
+}
 
 declare module "@tanstack/react-router" {
   interface Register {

@@ -31,6 +31,10 @@ describe("judge", () => {
     expect(verdicts({ "login.usable_ms": time(2500), "/.requests": count(4) })).toEqual([["/.requests", "beaten"], ["login.usable_ms", "beaten"]]);
   });
 
+  it("does not gate the API's p95, which is noise on a shared machine", () => {
+    expect(judge({ "api.p95_ms": time(900) }, { "api.p95_ms": { ceiling: 50, kind: "time" } })).toEqual([]);
+  });
+
   it("reports metrics a run added or no longer measures", () => {
     expect(judge({ "/more.ready_ms": time(200) }, ceilings).map((v) => [v.name, v.status])).toEqual([
       ["/.requests", "missing"],

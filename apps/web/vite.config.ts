@@ -15,10 +15,16 @@ function appVersion(): string {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  define: {
-    __ROUTIQ_VERSION__: JSON.stringify(appVersion()),
-  },
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      // In index.html, not in the JS: a version baked into one file renames it, every file
+      // importing it gets renamed in turn, and the gzip totals then move with each commit.
+      name: "routiq-version",
+      transformIndexHtml: () => [{ tag: "meta", attrs: { name: "routiq-version", content: appVersion() }, injectTo: "head" }],
+    },
+  ],
   // /assets/* is the app's truck routes; built files must not share it (#124).
   build: { assetsDir: "static" },
   resolve: {

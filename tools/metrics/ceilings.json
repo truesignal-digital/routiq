@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 590845,
+    "ceiling": 681280,
     "raises": [
       {
         "date": "2026-10-06",
@@ -157,6 +157,12 @@
         "from": 584923,
         "to": 590845,
         "reason": "Field kit and the six form layouts (#292), same growth as web.initial-js-gzip: about 5.7 kB gzip with no lazy split yet"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 590845,
+        "to": 681280,
+        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB). Measured on Linux (node:24) as CI builds it; macOS gives the same number"
       }
     ]
   },
@@ -214,7 +220,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 590845,
+    "ceiling": 256115,
     "raises": [
       {
         "date": "2026-10-06",
