@@ -51,7 +51,10 @@ person held before.
   a notice in the app on their next screen, with their new chain, until they
   dismiss it. The amount field of the expense and revenue forms states the
   rule too (#422).
-- **V** view only. **Own** only their own records. **—** no access.
+- **V** view only. **Own** only their own records. **—** no access. For
+  trips, a driver's own trips are the ones they recorded, are planned to
+  drive, or are on as driver (ADR-0012). Drivers see a trip's price only
+  when the company turns on "Show trip price to drivers".
 - **Planned** rows are not built yet. The roles are fixed now so training does
   not change when they ship.
 
@@ -80,8 +83,11 @@ person held before.
 | Trips | Close a trip | ✓ | ✓ | — | — | — | ✓ own |
 | Trips | Reopen a closed trip | ✓ | ✓ | — | — | — | — |
 | Trips | Swap the vehicle on a trip | ✓ | ✓ | — | — | — | ✓ own |
-| Trips | Start, pause and end a trip on the phone *(planned)* | — | V | — | — | — | ✓ own |
-| Trips | Schedule calendar *(planned)* | ✓ | ✓ | — | — | — | V own |
+| Trips | Start, pause and end a trip on the phone *(planned)* | ✓ | ✓ | — | — | — | ✓ own |
+| Trips | Book, assign, move, edit or cancel a planned trip *(planned, ADR-0012)* | ✓ | ✓ | — | — | — | — |
+| Trips | Start a planned trip *(planned, ADR-0012)* | ✓ | ✓ | — | — | — | ✓ own |
+| Trips | Record a delivery *(planned, ADR-0012)* | ✓ | ✓ | — | — | — | ✓ own |
+| Trips | Schedule calendar *(planned)* | ✓ | ✓ | V | — | V | V own |
 | Trips | Driver page and performance *(planned)* | ✓ | ✓ | — | — | — | V own |
 | Money | Record an expense (fuel, tolls, parts) | ✓ | ✓ | ✓ not on work orders | ✓ not on work orders | S on work orders | S not on work orders |
 | Money | Record revenue (never on a work order) | ✓ | ✓ | ✓ | ✓ | — | — |
