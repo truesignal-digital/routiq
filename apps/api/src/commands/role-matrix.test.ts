@@ -49,6 +49,13 @@ const MATRIX: Readonly<Record<string, Row>> = {
   "substitute-asset":                    [x, x, _, _, _, x],
   "close-activity":                      [x, x, _, _, _, x],
   "reopen-activity":                     [x, x, _, _, _, _],
+  // Planned trips (ADR-0012), Scheduling module
+  "plan-trip":                           [x, x, _, _, _, _],
+  "assign-trip":                         [x, x, _, _, _, _],
+  "reschedule-trip":                     [x, x, _, _, _, _],
+  "update-planned-trip":                 [x, x, _, _, _, _],
+  "cancel-planned-trip":                 [x, x, _, _, _, _],
+  "start-planned-trip":                  [x, x, _, _, _, x], // DRIVER: own trip (author, planned driver or crew driver)
   // Money
   "record-expense":                      [x, x, x, x, x, x], // TECHNICIAN: work-order lines only
   "update-pending-entry":                [x, x, x, x, x, x], // the author's own pending entry

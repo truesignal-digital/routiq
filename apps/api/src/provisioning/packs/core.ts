@@ -131,6 +131,15 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
     // The workshop reads the odometer when a truck comes in.
     ...wildcard(["record-meter-reading"], ["TECHNICIAN"]),
 
+    // Planned trips (ADR-0012 §3, migration 0045): the office books, assigns,
+    // moves, edits and cancels with no approval; a driver may also start
+    // their own trip.
+    ...wildcard(
+      ["plan-trip", "assign-trip", "reschedule-trip", "update-planned-trip", "cancel-planned-trip"],
+      DIRECTOR_ADMIN,
+    ),
+    ...wildcard(["start-planned-trip"], ["DIRECTOR", "ADMIN", "DRIVER"]),
+
     ...wildcard(["report-issue"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
     // Whoever reports may mark a problem safety-critical later; the handler
     // keeps taking the mark off to DIRECTOR and ADMIN (#96).
