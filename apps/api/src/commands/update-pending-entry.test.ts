@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../db/client.js";
-import { auditEvents, financialEntries, financialPostings } from "../db/schema.js";
+import { auditEvents, financialEntries, financialPostings, memberships } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
@@ -341,6 +341,57 @@ describe("update-pending-entry.v1", () => {
       expect(reply.status).toBe(403);
       expect(reply.body.error?.code).toBe("ROLE_FORBIDDEN");
       expect((await lines(entryId)).map((line) => line.workOrderId)).toEqual([null]);
+    });
+
+    // #572: a driver records expenses only (#532), so a pending revenue entry
+    // in their name (recorded before the rule, or before their role changed)
+    // stays as it is; record-revenue's own role list decides.
+    it("refuses a driver editing a pending revenue entry they recorded", async () => {
+      const recorder = await seedActor(db, { workspaceId, role: "CASHIER", allBranches: true });
+      const entryId = randomUUID();
+      const recorded = await api.ok(recorder.token, "record-revenue", {
+        entryId,
+        branchCode: "DLA",
+        categoryCode: "FREIGHT_REVENUE",
+        economicDate,
+        amountMinor: 250_000,
+        paymentMethod: "CASH",
+        postings: [{ assetId, amountMinor: 250_000 }],
+      });
+      expect(recorded.recordStatus).toBe("SUBMITTED");
+      const [membership] = await db
+        .select({ rowVersion: memberships.rowVersion })
+        .from(memberships)
+        .where(and(eq(memberships.workspaceId, workspaceId), eq(memberships.id, recorder.membershipId)));
+      const demoted = await api.send(
+        admin.token,
+        "update-member-role",
+        { principalId: recorder.principalId, role: "DRIVER" },
+        { expectedVersion: membership?.rowVersion },
+        2,
+      );
+      expect(demoted.status, JSON.stringify(demoted.body)).toBe(200);
+
+      const reply = await edit(
+        recorder,
+        entryId,
+        { categoryCode: "FREIGHT_REVENUE", counterpartyName: undefined, amountMinor: 25_000 },
+        1,
+      );
+
+      expect(reply.status, JSON.stringify(reply.body)).toBe(403);
+      expect(reply.body.error).toMatchObject({
+        code: "ROLE_FORBIDDEN",
+        metadata: { command: "record-revenue" },
+      });
+      expect(await entryRow(entryId)).toMatchObject({ status: "SUBMITTED", amountMinor: 250_000n, rowVersion: 1 });
+      expect((await events(entryId)).map((event) => event.eventType)).not.toContain("financial_entry.updated");
+    });
+
+    it("still lets a driver edit their own pending expense", async () => {
+      const { entryId } = await recordExpense(150_000);
+      const reply = await edit(author, entryId, { amountMinor: 140_000 }, 1);
+      expect(reply.status, JSON.stringify(reply.body)).toBe(200);
     });
 
     it("refuses an approver", async () => {

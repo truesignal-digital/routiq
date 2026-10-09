@@ -486,6 +486,7 @@ describe("an entry's steps", () => {
   const entry = (overrides: Partial<EntryFacts> = {}): EntryFacts => ({
     id: ENTRY_ID,
     status: "SUBMITTED",
+    direction: "EXPENSE",
     reversesEntryId: null,
     recordedBy: actor(OTHER_ID),
     evidence: { state: "NOT_SUPPLIED" },
@@ -513,6 +514,12 @@ describe("an entry's steps", () => {
     for (const status of ["POSTED", "REJECTED", "REVERSED"] as const) {
       expect(keys(entry({ status, recordedBy: actor(ME_ID) }), "DRIVER")).not.toContain("edit-entry");
     }
+  });
+
+  it("offers a driver no edit on their own pending revenue entry (#572)", () => {
+    const revenue = entry({ direction: "REVENUE", recordedBy: actor(ME_ID) });
+    expect(keys(revenue, "DRIVER")).toEqual(["attach-evidence"]);
+    expect(keys(revenue, "CASHIER")).toEqual(["attach-evidence", "edit-entry"]);
   });
 
   it("asks no receipt of a reversal and offers reverse on posted entries only", () => {

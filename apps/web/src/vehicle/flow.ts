@@ -330,6 +330,7 @@ export function issueSteps(
 export interface EntryFacts {
   id: string;
   status: "SUBMITTED" | "POSTED" | "REJECTED" | "REVERSED";
+  direction: "EXPENSE" | "REVENUE";
   reversesEntryId: string | null;
   recordedBy: HistoryActor;
   evidence: { state: "SUPPLIED" | "PAYMENT_REFERENCE" | "NOT_EXPECTED" | "NOT_SUPPLIED" };

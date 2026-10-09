@@ -101,6 +101,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `approve-from-panel` | Money waiting view → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
 | `repaired-awaiting-release` | as the technician: VH003 red → Complete work → amber "Repair done — waiting for release to service", no release button; as the Administrateur: amber with Release to service → release → green (#92) | yes |
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
+| `driver-revenue-edit` | as the driver: Trips → their trip → its pending revenue line → the entry's page offers no Edit; the entry reads back unchanged (#572). Precondition after a reseed: a driver trip sheet with one REVENUE entry, through `record-haulage-job-sheet` (see the flow's header) | no (the precondition does) |
 | `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
 | `trip-day-filter` | arranges two closed trips on VH001 just after local midnight (Mon 00:30, Tue 00:15 Douala) by the sheet command; the "This week" tile's list shows what the tile counts, and a Monday-only date pick lists the Monday trip, not Tuesday's (#511) | yes |

@@ -23,7 +23,7 @@ import {
   resolvePostingOrDefer,
   type FinancialEntryFacts,
 } from "./financial-entry-writer.js";
-import { requireWorkOrderAttribution } from "./record-financial-entry.js";
+import { requireRecordRole, requireWorkOrderAttribution } from "./record-financial-entry.js";
 
 const COMMAND = "update-pending-entry";
 
@@ -83,7 +83,8 @@ function auditLines(rows: Array<PostingRow | PostingInsert>) {
  * branch, one audit event holding what it said before and after.
  *
  * Only the author, whatever their role: an approver or admin who disagrees
- * rejects it. Only while SUBMITTED, at the version the author was shown, so an
+ * rejects it. And only an author whose role may still record the entry's
+ * direction: a driver records expenses only, so never edits revenue (#572). Only while SUBMITTED, at the version the author was shown, so an
  * approver acting first turns the author's save into VERSION_CONFLICT.
  *
  * The approval rules run again on the new facts, under record-expense or
@@ -176,9 +177,10 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       });
     }
 
+    const direction = BY_DIRECTION[entry.direction];
+    requireRecordRole(ctx.role, direction.recordCommand);
     requireWorkOrderAttribution(ctx.role, payload, COMMAND);
 
-    const direction = BY_DIRECTION[entry.direction];
     const { entryId: _entryId, ...fields } = payload;
     const facts: FinancialEntryFacts = {
       ...fields,
