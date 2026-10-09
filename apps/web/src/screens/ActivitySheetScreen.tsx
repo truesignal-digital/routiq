@@ -43,7 +43,7 @@ import { useFollowShellBranch } from "@/shell/branch-scope.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
-import { canRecordActivities } from "@/activities/permissions.js";
+import { canRecordActivities, canRecordSheetRevenue } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
 import {
   pendingChildrenCount,
@@ -112,11 +112,16 @@ export function ActivitySheetScreen() {
         {t("activities.record.subtitle")}
       </p>
 
-      <SheetForm
-        initialTemplate={initialTemplate}
-        templates={templates}
-        initialAssetId={typeof search.assetId === "string" ? search.assetId : undefined}
-      />
+      {/* The form's defaults read the role (a driver's sheet opens with no
+          revenue line), so it waits for /v1/me instead of opening with a guess. */}
+      {me !== undefined && (
+        <SheetForm
+          initialTemplate={initialTemplate}
+          templates={templates}
+          initialAssetId={typeof search.assetId === "string" ? search.assetId : undefined}
+          canAddRevenue={canRecordSheetRevenue(me.role)}
+        />
+      )}
     </PageContainer>
   );
 }
@@ -125,11 +130,14 @@ function SheetForm({
   initialTemplate,
   templates,
   initialAssetId,
+  canAddRevenue,
 }: {
   initialTemplate: SheetTemplate;
   templates: SheetTemplate[];
   /** "Start a trip" on a vehicle opens the sheet with that vehicle as primary. */
   initialAssetId?: string | undefined;
+  /** role-config: a driver records expenses only (#532). */
+  canAddRevenue: boolean;
 }) {
   const { t } = useTranslation();
   const label = useCommandLabel();
@@ -302,7 +310,7 @@ function SheetForm({
   }, [t]);
 
   const [defaultValues] = useState(() => ({
-    ...defaultSheetValues(initialTemplate),
+    ...defaultSheetValues(initialTemplate, { revenue: canAddRevenue }),
     ...(initialAssetId === undefined ? {} : { primaryAssetId: initialAssetId }),
   }));
   const form = useForm<SheetFormValues>({
@@ -888,6 +896,7 @@ function SheetForm({
               control={control}
               assetOptions={assetOptions}
               personOptions={personOptions}
+              canAddRevenue={canAddRevenue}
             />
           </CardContent>
         </Card>

@@ -23,7 +23,9 @@ import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let workspaceId: string;
+  /** The office clerk (ADMIN): the sheets below carry revenue, which a driver does not record. */
   let token: string;
+  let driverToken: string;
   let tractorId: string;
   let trailerId: string;
   let driverId: string;
@@ -37,8 +39,9 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
       role: "DRIVER",
       allBranches: true,
     });
-    token = (await createSession(ctx.db, { workspaceId, principalId: member.principal.id }))
-      .token;
+    driverToken = (
+      await createSession(ctx.db, { workspaceId, principalId: member.principal.id })
+    ).token;
 
     const manager = await seedMember(ctx.db, {
       workspaceId,
@@ -48,6 +51,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     const managerToken = (
       await createSession(ctx.db, { workspaceId, principalId: manager.principal.id })
     ).token;
+    token = managerToken;
 
     tractorId = await seedAsset(ctx.app, managerToken, { assetCode: "CMR-TR-014" });
     trailerId = await seedAsset(ctx.app, managerToken, { assetCode: "CMR-RM-007" });
@@ -145,7 +149,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
           paymentReference: "VIR-88213",
         },
         {
-          // Above the 100 000 XAF pilot threshold for a DRIVER.
+          // Above the 100 000 XAF pilot recording band.
           entryId: randomUUID(),
           direction: "EXPENSE" as const,
           categoryCode: "FUEL",
@@ -183,11 +187,11 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     };
   }
 
-  function postHaulage(payload: Record<string, unknown>, idempotencyKey?: string) {
+  function postHaulage(payload: Record<string, unknown>, idempotencyKey?: string, bearer = token) {
     return ctx.app.inject({
       method: "POST",
       url: "/v1/commands/record-haulage-job-sheet",
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${bearer}` },
       payload: recordHaulageJobSheetCommand.parse({
         name: "record-haulage-job-sheet",
         version: 1,
@@ -271,7 +275,7 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     const [revenue, fuel, tolls, allowance, repair] = sheet.entries;
 
     // The threshold fires per embedded line, inside the sheet rather than around
-    // it: a field clerk auto-posts through 100 000 XAF and no further, so the
+    // it: the clerk auto-posts through 100 000 XAF and no further, so the
     // freight invoice, the fuel and the repair all wait while the small lines
     // land. Exactly what a standalone entry would do at the same amounts.
     expect(byId.get(revenue!.entryId)).toBe("SUBMITTED");
@@ -540,9 +544,8 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
       ],
       entries: [
         {
-          // An expense inside the driver's band: it would auto-post, so only
-          // the lock holds it back. (Revenue is no longer the driver's to
-          // record, ADR-0009.)
+          // An expense inside the recording band: it would auto-post, so
+          // only the lock holds it back.
           entryId: randomUUID(),
           direction: "EXPENSE",
           categoryCode: "TOLLS",
@@ -673,5 +676,38 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
     // Same tables, different paper.
     expect(activity).toMatchObject({ templateCode: "PASSENGER_TRANSPORT", status: "CLOSED" });
     expect(activity?.customValues).toMatchObject({ seatsSold: 68, seatsAvailable: 70 });
+  });
+
+  describe("a driver's sheet (#532)", () => {
+    it("refuses a revenue line, as record-revenue would, and writes nothing", async () => {
+      const sheet = haulageSheet();
+      const response = await postHaulage(sheet, undefined, driverToken);
+
+      expect(response.statusCode, response.body).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
+      const trips = await ctx.db.select().from(activities).where(eq(activities.id, sheet.activityId));
+      expect(trips).toEqual([]);
+      const entries = await ctx.db
+        .select()
+        .from(financialEntries)
+        .where(inArray(financialEntries.id, sheet.entries.map((entry) => entry.entryId)));
+      expect(entries).toEqual([]);
+    });
+
+    it("still records the trip and its expenses", async () => {
+      const sheet = haulageSheet();
+      const expenses = sheet.entries.filter((entry) => entry.direction === "EXPENSE");
+      const response = await postHaulage({ ...sheet, entries: expenses }, undefined, driverToken);
+
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json().children).toHaveLength(expenses.length);
+      const written = await ctx.db
+        .select({ direction: financialEntries.direction, amountMinor: financialEntries.amountMinor })
+        .from(financialEntries)
+        .where(inArray(financialEntries.id, expenses.map((entry) => entry.entryId)));
+      expect(written).toHaveLength(4);
+      expect(written.every((entry) => entry.direction === "EXPENSE")).toBe(true);
+      expect(written.reduce((sum, entry) => sum + entry.amountMinor, 0n)).toBe(580_000n);
+    });
   });
 });

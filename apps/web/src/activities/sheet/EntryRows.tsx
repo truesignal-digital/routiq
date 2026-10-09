@@ -41,6 +41,8 @@ export interface EntryRowsProps {
   assetOptions: readonly Option[];
   /** Only the crew named above — a sheet cannot pay someone who was not on it. */
   personOptions: readonly Option[];
+  /** False for a driver: expense lines only, no revenue to add or flip to (#532). */
+  canAddRevenue: boolean;
 }
 
 interface EntryRowProps {
@@ -48,6 +50,7 @@ interface EntryRowProps {
   index: number;
   assetOptions: readonly Option[];
   personOptions: readonly Option[];
+  canAddRevenue: boolean;
   onRemove: (index: number) => void;
 }
 
@@ -60,6 +63,7 @@ const EntryRow = memo(function EntryRow({
   index,
   assetOptions,
   personOptions,
+  canAddRevenue,
   onRemove,
 }: EntryRowProps) {
   const { t } = useTranslation();
@@ -73,38 +77,42 @@ const EntryRow = memo(function EntryRow({
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
       <div className="flex items-center justify-between gap-2">
-        <FormField
-          control={control}
-          name={`entries.${index}.direction`}
-          render={({ field }) => (
-            <FormItem className="flex-1">
-              <Tabs
-                value={field.value}
-                onValueChange={(value) => {
-                  if (value !== "REVENUE" && value !== "EXPENSE") return;
-                  field.onChange(value);
-                  // Revenue and expense draw from disjoint category lists, so
-                  // the old pick cannot survive the flip.
-                  setValue(`entries.${index}.categoryCode`, "", {
-                    shouldDirty: true,
-                  });
-                }}
-              >
-                <TabsList
-                  className="w-full max-w-64"
-                  aria-label={t("activities.record.entries.rowDirection", { position })}
+        {canAddRevenue ? (
+          <FormField
+            control={control}
+            name={`entries.${index}.direction`}
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <Tabs
+                  value={field.value}
+                  onValueChange={(value) => {
+                    if (value !== "REVENUE" && value !== "EXPENSE") return;
+                    field.onChange(value);
+                    // Revenue and expense draw from disjoint category lists, so
+                    // the old pick cannot survive the flip.
+                    setValue(`entries.${index}.categoryCode`, "", {
+                      shouldDirty: true,
+                    });
+                  }}
                 >
-                  <TabsTrigger value="REVENUE">
-                    {t("activities.record.entries.revenue")}
-                  </TabsTrigger>
-                  <TabsTrigger value="EXPENSE">
-                    {t("activities.record.entries.expense")}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </FormItem>
-          )}
-        />
+                  <TabsList
+                    className="w-full max-w-64"
+                    aria-label={t("activities.record.entries.rowDirection", { position })}
+                  >
+                    <TabsTrigger value="REVENUE">
+                      {t("activities.record.entries.revenue")}
+                    </TabsTrigger>
+                    <TabsTrigger value="EXPENSE">
+                      {t("activities.record.entries.expense")}
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </FormItem>
+            )}
+          />
+        ) : (
+          <p className="flex-1 text-sm font-medium">{t("activities.record.entries.expense")}</p>
+        )}
 
         <Button
           type="button"
@@ -385,7 +393,7 @@ const EntryRow = memo(function EntryRow({
   );
 });
 
-export function EntryRows({ control, assetOptions, personOptions }: EntryRowsProps) {
+export function EntryRows({ control, assetOptions, personOptions, canAddRevenue }: EntryRowsProps) {
   const { t } = useTranslation();
   const { fields, append, remove } = useFieldArray({ control, name: "entries" });
   const onRemove = useCallback((index: number) => remove(index), [remove]);
@@ -405,19 +413,22 @@ export function EntryRows({ control, assetOptions, personOptions }: EntryRowsPro
           index={index}
           assetOptions={assetOptions}
           personOptions={personOptions}
+          canAddRevenue={canAddRevenue}
           onRemove={onRemove}
         />
       ))}
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => append(newEntryRow("REVENUE"))}
-        >
-          <Plus className="size-4" aria-hidden />
-          {t("activities.record.entries.addRevenue")}
-        </Button>
+        {canAddRevenue && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => append(newEntryRow("REVENUE"))}
+          >
+            <Plus className="size-4" aria-hidden />
+            {t("activities.record.entries.addRevenue")}
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
