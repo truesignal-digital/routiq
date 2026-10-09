@@ -31,7 +31,8 @@ const item = {
     origin: "HUMAN_UI",
     clientOccurredAt: null,
   },
-  changedFields: ["status", "completeness"],
+  changedFields: ["status", "completeness", "rowVersion"],
+  shownFields: ["status", "completeness"],
   note: "Feuille de route corrigée par le bureau",
   noteCode: null,
 };

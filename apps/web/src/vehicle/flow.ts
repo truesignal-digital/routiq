@@ -117,7 +117,11 @@ export function releaseLockFor(facts: GroundingFacts, viewer: Viewer): Lock | un
   return vouched ? { key: "selfReleaseForbidden" } : undefined;
 }
 
-/** What the flow still needs before anyone can release, or nothing when it is ready. */
+/**
+ * What the flow still needs before anyone can release, or nothing when it is
+ * ready. In the server's order (release-asset-to-service.ts): the repair, then
+ * every other safety-critical problem closed (SAFETY_ISSUE_OPEN).
+ */
 export function releaseBlocker(facts: GroundingFacts | undefined): Lock | undefined {
   if (facts === undefined) return { key: "notGrounded" };
   const wo = facts.workOrder;
@@ -127,10 +131,20 @@ export function releaseBlocker(facts: GroundingFacts | undefined): Lock | undefi
     // Not "and signed off": a completion inside the auto band lands COMPLETED directly.
     if (wo.status === "APPROVED") return { key: "needsCompletion", params: ref };
     if (wo.status === "COMPLETION_SUBMITTED") return { key: "needsSignOff", params: ref };
-    return undefined;
+  } else if (facts.grounded.issue.status === "OPEN") {
+    // No work order: only a signalement closed as dealt with lets a release through.
+    return { key: "needsWorkOrder" };
   }
-  // No work order: only a signalement closed as dealt with lets a release through.
-  return facts.grounded.issue.status === "OPEN" ? { key: "needsWorkOrder" } : undefined;
+  const others = facts.grounded.otherOpenSafetyIssues;
+  const [first] = others;
+  return first === undefined
+    ? undefined
+    : { key: "otherSafetyIssueOpen", params: { count: others.length, description: first.description } };
+}
+
+/** Everything that stops this viewer releasing now: the flow first, then who they are. */
+function releaseLock(facts: GroundingFacts, viewer: Viewer): Lock | undefined {
+  return releaseBlocker(facts) ?? releaseLockFor(facts, viewer);
 }
 
 const reference = (id: string) => ({ ref: recordReference(id) });
@@ -241,7 +255,7 @@ export function workOrderSteps(
     }
     case "COMPLETED": {
       if (releasing && grounding !== undefined) {
-        const lock = releaseLockFor(grounding, viewer);
+        const lock = releaseLock(grounding, viewer);
         offer("release", lock);
         primary = lock
           ? { kind: "locked", step: step("release"), lock }
@@ -318,7 +332,7 @@ export function issueSteps(
     may.release(viewer)
   ) {
     // Closed without a repair: the override release stands on the signalement.
-    const lock = releaseLockFor(grounding, viewer);
+    const lock = releaseLock(grounding, viewer);
     const step: Step = { key: "release", record };
     offered.push({ step, lock });
     primary = lock ? { kind: "locked", step, lock } : { kind: "go", step };
@@ -400,7 +414,7 @@ export function groundingStep(
     const record: PanelRef =
       wo !== undefined ? { kind: "work_order", id: wo.id } : { kind: "issue", id: facts.grounded.issue.id };
     const step: Step = { key: "release", record };
-    const lock = releaseBlocker(facts) ?? releaseLockFor(facts, viewer);
+    const lock = releaseLock(facts, viewer);
     return { step: lock ? { kind: "locked", step, lock } : { kind: "go", step }, record };
   }
   if (wo !== undefined) {
