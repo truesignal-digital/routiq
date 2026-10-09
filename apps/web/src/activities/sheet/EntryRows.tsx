@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { canRecordSheetRevenue } from "@/activities/permissions.js";
+import { useMeContext } from "@/auth/me.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { newEntryRow, PAYMENT_METHODS, type SheetFormValues } from "./form.js";
@@ -392,11 +394,7 @@ export function EntryRows({ control, assetOptions, personOptions }: EntryRowsPro
 
   return (
     <div className="flex flex-col gap-3">
-      {fields.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          {t("activities.record.entries.empty")}
-        </p>
-      )}
+      {fields.length === 0 && <NoEntries />}
 
       {fields.map((field, index) => (
         <EntryRow
@@ -428,5 +426,17 @@ export function EntryRows({ control, assetOptions, personOptions }: EntryRowsPro
         </Button>
       </div>
     </div>
+  );
+}
+
+/** A driver adds expenses only (#532), so their empty sheet does not mention revenue (#573). */
+function NoEntries() {
+  const { t } = useTranslation();
+  // role-config: the same rule that hides the driver's Add revenue button.
+  const expensesOnly = !canRecordSheetRevenue(useMeContext()?.role);
+  return (
+    <p className="text-sm text-muted-foreground">
+      {t(expensesOnly ? "activities.record.entries.emptyExpensesOnly" : "activities.record.entries.empty")}
+    </p>
   );
 }

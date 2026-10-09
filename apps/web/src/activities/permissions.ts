@@ -19,6 +19,15 @@ export function canRecordActivities(
 }
 
 /**
+ * A revenue line on a trip sheet: the sheet's recorders but the driver, who
+ * records expenses only and does not see trip prices (#532). The server
+ * refuses it with ROLE_FORBIDDEN, as it refuses record-revenue.
+ */
+export function canRecordSheetRevenue(role: Role | undefined): boolean {
+  return role === "DIRECTOR" || role === "ADMIN";
+}
+
+/**
  * Closing a trip and swapping its vehicle: a trip recorder, but a DRIVER only
  * on the trips they recorded (server: OWN_RECORDS_ONLY).
  */
