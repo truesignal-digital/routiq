@@ -44,11 +44,11 @@ const director: MeContext = {
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
-function renderScreen(me: MeContext = director) {
+function renderScreen(me: MeContext = director, client = new QueryClient()) {
   return render(
     createElement(
       QueryClientProvider,
-      { client: new QueryClient() },
+      { client },
       createElement(
         MeCtx.Provider,
         { value: me },
@@ -175,6 +175,102 @@ describe("finance period command routing", () => {
     await waitFor(() =>
       expect(submissionOrder).toEqual(["lock-period", "reopen-period"]),
     );
+  });
+
+  // #571: both commands version-check a stored period row, so the screen must
+  // send the row version it showed; without it the server answers
+  // EXPECTED_VERSION_REQUIRED and the month never locks.
+  it("sends the row version it shows with lock and reopen", async () => {
+    const submits = new Map<string, ReturnType<typeof vi.fn>>();
+    mocks.createCommandIntent.mockImplementation(
+      (_client: unknown, commandName: string) => {
+        const submit = vi.fn(async () => ({
+          ok: true,
+          outcome: {
+            commandId: crypto.randomUUID(),
+            recordId: crypto.randomUUID(),
+            rowVersion: 9,
+            warnings: [],
+            idempotentReplay: false,
+          },
+        }));
+        submits.set(commandName, submit);
+        return { current: vi.fn(), submit };
+      },
+    );
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 0, "Lock period");
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
+    await waitFor(() =>
+      expect(submits.get("lock-period")).toHaveBeenCalledWith(
+        { periodCode: currentPeriodCode() },
+        { expectedVersion: 1 },
+      ),
+    );
+
+    await chooseRowAction(user, 1, "Reopen period");
+    await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");
+    await user.click(screen.getByRole("button", { name: "Reopen period" }));
+    await waitFor(() =>
+      expect(submits.get("reopen-period")).toHaveBeenCalledWith(
+        { periodCode: "2026-06", reason: "Correction needed" },
+        { expectedVersion: 2 },
+      ),
+    );
+  });
+
+  it("locks the current month at version 0 when the server has no row for it yet", async () => {
+    mocks.usePeriods.mockReturnValue({
+      data: { periods: [] },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const submit = vi.fn(async () => ({
+      ok: true,
+      outcome: {
+        commandId: crypto.randomUUID(),
+        recordId: crypto.randomUUID(),
+        rowVersion: 2,
+        warnings: [],
+        idempotentReplay: false,
+      },
+    }));
+    mocks.createCommandIntent.mockReturnValue({ current: vi.fn(), submit });
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 0, "Lock period");
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith(
+        { periodCode: currentPeriodCode() },
+        { expectedVersion: 0 },
+      ),
+    );
+  });
+
+  it("refetches the months after a version conflict so the next try sends the fresh version", async () => {
+    const submit = vi.fn(async () => ({ ok: false, code: "VERSION_CONFLICT" }));
+    mocks.createCommandIntent.mockReturnValue({ current: vi.fn(), submit });
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const user = userEvent.setup();
+    renderScreen(director, queryClient);
+
+    await chooseRowAction(user, 0, "Lock period");
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
+
+    expect(
+      await within(screen.getByRole("alertdialog")).findByText(
+        "Someone else modified this record. Refresh, then reapply your changes.",
+      ),
+    ).toBeTruthy();
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["ws", undefined, "finance", "periods"],
+    });
   });
 
   it("lets Finance lock a period but leaves reopening to the Director", async () => {
