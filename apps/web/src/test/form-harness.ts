@@ -5,13 +5,14 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi, type MockInstance } from "vitest";
 import type { CommandResult, CommandSubmission } from "@routiq/contracts";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
-import { commandLabelKeys, type CommandName } from "../commands/labels.js";
+import { commandLabelKeys, type CommandLabelRef } from "../commands/labels.js";
 import { i18n } from "../i18n/index.js";
 import { errorMessage } from "../lib/error-message.js";
 
 
 export interface FormUnderTest {
-  command: CommandName;
+  /** The command the form sends first, or one of its named jobs (`{ command, intent }`). */
+  command: CommandLabelRef;
   version?: number;
   /** The form, writing through `client`; `onDismiss` is how it closes. */
   render(props: { client: CommandClient; onDismiss: () => void }): ReactElement;
@@ -103,7 +104,8 @@ export function describeCommandForm(name: string, form: FormUnderTest): void {
       await form.fill(user);
       await user.click(submit());
       await waitFor(() => expect(client.seen).toHaveLength(1));
-      expect(client.seen[0]).toMatchObject({ name: form.command, version: form.version ?? 1 });
+      const name = typeof form.command === "string" ? form.command : form.command.command;
+      expect(client.seen[0]).toMatchObject({ name, version: form.version ?? 1 });
       expect(client.seen[0]?.payload).toEqual(form.payload);
     });
 

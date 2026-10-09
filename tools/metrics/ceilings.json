@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 586194,
+    "ceiling": 590845,
     "raises": [
       {
         "date": "2026-10-06",
@@ -155,19 +155,13 @@
       {
         "date": "2026-10-09",
         "from": 584923,
-        "to": 585982,
-        "reason": "#334 planned trips: fr and en words for DRIVER_INELIGIBLE, five scheduling warnings, the SCHEDULING module label and six command labels, required by the error-map, warning-map and command-label guards"
-      },
-      {
-        "date": "2026-10-09",
-        "from": 585982,
-        "to": 586194,
-        "reason": "Planned-trip command labels and messages (#334) (re-measured on Linux after develop moved)"
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292), same growth as web.initial-js-gzip: about 5.7 kB gzip with no lazy split yet"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22212,
+    "ceiling": 22508,
     "raises": [
       {
         "date": "2026-10-06",
@@ -210,11 +204,17 @@
         "from": 22136,
         "to": 22212,
         "reason": "#322: navigation count badge and rail dot styles on the sidebar and phone bottom bar, about 80 B gzip (re-recorded on develop 6444c6bf)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 22212,
+        "to": 22508,
+        "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 586194,
+    "ceiling": 590845,
     "raises": [
       {
         "date": "2026-10-06",
@@ -369,14 +369,8 @@
       {
         "date": "2026-10-09",
         "from": 584923,
-        "to": 585982,
-        "reason": "#334 planned trips: fr and en words for DRIVER_INELIGIBLE, five scheduling warnings, the SCHEDULING module label and six command labels, required by the error-map, warning-map and command-label guards"
-      },
-      {
-        "date": "2026-10-09",
-        "from": 585982,
-        "to": 586194,
-        "reason": "Planned-trip command labels and messages (#334) (re-measured on Linux after develop moved)"
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292): FormLayout, FormGroup/FormPair/FormOptional and ten kit fields with required read from the schema, about 5.7 kB gzip (a Base UI combobox was dropped for the existing popover pattern to save about 14 kB); about 29 ms on a pilot phone at about 5 ms per kB; #294 moves the other forms onto it and drops their own markup"
       }
     ]
   }

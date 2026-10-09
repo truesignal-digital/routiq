@@ -1078,6 +1078,60 @@
         "react-i18next",
         "zod"
       ]
+    },
+    {
+      "name": "form-kit",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/form/form-layout.tsx",
+          "type": "registry:file",
+          "target": "components/form/form-layout.tsx"
+        },
+        {
+          "path": "src/components/form/field.tsx",
+          "type": "registry:file",
+          "target": "components/form/field.tsx"
+        },
+        {
+          "path": "src/components/form/fields.tsx",
+          "type": "registry:file",
+          "target": "components/form/fields.tsx"
+        },
+        {
+          "path": "src/components/form/date-fields.tsx",
+          "type": "registry:file",
+          "target": "components/form/date-fields.tsx"
+        },
+        {
+          "path": "src/components/form/search-field.tsx",
+          "type": "registry:file",
+          "target": "components/form/search-field.tsx"
+        },
+        {
+          "path": "src/components/form/schema-fields.ts",
+          "type": "registry:file",
+          "target": "components/form/schema-fields.ts"
+        }
+      ],
+      "registryDependencies": [
+        "command-form",
+        "use-command-form",
+        "date-field",
+        "file-upload",
+        "input",
+        "select",
+        "textarea",
+        "popover",
+        "button",
+        "form"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-hook-form",
+        "react-i18next",
+        "zod"
+      ]
     }
   ]
 }

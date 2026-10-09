@@ -1,44 +1,45 @@
 import { useRef, useState } from "react";
-import { DateTimeField } from "@/components/date-field";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { z } from "zod";
+import {
+  recordExpensePayload,
+  recordMeterReadingPayload,
+  type CommandResult,
+} from "@routiq/contracts";
 import { useCommandLabel } from "@/commands/labels.js";
-import type { z } from "zod";
-import type { CommandResult, recordMeterReadingPayload } from "@routiq/contracts";
-import {
-  CommandForm,
-  type CommandFormBack,
-  type CommandSurface,
-} from "@/components/command-form.js";
-import { ErrorBanner } from "@/components/error-banner.js";
-import { MoneyInput } from "@/components/money-input.js";
-import { FileUpload } from "@/components/ui/file-upload";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { localToIso, nowLocal, wholeNumber } from "../../activities/local-time.js";
+import type { CommandFormBack } from "@/components/command-form.js";
+import { DateTimeField } from "@/components/form/date-fields.js";
+import { ChoiceField, FileField, MoneyField, ReadingField, TextField } from "@/components/form/fields.js";
+import { FormGroup, FormLayout, FormOptional } from "@/components/form/form-layout.js";
+import { useCommandForm, type CommandFormSent } from "@/components/use-command-form.js";
+import { localToIso, nowLocal } from "../../activities/local-time.js";
 import type { LastReading } from "../../activities/ReadingForm.js";
 import { PinnedAssetField } from "../../assets/PinnedAssetField.js";
 import { useActiveSession } from "../../auth/store.js";
 import { commandClient, type CommandClient } from "../../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../../commands/intent.js";
-import { parseMoneyXaf, toRecordExpensePayload } from "../../finance/model.js";
-import { notifyCommandSuccess } from "../../lib/notify.js";
+import { toRecordExpensePayload } from "../../finance/model.js";
 
 type ExpensePayload = ReturnType<typeof toRecordExpensePayload>;
 type ReadingPayload = z.infer<typeof recordMeterReadingPayload>;
 
-const PAYMENT_METHODS = ["CASH", "MOMO", "OM", "BANK", "OTHER"] as const;
-type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+/** One fill-up as the driver types it, checked by the two contracts it becomes. */
+const logFuelValues = z.object({
+  amountMinor: recordExpensePayload.shape.amountMinor,
+  paymentMethod: recordExpensePayload.shape.paymentMethod,
+  at: z.iso.datetime({ local: true }),
+  odometer: recordMeterReadingPayload.shape.value.optional(),
+  station: recordExpensePayload.shape.counterpartyName,
+  /** Stored receipt photos; they travel on the expense's envelope. */
+  receipt: z.array(z.uuid()),
+});
+type LogFuelValues = z.infer<typeof logFuelValues>;
+
+const PAYMENT_METHODS = recordExpensePayload.shape.paymentMethod.options;
 
 export interface LogFuelFormProps {
-  surface: CommandSurface;
+  surface: "sheet" | "panel";
   assetId: string;
   assetLabel?: string | undefined;
   /** The vehicle's home branch: the fuel is booked where the vehicle belongs. */
@@ -53,11 +54,11 @@ export interface LogFuelFormProps {
 }
 
 /**
- * The driver's fill-up, in one form: a FUEL expense on this vehicle, then —
- * when the odometer was read — a meter reading, as two commands in that order.
- * The expense is what the money needs, so it goes first and stands on its own:
- * if the reading is refused, the form says the reading was not saved and
- * offers to send just the reading again.
+ * The driver's fill-up, in one Quick entry form: a FUEL expense on this
+ * vehicle, then — when the odometer was read — a meter reading, as two
+ * commands in that order. The expense is what the money needs, so it goes
+ * first and stands on its own: if the reading is refused, the form says the
+ * reading was not saved and offers to send just the reading again.
  */
 export function LogFuelForm({
   surface,
@@ -78,261 +79,136 @@ export function LogFuelForm({
 
   // Both ids are minted once per opening, so any retry replays rather than
   // booking a second fill-up or a second reading.
-  const [ids] = useState(() => ({
-    entryId: crypto.randomUUID(),
-    readingId: crypto.randomUUID(),
-  }));
+  const [ids] = useState(() => ({ entryId: crypto.randomUUID(), readingId: crypto.randomUUID() }));
   const expenseIntent = useRef<CommandIntent<ExpensePayload> | undefined>(undefined);
   const readingIntent = useRef<CommandIntent<ReadingPayload> | undefined>(undefined);
-
-  const [amountInput, setAmountInput] = useState("");
-  const [when, setWhen] = useState(() => nowLocal());
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
-  const [station, setStation] = useState("");
-  const [odometerRaw, setOdometerRaw] = useState("");
-  const [artifactIds, setArtifactIds] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [expenseError, setExpenseError] = useState<string>();
   /** Set once the expense committed: from then on only the reading is left. */
-  const [expense, setExpense] = useState<CommandResult>();
-  const [readingError, setReadingError] = useState<string>();
-
-  const amountMinor = parseMoneyXaf(amountInput);
-  const odometer = wholeNumber(odometerRaw);
-  const odometerUsable = odometerRaw.trim() === "" || odometer !== undefined;
-  const ready =
-    expense === undefined
-      ? amountMinor !== null && amountMinor > 0 && when !== "" && odometerUsable && !uploading
-      : odometer !== undefined;
+  const committed = useRef<CommandResult | undefined>(undefined);
+  const [expenseLocked, setExpenseLocked] = useState(false);
+  const announced = useRef(false);
 
   const invalidate = async (...reads: ReadonlyArray<readonly string[]>) => {
     for (const read of reads) {
-      await queryClient.invalidateQueries({
-        queryKey: ["ws", session?.workspaceSlug, ...read],
-      });
+      await queryClient.invalidateQueries({ queryKey: ["ws", session?.workspaceSlug, ...read] });
     }
   };
 
-  function finish(
-    outcome: CommandResult,
-    warnings: readonly string[],
-    readingSaved: boolean,
-  ) {
-    // Above the tenant's threshold the expense waits for an approver; the toast
-    // says so instead of claiming it was posted.
-    notifyCommandSuccess(
-      "activities",
-      outcome.recordStatus === "SUBMITTED" ? "expenseSubmitted" : "expenseRecorded",
-      warnings,
-      readingSaved ? { extraLines: [t("vehicle.forms.fuel.readingSaved")] } : {},
-    );
-    onDone?.();
-    onDismiss();
-  }
+  async function send(values: LogFuelValues): Promise<CommandFormSent> {
+    let expense = committed.current;
+    if (expense === undefined) {
+      expenseIntent.current ??= createCommandIntent<ExpensePayload>(client, "record-expense", 1);
+      const station = values.station?.trim();
+      const result = await expenseIntent.current.submit(
+        toRecordExpensePayload({
+          entryId: ids.entryId,
+          branchCode,
+          economicDate: values.at.slice(0, 10),
+          categoryCode: fuelCategoryCode,
+          amountMinor: values.amountMinor,
+          paymentMethod: values.paymentMethod,
+          assetId,
+          ...(station === undefined || station === "" ? {} : { counterpartyName: station }),
+        }),
+        values.receipt.length > 0 ? { sourceArtifactIds: values.receipt } : {},
+      );
+      if (!result.ok) return result;
+      expense = result.outcome;
+      committed.current = expense;
+      setExpenseLocked(true);
+      await invalidate(["finance"], ["asset", assetId]);
+    }
 
-  async function submitReading(): Promise<
-    { ok: true; warnings: readonly string[] } | { ok: false }
-  > {
-    if (odometer === undefined) return { ok: true, warnings: [] };
-    readingIntent.current ??= createCommandIntent<ReadingPayload>(
-      client,
-      "record-meter-reading",
-      1,
-    );
-    const result = await readingIntent.current.submit({
+    if (values.odometer === undefined) return { ok: true, outcome: expense };
+    readingIntent.current ??= createCommandIntent<ReadingPayload>(client, "record-meter-reading", 1);
+    const reading = await readingIntent.current.submit({
       readingId: ids.readingId,
       assetId,
       readingType: "ODOMETER",
-      value: odometer,
-      observedAt: localToIso(when),
+      value: values.odometer,
+      observedAt: localToIso(values.at),
       source: "MANUAL",
     });
-    if (!result.ok) {
-      setReadingError(result.code);
-      return { ok: false };
-    }
+    if (!reading.ok) return reading;
     await invalidate(["asset", assetId]);
-    return { ok: true, warnings: result.outcome.warnings };
-  }
-
-  /** The expense, once: a retry after a refused reading does not send it again. */
-  async function recordExpense(): Promise<CommandResult | undefined> {
-    if (amountMinor === null) return undefined;
-    expenseIntent.current ??= createCommandIntent<ExpensePayload>(
-      client,
-      "record-expense",
-      1,
-    );
-    const trimmedStation = station.trim();
-    const result = await expenseIntent.current.submit(
-      toRecordExpensePayload({
-        entryId: ids.entryId,
-        branchCode,
-        economicDate: when.slice(0, 10),
-        categoryCode: fuelCategoryCode,
-        amountMinor,
-        paymentMethod,
-        assetId,
-        ...(trimmedStation === "" ? {} : { counterpartyName: trimmedStation }),
-      }),
-      artifactIds.length > 0 ? { sourceArtifactIds: artifactIds } : {},
-    );
-    if (!result.ok) {
-      setExpenseError(result.code);
-      return undefined;
-    }
-    setExpense(result.outcome);
-    await invalidate(["finance"], ["asset", assetId]);
-    return result.outcome;
-  }
-
-  async function submit() {
-    if (!ready || submitting) return;
-    setSubmitting(true);
-    setExpenseError(undefined);
-    setReadingError(undefined);
-
-    const committed = expense ?? (await recordExpense());
-    if (committed === undefined) {
-      setSubmitting(false);
-      return;
-    }
-
-    const reading = await submitReading();
-    setSubmitting(false);
-    if (!reading.ok) return;
     // One toast for the fill-up, including after a retried reading: the
     // expense was never announced on its own.
-    finish(committed, [...committed.warnings, ...reading.warnings], odometer !== undefined);
+    return {
+      ok: true,
+      outcome: { ...expense, warnings: [...expense.warnings, ...reading.outcome.warnings] },
+      extraLines: [t("vehicle.forms.fuel.readingSaved")],
+    };
   }
 
-  const expenseLocked = expense !== undefined;
+  const fuel = useCommandForm(logFuelValues, "record-expense", 1, {
+    defaults: () => ({ paymentMethod: "CASH" as const, at: nowLocal(), receipt: [] }),
+    // Above the tenant's threshold the expense waits for an approver; the
+    // toast says so instead of claiming it was posted.
+    success: (outcome) => ({
+      namespace: "activities",
+      message: outcome.recordStatus === "SUBMITTED" ? "expenseSubmitted" : "expenseRecorded",
+    }),
+    send,
+    onDone: () => {
+      announced.current = true;
+      onDone?.();
+    },
+    onDismiss: () => {
+      // Closing after a refused reading still leaves a recorded expense
+      // behind; the host has to show it.
+      if (committed.current !== undefined && !announced.current) onDone?.();
+      onDismiss();
+    },
+    client,
+  });
+  const odometer = fuel.form.watch("odometer");
+  const odometerLast = lastReading?.readingType === "ODOMETER" ? lastReading.value : undefined;
 
   return (
-    <CommandForm
+    <FormLayout
+      kind="quick-entry"
+      form={fuel}
       surface={surface}
       title={label({ command: "record-expense", intent: "fuel" })}
       description={t("vehicle.forms.fuel.description")}
+      hint={t("vehicle.forms.logFuel.hint")}
+      pinned={<PinnedAssetField assetId={assetId} label={assetLabel} />}
       back={back}
-      error={expenseError}
       command={expenseLocked ? "record-meter-reading" : { command: "record-expense", intent: "fuel" }}
       cancelLabel={expenseLocked ? t("commandForm.close") : undefined}
-      ready={ready}
-      submitting={submitting}
-      onSubmit={() => void submit()}
-      onDismiss={() => {
-        // Closing after a refused reading still leaves a recorded expense
-        // behind; the host has to show it.
-        if (expenseLocked) onDone?.();
-        onDismiss();
-      }}
+      ready={!expenseLocked || (typeof odometer === "number" && Number.isFinite(odometer))}
     >
-      {expenseLocked && readingError !== undefined && (
-        <>
-          <p
-            role="status"
-            className="rounded-lg bg-info/10 px-4 py-3 text-sm text-info-foreground"
-          >
-            {t("vehicle.forms.fuel.expenseStands")}
-          </p>
-          <ErrorBanner code={readingError} />
-        </>
+      {expenseLocked && fuel.formProps.error !== undefined && (
+        <p role="status" className="rounded-lg bg-info/10 px-4 py-3 text-sm text-info-foreground">
+          {t("vehicle.forms.fuel.expenseStands")}
+        </p>
       )}
-
-      <PinnedAssetField assetId={assetId} label={assetLabel} />
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="fuel-amount">{t("vehicle.forms.fuel.amount")}</Label>
-        <MoneyInput
-          id="fuel-amount"
-          aria-label={t("vehicle.forms.fuel.amount")}
-          value={amountInput}
+      <FormGroup title={t("form.group.howMuch")}>
+        <MoneyField name="amountMinor" label={t("vehicle.forms.logFuel.amount")} main disabled={expenseLocked} />
+        <ChoiceField
+          name="paymentMethod"
+          label={t("vehicle.forms.logFuel.paymentMethod")}
           disabled={expenseLocked}
-          onValueChange={setAmountInput}
+          options={PAYMENT_METHODS.map((method) => ({
+            value: method,
+            label: t(`finance.record.paymentMethods.${method.toLowerCase()}`),
+          }))}
         />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="fuel-when">{t("vehicle.forms.fuel.when")}</Label>
-          <DateTimeField
-            id="fuel-when"
-            value={when}
-            disabled={expenseLocked}
-            onChange={setWhen}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label>{t("finance.record.paymentMethodLabel")}</Label>
-          <Select
-            value={paymentMethod}
-            disabled={expenseLocked}
-            onValueChange={(next) => {
-              if (next) setPaymentMethod(next as PaymentMethod);
-            }}
-          >
-            <SelectTrigger
-              className="w-full"
-              aria-label={t("finance.record.paymentMethodLabel")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAYMENT_METHODS.map((method) => (
-                <SelectItem key={method} value={method}>
-                  {t(`finance.record.paymentMethods.${method.toLowerCase()}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="fuel-station">{t("vehicle.forms.fuel.station")}</Label>
-        <Input
-          id="fuel-station"
-          maxLength={160}
-          value={station}
-          disabled={expenseLocked}
-          onChange={(event) => setStation(event.target.value)}
+        <DateTimeField name="at" label={t("vehicle.forms.logFuel.when")} disabled={expenseLocked} />
+      </FormGroup>
+      <FormGroup title={t("form.group.odometer")}>
+        <ReadingField
+          name="odometer"
+          label={t("vehicle.forms.logFuel.odometer")}
+          readingType="ODOMETER"
+          last={odometerLast}
         />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="fuel-odometer">{t("vehicle.forms.fuel.odometer")}</Label>
-        <Input
-          id="fuel-odometer"
-          type="number"
-          min={0}
-          step={1}
-          inputMode="numeric"
-          aria-describedby={lastReading === undefined ? undefined : "fuel-odometer-last"}
-          value={odometerRaw}
-          onChange={(event) => setOdometerRaw(event.target.value)}
-        />
-        {lastReading !== undefined && (
-          <p id="fuel-odometer-last" className="text-xs text-muted-foreground">
-            {t("vehicle.forms.lastReading", {
-              readingType: lastReading.readingType,
-              value: lastReading.value,
-            })}
-          </p>
-        )}
-      </div>
-
+      </FormGroup>
       {!expenseLocked && (
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{t("vehicle.forms.fuel.receipt")}</span>
-          <FileUpload
-            accept="image/*"
-            onChange={setArtifactIds}
-            onUploadingChange={setUploading}
-          />
-        </div>
+        <FormOptional>
+          <TextField name="station" label={t("vehicle.forms.logFuel.station")} maxLength={160} />
+          <FileField name="receipt" label={t("vehicle.forms.logFuel.receipt")} camera />
+        </FormOptional>
       )}
-    </CommandForm>
+    </FormLayout>
   );
 }
