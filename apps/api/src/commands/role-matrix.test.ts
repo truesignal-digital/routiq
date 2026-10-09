@@ -76,10 +76,8 @@ const MATRIX: Readonly<Record<string, Row>> = {
   "reactivate-category":                 [x, _, _, _, _, _],
   "update-approval-threshold":           [x, _, _, _, _, _],
   "acknowledge-approval-rules":          [x, x, x, x, x, x], // each member their own notice (#422)
-  "set-template-preset":                 [x, _, _, _, _, _],
-  // Vendor-only per ADR-0005; DIRECTOR holds them until they move to platform scope.
-  "enable-module":                       [x, _, _, _, _, _],
-  "disable-module":                      [x, _, _, _, _, _],
+  // enable-module, disable-module and set-template-preset are platform scope
+  // (ADR-0005): a vendor operator runs them, no tenant role does.
 };
 
 function rolesOf(row: Row): Role[] {

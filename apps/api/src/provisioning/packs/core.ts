@@ -73,14 +73,12 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       categoryCode: "CROSS_BRANCH",
     },
 
-    // Settings belong to Direction (ADR-0009). Modules are vendor-only
-    // (ADR-0005); DIRECTOR holds the toggles until they move to platform scope.
+    // Settings belong to Direction (ADR-0009). Modules and presets are
+    // platform-scope commands a vendor operator runs (ADR-0005), so no tenant
+    // role has a rule for them.
     ...wildcard(
       [
-        "enable-module",
-        "disable-module",
         "update-approval-threshold",
-        "set-template-preset",
         "create-category",
         "relabel-category",
         "deactivate-category",

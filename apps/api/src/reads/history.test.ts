@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import { auditEvents, branches, categories, commands, principals } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { diffStates } from "./history.js";
 
@@ -1249,11 +1250,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         })
       ).token;
 
-      await command(
-        "disable-module",
-        { moduleCode: "ACTIVITIES" },
-        { token: gatedToken },
-      );
+      await setModule(ctx.db, seeded.workspace.id, "ACTIVITIES", false);
 
       const response = await diff(
         "activity",
@@ -1282,11 +1279,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       })
     ).token;
 
-    await command(
-      "disable-module",
-      { moduleCode: "ACTIVITIES" },
-      { token: gatedToken },
-    );
+    await setModule(ctx.db, seeded.workspace.id, "ACTIVITIES", false);
 
     const response = await history("activity", randomUUID(), "", gatedToken);
     expect(response.statusCode).toBe(403);

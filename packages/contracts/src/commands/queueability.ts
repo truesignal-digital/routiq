@@ -56,14 +56,11 @@ export const COMMAND_QUEUEABILITY = {
   "reverse-entry": false,
   "lock-period": false,
   "reopen-period": false,
-  "enable-module": false,
-  "disable-module": false,
   "update-approval-threshold": false,
   "create-category": false,
   "relabel-category": false,
   "deactivate-category": false,
   "reactivate-category": false,
-  "set-template-preset": false,
   "create-branch": false,
   /*
    * Branch administration is a decision about where the workspace operates, and

@@ -5,6 +5,7 @@ import { currentPeriodCode } from "../commands/periods.js";
 import { branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 import { shiftMonth } from "./asset-finance.js";
 
@@ -282,7 +283,7 @@ describe("GET /v1/assets/:assetId/finance", () => {
     const gated = await seedWorkspace(ctx.db);
     const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const gatedTruck = await seedAsset(ctx.app, gatedAdmin.token);
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, gated.workspace.id, "FINANCE", false);
     const response = await api.get(gatedAdmin.token, `/v1/assets/${gatedTruck}/finance`);
     expect(response.status).toBe(403);
     expect(response.body).toEqual({

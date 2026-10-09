@@ -105,8 +105,8 @@ person held before.
 | People | See Personnel | ✓ | ✓ | V | — | — | — |
 | People | Add a person (driver, hostess, mechanic…) | ✓ | ✓ | — | — | — | — |
 | People | Give, change or remove app access; reset PIN | ✓ all roles | ✓ Chauffeur, Technicien, Caissier only | — | — | — | — |
-| Settings | Branches, categories, approval bands, presets | ✓ | — | — | — | — | — |
-| Settings | Modules | vendor only (ADR-0005) | — | — | — | — | — |
+| Settings | Branches, categories, approval bands | ✓ | — | — | — | — | — |
+| Settings | Modules and template presets (vendor only, ADR-0005: `pnpm --filter @routiq/api entitlement`) | — | — | — | — | — | — |
 | Any | Approve something you submitted | — | — | — | — | — | — |
 
 ## Migration from the built roles

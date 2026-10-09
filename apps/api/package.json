@@ -7,6 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "provision": "tsx scripts/provision.ts",
     "appoint-director": "tsx scripts/appoint-director.ts",
+    "entitlement": "tsx scripts/entitlement.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "smoke": "tsx scripts/smoke.ts",
     "contracts:snapshot": "tsx scripts/contract-snapshots.ts",

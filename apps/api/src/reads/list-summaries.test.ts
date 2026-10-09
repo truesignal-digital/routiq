@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { activities, branches } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 
@@ -211,7 +212,7 @@ describe("list overview summaries", () => {
         workspaceId: gated.workspace.id,
         role: "DIRECTOR",
       });
-      await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ACTIVITIES" });
+      await setModule(ctx.db, gated.workspace.id, "ACTIVITIES", false);
       const response = await api.get(gatedAdmin.token, "/v1/activities/summary");
       expect(response.status).toBe(403);
       expect(response.body).toEqual({
@@ -270,7 +271,7 @@ describe("list overview summaries", () => {
         workspaceId: gated.workspace.id,
         role: "DIRECTOR",
       });
-      await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(ctx.db, gated.workspace.id, "MAINTENANCE", false);
       const response = await api.get(gatedAdmin.token, "/v1/maintenance/summary");
       expect(response.status).toBe(403);
       expect(response.body).toEqual({

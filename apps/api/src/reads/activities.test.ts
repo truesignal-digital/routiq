@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import { branches } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { apiClient, seedActor } from "../test/client.js";
 
@@ -751,7 +752,7 @@ describe("activity detail ledger gate", () => {
   });
 
   it("gives nobody the money with FINANCE off", async () => {
-    await api.ok(adminToken, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, workspaceId, "FINANCE", false);
     try {
       for (const role of ["ADMIN", "FINANCE", "TECHNICIAN"] as const) {
         const { token } = await seedActor(ctx.db, { workspaceId, role });
@@ -759,7 +760,7 @@ describe("activity detail ledger gate", () => {
         expect({ role, entries: detail.financialEntries }).toEqual({ role, entries: null });
       }
     } finally {
-      await api.ok(adminToken, "enable-module", { moduleCode: "FINANCE" });
+      await setModule(ctx.db, workspaceId, "FINANCE", true);
     }
   });
 });
