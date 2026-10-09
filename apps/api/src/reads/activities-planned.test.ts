@@ -8,7 +8,7 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
-import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { plantDriverRevenue, seedAsset, seedWorkspace } from "../test/seed.js";
 
 /**
  * ADR-0012 §7 on the trip reads that predate Scheduling (#336): they keep
@@ -30,6 +30,7 @@ describe("trip reads with planned trips (#336, #583)", () => {
   let cancelledId: string;
   let startedId: string;
   let sheetId: string;
+  let driverRevenueId: string;
 
   async function list(actor: Actor, query = ""): Promise<string[]> {
     const response = await api.get(actor.token, `/v1/activities?limit=100${query}`);
@@ -91,10 +92,11 @@ describe("trip reads with planned trips (#336, #583)", () => {
       startedAt: "2026-10-06T07:20:00+01:00",
     });
 
-    // A trip sheet the driver filed with its revenue and fuel, as drivers
-    // could before #570 stopped them recording revenue.
+    // A trip sheet the driver filed with its fuel, and the trip's revenue as
+    // the driver could record it before #570 stopped them: the office's entry,
+    // planted again under the driver's sheet.
     sheetId = randomUUID();
-    await api.ok(driver.token, "record-haulage-job-sheet", {
+    const sheet = await api.ok(driver.token, "record-haulage-job-sheet", {
       activityId: sheetId,
       branchCode: "DLA",
       activityTypeCode: "HAULAGE_JOB",
@@ -105,19 +107,26 @@ describe("trip reads with planned trips (#336, #583)", () => {
       entries: [
         {
           entryId: randomUUID(),
-          direction: "REVENUE",
-          categoryCode: "FREIGHT_REVENUE",
-          amountMinor: 300_000,
-          economicDate: "2026-10-01",
-        },
-        {
-          entryId: randomUUID(),
           direction: "EXPENSE",
           categoryCode: "FUEL",
           amountMinor: 40_000,
           economicDate: "2026-10-01",
         },
       ],
+    });
+    const officeRevenue = randomUUID();
+    await api.ok(admin.token, "record-revenue", {
+      entryId: officeRevenue,
+      branchCode: "DLA",
+      categoryCode: "FREIGHT_REVENUE",
+      economicDate: "2026-10-01",
+      amountMinor: 300_000,
+      paymentMethod: "CASH",
+      postings: [{ assetId: truck, activityId: sheetId, amountMinor: 300_000 }],
+    });
+    driverRevenueId = await plantDriverRevenue(ctx.db, {
+      revenueEntryId: officeRevenue,
+      createdByCommandId: sheet.commandId,
     });
   });
 
@@ -174,9 +183,8 @@ describe("trip reads with planned trips (#336, #583)", () => {
     const { parsed: forDriver } = await detail(driver, sheetId);
     expect(forDriver.financialEntries?.map((entry) => entry.direction)).toEqual(["EXPENSE"]);
     const { parsed: forFinance } = await detail(finance, sheetId);
-    expect(forFinance.financialEntries?.map((entry) => entry.direction).sort()).toEqual([
-      "EXPENSE",
-      "REVENUE",
-    ]);
+    const financeRows = forFinance.financialEntries ?? [];
+    expect(financeRows.map((entry) => entry.direction).sort()).toEqual(["EXPENSE", "REVENUE", "REVENUE"]);
+    expect(financeRows.map((entry) => entry.entryId)).toContain(driverRevenueId);
   });
 });
