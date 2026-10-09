@@ -542,7 +542,7 @@
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
         "linkedTo": "Linked to",
-        "workOrderLink": "Work order {ref}",
+        "workOrderLink": "Work order: {title}",
         "tripLink": "Activity {number}",
         "paymentMethod": "Payment method",
         "description": "Description",

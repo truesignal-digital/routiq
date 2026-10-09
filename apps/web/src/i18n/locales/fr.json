@@ -542,7 +542,7 @@
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
         "linkedTo": "Rattachée à",
-        "workOrderLink": "Ordre de travail {ref}",
+        "workOrderLink": "Ordre de travail : {title}",
         "tripLink": "Activité {number}",
         "paymentMethod": "Moyen de paiement",
         "description": "Description",
