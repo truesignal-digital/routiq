@@ -55,18 +55,18 @@ describe("activity overview band", () => {
     expect(tile("Legs").textContent).toContain("2");
   });
 
-  it("keeps the end a time: an open activity's end is a dash, not a state (#94)", () => {
+  it("keeps the end a time: an open activity's end is not recorded, not a state (#94)", () => {
     render(<ActivityOverview showNet activity={overview({ status: "OPEN", endedAt: null })} />);
 
-    expect(tile("Ended").textContent).toBe("—");
+    expect(tile("Ended").textContent).toBe("Not recorded");
     expect(screen.queryByText("Running")).toBeNull();
     expect(tone("Ended")).not.toBe("warning");
   });
 
-  it("dashes a closed activity with no end rather than calling it running", () => {
+  it("says a closed activity's missing end is not recorded rather than calling it running", () => {
     render(<ActivityOverview showNet activity={overview({ status: "CLOSED", endedAt: null })} />);
 
-    expect(tile("Ended").textContent).toContain("—");
+    expect(tile("Ended").textContent).toContain("Not recorded");
     expect(screen.queryByText("Running")).toBeNull();
   });
 

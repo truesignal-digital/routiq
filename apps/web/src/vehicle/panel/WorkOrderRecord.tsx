@@ -15,7 +15,7 @@ import { Chronologie, CostLines } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useVehicle, type PanelForm } from "../context.js";
-import { groundingFacts, workOrderSteps, workOrderWaiting } from "../flow.js";
+import { groundingFacts, situationOf, workOrderSteps, workOrderWaiting } from "../flow.js";
 import { recordReference } from "../model.js";
 import { DetailHeader, DetailSection, FactList, Note, SafetyMark } from "../parts.js";
 import {
@@ -28,7 +28,7 @@ import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
-  const { asset, viewer, panel, gates } = useVehicle();
+  const { asset, attention, viewer, panel, gates } = useVehicle();
   const query = useWorkOrder(gates.maintenance ? id : undefined);
   const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordReference(id) }));
   const locale = i18n.language;
@@ -49,6 +49,9 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
 
   const waiting = workOrderWaiting(wo.status, isGrounding);
   const actor = (name: string | null) => name ?? t("history.actor.unknown");
+  // The vehicle header's own test, so the panel and the header never disagree on one screen.
+  const situation = situationOf(asset, attention, new Date());
+  const repaired = situation.kind === "grounded" && situation.repaired;
 
   return (
     <>
@@ -83,7 +86,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </button>
         )}
         {isGrounding && (
-          <Note tone="danger">
+          <Note tone={repaired ? "warning" : "danger"}>
             {t(wo.status === "COMPLETED" ? "vehicle.panel.keepsGroundedUntilRelease" : "vehicle.panel.keepsGrounded")}
           </Note>
         )}
@@ -100,24 +103,25 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
                 name: actor(wo.createdBy.displayName),
               }),
             ],
-            [
-              t("vehicle.panel.expectedCost"),
-              !gates.workOrderCosts
-                ? "—"
-                : wo.expectedCostMinor === null
-                  ? t("vehicle.maintenance.noEstimate")
-                  : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
-            ],
-            [
-              t("vehicle.panel.actualCost"),
-              !gates.workOrderCosts
-                ? "—"
-                : wo.actualCostMinor === null
-                  ? t("vehicle.panel.actualCostLater")
-                  : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
-                    ? t("vehicle.panel.invoicePending")
-                    : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
-            ],
+            // Costs a viewer may not read are left out, not shown as blanks.
+            ...(!gates.workOrderCosts
+              ? []
+              : ([
+                  [
+                    t("vehicle.panel.expectedCost"),
+                    wo.expectedCostMinor === null
+                      ? t("vehicle.maintenance.noEstimate")
+                      : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
+                  ],
+                  [
+                    t("vehicle.panel.actualCost"),
+                    wo.actualCostMinor === null
+                      ? t("vehicle.panel.actualCostLater")
+                      : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
+                        ? t("vehicle.panel.invoicePending")
+                        : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
+                  ],
+                ] as const)),
             ...(wo.completedAt === null
               ? []
               : ([

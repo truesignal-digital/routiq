@@ -75,6 +75,7 @@ _Avoid_: comment thread, description, edit
 
 **Correction**:
 What saving "Modifier" does to approved or posted money, a meter reading or stock. One command reverses the original and records the replacement, so the original stays. Lists show the current value with a "corrigé" badge; history shows the old value struck through. A changed amount goes back for approval. Users never choose between an edit and a correction; the **Edit Level** decides (ADR-0008).
+Not built yet for money (#86). Today a posted entry is corrected in two steps: **Cancel entry** with the reason "wrong details", then **Record again** with the form filled in from the cancelled entry (see **Cancellation**).
 _Avoid_: edit (for approved money), reversal (in the interface), void, overwrite
 
 **Cancellation (of an entry)**:
@@ -114,8 +115,16 @@ Which role may execute which command and see which form sections at each point o
 _Avoid_: permission set, profile
 
 **Lifecycle**:
-The fixed, code-defined status sequence of a record (e.g. activity DRAFT → OPEN → CLOSED → LOCKED); invariants hang off it. Tenants may relabel statuses, never restructure them.
+The fixed, code-defined status sequence of a record (e.g. a trip: PLANNED → OPEN → CLOSED, or PLANNED → CANCELLED, ADR-0012); invariants hang off it. Tenants may relabel statuses, never restructure them.
 _Avoid_: workflow (lifecycles are not workflows), custom status
+
+**Planned Trip** (fr: **Trajet planifié** / **Voyage planifié**, by preset):
+A trip booked for a date before it starts: the same trip record in status PLANNED, with a planned start, and a vehicle and driver that may wait. Starting it on the day sets its actual start and makes it the running trip (shown "En cours" / "In progress"); cancelling it keeps it with a reason (ADR-0012). Part of the Scheduling module.
+_Avoid_: booking, reservation, order (as a separate record), draft trip
+
+**Delivery** (fr: **Livraison**):
+The recorded fact that goods were handed over on a trip: when, who received them, an optional photo of the signed note, on the trip or one of its stages. Append-only; it never changes the trip's status. A trip stays In progress until it is closed (ADR-0012).
+_Avoid_: delivered status, proof of delivery (as a status), completion
 
 **Starter Pack**:
 A versioned data file of categories and approval defaults for one Template Preset, replayed through ordinary commands when a Workspace is provisioned — never applied retroactively to existing Workspaces.
@@ -166,4 +175,5 @@ _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing
 - **Template binding (resolved 2026-07-29; server enforcement shipped 2026-07-30):** a Workspace enables a SET of Template Presets (mixed fleets are real in Cameroon); single-preset tenants see single-preset UX. Enforced server-side like module flags — `workspace_templates` rows written at Provisioning, checked in the command pipeline (`PRESET_DISABLED`). Workspaces with zero rows (pre-provisioning pilots) are grandfathered all-enabled with a `preset.unenforced` warning until backfilled. Remaining gap: web UX still shows both presets to single-preset tenants.
 - **Roles and people (resolved 2026-09-27; roles built 2026-10, people not yet):** six fixed Roles named in the pilot team's words replace ADMIN/OPS_MANAGER/FIELD_SUBMITTER/MAINTENANCE/FINANCE_APPROVER/EXECUTIVE_VIEWER (ADR-0009). Persons and App Access stay separate records shown as one Personnel list; every App Access belongs to one Person; Custodian becomes Assigned Driver (ADR-0010). Feature map: [roles and access](docs/reference/roles-and-access.md).
 - **Vehicle workspace terms (2026-09-25):** Grounded, Attention Item, Evidence State, Note and Vehicle History, and the refined Custodian and Availability, describe behaviour implemented on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. See [the vehicle workspace reference](docs/reference/vehicle-workspace-v1.md).
+- **Planned trips and delivery (decided 2026-10-08, not built):** a booking is the trip record in status PLANNED, not a second record; delivery is a fact, not a status; drivers see the trip price only when the company turns it on (ADR-0012, #332, #344).
 - **Terminology variance (resolved 2026-07-29):** a tenant's words come from its enabled **Template Presets** (preset-level string overlays merged over base locale) plus its own category labels. Per-tenant renames of UI terms are NOT built — market survey: 4 of 5 mature vertical SaaS offer at most a two-value toggle. Revisit only if a paying tenant refuses the preset's word.

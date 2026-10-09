@@ -11,6 +11,7 @@ import {
   WORK_ORDER_ID,
   actor,
   asset,
+  attention,
   entryDetail,
   grounded,
   groundingWorkOrder,
@@ -148,7 +149,7 @@ it("reads a close with the invoice still to come as such, not as a zero cost", a
   expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
-it("gives a driver the work order without its money: dashes, no cost lines (#390)", async () => {
+it("gives a driver the work order without its money: no cost facts, no cost lines (#390)", async () => {
   await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
     ...scenario,
     role: "DRIVER",
@@ -158,9 +159,9 @@ it("gives a driver the work order without its money: dashes, no cost lines (#390
     ],
   });
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-  const fact = (label: string) => within(panel).getByText(label).nextElementSibling?.textContent;
-  expect(fact("Expected cost")).toBe("—");
-  expect(fact("Actual cost")).toBe("—");
+  // Withheld is not "not recorded": the cost facts are left out (#306).
+  expect(within(panel).queryByText("Expected cost")).toBeNull();
+  expect(within(panel).queryByText("Actual cost")).toBeNull();
   expect(within(panel).queryByText("No estimate")).toBeNull();
   expect(within(panel).queryByText("Costs")).toBeNull();
   expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
@@ -190,6 +191,36 @@ it("says a completed grounding order waits for a manager's release, not its own 
     ),
   ).toBeTruthy();
   expect(within(panel).queryByText(/Once it is completed/)).toBeNull();
+});
+
+describe("the grounding note's tone agrees with the vehicle header (#500)", () => {
+  const completed = {
+    ...scenario,
+    role: "ADMIN" as const,
+    asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [workOrderDetail("COMPLETED", { completedAt: "2026-09-30T10:00:00.000Z" })],
+  };
+  const tones = async () => {
+    const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+    const note = within(panel).getByText(/^The work is done, but the vehicle stays grounded/).closest("[data-tone]");
+    // The open panel hides the page from the accessibility tree; the header is still on screen.
+    const header = screen.getAllByRole("status", { hidden: true }).find((el) => el.hasAttribute("data-tone"));
+    return { note: note?.getAttribute("data-tone"), header: header?.getAttribute("data-tone") };
+  };
+
+  it("is amber, like the header, once the repair is done and only the release is left", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+      ...completed,
+      attention: [attention("ASSET_AWAITING_RELEASE", { severity: "CRITICAL", partOfGrounding: true })],
+    });
+    await waitFor(async () => expect(await tones()).toEqual({ note: "warning", header: "waiting" }));
+  });
+
+  it("stays red, like the header, while the server withholds the release", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, completed);
+    await waitFor(async () => expect(await tones()).toEqual({ note: "danger", header: "critical" }));
+  });
 });
 
 it("shows a refusal in place and keeps the form", async () => {

@@ -73,7 +73,9 @@
     "emptyHint": "Aucun trajet pour l'instant. Les feuilles de route saisies apparaîtront ici.",
     "branchEmptyHint": "Aucun trajet pour cette agence.",
     "completeness": {
-      "exceptionsHint": "Le trajet est clôturé, mais il manque les éléments suivants :"
+      "exceptionsHint": "Le trajet est clôturé, mais il manque les éléments suivants :",
+      "COMPLETE": "Complet",
+      "COMPLETE_WITH_EXCEPTIONS": "Clôturé avec réserves"
     },
     "columns": {
       "activityNumber": "N° de trajet",
@@ -95,7 +97,8 @@
       "moneySummary": {
         "ownOnly": "Seules les écritures que vous avez saisies sur ce trajet.",
         "branchOnly": "Seules les écritures de vos agences sur ce trajet."
-      }
+      },
+      "closedAt": "Clôturé le {date}"
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",
@@ -119,7 +122,14 @@
         "attributeHint": "Décochez si la somme revient à l'engin et non au trajet : une réparation reste hors de la fiche."
       }
     },
-    "subtitle": "Chaque trajet de vos camions, du départ à la clôture."
+    "subtitle": "Chaque trajet de vos camions, du départ à la clôture.",
+    "status": {
+      "CLOSED": "Clôturé"
+    },
+    "state": {
+      "closed": "Clôturé",
+      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -173,7 +183,8 @@
       "noMoney": "Aucune écriture liée à ce trajet.",
       "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce trajet.",
       "noBranchMoney": "Aucune écriture de vos agences sur ce trajet pour l'instant.",
-      "openFull": "Ouvrir le trajet complet"
+      "openFull": "Ouvrir le trajet complet",
+      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais."
     },
     "locked": {
       "notGrounded": "Le camion n'est pas immobilisé."
