@@ -2,6 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type {
   IssueListResponse,
   IssueStatus,
+  MaintenanceSummary,
   WorkOrderDetail,
   WorkOrderListResponse,
   WorkOrderStatus,
@@ -147,6 +148,54 @@ export function useIssues(callerParams: UseIssuesParams = {}) {
       if (token === undefined) throw new Error("AUTH_REQUIRED");
       const cursor = pageParam as string | undefined;
       return fetchIssues(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
+    },
+  });
+}
+
+function isMaintenanceSummary(value: unknown): value is MaintenanceSummary {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  const average = record["averageRepairDays"];
+  return (
+    ["openIssues", "openSafetyCritical", "grounded", "approvedWorkOrders", "repairsCounted", "repairWindowDays"].every(
+      (key) => typeof record[key] === "number",
+    ) &&
+    (average === null || typeof average === "number")
+  );
+}
+
+export async function fetchMaintenanceSummary(
+  token: string,
+  params: { branchId?: string } = {},
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<MaintenanceSummary> {
+  const response = await fetchImpl(buildUrl("/v1/maintenance/summary", params), {
+    headers: { authorization: `Bearer ${token}` },
+    ...(signal === undefined ? {} : { signal }),
+  });
+  if (!response.ok) throw new Error(`MAINTENANCE_SUMMARY_${response.status}`);
+  const body: unknown = await response.json();
+  if (!isMaintenanceSummary(body)) throw new Error("MAINTENANCE_SUMMARY_INVALID_RESPONSE");
+  return body;
+}
+
+/**
+ * The workshop's overview counts, from the server: a keyset page knows only
+ * what it holds. Under the maintenance key, so every maintenance write that
+ * refreshes the lists refreshes the tiles too.
+ */
+export function useMaintenanceSummary() {
+  const session = useActiveSession();
+  const params = useBranchScopedParams({});
+
+  return useQuery<MaintenanceSummary>({
+    queryKey: [...maintenanceQueryKey(session?.workspaceSlug), "summary", params],
+    enabled: session !== undefined,
+    queryFn: ({ signal }) => {
+      const token = sessionStore.getToken();
+      if (token === undefined) throw new Error("AUTH_REQUIRED");
+      return fetchMaintenanceSummary(token, params, signal);
     },
   });
 }

@@ -110,25 +110,23 @@ describe("SiteHeader breadcrumb", () => {
     ]);
   });
 
-  it("walks Home / Finance / Entries", () => {
+  it("walks Home / Money, naming the page once", () => {
     pathname = "/finance/entries";
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
-      ["finance.navigation.entries", null],
+      ["finance.entries.title", null],
     ]);
   });
 
-  it("gives an entry a fourth crumb that links back to the list", () => {
+  it("gives an entry a third crumb, after the Money crumb that links back to the list", () => {
     pathname = "/finance/entries/00000000-0000-4000-8000-000000000010";
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
       ["home.title", "/"],
       ["finance.entries.title", "/finance/entries"],
-      ["finance.navigation.entries", "/finance/entries"],
       ["finance.entries.detail.breadcrumb", null],
     ]);
   });
@@ -183,10 +181,10 @@ describe("SiteHeader breadcrumb", () => {
   });
 
   it("marks the last crumb as the current page for assistive tech", () => {
-    pathname = "/finance/periods";
+    pathname = "/finance/record";
     render(<SiteHeader />);
 
-    const current = screen.getByText("finance.navigation.periods");
+    const current = screen.getByText("finance.navigation.record");
     expect(current.getAttribute("aria-current")).toBe("page");
     expect(current.closest("a")).toBeNull();
   });
@@ -223,7 +221,7 @@ describe("SiteHeader breadcrumb", () => {
       const { container } = render(<SiteHeader />);
 
       expect(phoneCrumb(container)?.getAttribute("href")).toBe("/finance/entries");
-      expect(phoneCrumb(container)?.textContent).toBe("finance.navigation.entries");
+      expect(phoneCrumb(container)?.textContent).toBe("finance.entries.title");
     });
 
     it("steps back to Trips from a trip and from Record a trip", () => {

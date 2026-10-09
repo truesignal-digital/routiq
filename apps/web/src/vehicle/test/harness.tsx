@@ -14,6 +14,7 @@ import type {
   IssueDetail,
   IssueListItem,
   ModuleCode,
+  NoteDetail,
   PrincipalType,
   Role,
   VehicleHistoryItem,
@@ -69,6 +70,7 @@ export interface VehicleScenario {
   trips?: ActivityListItem[];
   tripDetails?: ActivityDetail[];
   documents?: AssetDocumentRead[];
+  notes?: NoteDetail[];
   /** What a command answers; defaults to a committed result. */
   command?: (name: string, body: CommandBody) => { status: number; body: unknown };
 }
@@ -207,6 +209,10 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
     if (p === "/v1/finance/entries") return json({ entries: scenario.entries ?? [], nextCursor: null });
     if (p.startsWith("/v1/finance/entries/")) {
       const detail = byId(scenario.entryDetails, last);
+      return detail === undefined ? json({ error: { code: "REFERENCE_NOT_FOUND" } }, 404) : json(detail);
+    }
+    if (p.startsWith("/v1/notes/")) {
+      const detail = byId(scenario.notes, last);
       return detail === undefined ? json({ error: { code: "REFERENCE_NOT_FOUND" } }, 404) : json(detail);
     }
     if (p === "/v1/activities") return json({ items: scenario.trips ?? [], nextCursor: null });

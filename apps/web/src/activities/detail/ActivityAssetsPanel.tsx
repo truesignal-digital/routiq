@@ -76,7 +76,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
       <CardContent className="flex flex-col gap-3">
         {segments.map((segment) => (
           <div key={segment.id} className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-mono">{segment.assetCode}</span>
+            <span className="tabular-nums">{segment.assetCode}</span>
             <StatusBadge tone={segment.role === "SUBSTITUTE" ? "warning" : "neutral"}>
               {t(`activities.roles.${segment.role}`)}
             </StatusBadge>
@@ -109,7 +109,7 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
           <>
             {(segments.length > 0 || crew.length > 0) && <Separator />}
             <div className="flex flex-col gap-2">
-              <h3 className="text-muted-foreground text-xs uppercase tracking-wide">
+              <h3 className="text-muted-foreground text-xs">
                 {t("activities.detail.readings.title")}
               </h3>
 

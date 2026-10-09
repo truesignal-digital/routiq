@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { visibleFinanceSections } from "../finance/navigation.js";
 import {
   canApproveEntries,
   canManagePeriods,
@@ -8,7 +7,7 @@ import {
 import { visibleSections } from "../shell/sections.js";
 
 describe("finance navigation by role and module", () => {
-  it("gives a DRIVER the Entries tab but no Money row: their own entries show on their truck and trips", () => {
+  it("gives a DRIVER no Money row, decisions or months: their own entries show on their truck and trips", () => {
     const enabledModules = ["CORE", "FINANCE"] as const;
 
     expect(canRecordFinance("DRIVER", enabledModules)).toBe(true);
@@ -17,14 +16,9 @@ describe("finance navigation by role and module", () => {
     expect(visibleSections("DRIVER", [...enabledModules]).map(({ key }) => key)).not.toContain(
       "finances",
     );
-    expect(
-      visibleFinanceSections("DRIVER", enabledModules).map(
-        ({ key }) => key,
-      ),
-    ).toEqual(["entries"]);
   });
 
-  it("shows all three finance tabs to a FINANCE", () => {
+  it("shows Money, decisions and Accounting months to a FINANCE", () => {
     const enabledModules = ["CORE", "FINANCE"] as const;
 
     expect(canRecordFinance("FINANCE", enabledModules)).toBe(true);
@@ -33,11 +27,6 @@ describe("finance navigation by role and module", () => {
     expect(visibleSections("FINANCE", [...enabledModules]).map(({ key }) => key)).toContain(
       "finances",
     );
-    expect(
-      visibleFinanceSections("FINANCE", enabledModules).map(
-        ({ key }) => key,
-      ),
-    ).toEqual(["entries", "approvals", "periods"]);
   });
 
   it("hides Money when the FINANCE module is disabled", () => {
@@ -49,6 +38,5 @@ describe("finance navigation by role and module", () => {
     expect(visibleSections("FINANCE", [...enabledModules]).map(({ key }) => key)).not.toContain(
       "finances",
     );
-    expect(visibleFinanceSections("FINANCE", enabledModules)).toEqual([]);
   });
 });

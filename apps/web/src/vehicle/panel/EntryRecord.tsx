@@ -22,6 +22,7 @@ import {
   RecordFileRow,
   useFormHost,
 } from "./shared.js";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 /** This vehicle's signed share of the entry: its own posting lines, nothing else. */
 export function vehicleShare(entry: Pick<FinancialEntryDetail, "postings">, assetId: string): number {
@@ -245,6 +246,9 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
         >
           {t("vehicle.panel.openFullEntry")}
         </Link>
+        <div>
+          <RecordHistorySheet entityType="financial_entry" entityId={entry.id} />
+        </div>
       </div>
       <PanelFooter steps={steps} waiting={waiting} onStep={panel.openStep} />
     </>

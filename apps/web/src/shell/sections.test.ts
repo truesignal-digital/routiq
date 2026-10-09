@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   Banknote,
   Building,
+  Calendar,
   House,
-  Menu,
   Route,
   ShieldUser,
   SlidersHorizontal,
@@ -13,8 +13,7 @@ import {
   UserRound,
   Wrench,
 } from "lucide-react";
-import { ROLES, type ModuleCode, type Role } from "@routiq/contracts";
-import { visibleFinanceSections } from "../finance/navigation.js";
+import { ROLES, waitsOn, type ModuleCode, type Role } from "@routiq/contracts";
 import { canReadFinanceEntries, canRecordFinance } from "../finance/permissions.js";
 import {
   activeSection,
@@ -30,12 +29,12 @@ function activeKey(pathname: string): string | undefined {
   return activeSection(ALL, pathname)?.key;
 }
 
-/** Rows per group, by key; `more` is the personal page #316 removes. */
+/** Rows per group, by key. */
 function sidebar(role: Role, modules: ModuleCode[] = EVERY) {
   return Object.fromEntries(
     visibleSectionGroups(role, modules).map((group) => [
       group.key,
-      group.sections.map((section) => section.key).filter((key) => key !== "more"),
+      group.sections.map((section) => section.key),
     ]),
   );
 }
@@ -45,13 +44,13 @@ describe("each role's sidebar (#312)", () => {
   const expected: Record<Role, Record<string, string[]>> = {
     DIRECTOR: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
-      company: ["persons", "users", "branches", "companySettings"],
+      company: ["persons", "users", "branches", "accountingMonths", "companySettings"],
     },
     ADMIN: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
       company: ["persons", "users"],
     },
-    FINANCE: { daily: ["home", "assets", "activities", "finances"], company: ["persons"] },
+    FINANCE: { daily: ["home", "assets", "activities", "finances"], company: ["persons", "accountingMonths"] },
     CASHIER: { daily: ["home", "assets", "finances"] },
     TECHNICIAN: { daily: ["home", "assets", "maintenance"] },
     DRIVER: { daily: ["home", "assets", "activities"] },
@@ -73,6 +72,19 @@ describe("each role's sidebar (#312)", () => {
     expect(sidebar("DIRECTOR", modules).company).not.toContain("companySettings");
   });
 
+  it("drops Accounting months for everyone when Finance is off (#314)", () => {
+    for (const role of ROLES) {
+      const modules = EVERY.filter((code) => code !== "FINANCE");
+      expect(sidebar(role, modules).company ?? [], role).not.toContain("accountingMonths");
+    }
+  });
+
+  it("keeps one row per page: no Approvals row, and Accounting months is the only periods row (#314)", () => {
+    const rows = visibleSections("DIRECTOR", EVERY);
+    expect(rows.filter((row) => row.to.startsWith("/finance/approvals"))).toEqual([]);
+    expect(rows.filter((row) => row.to === "/finance/periods").map((row) => row.key)).toEqual(["accountingMonths"]);
+  });
+
   it("drops Maintenance for everyone when Maintenance is off", () => {
     for (const role of ROLES) {
       const modules = EVERY.filter((code) => code !== "MAINTENANCE");
@@ -91,20 +103,6 @@ describe("each role's sidebar (#312)", () => {
     }
   });
 
-  it("keeps each role's finance tabs (ADR-0009)", () => {
-    const tabs = Object.fromEntries(
-      ROLES.map((role) => [role, visibleFinanceSections(role, EVERY).map((tab) => tab.key)]),
-    );
-    expect(tabs).toEqual({
-      DIRECTOR: ["entries", "approvals", "periods"],
-      ADMIN: ["entries"],
-      FINANCE: ["entries", "approvals", "periods"],
-      CASHIER: ["entries"],
-      TECHNICIAN: [],
-      DRIVER: ["entries"],
-    });
-  });
-
   it("gives every role that records money a way to read it back", () => {
     for (const role of ROLES) {
       if (!canRecordFinance(role, EVERY)) continue;
@@ -113,7 +111,7 @@ describe("each role's sidebar (#312)", () => {
   });
 
   it("while membership is loading shows only rows no module or role decides", () => {
-    expect(visibleSections(undefined, undefined).map((s) => s.key)).toEqual(["home", "more"]);
+    expect(visibleSections(undefined, undefined).map((s) => s.key)).toEqual(["home"]);
   });
 
   it("home leads the nav for every role and module combination", () => {
@@ -133,10 +131,10 @@ describe("row label = page title (#312)", () => {
     activities: "screens/ActivitiesScreen.tsx",
     maintenance: "screens/MaintenanceScreen.tsx",
     finances: "screens/FinanceEntriesScreen.tsx",
-    more: "screens/MoreStub.tsx",
     persons: "screens/PersonsScreen.tsx",
     users: "screens/UsersScreen.tsx",
     branches: "screens/BranchesScreen.tsx",
+    accountingMonths: "screens/FinancePeriodsScreen.tsx",
     companySettings: "screens/CompanySettingsScreen.tsx",
   };
 
@@ -152,7 +150,6 @@ describe("isSectionActive (exact-or-child)", () => {
   it("matches the section's own route", () => {
     expect(activeKey("/assets")).toBe("assets");
     expect(activeKey("/maintenance")).toBe("maintenance");
-    expect(activeKey("/more")).toBe("more");
   });
 
   it("home owns the landing route only, never every route beneath it", () => {
@@ -168,8 +165,13 @@ describe("isSectionActive (exact-or-child)", () => {
 
   it("a section owning a subtree stays active across its siblings", () => {
     expect(activeKey("/finance/entries")).toBe("finances");
-    expect(activeKey("/finance/periods")).toBe("finances");
+    expect(activeKey("/finance/record")).toBe("finances");
     expect(activeKey("/finance/approvals")).toBe("finances");
+  });
+
+  it("Accounting months owns its page, not the Money subtree it sits in (#314)", () => {
+    expect(activeKey("/finance/periods")).toBe("accountingMonths");
+    expect(activeSection(visibleSections("CASHIER", EVERY), "/finance/periods")?.key).toBe("finances");
   });
 
   it("a Company row owns its page, not the More page it sits under", () => {
@@ -214,10 +216,10 @@ describe("row icons follow the consistency kit", () => {
     activities: ["route", Route],
     maintenance: ["wrench", Wrench],
     finances: ["money", Banknote],
-    more: ["menu", Menu],
     persons: ["user", UserRound],
     users: [undefined, ShieldUser],
     branches: ["building", Building],
+    accountingMonths: ["cal", Calendar],
     companySettings: ["sliders", SlidersHorizontal],
   };
 
@@ -227,5 +229,26 @@ describe("row icons follow the consistency kit", () => {
     const [kit, icon] = entry ?? [];
     if (kit !== undefined) expect(KIT).toMatch(new RegExp(`^\\s+${kit}: '`, "m"));
     expect(section.icon).toBe(icon);
+  });
+});
+
+describe("navigation counts (#322)", () => {
+  it("are declared only on Money and Maintenance", () => {
+    const counted = ALL.filter((section) => section.count !== undefined).map((section) => [
+      section.key,
+      section.count?.key,
+    ]);
+    expect(counted).toEqual([
+      ["maintenance", "maintenanceNew"],
+      ["finances", "moneyWaiting"],
+    ]);
+  });
+
+  it("go only to roles that see the row they sit on", () => {
+    for (const role of ROLES) {
+      const keys = visibleSections(role, EVERY).map((section) => section.key);
+      if (waitsOn("moneyWaiting", role)) expect(keys, role).toContain("finances");
+      if (waitsOn("maintenanceNew", role)) expect(keys, role).toContain("maintenance");
+    }
   });
 });

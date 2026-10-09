@@ -1,6 +1,6 @@
 import type { Page } from "playwright-core";
-import { DEMO_ACCOUNTS, DEMO_WORKSPACE, type DemoAccount } from "../accounts.js";
-import type { DriveScript } from "../browser.js";
+import { DEMO_ACCOUNTS, type DemoAccount } from "../accounts.js";
+import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 /**
  * Trips and Approvals fit the screen at desktop widths (#450). Opens each route
@@ -18,7 +18,7 @@ export const DESKTOP_VIEWPORTS = [
   { width: 1280, height: 800 },
 ] as const;
 
-export const FIT_ROUTES = ["/activities", "/finance/approvals"] as const;
+export const FIT_ROUTES = ["/activities", "/finance/entries?view=waiting"] as const;
 
 /**
  * Every role that reads money: the ⋯ menu differs by role, the columns don't.
@@ -69,7 +69,7 @@ function measureTables(page: Page): Promise<TableMeasure> {
 
 /** Opens the first row's ⋯ menu and reports a sideways scroll it caused. */
 async function menuShift(page: Page): Promise<string | undefined> {
-  const trigger = page.locator("main [data-slot='table-container'] tbody tr").first().locator("td").last().locator("button");
+  const trigger = page.locator("main [data-slot='table-container'] tbody tr").first().locator("td").last().locator("button[aria-haspopup='menu']");
   if ((await trigger.count()) === 0) return undefined;
   await trigger.click();
   await page.getByRole("menu").waitFor({ timeout: 5_000 });
@@ -103,11 +103,9 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
 
   const signIn = async (account: DemoAccount) => {
     if (!new URL(page.url()).pathname.startsWith("/login")) {
-      await goTo("/more");
-      await page.getByRole("main").getByRole("button", { name: /^(Se déconnecter|Sign out)$/ }).click();
-      await page.waitForURL((url) => url.pathname === "/login");
+      await signOutThroughNameMenu(page);
     }
-    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(account.workspace);
     await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
     await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);
     await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
@@ -116,7 +114,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
   };
 
   const chooseLanguage = async (lang: "fr" | "en") => {
-    await goTo("/more");
+    await goTo("/my-settings");
     await page.getByRole("button", { name: lang === "en" ? "English" : "Français", exact: true }).click();
     await page.getByRole("heading", { name: lang === "en" ? "Language" : "Langue" }).waitFor({ timeout: 10_000 });
   };

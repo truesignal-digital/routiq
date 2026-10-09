@@ -142,7 +142,7 @@ export function ChartAreaInteractive({
                             {chartConfig[String(name) as keyof typeof chartConfig]?.label ??
                               String(name)}
                           </span>
-                          <span className="font-mono font-medium tabular-nums">
+                          <span className="font-medium tabular-nums">
                             {formatMoney(Number(value), { currency })}
                           </span>
                         </span>

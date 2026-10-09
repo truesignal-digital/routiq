@@ -198,7 +198,7 @@ export function AssetRegisterScreen() {
 
   return (
     <PageContainer width="narrow">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-semibold text-muted-foreground">
         {t("assets.form.eyebrow")}
       </p>
       <PageHeader className="mt-1" title={label("register-asset")} />

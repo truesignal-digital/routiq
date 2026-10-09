@@ -141,7 +141,7 @@ export function ActivityTimeline({ activity }: ActivityTimelineProps) {
         {rows.map((row) => (
           <div key={row.key} className="flex flex-col gap-1.5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="text-muted-foreground text-xs uppercase tracking-wide">
+              <span className="text-muted-foreground text-xs">
                 {row.label}
               </span>
               <span className="text-sm tabular-nums">

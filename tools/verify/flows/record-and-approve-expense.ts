@@ -1,5 +1,5 @@
-import { DEMO_WORKSPACE, resolveAccount } from "../accounts.js";
-import { openSidebar, type DriveScript } from "../browser.js";
+import { resolveAccount } from "../accounts.js";
+import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 interface HistoryItem {
   eventType: string;
@@ -20,7 +20,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
     page.getByRole("row").or(page.locator("div.rounded-xl.border")).filter({ hasText: text }).last();
 
   await nav("/finance/record");
-  await page.getByRole("heading", { level: 1 }).waitFor();
+  // The record panel opens over Entries (#296).
+  await page.getByRole("dialog", { name: t("Saisir une écriture", "Record an entry") }).waitFor();
   await page.getByRole("combobox", { name: t("Catégorie", "Category") }).click();
   await page.getByRole("option", { name: t("Chargement", "Loading") }).click();
   await page.getByLabel(t("Montant (FCFA)", "Amount (FCFA)")).fill("150000");
@@ -54,10 +55,9 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   });
 
   const finance = resolveAccount("finance");
-  await openSidebar(page);
-  await page.getByRole("button", { name: t("Se déconnecter", "Sign out") }).locator("visible=true").first().click();
+  await signOutThroughNameMenu(page);
   await page.waitForURL((url) => url.pathname === "/login");
-  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(finance.workspace);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(finance.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(finance.pin);
   await page.waitForTimeout(400);
@@ -69,8 +69,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
 
-  await nav("/finance/approvals");
-  await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
+  await nav("/finance/entries?view=waiting");
+  await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   const row = itemWith(entry.entryNumber);
   await row.waitFor();
   await quiet();
@@ -78,10 +78,9 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   // paints the loaded table so the beat doesn't show the loading skeleton.
   await row.hover();
   await page.waitForTimeout(1000);
-  await shot("approvals-queue", { caption: `Signed in as Finance: ${entry.entryNumber} is in the approvals queue`, highlight: row });
+  await shot("approvals-queue", { caption: `Signed in as Finance: ${entry.entryNumber} waits in the Money page's waiting view`, highlight: row });
 
-  await row.getByRole("button", { name: "Actions" }).click();
-  await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
+  await row.getByRole("button", { name: `${t("Approuver l'écriture", "Approve entry")} ${entry.entryNumber}`, exact: true }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await row.waitFor({ state: "detached" });
   await quiet();

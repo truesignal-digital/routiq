@@ -153,6 +153,18 @@ describe("routiq_app grants", () => {
     expect(rls.rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
   });
 
+  it("note acknowledgements are append-only for the runtime role, behind forced RLS (#98)", async () => {
+    const grants = await grantsByTable();
+    const privs = grants.get("note_acknowledgements");
+    expect([...(privs ?? [])].sort()).toEqual(["INSERT", "SELECT"]);
+
+    const rls = await ctx.db.execute(sql`
+      select relrowsecurity, relforcerowsecurity from pg_class
+      where relname = 'note_acknowledgements' and relnamespace = 'public'::regnamespace
+    `);
+    expect(rls.rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
+  });
+
   it("maintenance rows keep the intended append-only runtime grants", async () => {
     const grants = await grantsByTable();
 
@@ -165,7 +177,8 @@ describe("routiq_app grants", () => {
     expect(issues?.has("DELETE")).toBe(false);
 
     // #28: a signalement's status moves once — resolved or dismissed — and the
-    // report itself never does, so UPDATE reaches only the status columns.
+    // report itself never does, so UPDATE reaches only the status columns, and
+    // the safety-critical mark while the problem is open (#96).
     const issueColumnGrants = await ctx.db.execute(sql`
       select column_name
       from information_schema.role_column_grants
@@ -184,6 +197,7 @@ describe("routiq_app grants", () => {
       "resolution_note",
       "resolved_at",
       "row_version",
+      "safety_critical",
       "status",
     ]);
 

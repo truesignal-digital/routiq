@@ -2,11 +2,14 @@
   "app": {
     "name": "ROUTIQ"
   },
+  "brand": {
+    "mark": "ROUTIQ logo",
+    "poweredBy": "powered by ROUTIQ"
+  },
   "nav": {
     "home": "Home",
     "assets": "Assets",
     "finances": "Finance",
-    "more": "More",
     "activities": "Activities",
     "maintenance": "Maintenance"
   },
@@ -60,9 +63,18 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "counts": {
+      "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
+      "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
+      "tooltip": "{label}: {waiting}"
+    },
     "groups": {
       "daily": "Daily work",
       "company": "Company"
+    },
+    "bottomBar": {
+      "label": "Shortcuts",
+      "menu": "Menu"
     },
     "branch": {
       "label": "Current branch",
@@ -178,6 +190,9 @@
     "AUTH_FAILED": "Incorrect workspace, username, or PIN.",
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
     "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
+    "ISSUE_SEVERITY_ALREADY_SET": "This problem is already marked that way. Refresh the page.",
+    "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
+    "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
@@ -310,21 +325,22 @@
       "registration": "Plate"
     }
   },
-  "more": {
-    "title": "More",
-    "signedInAs": "Signed in as {username}",
+  "nameMenu": {
+    "roleLine": "{role} · {branch}",
+    "branchCount": "{count, plural, one {# branch} other {# branches}}",
+    "mySettings": "My settings",
+    "signOut": "Sign out"
+  },
+  "mySettings": {
+    "title": "My settings",
+    "identityLine": "{roleLine} · {workspace}",
     "language": "Language",
-    "theme": {
-      "label": "Theme",
+    "appearance": {
+      "label": "Appearance",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
-    },
-    "manage": "Manage",
-    "persons": "People",
-    "users": "Users",
-    "branches": "Branches",
-    "logout": "Sign out"
+      "system": "Same as phone"
+    }
   },
   "form": {
     "errors": {
@@ -416,12 +432,29 @@
       }
     },
     "navigation": {
-      "label": "Finance sections",
-      "record": "Record",
-      "entries": "Entries",
-      "approvals": "Approvals",
-      "periods": "Periods",
-      "approvalsBadge": "{count, plural, one {# pending approval} other {# pending approvals}}"
+      "record": "Record"
+    },
+    "money": {
+      "lead": {
+        "both": "Every expense and revenue. {open} is open; {locked} is locked.",
+        "open": "Every expense and revenue. {open} is open.",
+        "none": "Every expense and revenue."
+      },
+      "tiles": {
+        "out": "Out in {month}",
+        "in": "In in {month}",
+        "waiting": "Waiting your approval",
+        "waitingHint": "{amount} · oldest {age}",
+        "missing": "Missing receipt",
+        "missingHint": "Oldest {date}"
+      },
+      "lens": {
+        "waiting": "Waiting approval",
+        "out": "Out this month",
+        "in": "In this month",
+        "missing": "Missing receipt",
+        "clear": "Clear filter: {name}"
+      }
     },
     "record": {
       "title": "Record an entry",
@@ -551,14 +584,14 @@
       }
     },
     "approvals": {
-      "title": "Approvals",
       "loading": "Loading…",
       "loadFailed": "We couldn't load approvals. Please retry.",
       "retry": "Try again",
       "empty": "No entries awaiting approval.",
       "columns": {
         "branch": "Branch",
-        "submittedAt": "Submitted"
+        "submittedAt": "Submitted",
+        "decision": "Decision"
       },
       "filters": {
         "branch": "Branch",
@@ -566,8 +599,6 @@
       },
       "branchEmpty": "Nothing awaiting approval for {branch}.",
       "outsideBranch": "{count, plural, one {+# pending in another branch} other {+# pending in other branches}}",
-      "makerGuard": "Your submission — another approver must decide",
-      "directionDecides": "The Director decides",
       "noteLabel": "Note",
       "optional": "(optional)",
       "notePlaceholder": "Add a note…",
@@ -576,10 +607,13 @@
       "approved": "Entry approved",
       "rejected": "Entry rejected",
       "warningsLabel": "Notices",
-      "done": "Close"
+      "done": "Close",
+      "noReceipt": "no receipt",
+      "decideRow": "{action} {number}"
     },
     "periods": {
-      "title": "Period management",
+      "title": "Accounting months",
+      "lead": "Each month takes entries until finance locks it. Late corrections go into the open month.",
       "columns": {
         "period": "Period",
         "status": "Status",
@@ -615,7 +649,8 @@
     "close": "Close",
     "notRecorded": "Not recorded",
     "add": "Add",
-    "readFailed": "Could not load"
+    "readFailed": "Could not load",
+    "howCalculated": "How this is calculated"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
@@ -625,6 +660,9 @@
     "view": "View",
     "columns": "Columns",
     "clearFilters": "Clear filters",
+    "filters": "{count, plural, =0 {Filters} other {Filters (#)}}",
+    "filtersTitle": "Filters",
+    "showResults": "Show results",
     "filterAll": "All",
     "rowsPerPage": "Rows per page",
     "pageOf": "Page {page} of {pages}",
@@ -1021,6 +1059,16 @@
           "OTHER": "Other"
         }
       }
+    },
+    "subtitle": "Every activity your fleet runs, from start to close.",
+    "metrics": {
+      "thisWeek": "This week",
+      "thisWeekHint": "Started since Monday",
+      "incomplete": "Incomplete data",
+      "incompleteHint": "Closed with exceptions",
+      "weekKm": "Km this week",
+      "weekKmValue": "{km, number} km",
+      "weekKmHint": "From the legs recorded"
     }
   },
   "maintenance": {
@@ -1120,7 +1168,9 @@
       "releaseHint": "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem.",
       "releaseSubject": "Work order {reference}",
       "resolveIssueHint": "The problem has been dealt with, for example fixed on the spot. Resolving does not lift a grounding: only a return to service does.",
-      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail."
+      "dismissIssueHint": "The problem should not have been raised: a mistake, a duplicate, nothing found. The reason stays on the audit trail.",
+      "raiseSeverityHint": "The vehicle is grounded as soon as you save, and stays grounded until a manager releases it to service.",
+      "lowerSeverityHint": "The vehicle stays grounded: releasing it to service is a separate step. The reason stays on the audit trail."
     },
     "close": {
       "hint": "Say what was done and what the repair cost.",
@@ -1178,8 +1228,22 @@
         "completionApproved": "Completion approved",
         "completionRejected": "Completion rejected",
         "workOrderCancelled": "Work order cancelled",
-        "assetReleased": "Asset returned to service"
+        "assetReleased": "Asset returned to service",
+        "severityRaised": "Marked as safety-critical. The vehicle is grounded.",
+        "severityLowered": "Safety-critical mark removed"
       }
+    },
+    "subtitle": "Problems reported and work orders, from report to repair.",
+    "metrics": {
+      "newProblems": "New problems",
+      "newProblemsHint": "{count, plural, =0 {None safety critical} one {# safety critical} other {# safety critical}}",
+      "grounded": "Grounded",
+      "groundedHint": "Must not be driven",
+      "inProgress": "Work orders in progress",
+      "inProgressHint": "Approved, not yet finished",
+      "repairDays": "Average days to repair",
+      "repairDaysValue": "{days, number} d",
+      "repairDaysHint": "{count, plural, =0 {No repair in the last {window} days} one {# repair in the last {window} days} other {# repairs in the last {window} days}}"
     }
   },
   "persons": {
@@ -1208,7 +1272,8 @@
       "MECHANIC": "Mechanic",
       "CLERK": "Clerk",
       "OTHER": "Other"
-    }
+    },
+    "lead": "The people your fleet works with: drivers, mechanics and crew. A person can drive without signing in."
   },
   "users": {
     "title": "Users",
@@ -1275,7 +1340,8 @@
         "reactivated": "User reactivated: {name}"
       },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
-    }
+    },
+    "lead": "Who can sign in, with which role and in which branches."
   },
   "branches": {
     "title": "Branches",
@@ -1323,7 +1389,8 @@
       "info": {
         "switched": "You are viewing: {branch}"
       }
-    }
+    },
+    "lead": "Branches group vehicles, people and money by site. Each user sees the branches they are given."
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -1366,6 +1433,7 @@
       "unavailable": "Not available"
     },
     "event": {
+      "other": "Other change",
       "activity-created": "Activity created",
       "activity-closed": "Activity closed",
       "activity-reopened": "Activity reopened",
@@ -1417,7 +1485,10 @@
       "work_order-closure_approved": "Closure validated",
       "asset_availability-opened": "Asset grounded",
       "asset_availability-closed": "Grounding lifted",
-      "financial_entry-updated": "Entry edited"
+      "financial_entry-updated": "Entry edited",
+      "operational_issue-severity_raised": "Marked safety-critical",
+      "operational_issue-severity_lowered": "Safety-critical mark removed",
+      "note-acknowledged": "Note marked as seen"
     },
     "field": {
       "status": "status",
@@ -1646,7 +1717,11 @@
     "approvalTitle": "Approval required",
     "approvalBody": "This action needs an approval before it takes effect. Nothing was changed.",
     "issues": "{count, plural, one {# thing to fix} other {# things to fix}}",
-    "issue": "{field}: {message}"
+    "issue": "{field}: {message}",
+    "discardTitle": "Discard this form?",
+    "discardBody": "What you typed will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
   },
   "commands": {
     "register-asset": {
@@ -1963,6 +2038,21 @@
       "submit": "Got it",
       "submitting": "Saving…",
       "dismiss": "Later"
+    },
+    "change-issue-severity": {
+      "label": "Mark as safety-critical",
+      "submit": "Mark as safety-critical",
+      "submitting": "Saving…",
+      "lower": {
+        "label": "Remove the safety-critical mark",
+        "submit": "Remove the mark",
+        "dismiss": "Keep the mark"
+      }
+    },
+    "acknowledge-note": {
+      "label": "Mark as seen",
+      "submit": "Mark as seen",
+      "submitting": "Saving…"
     }
   },
   "vehicle": {
@@ -2158,7 +2248,8 @@
       "workshop": "The workshop",
       "manager": "A manager",
       "operations": "Operations",
-      "recorder": "Whoever recorded it"
+      "recorder": "Whoever recorded it",
+      "team": "The team"
     },
     "now": {
       "todo": {
@@ -2230,6 +2321,11 @@
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Receipt missing",
         "detail": "{ref} · {amount}, recorded by {name}."
+      },
+      "DIRECTION_NOTE": {
+        "title": "{description}",
+        "detail": "Note from Direction · {name} · {when}",
+        "badge": "Note from Direction"
       }
     },
     "maintenance": {
@@ -2279,7 +2375,6 @@
       "revenue": "Posted revenue",
       "revenueHint": "Posted is not cash received",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "howCalculated": "How this is calculated",
       "byCategory": "Spending by category",
       "byCategoryHint": "Posted, {period}",
       "lastSixMonths": "Last 6 months",
@@ -2447,7 +2542,10 @@
         "asset_availability-closed": "Grounding lifted",
         "note-added": "Note added",
         "financial_entry-updated": "Entry edited before review",
-        "asset-details_updated": "Details edited"
+        "asset-details_updated": "Details edited",
+        "operational_issue-severity_raised": "Problem marked safety-critical",
+        "operational_issue-severity_lowered": "Safety-critical mark removed from a problem",
+        "note-acknowledged": "Note marked as seen"
       },
       "change": "{field}: {before} → {after}"
     },
@@ -2528,7 +2626,11 @@
         "documentRenewal": "Waiting on operations to renew it."
       },
       "photoNumber": "Photo {number}",
-      "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again."
+      "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again.",
+      "directionNoteEyebrow": "Note from Direction",
+      "notSeenYet": "Nobody has marked it as seen yet. It stays in the vehicle's To do list until someone does.",
+      "seenBy": "Seen by {name} on {date}",
+      "acknowledgeHint": "Tells Direction you have read this note. It leaves the To do list; your name and the time stay on the note."
     },
     "rows": {
       "actionsFor": "Actions for {record}"
@@ -2541,7 +2643,8 @@
       "success": {
         "noteAdded": "Note added",
         "evidenceAttached": "Receipt attached",
-        "detailsSaved": "Vehicle details saved."
+        "detailsSaved": "Vehicle details saved.",
+        "noteAcknowledged": "Marked as seen"
       },
       "info": {
         "nothingToSave": "Nothing to save: no changes."

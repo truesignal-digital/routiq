@@ -258,12 +258,15 @@ describe("migration 0027 on a database that predates it", () => {
        WHERE grantee = 'routiq_app' AND table_name = 'operational_issues'
          AND privilege_type = 'UPDATE' ORDER BY column_name`,
     );
+    // Every migration runs here, so the later safety-critical mark (#96) is
+    // the one column beyond 0027's status columns.
     expect(columns.map((row) => row.column_name)).toEqual([
       "dismiss_reason",
       "dismissed_at",
       "resolution_note",
       "resolved_at",
       "row_version",
+      "safety_critical",
       "status",
     ]);
     // Keep drizzle's own bookkeeping honest: every journal entry — 0027 and

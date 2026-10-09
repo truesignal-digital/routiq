@@ -9,10 +9,12 @@ import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { BranchProvider, branchStorageKey } from "../shell/branch-context.js";
 import { AssetsStub } from "./AssetsStub.js";
+import { applyNavigate, useTestSearch } from "../test-router.js";
 
 // A real Link needs a router around it; the screen renders bare here.
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => applyNavigate,
+  useSearch: () => useTestSearch(),
   Link: ({ to, children }: { to: string; children?: ReactNode }) => (
     <a href={to}>{children}</a>
   ),
@@ -71,6 +73,8 @@ function renderScreen() {
     principalId: "p",
     principalType: "HUMAN",
     membershipId: "m",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role: "ADMIN",
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS"],

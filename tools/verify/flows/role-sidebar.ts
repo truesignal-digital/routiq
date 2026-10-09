@@ -14,6 +14,7 @@ const EXPECTED: Record<string, { daily: readonly [string, string][]; company: re
       ["Personnel", "People"],
       ["Utilisateurs", "Users"],
       ["Agences", "Branches"],
+      ["Mois comptables", "Accounting months"],
       ["Paramètres de l'entreprise", "Company settings"],
     ],
   },
@@ -23,7 +24,7 @@ const EXPECTED: Record<string, { daily: readonly [string, string][]; company: re
   },
   FINANCE: {
     daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Argent", "Money"]],
-    company: [["Personnel", "People"]],
+    company: [["Personnel", "People"], ["Mois comptables", "Accounting months"]],
   },
   CASHIER: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Argent", "Money"]], company: [] },
   TECHNICIAN: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Maintenance", "Maintenance"]], company: [] },
@@ -39,7 +40,6 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     if (!ok) failures.push(what);
   };
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
-  const more = t("Plus", "More");
 
   const readSidebar = async () => {
     const nav = await openSidebar(page);
@@ -47,7 +47,12 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     return nav.evaluate((root) =>
       [...root.querySelectorAll("[data-sidebar='group']")].map((group) => ({
         heading: group.querySelector("[data-sidebar='group-label']")?.textContent?.trim() ?? "",
-        rows: [...group.querySelectorAll("a")].map((a) => a.textContent?.trim() ?? ""),
+        // A row's own words: not its count link (#322), not the rail's dot.
+        rows: [...group.querySelectorAll("a:not([data-nav-count])")].map((a) => {
+          const row = a.cloneNode(true) as Element;
+          row.querySelectorAll("[data-nav-count-dot]").forEach((dot) => dot.remove());
+          return row.textContent?.trim() ?? "";
+        }),
       })),
     );
   };
@@ -60,7 +65,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     { heading: t("Au quotidien", "Daily work"), rows: daily },
     ...(company.length > 0 ? [{ heading: t("Entreprise", "Company"), rows: company }] : []),
   ];
-  const got = groups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== more) }));
+  const got = groups;
   check(JSON.stringify(got) === JSON.stringify(want), `${account.role} sidebar ${JSON.stringify(got)} matches the role table`);
   await shot(`${account.role.toLowerCase()}-sidebar`, {
     caption: `${account.role}: ${daily.join(", ")}${company.length > 0 ? ` | Company: ${company.join(", ")}` : ""}`,

@@ -116,7 +116,8 @@
         "rowAttribute": "Charge line {position} to this trip",
         "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
       }
-    }
+    },
+    "subtitle": "Every trip your vehicles run, from start to close."
   },
   "maintenance": {
     "workOrders": {

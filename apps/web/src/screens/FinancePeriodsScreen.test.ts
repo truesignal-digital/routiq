@@ -31,15 +31,13 @@ vi.mock("../finance/usePeriods.js", () => ({
   usePeriods: mocks.usePeriods,
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({
-  FinanceNav: () => null,
-}));
-
 const director: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
   role: "DIRECTOR",
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],

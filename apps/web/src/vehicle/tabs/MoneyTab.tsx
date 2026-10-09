@@ -1,15 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, CircleDollarSign, Info, Receipt, TriangleAlert } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleDollarSign, Receipt } from "lucide-react";
 import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contracts";
 import { FilterChips } from "@/components/filter-chips";
+import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCategories } from "@/documents/useCategories.js";
 import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
@@ -176,9 +176,9 @@ function MoneySection() {
         />
       ) : (
         <>
-          <PeriodStats
+          <PeriodTiles
             finance={finance}
-            money={money}
+            currency={asset.currency}
             showRevenue={(revenueTypes.data?.length ?? 0) > 0}
           />
           <div className="grid gap-6 lg:grid-cols-2">
@@ -261,84 +261,59 @@ function MoneySection() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  hint,
-  warn = false,
-  info,
-}: {
-  label: string;
-  value: string;
-  hint: ReactNode;
-  warn?: boolean;
-  info?: string;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-col gap-1 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:p-4">
-      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        {warn && <TriangleAlert className="size-3.5 text-warning-foreground" aria-hidden />}
-        {label}
-        {info !== undefined && (
-          <Tooltip>
-            <TooltipTrigger
-              className="ml-auto inline-flex rounded-sm text-muted-foreground hover:text-foreground"
-              aria-label={t("vehicle.money.howCalculated")}
-            >
-              <Info className="size-3.5" aria-hidden />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64">{info}</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-      <div className="text-lg font-semibold leading-tight tabular-nums sm:text-xl">{value}</div>
-      <div className="text-xs text-muted-foreground">{hint}</div>
-    </div>
-  );
-}
-
-function PeriodStats({
+/** The month at a glance, from the asset finance read; nothing is counted here. */
+function PeriodTiles({
   finance,
-  money,
+  currency,
   showRevenue,
 }: {
   finance: AssetFinanceResponse;
-  money: (minor: number) => string;
+  currency: string;
   showRevenue: boolean;
 }) {
   const { t } = useTranslation();
   const missing = finance.evidenceMissing.postedCount + finance.evidenceMissing.pendingCount;
+  const posted: MetricTile = {
+    id: "posted",
+    label: t("vehicle.money.posted"),
+    ...moneyMetric(finance.posted.expenseMinor, currency),
+    hint: t("vehicle.money.postedHint"),
+    info: t("vehicle.money.postedBasis"),
+  };
+  const review: MetricTile = {
+    id: "review",
+    label: t("vehicle.money.review"),
+    ...moneyMetric(finance.pending.expenseMinor, currency),
+    hint: t("vehicle.money.reviewHint", { count: finance.pending.entryCount }),
+    tone: finance.pending.entryCount > 0 ? "warning" : "neutral",
+    info: t("vehicle.money.economicBasis"),
+  };
+  const missingTile: MetricTile = {
+    id: "missing",
+    label: t("vehicle.money.missing"),
+    value: t("vehicle.money.entryCount", { count: missing }),
+    hint: t("vehicle.money.missingHint"),
+    tone: missing > 0 ? "warning" : "neutral",
+  };
+  const tiles: MetricTiles = showRevenue
+    ? [
+        posted,
+        review,
+        missingTile,
+        {
+          id: "revenue",
+          label: t("vehicle.money.revenue"),
+          ...moneyMetric(finance.posted.revenueMinor, currency),
+          hint: t("vehicle.money.revenueHint"),
+          info: t("vehicle.money.postedBasis"),
+        },
+      ]
+    : [posted, review, missingTile];
   return (
-    <div className={cn("grid grid-cols-2 gap-3", showRevenue ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
-      <Stat
-        label={t("vehicle.money.posted")}
-        value={money(finance.posted.expenseMinor)}
-        hint={t("vehicle.money.postedHint")}
-        info={t("vehicle.money.postedBasis")}
-      />
-      <Stat
-        label={t("vehicle.money.review")}
-        value={money(finance.pending.expenseMinor)}
-        hint={t("vehicle.money.reviewHint", { count: finance.pending.entryCount })}
-        warn={finance.pending.entryCount > 0}
-        info={t("vehicle.money.economicBasis")}
-      />
-      <Stat
-        label={t("vehicle.money.missing")}
-        value={t("vehicle.money.entryCount", { count: missing })}
-        hint={t("vehicle.money.missingHint")}
-        warn={missing > 0}
-      />
-      {showRevenue && (
-        <Stat
-          label={t("vehicle.money.revenue")}
-          value={money(finance.posted.revenueMinor)}
-          hint={t("vehicle.money.revenueHint")}
-          info={t("vehicle.money.postedBasis")}
-        />
-      )}
-    </div>
+    <MetricStrip
+      tiles={tiles}
+      className={showRevenue ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3"}
+    />
   );
 }
 

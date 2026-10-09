@@ -114,6 +114,46 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
   },
 ];
 
+/**
+ * The forms a centred dialog may host (#296): a decision on an existing
+ * record, with at most a reason. Approve, reject and reverse an entry; the
+ * work-order decisions and cancel; dismiss and resolve a problem; release to
+ * service; close and reopen a trip; deactivate a branch or a user, reset a
+ * PIN; lock and reopen a period; discard. A name here is the JSX element
+ * that sets `surface="dialog"` or the component that renders it.
+ */
+const DECISION_SURFACES: ReadonlySet<string> = new Set([
+  "ApproveEntryForm",
+  "RejectEntryForm",
+  "ReverseEntryForm",
+  "WorkOrderDecisionForm",
+  "CancelWorkOrderForm",
+  "IssueDecisionForm",
+  "IssueSeverityForm",
+  "ReleaseForm",
+  "CloseTripDialog",
+  "ReopenTripDialog",
+  "BranchActionDialog",
+  "MemberActionDialog",
+  "PeriodDecisionDialog",
+  "DiscardDialog",
+]);
+
+function dialogSurfacesOutsideDecisions(file: SourceFile): Violation[] {
+  const code = withoutComments(file.content);
+  const lines = file.content.split("\n");
+  return [...code.matchAll(/\bsurface\s*[=:]\s*\{?\s*["'`]dialog["'`]/g)].flatMap((match) => {
+    const before = code.slice(0, match.index);
+    const tag = [...before.matchAll(/<([A-Z]\w*)/g)].at(-1)?.[1];
+    const component = [...before.matchAll(/function\s+([A-Z]\w*)/g)].at(-1)?.[1];
+    if ((tag !== undefined && DECISION_SURFACES.has(tag)) || (component !== undefined && DECISION_SURFACES.has(component))) {
+      return [];
+    }
+    const line = before.split("\n").length;
+    return [{ path: file.path, line, text: (lines[line - 1] ?? "").trim() }];
+  });
+}
+
 /** Whole-line `//` comments and block comments that open a line, blanked with their line breaks kept. */
 function withoutComments(content: string): string {
   const blank = (text: string) => text.replace(/[^\n]/g, " ");
@@ -199,6 +239,38 @@ const SMALL_CONTROL =
   /<(?:Button|SelectTrigger|Input|TabsList|AlertDialogAction|AlertDialogCancel|Link|button|a|input|select|summary)\b(?:[^<>]|=>)*?(?:\bsize=["'](?:sm|icon-sm|xs|icon-xs)["']|(?<![\w:/[-])(?:min-h|h|size)-(?:[6-9]|10)(?![\w-]))/;
 
 const CATALOG = /^apps\/web\/src\/i18n\/(locales|presets)\/[^/]+\.json$/;
+
+/**
+ * Where colours are defined (apps/web/DESIGN.md): the tokens in styles.css and
+ * theme.ts's mirror of `--background` for <meta name="theme-color">, which
+ * cannot read a CSS variable.
+ */
+const TOKEN_FILES = ["apps/web/src/styles.css", "apps/web/src/lib/theme.ts"];
+/** The logo's geometry: mask cut-outs in pure black and white, and the wordmark's capitals. */
+const BRAND = "apps/web/src/components/brand/";
+
+const isWebStyled = (path: string) =>
+  (isWebProduction(path) || /^apps\/web\/src\/.+\.css$/.test(path)) && !path.startsWith(BRAND);
+
+/**
+ * A hex colour where code writes one (after a quote, a Tailwind `[`, or a CSS
+ * `prop:`), so an issue reference like "(#422)" is never a colour; and the CSS
+ * colour functions.
+ */
+const COLOUR_LITERAL =
+  /(?:["'`[]|:\s*)#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![\w-])|\b(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch)\(/;
+/** shadcn's chart selects recharts' own default strokes (`[stroke='#ccc']`) to restyle them with tokens. */
+const RECHARTS_ATTRIBUTE_SELECTOR = /\[(?:stroke|fill)='[^']*'\]/g;
+
+function colourLiterals(files: readonly SourceFile[]): Violation[] {
+  return files
+    .filter((file) => isWebStyled(file.path) && !TOKEN_FILES.includes(file.path))
+    .flatMap((file) =>
+      matchLines({ ...file, content: file.content.replace(RECHARTS_ATTRIBUTE_SELECTOR, "") }, COLOUR_LITERAL).map(
+        (violation) => ({ ...violation, text: (file.content.split("\n")[violation.line - 1] ?? "").trim() }),
+      ),
+    );
+}
 
 /**
  * Each catalog key with its line, for the two-space JSON the catalogs are
@@ -489,6 +561,38 @@ export const RULES: readonly Rule[] = [
         )
         .map((file) => ({ path: file.path, line: 1, text: "no sibling test runs the form harness" }));
     },
+  },
+  {
+    id: "H18",
+    name: "dialogs-only-for-decisions",
+    fix: "Recording or editing a fact opens the side panel: surface=\"sheet\" (or \"panel\" inside a record panel). A centred dialog is only for a decision on an existing record, the allow-list DECISION_SURFACES in tools/guards/rules.ts (docs/design/consistency/README.md, Surface by job).",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            file.path.endsWith(".tsx") &&
+            file.path !== "apps/web/src/components/command-form.tsx",
+        )
+        .flatMap(dialogSurfacesOutsideDecisions),
+  },
+  {
+    id: "DS-1",
+    name: "figures-tabular-sans",
+    fix: "Figures (money, counts, record numbers, codes) use `tabular-nums` in the sans face, never `font-mono` or a monospace family (apps/web/DESIGN.md).",
+    check: linesMatching(/\bfont-mono\b|--font-mono\b|\bmonospace\b/, isWebStyled),
+  },
+  {
+    id: "DS-2",
+    name: "colours-from-tokens",
+    fix: "Use a semantic token class (bg-primary, text-muted-foreground, fill-chart-1) or var(--token); colours are defined only in apps/web/src/styles.css (apps/web/DESIGN.md).",
+    check: colourLiterals,
+  },
+  {
+    id: "DS-4",
+    name: "labels-sentence-case",
+    fix: "Write labels, eyebrows and badges in sentence case in the catalog and render them as written; no `uppercase` class or text-transform (apps/web/DESIGN.md). A code the user types in capitals is capitalised in the value, not by CSS.",
+    check: linesMatching(/\buppercase\b|\bsmall-caps\b/, isWebStyled),
   },
   {
     id: "J1",

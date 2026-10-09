@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -17,6 +17,7 @@ import {
   DataTableViewOptions,
   type DataTableFilter,
   type DataTableFilterValues,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -78,22 +79,22 @@ export function PersonsScreen() {
     [t],
   );
 
-  const columns = useMemo<ColumnDef<PersonListItem>[]>(
+  const columns = useMemo<DataTableColumn<PersonListItem>[]>(
     () => [
       {
         accessorKey: "displayName",
         header: t("persons.columns.displayName"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("persons.columns.displayName") },
+        meta: { phone: "title", label: t("persons.columns.displayName") },
         cell: ({ row }) => row.original.displayName,
       },
       {
         accessorKey: "personCode",
         header: t("persons.columns.personCode"),
         enableSorting: true,
-        meta: { mobile: "secondary", label: t("persons.columns.personCode") },
+        meta: { phone: "meta", label: t("persons.columns.personCode") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {row.original.personCode ?? <NotRecorded />}
           </span>
         ),
@@ -101,7 +102,7 @@ export function PersonsScreen() {
       {
         accessorKey: "defaultRole",
         header: t("persons.columns.defaultRole"),
-        meta: { mobile: "secondary", label: t("persons.columns.defaultRole") },
+        meta: { phone: "meta", label: t("persons.columns.defaultRole") },
         cell: ({ row }) => {
           const role = row.original.defaultRole;
           return role === null ? <NotRecorded /> : t(`persons.roles.${role}`);
@@ -110,7 +111,7 @@ export function PersonsScreen() {
       {
         accessorKey: "active",
         header: t("persons.columns.active"),
-        meta: { mobile: "primary", label: t("persons.columns.active") },
+        meta: { phone: "status", label: t("persons.columns.active") },
         cell: ({ row }) => (
           <StatusBadge tone={row.original.active ? "success" : "neutral"}>
             {t(row.original.active ? "persons.active" : "persons.inactive")}
@@ -175,6 +176,7 @@ export function PersonsScreen() {
           ) : undefined
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("persons.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <BranchScopeLine
