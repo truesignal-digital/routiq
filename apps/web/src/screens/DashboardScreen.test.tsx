@@ -290,11 +290,19 @@ describe("DashboardScreen — KPI cards", () => {
     expect(kpiValue("pendingApprovals")).toBe("—");
   });
 
-  it("reports an em dash, never a zero, when no period is open yet", async () => {
+  it("leaves withheld finance out rather than calling it not recorded", async () => {
+    installFetch({ dashboard: { ...dashboard, pendingApprovals: null } });
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
+
+    await waitFor(() => expect(screen.getByText("Not available for your role")).toBeTruthy());
+    expect(kpiValue("pendingApprovals")).toBe("");
+  });
+
+  it("says not recorded, never a zero, when no period is open yet", async () => {
     installFetch({ dashboard: { ...dashboard, openPeriod: null } });
     await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
-    await waitFor(() => expect(kpiValue("openPeriodExpense")).toBe("—"));
+    await waitFor(() => expect(kpiValue("openPeriodExpense")).toBe("Not recorded"));
     expect(screen.getAllByText("No open period yet").length).toBe(2);
   });
 

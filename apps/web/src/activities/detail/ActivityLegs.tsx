@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 export interface ActivityLegsProps {
   legs: ActivityDetail["legs"];
@@ -79,19 +80,19 @@ export function ActivityLegs({ legs }: ActivityLegsProps) {
                 {showDeparted && (
                   <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
                     {leg.departedAt === null
-                      ? "—"
+                      ? <NotRecorded />
                       : formatDateTime(leg.departedAt, locale)}
                   </TableCell>
                 )}
                 {showArrived && (
                   <TableCell className="whitespace-nowrap tabular-nums text-muted-foreground">
-                    {leg.arrivedAt === null ? "—" : formatDateTime(leg.arrivedAt, locale)}
+                    {leg.arrivedAt === null ? <NotRecorded /> : formatDateTime(leg.arrivedAt, locale)}
                   </TableCell>
                 )}
                 {showLoad && (
                   <TableCell>
                     {leg.loadState === null ? (
-                      "—"
+                      <NotRecorded />
                     ) : (
                       <LegLoadBadge state={leg.loadState} />
                     )}
@@ -100,13 +101,13 @@ export function ActivityLegs({ legs }: ActivityLegsProps) {
                 {showDistance && (
                   <TableCell className="text-right tabular-nums">
                     {leg.distanceKm === null
-                      ? "—"
+                      ? <NotRecorded />
                       : t("activities.detail.km", { count: leg.distanceKm })}
                   </TableCell>
                 )}
                 {showPassengers && (
                   <TableCell className="text-right tabular-nums">
-                    {leg.passengerCount ?? "—"}
+                    {leg.passengerCount ?? <NotRecorded />}
                   </TableCell>
                 )}
               </TableRow>

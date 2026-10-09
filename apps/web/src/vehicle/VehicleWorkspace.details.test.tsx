@@ -292,6 +292,22 @@ describe("who may edit", () => {
     },
   );
 
+  it("says a missing plate is not recorded, with no Add for a reader (#306)", async () => {
+    await openVehicle(DETAILS, { role: "DRIVER", asset: asset({ registrationNumber: null }) });
+    expect((await screen.findByText("Plate")).nextElementSibling?.textContent).toBe("Not recorded");
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+  });
+
+  it("offers an editor an inline Add on a missing plate that opens the edit (#306)", async () => {
+    await openVehicle(DETAILS, { role: "ADMIN", asset: asset({ registrationNumber: null }) });
+    const user = userEvent.setup();
+    const plate = (await screen.findByText("Plate")).nextElementSibling;
+    if (!(plate instanceof HTMLElement)) throw new Error("no plate value");
+    await user.click(within(plate).getByRole("button", { name: "Add" }));
+    expect(field("Plate").value).toBe("");
+    expect(await screen.findByRole("button", { name: "Save details" })).toBeTruthy();
+  });
+
   it.each(["DIRECTOR", "ADMIN"] as Role[])("offers %s the button, with its tooltip", async (role) => {
     await openVehicle(DETAILS, { role });
     const user = userEvent.setup();

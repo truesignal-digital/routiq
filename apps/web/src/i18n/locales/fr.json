@@ -648,6 +648,9 @@
   },
   "common": {
     "close": "Fermer",
+    "notRecorded": "Non renseigné",
+    "add": "Ajouter",
+    "readFailed": "Chargement impossible",
     "howCalculated": "Mode de calcul"
   },
   "dataTable": {
@@ -776,7 +779,6 @@
         "title": "Prévu et réalisé",
         "planned": "Prévu",
         "actual": "Réalisé",
-        "notRecorded": "Non renseigné",
         "openEnd": "fin non renseignée"
       },
       "readings": {
@@ -1425,7 +1427,6 @@
       "loading": "Chargement des changements…",
       "loadFailed": "Impossible de charger les changements.",
       "empty": "Aucun changement détaillé",
-      "none": "—",
       "yes": "Oui",
       "no": "Non",
       "lines": "{count, plural, one {# ligne} other {# lignes}}, {total}",
@@ -2153,7 +2154,6 @@
       "chassis": "N° de châssis",
       "acquired": "Acquisition",
       "acquiredWithAmount": "{date} · {amount}",
-      "notRecorded": "Non renseigné",
       "noSpecifications": "Aucune caractéristique pour ce modèle.",
       "edit": {
         "tooltip": "Modifier les informations du véhicule",
@@ -2424,8 +2424,8 @@
       "route": "{from} → {to}",
       "tripNumber": "Activité {number}",
       "km": "{value, number} km",
-      "startedAt": "Départ {time}",
-      "endedAt": "Arrivée {time}",
+      "startedAt": "Départ : {time}",
+      "endedAt": "Arrivée : {time}",
       "customer": "Client",
       "none": "Aucun",
       "driver": "Chauffeur",

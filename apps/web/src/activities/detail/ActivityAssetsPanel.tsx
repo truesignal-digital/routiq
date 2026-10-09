@@ -80,10 +80,11 @@ export function ActivityAssetsPanel({ activity }: ActivityAssetsPanelProps) {
             <StatusBadge tone={segment.role === "SUBSTITUTE" ? "warning" : "neutral"}>
               {t(`activities.roles.${segment.role}`)}
             </StatusBadge>
+            {/* An open segment is still running: the same ellipsis as the timeline. */}
             <span className="text-muted-foreground">
               {formatDateTime(segment.startedAt, locale)}
               {" → "}
-              {segment.endedAt === null ? "—" : formatDateTime(segment.endedAt, locale)}
+              {segment.endedAt === null ? "…" : formatDateTime(segment.endedAt, locale)}
             </span>
           </div>
         ))}

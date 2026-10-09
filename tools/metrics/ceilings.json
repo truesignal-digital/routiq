@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 672991,
+    "ceiling": 673717,
     "raises": [
       {
         "date": "2026-10-06",
@@ -143,8 +143,14 @@
       {
         "date": "2026-10-09",
         "from": 583829,
-        "to": 672991,
-        "reason": "Screens load on demand (#488): one file became 149, and separately gzipped files compress worse in total (the same files concatenated gzip to 610 kB); a phone now downloads 248 kB before sign-in instead of 570 kB and the rest in the background after Home settles"
+        "to": 583959,
+        "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 673717,
+        "reason": "Screens load on demand (#488): one file became 149, and separately gzipped files compress worse in total (the same files concatenated gzip to 610 kB); a phone now downloads 249 kB before sign-in instead of 570 kB and the rest in the background after Home settles"
       }
     ]
   },
@@ -196,7 +202,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 254415,
+    "ceiling": 254500,
     "raises": [
       {
         "date": "2026-10-06",
@@ -335,6 +341,12 @@
         "from": 581936,
         "to": 583829,
         "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583829,
+        "to": 583959,
+        "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
       }
     ]
   }
