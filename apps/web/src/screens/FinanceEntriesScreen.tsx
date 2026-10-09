@@ -24,8 +24,7 @@ import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
 import { ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
-import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
-import { useEntry } from "@/finance/useEntry.js";
+import { RecordAgainSheet } from "@/finance/RecordAgainSheet.js";
 import {
   canApproveEntries,
   canManagePeriods,
@@ -371,8 +370,8 @@ function FinanceEntriesContent() {
                       icon: Undo2,
                       destructive: true,
                       onSelect: () =>
-                        // The dialog lives on the detail screen; opening it
-                        // there beats a second copy of the same command.
+                        // The row menu hands off to the detail page with the
+                        // dialog open; the record panel opens it in place.
                         void navigate({
                           to: "/finance/entries/$entryId",
                           params: { entryId: entry.id },
@@ -459,20 +458,6 @@ function FinanceEntriesContent() {
         />
       )}
     </PageContainer>
-  );
-}
-
-/** After a "wrong details" cancellation: the recording form, pre-filled from the cancelled entry. */
-function RecordAgainSheet({ entryId, onClose }: { entryId: string; onClose: () => void }) {
-  const entryQuery = useEntry(entryId);
-  if (entryQuery.data === undefined) return null;
-  return (
-    <RecordEntryForm
-      surface="sheet"
-      recordAgainFrom={entryQuery.data}
-      onRecorded={onClose}
-      onDismiss={onClose}
-    />
   );
 }
 
