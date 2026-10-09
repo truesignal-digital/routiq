@@ -26,6 +26,8 @@ import { createTestApp } from "../test/fixture.js";
  * EXISTS: another branch wanted the same number, so it may yet be renumbered.
  * 0042 (#426, first numbered 0040) guards its columns and constraint, backfills
  * only reversals still without a reason, and replaces its function.
+ * 0045 (#334, planned trips) guards its columns, constraints and indexes, and
+ * inserts the six scheduling commands' rules with NOT EXISTS.
  *
  * The file's own database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -42,6 +44,7 @@ const MIGRATIONS = [
   "0035_update_asset_details_command_defaults",
   "0039_approval_rule_notice",
   "0042_cancellation_reason",
+  "0045_planned_trips",
 ];
 
 function statementsOf(migration: string): string[] {

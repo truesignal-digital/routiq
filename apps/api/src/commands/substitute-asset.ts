@@ -10,7 +10,7 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
-import { assertOwnRecord } from "./own-records.js";
+import { assertOwnTrip } from "./own-records.js";
 
 type SubstituteAssetPayload = z.infer<typeof substituteAssetPayload>;
 
@@ -46,6 +46,7 @@ const substituteAsset: CommandDefinition<SubstituteAssetPayload> = {
         id: activities.id,
         status: activities.status,
         createdByCommandId: activities.createdByCommandId,
+        plannedDriverPersonId: activities.plannedDriverPersonId,
       })
       .from(activities)
       .where(
@@ -61,12 +62,9 @@ const substituteAsset: CommandDefinition<SubstituteAssetPayload> = {
         referenceCode: payload.activityId,
       });
     }
-    await assertOwnRecord(tx, ctx, ["DRIVER"], {
-      entityType: "activity",
-      id: activity.id,
-      createdByCommandId: activity.createdByCommandId,
-    });
-    if (activity.status === "CLOSED") {
+    await assertOwnTrip(tx, ctx, ["DRIVER"], activity);
+    // A planned or cancelled trip has no carrier to swap (ADR-0012 §3).
+    if (activity.status !== "OPEN") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         entityType: "activity",
         status: activity.status,

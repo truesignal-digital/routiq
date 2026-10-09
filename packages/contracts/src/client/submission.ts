@@ -65,7 +65,11 @@ export interface CommandResult {
   rowVersion: number;
   recordStatus?: string;
   warnings: CommandWarningCode[];
+  /** Details for a warning that names other records (ADR-0012 §4 `tripIds`); absent otherwise. */
+  warningMetadata?: CommandWarningMetadata;
   /** Composite commands only; absent for the single-record majority. */
   children?: CommandResultChild[];
   idempotentReplay: boolean;
 }
+
+export type CommandWarningMetadata = Partial<Record<CommandWarningCode, Record<string, unknown>>>;

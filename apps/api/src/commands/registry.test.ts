@@ -110,6 +110,7 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
       "create-activity.v1",
       "record-journey-sheet.v1",
       "record-haulage-job-sheet.v1",
+      "plan-trip.v1",
     ],
     meaning: "the branch the record is filed under or moved to; branchAuthorization checks it against the caller's scope",
   },
@@ -130,7 +131,12 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
   },
   {
     path: "crew[].role",
-    commands: ["create-activity.v1", "record-journey-sheet.v1", "record-haulage-job-sheet.v1"],
+    commands: [
+      "create-activity.v1",
+      "record-journey-sheet.v1",
+      "record-haulage-job-sheet.v1",
+      "start-planned-trip.v1",
+    ],
     meaning: "what a crew member did on the trip (DRIVER, CONDUCTOR...), not an access role",
   },
   {

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { MODULE_CODES, type MeResponse } from "@routiq/contracts";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Fastify from "fastify";
 import { LocalSessionProvider } from "./auth/local.js";
 import { makeRequireAuth, registerAuthRoutes } from "./auth/plugin.js";
@@ -22,6 +22,7 @@ import "./commands/create-activity.js";
 import "./commands/activity-legs.js";
 import "./commands/substitute-asset.js";
 import "./commands/activity-close.js";
+import "./commands/planned-trips.js";
 import "./commands/record-sheet.js";
 import "./commands/provision-workspace.js";
 import "./commands/appoint-director.js";
@@ -45,7 +46,7 @@ import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
-import { principals, workspaceModules, workspaces } from "./db/schema.js";
+import { principals, workspaces } from "./db/schema.js";
 import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
@@ -61,6 +62,7 @@ import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
 import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
 import { registerApprovalThresholdsReadRoutes } from "./reads/approval-thresholds.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
+import { enabledModuleSet } from "./reads/read-gate.js";
 import { registerTelemetryRoutes } from "./observability/telemetry.js";
 
 export interface ServerDeps {
@@ -148,16 +150,10 @@ export function buildServer({
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {
-    const { disabled, presets, principal, workspace } = await read(async (tx) => ({
-      disabled: await tx
-        .select({ moduleCode: workspaceModules.moduleCode })
-        .from(workspaceModules)
-        .where(
-          and(
-            eq(workspaceModules.workspaceId, auth.workspaceId),
-            eq(workspaceModules.enabled, false),
-          ),
-        ),
+    const { modules, presets, principal, workspace } = await read(async (tx) => ({
+      // The read gate's rule, so the menu and the per-command check agree on
+      // modules that are off until the vendor turns them on.
+      modules: await enabledModuleSet(tx, auth.workspaceId),
       // Grandfather clause and ordering both live in the helper, so this set
       // and the dispatcher's per-command check can never disagree.
       presets: await enabledPresets(tx, auth.workspaceId),
@@ -176,12 +172,11 @@ export function buildServer({
     if (displayName === undefined || workspaceName === undefined) {
       throw new Error("me: principal or workspace row missing for a verified session");
     }
-    const disabledCodes = new Set(disabled.map((row) => row.moduleCode));
     return {
       ...auth,
       displayName,
       workspaceName,
-      enabledModules: MODULE_CODES.filter((code) => !disabledCodes.has(code)),
+      enabledModules: MODULE_CODES.filter((code) => modules.has(code)),
       enabledPresets: presets,
     } satisfies MeResponse;
   });
