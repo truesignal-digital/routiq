@@ -11,6 +11,7 @@ table. (Owner decisions 2026-10-08, #332 and #344; mockup:
 PLANNED ──start──▶ OPEN ──close──▶ CLOSED
    │                 ▲   ◀─reopen──┘
    └──cancel──▶ CANCELLED
+                    └ ─ ─▶ OPEN  (offline replay of a start only, flagged; §5)
 ```
 
 | Status | fr | en | Meaning |
@@ -202,7 +203,9 @@ These are entries in `COMMAND_QUEUEABILITY`. Nothing queues until the outbox
 **When an offline start meets a changed trip.** Only `origin: OFFLINE_SYNC`
 gets this latitude, following the `BRANCH_INACTIVE_AT_COMMIT` precedent
 (`apps/api/src/commands/branch-authorization.ts:98`). A live start against a
-changed trip is refused, because the person can see the current state.
+cancelled or already started trip is refused, because the person can see the
+current state; a live start on a reassigned PLANNED trip goes ahead with a
+warning (table below).
 
 | Trip state when the start arrives | Live start | Offline replay |
 |---|---|---|
@@ -274,7 +277,9 @@ id. It returns:
 - `drivers`: eligible drivers in scope, for the by-driver view.
 - `days`: per business day, `planned`, `toAssign` and `conflicts` counts.
 - `summary`: `planned`, `toAssign`, `conflicts`, `vehiclesBooked` /
-  `vehiclesTotal`, and `plannedRevenueMinor` for roles that may see prices.
+  `vehiclesTotal`, and `plannedRevenueMinor` (the agreed prices of PLANNED trips
+  in the range; CANCELLED, OPEN and CLOSED trips are not summed) for roles that
+  may see prices.
 
 **`GET /v1/my-schedule`** (#344). Module SCHEDULING; any role whose App Access
 belongs to a Person. Same trip shape, filtered to trips where that Person is
@@ -304,7 +309,8 @@ every preset, and the vendor turns it on (ADR-0005).
 
 **When it is off:** the six SCHEDULING commands and both reads return
 MODULE_DISABLED, the Planning tab, Book a trip and the Home card are absent,
-and Trips works as it does today. Existing PLANNED trips stay in the database,
+and Trips works as it does today, plus `record-delivery`, which belongs to
+ACTIVITIES and stays available on any running trip. Existing PLANNED trips stay in the database,
 unseen and unstartable, and reappear when the module is turned back on.
 
 ### 9. Words

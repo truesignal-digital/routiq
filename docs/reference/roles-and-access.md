@@ -83,7 +83,7 @@ person held before.
 | Trips | Close a trip | ✓ | ✓ | — | — | — | ✓ own |
 | Trips | Reopen a closed trip | ✓ | ✓ | — | — | — | — |
 | Trips | Swap the vehicle on a trip | ✓ | ✓ | — | — | — | ✓ own |
-| Trips | Start, pause and end a trip on the phone *(planned)* | — | V | — | — | — | ✓ own |
+| Trips | Start, pause and end a trip on the phone *(planned)* | ✓ | ✓ | — | — | — | ✓ own |
 | Trips | Book, assign, move, edit or cancel a planned trip *(planned, ADR-0012)* | ✓ | ✓ | — | — | — | — |
 | Trips | Start a planned trip *(planned, ADR-0012)* | ✓ | ✓ | — | — | — | ✓ own |
 | Trips | Record a delivery *(planned, ADR-0012)* | ✓ | ✓ | — | — | — | ✓ own |
