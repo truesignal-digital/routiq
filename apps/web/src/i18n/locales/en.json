@@ -350,7 +350,27 @@
       "max": "Must not exceed {max}.",
       "invalid": "Invalid value.",
       "tooShort": "At least {min} characters.",
-      "tooLong": "At most {max} characters."
+      "tooLong": "At most {max} characters.",
+      "above": "Must be more than {min}."
+    },
+    "optional": {
+      "title": "More details (optional)",
+      "filled": "{filled} of {total}"
+    },
+    "group": {
+      "howMuch": "How much",
+      "odometer": "Odometer"
+    },
+    "reading": {
+      "last": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}"
+    },
+    "units": {
+      "km": "km",
+      "hours": "h"
+    },
+    "search": {
+      "placeholder": "Type to search",
+      "empty": "Nothing matches"
     }
   },
   "fileUpload": {
@@ -365,7 +385,9 @@
       "megabytes": "MB"
     },
     "add": "Add a photo or document",
-    "retry": "Retry"
+    "retry": "Retry",
+    "takePhoto": "Take a photo",
+    "chooseFile": "Or choose a file"
   },
   "documents": {
     "notify": {
@@ -2071,6 +2093,15 @@
         "receipt": "Receipt photo (optional)",
         "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
         "readingSaved": "Odometer reading saved"
+      },
+      "logFuel": {
+        "amount": "Amount paid",
+        "paymentMethod": "Paid by",
+        "when": "Date and time",
+        "odometer": "Reading",
+        "station": "Station",
+        "receipt": "Receipt photo",
+        "hint": "Above the approval limit, it waits for an approver."
       },
       "note": {
         "description": "A remark on the vehicle's history. Notes are never edited; a correction is another note.",

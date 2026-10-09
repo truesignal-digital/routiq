@@ -350,7 +350,27 @@
       "max": "Ne doit pas dépasser {max}.",
       "invalid": "Valeur invalide.",
       "tooShort": "Au moins {min} caractères.",
-      "tooLong": "Au plus {max} caractères."
+      "tooLong": "Au plus {max} caractères.",
+      "above": "Doit être supérieur à {min}."
+    },
+    "optional": {
+      "title": "Plus de détails (facultatif)",
+      "filled": "{filled} sur {total}"
+    },
+    "group": {
+      "howMuch": "Combien",
+      "odometer": "Compteur"
+    },
+    "reading": {
+      "last": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}"
+    },
+    "units": {
+      "km": "km",
+      "hours": "h"
+    },
+    "search": {
+      "placeholder": "Tapez pour chercher",
+      "empty": "Aucun résultat"
     }
   },
   "fileUpload": {
@@ -365,7 +385,9 @@
       "megabytes": "Mo"
     },
     "add": "Ajouter une photo ou un document",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "takePhoto": "Prendre une photo",
+    "chooseFile": "Ou choisir un fichier"
   },
   "documents": {
     "notify": {
@@ -2071,6 +2093,15 @@
         "receipt": "Photo du reçu (facultatif)",
         "expenseStands": "La dépense de carburant est enregistrée. Le relevé du compteur n'a pas été enregistré.",
         "readingSaved": "Relevé du compteur enregistré"
+      },
+      "logFuel": {
+        "amount": "Montant payé",
+        "paymentMethod": "Payé par",
+        "when": "Date et heure",
+        "odometer": "Relevé",
+        "station": "Station",
+        "receipt": "Photo du reçu",
+        "hint": "Au-delà du seuil, elle attend une approbation."
       },
       "note": {
         "description": "Une remarque dans l'historique du véhicule. Une note n'est jamais modifiée ; une correction est une nouvelle note.",
