@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 583829,
+    "ceiling": 584046,
     "raises": [
       {
         "date": "2026-10-06",
@@ -139,6 +139,12 @@
         "from": 581936,
         "to": 583829,
         "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583829,
+        "to": 584046,
+        "reason": "Cancel entry in the Money record panel (#525) and the narrow-screen column default for the entries list (#436)"
       }
     ]
   },
@@ -190,7 +196,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 583829,
+    "ceiling": 584046,
     "raises": [
       {
         "date": "2026-10-06",
@@ -329,6 +335,12 @@
         "from": 581936,
         "to": 583829,
         "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583829,
+        "to": 584046,
+        "reason": "Cancel entry in the Money record panel (#525) and the narrow-screen column default for the entries list (#436)"
       }
     ]
   }

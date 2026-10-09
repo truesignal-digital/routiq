@@ -23,6 +23,9 @@ import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
+import { ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
+import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
+import { useEntry } from "@/finance/useEntry.js";
 import {
   canApproveEntries,
   canManagePeriods,
@@ -149,6 +152,10 @@ function FinanceEntriesContent() {
   const [chosenVisibility, setColumnVisibility] = useState<VisibilityState>();
   const columnVisibility = chosenVisibility ?? defaultVisibility;
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  // Cancel entry from the record panel (#525): the panel closes and the dialog
+  // takes over, as Reject does in the waiting view.
+  const [cancelling, setCancelling] = useState<{ id: string; rowVersion: number }>();
+  const [recordingAgainId, setRecordingAgainId] = useState<string>();
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
   const sort = toSortParam(sorting);
 
@@ -390,6 +397,21 @@ function FinanceEntriesContent() {
                     params: { entryId: entry.id },
                   }),
               },
+              // role-config: the same gate as the row menu and the detail page.
+              actions: (entry, drawer) =>
+                canReverseEntry(me?.role, entry) ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="min-h-11"
+                    onClick={() => {
+                      drawer.close();
+                      setCancelling({ id: entry.id, rowVersion: entry.rowVersion });
+                    }}
+                  >
+                    {label("reverse-entry")}
+                  </Button>
+                ) : null,
             }}
             loadMore={{
               hasNextPage: entriesQuery.hasNextPage,
@@ -418,7 +440,39 @@ function FinanceEntriesContent() {
       )}
       </>
       )}
+
+      {cancelling !== undefined && (
+        <ReverseEntryForm
+          surface="dialog"
+          entry={cancelling}
+          onRecordAgain={() => {
+            setRecordingAgainId(cancelling.id);
+            setCancelling(undefined);
+          }}
+          onDismiss={() => setCancelling(undefined)}
+        />
+      )}
+      {recordingAgainId !== undefined && (
+        <RecordAgainSheet
+          entryId={recordingAgainId}
+          onClose={() => setRecordingAgainId(undefined)}
+        />
+      )}
     </PageContainer>
+  );
+}
+
+/** After a "wrong details" cancellation: the recording form, pre-filled from the cancelled entry. */
+function RecordAgainSheet({ entryId, onClose }: { entryId: string; onClose: () => void }) {
+  const entryQuery = useEntry(entryId);
+  if (entryQuery.data === undefined) return null;
+  return (
+    <RecordEntryForm
+      surface="sheet"
+      recordAgainFrom={entryQuery.data}
+      onRecorded={onClose}
+      onDismiss={onClose}
+    />
   );
 }
 

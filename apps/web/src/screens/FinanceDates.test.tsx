@@ -140,8 +140,6 @@ it.each(viewers)("preserves financial dates through list, drawer, detail and fil
   expect(new Intl.DateTimeFormat().resolvedOptions().timeZone).toBe(viewer.zone);
   // jsdom does not implement the browser scrolling used by route navigation.
   vi.stubGlobal("scrollTo", vi.fn());
-  // Below 1440 px the list starts without Posting date (#436).
-  vi.stubGlobal("innerWidth", 1440);
   await i18n.changeLanguage(viewer.locale);
   sessionStore.save({ ...identity, token: "disposable-test-token", expiresAt: "2099-01-01T00:00:00Z" });
   const ledgerRequests = serveFinanceReadFixtures();

@@ -150,14 +150,16 @@ export function useFinanceEntryColumns(
 }
 
 /**
- * The full entries list needs about 1050 px in French, which a 1440 px screen
- * with the sidebar open has and a 1280 px one does not (#436). Below that the
- * list starts without Posting date — the entry and its detail still carry it,
- * and the view menu brings it back — so the row actions stay on screen.
+ * The full entries list needs about 1045 px in French, which a 1440 px screen
+ * with the sidebar open has and a 1280 px one (990 px card) does not (#436).
+ * Below that the list starts without Counterparty — the drawer and the detail
+ * still show it, and the view menu brings it back — so the row actions stay on
+ * screen. Posting date stays: the list is sorted by it, and a list is never
+ * sorted by a column the viewer can't see.
  */
 const ROOMY_SCREEN_QUERY = "(min-width: 1440px)";
 const ROOMY_VISIBILITY: VisibilityState = {};
-const NARROW_VISIBILITY: VisibilityState = { postedAt: false };
+const NARROW_VISIBILITY: VisibilityState = { counterpartyName: false };
 
 function subscribeRoomy(onChange: () => void): () => void {
   const query = window.matchMedia(ROOMY_SCREEN_QUERY);
