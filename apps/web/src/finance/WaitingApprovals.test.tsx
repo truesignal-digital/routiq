@@ -68,6 +68,7 @@ const approvalEntries = [
     postedAt: null,
     rowVersion: 1,
     submittedByPrincipalId: "00000000-0000-4000-8000-000000000030",
+    recordedBy: { principalId: "00000000-0000-4000-8000-000000000030", displayName: "Sali", scope: "WORKSPACE" },
     submittedAt: "2026-07-01T10:00:00.000Z",
   },
   {
@@ -88,6 +89,7 @@ const approvalEntries = [
     postedAt: null,
     rowVersion: 2,
     submittedByPrincipalId: "00000000-0000-4000-8000-000000000031",
+    recordedBy: { principalId: "00000000-0000-4000-8000-000000000031", displayName: "Hervé", scope: "WORKSPACE" },
     submittedAt: "2026-07-02T10:00:00.000Z",
   },
 ];
@@ -333,6 +335,9 @@ describe("finance approval command routing", () => {
     const submit = within(dialog).getByRole("button", { name: "Reject entry" });
     expect(within(submit.parentElement!).getAllByRole("button").map((button) => button.textContent))
       .toEqual(["Keep entry", "Reject entry"]);
+    // The queue row has no description: its category names the entry (#515).
+    const described = document.getElementById(dialog.getAttribute("aria-describedby") ?? "");
+    expect(described?.textContent).toMatch(/^FIN-001 · Fuel · .*Your reason is shown to Sali\./);
 
     await user.click(screen.getByRole("button", { name: "Keep entry" }));
 

@@ -5,6 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Locator, type Page } 
 import { resolveAccount, type DemoAccount } from "./accounts.js";
 import { startCast, type Cast } from "./cast.js";
 import type { DriveOptions, Lang } from "./args.js";
+import { run } from "./proc.js";
 import { REPO_ROOT } from "./slot.js";
 import { newRunDir, requireState, type SlotState } from "./stack.js";
 
@@ -34,14 +35,28 @@ export interface RunMetrics {
   apiRequests: number;
   consoleErrors: number;
   failedRequests: number;
+  /** Declared HTTP refusals, excluded from error metrics; absent in older runs. */
+  expectedRefusals?: number;
   /** Layout shifts without recent input since the last full page load. */
   layoutShifts: number;
   cumulativeLayoutShift: number;
   domNodes: number;
 }
 
+export interface ExpectedRefusal {
+  /** Integer HTTP status in the 400–499 range. */
+  status: number;
+  /** Pattern matched against the full response URL. */
+  url: RegExp;
+}
+
 /** What a drive script receives. Scripts live in tools/verify/flows/ or anywhere else. */
 export interface DriveContext {
+  /** Declare before the action: expectRefusal({ status: 409, url: /\/v1\/commands\/register-asset$/ }).
+   * Applies to subsequent responses in this drive. Counts refusals separately in the reel;
+   * only matching browser resource console errors are excluded. Raw evidence stays intact.
+   */
+  expectRefusal: (refusal: ExpectedRefusal) => void;
   page: Page;
   account: DemoAccount;
   lang: Lang;
@@ -76,6 +91,9 @@ export function classifyTarget(target: string, initCwd: string): { kind: "route"
 }
 
 interface Recorder {
+  expectedRefusals: number;
+  expectedConsoleErrors: number;
+  expectRefusal: DriveContext["expectRefusal"];
   consoleErrors: string[];
   failedRequests: string[];
   /** Requests the app cancelled itself (route change, query abort); counted, not reported as failures. */
@@ -93,10 +111,22 @@ function firstLines(text: string): string {
 }
 
 function record(page: Page): Recorder {
-  const rec: Recorder = { consoleErrors: [], failedRequests: [], aborted: 0, apiRequests: 0, inflight: 0, lastActivity: Date.now() };
+  const expected: ExpectedRefusal[] = [];
+  const matches = (status: number, url: string) => expected.some((refusal) => {
+    refusal.url.lastIndex = 0;
+    return refusal.status === status && refusal.url.test(url);
+  });
+  const expectRefusal: DriveContext["expectRefusal"] = ({ status, url }) => {
+    if (!Number.isInteger(status) || status < 400 || status >= 500) throw new Error("expected refusal status must be an integer from 400 to 499");
+    expected.push({ status, url: new RegExp(url.source, url.flags) });
+  };
+  const rec: Recorder = { expectedRefusals: 0, expectedConsoleErrors: 0, expectRefusal, consoleErrors: [], failedRequests: [], aborted: 0, apiRequests: 0, inflight: 0, lastActivity: Date.now() };
   const isApi = (url: string) => new URL(url).pathname.startsWith("/v1/");
   page.on("console", (msg) => {
-    if (msg.type() === "error") rec.consoleErrors.push(`[console.error] ${firstLines(msg.text())} (${page.url()})`);
+    if (msg.type() !== "error") return;
+    rec.consoleErrors.push(`[console.error] ${firstLines(msg.text())} (${page.url()})`);
+    const resourceStatus = /^Failed to load resource: the server responded with a status of (\d{3})\b/.exec(msg.text());
+    if (resourceStatus !== null && matches(Number(resourceStatus[1]), msg.location().url)) rec.expectedConsoleErrors += 1;
   });
   page.on("pageerror", (error) => rec.consoleErrors.push(`[pageerror] ${firstLines(error.stack ?? error.message)} (${page.url()})`));
   page.on("request", (req) => {
@@ -120,7 +150,10 @@ function record(page: Page): Recorder {
     else rec.failedRequests.push(`FAILED ${req.method()} ${req.url()} ${reason}`);
   });
   page.on("response", (res) => {
-    if (res.status() >= 400) rec.failedRequests.push(`${res.status()} ${res.request().method()} ${res.url()}`);
+    if (res.status() >= 400) {
+      rec.failedRequests.push(`${res.status()} ${res.request().method()} ${res.url()}`);
+      if (matches(res.status(), res.url())) rec.expectedRefusals += 1;
+    }
   });
   return rec;
 }
@@ -283,6 +316,9 @@ async function switchToEnglish(page: Page, rec: Recorder): Promise<void> {
 
 export async function drive(slot: number, targets: readonly string[], options: DriveOptions, command: "drive" | "login"): Promise<boolean> {
   const state = requireState(slot);
+  const head = run("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT }).stdout.trim();
+  const dirty = run("git", ["status", "--porcelain"], { cwd: REPO_ROOT }).stdout.trim() !== "";
+  const commit = `${head}${dirty ? "-dirty" : ""}`;
   const account = resolveAccount(options.role);
   const evidenceDir = newRunDir(command, slot);
   const initCwd = process.env["INIT_CWD"] ?? process.cwd();
@@ -410,11 +446,11 @@ export async function drive(slot: number, targets: readonly string[], options: D
             await shot(item.route === "/" ? "home" : item.route);
           });
         } else {
-          const mod = (await import(pathToFileURL(item.file).href)) as { default?: DriveScript };
-          const script = mod.default;
-          if (typeof script !== "function") throw new Error(`${item.file} has no default export function`);
-          await runStep(`script ${path.relative(REPO_ROOT, item.file)}`, () =>
-            script({
+          await runStep(`script ${path.relative(REPO_ROOT, item.file)}`, async () => {
+            const mod = (await import(pathToFileURL(item.file).href)) as { default?: DriveScript };
+            const script = mod.default;
+            if (typeof script !== "function") throw new Error(`${item.file} has no default export function`);
+            await script({
               page,
               account,
               lang: options.lang,
@@ -429,8 +465,9 @@ export async function drive(slot: number, targets: readonly string[], options: D
                 say(`  ${line}`);
               },
               apiGet,
-            }),
-          );
+              expectRefusal: rec.expectRefusal,
+            });
+          });
         }
       }
     } catch {
@@ -444,8 +481,9 @@ export async function drive(slot: number, targets: readonly string[], options: D
     const pageMetrics = await readPageMetrics(page).catch(() => ({ layoutShifts: 0, cumulativeLayoutShift: 0, domNodes: 0 }));
     const metrics: RunMetrics = {
       apiRequests: rec.apiRequests,
-      consoleErrors: rec.consoleErrors.length,
-      failedRequests: rec.failedRequests.length,
+      consoleErrors: rec.consoleErrors.length - rec.expectedConsoleErrors,
+      failedRequests: rec.failedRequests.length - rec.expectedRefusals,
+      expectedRefusals: rec.expectedRefusals,
       ...pageMetrics,
     };
 
@@ -455,7 +493,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
     writeFileSync(requestsFile, rec.failedRequests.join("\n") + (rec.failedRequests.length ? "\n" : ""));
     writeFileSync(
       path.join(evidenceDir, "summary.json"),
-      `${JSON.stringify({ slot, commit: state.commit, account: account.username, role: account.role, lang: options.lang, viewport: options.viewport, targets, ok, steps, frames, metrics, finalUrl: page.url(), consoleErrors: rec.consoleErrors.length, failedRequests: rec.failedRequests.length, abortedRequests: rec.aborted }, null, 2)}\n`,
+      `${JSON.stringify({ slot, commit, account: account.username, role: account.role, lang: options.lang, viewport: options.viewport, targets, ok, steps, frames, metrics, finalUrl: page.url(), consoleErrors: rec.consoleErrors.length, failedRequests: rec.failedRequests.length, abortedRequests: rec.aborted }, null, 2)}\n`,
     );
     say(`console errors: ${rec.consoleErrors.length} → ${consoleFile}`);
     say(`failed requests (status >= 400 or network): ${rec.failedRequests.length} → ${requestsFile}`);

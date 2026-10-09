@@ -81,6 +81,7 @@ const flow: DriveScript = async (ctx) => {
     caption: `Register a truck under VH003's plate ${VH003_PLATE}, typed lower case with dashes`,
     highlight: plateField(),
   });
+  ctx.expectRefusal({ status: 409, url: /\/v1\/commands\/register-asset$/ });
   await submit(ctx);
   await shot("duplicate-plate-refused", {
     caption: "The server refuses a plate another truck carries, and the form says so on the plate field",

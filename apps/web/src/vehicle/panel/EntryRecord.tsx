@@ -70,7 +70,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
       case "approve-entry":
         return <ApproveEntryForm {...common} />;
       case "reject-entry":
-        return <RejectEntryForm {...common} />;
+        return <RejectEntryForm {...common} entry={entry} />;
       case "reverse-entry":
         if (recordingAgain) {
           const onThisVehicle = entry.postings[0]?.assetId === asset.id;
