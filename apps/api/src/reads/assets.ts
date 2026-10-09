@@ -62,6 +62,7 @@ import {
   type KeysetColumn,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { readableTripSql } from "./trip-scope.js";
 import type { AuthContext } from "../auth/types.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
@@ -552,7 +553,8 @@ export function registerAssetReadRoutes(
             : undefined;
 
           const activityConditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
+            // The caller's trips: their branches, and a driver's own only.
+            readableTripSql(auth),
             // An asset can hold several segments on one activity (substitution,
             // trailer swap); EXISTS keeps the activity a single row.
             exists(
@@ -571,11 +573,6 @@ export function registerAssetReadRoutes(
                 ),
             ),
           ];
-          if (auth.branchScope !== "ALL") {
-            activityConditions.push(
-              inArray(activities.branchId, auth.branchScope),
-            );
-          }
 
           const activityRows = await tx
             .select({
