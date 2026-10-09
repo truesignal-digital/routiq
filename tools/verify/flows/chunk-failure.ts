@@ -73,13 +73,15 @@ const flow: DriveScript = async ({ page, shot, log, nav, t }) => {
   await shot("b-back-online", { caption: "Back online: Branches opens by itself, no reload" });
 
   // C: online, the screen's code fails on the tap; Try again.
-  await page.route("**/static/PersonsScreen-*.js", (route) => route.abort("failed"));
+  // Every attempt fails while the connection is bad, the app's retry under a new URL included.
+  const persons = /\/static\/PersonsScreen-[^/?]+\.js(\?.*)?$/;
+  await page.route(persons, (route) => route.abort("failed"));
   await coldHome();
   before = loads;
   await nav("/more/persons");
   const shownC = await screenError(page, t).waitFor({ timeout: 30_000 }).then(() => true, () => false);
   check(shownC && loads === before, `C: online, a failed fetch shows the error and no reload (full page loads: ${loads - before})`);
-  await page.unroute("**/static/PersonsScreen-*.js");
+  await page.unroute(persons);
   await page.getByRole("button", { name: t("Réessayer", "Try again"), exact: true }).click();
   const openedC = await heading(t("Personnel", "People")).waitFor({ timeout: 30_000 }).then(() => true, () => false);
   check(openedC && loads === before, "C: Try again opens People in-app");
@@ -88,7 +90,9 @@ const flow: DriveScript = async ({ page, shot, log, nav, t }) => {
   // D: a deploy replaced the files. The app's own check reads index.html (a fetch); the
   // browser's navigations keep the real one, so the reload lands on a working app.
   await page.evaluate(() => sessionStorage.removeItem("routiq-reloaded-for-entry"));
-  await page.route("**/static/UsersScreen-*.js", (route) => route.abort("failed"));
+  // The old file is gone from the server, under any query string too.
+  const removed = /\/static\/UsersScreen-[^/?]+\.js(\?.*)?$/;
+  await page.route(removed, (route) => route.fulfill({ status: 404, body: "" }));
   await page.route(home, async (route) => {
     if (route.request().resourceType() !== "fetch") return route.continue();
     const response = await route.fetch();
@@ -103,7 +107,7 @@ const flow: DriveScript = async ({ page, shot, log, nav, t }) => {
   const shownD = await screenError(page, t).waitFor({ timeout: 60_000 }).then(() => true, () => false);
   check(loads - before === 1, `D: exactly one reload after a deploy (full page loads: ${loads - before})`);
   check(shownD && (await shellHeader.isVisible()), "D: the file still missing after the reload, the error shows in place instead of a second reload");
-  await page.unroute("**/static/UsersScreen-*.js");
+  await page.unroute(removed);
   await page.unroute(home);
 
   if (failures.length > 0) throw new Error(`chunk failure checks failed:\n  ${failures.join("\n  ")}`);

@@ -28,7 +28,8 @@ if (!sessionStore.getActive()) {
 const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
   if (toLocation.pathname === "/login") return;
   stopWatching();
-  const busy = () => queryClient.isFetching() > 0 || router.state.status === "pending";
+  // Offline it waits too: a file fetched offline fails, and the page then keeps it failed.
+  const busy = () => !navigator.onLine || queryClient.isFetching() > 0 || router.state.status === "pending";
   window.setTimeout(() => void preloadScreens(busy), 250);
 });
 

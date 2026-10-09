@@ -48,6 +48,11 @@ function useScreenError({ error, reset }: ErrorComponentProps) {
     message: t(error instanceof ScreenLoadError ? "shell.screenLoadFailed" : "shell.screenFailed"),
     retryLabel: t("shell.retry"),
     onRetry: () => {
+      // This page can no longer load a file it already failed on; the server answered, so a new page can.
+      if (error instanceof ScreenLoadError && error.needsReload && navigator.onLine) {
+        window.location.reload();
+        return;
+      }
       retryFailedScreens();
       reset();
       void router.invalidate();
