@@ -181,7 +181,10 @@ export function newEntryRow(direction: SheetEntryDirection = "REVENUE"): EntryFo
   };
 }
 
-export function defaultSheetValues(template: SheetTemplate): SheetFormValues {
+export function defaultSheetValues(
+  template: SheetTemplate,
+  { revenue }: { revenue: boolean } = { revenue: true },
+): SheetFormValues {
   return {
     template,
     branchCode: "",
@@ -198,8 +201,9 @@ export function defaultSheetValues(template: SheetTemplate): SheetFormValues {
     crew: [newCrewRow("DRIVER")],
     legs: [newLegRow()],
     // A passenger run always took money; a haul is billed by the office, so it
-    // opens with no money line rather than an empty one to dismiss.
-    entries: template === "journey" ? [newEntryRow("REVENUE")] : [],
+    // opens with no money line rather than an empty one to dismiss. A driver
+    // records no revenue (#532), so their sheet opens with none either.
+    entries: template === "journey" && revenue ? [newEntryRow("REVENUE")] : [],
     seatsSold: "",
     seatsAvailable: "",
     cargoDescription: "",

@@ -31,7 +31,6 @@ import {
   postingPeriods,
   principals,
   workOrders,
-  workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { commandActors, eventPrincipalIds, lastEvents, toActor } from "./actors.js";
@@ -41,6 +40,7 @@ import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { workOrderActualCostSql } from "./work-order-cost.js";
+import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 import { directionDecidesEntries } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { directionNoteItems } from "./notes.js";
@@ -49,8 +49,6 @@ const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING:
 
 /** Descriptions travel as params, bounded so a long report cannot flood the list. */
 const clip = (text: string): string => (text.length > 140 ? `${text.slice(0, 139)}…` : text);
-
-const utcMidnight = (isoDate: string): string => `${isoDate}T00:00:00.000Z`;
 
 /** Whole days from `from` to `to`, both ISO dates. */
 function daysBetween(from: string, to: string): number {
@@ -360,14 +358,21 @@ async function documentItems(
   workspaceId: string,
   assetId: string,
   businessDate: string,
+  timezone: string,
 ): Promise<AssetAttentionItem[]> {
   const superseding = alias(documents, "superseding");
+  // The workspace's midnight, so the edge sits where the business date turns.
+  const dayStart = (date: SQL) => dayStartSql(date, timezone).mapWith(documents.createdAt);
   const rows = await tx
     .select({
       id: documents.id,
       documentNumber: documents.documentNumber,
       documentTypeCode: documents.documentTypeCode,
       expiresAt: documents.expiresAt,
+      expiredSince: dayStart(sql`${documents.expiresAt}`),
+      expiringSince: dayStart(
+        sql`${documents.expiresAt} - ${DOCUMENT_EXPIRING_WINDOW_DAYS}::int`,
+      ),
       labelFr: categories.labelFr,
       labelEn: categories.labelEn,
     })
@@ -402,7 +407,7 @@ async function documentItems(
       code: expired ? "DOCUMENT_EXPIRED" : "DOCUMENT_EXPIRING",
       severity: expired ? "CRITICAL" : "WARNING",
       subject: { entityType: "document", id: row.id, number: row.documentNumber, rowVersion: null },
-      since: utcMidnight(expired ? expiresAt : addDays(expiresAt, -DOCUMENT_EXPIRING_WINDOW_DAYS)),
+      since: (expired ? row.expiredSince : row.expiringSince).toISOString(),
       partOfGrounding: false,
       makerPrincipalIds: [],
       params: {
@@ -531,11 +536,8 @@ async function entryItems(
 }
 
 async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, modules: ReadonlySet<ModuleCode>) {
-  const [workspace] = await tx
-    .select({ timezone: workspaces.timezone })
-    .from(workspaces)
-    .where(eq(workspaces.id, auth.workspaceId));
-  const businessDate = currentBusinessDate(new Date(), workspace?.timezone ?? "Africa/Douala");
+  const timezone = await workspaceTimezone(tx, auth.workspaceId);
+  const businessDate = currentBusinessDate(new Date(), timezone);
 
   // Notes are CORE: whoever sees the vehicle sees Direction's notes on it (#98).
   const items: AssetAttentionItem[] = await directionNoteItems(tx, auth, assetId);
@@ -543,7 +545,7 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
     items.push(...(await maintenanceItems(tx, auth, assetId)).items);
   }
   if (modules.has("DOCUMENTS") && canReadDocuments(auth.role)) {
-    items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate)));
+    items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate, timezone)));
   }
   // Ledger facts only for the roles that read the books (DECISIONS 1).
   if (modules.has("FINANCE") && canReadLedger(auth.role)) {
