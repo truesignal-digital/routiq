@@ -73,14 +73,12 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       categoryCode: "CROSS_BRANCH",
     },
 
-    // Settings belong to Direction (ADR-0009). Modules are vendor-only
-    // (ADR-0005); DIRECTOR holds the toggles until they move to platform scope.
+    // Settings belong to Direction (ADR-0009). Modules and presets are
+    // platform-scope commands a vendor operator runs (ADR-0005), so no tenant
+    // role has a rule for them.
     ...wildcard(
       [
-        "enable-module",
-        "disable-module",
         "update-approval-threshold",
-        "set-template-preset",
         "create-category",
         "relabel-category",
         "deactivate-category",
@@ -130,6 +128,15 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
     ),
     // The workshop reads the odometer when a truck comes in.
     ...wildcard(["record-meter-reading"], ["TECHNICIAN"]),
+
+    // Planned trips (ADR-0012 §3, migration 0045): the office books, assigns,
+    // moves, edits and cancels with no approval; a driver may also start
+    // their own trip.
+    ...wildcard(
+      ["plan-trip", "assign-trip", "reschedule-trip", "update-planned-trip", "cancel-planned-trip"],
+      DIRECTOR_ADMIN,
+    ),
+    ...wildcard(["start-planned-trip"], ["DIRECTOR", "ADMIN", "DRIVER"]),
 
     ...wildcard(["report-issue"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
     // Whoever reports may mark a problem safety-critical later; the handler

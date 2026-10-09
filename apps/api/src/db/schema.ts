@@ -8,8 +8,10 @@ import {
   PROFITABILITY_LAYERS,
   ROLES,
   TEMPLATE_CODES,
+  TRIP_CANCELLATION_REASONS,
   type ActivityCompletenessCode,
   type CommandWarningCode,
+  type TripDiscrepancyCode,
 } from "@routiq/contracts";
 import { sql } from "drizzle-orm";
 import {
@@ -754,6 +756,11 @@ export const places = pgTable(
  * A haulage job, scheduled journey, charter, or plant hire. Closing warns rather
  * than blocks (§3.4 inv. 6): `completeness_codes` records what was missing, using
  * the same vocabulary the command returns as warnings.
+ *
+ * With Scheduling (ADR-0012) a trip may be booked first: PLANNED, with no actual
+ * start, then started into OPEN, or CANCELLED before it starts. The planned_*
+ * columns are the plan, never the facts; segments and crew rows are written
+ * only at start. CHECKs in migration 0045 tie each status to its dates.
  */
 export const activities = pgTable(
   "activities",
@@ -778,7 +785,7 @@ export const activities = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
-    status: text("status", { enum: ["OPEN", "CLOSED"] })
+    status: text("status", { enum: ["PLANNED", "OPEN", "CLOSED", "CANCELLED"] })
       .notNull()
       .default("OPEN"),
     /** NULL while OPEN; set once by close. */
@@ -802,6 +809,29 @@ export const activities = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     closedByCommandId: uuid("closed_by_command_id").references(() => commands.id),
+    /** The planned assignment (ADR-0012). Facts live in segments and crew rows. */
+    plannedAssetId: uuid("planned_asset_id").references(() => assets.id),
+    plannedDriverPersonId: uuid("planned_driver_person_id").references(() => persons.id),
+    /** The planned route; it pre-fills the first leg and is not a leg. */
+    plannedOriginPlaceId: uuid("planned_origin_place_id").references(() => places.id),
+    plannedOriginText: text("planned_origin_text"),
+    plannedDestinationPlaceId: uuid("planned_destination_place_id").references(() => places.id),
+    plannedDestinationText: text("planned_destination_text"),
+    /** Minor units of price_currency. A booking never posts; these pre-fill revenue. */
+    agreedPriceMinor: bigint("agreed_price_minor", { mode: "bigint" }),
+    amountToCollectMinor: bigint("amount_to_collect_minor", { mode: "bigint" }),
+    priceCurrency: char("price_currency", { length: 3 }).notNull().default("XAF"),
+    /** Kept if a late offline start revives the trip (ADR-0012 §5). */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByCommandId: uuid("cancelled_by_command_id").references(() => commands.id),
+    cancellationReason: text("cancellation_reason", { enum: TRIP_CANCELLATION_REASONS }),
+    cancellationNote: text("cancellation_note"),
+    /** Permanent facts written by start-planned-trip, like completeness_codes. */
+    discrepancyCodes: text("discrepancy_codes")
+      .array()
+      .$type<TripDiscrepancyCode[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     rowVersion: integer("row_version").notNull().default(1),
     createdByCommandId: uuid("created_by_command_id")
       .notNull()
@@ -812,6 +842,11 @@ export const activities = pgTable(
     uniqueIndex("activities_ws_number_uq").on(t.workspaceId, t.activityNumber),
     index("activities_ws_branch_started_idx").on(t.workspaceId, t.branchId, t.startedAt),
     index("activities_ws_status_idx").on(t.workspaceId, t.status),
+    index("activities_ws_branch_planned_idx")
+      .on(t.workspaceId, t.branchId, t.plannedStartAt)
+      .where(sql`${t.status} IN ('PLANNED', 'OPEN')`),
+    index("activities_ws_planned_asset_idx").on(t.workspaceId, t.plannedAssetId),
+    index("activities_ws_planned_driver_idx").on(t.workspaceId, t.plannedDriverPersonId),
   ],
 );
 

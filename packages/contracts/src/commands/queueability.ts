@@ -38,6 +38,14 @@ export const COMMAND_QUEUEABILITY = {
    * attaching it changes nothing the entry says, so a late replay is harmless.
    */
   "attach-evidence": true,
+  /*
+   * Planned trips (ADR-0012 §5). A booking creates a new record with client
+   * ids nobody else can have touched, like create-work-order; collisions come
+   * back as warnings. A start is the truck leaving, which the server does not
+   * get to reject.
+   */
+  "plan-trip": true,
+  "start-planned-trip": true,
 
   /*
    * Decisions — never queued.
@@ -56,14 +64,11 @@ export const COMMAND_QUEUEABILITY = {
   "reverse-entry": false,
   "lock-period": false,
   "reopen-period": false,
-  "enable-module": false,
-  "disable-module": false,
   "update-approval-threshold": false,
   "create-category": false,
   "relabel-category": false,
   "deactivate-category": false,
   "reactivate-category": false,
-  "set-template-preset": false,
   "create-branch": false,
   /*
    * Branch administration is a decision about where the workspace operates, and
@@ -97,6 +102,15 @@ export const COMMAND_QUEUEABILITY = {
    * current values.
    */
   "update-asset-details": false,
+  /*
+   * Edits of a planned trip against the version on screen, for the same
+   * reason: a late replay would overwrite someone else's change or fail on the
+   * version. Cancelling is a decision, like cancel-work-order (ADR-0012 §5).
+   */
+  "assign-trip": false,
+  "reschedule-trip": false,
+  "update-planned-trip": false,
+  "cancel-planned-trip": false,
 
   /*
    * The two work-order decisions. A creation or a completion is a fact the

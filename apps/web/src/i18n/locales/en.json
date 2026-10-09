@@ -197,6 +197,7 @@
     "ISSUE_SEVERITY_ALREADY_SET": "This problem is already marked that way. Refresh the page.",
     "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
+    "DRIVER_INELIGIBLE": "This person cannot drive this activity: they are no longer active, or their usual job is not driver.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
@@ -721,7 +722,12 @@
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
     "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open."
+    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open.",
+    "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another activity at the same time.",
+    "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another activity at the same time.",
+    "VEHICLE_GROUNDED": "This vehicle is grounded right now. It must be released to service before it leaves.",
+    "TRIP_STARTED_OFF_PLAN": "Started with a vehicle or driver other than the one planned.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "This activity had been cancelled, but it was started offline. It is running again."
   },
   "activities": {
     "title": "Activities",
@@ -1696,7 +1702,8 @@
         "DOCUMENTS": "Documents",
         "FINANCE": "Finance",
         "ACTIVITIES": "Activities",
-        "MAINTENANCE": "Maintenance"
+        "MAINTENANCE": "Maintenance",
+        "SCHEDULING": "Scheduling"
       },
       "categoryKind": {
         "ASSET_CLASS": "Asset class",
@@ -1789,6 +1796,37 @@
       "label": "Create an activity",
       "submit": "Create activity",
       "submitting": "Creating…"
+    },
+    "plan-trip": {
+      "label": "Plan an activity",
+      "submit": "Plan activity",
+      "submitting": "Planning…"
+    },
+    "assign-trip": {
+      "label": "Assign vehicle and driver",
+      "submit": "Save assignment",
+      "submitting": "Saving…"
+    },
+    "reschedule-trip": {
+      "label": "Change the date",
+      "submit": "Save new date",
+      "submitting": "Saving…"
+    },
+    "update-planned-trip": {
+      "label": "Edit the booking",
+      "submit": "Save changes",
+      "submitting": "Saving…"
+    },
+    "cancel-planned-trip": {
+      "label": "Cancel the activity",
+      "submit": "Cancel activity",
+      "submitting": "Cancelling…",
+      "dismiss": "Keep activity"
+    },
+    "start-planned-trip": {
+      "label": "Start the activity",
+      "submit": "Start activity",
+      "submitting": "Starting…"
     },
     "record-movement-leg": {
       "label": "Add a leg",
@@ -1918,16 +1956,6 @@
       "submit": "Reopen period",
       "submitting": "Reopening…"
     },
-    "enable-module": {
-      "label": "Enable module",
-      "submit": "Enable module",
-      "submitting": "Enabling…"
-    },
-    "disable-module": {
-      "label": "Disable module",
-      "submit": "Disable module",
-      "submitting": "Disabling…"
-    },
     "update-approval-threshold": {
       "label": "Change approval thresholds",
       "submit": "Save thresholds",
@@ -1952,11 +1980,6 @@
       "label": "Reactivate category",
       "submit": "Reactivate category",
       "submitting": "Reactivating…"
-    },
-    "set-template-preset": {
-      "label": "Choose templates",
-      "submit": "Save templates",
-      "submitting": "Saving…"
     },
     "create-branch": {
       "label": "Create a branch",
