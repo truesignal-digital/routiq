@@ -71,6 +71,11 @@
       <h2>Stock and purchasing</h2>
       <p class="lede">The two Loom videos are tutorials for <b>the reference app</b>, a separate business-management app, recorded in April 2025. Video 2's description says "replicate this process for our upcoming project". That process is purchasing and stock: buy parts with a purchase order, approve it, receive the goods into a store, pay, then track stock per store, move it between stores, and adjust it. ROUTIQ already plans a Stock module for workshop parts (#27, with decisions recorded). This page maps the reference flow onto it and draws the screens in ROUTIQ's consistency system.</p>
     </header>
+    <div class="spec-card" style="margin:0 0 24px"><h4>Decided 2026-10-08</h4><ul>
+      <li><b>Pilot scope: receipts only.</b> No purchase orders yet. The supplier invoice is an expense in Money and goes through the existing approval chain; a purchase order would approve the same money twice. The purchase order screens below are kept for later, when a company wants approval before ordering.</li>
+      <li><b>Approvals: no new rule.</b> Supplier invoices use the approval thresholds in Company settings. Adjustments are approved by someone other than the counter (#27).</li>
+      <li><b>Fuel is not stock for the pilot.</b> Fuel bought at a station stays an expense on the truck. A company with its own tank gets the tank as a magasin holding litres, in a later slice.</li>
+    </ul></div>
 
     <section class="section" id="videos">
       <div class="kicker">Source</div>
@@ -310,14 +315,14 @@
         <div class="spec-card"><h4>Scope</h4><ol class="q-list">
           <li>Both videos are tutorials for another business app. Is "the upcoming project" ROUTIQ's parts and stock module, or a different product?</li>
           <li>Is video 1 (customers) part of the ask? If yes: haulage customers and what they owe?</li>
-          <li>Purchase orders were not in the #27 plan (receipts only). Do you want approval before spending (PO), or is recording receipts enough for the pilot?</li>
+          <li>Purchase orders were not in the #27 plan (receipts only). Do you want approval before spending (PO), or is recording receipts enough for the pilot? <b>Decided: receipts only for the pilot.</b></li>
         </ol></div>
         <div class="spec-card"><h4>Rules</h4><ol class="q-list" start="4">
-          <li>Who may approve a PO, and from what amount? (Reuses the approval bands.)</li>
+          <li>Who may approve a PO, and from what amount? (Reuses the approval bands.) <b>Decided: no PO yet; supplier invoices use the existing thresholds.</b></li>
           <li>Partial receipts and partial invoices: needed from day one?</li>
           <li>Transfers between branches: does the destination confirm receipt (in-transit stock)?</li>
           <li>Minimum stock per article: per magasin or one number per article?</li>
-          <li>Should fuel be an article (bulk diesel in a tank) or stay as fuel expenses?</li>
+          <li>Should fuel be an article (bulk diesel in a tank) or stay as fuel expenses? <b>Decided: fuel expenses; a tank becomes a magasin later, only for a company that owns one.</b></li>
         </ol></div>
       </div>
     </section>
