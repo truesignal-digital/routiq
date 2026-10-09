@@ -6,6 +6,7 @@ import {
   formatDayLong,
   localDayKey,
   localizedLabel,
+  notRecorded,
 } from "./format.js";
 import { i18n } from "../i18n/index.js";
 
@@ -259,6 +260,20 @@ describe("format", () => {
     it("uses i18n.resolvedLanguage when language not specified", () => {
       const result = localizedLabel({ labelFr: "FR", labelEn: "EN" });
       expect(result).toBeTruthy();
+    });
+  });
+
+  describe("notRecorded", () => {
+    it("says a missing value in words in fr and en, never a dash", () => {
+      expect(notRecorded("fr-CM")).toBe("Non renseigné");
+      expect(notRecorded("en")).toBe("Not recorded");
+    });
+
+    it("follows the app language when no locale is given", async () => {
+      await i18n.changeLanguage("en");
+      expect(notRecorded()).toBe("Not recorded");
+      await i18n.changeLanguage("fr-CM");
+      expect(notRecorded()).toBe("Non renseigné");
     });
   });
 });

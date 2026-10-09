@@ -144,6 +144,18 @@ describe("activity assets panel", () => {
     expect(screen.getByText(/999,999/)).toBeTruthy();
   });
 
+  it("ends an open segment with the timeline's ellipsis, not as unrecorded", () => {
+    const [segment] = panel().segments;
+    render(
+      <ActivityAssetsPanel
+        activity={panel({ segments: [{ ...segment!, endedAt: null }] })}
+      />,
+    );
+
+    expect(screen.getByText(/→ …$/)).toBeTruthy();
+    expect(screen.queryByText(/Not recorded/)).toBeNull();
+  });
+
   it("survives an activity that has readings but no asset row", () => {
     render(<ActivityAssetsPanel activity={panel({ segments: [], crew: [] })} />);
 

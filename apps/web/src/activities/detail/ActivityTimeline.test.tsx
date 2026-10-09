@@ -72,12 +72,12 @@ describe("activity timeline", () => {
     expect(screen.getByText("Actual")).toBeTruthy();
   });
 
-  it("dashes a running activity's end instead of inventing one (#94)", () => {
+  it("leaves a running activity's end open instead of inventing one (#94)", () => {
     render(
       <ActivityTimeline activity={timeline({ status: "OPEN", endedAt: null })} />,
     );
 
-    expect(screen.getByText(/→ —$/)).toBeTruthy();
+    expect(screen.getByText(/→ …$/)).toBeTruthy();
     expect(screen.queryByText(/still running/)).toBeNull();
   });
 

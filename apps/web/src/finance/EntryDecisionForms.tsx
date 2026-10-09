@@ -6,6 +6,7 @@ import {
   CANCELLATION_REASON_CODES,
   type approveEntryPayload,
   type CancellationReasonCode,
+  type FinancialEntryListItem,
   type rejectEntryPayload,
   type ReverseEntryPayload,
 } from "@routiq/contracts";
@@ -24,6 +25,8 @@ import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { useCommandLabel } from "../commands/labels.js";
+import { RecordText } from "@/components/record-number.js";
+import { formatMoney, localizedLabel } from "../lib/format.js";
 import { notifyCommandError, notifyCommandSuccess } from "../lib/notify.js";
 import { cancellationPayload, validateRejectionReason } from "./model.js";
 
@@ -206,7 +209,33 @@ export function EntryDecisionButtons({
   );
 }
 
-export function RejectEntryForm(host: EntryDecisionHost) {
+/** What the reject dialog names: the entry as the approver saw it in the queue or on its record. */
+export type RejectableEntry = EntryRef &
+  Pick<FinancialEntryListItem, "entryNumber" | "category" | "amountMinor" | "currency" | "recordedBy"> & {
+    /** The detail's own words; the queue row has none, so its category stands in. */
+    description?: string | null | undefined;
+  };
+
+/**
+ * Names the entry and what a rejection does (#515): who will read the reason,
+ * and that the entry stays in the history without ever counting.
+ */
+function RejectDescription({ entry }: { entry: RejectableEntry }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const recorder = entry.recordedBy.displayName;
+  const text = t("finance.approvals.rejectDescription", {
+    number: entry.entryNumber,
+    what: entry.description?.trim() || localizedLabel(entry.category, locale),
+    amount: formatMoney(entry.amountMinor, { currency: entry.currency, locale, sign: { context: "record" } }),
+    named: recorder === null ? "no" : "yes",
+    recorder: recorder ?? "",
+  });
+  return <RecordText text={text} numbers={[entry.entryNumber]} />;
+}
+
+export function RejectEntryForm({ entry, ...rest }: EntryDecisionHost & { entry: RejectableEntry }) {
+  const host = { ...rest, entry };
   const { t } = useTranslation();
   const label = useCommandLabel();
   const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
@@ -242,6 +271,7 @@ export function RejectEntryForm(host: EntryDecisionHost) {
     <CommandForm
       {...chrome}
       title={label("reject-entry")}
+      description={<RejectDescription entry={entry} />}
       error={submission.error}
       command="reject-entry"
       tone="destructive"

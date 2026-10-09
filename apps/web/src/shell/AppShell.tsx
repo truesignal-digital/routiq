@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Outlet } from "@tanstack/react-router";
+import { PageNoticeProvider } from "@/components/page-container";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toast.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -54,9 +55,11 @@ export function AppShell() {
               <RecordCrumbProvider>
                 <SiteHeader />
                 <BranchScopeAnnouncer />
-                <ApprovalRulesNotice />
                 <div className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
-                  <Outlet />
+                  {/* Rendered by each page's container, in the page's column (#467). */}
+                  <PageNoticeProvider notice={<ApprovalRulesNotice />}>
+                    <Outlet />
+                  </PageNoticeProvider>
                 </div>
                 <BottomBar />
               </RecordCrumbProvider>

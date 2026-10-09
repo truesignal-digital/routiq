@@ -30,6 +30,7 @@ import {
 } from "@/members/MemberActionDialog.js";
 import { canAdministerMembers, type MemberActor } from "@/members/permissions.js";
 import { useMembers } from "@/members/useMembers.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
 const DEACTIVATED_FILTER_ID = "includeDeactivated";
@@ -122,7 +123,7 @@ export function UsersScreen() {
         meta: { phone: "meta", label: t("users.columns.username") },
         cell: ({ row }) => (
           <span className="tabular-nums whitespace-nowrap">
-            {row.original.username ?? "—"}
+            {row.original.username ?? <NotRecorded />}
           </span>
         ),
       },
