@@ -303,7 +303,7 @@ describe("finance record form", () => {
         title: "Entry sent for approval",
         description:
           "Missing evidence: this category requires supporting documentation or a photo.\n" +
-          "This entry was posted to a previous accounting period.",
+          "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
       }),
     );
   });

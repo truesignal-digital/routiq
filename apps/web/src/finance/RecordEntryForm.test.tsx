@@ -302,7 +302,11 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
       },
     });
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
-    expect(screen.getByText("Above FCFA 150,000, this entry waits for Finance.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+      ),
+    ).toBeTruthy();
 
     inPanel(
       <RecordEntryForm
@@ -313,7 +317,30 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
         onRecorded={vi.fn()}
       />,
     );
-    expect(screen.getByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("follows the typed amount to the band that decides it (#534)", async () => {
+    mocks.useApprovalChain.mockReturnValue({
+      data: { currency: "XAF", chains: [{ commandType: "record-expense", steps: steps(100_000) }], notice: null },
+    });
+    inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
+    const amount = screen.getByLabelText("Amount (FCFA)");
+
+    await userEvent.type(amount, "1500000");
+    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for Direction.")).toBeTruthy();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "250000");
+    expect(await screen.findByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "40000");
+    expect(await screen.findByText("At this amount, the entry posts directly.")).toBeTruthy();
   });
 
   it("tells Direction its entries post at any amount", () => {
@@ -335,7 +362,41 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
 });
 
 describe("entry decisions on a record panel", () => {
-  const entry = { id: ENTRY_ID, rowVersion: 3 };
+  const entry = {
+    id: ENTRY_ID,
+    rowVersion: 3,
+    entryNumber: "DLA-2026-00014",
+    description: "Brake pads",
+    category: { code: "MAINTENANCE", labelFr: "Entretien", labelEn: "Maintenance", layer: null },
+    amountMinor: 180_000,
+    currency: "XAF",
+    recordedBy: { principalId: "00000000-0000-4000-8000-000000000070", displayName: "Hervé", scope: "WORKSPACE" as const },
+  };
+
+  it("names the entry it rejects and says what happens next (#515)", () => {
+    const description = () => {
+      const id = screen.getByRole("dialog").getAttribute("aria-describedby") ?? "";
+      const node = document.getElementById(id);
+      return {
+        // Money keeps its no-break space; compare words, not space characters.
+        text: node?.textContent?.replace(/\s/g, " "),
+        unbroken: node?.querySelector("[data-record-number]")?.textContent,
+      };
+    };
+    inPanel(<RejectEntryForm surface="panel" entry={entry} client={recordingClient(posted)} onDismiss={vi.fn()} />);
+    expect(description()).toEqual({
+      text: "DLA-2026-00014 · Brake pads · FCFA 180,000. Your reason is shown to Hervé. The entry stays in the history as rejected and never counts in the books.",
+      unbroken: "DLA-2026-00014",
+    });
+    cleanup();
+
+    // Without a description it names the category, and nobody it cannot name.
+    const bare = { ...entry, description: null, recordedBy: { ...entry.recordedBy, displayName: null } };
+    inPanel(<RejectEntryForm surface="panel" entry={bare} client={recordingClient(posted)} onDismiss={vi.fn()} />);
+    expect(description().text).toBe(
+      "DLA-2026-00014 · Maintenance · FCFA 180,000. Your reason is shown to whoever recorded it. The entry stays in the history as rejected and never counts in the books.",
+    );
+  });
 
   it("approves at the version the approver was shown", async () => {
     const client = recordingClient(posted);
