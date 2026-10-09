@@ -2,8 +2,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { router } from "./router.js";
+import { preloadAfterSignIn, preloadScreens, router } from "./router.js";
 import { sessionStore } from "./auth/store.js";
+import { retryFailedScreens } from "./shell/lazy-screen.js";
 import { reportError, startTelemetry } from "./telemetry/index.js";
 import { initTheme } from "./lib/theme.js";
 import "./i18n/index.js";
@@ -16,6 +17,27 @@ initTheme();
 const queryClient = new QueryClient();
 
 startTelemetry({ getToken: () => sessionStore.getToken(), queryClient, router });
+
+if (!sessionStore.getActive()) {
+  // After the login screen has loaded, so its own download comes first.
+  window.addEventListener("load", () => setTimeout(preloadAfterSignIn, 0), { once: true });
+}
+
+// After the first signed-in screen has rendered and its data has arrived, so
+// other screens' code never competes with it for a slow connection.
+const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
+  if (toLocation.pathname === "/login") return;
+  stopWatching();
+  // Offline it waits too: a file fetched offline fails, and the page then keeps it failed.
+  const busy = () => !navigator.onLine || queryClient.isFetching() > 0 || router.state.status === "pending";
+  window.setTimeout(() => void preloadScreens(busy), 250);
+});
+
+// A screen that could not open while offline opens by itself once the
+// connection is back.
+window.addEventListener("online", () => {
+  if (retryFailedScreens()) void router.invalidate();
+});
 
 const root = document.getElementById("root");
 if (!root) throw new Error("missing #root element");
