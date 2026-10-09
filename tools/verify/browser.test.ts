@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { drive } from "./browser.js";
 
 const harness = vi.hoisted(() => ({ dir: "", commit: "slot-start", url: "http://localhost/", dirty: false,
-  emit: (_event: string, ..._args: unknown[]) => false, events: () => {},
+  emit: (_event: string, ..._args: unknown[]): boolean => false, events: () => {},
 }));
 vi.mock("./stack.js", () => ({
   requireState: () => ({ commit: harness.commit, urls: { web: "http://localhost", api: "http://localhost" } }),
