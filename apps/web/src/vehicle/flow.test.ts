@@ -271,6 +271,43 @@ describe("the step beside the status sentence", () => {
     expect(token(groundingStep(vehicle, viewer("CASHIER")).step)).toBe("none");
   });
 
+  describe("another safety-critical problem still open (#501, server SAFETY_ISSUE_OPEN)", () => {
+    const steering = { id: OTHER_ID, description: "Steering locks on the left" };
+    const completed = () => groundingWorkOrder("COMPLETED");
+
+    it("locks the release beside the status sentence, naming the other problem", () => {
+      const vehicle = asset({ availability: grounded([completed()], {}, [steering]) });
+      const { step } = groundingStep(vehicle, viewer("ADMIN"));
+      expect(token(step)).toBe("locked:release:otherSafetyIssueOpen");
+      expect(step.kind === "locked" && step.lock.params).toEqual({
+        count: 1,
+        description: steering.description,
+      });
+    });
+
+    it("locks it on the work order, in the actions sheet's blocker and on the override path", () => {
+      const wo = completed();
+      const facts = groundingFacts(asset({ availability: grounded([wo], {}, [steering]) }));
+      expect(token(workOrderSteps(wo, viewer("ADMIN"), facts).primary)).toBe(
+        "locked:release:otherSafetyIssueOpen",
+      );
+      expect(releaseBlocker(facts)?.key).toBe("otherSafetyIssueOpen");
+
+      const closed = asset({
+        availability: grounded([], { status: "RESOLVED", closedBy: actor(OTHER_ID) }, [steering]),
+      });
+      const issue = { id: ISSUE_ID, status: "RESOLVED" as const, safetyCritical: true, planned: false };
+      expect(token(issueSteps(issue, viewer("ADMIN"), groundingFacts(closed)).primary)).toBe(
+        "locked:release:otherSafetyIssueOpen",
+      );
+    });
+
+    it("still names an unfinished repair first, as the server checks it first", () => {
+      const vehicle = asset({ availability: grounded([groundingWorkOrder("APPROVED")], {}, [steering]) });
+      expect(token(groundingStep(vehicle, viewer("ADMIN")).step)).toBe("locked:release:needsCompletion");
+    });
+  });
+
   it("names what a release still needs", () => {
     expect(releaseBlocker(undefined)?.key).toBe("notGrounded");
     const at = (status: WorkOrderStatus) =>

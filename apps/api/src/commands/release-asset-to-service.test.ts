@@ -526,9 +526,28 @@ describe("release-asset-to-service.v1", () => {
    * back on the road.
    */
   describe("every other safety-critical signalement closed first", () => {
+    /**
+     * What the asset read tells the client to lock its Release step on (#501).
+     * Each case below checks it against the command's answer, so the lock and
+     * the refusal cannot drift apart.
+     */
+    async function releaseLockedBy(assetId: string): Promise<unknown> {
+      const detail = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/assets/${assetId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      const availability = detail.json().availability;
+      expect(availability.state).toBe("GROUNDED");
+      return availability.otherOpenSafetyIssues;
+    }
+
     it("keeps the truck grounded until the second signalement is closed", async () => {
       const { assetId, workOrderId } = await groundedAsset();
       const steering = await reportIssue(assetId, true, "Direction bloquée");
+      expect(await releaseLockedBy(assetId)).toEqual([
+        { id: steering, description: "Direction bloquée" },
+      ]);
 
       const refused = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
       expect(refused.statusCode).toBe(409);
@@ -547,6 +566,7 @@ describe("release-asset-to-service.v1", () => {
         (await post(mechanicToken, "resolve-issue", { issueId: steering }, { expectedVersion: 1 }))
           .statusCode,
       ).toBe(200);
+      expect(await releaseLockedBy(assetId)).toEqual([]);
       const released = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
       expect(released.statusCode).toBe(200);
       expect(await openIntervals(assetId)).toHaveLength(0);
@@ -559,6 +579,9 @@ describe("release-asset-to-service.v1", () => {
       await post(mechanicToken, "dismiss-issue", { issueId: brakes, reason: "Fausse alerte" }, {
         expectedVersion: 1,
       });
+      expect(await releaseLockedBy(assetId)).toEqual([
+        { id: steering, description: "Direction bloquée" },
+      ]);
 
       const refused = await post(adminToken, "release-asset-to-service", {
         assetId,
@@ -574,6 +597,7 @@ describe("release-asset-to-service.v1", () => {
     it("lets a minor fault left open ride along", async () => {
       const { assetId, workOrderId } = await groundedAsset();
       await reportIssue(assetId, false, "Rétroviseur fissuré");
+      expect(await releaseLockedBy(assetId)).toEqual([]);
       const response = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ warnings: [] });

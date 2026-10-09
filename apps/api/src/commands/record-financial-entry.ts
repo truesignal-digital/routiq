@@ -57,8 +57,8 @@ export function requireWorkOrderAttribution(
 }
 
 /**
- * A write under record-expense's or record-revenue's rules passes that
- * command's role gate too, read from its registration so the roles live in one
+ * A write under record-expense's or record-revenue's rules (a pending-entry
+ * edit, each money line of a sheet) passes that command's role gate too, read from its registration so the roles live in one
  * place: a driver records expenses, never revenue (#532), and so may not edit
  * a pending revenue entry either (#572).
  */
