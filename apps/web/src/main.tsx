@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { preloadAfterSignIn, preloadScreens, router } from "./router.js";
 import { sessionStore } from "./auth/store.js";
+import { retryFailedScreens } from "./shell/lazy-screen.js";
 import { reportError, startTelemetry } from "./telemetry/index.js";
 import { initTheme } from "./lib/theme.js";
 import "./i18n/index.js";
@@ -29,6 +30,12 @@ const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
   stopWatching();
   const busy = () => queryClient.isFetching() > 0 || router.state.status === "pending";
   window.setTimeout(() => void preloadScreens(busy), 250);
+});
+
+// A screen that could not open while offline opens by itself once the
+// connection is back.
+window.addEventListener("online", () => {
+  if (retryFailedScreens()) void router.invalidate();
 });
 
 const root = document.getElementById("root");

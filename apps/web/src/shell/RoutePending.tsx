@@ -1,6 +1,8 @@
+import { useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { LoadingState } from "@/components/page";
+import { ErrorState, LoadingState } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { retryFailedScreens, ScreenLoadError } from "./lazy-screen.js";
 
 /**
  * Shown only when a screen's code takes longer than the router's pending delay
@@ -32,4 +34,36 @@ export function ScreenPending() {
 export function SectionPending() {
   const { t } = useTranslation();
   return <LoadingState label={t("shell.pageLoading")} />;
+}
+
+/**
+ * A screen that could not open: its code did not arrive (offline, a dropped
+ * connection) or it failed while drawing. Shown in the screen's own slot, so
+ * the shell stays usable; Retry fetches the code again.
+ */
+function useScreenError({ error, reset }: ErrorComponentProps) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  return {
+    message: t(error instanceof ScreenLoadError ? "shell.screenLoadFailed" : "shell.screenFailed"),
+    retryLabel: t("shell.retry"),
+    onRetry: () => {
+      retryFailedScreens();
+      reset();
+      void router.invalidate();
+    },
+  };
+}
+
+export function ScreenError(props: ErrorComponentProps) {
+  return (
+    <PageContainer width="wide">
+      <ErrorState {...useScreenError(props)} />
+    </PageContainer>
+  );
+}
+
+/** The same, inside the truck workspace's own page frame. */
+export function SectionError(props: ErrorComponentProps) {
+  return <ErrorState {...useScreenError(props)} />;
 }

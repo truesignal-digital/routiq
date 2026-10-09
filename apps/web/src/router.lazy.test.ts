@@ -31,7 +31,7 @@ describe("routes load on demand", () => {
   it("holds the background fetch while the app is loading something of its own", async () => {
     vi.useFakeTimers();
     try {
-      const spies = SCREENS_BY_USE.map((screen) => vi.spyOn(screen, "preload").mockResolvedValue(undefined));
+      const spies = [...AFTER_SIGN_IN, ...SCREENS_BY_USE].map((screen) => vi.spyOn(screen, "preload").mockResolvedValue(undefined));
       let busy = true;
       const done = preloadScreens(() => busy);
       await vi.advanceTimersByTimeAsync(1_000);
