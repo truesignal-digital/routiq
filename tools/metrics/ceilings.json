@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 683186,
+    "ceiling": 683318,
     "raises": [
       {
         "date": "2026-10-06",
@@ -179,8 +179,8 @@
       {
         "date": "2026-10-09",
         "from": 682663,
-        "to": 683186,
-        "reason": "Issue 559: the work-order hand-off in Cancel entry (fr and en copy, the role check and its three hosts)"
+        "to": 683318,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
       }
     ]
   },
@@ -238,7 +238,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 257927,
+    "ceiling": 257853,
     "raises": [
       {
         "date": "2026-10-06",
@@ -411,8 +411,8 @@
       {
         "date": "2026-10-09",
         "from": 257700,
-        "to": 257927,
-        "reason": "Issue 559: Cancel entry hands a work-order cost Finance may not book to the work order; its fr and en sentences ship in the initial locale bundle"
+        "to": 257853,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
       }
     ]
   }
