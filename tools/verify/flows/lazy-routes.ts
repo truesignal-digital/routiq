@@ -6,9 +6,9 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * place the role has, then a truck and each of its sections, and fails when a
  * screen's code request fails, when a page never shows its title, or when the
  * shell (header, sidebar, phone bottom bar) moves or shifts while a screen's
- * code arrives. Logs which code files the sign-in page loaded and how many
- * arrived after it. Best with --throttle phone, so code is still arriving
- * while the run moves around.
+ * code arrives. It starts with a cold load of Home and moves on at once, so it
+ * walks ahead of the background fetch; it logs how many code files that load
+ * brought and how many arrived during the walk. Best with --throttle phone.
  * Run: pnpm verify drive flow:lazy-routes --role director --lang en --throttle phone
  */
 
@@ -32,25 +32,39 @@ function shellBoxes(page: Page): Promise<ShellBox[]> {
   );
 }
 
-/** Layout shifts whose moved nodes sit in the shell, since the observer started. */
+interface ShellShift { frame: boolean; text: string }
+
+/**
+ * Layout shifts whose moved nodes sit in the shell, since the observer started.
+ * `frame` is the header, sidebar or bottom bar itself moving; anything else is
+ * content inside it changing, such as a record's crumb filling in.
+ */
 function watchShellShifts(page: Page): Promise<void> {
   return page.evaluate(() => {
-    const store = window as unknown as { __shellShifts?: string[] };
+    const store = window as unknown as { __shellShifts?: Array<{ frame: boolean; text: string }> };
     store.__shellShifts = [];
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as unknown as Array<{ value: number; sources?: Array<{ node?: Node | null }> }>) {
+      type Rect = { x: number; y: number; width: number; height: number };
+      type Source = { node?: Node | null; previousRect: Rect; currentRect: Rect };
+      for (const entry of list.getEntries() as unknown as Array<{ value: number; sources?: Source[] }>) {
         for (const source of entry.sources ?? []) {
           const node = source.node;
           const el = node instanceof Element ? node : node?.parentElement;
           const shell = el?.closest("[data-slot='sidebar-inset'] > header, [data-slot='sidebar-container'], [data-slot='bottom-bar']");
-          if (shell) store.__shellShifts?.push(`${shell.tagName.toLowerCase()} ${entry.value.toFixed(4)}`);
+          if (!shell || !el) continue;
+          const what = `${el.tagName.toLowerCase()}${el.getAttribute("data-slot") ? `[${el.getAttribute("data-slot")}]` : ""} "${(el.textContent ?? "").trim().slice(0, 30)}"`;
+          const from = source.previousRect;
+          const to = source.currentRect;
+          const text = `${what} ${entry.value.toFixed(4)} at ${location.pathname}: ${Math.round(from.x)},${Math.round(from.y)} ${Math.round(from.width)}x${Math.round(from.height)} → ${Math.round(to.x)},${Math.round(to.y)} ${Math.round(to.width)}x${Math.round(to.height)}`;
+          store.__shellShifts?.push({ frame: el === shell, text });
         }
       }
     }).observe({ type: "layout-shift" });
   });
 }
 
-const readShellShifts = (page: Page) => page.evaluate(() => (window as unknown as { __shellShifts?: string[] }).__shellShifts ?? []);
+const readShellShifts = (page: Page): Promise<ShellShift[]> =>
+  page.evaluate(() => (window as unknown as { __shellShifts?: Array<{ frame: boolean; text: string }> }).__shellShifts ?? []);
 
 const codeFiles = (page: Page) =>
   page.evaluate(() =>
@@ -59,6 +73,13 @@ const codeFiles = (page: Page) =>
       .filter((entry) => /\/static\/.+\.js$/.test(new URL(entry.name).pathname))
       .map((entry) => new URL(entry.name).pathname.replace("/static/", "")),
   );
+
+/** On a phone the sidebar is a sheet: close it and wait until it has gone, or the next open finds it mid-close. */
+async function closeSheet(page: Page): Promise<void> {
+  const nav = page.getByRole("navigation", { name: "Navigation" });
+  if (await nav.isVisible().catch(() => false)) await page.keyboard.press("Escape");
+  await nav.waitFor({ state: "hidden", timeout: 10_000 });
+}
 
 const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
   const failures: string[] = [];
@@ -74,11 +95,17 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     if (/\/static\/.+\.js$/.test(response.url()) && response.status() >= 400) failedCode.push(`${response.url()} ${response.status()}`);
   });
 
+  // Sign-in and the language switch leave time for the background fetch to
+  // finish; a cold load of Home, then moving on at once, walks ahead of it.
+  await page.goto(new URL("/", page.url()).href);
+  await page.getByRole("heading", { level: 1, name: t("Accueil", "Home"), exact: true }).waitFor({ timeout: 60_000 });
   const loadedAtStart = await codeFiles(page);
-  log(`code files loaded by sign-in and the first screen: ${loadedAtStart.length}`);
+  log(`code files loaded by a cold load of Home: ${loadedAtStart.length}`);
   await watchShellShifts(page);
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
 
+  // The role's places appear once /v1/me has answered.
+  await quiet();
   const nav = await openSidebar(page);
   const labels = (await nav.locator("[data-sidebar='group'] a:not([data-nav-count])").evaluateAll((links) =>
     links.map((a) => {
@@ -87,7 +114,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
       return row.textContent?.trim() ?? "";
     }),
   )).filter((label) => label !== "");
-  if (phone) await page.keyboard.press("Escape");
+  if (phone) await closeSheet(page);
   log(`${account.role} places: ${labels.join(", ")}`);
 
   const reference = await shellBoxes(page);
@@ -100,7 +127,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
       .then(() => true, () => false);
     check(titled, `${label}: page opens with its title`);
     await quiet();
-    if (phone) await page.keyboard.press("Escape").catch(() => undefined);
+    if (phone) await closeSheet(page);
     const boxes = await shellBoxes(page);
     check(JSON.stringify(boxes) === JSON.stringify(reference), `${label}: shell in place ${JSON.stringify(boxes)}`);
     await shot(`place-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, { caption: `${label} opens on demand; the header${phone ? " and bottom bar" : " and sidebar"} stay where they were` });
@@ -130,7 +157,9 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
   }
 
   const shellShifts = await readShellShifts(page);
-  check(shellShifts.length === 0, `no layout shift inside the shell (${shellShifts.join("; ") || "none"})`);
+  const frameShifts = shellShifts.filter((shift) => shift.frame).map((shift) => shift.text);
+  check(frameShifts.length === 0, `the header, sidebar and bottom bar never shifted (${frameShifts.join("; ") || "none"})`);
+  for (const shift of shellShifts.filter((each) => !each.frame)) log(`content inside the shell changed: ${shift.text}`);
   check(failedCode.length === 0, `every code file loaded (${failedCode.join("; ") || "no failures"})`);
   const loadedAtEnd = await codeFiles(page);
   log(`code files after the walk: ${loadedAtEnd.length} (${loadedAtEnd.length - loadedAtStart.length} arrived after the first screen)`);

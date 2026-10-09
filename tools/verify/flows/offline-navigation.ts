@@ -4,15 +4,22 @@ import { openSidebar, type DriveScript } from "../browser.js";
 /**
  * Once Home has settled the app fetches every other screen's code in the
  * background (#488), so losing the connection afterwards does not stop someone
- * moving between screens: each opens with its title and a load-failed state for
- * its data, never a blank page or a failed code request. The app has no service
- * worker yet, so a full reload while offline is out of scope.
- * Its /v1 requests fail on purpose while offline; those failures are expected.
+ * moving between screens: each opens with its title, never a blank page or a
+ * failed code request. Its data waits in the loading skeleton (TanStack Query
+ * pauses while the browser is offline). The app has no service worker yet, so a
+ * full reload while offline is out of scope.
  * Run: pnpm verify drive flow:offline-navigation --role director --lang en
  */
 
 const codeCount = (page: Page) =>
   page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => /\/static\/.+\.js$/.test(new URL(entry.name).pathname)).length);
+
+/** On a phone the sidebar is a sheet: close it and wait until it has gone, or the next open finds it mid-close. */
+async function closeSheet(page: Page): Promise<void> {
+  const nav = page.getByRole("navigation", { name: "Navigation" });
+  if (await nav.isVisible().catch(() => false)) await page.keyboard.press("Escape");
+  await nav.waitFor({ state: "hidden", timeout: 10_000 });
+}
 
 const flow: DriveScript = async ({ page, shot, quiet, log }) => {
   const failures: string[] = [];
@@ -39,7 +46,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
     }),
   )).filter((label) => label !== "");
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
-  if (phone) await page.keyboard.press("Escape");
+  if (phone) await closeSheet(page);
 
   const failedCode: string[] = [];
   page.on("requestfailed", (request) => {
@@ -55,9 +62,9 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
       .waitFor({ timeout: 15_000 })
       .then(() => true, () => false);
     check(titled, `offline: ${label} opens with its title`);
-    if (phone) await page.keyboard.press("Escape").catch(() => undefined);
+    if (phone) await closeSheet(page);
   }
-  await shot("offline-last-place", { caption: "Offline after Home settled: every place still opens, its data shows the load-failed state" });
+  await shot("offline-last-place", { caption: "Offline after Home settled: every place still opens with its title; its data waits for the connection" });
   await page.context().setOffline(false);
   check(failedCode.length === 0, `no code request needed while offline (${failedCode.join("; ") || "none"})`);
 
