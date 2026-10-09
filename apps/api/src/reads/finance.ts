@@ -249,6 +249,11 @@ function entryLinkColumns() {
       where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
         and ${workOrders.id} = ${firstLineSql(financialPostings.workOrderId)}
     )`,
+    linkWorkOrderDescription: sql<string | null>`(
+      select ${workOrders.description} from ${workOrders}
+      where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
+        and ${workOrders.id} = ${firstLineSql(financialPostings.workOrderId)}
+    )`,
   };
 }
 
@@ -257,6 +262,7 @@ interface EntryLinkRow {
   linkActivityNumber: string | null;
   linkWorkOrderId: string | null;
   linkWorkOrderAssetId: string | null;
+  linkWorkOrderDescription: string | null;
 }
 
 function toEntryLinks(row: EntryLinkRow): FinancialEntryListItem["links"] {
@@ -265,6 +271,7 @@ function toEntryLinks(row: EntryLinkRow): FinancialEntryListItem["links"] {
     activityNumber: row.linkActivityNumber,
     workOrderId: row.linkWorkOrderId,
     workOrderAssetId: row.linkWorkOrderAssetId,
+    workOrderDescription: row.linkWorkOrderDescription,
   };
 }
 
