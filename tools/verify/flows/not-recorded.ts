@@ -47,7 +47,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, nav, log }) => {
   await nav("/maintenance");
   await quiet();
   await noDash("maintenance");
-  await shot("maintenance-costs", { caption: "Maintenance: a cost not known yet reads \"Not recorded\", never a dash" });
+  await shot("maintenance-costs", {
+    caption: phone
+      ? "Maintenance on a phone: no bare dash in the list rows"
+      : "Maintenance: a cost not known yet reads \"Not recorded\", never a dash",
+  });
 
   await nav("/assets");
   await quiet();
