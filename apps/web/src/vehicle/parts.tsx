@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Ellipsis,
+  Hourglass,
   Info,
   Lock,
   OctagonAlert,
@@ -434,27 +435,24 @@ export function FactList({ rows }: { rows: ReadonlyArray<readonly [string, React
   );
 }
 
+const noteStyles = {
+  muted: { className: "bg-muted/60 text-muted-foreground", Icon: Info },
+  // Amber with an hourglass, as the vehicle header says "waiting for release" (#92, #500).
+  warning: { className: "bg-warning/10 text-warning-foreground ring-1 ring-warning/30", Icon: Hourglass },
+  danger: { className: "bg-destructive/5 text-destructive dark:bg-destructive/10", Icon: ShieldAlert },
+} satisfies Record<string, { className: string; Icon: LucideIcon }>;
+
 export function Note({
   children,
   tone = "muted",
 }: {
   children: ReactNode;
-  tone?: "muted" | "danger";
+  tone?: keyof typeof noteStyles;
 }) {
+  const { className, Icon } = noteStyles[tone];
   return (
-    <p
-      className={cn(
-        "flex gap-2 rounded-lg px-3 py-2.5 text-sm",
-        tone === "danger"
-          ? "bg-destructive/5 text-destructive dark:bg-destructive/10"
-          : "bg-muted/60 text-muted-foreground",
-      )}
-    >
-      {tone === "danger" ? (
-        <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-      ) : (
-        <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-      )}
+    <p data-tone={tone} className={cn("flex gap-2 rounded-lg px-3 py-2.5 text-sm", className)}>
+      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
       <span>{children}</span>
     </p>
   );
