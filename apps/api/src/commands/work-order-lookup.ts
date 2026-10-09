@@ -1,5 +1,5 @@
 import type { CommandEnvelope } from "@routiq/contracts";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import {
   assetAvailabilityIntervals,
   assets,
@@ -211,6 +211,33 @@ export async function issueBranchIds(
     )
     .limit(1);
   return issue ? assetBranchIds(tx, ctx, [issue.assetId]) : [];
+}
+
+/**
+ * Every OPEN safety-critical signalement on the asset other than the one that
+ * grounded it. While any is listed the release refuses (SAFETY_ISSUE_OPEN), and
+ * the asset read hands the same list to the client to lock its Release step:
+ * one query, so the lock and the refusal cannot drift apart (#501).
+ */
+export async function otherOpenSafetyIssues(
+  tx: Tx,
+  workspaceId: string,
+  assetId: string,
+  groundingIssueId: string,
+): Promise<Array<{ id: string; description: string }>> {
+  return tx
+    .select({ id: operationalIssues.id, description: operationalIssues.description })
+    .from(operationalIssues)
+    .where(
+      and(
+        eq(operationalIssues.workspaceId, workspaceId),
+        eq(operationalIssues.assetId, assetId),
+        eq(operationalIssues.safetyCritical, true),
+        eq(operationalIssues.status, "OPEN"),
+        ne(operationalIssues.id, groundingIssueId),
+      ),
+    )
+    .orderBy(asc(operationalIssues.id));
 }
 
 /** The asset's open availability interval, locked, or undefined when it is available. */

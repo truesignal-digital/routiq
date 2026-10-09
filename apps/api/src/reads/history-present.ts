@@ -284,6 +284,25 @@ function shapeOf(entityType: HistoryEntityType, field: string): HistoryFieldShap
   return (HISTORY_FIELD_SHAPES[entityType] as Record<string, HistoryFieldShape>)[field];
 }
 
+/**
+ * The changes the record history sheet can give a row: a shape the sheet shows
+ * (not `HIDDEN`), money only for a reader who may see it, and something on at
+ * least one side. The timeline's chips come from this same filter, so a chip
+ * never names a field the change list leaves out (#465).
+ */
+export function shownChanges(
+  entityType: HistoryEntityType,
+  changes: readonly HistoryFieldChange[],
+  { showMoney }: { showMoney: boolean },
+): HistoryFieldChange[] {
+  return changes.filter(({ field, before, after }) => {
+    const shape = shapeOf(entityType, field);
+    if (shape === undefined || shape === "HIDDEN") return false;
+    if (shape === "MONEY" && !showMoney) return false;
+    return !(isNothing(before) && isNothing(after));
+  });
+}
+
 export async function presentChanges(
   tx: TenantTx,
   workspaceId: string,
@@ -320,7 +339,7 @@ export async function presentChanges(
   };
 
   const presented: HistoryDiffChange[] = [];
-  for (const { field, before, after } of changes) {
+  for (const { field, before, after } of shownChanges(entityType, changes, { showMoney })) {
     const shape = shapeOf(entityType, field);
     if (shape === undefined || shape === "HIDDEN") continue;
 

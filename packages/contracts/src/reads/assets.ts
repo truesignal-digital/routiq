@@ -170,6 +170,12 @@ export const assetAvailability = z.discriminatedUnion("state", [
     }),
     /** Work orders on the grounding signalement, newest first. */
     workOrders: z.array(availabilityWorkOrder),
+    /**
+     * Every other OPEN safety-critical signalement on the vehicle: while one
+     * is listed, release-asset-to-service refuses (SAFETY_ISSUE_OPEN). The
+     * server computes both from one query, so the lock and the refusal agree.
+     */
+    otherOpenSafetyIssues: z.array(z.object({ id: z.uuid(), description: z.string() })),
   }),
 ]);
 
