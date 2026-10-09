@@ -101,6 +101,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `approve-from-panel` | Money waiting view → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
 | `repaired-awaiting-release` | as the technician: VH003 red → Complete work → amber "Repair done — waiting for release to service", no release button; as the Administrateur: amber with Release to service → release → green (#92) | yes |
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
+| `lock-period` | as Direction: Company → Accounting months → lock the newest open month the books hold, then reopen it with a reason; after each, `GET /v1/finance/periods` shows the new status one row version higher (#571) | yes |
 | `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `vehicle-money-numbers` | September locked first through `lock-period` (header of the flow): VH001 → cancel the September repair from its panel → October's Spending by category nets −85,000 with no share; cancel July's fuel entry with no receipt → July's Missing receipts and the row stop asking for it (#472, #473) | yes |
 | `trips` | trips list → a closed trip's detail | no |
