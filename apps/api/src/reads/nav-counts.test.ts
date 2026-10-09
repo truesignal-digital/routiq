@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
 /** Above every recording band, so the entry waits for a decision. */
@@ -12,6 +13,7 @@ const WAITING_AMOUNT = 5_000_000;
 describe("GET /v1/nav-counts", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
   let director: Actor;
   let admin: Actor;
   let finance: Actor;
@@ -59,7 +61,7 @@ describe("GET /v1/nav-counts", () => {
     ctx = await createTestApp();
     api = apiClient(ctx.app);
     const seeded = await seedWorkspace(ctx.db);
-    const workspaceId = seeded.workspace.id;
+    workspaceId = seeded.workspace.id;
     const [yaounde] = await ctx.db
       .insert(branches)
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
@@ -126,8 +128,8 @@ describe("GET /v1/nav-counts", () => {
   });
 
   it("returns no count for a module that is off", async () => {
-    for (const moduleCode of ["FINANCE", "MAINTENANCE"]) {
-      await api.ok(director.token, "disable-module", { moduleCode });
+    for (const moduleCode of ["FINANCE", "MAINTENANCE"] as const) {
+      await setModule(ctx.db, workspaceId, moduleCode, false);
     }
     expect(await counts(director)).toEqual({ moneyWaiting: null, maintenanceNew: null });
     expect(await counts(technician)).toEqual({ moneyWaiting: null, maintenanceNew: null });

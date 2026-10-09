@@ -10,6 +10,7 @@ import { createSession } from "../auth/local.js";
 import { assets, branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
 describe("GET /v1/assets", () => {
@@ -763,12 +764,12 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
   });
 
   it("counts lifecycle statuses only while MAINTENANCE is off", async () => {
-    await api.ok(admin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await setModule(ctx.db, workspaceId, "MAINTENANCE", false);
     try {
       expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 1 });
       await expectTileMatchesFilter(admin.token, ["VH003"]);
     } finally {
-      await api.ok(admin.token, "enable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(ctx.db, workspaceId, "MAINTENANCE", true);
     }
   });
 

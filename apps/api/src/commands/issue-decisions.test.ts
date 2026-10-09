@@ -6,6 +6,7 @@ import type { Db } from "../db/client.js";
 import { auditEvents, branches, operationalIssues } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * The signalement's own state machine (#28): OPEN → RESOLVED | DISMISSED, once.
@@ -314,9 +315,7 @@ describe("issue decision commands", () => {
 
   it("answers MODULE_DISABLED for both decisions once maintenance is off", async () => {
     const issueId = await reportIssue();
-    expect(
-      (await post(adminToken, "disable-module", { moduleCode: "MAINTENANCE" })).statusCode,
-    ).toBe(200);
+    await setModule(db, workspaceId, "MAINTENANCE", false);
     try {
       for (const [name, payload] of [
         ["resolve-issue", { issueId }],
@@ -327,9 +326,7 @@ describe("issue decision commands", () => {
         expect(response.json(), name).toMatchObject({ error: { code: "MODULE_DISABLED" } });
       }
     } finally {
-      expect(
-        (await post(adminToken, "enable-module", { moduleCode: "MAINTENANCE" })).statusCode,
-      ).toBe(200);
+      await setModule(db, workspaceId, "MAINTENANCE", true);
     }
   });
 });

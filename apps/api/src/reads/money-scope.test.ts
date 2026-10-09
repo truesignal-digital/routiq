@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { branches, persons } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { plantWorkOrderRevenue, seedWorkspace } from "../test/seed.js";
 
 /**
@@ -16,6 +17,7 @@ import { plantWorkOrderRevenue, seedWorkspace } from "../test/seed.js";
 describe("money read scope, role by read", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
   const actors = {} as Record<Role, Actor>;
   let otherDriver: Actor;
   let truckId: string;
@@ -62,7 +64,7 @@ describe("money read scope, role by read", () => {
     ctx = await createTestApp();
     api = apiClient(ctx.app);
     const seeded = await seedWorkspace(ctx.db);
-    const workspaceId = seeded.workspace.id;
+    workspaceId = seeded.workspace.id;
     await ctx.db.insert(branches).values({ workspaceId, code: "YDE", name: "Yaoundé" });
     const douala = [seeded.branch.id];
     actors.DIRECTOR = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
@@ -407,7 +409,7 @@ describe("money read scope, role by read", () => {
   });
 
   it("gives nobody the vehicle's money or price with FINANCE off (#118)", async () => {
-    await api.ok(actors.DIRECTOR.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, workspaceId, "FINANCE", false);
     try {
       for (const role of LEDGER) {
         const response = await api.get(actors[role].token, `/v1/assets/${truckId}`);
@@ -419,7 +421,7 @@ describe("money read scope, role by read", () => {
         });
       }
     } finally {
-      await api.ok(actors.DIRECTOR.token, "enable-module", { moduleCode: "FINANCE" });
+      await setModule(ctx.db, workspaceId, "FINANCE", true);
     }
   });
 });
