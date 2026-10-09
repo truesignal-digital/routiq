@@ -28,10 +28,9 @@
   .small-ui .frame { display: flex; min-height: 380px; }
   .small-ui .frame .sb { width: 100%; }
   .budget td:last-child { font-weight: 650; }
-  .trow { display: grid; grid-template-columns: minmax(0, 1fr) 110px 44px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .trow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
   .trow:last-of-type { border-bottom: 0; }
-  .trow b { display: block; } .trow span:not(.tg):not(.price) { color: var(--muted-foreground); font-size: 12px; }
-  .trow .price { text-align: right; font-weight: 600; } .trow .price.muted { color: var(--muted-foreground); font-weight: 500; }
+  .trow b { display: block; } .trow span:not(.tg) { color: var(--muted-foreground); font-size: 12px; }
   .tg { width: 40px; height: 22px; border-radius: 11px; background: var(--border); position: relative; display: inline-block; }
   .tg::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 2px rgb(0 0 0 / .25); }
   .tg.y { background: var(--primary); } .tg.y::after { left: 20px; }
@@ -138,7 +137,7 @@
 
     <section class="section" id="superadmin">
       <div class="kicker">Super admin</div>
-      <h3>Our own super admin console at console.routiq.app: yes, and most of it exists underneath</h3>
+      <h3>Our own super admin console on a console. subdomain: yes, and most of it exists underneath</h3>
       <div class="cols even">
         <div class="spec-card"><h4>What already exists</h4><ul>
           <li>A <b>vendor operator</b> identity, separate from every tenant's users (<code>VENDOR_OPERATOR</code> principal).</li>
@@ -158,7 +157,7 @@
       <h3>Tenants list</h3>
       <div class="frame desktop console" style="min-height:560px">
         <aside class="sb"><div class="ws"><span data-mark></span><span><span class="wordmark">Routi<b>q</b></span><span class="wsname">Platform console</span></span></div><div class="glabel">Platform</div><div class="item on"><i data-i="building"></i><span>Tenants</span></div><div class="item"><i data-i="plus"></i><span>Set up a tenant</span></div><div class="item"><i data-i="sliders"></i><span>Presets and modules</span></div><div class="item"><i data-i="lock"></i><span>Support access</span><span class="nb">1</span></div><div class="item"><i data-i="history"></i><span>Platform audit</span></div><div class="who" style="margin-top:auto"><span class="av">L</span><span><b>Linus</b>Vendor operator</span></div></aside>
-        <div class="main"><div class="topbar"><b>Tenants</b><span class="env">Platform</span><div class="right"><span class="caption" style="margin:0">console.routiq.app</span></div></div>
+        <div class="main"><div class="topbar"><b>Tenants</b><span class="env">Platform</span><div class="right"><span class="caption" style="margin:0">console.&lt;product domain&gt;</span></div></div>
           <div class="page">
             <div class="ph"><div><h1 class="pt">Tenants</h1><div class="lead">Every company on ROUTIQ: what they have, and whether they're using it.</div></div><button class="btn primary"><i data-i="plus"></i>Set up a tenant</button></div>
             <div class="metrics">
@@ -188,15 +187,15 @@
             <div class="attn info"><i data-i="clock" data-c="lg"></i><div><div class="t">Asked for Stock &amp; purchasing</div><div class="s">Requested by Esther on 3 Oct. Enabling is a platform decision, logged with a reason.</div></div></div>
             <div class="facts"><div><div class="k">Active users (7 d)</div><div class="v">6 of 8</div></div><div><div class="k">Records this week</div><div class="v">412</div></div><div><div class="k">Storage</div><div class="v">1.2 GB</div></div><div><div class="k">Errors (24 h)</div><div class="v">3</div></div></div>
             <div class="tabs"><div>Overview</div><div class="on">Modules</div><div>Agencies</div><div>Administrators</div><div>Usage</div><div>Support access</div><div>Audit</div></div>
-            <div class="card"><div class="card-h"><div><h2>Modules</h2><div class="d">Switch on or off. Turning off hides the module for this company; its data stays.</div></div><div style="text-align:right"><div class="caption" style="margin:0">Plan total</div><b class="num" style="font-size:17px">95 000 XAF / month</b></div></div><div class="card-b">
-              <div class="trow"><div><b>Core</b><span>Branches, personnel, approvals, history · always on</span></div><span class="num price">25 000</span><span class="tg y lock"></span></div>
-              <div class="trow"><div><b>Vehicles · Journeys · Maintenance · Money · Documents</b><span>Bus preset base</span></div><span class="num price">30 000</span><span class="tg y"></span></div>
-              <div class="trow"><div><b>Customers</b><span>On since 4 Oct · required by Parcels</span></div><span class="num price">15 000</span><span class="tg y lock" title="Turn off Parcels first"></span></div>
-              <div class="trow"><div><b>Parcels</b><span>On since 4 Oct</span></div><span class="num price">25 000</span><span class="tg y"></span></div>
-              <div class="trow"><div><b>Scheduling</b><span>Timetable and planning board</span></div><span class="num price muted">+ 15 000</span><span class="tg"></span></div>
-              <div class="trow"><div><b>Stock &amp; purchasing</b><span>Requested by Esther on 3 Oct</span></div><span class="num price muted">+ 20 000</span><span class="tg"></span></div>
-              <div class="trow"><div><b>Partners</b><span>Coming later</span></div><span class="num price muted">—</span><span class="tg off"></span></div>
-              <p class="caption" style="margin:8px 0 0">Prices are placeholders; billing isn't designed yet. Flipping a toggle opens a short confirm ("Turn on Stock for Voyages Kamer Express? Reason …"), then the change is logged in both audits.</p>
+            <div class="card"><div class="card-h"><div><h2>Modules</h2><div class="d">Switch on or off. Turning off hides the module for this company; its data stays.</div></div></div><div class="card-b">
+              <div class="trow"><div><b>Core</b><span>Branches, personnel, approvals, history · always on</span></div><span class="tg y lock"></span></div>
+              <div class="trow"><div><b>Vehicles · Journeys · Maintenance · Money · Documents</b><span>Bus preset base</span></div><span class="tg y"></span></div>
+              <div class="trow"><div><b>Customers</b><span>On since 4 Oct · required by Parcels</span></div><span class="tg y lock" title="Turn off Parcels first"></span></div>
+              <div class="trow"><div><b>Parcels</b><span>On since 4 Oct</span></div><span class="tg y"></span></div>
+              <div class="trow"><div><b>Scheduling</b><span>Timetable and planning board</span></div><span class="tg"></span></div>
+              <div class="trow"><div><b>Stock &amp; purchasing</b><span>Requested by Esther on 3 Oct</span></div><span class="tg"></span></div>
+              <div class="trow"><div><b>Partners</b><span>Coming later</span></div><span class="tg off"></span></div>
+              <p class="caption" style="margin:8px 0 0">No prices in the console: ROUTIQ invoices each company by hand until there are about 3 to 5 paying companies (decided 2026-10-08). Flipping a toggle opens a short confirm ("Turn on Stock for Voyages Kamer Express? Reason …"), then the change is logged in both audits.</p>
             </div></div>
           </div>
           <div class="actionbar"><button class="btn primary">Add an agency</button><button class="btn">Reset admin PIN</button><button class="btn ghost" style="margin-left:auto"><i data-i="dots"></i>More</button></div>
@@ -218,13 +217,13 @@
 
     <section class="section" id="console-map">
       <div class="kicker">Console</div>
-      <h3>Console pages and actions (console.routiq.app)</h3>
+      <h3>Console pages and actions (console. subdomain)</h3>
       <p class="rule">The whole console is seven pages. Each action is tagged with what exists today, so building the console starts from the truth: <span class="st ex">Exists</span> built and usable, <span class="st be">Backend only</span> works through the API or the CLI but has no screen, <span class="st gap2">Exists, wrong scope</span> built but runs as the tenant admin instead of the platform (ADR-0005 not implemented), <span class="st nw">New</span> not built.</p>
       <div class="site">
         <div class="pg"><b>Tenants</b><code>/tenants</code><br>List, health tiles, search. Module list archetype.</div>
-        <div class="pg"><b>Tenant</b><code>/tenants/:id</code><br>Overview · Modules · Agencies · Administrators · Plan · Usage · Support access · Audit</div>
+        <div class="pg"><b>Tenant</b><code>/tenants/:id</code><br>Overview · Modules · Agencies · Administrators · Usage · Support access · Audit</div>
         <div class="pg"><b>Set up a tenant</b><code>/tenants/new</code><br>4 steps: company and agencies → preset and modules → first administrator → review and create</div>
-        <div class="pg"><b>Presets and modules</b><code>/catalog</code><br>Each module's manifest, defaults per preset, placeholder price</div>
+        <div class="pg"><b>Presets and modules</b><code>/catalog</code><br>Each module's manifest, defaults per preset</div>
         <div class="pg"><b>Support access</b><code>/support</code><br>Requests sent, granted sessions, expiry</div>
         <div class="pg"><b>Platform audit</b><code>/audit</code><br>Every platform-scope command, who, when, why</div>
         <div class="pg"><b>Operators</b><code>/operators</code><br>ROUTIQ staff who can sign in, with second factor</div>
@@ -239,7 +238,7 @@
           <tr><td>Add an agency</td><td>Tenant → Agencies</td><td><span class="st nw">New</span> (platform)</td><td><code>create-branch</code> exists for the tenant's own admin; a platform version is new</td></tr>
           <tr><td>Add or reset the first administrator</td><td>Tenant → Administrators</td><td><span class="st nw">New</span> (platform)</td><td><code>add-member</code>, <code>reset-member-pin</code> exist tenant-side only</td></tr>
           <tr><td>See tenant health (users, records, errors, storage)</td><td>Tenants, Tenant → Usage</td><td><span class="st nw">New</span></td><td>Platform count reads</td></tr>
-          <tr><td>Plan and total</td><td>Tenant → Plan</td><td><span class="st nw">New</span></td><td>Prices per module; billing not designed</td></tr>
+          <tr><td>Prices and billing</td><td>None</td><td><span class="st nw">Not now</span></td><td>Invoiced by hand; revisit at about 3 to 5 paying companies (decided 2026-10-08)</td></tr>
           <tr><td>Ask for / end support access</td><td>Support access</td><td><span class="st nw">New</span></td><td>Grant + revoke commands on the tenant side, time-boxed read-only session</td></tr>
           <tr><td>Suspend (read-only) / export a tenant</td><td>Tenant → More</td><td><span class="st nw">New</span></td><td>—</td></tr>
           <tr><td>Operator sign-in with second factor</td><td>Sign in</td><td><span class="st nw">New</span></td><td><code>VENDOR_OPERATOR</code> principal exists; no web login</td></tr>
@@ -296,7 +295,7 @@
         <div class="spec-card"><h4>How it would work</h4><ul>
           <li>Both companies agree to connect (invite + accept); either can disconnect.</li>
           <li>A trip request is a message with chosen fields (date, route, cargo, price). Accepting creates a <b>copy</b> in the receiving company; each keeps its own record and history.</li>
-          <li>Afterwards only status flows back (planned, started, delivered), never money, drivers or other data.</li>
+          <li>Afterwards only status flows back (planned, started, closed, and when it was delivered), never money, drivers or other data.</li>
           <li>Every exchange is logged on both sides.</li>
         </ul>
         <h4 style="margin-top:12px">Recommendation</h4><p>Not for the pilot. It needs its own architecture decision and two companies that actually want it. Isolation stays the default and the guarantee; connections are an add-on, and the "Partners" page only exists once that module is on.</p></div>
