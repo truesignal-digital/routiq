@@ -18,7 +18,7 @@ import {
   gte,
   ilike,
   inArray,
-  lte,
+  lt,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -73,6 +73,24 @@ const activitySortColumns: Record<ActivitySortField, KeysetColumn> = {
   startedAt: timestampKeyset(activities.startedAt, { nullable: true }),
   activityNumber: { column: activities.activityNumber, bind: bindText },
 };
+
+/**
+ * Trip days are workspace days, for the list's date filter and the summary's
+ * week alike. Branches carry their own zone too; neither read uses it yet, and
+ * moving one alone would split the tile from the list it filters (#511).
+ */
+async function workspaceTimezone(tx: ReadTx, workspaceId: string): Promise<string> {
+  const [workspace] = await tx
+    .select({ timezone: workspaces.timezone })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId));
+  return workspace?.timezone ?? "Africa/Douala";
+}
+
+/** The instant a calendar day starts in `timezone`. */
+function dayStartSql(isoDate: string, timezone: string): SQL {
+  return sql`(${isoDate}::date)::timestamp at time zone ${timezone}`;
+}
 
 interface ActivitySortRow {
   /** `startedAt` as microsecond keyset text. */
@@ -231,8 +249,15 @@ export function registerActivityReadRoutes(
           if (activityTypeCode) {
             conditions.push(eq(categories.code, activityTypeCode));
           }
-          if (from) conditions.push(gte(activities.startedAt, new Date(from)));
-          if (to) conditions.push(lte(activities.startedAt, new Date(to)));
+          if (from !== undefined || to !== undefined) {
+            const timezone = await workspaceTimezone(tx, auth.workspaceId);
+            if (from !== undefined) {
+              conditions.push(gte(activities.startedAt, dayStartSql(from, timezone)));
+            }
+            if (to !== undefined) {
+              conditions.push(lt(activities.startedAt, dayStartSql(addDays(to, 1), timezone)));
+            }
+          }
 
           if (assetId) {
             conditions.push(
@@ -370,11 +395,7 @@ export function registerActivityReadRoutes(
         const { branchId } = parsedQuery.data;
 
         const summary = await read(async (tx) => {
-          const [workspace] = await tx
-            .select({ timezone: workspaces.timezone })
-            .from(workspaces)
-            .where(eq(workspaces.id, auth.workspaceId));
-          const timezone = workspace?.timezone ?? "Africa/Douala";
+          const timezone = await workspaceTimezone(tx, auth.workspaceId);
           const week = isoWeek(currentBusinessDate(new Date(), timezone));
 
           // The same scope the list applies: session branches and a driver's
@@ -384,8 +405,8 @@ export function registerActivityReadRoutes(
 
           // Week edges are local midnights, so a trip started at 00:30 Monday
           // in Douala belongs to this week, not the last.
-          const startsAt = sql`(${week.from}::date)::timestamp at time zone ${timezone}`;
-          const endsBefore = sql`(${addDays(week.to, 1)}::date)::timestamp at time zone ${timezone}`;
+          const startsAt = dayStartSql(week.from, timezone);
+          const endsBefore = dayStartSql(addDays(week.to, 1), timezone);
           const inWeek = sql`${activities.startedAt} >= ${startsAt} and ${activities.startedAt} < ${endsBefore}`;
 
           const [counts] = await tx

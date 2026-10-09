@@ -420,7 +420,7 @@
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
         "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-        "LATE_POSTING": "Cette écriture a été comptabilisée dans une période précédente.",
+        "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
       "errors": {
@@ -605,6 +605,7 @@
       "notePlaceholder": "Ajoutez une remarque…",
       "reasonLabel": "Motif du rejet",
       "reasonPlaceholder": "Expliquez pourquoi cette écriture est rejetée…",
+      "rejectDescription": "{number} · {what} · {amount}. {named, select, yes {Votre motif sera visible par {recorder}.} other {Votre motif sera visible par la personne qui l'a saisie.}} L'écriture reste dans l'historique comme rejetée et n'entre jamais dans les comptes.",
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
@@ -683,7 +684,7 @@
   },
   "warnings": {
     "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
-    "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+    "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
     "PERIOD_HAS_SUBMITTED_ENTRIES": "Des écritures en attente d'approbation restent sur cette période.",
     "ACTIVITY_MISSING_START_READING": "Relevé compteur de départ manquant",
     "ACTIVITY_MISSING_END_READING": "Relevé compteur d'arrivée manquant",
@@ -715,8 +716,8 @@
     },
     "state": {
       "onTheRoad": "En route",
-      "closed": "Clôturé",
-      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
+      "closed": "Clôturée",
+      "closedWithGaps": "{count, plural, one {Clôturée, # manque} other {Clôturée, # manques}}"
     },
     "completeness": {
       "COMPLETE": "Complète",
@@ -908,7 +909,7 @@
         "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
         "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
         "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
-        "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+        "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée."
       },
       "pendingEntries": "{count, plural, one {# ligne en attente d'approbation} other {# lignes en attente d'approbation}}"
@@ -2261,6 +2262,7 @@
       "needsSignOff": "Il faut que {ref} soit validé.",
       "needsAll": "Il faut que {ref} soit autorisé et terminé.",
       "needsWorkOrder": "Il faut un ordre de travail terminé, ou le problème clos.",
+      "otherSafetyIssueOpen": "{count, plural, one {Un autre problème critique est encore ouvert : « {description} ». Clôturez-le d'abord.} other {# autres problèmes critiques sont encore ouverts, dont « {description} ». Clôturez-les d'abord.}}",
       "makerCannotApprove": "Vous avez créé {ref} ; une autre personne l'autorise.",
       "completerCannotSignOff": "Vous avez terminé {ref} ; une autre personne le valide.",
       "youRecordedIt": "Vous l'avez saisie ; une autre personne l'examine.",
@@ -2470,7 +2472,7 @@
       "ended": "Arrivée",
       "distance": "Distance",
       "distanceUnknown": "Connue à la clôture",
-      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
+      "gapsNote": "Clôturée avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
       "linkedMoney": "Argent lié",
       "wholeTrip": "Montants de l'activité entière",
       "noMoney": "Aucune écriture liée à cette activité.",
@@ -2785,6 +2787,7 @@
     "step": "{bound, select, upTo {Jusqu'à {amount}} above {Au-delà de {amount}} other {Tout montant}} : {outcome, select, POSTS_DIRECTLY {enregistrée directement} FINANCE_APPROVES {la Finance approuve} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction approuve} DIRECTION_APPROVES {la Direction approuve} other {attend une approbation}}",
     "hint": {
       "posts": "Vos saisies sont enregistrées directement, quel que soit le montant.",
+      "postsAt": "À ce montant, la saisie est enregistrée directement.",
       "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
       "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
     }

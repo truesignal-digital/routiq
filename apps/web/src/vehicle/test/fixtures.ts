@@ -87,6 +87,7 @@ export function groundingWorkOrder(
 export function grounded(
   workOrders: AvailabilityWorkOrder[] = [],
   issue: Partial<Extract<AssetAvailability, { state: "GROUNDED" }>["issue"]> = {},
+  otherOpenSafetyIssues: Extract<AssetAvailability, { state: "GROUNDED" }>["otherOpenSafetyIssues"] = [],
 ): AssetAvailability {
   return {
     state: "GROUNDED",
@@ -106,6 +107,7 @@ export function grounded(
       ...issue,
     },
     workOrders,
+    otherOpenSafetyIssues,
   };
 }
 

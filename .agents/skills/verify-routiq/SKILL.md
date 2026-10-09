@@ -103,6 +103,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
 | `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
+| `trip-day-filter` | arranges two closed trips on VH001 just after local midnight (Mon 00:30, Tue 00:15 Douala) by the sheet command; the "This week" tile's list shows what the tile counts, and a Monday-only date pick lists the Monday trip, not Tuesday's (#511) | yes |
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
@@ -113,6 +114,8 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `scoped-header` | Douala picked, light and dark, on Home scrolled under the header: header background opaque, `::before` tint at primary 5% covering it at z-index -10, controls win the hit test, header pixels unchanged by scrolling; then all branches: plain header (#57). Checks the run's `--lang` and `--viewport` | no |
 
 A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label, { caption, highlight })`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. `caption` is one English sentence saying what the frame proves; `highlight` is a locator the shot outlines, and the reel zooms into it. Copy a flow as a starting point; `approve-from-panel` uses both. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
+
+For a deliberate refusal, declare it before the action: `ctx.expectRefusal({ status: 409, url: /\/v1\/commands\/register-asset$/ })`. The status must be an integer from 400 to 499; the regular expression matches the full response URL for subsequent responses in this drive. The reel lists matching responses as **Expected refusals** without a red delta and excludes their browser resource errors from **Console errors**. Other console errors, network failures, and unmatched responses remain errors. Raw evidence files and `--strict` keep all errors. This declaration does not assert that the refusal occurred; the flow must still check the response and UI.
 
 `api` prints the status and pretty JSON and never prints the token. Commands take `{ "version": 1, "envelope": { "commandId": "<uuid>", "idempotencyKey": "<unique>", "origin": "HUMAN_UI", "expectedVersion": <n> }, "payload": { ... } }`. Quote paths with `?` in zsh: `pnpm verify api GET '/v1/finance/entries?status=POSTED'`.
 
