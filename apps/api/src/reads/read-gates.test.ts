@@ -6,6 +6,7 @@ import { createSession } from "../auth/local.js";
 import { branches } from "../db/schema.js";
 import { inWorkspaceRead } from "../db/tenant.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 import { ANY_ROLE, UNGATED_READS, defineRead, requireReadGates } from "./define-read.js";
 
@@ -23,18 +24,6 @@ describe("read gates (#59)", () => {
 
   const read = (token: string, url: string) =>
     ctx.app.inject({ method: "GET", url, headers: { authorization: `Bearer ${token}` } });
-
-  const command = (token: string, name: string, payload: object) =>
-    ctx.app.inject({
-      method: "POST",
-      url: `/v1/commands/${name}`,
-      headers: { authorization: `Bearer ${token}` },
-      payload: {
-        version: 1,
-        envelope: { commandId: randomUUID(), idempotencyKey: randomUUID(), origin: "HUMAN_UI" },
-        payload,
-      },
-    });
 
   async function member(wsId: string, branchId: string, role: Role, key: string) {
     const seeded = await seedMember(ctx.db, {
@@ -63,9 +52,8 @@ describe("read gates (#59)", () => {
 
     const closed = await seedWorkspace(ctx.db);
     await member(closed.workspace.id, closed.branch.id, "DIRECTOR", "closedAdmin");
-    for (const moduleCode of ["FINANCE", "DOCUMENTS", "ASSETS", "ACTIVITIES"]) {
-      const response = await command(token("closedAdmin"), "disable-module", { moduleCode });
-      expect(response.statusCode, response.body).toBe(200);
+    for (const moduleCode of ["FINANCE", "DOCUMENTS", "ASSETS", "ACTIVITIES"] as const) {
+      await setModule(ctx.db, closed.workspace.id, moduleCode, false);
     }
   });
 

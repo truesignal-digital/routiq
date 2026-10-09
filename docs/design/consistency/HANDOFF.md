@@ -43,8 +43,7 @@ Re-checked 2026-10-04 on `origin/develop`, which is still `6399529` (no merges s
 
 
 - Trip statuses are `OPEN` and `CLOSED` only, and `create-activity` requires `startedAt`. Scheduling needs a lifecycle change (needs an ADR).
-- `enable-module` / `disable-module` run as tenant `ADMIN` (`apps/api/src/commands/module-toggle.ts:29`). ADR-0005 says they must be platform scope; this is not implemented.
-- `set-template-preset` runs as tenant `ADMIN`.
+- `enable-module`, `disable-module` and `set-template-preset` are platform scope (ADR-0005, #362): only a vendor operator runs them, from `apps/api/scripts/entitlement.ts`. There is no console screen yet (#366).
 - These are backend only, with no screen: categories (`create-category`, `relabel-category`, `deactivate-category`, `reactivate-category`), `update-approval-threshold`, `provision-workspace` (platform scope, CLI at `apps/api/scripts/provision.ts`), and `create-activity`.
 - The six team roles (Direction, Administrator, Finance, Cashier, Technician, Driver) were decided on 2026-09-27 but are not in the code. The code still has `ADMIN`, `OPS_MANAGER`, `FIELD_SUBMITTER`, `MAINTENANCE`, `FINANCE_APPROVER`, `EXECUTIVE_VIEWER`. The docs are on branch `docs/roles-and-access` (uncommitted, in another worktree).
 - The customer on a trip is free text (`customerName`). "Party" is named in ARCHITECTURE.md but has no table.
@@ -102,7 +101,7 @@ Each epic is a parent issue with slices underneath. Every slice is one PR with a
    - screens for Approvals and Categories (backend already exists)
    - language stored on the account (#127)
 8. **Platform console** (`console.` subdomain; the host is configuration, not code):
-   - move module and preset commands to platform scope (ADR-0005)
+   - move module and preset commands to platform scope (ADR-0005; done in #362)
    - operator sign-in with a second factor
    - pages: Tenants, Tenant (module toggles), Set up a tenant wizard over `provision-workspace`
    - health reads

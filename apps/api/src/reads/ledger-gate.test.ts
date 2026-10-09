@@ -3,6 +3,7 @@ import { LEDGER_READER_ROLES } from "@routiq/contracts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
 /**
@@ -71,7 +72,7 @@ describe("ledger reads are for the ledger readers", () => {
   it("answers MODULE_DISABLED once FINANCE is off", async () => {
     const gated = await seedWorkspace(ctx.db);
     const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, gated.workspace.id, "FINANCE", false);
     for (const route of ["/v1/finance/entries", `/v1/finance/entries/${randomUUID()}`, "/v1/finance/approvals"]) {
       const response = await api.get(gatedAdmin.token, route);
       expect(response.status, route).toBe(403);

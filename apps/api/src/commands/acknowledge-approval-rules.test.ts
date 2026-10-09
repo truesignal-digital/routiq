@@ -5,6 +5,7 @@ import { approvalRuleAcknowledgements, approvalRuleChanges, auditEvents } from "
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * #422: when Direction moves an approval band, the members it affects are told
@@ -316,7 +317,7 @@ describe("approval rules notice (#422)", () => {
   it("is silent while the Finance module is off: no entries, so no chain to tell", async () => {
     const t = await team();
     await move(t.DIRECTOR, "record-expense", 150_000);
-    await api.ok(t.DIRECTOR.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, t.workspaceId, "FINANCE", false);
 
     expect(await chainOf(t.ADMIN)).toEqual({ currency: "XAF", chains: [], notice: null });
   });
