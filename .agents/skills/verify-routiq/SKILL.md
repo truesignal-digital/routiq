@@ -104,6 +104,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `lock-period` | as Direction: Company → Accounting months → lock the newest open month the books hold, then reopen it with a reason; after each, `GET /v1/finance/periods` shows the new status one row version higher (#571) | yes |
 | `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
+| `trip-day-filter` | arranges two closed trips on VH001 just after local midnight (Mon 00:30, Tue 00:15 Douala) by the sheet command; the "This week" tile's list shows what the tile counts, and a Monday-only date pick lists the Monday trip, not Tuesday's (#511) | yes |
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |

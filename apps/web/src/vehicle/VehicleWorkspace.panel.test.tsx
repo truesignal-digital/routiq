@@ -11,6 +11,7 @@ import {
   WORK_ORDER_ID,
   actor,
   asset,
+  attention,
   entryDetail,
   grounded,
   groundingWorkOrder,
@@ -190,6 +191,36 @@ it("says a completed grounding order waits for a manager's release, not its own 
     ),
   ).toBeTruthy();
   expect(within(panel).queryByText(/Once it is completed/)).toBeNull();
+});
+
+describe("the grounding note's tone agrees with the vehicle header (#500)", () => {
+  const completed = {
+    ...scenario,
+    role: "ADMIN" as const,
+    asset: asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [workOrderDetail("COMPLETED", { completedAt: "2026-09-30T10:00:00.000Z" })],
+  };
+  const tones = async () => {
+    const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+    const note = within(panel).getByText(/^The work is done, but the vehicle stays grounded/).closest("[data-tone]");
+    // The open panel hides the page from the accessibility tree; the header is still on screen.
+    const header = screen.getAllByRole("status", { hidden: true }).find((el) => el.hasAttribute("data-tone"));
+    return { note: note?.getAttribute("data-tone"), header: header?.getAttribute("data-tone") };
+  };
+
+  it("is amber, like the header, once the repair is done and only the release is left", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+      ...completed,
+      attention: [attention("ASSET_AWAITING_RELEASE", { severity: "CRITICAL", partOfGrounding: true })],
+    });
+    await waitFor(async () => expect(await tones()).toEqual({ note: "warning", header: "waiting" }));
+  });
+
+  it("stays red, like the header, while the server withholds the release", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, completed);
+    await waitFor(async () => expect(await tones()).toEqual({ note: "danger", header: "critical" }));
+  });
 });
 
 it("shows a refusal in place and keeps the form", async () => {

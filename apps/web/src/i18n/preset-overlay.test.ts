@@ -5,7 +5,7 @@ import type { TemplateCode } from "@routiq/contracts";
 import { TEMPLATE_CODES } from "@routiq/contracts";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";
-import { PRESET_VOCABULARIES } from "./presets/index.js";
+import { FRENCH_AGREEMENT_KEYS, PRESET_VOCABULARIES } from "./presets/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "./preset-overlay.js";
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
@@ -74,8 +74,12 @@ describe("preset overlays", () => {
         });
       }
 
-      it("fr and en overlay the same keys", () => {
-        expect(flattenKeys(overlay.en).sort()).toEqual(flattenKeys(overlay.fr).sort());
+      it("fr and en overlay the same keys, besides French agreement", () => {
+        const agreement = new Set(FRENCH_AGREEMENT_KEYS);
+        const fr = flattenKeys(overlay.fr);
+        expect(flattenKeys(overlay.en).sort()).toEqual(fr.filter((key) => !agreement.has(key)).sort());
+        // Every preset's trip noun is masculine, so each one carries them all.
+        expect(fr.filter((key) => agreement.has(key)).sort()).toEqual([...agreement].sort());
       });
 
       // An activity renamed to whatever French calls a leg would leave one
@@ -347,6 +351,45 @@ describe("applyPresetVocabulary", () => {
         expect(instance.t("commands.record-journey-sheet.label", { lng }), `${preset} ${lng}`).toBe(title);
         expect(instance.t("commands.record-journey-sheet.submit", { lng }), `${preset} ${lng}`).toBe(submit);
       }
+    }
+  });
+
+  // Activité is feminine, Trajet and Voyage masculine: the closed and complete
+  // words agree with the noun on screen, in French only (#143).
+  it("makes the trip's closed and complete words agree with the noun on screen", () => {
+    const instance = freshInstance();
+    const words = (lng: "fr" | "en") => ({
+      status: instance.t("activities.status.CLOSED", { lng }),
+      chip: instance.t("activities.state.closed", { lng }),
+      chipWithGaps: instance.t("activities.state.closedWithGaps", { count: 2, lng }),
+      complete: instance.t("activities.completeness.COMPLETE", { lng }),
+      withExceptions: instance.t("activities.completeness.COMPLETE_WITH_EXCEPTIONS", { lng }),
+      closedAt: instance.t("activities.detail.closedAt", { date: "04/10/2026", lng }),
+      gapsNote: instance.t("vehicle.trips.gapsNote", { count: 2, lng }).split(".")[0],
+    });
+    const english = words("en");
+
+    expect(words("fr")).toEqual({
+      status: "Clôturée",
+      chip: "Clôturée",
+      chipWithGaps: "Clôturée, 2 manques",
+      complete: "Complète",
+      withExceptions: "Clôturée avec réserves",
+      closedAt: "Clôturée le 04/10/2026",
+      gapsNote: "Clôturée avec 2 manques",
+    });
+    for (const preset of TEMPLATE_CODES) {
+      applyPresetVocabulary(instance, preset);
+      expect(words("fr"), preset).toEqual({
+        status: "Clôturé",
+        chip: "Clôturé",
+        chipWithGaps: "Clôturé, 2 manques",
+        complete: "Complet",
+        withExceptions: "Clôturé avec réserves",
+        closedAt: "Clôturé le 04/10/2026",
+        gapsNote: "Clôturé avec 2 manques",
+      });
+      expect(words("en"), preset).toEqual(english);
     }
   });
 
