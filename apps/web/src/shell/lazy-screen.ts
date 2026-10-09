@@ -94,6 +94,8 @@ const offline = () => typeof navigator !== "undefined" && !navigator.onLine;
 export function lazyScreen<M extends Record<K, ComponentType>, K extends keyof M & string>(
   importer: () => Promise<M>,
   exportName: K,
+  /** Imports the screen's file under a new URL; tests replace it. */
+  importAnew: (url: string) => Promise<M> = (url) => import(/* @vite-ignore */ url) as Promise<M>,
 ): LazyScreen {
   let screen: ComponentType | undefined;
   let fetching: Promise<void> | undefined;
@@ -109,7 +111,7 @@ export function lazyScreen<M extends Record<K, ComponentType>, K extends keyof M
     if (fetching !== undefined) return fetching;
     if (offline()) return Promise.reject(new TypeError("offline"));
     const retrying = spoiled !== undefined;
-    const attempt = spoiled !== undefined ? (import(/* @vite-ignore */ `${spoiled}?retry=${Date.now()}`) as Promise<M>) : importer();
+    const attempt = spoiled !== undefined ? importAnew(`${spoiled}?retry=${Date.now()}`) : importer();
     fetching = attempt
       .then((module) => {
         screen = module[exportName];

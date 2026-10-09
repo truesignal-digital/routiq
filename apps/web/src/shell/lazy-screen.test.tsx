@@ -117,14 +117,17 @@ describe("lazyScreen", () => {
     [200, "load failed, reload"],
   ])("asks for a reload only when the server hands out the file it failed on (HEAD %i)", async (status, shown) => {
     const file = "http://127.0.0.1:1/static/BranchesScreen-x.js";
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
       input === "/" ? serverIndex("/static/index-a.js") : new Response(null, { status }),
     );
     const failure = new TypeError(`Failed to fetch dynamically imported module: ${file}`);
-    const Lazy = lazyScreen(vi.fn<() => Promise<Module>>().mockRejectedValue(failure), "Page");
+    const importAnew = vi.fn<(url: string) => Promise<Module>>().mockRejectedValue(failure);
+    const Lazy = lazyScreen(vi.fn<() => Promise<Module>>().mockRejectedValue(failure), "Page", importAnew);
     await Lazy.preload();
     // The tap fetches the file under a new URL; that fails too.
     await mount(Lazy);
+    expect(importAnew).toHaveBeenCalledWith(expect.stringMatching(/BranchesScreen-x\.js\?retry=\d+$/));
+    expect(fetchSpy).toHaveBeenCalledWith(file, { method: "HEAD", cache: "no-store" });
     expect(screen.getByText(shown)).toBeTruthy();
   });
 
