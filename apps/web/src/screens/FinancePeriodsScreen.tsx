@@ -42,6 +42,7 @@ import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { usePeriods } from "@/finance/usePeriods.js";
 import {
+  currentPeriodCode,
   mergeImplicitCurrentPeriod,
   validateReopenReason,
 } from "@/finance/model.js";
@@ -263,6 +264,7 @@ export function FinancePeriodsScreen() {
       {actionDialog.open && (
         <ActionDialog
           action={actionDialog.action}
+          current={actionDialog.periodCode === currentPeriodCode()}
           onLock={() => handleLock(actionDialog.periodCode)}
           onReopen={(reason) => handleReopen(actionDialog.periodCode, reason)}
           onCancel={() => setActionDialog({ open: false })}
@@ -276,12 +278,15 @@ export function FinancePeriodsScreen() {
 
 function ActionDialog({
   action,
+  current,
   onLock,
   onReopen,
   onCancel,
   error,
 }: {
   action: "lock" | "reopen";
+  /** Locking the current month stops posting; any other month sends late entries to the current one. */
+  current: boolean;
   onLock: () => Promise<void>;
   onReopen: (reason: string) => Promise<void>;
   onCancel: () => void;
@@ -312,7 +317,7 @@ function ActionDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>{label("lock-period")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("finance.periods.lockExplanation")}
+              {t(current ? "finance.periods.lockCurrentExplanation" : "finance.periods.lockExplanation")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
