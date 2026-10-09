@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 675364,
+    "ceiling": 590845,
     "raises": [
       {
         "date": "2026-10-06",
@@ -155,13 +155,13 @@
       {
         "date": "2026-10-09",
         "from": 584923,
-        "to": 675364,
-        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB). Measured on Linux (node:24) as CI builds it; macOS gives the same number"
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292), same growth as web.initial-js-gzip: about 5.7 kB gzip with no lazy split yet"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22212,
+    "ceiling": 22508,
     "raises": [
       {
         "date": "2026-10-06",
@@ -204,11 +204,17 @@
         "from": 22136,
         "to": 22212,
         "reason": "#322: navigation count badge and rail dot styles on the sidebar and phone bottom bar, about 80 B gzip (re-recorded on develop 6444c6bf)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 22212,
+        "to": 22508,
+        "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 255682,
+    "ceiling": 590845,
     "raises": [
       {
         "date": "2026-10-06",
@@ -359,6 +365,12 @@
         "from": 583959,
         "to": 584923,
         "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292): FormLayout, FormGroup/FormPair/FormOptional and ten kit fields with required read from the schema, about 5.7 kB gzip (a Base UI combobox was dropped for the existing popover pattern to save about 14 kB); about 29 ms on a pilot phone at about 5 ms per kB; #294 moves the other forms onto it and drops their own markup"
       }
     ]
   }

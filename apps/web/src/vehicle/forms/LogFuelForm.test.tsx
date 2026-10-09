@@ -6,12 +6,13 @@ import {
   type CommandWarningCode,
 } from "@routiq/contracts";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { sessionStore } from "../../auth/store.js";
 import type { CommandClient, SubmitResult } from "../../commands/client.js";
 import { i18n } from "../../i18n/index.js";
+import { describeCommandForm } from "../../test/form-harness.js";
 import { LogFuelForm } from "./LogFuelForm.js";
 
 const mocks = vi.hoisted(() => ({ toastAdd: vi.fn() }));
@@ -78,13 +79,15 @@ function renderForm(client: CommandClient, handlers = { onDone: vi.fn(), onDismi
   return handlers;
 }
 
-async function fill({ amount, odometer }: { amount: string; odometer?: string }) {
-  await userEvent.type(screen.getByLabelText("Amount paid (FCFA)"), amount);
+async function fill({ amount, odometer }: { amount: string; odometer?: string }, user: UserEvent = userEvent.setup()) {
+  await user.type(screen.getByLabelText("Amount paid"), amount);
+  // Leaving the amount lays it out as the money it is (45,000).
+  await user.tab();
   fireEvent.change(screen.getByLabelText("Date and time"), {
     target: { value: "2026-09-25T07:40" },
   });
   if (odometer !== undefined) {
-    fireEvent.change(screen.getByLabelText("Odometer in km (optional)"), {
+    fireEvent.change(screen.getByLabelText("Reading"), {
       target: { value: odometer },
     });
   }
@@ -112,7 +115,46 @@ afterEach(() => {
   cleanup();
 });
 
+describeCommandForm("LogFuelForm", {
+  command: { command: "record-expense", intent: "fuel" },
+  render: ({ client, onDismiss }) => (
+    <LogFuelForm
+      surface="sheet"
+      assetId={ASSET_ID}
+      assetLabel="DLA-T-001 · Mercedes Actros"
+      branchCode="DLA"
+      lastReading={{ readingType: "ODOMETER", value: 412_000 }}
+      client={client}
+      onDismiss={onDismiss}
+    />
+  ),
+  opened: () => {
+    expect(screen.getByText("DLA-T-001 · Mercedes Actros")).toBeTruthy();
+    expect((screen.getByLabelText("Amount paid") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("Date and time") as HTMLInputElement).value).not.toBe("");
+    expect(screen.getByText("Last reading: 412,000 km")).toBeTruthy();
+  },
+  fill: (user) => fill({ amount: "45000" }, user),
+  payload: {
+    entryId: expect.any(String),
+    branchCode: "DLA",
+    economicDate: "2026-09-25",
+    categoryCode: "FUEL",
+    amountMinor: 45_000,
+    currency: "XAF",
+    paymentMethod: "CASH",
+    estimateStatus: "ACTUAL",
+    postings: [{ assetId: ASSET_ID, amountMinor: 45_000, assetAttribution: "DIRECT" }],
+  },
+  refusal: "PERIOD_LOCKED",
+});
+
 describe("LogFuelForm", () => {
+  // The harness above puts the language back to French when it is done.
+  beforeAll(async () => {
+    await i18n.changeLanguage("en");
+  });
+
   it("records the FUEL expense, then the odometer, as two commands in that order", async () => {
     const client = scriptedClient({
       "record-expense": [committed("POSTED")],
@@ -198,13 +240,13 @@ describe("LogFuelForm", () => {
     );
     expect(screen.getByRole("alert")).toBeTruthy();
     // The expense stands: its fields are closed, and nothing was announced yet.
-    expect((screen.getByLabelText("Amount paid (FCFA)") as HTMLInputElement).disabled).toBe(
+    expect((screen.getByLabelText("Amount paid") as HTMLInputElement).disabled).toBe(
       true,
     );
     expect(onDismiss).not.toHaveBeenCalled();
     expect(mocks.toastAdd).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Odometer in km (optional)"), {
+    fireEvent.change(screen.getByLabelText("Reading"), {
       target: { value: "412850" },
     });
     await userEvent.click(screen.getByRole("button", { name: "Record the reading" }));
