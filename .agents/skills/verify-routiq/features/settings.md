@@ -1,13 +1,13 @@
 # Settings
 
-Direction manages branches; Direction and administrators manage users (logins with a role and branch scope; an administrator only drivers, technicians and cashiers in their branches); Direction and administrators manage people (drivers and crew without a login). There is no modules screen; modules are switched by the `enable-module` and `disable-module` commands.
+Direction manages branches; Direction and administrators manage users (logins with a role and branch scope; an administrator only drivers, technicians and cashiers in their branches); Direction and administrators manage people (drivers and crew without a login). There is no modules screen. Modules and template presets are vendor-only (ADR-0005): no tenant role can change them, and a tenant session sending `enable-module`, `disable-module` or `set-template-preset` gets 403 `COMMAND_SCOPE_FORBIDDEN`.
 
 ## Sub-features
 
 - `set-branches` lists branches and creates, renames, deactivates or reactivates one.
 - `set-users` lists users with role and branch scope, adds a user with a PIN, changes a role, resets a PIN, deactivates.
 - `set-people` lists people and adds a person ("Ajouter une personne").
-- `set-modules` has no UI; use the commands.
+- `set-modules` has no UI. Switch a module or preset on slot N as the vendor, with the slot's Postgres (port 24000+10N) and its `commandPayloadHmacKey` from `.verify/slots/N/state.json`: `DATABASE_URL=postgresql://routiq_app:routiq_app@127.0.0.1:<pg>/routiq_dev AUTH_DATABASE_URL=postgresql://routiq:routiq@127.0.0.1:<pg>/routiq_dev COMMAND_PAYLOAD_HMAC_KEY=<key> pnpm --filter @routiq/api entitlement --workspace transports-ngwa --disable-module FINANCE` (also `--enable-module`, `--enable-preset`, `--disable-preset`). `pnpm verify up --reseed` puts the seed's modules and presets back.
 
 ## How to get to it (user POV)
 

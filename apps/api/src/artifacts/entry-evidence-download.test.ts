@@ -9,6 +9,7 @@ import { buildServer } from "../server.js";
 import type { ObjectStorage } from "../storage/types.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * The entry-scoped download (PLAN §1.7): a receipt is a financial record's
@@ -233,7 +234,7 @@ describe("GET /v1/finance/entries/:entryId/evidence/:artifactId/download-url", (
   it("answers MODULE_DISABLED when FINANCE is off", async () => {
     const gated = await seedWorkspace(db);
     const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(db, gated.workspace.id, "FINANCE", false);
     const response = await api.get(gatedAdmin.token, url(randomUUID(), randomUUID()));
     expect(response.status).toBe(403);
     expect(response.body).toEqual({

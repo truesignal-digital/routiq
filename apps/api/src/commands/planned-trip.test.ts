@@ -15,6 +15,7 @@ import {
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * ADR-0012 for #334: a booking is the trip record itself, PLANNED, and
@@ -70,7 +71,7 @@ describe("planned trips (ADR-0012)", () => {
     driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
     otherDriver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
 
-    await api.ok(director.token, "enable-module", { moduleCode: "SCHEDULING" });
+    await setModule(ctx.db, workspaceId, "SCHEDULING", true);
 
     driverPersonId = await registerPerson("DRIVER", driver.membershipId);
     otherDriverPersonId = await registerPerson("DRIVER", otherDriver.membershipId);
@@ -610,12 +611,12 @@ describe("planned trips (ADR-0012)", () => {
       const booked = await plan({ plannedAssetId: vehicle, plannedStartAt: "2026-11-20T07:00:00+01:00" });
       expect(booked.body.warnings).toEqual(["VEHICLE_GROUNDED"]);
 
-      await api.ok(director.token, "disable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(ctx.db, workspaceId, "MAINTENANCE", false);
       try {
         const off = await plan({ plannedAssetId: vehicle, plannedStartAt: "2026-11-21T07:00:00+01:00" });
         expect(off.body.warnings).toEqual([]);
       } finally {
-        await api.ok(director.token, "enable-module", { moduleCode: "MAINTENANCE" });
+        await setModule(ctx.db, workspaceId, "MAINTENANCE", true);
       }
     });
   });

@@ -233,8 +233,8 @@
         <thead><tr><th>Action</th><th>Page</th><th>Status today</th><th>Evidence / what's missing</th></tr></thead>
         <tbody>
           <tr><td>Set up a tenant (company, agencies, first admin, modules, presets)</td><td>Set up a tenant</td><td><span class="st be">Backend only</span></td><td><code>provision-workspace</code> (platform scope) + <code>apps/api/scripts/provision.ts</code></td></tr>
-          <tr><td>Turn a module on / off</td><td>Tenant → Modules</td><td><span class="st gap2">Exists, wrong scope</span></td><td><code>enable-module</code> / <code>disable-module</code> run as tenant <code>ADMIN</code> (<code>module-toggle.ts:29</code>); ADR-0005 says platform only</td></tr>
-          <tr><td>Change a tenant's presets</td><td>Tenant → Overview</td><td><span class="st gap2">Exists, wrong scope</span></td><td><code>set-template-preset</code> runs as tenant <code>ADMIN</code></td></tr>
+          <tr><td>Turn a module on / off</td><td>Tenant → Modules</td><td><span class="st be">Backend only</span></td><td><code>enable-module</code> / <code>disable-module</code> v2, platform scope (#362) + <code>apps/api/scripts/entitlement.ts</code></td></tr>
+          <tr><td>Change a tenant's presets</td><td>Tenant → Overview</td><td><span class="st be">Backend only</span></td><td><code>set-template-preset</code> v2, platform scope (#362) + <code>apps/api/scripts/entitlement.ts</code></td></tr>
           <tr><td>Add an agency</td><td>Tenant → Agencies</td><td><span class="st nw">New</span> (platform)</td><td><code>create-branch</code> exists for the tenant's own admin; a platform version is new</td></tr>
           <tr><td>Add or reset the first administrator</td><td>Tenant → Administrators</td><td><span class="st nw">New</span> (platform)</td><td><code>add-member</code>, <code>reset-member-pin</code> exist tenant-side only</td></tr>
           <tr><td>See tenant health (users, records, errors, storage)</td><td>Tenants, Tenant → Usage</td><td><span class="st nw">New</span></td><td>Platform count reads</td></tr>

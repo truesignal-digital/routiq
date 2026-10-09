@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { setTemplatePresetCommand } from "./set-template-preset.js";
+import { setTemplatePresetCommand, setTemplatePresetV2Command } from "./set-template-preset.js";
 
 const valid = {
   name: "set-template-preset",
@@ -37,5 +37,17 @@ describe("setTemplatePresetCommand", () => {
         payload: { ...valid.payload, enabled: "true" },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("setTemplatePresetV2Command", () => {
+  const v2 = { ...valid, version: 2, payload: { ...valid.payload, workspaceSlug: "transports-ngwa" } };
+
+  it("accepts a preset change that names its workspace", () => {
+    expect(setTemplatePresetV2Command.parse(v2).payload.workspaceSlug).toBe("transports-ngwa");
+  });
+
+  it("refuses one that names no workspace", () => {
+    expect(setTemplatePresetV2Command.safeParse({ ...v2, payload: valid.payload }).success).toBe(false);
   });
 });

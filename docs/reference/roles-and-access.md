@@ -109,8 +109,8 @@ whatever its access says.
 | People | See Personnel | ✓ | ✓ | V | — | — | — |
 | People | Add a person (driver, hostess, mechanic…) | ✓ | ✓ | — | — | — | — |
 | People | Give, change or remove app access; reset PIN | ✓ every role but Direction | ✓ Chauffeur, Technicien, Caissier only | — | — | — | — |
-| Settings | Branches, categories, approval bands, presets | ✓ | — | — | — | — | — |
-| Settings | Modules | vendor only (ADR-0005); the app still lets Direction change them until #362 (open question below) | — | — | — | — | — |
+| Settings | Branches, categories, approval bands | ✓ | — | — | — | — | — |
+| Settings | Modules and template presets | vendor only (ADR-0005, confirmed 2026-10-08; `pnpm --filter @routiq/api entitlement`, #362) | — | — | — | — | — |
 | Any | Approve something you submitted | — | — | — | — | — | — |
 
 ## Migration from the built roles
@@ -133,11 +133,11 @@ A plain map that promotes nobody (owner, 2026-10-04). Nobody becomes Direction a
 - **Who approves work orders:** does the Administrateur approve work orders
   alone, or does Finance also sign costs above a band? The default above
   follows the team's use-case document (Admin validates, Finance pays).
-- **Open question: who turns modules on and off?** ADR-0005 makes modules
-  entitlements the vendor grants, so the rule in this document is "vendor
-  only". The app does not enforce that yet: Direction can still enable and
-  disable a module until #362 restricts it to vendor operators. Owner to
-  confirm the rule before #362 ships.
+- **Decided 2026-10-08: who turns modules on and off?** The vendor only,
+  per ADR-0005: modules and template presets are entitlements the vendor
+  grants. The owner confirmed this on 2026-10-08. #362 enforces it: every
+  tenant role, Direction included, is refused, and the vendor changes them
+  with `pnpm --filter @routiq/api entitlement`.
 - **Open question: may a Finance member limited to some branches lock the
   month for the whole company?** A month is one per company, not per branch,
   so a lock stops posting into that month in every branch. Today any Finance

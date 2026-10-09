@@ -11,6 +11,7 @@ import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
 import { approvalRules, branches, sourceArtifacts } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 
@@ -820,7 +821,7 @@ describe("work order and signalement reads", () => {
         expect(open.statusCode, url).not.toBe(403);
       }
 
-      await command(gatedToken, "disable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(db, seeded.workspace.id, "MAINTENANCE", false);
 
       for (const url of ["/v1/work-orders", "/v1/issues", `/v1/work-orders/${randomUUID()}`]) {
         const response = await ctx.app.inject({
@@ -1002,7 +1003,7 @@ describe("work order makers and the issue detail read", () => {
 
     const gated = await seedWorkspace(ctx.db);
     const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await setModule(ctx.db, gated.workspace.id, "MAINTENANCE", false);
     const refused = await api.get(gatedAdmin.token, `/v1/issues/${randomUUID()}`);
     expect(refused.status).toBe(403);
     expect(refused.body).toEqual({

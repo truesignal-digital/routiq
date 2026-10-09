@@ -97,6 +97,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `issue-severity` | as the driver: report a problem on VH001 unticked, then Mark as safety-critical → grounded, History shows it; `--role admin` after it: take the mark off with a reason → still grounded (#96) | yes |
 | `direction-note` | as Direction: write a note on VH001 → it waits in Now → To do; `--role driver` after it: the note is in the To do, Mark as seen → it leaves, the note says "Seen by" (#98) | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
+| `work-order-link` | as Finance: a posted work-order entry's "Linked to" names the order by its description, never an id fragment, in the Money list, the side panel and the full page; the link opens the order in its vehicle's Maintenance tab (#547) | no |
 | `approve-entry` | Money → Waiting your approval → row Approve (one tap) → entry POSTED | yes |
 | `money-page` | Money: lead line, tiles = `GET /v1/finance/summary`, waiting tile → row Reject dialog / Approve, `/finance/approvals` redirect, Accounting months link (#314) | yes |
 | `approve-from-panel` | Money waiting view → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
