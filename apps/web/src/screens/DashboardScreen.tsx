@@ -141,14 +141,17 @@ function homeTile(
 
   if (key === "pendingApprovals") {
     const link = { to: "/finance/approvals" };
+    if (data === undefined) return { ...base, link, value: null };
     // Null only when the API withholds finance from this caller; the tile is
     // gated to approvers, so this is the brief window before /v1/me agrees.
-    if (data === undefined || data.pendingApprovals === null) {
+    // Withheld is not unrecorded, so the value is left out.
+    if (data.pendingApprovals === null) {
       return {
         ...base,
         link,
         value: null,
-        ...(data === undefined ? {} : { hint: t("home.cards.financeUnavailable") }),
+        withheld: true,
+        hint: t("home.cards.financeUnavailable"),
       };
     }
     const { count, outsideBranchCount } = data.pendingApprovals;
@@ -194,8 +197,8 @@ function homeTile(
       }
     : {};
   if (data === undefined) return { ...base, ...link, value: null };
-  // No open period means nothing has been posted yet: a dash, never a zero,
-  // because a zero would claim the period balanced (§3.4).
+  // No open period means nothing has been posted yet: said in words, never a
+  // zero, because a zero would claim the period balanced (§3.4).
   if (openPeriod == null) {
     return { ...base, ...link, value: null, hint: t("home.cards.noOpenPeriod") };
   }
