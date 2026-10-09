@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { Building2, Pencil, Plus, PowerOff, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -9,6 +9,7 @@ import {
   DataTable,
   DataTableViewOptions,
   type DataTableRowAction,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -62,21 +63,21 @@ export function BranchesScreen() {
     [branchesQuery.data],
   );
 
-  const columns = useMemo<ColumnDef<BranchListItem>[]>(
+  const columns = useMemo<DataTableColumn<BranchListItem>[]>(
     () => [
       {
         accessorKey: "code",
         header: t("branches.columns.code"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("branches.columns.code") },
+        meta: { phone: "title", label: t("branches.columns.code") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">{row.original.code}</span>
+          <span className="tabular-nums whitespace-nowrap">{row.original.code}</span>
         ),
       },
       {
         accessorKey: "name",
         header: t("branches.columns.name"),
-        meta: { mobile: "primary", label: t("branches.columns.name") },
+        meta: { phone: "meta", label: t("branches.columns.name") },
         cell: ({ row }) => (
           <span className={row.original.active ? "" : "text-muted-foreground"}>
             {row.original.name}
@@ -86,7 +87,7 @@ export function BranchesScreen() {
       {
         accessorKey: "timezone",
         header: t("branches.columns.timezone"),
-        meta: { mobile: "secondary", label: t("branches.columns.timezone") },
+        meta: { phone: "meta", label: t("branches.columns.timezone") },
         cell: ({ row }) => (
           <span className="whitespace-nowrap">{row.original.timezone}</span>
         ),
@@ -94,7 +95,7 @@ export function BranchesScreen() {
       {
         accessorKey: "active",
         header: t("branches.columns.status"),
-        meta: { mobile: "primary", label: t("branches.columns.status") },
+        meta: { phone: "status", label: t("branches.columns.status") },
         cell: ({ row }) => (
           <StatusBadge tone={row.original.active ? "success" : "neutral"}>
             {t(row.original.active ? "branches.status.active" : "branches.status.inactive")}
@@ -129,6 +130,7 @@ export function BranchesScreen() {
           </Button>
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("branches.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions

@@ -19,7 +19,7 @@
         "assigned": "Camion affecté"
       }
     },
-    "title": "Vos camions",
+    "title": "Camions",
     "subtitle": "Suivez chaque camion, de son enregistrement à sa mise hors service.",
     "searchLabel": "Rechercher dans les camions",
     "filterLabel": "Filtrer les camions",
@@ -118,7 +118,8 @@
         "rowAttribute": "Imputer la ligne {position} à ce trajet",
         "attributeHint": "Décochez si la somme revient à l'engin et non au trajet : une réparation reste hors de la fiche."
       }
-    }
+    },
+    "subtitle": "Chaque trajet de vos camions, du départ à la clôture."
   },
   "maintenance": {
     "workOrders": {
@@ -213,7 +214,7 @@
     },
     "actions": {
       "change-custodian": {
-        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque trajet."
+        "description": "La personne qui conduit habituellement le véhicule. Chaque trajet peut avoir un autre chauffeur."
       }
     }
   },

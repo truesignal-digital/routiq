@@ -37,14 +37,14 @@ Each section is a route under `/assets/$assetId`, so the selected section, perio
 
 | Section | Shown when | Backed by |
 | --- | --- | --- |
-| Now (fr: “En ce moment”) | Always | Attention items, the selected month's money (ledger readers only) and the five latest history items. |
+| Overview (fr: “Vue d’ensemble”, was Now until #90) | Always | Attention items (To do first, collapsible), the selected month's money (ledger readers only) and the five latest history items. |
 | Maintenance | MAINTENANCE is on | `GET /v1/work-orders` and `GET /v1/issues` filtered to the vehicle; `GET /v1/issues/:issueId` for a direct link to one issue. A work order's estimate, actual cost and cost lines follow `canReadWorkOrderCosts` (every role but DRIVER, #390): null for a driver, in the list, the detail and the record history's MONEY changes. |
 | Money | FINANCE is on and the role reads the ledger | `GET /v1/assets/:assetId/finance` and `GET /v1/finance/entries` filtered to the vehicle. |
 | Trips | ACTIVITIES is on | `GET /v1/activities` filtered to the vehicle; each row now carries origin, destination, total distance and the first driver. |
 | Documents | DOCUMENTS is on | `GET /v1/assets/:assetId/documents`. |
 | History | Always | `GET /v1/assets/:assetId/history`. |
 
-- Now: the status of the vehicle in one sentence, what needs the reader next, what waits on others, and missing data made explicit.
+- Overview: the status of the vehicle in one sentence, what needs the reader next, what waits on others, and missing data made explicit.
 - Maintenance: reported issues and work orders, with each work order's chronology and cost lines.
 - Money: recorded vehicle expenses, pending review separately, category breakdown, contributing entries, evidence and history links, and permitted expense, review and correction actions.
 - Documents: reuse existing vehicle document records, renewal and supersession commands. A renewal creates a new version; do not replace old evidence.
@@ -52,7 +52,7 @@ Each section is a route under `/assets/$assetId`, so the selected section, perio
 
 Phone: compact identity and section selector, readable record cards, full-screen capture. Desktop: line tabs, table and contextual drawer with full-detail escape. Load section records on demand rather than fetching every module on arrival. A long form must not lose a draft when a drawer closes or a route changes; #45 owns durable capture/recovery.
 
-Hide actions the actor cannot perform. An executive can inspect but cannot record, approve, reverse, lock or reopen periods. The UI uses current membership/module context; server authorization remains decisive. Command capabilities do not implicitly define read permission. Do not import the entire identity-capabilities candidate just to obtain a read gate (#47).
+Hide actions the actor cannot perform. Since ADR-0009 there is no read-only executive: Direction records, approves, cancels entries, creates work orders and releases vehicles; [roles-and-access](roles-and-access.md) has the full list. The UI uses current membership/module context; server authorization remains decisive. Command capabilities do not implicitly define read permission. Do not import the entire identity-capabilities candidate just to obtain a read gate (#47).
 
 ## Money: precise meanings
 

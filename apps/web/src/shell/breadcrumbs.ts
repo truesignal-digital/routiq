@@ -24,7 +24,7 @@ interface PageTrail {
  * longer include Saisie, but a breadcrumb has to name whatever page you are
  * actually looking at.
  */
-const PAGE_TRAILS: readonly PageTrail[] = [
+export const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
   // The vehicle workspace: its sections are tabs on one record, so every
   // section shares the record's crumb and the tabs say where you are.
@@ -39,22 +39,23 @@ const PAGE_TRAILS: readonly PageTrail[] = [
     trail: [{ labelKey: "activities.detail.breadcrumb", record: true }],
   },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
-  { pattern: "/finance/entries", trail: [{ labelKey: "finance.navigation.entries" }] },
+  // The page title keys, so the Money and Accounting months rows name these pages once.
+  { pattern: "/finance/entries", trail: [{ labelKey: "finance.entries.title" }] },
   {
     pattern: "/finance/entries/$entryId",
     trail: [
-      { labelKey: "finance.navigation.entries", to: "/finance/entries" },
+      { labelKey: "finance.entries.title", to: "/finance/entries" },
       { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
   },
-  {
-    pattern: "/finance/approvals",
-    trail: [{ labelKey: "finance.navigation.approvals" }],
-  },
-  { pattern: "/finance/periods", trail: [{ labelKey: "finance.navigation.periods" }] },
+  // Redirects to the waiting view; named the same in case a frame renders first.
+  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
+  { pattern: "/finance/periods", trail: [{ labelKey: "finance.periods.title" }] },
+  { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
   { pattern: "/more/users", trail: [{ labelKey: "users.title" }] },
   { pattern: "/more/branches", trail: [{ labelKey: "branches.title" }] },
+  { pattern: "/more/company", trail: [{ labelKey: "settings.title" }] },
 ];
 
 function segments(path: string): string[] {
@@ -81,17 +82,18 @@ export function breadcrumbTrail(
   pathname: string,
   recordLabel?: string,
 ): Crumb[] {
-  const crumbs: Crumb[] = [{ labelKey: "nav.home", to: "/" }];
+  const crumbs: Crumb[] = [{ labelKey: "home.title", to: "/" }];
 
   const section = activeSection(sections, pathname);
   // The home section is the crumb we just seeded; anything else nests under it.
   if (section !== undefined && section.key !== "home") {
-    crumbs.push({ labelKey: `nav.${section.key}`, to: section.to });
+    crumbs.push({ labelKey: section.labelKey, to: section.to });
   }
 
   const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
   if (page !== undefined) {
-    crumbs.push(...page.trail);
+    // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
+    crumbs.push(...page.trail.filter((crumb) => crumb.labelKey !== section?.labelKey));
   }
 
   const last = crumbs[crumbs.length - 1];

@@ -1,4 +1,5 @@
 import {
+  CANCELLATION_REASON_CODES,
   CATEGORY_KINDS,
   EVIDENCE_POLICIES,
   MODULE_CODES,
@@ -288,6 +289,9 @@ export const auditEvents = pgTable(
       t.occurredAt.desc().nullsFirst(),
       t.id,
     ),
+    // The dispatcher's "every command writes its own audit event" check (#153)
+    // looks events up by command on every write; without this it scans the table.
+    index("audit_events_ws_command_idx").on(t.workspaceId, t.commandId),
   ],
 );
 
@@ -578,6 +582,12 @@ export const financialEntries = pgTable(
     }).notNull(),
     rejectedReason: text("rejected_reason"),
     reversesEntryId: uuid("reverses_entry_id").references((): AnyPgColumn => financialEntries.id),
+    /**
+     * On a reversal row only, set once at insert: why the entry was cancelled
+     * (#426). Text is the person's words, required for OTHER.
+     */
+    reversalReasonCode: text("reversal_reason_code", { enum: CANCELLATION_REASON_CODES }),
+    reversalReasonText: text("reversal_reason_text"),
     postedAt: timestamp("posted_at", { withTimezone: true }),
     rowVersion: integer("row_version").notNull().default(1),
     createdByCommandId: uuid("created_by_command_id")
@@ -985,7 +995,9 @@ export const operationalIssues = pgTable(
     /**
      * OPEN → RESOLVED | DISMISSED, once (#28). No triage state: what happens
      * next — a work order, a dismissal, nothing yet — is an attribute of the
-     * issue's surroundings, not a status. The report columns above never move.
+     * issue's surroundings, not a status. The report columns above never move,
+     * except `safety_critical`, which change-issue-severity sets while the
+     * issue is OPEN (#96); its audit events keep every earlier value.
      */
     status: text("status", { enum: ["OPEN", "RESOLVED", "DISMISSED"] })
       .notNull()
@@ -1142,6 +1154,14 @@ export const notes = pgTable(
     authorMembershipId: uuid("author_membership_id")
       .notNull()
       .references(() => memberships.id),
+    /**
+     * The author's role when the note was written (#98): a note from Direction
+     * waits in the vehicle's To-do until someone acknowledges it. Stored, not
+     * read off the membership, so a later role change does not move old notes
+     * in or out of the To-do. Notes written before 0043 took the role their
+     * author held then.
+     */
+    authorRole: text("author_role", { enum: ROLES }).notNull(),
     body: text("body").notNull(),
     createdByCommandId: uuid("created_by_command_id")
       .notNull()
@@ -1150,7 +1170,35 @@ export const notes = pgTable(
   },
   (t) => [
     index("notes_ws_entity_created_idx").on(t.workspaceId, t.entityType, t.entityId, t.createdAt),
+    uniqueIndex("notes_ws_id_uq").on(t.workspaceId, t.id),
   ],
+);
+
+/**
+ * Someone saw a note from Direction (#98), written by acknowledge-note.
+ * Append-only and one per note: the note leaves the To-do with "Seen by" the
+ * first member who acknowledged it, and a later acknowledgement adds nothing.
+ * The note itself is never touched.
+ */
+export const noteAcknowledgements = pgTable(
+  "note_acknowledgements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    noteId: uuid("note_id")
+      .notNull()
+      .references(() => notes.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("note_acknowledgements_ws_note_uq").on(t.workspaceId, t.noteId)],
 );
 
 /**

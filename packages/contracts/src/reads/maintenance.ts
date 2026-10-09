@@ -153,6 +153,13 @@ export const workOrderChronologieEvent = z.object({
   occurredAt: z.iso.datetime(),
   /** Masked for PLATFORM actors exactly as the history timeline masks them. */
   actor: historyActor,
+  /**
+   * The decision's reason or note, through the same allowlist the record
+   * history reads (`noteSql`), so the two timelines can't disagree.
+   */
+  note: z.string().nullable(),
+  /** A reason picked from a list (#426): a code the client words. */
+  noteCode: z.string().nullable(),
 });
 
 const costLineFields = {
@@ -281,3 +288,30 @@ export type IssueListQuery = z.infer<typeof issueListQuery>;
 export type IssueListItem = z.infer<typeof issueListItem>;
 export type IssueListResponse = z.infer<typeof issueListResponse>;
 export type IssueDetail = z.infer<typeof issueDetail>;
+
+/** Narrows the workshop counts like the lists: inside the caller's scope, never wider. */
+export const maintenanceSummaryQuery = z.object({
+  branchId: z.uuid().optional(),
+});
+
+/**
+ * The Maintenance overview, counted in SQL over the caller's workspace and
+ * branch scope (the asset's branch). `openIssues` equals what the issues list
+ * shows for `status=OPEN`, `approvedWorkOrders` what the work-order list shows
+ * for `status=APPROVED`. `grounded` counts vehicles holding an open
+ * availability interval. `averageRepairDays` is the mean time from a work
+ * order's creation to its completion over the orders completed in the last
+ * `repairWindowDays` days, to one decimal; null when none completed.
+ */
+export const maintenanceSummary = z.object({
+  openIssues: z.number().int().nonnegative(),
+  openSafetyCritical: z.number().int().nonnegative(),
+  grounded: z.number().int().nonnegative(),
+  approvedWorkOrders: z.number().int().nonnegative(),
+  averageRepairDays: z.number().nonnegative().nullable(),
+  repairsCounted: z.number().int().nonnegative(),
+  repairWindowDays: z.number().int().positive(),
+});
+
+export type MaintenanceSummaryQuery = z.infer<typeof maintenanceSummaryQuery>;
+export type MaintenanceSummary = z.infer<typeof maintenanceSummary>;

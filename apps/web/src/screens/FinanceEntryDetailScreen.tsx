@@ -13,7 +13,7 @@ import { EntrySummary } from "@/finance/EntrySummary.js";
 import { useMeContext } from "@/auth/me.js";
 import { useActiveSession } from "@/auth/store.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { isOwnSubmission } from "@/finance/model.js";
+import { cancellationReasonWords, isOwnSubmission } from "@/finance/model.js";
 import {
   canApproveEntries,
   canEditPendingEntry,
@@ -57,6 +57,7 @@ function FinanceEntryDetailContent() {
   const [reverseOpen, setReverseOpen] = useState(openReverse === true);
   const [editOpen, setEditOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [recordAgainOpen, setRecordAgainOpen] = useState(false);
   const queryClient = useQueryClient();
   const session = useActiveSession();
 
@@ -109,10 +110,16 @@ function FinanceEntryDetailContent() {
             </CardContent>
           </Card>
 
-          {(entryQuery.data.reversesEntryId || entryQuery.data.reversedByEntryId) && (
+          {(entryQuery.data.reversesEntryId || entryQuery.data.reversedByEntryId || entryQuery.data.cancellation) && (
             <div className="rounded-xl border border-border bg-card p-4">
               <h2 className="mb-3 font-semibold">{t("finance.entries.detail.reversalChain")}</h2>
               <div className="space-y-2">
+                {entryQuery.data.cancellation && (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">{t("finance.entries.detail.cancellationReason")}</span>{" "}
+                    <span className="font-medium">{cancellationReasonWords(entryQuery.data.cancellation, t)}</span>
+                  </p>
+                )}
                 {entryQuery.data.reversesEntryId && (
                   <ReversalLink entryId={entryQuery.data.reversesEntryId} type="reverses" />
                 )}
@@ -135,7 +142,7 @@ function FinanceEntryDetailContent() {
 
           {canEdit && editOpen && (
             <RecordEntryForm
-              surface="dialog"
+              surface="sheet"
               editing={entryQuery.data}
               onRecorded={() => {
                 setEditOpen(false);
@@ -173,11 +180,14 @@ function FinanceEntryDetailContent() {
             </Button>
           )}
 
-          {canReverse && reverseOpen && (
+          {/* Stays mounted once the entry reads Cancelled: a "wrong details"
+              cancellation ends on the Record again step. */}
+          {reverseOpen && (canReverse || entryQuery.data.status === "REVERSED") && (
             <ReverseEntryForm
               surface="dialog"
               entry={{ id: entryQuery.data.id, rowVersion: entryQuery.data.rowVersion }}
-              onReversed={(reversalEntryId) => {
+              onReversed={(reversalEntryId, reasonCode) => {
+                if (reasonCode === "WRONG_DETAILS") return;
                 setTimeout(() => {
                   void navigate({
                     to: "/finance/entries/$entryId",
@@ -185,7 +195,27 @@ function FinanceEntryDetailContent() {
                   });
                 }, 1500);
               }}
+              onRecordAgain={() => {
+                setReverseOpen(false);
+                setRecordAgainOpen(true);
+              }}
               onDismiss={() => setReverseOpen(false)}
+            />
+          )}
+
+          {recordAgainOpen && (
+            <RecordEntryForm
+              surface="sheet"
+              recordAgainFrom={entryQuery.data}
+              onRecorded={(outcome) => {
+                setRecordAgainOpen(false);
+                void refreshFinance();
+                void navigate({
+                  to: "/finance/entries/$entryId",
+                  params: { entryId: outcome.recordId },
+                });
+              }}
+              onDismiss={() => setRecordAgainOpen(false)}
             />
           )}
         </div>

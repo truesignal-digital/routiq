@@ -1,6 +1,7 @@
 import { ledgerEntryStatuses, type ActivityDetail, type MoneyReadScope } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { CancellationDetails, foldedAmountClass, foldTripEntries } from "@/finance/EntryCancellation.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -63,6 +64,8 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
   const postedNet = postedNetMinor(entries);
   const pendingNet = pendingNetMinor(entries);
   const hasPending = entries.some((entry) => entry.status === "SUBMITTED");
+  // One line per event (#427); the sums above stay on every signed row.
+  const lines = foldTripEntries(entries);
 
   return (
     <Card>
@@ -71,7 +74,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col gap-1">
-          {entries.map((entry) => (
+          {lines.map((entry) => (
             <li key={entry.entryId}>
               <Link
                 to="/finance/entries/$entryId"
@@ -79,7 +82,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
                 className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm transition hover:bg-foreground/[0.04]"
               >
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono">{entry.entryNumber}</span>
+                  <span className="tabular-nums">{entry.entryNumber}</span>
                   <span className="text-muted-foreground">
                     {localizedLabel(
                       { labelFr: entry.categoryLabelFr, labelEn: entry.categoryLabelEn },
@@ -90,13 +93,16 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
                       must not mistake for money already in the books. */}
                   <EntryStatusBadge status={entry.status} />
                 </span>
-                <span className="tabular-nums">
+                <span className={cn("tabular-nums", foldedAmountClass(entry))}>
                   {formatMoney(entry.amountMinor, {
                     locale,
                     sign: { context: "ledger", direction: entry.direction },
                   })}
                 </span>
               </Link>
+              {entry.cancelledBy !== null && (
+                <CancellationDetails cancellation={entry.cancelledBy} className="px-2" />
+              )}
             </li>
           ))}
         </ul>
@@ -119,7 +125,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <dt className="text-sm font-medium">
               <span>{t("activities.detail.moneySummary.net")}</span>
-              <span className="ml-2 text-muted-foreground text-xs uppercase tracking-wide">
+              <span className="ml-2 text-muted-foreground text-xs">
                 {t("activities.detail.moneySummary.postedOnly")}
               </span>
             </dt>

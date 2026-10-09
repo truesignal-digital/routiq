@@ -33,6 +33,7 @@ const entry: FinancialEntryDetail = {
   rejectedReason: null,
   reversesEntryId: null,
   reversedByEntryId: null,
+  cancellation: null,
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,
@@ -65,6 +66,8 @@ function serveFinanceReadFixtures() {
           principalId: "00000000-0000-4000-8000-000000000002",
           membershipId: "00000000-0000-4000-8000-000000000003",
           principalType: "HUMAN",
+          displayName: "Sali Ahmadou",
+          workspaceName: "Transports Ngwa",
           role: "ADMIN",
           branchScope: "ALL",
           enabledModules: ["CORE", "FINANCE"],
@@ -79,6 +82,12 @@ function serveFinanceReadFixtures() {
         break;
       case "/v1/finance/approvals":
         body = { entries: [], nextCursor: null, total: 0, outsideBranchCount: 0 };
+        break;
+      case "/v1/finance/summary":
+        body = {
+          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
+        };
         break;
       case "/v1/finance/entries":
         ledgerRequests.push(url);

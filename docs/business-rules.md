@@ -34,8 +34,11 @@ would bury the approver. Human judgment is concentrated on large amounts.
 
 **The number:** pilot placeholder is **100 000 XAF**, stored per tenant in
 `approval_rules` — it is data, not code. Each business gets its own threshold
-(can be 0 = "approve everything"). Changed via the `update-approval-threshold`
-command — audited like everything else. Real per-tenant values are an open
+(can be 0 = "approve everything"). Direction changes it, together with the
+amount up to which Finance decides (1 000 000 XAF by default), under Company →
+Company settings → Approvals, which sends `update-approval-threshold` v2 —
+audited like everything else. The amount that posts directly must stay below
+Finance's. Real per-tenant values are an open
 onboarding decision (mtp-pilot 06).
 
 ## 4. Maker ≠ approver

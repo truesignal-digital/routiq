@@ -161,6 +161,8 @@ describe("work order detail contract", () => {
         eventId: "11112222-3333-4444-8555-666677778888",
         kind: "work_order.created",
         occurredAt: "2026-08-12T09:00:00.000Z",
+        note: null,
+        noteCode: null,
         actor: {
           principalId: "22223333-4444-4555-8666-777788889999",
           displayName: "Awa Njoya",
@@ -171,6 +173,8 @@ describe("work order detail contract", () => {
         eventId: "33334444-5555-4666-8777-888899990000",
         kind: "work_order.completed",
         occurredAt: "2026-08-13T16:30:00.000Z",
+        note: "Facture conforme",
+        noteCode: null,
         actor: { principalId: null, displayName: null, scope: "PLATFORM" },
       },
     ],

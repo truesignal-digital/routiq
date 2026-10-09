@@ -7,6 +7,7 @@ import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { Pencil, RotateCw, TriangleAlert } from "lucide-react";
 import {
+  REGISTRATION_NUMBER_MAX_LENGTH,
   TEMPLATE_FIELDS,
   type AssetDetail,
   type TemplateCode,
@@ -358,8 +359,12 @@ function DetailsEditCard({
       max: problem === "chassisTooLong" ? CHASSIS_NUMBER_MAX_LENGTH : YEAR_BOUNDS.max(),
     });
 
+  // What the card opened with: a field still holding it is neither checked nor sent (#122).
+  const [initial] = useState(() => formValuesOf(asset, locale));
+
   const schema = formShape.superRefine((values, ctx) => {
     const problems = detailsProblems(values, {
+      initial,
       locale,
       templateCode: asset.templateCode,
       money: gates.money,
@@ -372,7 +377,7 @@ function DetailsEditCard({
 
   const form = useForm<DetailsFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: formValuesOf(asset, locale),
+    defaultValues: initial,
   });
   const hasErrors = Object.keys(form.formState.errors).length > 0;
 
@@ -477,7 +482,7 @@ function DetailsEditCard({
             <section className="grid content-start gap-3 p-4 md:grid-cols-[minmax(7.5rem,auto)_1fr] md:gap-x-4">
               <h3 className="text-xs font-medium text-muted-foreground md:col-span-2">{t("vehicle.details.vehicle")}</h3>
               <StaticRow label={t("vehicle.details.fleetCode")} value={asset.assetCode} />
-              {textField("registrationNumber", t("vehicle.details.plate"), { maxLength: 40 })}
+              {textField("registrationNumber", t("vehicle.details.plate"), { maxLength: REGISTRATION_NUMBER_MAX_LENGTH })}
               {textField("manufacturer", t("vehicle.details.edit.make"), { maxLength: 80 })}
               {textField("model", t("vehicle.details.edit.model"), { maxLength: 80 })}
               {textField("modelYear", t("vehicle.details.year"), { numeric: true })}

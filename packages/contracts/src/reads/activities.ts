@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ACTIVITY_COMPLETENESS_CODES } from "../errors.js";
+import { entryCancellation } from "./finance.js";
 import { listQuery, listResponse } from "./list.js";
 
 export const activityStatuses = ["OPEN", "CLOSED"] as const;
@@ -124,6 +125,10 @@ export const activityFinancialEntryRead = z.object({
   categoryLabelEn: z.string(),
   amountMinor: z.number().int(),
   status: z.enum(["SUBMITTED", "POSTED", "REJECTED", "REVERSED"]),
+  /** Set on a cancellation: the entry it cancels, so the card can fold the pair (#427). */
+  reversesEntryId: z.uuid().nullable(),
+  /** On an original: its posted cancellation. A trip's money is one window, so always folded. */
+  cancelledBy: entryCancellation.nullable(),
 });
 
 export const activityDetail = activityListItem.extend({
@@ -200,3 +205,27 @@ export type ActivityDetail = z.infer<typeof activityDetail>;
 export type PersonListQuery = z.infer<typeof personListQuery>;
 export type PersonListItem = z.infer<typeof personListItem>;
 export type PlaceListItem = z.infer<typeof placeListItem>;
+
+/** Narrows the trip counts like the list: inside the caller's scope, never wider. */
+export const activitySummaryQuery = z.object({
+  branchId: z.uuid().optional(),
+});
+
+/**
+ * The Trips overview, counted in SQL over the caller's workspace and branch
+ * scope. `week` is the current business week (Monday to Sunday, workspace
+ * time zone) that `thisWeek` and `weekKm` cover, so a tile can filter the list
+ * to exactly the days it counted. `open` and `incomplete` are all-time and
+ * equal what `status=OPEN` and `completeness=COMPLETE_WITH_EXCEPTIONS` list.
+ * `weekKm` sums the legs that carry a distance; null when none does.
+ */
+export const activitySummary = z.object({
+  week: z.object({ from: z.iso.date(), to: z.iso.date() }),
+  thisWeek: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  incomplete: z.number().int().nonnegative(),
+  weekKm: z.number().int().nonnegative().nullable(),
+});
+
+export type ActivitySummaryQuery = z.infer<typeof activitySummaryQuery>;
+export type ActivitySummary = z.infer<typeof activitySummary>;

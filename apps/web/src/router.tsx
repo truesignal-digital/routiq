@@ -6,10 +6,18 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { z } from "zod";
-import { financialEntryFilters, VEHICLE_HISTORY_KINDS } from "@routiq/contracts";
+import {
+  activityCompleteness,
+  activityStatus,
+  financialEntryFilters,
+  issueStatus,
+  VEHICLE_HISTORY_KINDS,
+  workOrderStatus,
+} from "@routiq/contracts";
 import { sessionStore } from "./auth/store.js";
-import { PANEL_PATTERN } from "./vehicle/model.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
+import { PANEL_PATTERN } from "./vehicle/model.js";
+import { ScreenPending, SectionPending, ShellPending } from "./shell/RoutePending.js";
 
 /**
  * Every screen but sign-in loads on demand, so the first page a phone opens
@@ -19,8 +27,9 @@ import { LoginScreen } from "./screens/LoginScreen.js";
 const AssetRegisterScreen = lazyRouteComponent(() => import("./screens/AssetRegisterScreen.js"), "AssetRegisterScreen");
 const AssetsStub = lazyRouteComponent(() => import("./screens/AssetsStub.js"), "AssetsStub");
 const BranchesScreen = lazyRouteComponent(() => import("./screens/BranchesScreen.js"), "BranchesScreen");
+const CompanySettingsScreen = lazyRouteComponent(() => import("./screens/CompanySettingsScreen.js"), "CompanySettingsScreen");
 const DashboardScreen = lazyRouteComponent(() => import("./screens/DashboardScreen.js"), "DashboardScreen");
-const MoreStub = lazyRouteComponent(() => import("./screens/MoreStub.js"), "MoreStub");
+const MySettingsScreen = lazyRouteComponent(() => import("./screens/MySettingsScreen.js"), "MySettingsScreen");
 const PersonsScreen = lazyRouteComponent(() => import("./screens/PersonsScreen.js"), "PersonsScreen");
 const UsersScreen = lazyRouteComponent(() => import("./screens/UsersScreen.js"), "UsersScreen");
 const FinanceRecordScreen = lazyRouteComponent(() => import("./screens/FinanceRecordScreen.js"), "FinanceRecordScreen");
@@ -30,7 +39,6 @@ const MaintenanceScreen = lazyRouteComponent(() => import("./screens/Maintenance
 const ActivityDetailScreen = lazyRouteComponent(() => import("./screens/ActivityDetailScreen.js"), "ActivityDetailScreen");
 const ActivitySheetScreen = lazyRouteComponent(() => import("./screens/ActivitySheetScreen.js"), "ActivitySheetScreen");
 const FinanceEntryDetailScreen = lazyRouteComponent(() => import("./screens/FinanceEntryDetailScreen.js"), "FinanceEntryDetailScreen");
-const FinanceApprovalsScreen = lazyRouteComponent(() => import("./screens/FinanceApprovalsScreen.js"), "FinanceApprovalsScreen");
 const FinancePeriodsScreen = lazyRouteComponent(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
 const AppShell = lazyRouteComponent(() => import("./shell/AppShell.js"), "AppShell");
 const VehicleWorkspaceScreen = lazyRouteComponent(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
@@ -63,6 +71,7 @@ const appRoute = createRoute({
     }
   },
   component: AppShell,
+  pendingComponent: ShellPending,
 });
 
 const indexRoute = createRoute({
@@ -74,6 +83,11 @@ const indexRoute = createRoute({
 const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
+  // The overview tiles filter the list through the URL, so a tile's view is a
+  // link that survives reload and back (#302).
+  validateSearch: z.object({
+    status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
+  }),
   component: AssetsStub,
 });
 
@@ -107,12 +121,14 @@ const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
   component: NowTab,
+  pendingComponent: SectionPending,
 });
 
 const vehicleMaintenanceRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "maintenance",
   component: MaintenanceTab,
+  pendingComponent: SectionPending,
 });
 
 const vehicleMoneyRoute = createRoute({
@@ -124,12 +140,14 @@ const vehicleMoneyRoute = createRoute({
     evidence: z.literal("missing").optional().catch(undefined),
   }),
   component: MoneyTab,
+  pendingComponent: SectionPending,
 });
 
 const vehicleTripsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "trips",
   component: TripsTab,
+  pendingComponent: SectionPending,
 });
 
 // The old asset documents screen lived at this same URL, so its links and its
@@ -138,6 +156,7 @@ const vehicleDocumentsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "documents",
   component: DocumentsTab,
+  pendingComponent: SectionPending,
 });
 
 const vehicleHistoryRoute = createRoute({
@@ -147,12 +166,14 @@ const vehicleHistoryRoute = createRoute({
     kind: z.enum(VEHICLE_HISTORY_KINDS).optional().catch(undefined),
   }),
   component: HistoryTab,
+  pendingComponent: SectionPending,
 });
 
 const vehicleDetailsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "details",
   component: DetailsTab,
+  pendingComponent: SectionPending,
 });
 
 const financeRecordRoute = createRoute({
@@ -164,13 +185,26 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
-  validateSearch: financialEntryFilters.omit({ branchId: true }),
+  // `view=waiting` is the "Waiting your approval" view (#314), beside the
+  // read's own events / books views (#427). `branch=all` arrives from an
+  // overflow line that has already named the work outside the shell's agency,
+  // so the queue opens widened.
+  validateSearch: financialEntryFilters.omit({ branchId: true }).extend({
+    view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
+    branch: z.literal("all").optional().catch(undefined),
+  }),
   component: FinanceEntriesScreen,
 });
 
 const activitiesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities",
+  validateSearch: z.object({
+    status: activityStatus.optional().catch(undefined),
+    completeness: activityCompleteness.optional().catch(undefined),
+    from: z.iso.date().optional().catch(undefined),
+    to: z.iso.date().optional().catch(undefined),
+  }),
   component: ActivitiesScreen,
 });
 
@@ -197,6 +231,11 @@ const activityDetailRoute = createRoute({
 const maintenanceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/maintenance",
+  validateSearch: z.object({
+    tab: z.enum(["work-orders", "issues"]).optional().catch(undefined),
+    status: workOrderStatus.optional().catch(undefined),
+    issueStatus: issueStatus.optional().catch(undefined),
+  }),
   component: MaintenanceScreen,
 });
 
@@ -209,14 +248,19 @@ const financeEntryDetailRoute = createRoute({
   component: FinanceEntryDetailScreen,
 });
 
+// The Approvals page became the Money page's waiting view (#314). Old links,
+// notifications and the dashboard keep landing on the same work.
 const financeApprovalsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/approvals",
-  // The dashboard's overflow line sends an approver to the queue already
-  // widened; without it the queue presets itself to the shell's agency, which
-  // is exactly the narrowing that line is reporting around.
-  validateSearch: z.object({ branch: z.literal("all").optional() }),
-  component: FinanceApprovalsScreen,
+  validateSearch: z.object({ branch: z.literal("all").optional().catch(undefined) }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/finance/entries",
+      search: { view: "waiting", ...(search.branch === "all" ? { branch: "all" } : {}) },
+      replace: true,
+    });
+  },
 });
 
 const financePeriodsRoute = createRoute({
@@ -225,13 +269,23 @@ const financePeriodsRoute = createRoute({
   component: FinancePeriodsScreen,
 });
 
+// The More page went with #316: personal settings live in the name menu.
+// Old links and bookmarks land on Home rather than on a missing page.
 const moreRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more",
-  component: MoreStub,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
 
-// Under /more so the shell keeps the Plus tab lit while you administer.
+const mySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/my-settings",
+  component: MySettingsScreen,
+});
+
+// The administration pages keep their /more paths so existing links still work.
 const personsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/persons",
@@ -248,6 +302,12 @@ const branchesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/branches",
   component: BranchesScreen,
+});
+
+const companySettingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/more/company",
+  component: CompanySettingsScreen,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -277,13 +337,16 @@ const routeTree = rootRoute.addChildren([
     financeApprovalsRoute,
     financePeriodsRoute,
     moreRoute,
+    mySettingsRoute,
     personsRoute,
     usersRoute,
     branchesRoute,
+    companySettingsRoute,
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+// Inside the shell a slow screen shows its skeleton in the content slot.
+export const router = createRouter({ routeTree, defaultPendingComponent: ScreenPending });
 
 /**
  * While someone types their PIN, fetch the shell and Home, so signing in does
@@ -301,9 +364,7 @@ const SCREENS_BY_USE = [
   NowTab,
   ActivitiesScreen,
   FinanceEntriesScreen,
-  FinanceApprovalsScreen,
   MaintenanceScreen,
-  MoreStub,
   ActivityDetailScreen,
   FinanceEntryDetailScreen,
   MaintenanceTab,
@@ -315,10 +376,12 @@ const SCREENS_BY_USE = [
   FinanceRecordScreen,
   ActivitySheetScreen,
   AssetRegisterScreen,
+  MySettingsScreen,
   FinancePeriodsScreen,
   PersonsScreen,
   UsersScreen,
   BranchesScreen,
+  CompanySettingsScreen,
 ];
 
 /**

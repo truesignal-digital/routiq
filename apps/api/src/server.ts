@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { MODULE_CODES } from "@routiq/contracts";
+import { MODULE_CODES, type MeResponse } from "@routiq/contracts";
 import { and, eq, sql } from "drizzle-orm";
 import Fastify from "fastify";
 import { LocalSessionProvider } from "./auth/local.js";
@@ -9,6 +9,7 @@ import "./commands/register-asset.js";
 import "./commands/add-or-renew-document.js";
 import "./commands/module-toggle.js";
 import "./commands/update-approval-threshold.js";
+import "./commands/update-approval-threshold-v2.js";
 import "./commands/asset-lifecycle.js";
 import "./commands/record-financial-entry.js";
 import "./commands/entry-decisions.js";
@@ -29,11 +30,13 @@ import "./commands/set-template-preset.js";
 import "./commands/members.js";
 import "./commands/report-issue.js";
 import "./commands/issue-decisions.js";
+import "./commands/change-issue-severity.js";
 import "./commands/work-orders.js";
 import "./commands/work-order-decisions.js";
 import "./commands/release-asset-to-service.js";
 import "./commands/update-asset-details.js";
 import "./commands/add-note.js";
+import "./commands/acknowledge-note.js";
 import "./commands/attach-evidence.js";
 import "./commands/update-pending-entry.js";
 import "./commands/acknowledge-approval-rules.js";
@@ -42,18 +45,21 @@ import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
-import { workspaceModules } from "./db/schema.js";
+import { principals, workspaceModules, workspaces } from "./db/schema.js";
 import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
+import { registerNavCountsReadRoutes } from "./reads/nav-counts.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
+import { registerFinanceSummaryReadRoutes } from "./reads/finance-summary.js";
 import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
 import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
+import { registerApprovalThresholdsReadRoutes } from "./reads/approval-thresholds.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
 import { registerTelemetryRoutes } from "./observability/telemetry.js";
 
@@ -129,17 +135,20 @@ export function buildServer({
   registerCommandRoutes(app, db, requireAuth);
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);
+  registerFinanceSummaryReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
+  registerNavCountsReadRoutes(app, db, requireAuth);
   registerActivityReadRoutes(app, db, requireAuth);
   registerMemberReadRoutes(app, db, requireAuth);
   registerBranchReadRoutes(app, db, requireAuth);
   registerHistoryReadRoutes(app, db, requireAuth);
   registerMaintenanceReadRoutes(app, db, requireAuth);
   registerApprovalChainReadRoutes(app, db, requireAuth);
+  registerApprovalThresholdsReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {
-    const { disabled, presets } = await read(async (tx) => ({
+    const { disabled, presets, principal, workspace } = await read(async (tx) => ({
       disabled: await tx
         .select({ moduleCode: workspaceModules.moduleCode })
         .from(workspaceModules)
@@ -152,13 +161,29 @@ export function buildServer({
       // Grandfather clause and ordering both live in the helper, so this set
       // and the dispatcher's per-command check can never disagree.
       presets: await enabledPresets(tx, auth.workspaceId),
+      principal: await tx
+        .select({ displayName: principals.displayName })
+        .from(principals)
+        .where(eq(principals.id, auth.principalId)),
+      workspace: await tx
+        .select({ name: workspaces.name })
+        .from(workspaces)
+        .where(eq(workspaces.id, auth.workspaceId)),
     }));
+    const displayName = principal[0]?.displayName;
+    const workspaceName = workspace[0]?.name;
+    // The session just resolved both rows, so a miss is a broken invariant.
+    if (displayName === undefined || workspaceName === undefined) {
+      throw new Error("me: principal or workspace row missing for a verified session");
+    }
     const disabledCodes = new Set(disabled.map((row) => row.moduleCode));
     return {
       ...auth,
+      displayName,
+      workspaceName,
       enabledModules: MODULE_CODES.filter((code) => !disabledCodes.has(code)),
       enabledPresets: presets,
-    };
+    } satisfies MeResponse;
   });
   defineRead(app, readDeps, { path: "/v1/commands", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async () => ({
     commands: listCommands(),

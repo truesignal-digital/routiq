@@ -1,6 +1,6 @@
 import type { Page } from "playwright-core";
-import { DEMO_ACCOUNTS, DEMO_WORKSPACE, type DemoAccount } from "../accounts.js";
-import type { DriveContext, DriveScript } from "../browser.js";
+import { TRUCKING_ACCOUNTS, type DemoAccount } from "../accounts.js";
+import { signOutThroughNameMenu, type DriveContext, type DriveScript } from "../browser.js";
 
 /**
  * No list page scrolls sideways on a 390 px phone (#183). Signs in as every
@@ -8,7 +8,7 @@ import type { DriveContext, DriveScript } from "../browser.js";
  * fails with the route and the measured width when the page is wider than the
  * screen or a control sticks out past its right edge. It also opens an open
  * and a closed trip, whose header carries the most actions, and fails when the
- * trip number breaks across lines (#395). It also opens VH003's Now, History
+ * trip number breaks across lines (#395). It also opens VH003's Overview, History
  * (trips) and Money tabs and fails when any record number on a page, such as
  * the trip in "Leg recorded on trip DLA-2026-00003", wraps at a hyphen (#430).
  * Run: pnpm verify drive flow:phone-overflow
@@ -21,9 +21,9 @@ export const LIST_ROUTES = [
   "/activities",
   "/maintenance",
   "/finance/entries",
-  "/finance/approvals",
+  "/finance/entries?view=waiting",
   "/finance/periods",
-  "/more",
+  "/my-settings",
   "/more/persons",
   "/more/users",
   "/more/branches",
@@ -120,11 +120,9 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
 
   const signIn = async (account: DemoAccount) => {
     if (!new URL(page.url()).pathname.startsWith("/login")) {
-      await goTo("/more");
-      await page.getByRole("main").getByRole("button", { name: /^(Se déconnecter|Sign out)$/ }).click();
-      await page.waitForURL((url) => url.pathname === "/login");
+      await signOutThroughNameMenu(page);
     }
-    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+    await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(account.workspace);
     await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
     await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);
     await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
@@ -133,12 +131,12 @@ const flow: DriveScript = async ({ page, shot, quiet, log, apiGet }) => {
   };
 
   const chooseLanguage = async (lang: "fr" | "en") => {
-    await goTo("/more");
+    await goTo("/my-settings");
     await page.getByRole("button", { name: lang === "en" ? "English" : "Français", exact: true }).click();
     await page.getByRole("heading", { name: lang === "en" ? "Language" : "Langue" }).waitFor({ timeout: 10_000 });
   };
 
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of TRUCKING_ACCOUNTS) {
     await signIn(account);
     for (const lang of ["fr", "en"] as const) {
       await chooseLanguage(lang);

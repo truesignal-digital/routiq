@@ -15,6 +15,30 @@ const SCHEMA = file(
   "apps/api/src/db/schema.ts",
   'export const assets = pgTable("assets", {});\nexport const sessions = pgTable("sessions", {});',
 );
+const APPEND_ONLY_SCHEMA = file(
+  "apps/api/src/db/schema.ts",
+  [
+    'export const notes = pgTable(\n  "notes",\n  {},\n);',
+    'export const auditEvents = pgTable(\n  "audit_events",\n  {},\n);',
+    'export const meterReadings = pgTable("meter_readings", {});',
+    'export const financialPostings = pgTable("financial_postings", {});',
+    'export const financialEntries = pgTable("financial_entries", {});',
+    'export const assets = pgTable("assets", {});',
+  ].join("\n"),
+);
+const APPEND_ONLY_INVENTORY = file(
+  "apps/api/src/db/append-only.ts",
+  [
+    "export const APPEND_ONLY_TABLES = {",
+    '  auditEvents: { update: [], delete: "never" },',
+    '  notes: { update: [], delete: "never" },',
+    '  meterReadings: { update: ["superseded_by_id"], delete: "never" },',
+    '  financialPostings: { update: ["posting_period_id"], delete: "pending entry lines only" },',
+    "} as const satisfies Record<string, unknown>;",
+  ].join("\n"),
+);
+const APPEND_ONLY = [APPEND_ONLY_SCHEMA, APPEND_ONLY_INVENTORY];
+
 const REGISTRY = file(
   "apps/web/registry.json",
   JSON.stringify({ items: [{ files: [{ path: "src/components/page.tsx" }] }] }),
@@ -81,6 +105,23 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "A27",
+    bad: [
+      ...APPEND_ONLY,
+      file("apps/api/src/commands/add-note.ts", "await tx.update(notes).set({ body }).where(eq(notes.id, id));"),
+    ],
+    good: [
+      ...APPEND_ONLY,
+      file("apps/api/src/commands/add-note.ts", "await tx.insert(notes).values(row);"),
+      file("apps/api/src/commands/entry-decisions.ts", "await tx.update(financialPostings).set({ postingPeriodId });"),
+      file("apps/api/src/commands/update-pending-entry.ts", "await tx.delete(financialPostings).where(pending);"),
+      file("apps/api/src/commands/activity-legs.ts", "await tx.update(meterReadings).set({ supersededById });"),
+      file("apps/api/src/commands/reverse-entry.ts", "await tx.update(financialEntries).set({ status });"),
+      file("apps/api/scripts/seed-demo.ts", "await owner.delete(schema.notes).where(inWorkspace);"),
+      file("apps/api/src/commands/add-note.test.ts", "await tx.update(notes).set({ body: 'x' });"),
+    ],
+  },
+  {
     id: "A18",
     bad: [
       file("apps/api/src/commands/x.test.ts", 'const res = await fetch("/v1/commands", { method: "POST" });'),
@@ -132,6 +173,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     id: "E1",
     bad: [REGISTRY, file("apps/web/src/components/new-thing.tsx", "")],
     good: [REGISTRY, file("apps/web/src/components/page.tsx", ""), file("apps/web/src/components/page.test.tsx", "")],
+  },
+  {
+    id: "H17",
+    bad: [
+      file("apps/web/src/vehicle/forms/LogFuelForm.tsx", "export function LogFuelForm() {}"),
+      file("apps/web/src/vehicle/forms/LogFuelForm.test.tsx", 'import { render } from "@testing-library/react";'),
+      file("apps/web/src/members/AddMemberDialog.tsx", "export function AddMemberDialog() {}"),
+      file("apps/web/src/finance/EntryDecisionForms.tsx", "export function RejectEntryForm() {}"),
+    ],
+    good: [
+      file("apps/web/src/vehicle/forms/AddNoteForm.tsx", "export function AddNoteForm() {}"),
+      file("apps/web/src/vehicle/forms/AddNoteForm.test.tsx", 'import { describeCommandForm } from "../../test/form-harness.js";'),
+      file("apps/web/src/components/command-form.tsx", "export function CommandForm() {}"),
+      file("apps/web/src/vehicle/forms/useFormDraft.ts", ""),
+    ],
   },
   {
     id: "G1",
@@ -221,6 +277,80 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H18",
+    // From Maintenance, Report a problem was a centred dialog; from the truck, a panel.
+    bad: [
+      file("apps/web/src/maintenance/MaintenanceDialogs.tsx", 'export function ReportIssueDialog(props: DialogHost) {\n  return <ReportIssueForm surface="dialog" {...props} />;\n}'),
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<RecordEntryForm\n  surface="dialog"\n  editing={entry}\n/>'),
+      file("apps/web/src/activities/ActivityActions.tsx", 'function LegForm() {\n  const common = { surface: "dialog" as const };\n}'),
+    ],
+    good: [
+      file("apps/web/src/maintenance/MaintenanceDialogs.tsx", 'export function ReportIssueDialog(props: DialogHost) {\n  return <ReportIssueForm surface="sheet" {...props} />;\n}'),
+      file("apps/web/src/screens/FinanceApprovalsScreen.tsx", '<RejectEntryForm\n  surface="dialog"\n  entry={entry}\n/>'),
+      file("apps/web/src/activities/ActivityActions.tsx", 'function CloseTripDialog() {\n  return <ActivityForm\n    surface="dialog"\n  />;\n}'),
+      file("apps/web/src/components/command-form.tsx", '| { surface: "dialog" | "sheet" | "panel"; title: ReactNode }'),
+    ],
+  },
+  {
+    id: "DS-1",
+    // An amount was monospace in Finance and proportional on the vehicle (#310).
+    bad: [
+      file("apps/web/src/finance/entryColumns.tsx", '<span className="text-right font-mono font-semibold">{amount}</span>'),
+      file("apps/web/src/components/ui/chart.tsx", '<span className="font-mono font-medium tabular-nums">'),
+      file("apps/web/src/components/metric-strip.tsx", 'className="font-[family-name:var(--font-mono)] text-2xl"'),
+      file("apps/web/src/screens/X.css", ".plate { font-family: ui-monospace, monospace; }"),
+    ],
+    good: [
+      file("apps/web/src/finance/entryColumns.tsx", '<span className="text-right font-semibold tabular-nums">{amount}</span>'),
+      file("apps/web/src/finance/entryColumns.test.tsx", 'expect(cell.className).not.toContain("font-mono");'),
+      // A chart curve type is not a font.
+      file("apps/web/src/dashboard/ChartAreaInteractive.tsx", '<Area type="monotone" dataKey="cost" />'),
+    ],
+  },
+  {
+    id: "DS-2",
+    bad: [
+      file("apps/web/src/vehicle/tabs/MoneyTab.tsx", '<path fill="#3072c7" d={d} />'),
+      file("apps/web/src/screens/X.tsx", '<div className="bg-[#192c45] text-white" />'),
+      file("apps/web/src/dashboard/Chart.tsx", 'const stroke = "rgb(48 114 199)";'),
+      file("apps/web/src/dashboard/Chart.tsx", "style={{ color: 'oklch(0.55 0.15 256)' }}"),
+      file("apps/web/src/screens/X.css", ".x { color: hsl(210 50% 40%); }"),
+    ],
+    good: [
+      file("apps/web/src/vehicle/tabs/MoneyTab.tsx", '<path className="fill-primary" d={d} />'),
+      file("apps/web/src/dashboard/Chart.tsx", 'const stroke = "var(--color-chart-1)";'),
+      // Issue references are not colours, in comments or out of them.
+      file("apps/web/src/shell/AppShell.tsx", "  min-content width widens the whole page (#450). */}\nconst why = \"see #422\";"),
+      // shadcn's chart selects recharts' own default strokes to restyle them.
+      file("apps/web/src/components/ui/chart.tsx", "\"[&_.recharts-dot[stroke='#fff']]:stroke-transparent\""),
+      // The token files: styles.css, and the meta theme-color mirror that cannot read CSS.
+      file("apps/web/src/styles.css", ":root { --background: oklch(1 0 0); }"),
+      file("apps/web/src/lib/theme.ts", 'light: "#ffffff",'),
+      // The logo's masks cut holes in pure black and white: geometry, not colour.
+      file("apps/web/src/components/brand/routiq-logo.tsx", '<rect width="100" height="100" fill="#fff" />'),
+    ],
+  },
+  {
+    id: "DS-4",
+    bad: [
+      file("apps/web/src/finance/EntrySummary.tsx", '<dt className="text-xs font-semibold uppercase text-muted-foreground">'),
+      file("apps/web/src/finance/EntryStatusBadge.tsx", '<Badge className="uppercase tracking-wide">{label}</Badge>'),
+      file("apps/web/src/screens/X.css", ".eyebrow { text-transform: uppercase; }"),
+      // The overview tile labels rendered "WAITING YOUR APPROVAL" beside sentence-case Home cards.
+      file("apps/web/src/components/metric-strip.tsx", '<dt className="text-xs font-medium tracking-wide uppercase">'),
+      file("apps/web/src/vehicle/header/IdentityStrip.tsx", "<span style={{ textTransform: \"uppercase\" }}>{plate}</span>"),
+      file("apps/web/src/screens/X.css", ".label { font-variant: small-caps; }"),
+    ],
+    good: [
+      file("apps/web/src/finance/EntrySummary.tsx", '<dt className="text-xs font-medium text-muted-foreground">'),
+      file("apps/web/src/finance/EntryStatusBadge.test.tsx", 'expect(badge.className).not.toContain("uppercase");'),
+      // A code the user types is capitalised in the value, not by CSS.
+      file("apps/web/src/branches/CreateBranchDialog.tsx", "field.onChange(event.target.value.toUpperCase())"),
+      // The wordmark sets the product name in wide caps; it is the logo, not a label.
+      file("apps/web/src/components/brand/routiq-logo.tsx", 'className={cn("tracking-[0.16em] uppercase", className)}'),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],
@@ -286,6 +416,18 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],
   },
+  {
+    id: "S1",
+    bad: [
+      file("apps/api/src/reads/assets.ts", "await tx.execute(sql.raw(`select * from assets where asset_code = '${code}'`));"),
+      file("apps/api/scripts/x.ts", 'await pool.query("select * from notes where body like \'%" + request.query.q + "%\'");'),
+    ],
+    good: [
+      file("apps/api/src/reads/assets.ts", "await tx.execute(sql`select * from assets where asset_code = ${code}`);"),
+      file("apps/api/scripts/x.ts", 'await pool.query("select * from notes where id = $1", [id]);'),
+      file("apps/api/src/reads/x.test.ts", "await ctx.db.execute(sql.raw(migrationSql));"),
+    ],
+  },
 ];
 
 describe("every rule", () => {
@@ -305,6 +447,69 @@ describe.each(CASES)("rule $id", ({ id, bad, good }) => {
 
   it("allows the paved path", () => {
     expect(rule(id).check(good)).toEqual([]);
+  });
+});
+
+describe.each(CASES.filter((c) => c.id.startsWith("DS-")))("design rule $id", ({ id, bad }) => {
+  it.each(bad.map((source) => [source.content, source]))("catches %s on its own", (_, source) => {
+    expect(rule(id).check([source]).length).toBeGreaterThan(0);
+  });
+});
+
+describe("A27 append-only tables", () => {
+  const a27 = rule("A27");
+  const at = (content: string, path = "apps/api/src/commands/x.ts") =>
+    a27.check([...APPEND_ONLY, file(path, content)]).map((v) => v.line);
+
+  it.each([
+    ["a note edit", "await tx.update(notes).set({ body });"],
+    ["a note delete", "await tx.delete(notes).where(eq(notes.id, id));"],
+    ["an audit delete through the schema namespace", "await tx.delete(schema.auditEvents);"],
+    ["an aliased import", 'import { notes as remarks } from "../db/schema.js";\nawait tx.update(remarks).set({ body });'],
+    ["a call split over lines", "await tx\n  .update(\n    notes\n  )\n  .set({ body });"],
+    ["raw SQL", "await tx.execute(sql`UPDATE notes SET body = ${body} WHERE id = ${id}`);"],
+    ["raw SQL with a quoted, schema-qualified name", 'await client.query(\'delete from public."audit_events" where id = $1\', [id]);'],
+    ["raw SQL over lines", "await tx.execute(sql`\n  delete\n  from audit_events\n`);"],
+    ["truncate", "await tx.execute(sql.raw('truncate table notes'));"],
+    ["an interpolated table", "await tx.execute(sql`update ${notes} set body = ${body}`);"],
+    ["a meter reading delete, whose only sanctioned write is the supersede link", "await tx.delete(meterReadings);"],
+    ["a posting delete outside the pending-entry path", "await tx.delete(financialPostings);"],
+  ])("catches %s", (_label, snippet) => {
+    expect(at(snippet)).toHaveLength(1);
+  });
+
+  it("points at the line the call starts on", () => {
+    expect(at("const a = 1;\nawait tx\n  .update(notes)\n  .set({ body });")).toEqual([3]);
+  });
+
+  it.each([
+    ["an insert", "await tx.insert(notes).values(row);"],
+    ["a read", "await tx.select().from(auditEvents).where(eq(auditEvents.id, id));"],
+    ["a mutable table", "await tx.update(financialEntries).set({ status });"],
+    ["a table whose name only starts the same", "await tx.update(notesDraft).set({ body });"],
+    ["a doc comment", "/**\n * Never `update notes`: a correction is another note.\n */\nconst x = 1;"],
+    ["a line comment", "// tx.delete(auditEvents) would be refused by the grant\nconst x = 1;"],
+    ["a Map delete by id", "seen.delete(noteId);"],
+  ])("allows %s", (_label, snippet) => {
+    expect(at(snippet)).toEqual([]);
+  });
+
+  it("ignores test files and code outside the API", () => {
+    expect(at("await tx.update(notes).set({ body });", "apps/api/src/commands/add-note.test.ts")).toEqual([]);
+    expect(at("await tx.update(notes).set({ body });", "apps/web/src/notes/x.ts")).toEqual([]);
+  });
+
+  it("fails when the inventory is missing, so the guard cannot be switched off by deleting it", () => {
+    expect(a27.check([APPEND_ONLY_SCHEMA])).toEqual([
+      expect.objectContaining({ path: "apps/api/src/db/append-only.ts" }),
+    ]);
+  });
+
+  it("fails when the inventory names a table schema.ts does not have", () => {
+    const stale = file("apps/api/src/db/append-only.ts", 'export const APPEND_ONLY_TABLES = {\n  remarks: { update: [], delete: "never" },\n} as const;');
+    expect(a27.check([APPEND_ONLY_SCHEMA, stale])).toEqual([
+      expect.objectContaining({ text: "not a schema.ts table: remarks" }),
+    ]);
   });
 });
 

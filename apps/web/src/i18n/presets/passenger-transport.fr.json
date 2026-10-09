@@ -19,7 +19,7 @@
         "assigned": "Véhicule affecté"
       }
     },
-    "title": "Vos véhicules",
+    "title": "Véhicules",
     "searchLabel": "Rechercher dans les véhicules",
     "filterLabel": "Filtrer les véhicules",
     "emptyHint": "Ajoutez un bus ou un minibus. Son historique fiable se construira dès le premier jour.",
@@ -116,7 +116,8 @@
         "rowAttribute": "Imputer la ligne {position} à ce voyage",
         "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche."
       }
-    }
+    },
+    "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture."
   },
   "maintenance": {
     "workOrders": {
@@ -205,7 +206,7 @@
     },
     "actions": {
       "change-custodian": {
-        "description": "Qui répond du véhicule au quotidien. Ce n'est pas forcément le chauffeur de chaque voyage."
+        "description": "La personne qui conduit habituellement le véhicule. Chaque voyage peut avoir un autre chauffeur."
       }
     }
   },

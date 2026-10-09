@@ -11,8 +11,11 @@ import type { RecordSteps } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
 import { TripStatusBadge } from "@/activities/TripStatusBadge.js";
 import { tripRoute } from "../tabs/TripsTab.js";
+import { CancellationDetails, foldedAmountClass, foldTripEntries } from "@/finance/EntryCancellation.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
+import { cn } from "@/lib/utils.js";
 import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
+import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 export function TripRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { gates } = useVehicle();
@@ -121,6 +124,9 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
         >
           {t("vehicle.trips.openFull")}
         </Link>
+        <div>
+          <RecordHistorySheet entityType="activity" entityId={trip.id} />
+        </div>
       </div>
       <PanelFooter steps={steps} onStep={panel.openStep} />
     </>
@@ -157,7 +163,7 @@ function TripMoney({
         </p>
       ) : (
         <ul className="divide-y rounded-lg border">
-          {entries.map((entry) => (
+          {foldTripEntries(entries).map((entry) => (
             <li key={entry.entryId}>
               <button
                 type="button"
@@ -168,13 +174,16 @@ function TripMoney({
                   <span className="text-sm font-medium tabular-nums">{entry.entryNumber}</span>
                   <EntryStatusBadge status={entry.status} />
                 </span>
-                <span className="shrink-0 text-sm tabular-nums">
+                <span className={cn("shrink-0 text-sm tabular-nums", foldedAmountClass(entry))}>
                   {formatMoney(entry.amountMinor, {
                     locale: i18n.language,
                     sign: { context: "ledger", direction: entry.direction },
                   })}
                 </span>
               </button>
+              {entry.cancelledBy !== null && (
+                <CancellationDetails cancellation={entry.cancelledBy} className="px-3 pb-2" />
+              )}
             </li>
           ))}
         </ul>

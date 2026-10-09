@@ -1,5 +1,6 @@
 import { migrationIntegrity, migrationsBehindBase } from "./migrations.js";
 import { isTestFile, matchFile, matchLines, type SourceFile, type Violation } from "./scan.js";
+import { unsafeSqlConstruction } from "./sql.js";
 
 /**
  * A rule is a mistake that must not spread. Ids match the rule table in
@@ -62,6 +63,172 @@ function schemaTables(files: readonly SourceFile[]): string[] {
   );
 }
 
+/** Drizzle export name → SQL table name, from schema.ts. */
+function schemaTableNames(files: readonly SourceFile[]): Map<string, string> {
+  const schema = files.find((file) => file.path === "apps/api/src/db/schema.ts");
+  if (schema === undefined) return new Map();
+  return new Map(
+    [...schema.content.matchAll(/export const (\w+) = pgTable\(\s*"(\w+)"/g)].flatMap((match) =>
+      match[1] === undefined || match[2] === undefined ? [] : [[match[1], match[2]] as const],
+    ),
+  );
+}
+
+const APPEND_ONLY_INVENTORY = "apps/api/src/db/append-only.ts";
+
+/**
+ * The one documented code path for each write an append-only table still
+ * takes (apps/api/src/db/append-only.ts says which columns and why). Adding a
+ * row here is a design change: say so in the PR and point at the grant.
+ */
+const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" | "delete"; why: string }[] = [
+  {
+    path: "apps/api/src/commands/activity-legs.ts",
+    table: "meterReadings",
+    op: "update",
+    why: "links a superseded reading to the one that corrects it (superseded_by_id, supersede_reason)",
+  },
+  {
+    path: "apps/api/src/commands/entry-decisions.ts",
+    table: "financialPostings",
+    op: "update",
+    why: "stamps posting_period_id on a pending entry's lines when it is approved",
+  },
+  {
+    path: "apps/api/src/commands/update-pending-entry.ts",
+    table: "financialPostings",
+    op: "update",
+    why: "re-stamps posting_period_id when the author moves a pending entry's date",
+  },
+  {
+    path: "apps/api/src/commands/update-pending-entry.ts",
+    table: "financialPostings",
+    op: "delete",
+    why: "replaces a pending entry's lines (#85); trigger financial_postings_pending_delete refuses any other delete (0034)",
+  },
+  {
+    path: "apps/api/scripts/seed-demo.ts",
+    table: "*",
+    op: "delete",
+    why: "seed-demo --reset wipes the demo workspace as the database owner, never as routiq_app",
+  },
+];
+
+/**
+ * The forms a centred dialog may host (#296): a decision on an existing
+ * record, with at most a reason. Approve, reject and reverse an entry; the
+ * work-order decisions and cancel; dismiss and resolve a problem; release to
+ * service; close and reopen a trip; deactivate a branch or a user, reset a
+ * PIN; lock and reopen a period; discard. A name here is the JSX element
+ * that sets `surface="dialog"` or the component that renders it.
+ */
+const DECISION_SURFACES: ReadonlySet<string> = new Set([
+  "ApproveEntryForm",
+  "RejectEntryForm",
+  "ReverseEntryForm",
+  "WorkOrderDecisionForm",
+  "CancelWorkOrderForm",
+  "IssueDecisionForm",
+  "IssueSeverityForm",
+  "ReleaseForm",
+  "CloseTripDialog",
+  "ReopenTripDialog",
+  "BranchActionDialog",
+  "MemberActionDialog",
+  "PeriodDecisionDialog",
+  "DiscardDialog",
+]);
+
+function dialogSurfacesOutsideDecisions(file: SourceFile): Violation[] {
+  const code = withoutComments(file.content);
+  const lines = file.content.split("\n");
+  return [...code.matchAll(/\bsurface\s*[=:]\s*\{?\s*["'`]dialog["'`]/g)].flatMap((match) => {
+    const before = code.slice(0, match.index);
+    const tag = [...before.matchAll(/<([A-Z]\w*)/g)].at(-1)?.[1];
+    const component = [...before.matchAll(/function\s+([A-Z]\w*)/g)].at(-1)?.[1];
+    if ((tag !== undefined && DECISION_SURFACES.has(tag)) || (component !== undefined && DECISION_SURFACES.has(component))) {
+      return [];
+    }
+    const line = before.split("\n").length;
+    return [{ path: file.path, line, text: (lines[line - 1] ?? "").trim() }];
+  });
+}
+
+/** Whole-line `//` comments and block comments that open a line, blanked with their line breaks kept. */
+function withoutComments(content: string): string {
+  const blank = (text: string) => text.replace(/[^\n]/g, " ");
+  return content
+    .replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, blank)
+    .replace(/^[ \t]*\/\/.*$/gm, blank);
+}
+
+function lineAt(file: SourceFile, index: number): Violation {
+  const line = file.content.slice(0, index).split("\n").length;
+  return { path: file.path, line, text: (file.content.split("\n")[line - 1] ?? "").trim() };
+}
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A27. Drizzle `.update(t)` / `.delete(t)`, with `t` imported under another
+ * name or reached through a namespace (`schema.notes`), and raw SQL that
+ * updates, deletes from or truncates the table, by name or as `${t}`. Limit: a
+ * table object handed through a variable, or a table name assembled at run
+ * time, is not visible here. The runtime role's grants refuse those writes in
+ * the database (db/grants.test.ts, db/append-only.test.ts).
+ */
+function appendOnlyWrites(files: readonly SourceFile[]): Violation[] {
+  const names = schemaTableNames(files);
+  if (names.size === 0) return [];
+  const inventory = files.find((file) => file.path === APPEND_ONLY_INVENTORY);
+  const block = inventory && /APPEND_ONLY_TABLES = \{([\s\S]*?)\n\} as const/.exec(inventory.content)?.[1];
+  if (inventory === undefined || block === undefined) {
+    return [{ path: APPEND_ONLY_INVENTORY, line: 1, text: "APPEND_ONLY_TABLES not found; the append-only guard has no tables to protect" }];
+  }
+  const tables = [...block.matchAll(/^\s+(\w+): \{/gm)].flatMap((match) => (match[1] === undefined ? [] : [match[1]]));
+  const unknown = tables.filter((table) => !names.has(table));
+  if (tables.length === 0 || unknown.length > 0) {
+    return [{ path: APPEND_ONLY_INVENTORY, line: 1, text: `not a schema.ts table: ${unknown.join(", ") || "(none listed)"}` }];
+  }
+
+  const sanctioned = (path: string, table: string, op: "update" | "delete") =>
+    APPEND_ONLY_WRITERS.some(
+      (writer) => writer.path === path && writer.op === op && (writer.table === "*" || writer.table === table),
+    );
+
+  return files
+    .filter((file) => isProductionSource(file.path) && file.path.startsWith("apps/api/"))
+    .flatMap((file) => {
+      const code = withoutComments(file.content);
+      const aliases = new Map(tables.map((table) => [table, table]));
+      for (const imported of code.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["'][^"']*\/schema(?:\.js)?["']/g)) {
+        for (const spec of (imported[1] ?? "").split(",")) {
+          const [name, alias] = spec.trim().split(/\s+as\s+/);
+          if (name !== undefined && alias !== undefined && tables.includes(name)) aliases.set(alias, name);
+        }
+      }
+      const identifiers = [...aliases.keys()].map(escapeRegExp).join("|");
+      const sqlNames = new Map(tables.map((table) => [names.get(table) ?? table, table]));
+      const sqlNamePattern = [...sqlNames.keys()].map(escapeRegExp).join("|");
+
+      const found: { index: number; table: string; op: "update" | "delete" }[] = [];
+      for (const match of code.matchAll(new RegExp(`\\.(update|delete)\\(\\s*(?:\\w+\\.)?(${identifiers})\\s*[,)]`, "g"))) {
+        found.push({ index: match.index, table: aliases.get(match[2] ?? "") ?? "", op: match[1] === "update" ? "update" : "delete" });
+      }
+      const verb = String.raw`\b(update|delete\s+from|truncate(?:\s+table)?)\s+(?:only\s+)?`;
+      for (const match of code.matchAll(new RegExp(`${verb}(?:"?public"?\\.)?"?(${sqlNamePattern})"?(?!\\w)`, "gi"))) {
+        found.push({ index: match.index, table: sqlNames.get((match[2] ?? "").toLowerCase()) ?? "", op: /^update/i.test(match[1] ?? "") ? "update" : "delete" });
+      }
+      for (const match of code.matchAll(new RegExp(`${verb}\\$\\{\\s*(?:\\w+\\.)?(${identifiers})\\s*\\}`, "gi"))) {
+        found.push({ index: match.index, table: aliases.get(match[2] ?? "") ?? "", op: /^update/i.test(match[1] ?? "") ? "update" : "delete" });
+      }
+      return found
+        .filter(({ table, op }) => !sanctioned(file.path, table, op))
+        .sort((a, b) => a.index - b.index)
+        .map(({ index }) => lineAt(file, index));
+    });
+}
+
 /**
  * An interactive element whose own tag sets a size below 44 px that applies on
  * a phone: a small Button/SelectTrigger size, or an unprefixed h-, min-h- or
@@ -72,6 +239,38 @@ const SMALL_CONTROL =
   /<(?:Button|SelectTrigger|Input|TabsList|AlertDialogAction|AlertDialogCancel|Link|button|a|input|select|summary)\b(?:[^<>]|=>)*?(?:\bsize=["'](?:sm|icon-sm|xs|icon-xs)["']|(?<![\w:/[-])(?:min-h|h|size)-(?:[6-9]|10)(?![\w-]))/;
 
 const CATALOG = /^apps\/web\/src\/i18n\/(locales|presets)\/[^/]+\.json$/;
+
+/**
+ * Where colours are defined (apps/web/DESIGN.md): the tokens in styles.css and
+ * theme.ts's mirror of `--background` for <meta name="theme-color">, which
+ * cannot read a CSS variable.
+ */
+const TOKEN_FILES = ["apps/web/src/styles.css", "apps/web/src/lib/theme.ts"];
+/** The logo's geometry: mask cut-outs in pure black and white, and the wordmark's capitals. */
+const BRAND = "apps/web/src/components/brand/";
+
+const isWebStyled = (path: string) =>
+  (isWebProduction(path) || /^apps\/web\/src\/.+\.css$/.test(path)) && !path.startsWith(BRAND);
+
+/**
+ * A hex colour where code writes one (after a quote, a Tailwind `[`, or a CSS
+ * `prop:`), so an issue reference like "(#422)" is never a colour; and the CSS
+ * colour functions.
+ */
+const COLOUR_LITERAL =
+  /(?:["'`[]|:\s*)#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![\w-])|\b(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch)\(/;
+/** shadcn's chart selects recharts' own default strokes (`[stroke='#ccc']`) to restyle them with tokens. */
+const RECHARTS_ATTRIBUTE_SELECTOR = /\[(?:stroke|fill)='[^']*'\]/g;
+
+function colourLiterals(files: readonly SourceFile[]): Violation[] {
+  return files
+    .filter((file) => isWebStyled(file.path) && !TOKEN_FILES.includes(file.path))
+    .flatMap((file) =>
+      matchLines({ ...file, content: file.content.replace(RECHARTS_ATTRIBUTE_SELECTOR, "") }, COLOUR_LITERAL).map(
+        (violation) => ({ ...violation, text: (file.content.split("\n")[violation.line - 1] ?? "").trim() }),
+      ),
+    );
+}
 
 /**
  * Each catalog key with its line, for the two-space JSON the catalogs are
@@ -151,6 +350,12 @@ export const RULES: readonly Rule[] = [
         (path) => isApiProduction(path) && !WRITE_OWNERS.some((owner) => path.startsWith(owner)),
       )(files);
     },
+  },
+  {
+    id: "A27",
+    name: "append-only-tables",
+    fix: "Append-only rows are never edited or deleted (apps/api/src/db/append-only.ts): write a new row that supersedes, reverses or follows up the original. A new sanctioned path is a design change; it needs a grant in a migration and a row in APPEND_ONLY_WRITERS.",
+    check: appendOnlyWrites,
   },
   {
     id: "A18",
@@ -328,6 +533,58 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
+    id: "H17",
+    name: "forms-have-harness-tests",
+    fix: "Give the form a sibling <Name>.test.tsx that runs describeCommandForm from apps/web/src/test/form-harness.ts: the six command-form tests (docs/design/consistency/README.md, Recipe: a new form).",
+    check: (files) => {
+      const harnessed = new Set(
+        files
+          .filter((file) => isTestFile(file.path) && /test\/form-harness(\.js)?["']/.test(file.content))
+          .map((file) => file.path.replace(/\.test\.tsx?$/, "")),
+      );
+      return files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            /(Forms?|Dialogs?)\.tsx$/.test(file.path) &&
+            !harnessed.has(file.path.replace(/\.tsx$/, "")),
+        )
+        .map((file) => ({ path: file.path, line: 1, text: "no sibling test runs the form harness" }));
+    },
+  },
+  {
+    id: "H18",
+    name: "dialogs-only-for-decisions",
+    fix: "Recording or editing a fact opens the side panel: surface=\"sheet\" (or \"panel\" inside a record panel). A centred dialog is only for a decision on an existing record, the allow-list DECISION_SURFACES in tools/guards/rules.ts (docs/design/consistency/README.md, Surface by job).",
+    check: (files) =>
+      files
+        .filter(
+          (file) =>
+            isWebProduction(file.path) &&
+            file.path.endsWith(".tsx") &&
+            file.path !== "apps/web/src/components/command-form.tsx",
+        )
+        .flatMap(dialogSurfacesOutsideDecisions),
+  },
+  {
+    id: "DS-1",
+    name: "figures-tabular-sans",
+    fix: "Figures (money, counts, record numbers, codes) use `tabular-nums` in the sans face, never `font-mono` or a monospace family (apps/web/DESIGN.md).",
+    check: linesMatching(/\bfont-mono\b|--font-mono\b|\bmonospace\b/, isWebStyled),
+  },
+  {
+    id: "DS-2",
+    name: "colours-from-tokens",
+    fix: "Use a semantic token class (bg-primary, text-muted-foreground, fill-chart-1) or var(--token); colours are defined only in apps/web/src/styles.css (apps/web/DESIGN.md).",
+    check: colourLiterals,
+  },
+  {
+    id: "DS-4",
+    name: "labels-sentence-case",
+    fix: "Write labels, eyebrows and badges in sentence case in the catalog and render them as written; no `uppercase` class or text-transform (apps/web/DESIGN.md). A code the user types in capitals is capitalised in the value, not by CSS.",
+    check: linesMatching(/\buppercase\b|\bsmall-caps\b/, isWebStyled),
+  },
+  {
     id: "J1",
     name: "no-any",
     fix: "Type it: use the contract's types, unknown plus a guard, or a generic.",
@@ -376,5 +633,11 @@ export const RULES: readonly Rule[] = [
     name: "flow-shots-captioned",
     fix: 'Give the shot a caption: shot("label", { caption: "One English sentence: what this frame proves" }), and a highlight locator where something changed. Reels show the caption under the frame; without it a reviewer sees only the label.',
     check: linesMatching(/\bshot\(\s*(["'`])[^"'`]*\1\s*\)/, (path) => path.startsWith("tools/verify/flows/") && path.endsWith(".ts")),
+  },
+  {
+    id: "S1",
+    name: "sql-from-bound-values",
+    fix: "Build SQL with the drizzle sql`...` template, which binds every ${value} as a parameter, or pg's query(text, [values]) with $1, $2 placeholders. Never put a value into SQL text with ${}, + or .join(), and never pass anything but a string literal to sql.raw. A dynamic table or column name goes through sql.identifier() (or pg.escapeIdentifier()) after it is checked against an allowlist. Limits and details: tools/guards/sql.ts.",
+    check: (files) => files.filter((file) => isProductionSource(file.path)).flatMap(unsafeSqlConstruction),
   },
 ];

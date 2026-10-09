@@ -48,9 +48,9 @@ describe("ThemeToggle", () => {
     expect(options.map((option) => option.textContent)).toEqual([
       "Light",
       "Dark",
-      "System",
+      "Same as phone",
     ]);
-    expect(screen.getByRole("button", { name: "System" }).getAttribute("aria-pressed")).toBe(
+    expect(screen.getByRole("button", { name: "Same as phone" }).getAttribute("aria-pressed")).toBe(
       "true",
     );
   });
@@ -85,7 +85,7 @@ describe("ThemeToggle", () => {
     await userEvent.click(screen.getByRole("button", { name: "Light" }));
     expect(document.documentElement.classList.contains("dark")).toBe(false);
 
-    await userEvent.click(screen.getByRole("button", { name: "System" }));
+    await userEvent.click(screen.getByRole("button", { name: "Same as phone" }));
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
@@ -96,9 +96,9 @@ describe("ThemeToggle", () => {
     expect(screen.getAllByRole("button").map((option) => option.textContent)).toEqual([
       "Clair",
       "Sombre",
-      "Système",
+      "Comme le téléphone",
     ]);
-    expect(screen.getByRole("group").getAttribute("aria-label")).toBe("Thème");
+    expect(screen.getByRole("group").getAttribute("aria-label")).toBe("Apparence");
   });
 });
 
@@ -106,14 +106,14 @@ describe("ThemeToggleMenu", () => {
   it("labels its icon trigger and keeps a 44px touch target", () => {
     renderToggle(<ThemeToggleMenu />);
 
-    const trigger = screen.getByRole("button", { name: "Theme" });
+    const trigger = screen.getByRole("button", { name: "Appearance" });
     expect(trigger.className).toContain("size-11");
   });
 
   it("picks a mode from the menu", async () => {
     renderToggle(<ThemeToggleMenu />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Theme" }));
+    await userEvent.click(screen.getByRole("button", { name: "Appearance" }));
     await userEvent.click(await screen.findByRole("menuitemradio", { name: "Dark" }));
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);

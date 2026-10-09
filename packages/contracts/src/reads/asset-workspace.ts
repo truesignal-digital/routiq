@@ -90,6 +90,11 @@ export const assetFinanceResponse = z.object({
     expenseMinor: moneyMinor,
     revenueMinor: moneyMinor,
     entryCount: z.number().int().nonnegative(),
+    /**
+     * Lines of the one-line-per-event list for the month (#427): a
+     * cancellation posted in its original's month folds into it.
+     */
+    eventCount: z.number().int().nonnegative(),
   }),
   pending: z.object({
     basis: z.literal("ECONOMIC_MONTH"),
@@ -148,6 +153,13 @@ export const ATTENTION_CODES = [
   "DOCUMENT_EXPIRING",
   "ENTRY_AWAITING_REVIEW",
   "ENTRY_EVIDENCE_MISSING",
+  /**
+   * A note Direction left on the vehicle that nobody has acknowledged yet
+   * (#98). INFO: an instruction to read, not a fault. `description` is the
+   * note's text, `recordedBy` its author; it leaves once someone runs
+   * acknowledge-note.
+   */
+  "DIRECTION_NOTE",
 ] as const;
 export const attentionCode = z.enum(ATTENTION_CODES);
 
@@ -160,6 +172,7 @@ export const ATTENTION_SUBJECT_TYPES = [
   "asset_availability_interval",
   "document",
   "financial_entry",
+  "note",
 ] as const;
 
 /** How many days ahead an expiry becomes DOCUMENT_EXPIRING. */
@@ -310,6 +323,8 @@ export const vehicleHistoryItem = z.object({
   params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
   /** The event's own reason, as the record history lifts it. */
   note: z.string().nullable(),
+  /** The event's listed reason code, as the record history lifts it. */
+  noteCode: z.string().nullable(),
   /**
    * What an edit of the vehicle's details changed (`asset.details_updated`),
    * before and after, in allowlist order. Money fields reach only the roles

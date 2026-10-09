@@ -2,8 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { i18n } from "./index.js";
 
 const locales = [
-  ["en", "3 entries", "2 pending approvals"],
-  ["fr", "3 écritures", "2 approbations en attente"],
+  ["en", "3 entries", "+2 pending in other branches"],
+  ["fr", "3 écritures", "+2 en attente dans d'autres agences"],
 ] as const;
 
 afterAll(async () => {
@@ -22,10 +22,10 @@ describe("ICU interpolation", () => {
     }
   });
 
-  it("renders finance.navigation.approvalsBadge with count=2", async () => {
+  it("renders finance.approvals.outsideBranch with count=2", async () => {
     for (const [locale, , expected] of locales) {
       await i18n.changeLanguage(locale);
-      const output = i18n.t("finance.navigation.approvalsBadge", { count: 2 });
+      const output = i18n.t("finance.approvals.outsideBranch", { count: 2 });
 
       expect(output).toBe(expected);
       expect(output).not.toContain("{{");

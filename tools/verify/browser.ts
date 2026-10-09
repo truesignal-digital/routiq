@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, renameSync, readdirSync, writeFileSync } from "n
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright-core";
-import { DEMO_WORKSPACE, resolveAccount, type DemoAccount } from "./accounts.js";
+import { resolveAccount, type DemoAccount } from "./accounts.js";
 import { startCast, type Cast } from "./cast.js";
 import type { DriveOptions, Lang } from "./args.js";
 import { REPO_ROOT } from "./slot.js";
@@ -237,7 +237,7 @@ export function captionFromLabel(label: string): string {
 
 async function loginThroughUi(page: Page, state: SlotState, account: DemoAccount, rec: Recorder): Promise<void> {
   await page.goto(`${state.urls.web}/login`);
-  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(DEMO_WORKSPACE);
+  await page.getByLabel(/^(Espace de travail|Workspace)$/).fill(account.workspace);
   await page.getByLabel(/^(Nom d'utilisateur|Username)$/).fill(account.username);
   await page.getByLabel(/^(Code PIN|PIN code)$/).fill(account.pin);
   await page.getByRole("button", { name: /^(Se connecter|Sign in)$/ }).click();
@@ -258,9 +258,24 @@ export async function openSidebar(page: Page): Promise<Locator> {
   return nav;
 }
 
-/** Switches to English through More, the way a user does; the choice then persists per device (#127). */
+/** Opens the name menu at the foot of the sidebar (#316): My settings, Sign out. */
+export async function openNameMenu(page: Page): Promise<Locator> {
+  await openSidebar(page);
+  await page.locator('[data-sidebar="footer"] [data-sidebar="menu-button"]').first().click();
+  const menu = page.getByRole("menu");
+  await menu.waitFor({ state: "visible", timeout: 10_000 });
+  return menu;
+}
+
+/** Signs out through the name menu, the one place the app offers it. */
+export async function signOutThroughNameMenu(page: Page): Promise<void> {
+  await (await openNameMenu(page)).getByRole("menuitem", { name: /^(Se déconnecter|Sign out)$/ }).click();
+  await page.waitForURL((url) => url.pathname === "/login");
+}
+
+/** Switches to English through name menu → My settings, the way a user does; the choice then persists per device (#127). */
 async function switchToEnglish(page: Page, rec: Recorder): Promise<void> {
-  await (await openSidebar(page)).getByRole("link", { name: /^Plus$/ }).click();
+  await (await openNameMenu(page)).getByRole("menuitem", { name: /^(Mes réglages|My settings)$/ }).click();
   await waitQuiet(page, rec);
   await page.getByRole("button", { name: "English", exact: true }).click();
   await page.getByRole("heading", { name: "Language" }).waitFor({ timeout: 10_000 });
@@ -379,7 +394,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
 
     try {
       await runStep(`log in as ${account.username}`, () => loginThroughUi(page, state, account, rec));
-      if (options.lang === "en") await runStep("switch language to English (More → English)", () => switchToEnglish(page, rec));
+      if (options.lang === "en") await runStep("switch language to English (My settings → English)", () => switchToEnglish(page, rec));
       // After sign-in: on the Vite dev server a cold load is hundreds of unbundled
       // modules, which slow 4G turns into minutes that a built app never pays.
       if (options.throttle === "phone") await runStep("throttle like a phone (CPU 4x, slow 4G)", () => throttleLikeAPhone(page));

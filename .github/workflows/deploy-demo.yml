@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       reseed:
-        description: "Re-run the transports-ngwa demo seed after deploying"
+        description: "Re-run the demo seed (transports-ngwa and littoral-voyages) after deploying"
         type: boolean
         default: false
 
@@ -95,6 +95,25 @@ jobs:
           body=$(curl -fsS --max-time 5 http://127.0.0.1:8080/assets/00000000-0000-4000-8000-000000000000)
           grep -q '<div id="root"' <<<"$body" || { echo "::error::/assets/<id> did not return the app shell"; exit 1; }
           echo "deep link serves the app shell"
+
+      # A missing storage config leaves the app healthy but drops the upload
+      # routes, so every receipt photo fails with STORAGE_FAILED. An
+      # unauthenticated presign must reach the route (401), not 404, and the
+      # bucket path must reach storage itself.
+      - name: Smoke test (uploads)
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST \
+            -H 'content-type: application/json' -d '{}' http://127.0.0.1:8080/v1/artifacts/presign)
+          [ "$code" = 401 ] || { echo "::error::presign answered $code, not 401 — is S3_ENDPOINT set in /srv/routiq/demo.env?"; exit 1; }
+          # Unsigned, so storage itself must refuse it. A 502, a timeout or the
+          # app shell all mean uploads are broken.
+          storage=$(curl -s -w '\n%{http_code}' --max-time 5 http://127.0.0.1:8080/artifacts/ || true)
+          status=${storage##*$'\n'}
+          if [ "$status" != 403 ] || ! grep -q '<Code>AccessDenied</Code>' <<<"$storage"; then
+            echo "::error::/artifacts/ answered $status without an S3 AccessDenied — storage is not reachable through nginx"; exit 1
+          fi
+          echo "upload routes and storage proxy reachable"
 
       # The hostname lives in the box env file, not here: swapping nip.io for a
       # real subdomain is then a box change, not a repo change.

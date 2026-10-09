@@ -1,12 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LogOut, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PoweredByRoutiq, RoutiqLogo, useCompanyLogo } from "@/components/brand/routiq-logo";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -15,9 +16,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useMeContext } from "../auth/me.js";
-import { useSignOut } from "../auth/sign-out.js";
-import { useActiveSession } from "../auth/store.js";
-import { isSectionActive, visibleSections } from "./sections.js";
+import { NameMenu } from "./NameMenu.js";
+import { NavCountDot, NavCountLink } from "./NavCount.js";
+import { activeSection, visibleSectionGroups } from "./sections.js";
+import { useNavCounts } from "./useNavCounts.js";
 
 /** Sheet nav items are thumb targets on mobile; the desktop rail stays compact. */
 const MENU_BUTTON = "min-h-11 md:min-h-8";
@@ -25,21 +27,21 @@ const MENU_BUTTON = "min-h-11 md:min-h-8";
 export function AppSidebar() {
   const { t } = useTranslation();
   const me = useMeContext();
-  const session = useActiveSession();
-  const signOut = useSignOut();
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const companyLogo = useCompanyLogo();
+  const railOnly = state === "collapsed" && !isMobile;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const sections = visibleSections(me?.enabledModules, me?.role);
+  const groups = visibleSectionGroups(me?.role, me?.enabledModules);
+  const counts = useNavCounts();
+  const active = activeSection(
+    groups.flatMap((group) => group.sections),
+    pathname,
+  );
 
   // The sheet has no route awareness of its own: navigating from inside it
   // would otherwise leave the overlay covering the screen it just opened.
   function closeOnMobile() {
     if (isMobile) setOpenMobile(false);
-  }
-
-  function onLogout() {
-    closeOnMobile();
-    signOut();
   }
 
   return (
@@ -49,16 +51,15 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="group-data-[collapsible=icon]:p-1.5!"
+              className="group-data-[collapsible=icon]:p-1!"
               onClick={closeOnMobile}
               render={<Link to="/" />}
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
-                <Truck className="size-5" strokeWidth={1.8} aria-hidden />
-              </span>
-              <span className="font-heading text-base font-semibold tracking-tight">
-                {t("app.name")}
-              </span>
+              <RoutiqLogo
+                markClassName="size-8! group-data-[collapsible=icon]:size-6!"
+                markTitle={railOnly ? t("brand.mark") : undefined}
+                wordmarkClassName="text-base group-data-[collapsible=icon]:hidden"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -66,55 +67,58 @@ export function AppSidebar() {
 
       <SidebarContent>
         <nav aria-label={t("shell.navLabel")}>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {sections.map((section) => {
-                  const { key, to, icon: Icon } = section;
-                  const label = t(`nav.${key}`);
-                  return (
-                    <SidebarMenuItem key={key}>
-                      <SidebarMenuButton
-                        isActive={isSectionActive(section, pathname)}
-                        tooltip={label}
-                        className={MENU_BUTTON}
-                        onClick={closeOnMobile}
-                        render={<Link to={to} />}
-                      >
-                        <Icon aria-hidden />
-                        <span>{label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {groups.map((group) => (
+            <SidebarGroup key={group.key}>
+              {/* The rail fades the label and slides it over the row above; it must not catch that row's pointer. */}
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:pointer-events-none">
+                {t(group.labelKey)}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.sections.map(({ key, to, labelKey, icon: Icon, count }) => {
+                    const label = t(labelKey);
+                    const waiting = count === undefined ? undefined : counts[count.key];
+                    return (
+                      <SidebarMenuItem key={key}>
+                        <SidebarMenuButton
+                          isActive={active?.key === key}
+                          tooltip={
+                            count === undefined || waiting === undefined
+                              ? label
+                              : t("shell.counts.tooltip", {
+                                  label,
+                                  waiting: t(count.labelKey, { count: waiting }),
+                                })
+                          }
+                          className={MENU_BUTTON}
+                          onClick={closeOnMobile}
+                          render={<Link to={to} />}
+                        >
+                          <Icon aria-hidden />
+                          <span>{label}</span>
+                          {count !== undefined && waiting !== undefined && (
+                            <NavCountDot count={count} value={waiting} />
+                          )}
+                        </SidebarMenuButton>
+                        {count !== undefined && waiting !== undefined && (
+                          <NavCountLink count={count} value={waiting} onNavigate={closeOnMobile} />
+                        )}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </nav>
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarMenu>
-          {session && (
-            <SidebarMenuItem>
-              <div className="flex min-w-0 flex-col px-2 py-1 group-data-[collapsible=icon]:hidden">
-                <span className="truncate text-sm font-medium">{session.username}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {session.workspaceSlug}
-                </span>
-              </div>
-            </SidebarMenuItem>
-          )}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={t("more.logout")}
-              className={MENU_BUTTON}
-              onClick={onLogout}
-            >
-              <LogOut aria-hidden />
-              <span>{t("more.logout")}</span>
-            </SidebarMenuButton>
+          <SidebarMenuItem className="px-2 group-data-[collapsible=icon]:hidden">
+            <PoweredByRoutiq companyLogo={companyLogo} />
           </SidebarMenuItem>
+          <NameMenu />
         </SidebarMenu>
       </SidebarFooter>
 

@@ -132,6 +132,9 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
     ...wildcard(["record-meter-reading"], ["TECHNICIAN"]),
 
     ...wildcard(["report-issue"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
+    // Whoever reports may mark a problem safety-critical later; the handler
+    // keeps taking the mark off to DIRECTOR and ADMIN (#96).
+    ...wildcard(["change-issue-severity"], ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"]),
     ...wildcard(
       ["resolve-issue", "dismiss-issue", "create-work-order", "complete-work-order", "cancel-work-order"],
       ["DIRECTOR", "ADMIN", "TECHNICIAN"],
@@ -151,9 +154,11 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     ),
 
-    // Reading a notice is no decision: every member acknowledges their own (#422).
+    // Reading a notice is no decision: every member acknowledges their own
+    // (#422), and anyone who sees a vehicle may say they saw Direction's note
+    // on it (#98).
     ...wildcard(
-      ["acknowledge-approval-rules"],
+      ["acknowledge-approval-rules", "acknowledge-note"],
       ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     ),
   ];

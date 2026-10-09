@@ -1,7 +1,7 @@
 /**
  * The UI language is a device preference, like the theme: it lives in
  * localStorage, is read before the first render, and never travels through a
- * command. fr-CM is the default; only an explicit choice on More changes it.
+ * command. fr-CM is the default; only an explicit choice on My settings changes it.
  */
 export const LANGUAGE_STORAGE_KEY = "routiq-language";
 
@@ -24,7 +24,7 @@ export function readStoredLanguage(): AppLanguage {
   }
 }
 
-/** The user's pick on More: remembered for the next load, then applied. */
+/** The user's pick on My settings: remembered for the next load, then applied. */
 export function chooseLanguage(
   i18n: { changeLanguage: (language: string) => Promise<unknown> },
   language: AppLanguage,

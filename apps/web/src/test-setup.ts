@@ -1,5 +1,6 @@
 import { configure } from "@testing-library/react";
 import { afterEach, beforeEach } from "vitest";
+import { resetSearch } from "./test-router.js";
 
 /**
  * `findBy*` and `waitFor` give up after testing-library's 1 s default, and a
@@ -12,7 +13,7 @@ configure({ asyncUtilTimeout: 10_000 });
 
 /**
  * jsdom ships no `matchMedia`, and the responsive components lean on it —
- * `useIsMobile` calls it on mount, the DataTable picks table-vs-cards with it.
+ * `useIsMobile` calls it on mount, the DataTable picks table-vs-list-rows with it.
  * The stub answers `min-width`/`max-width` queries against jsdom's own window
  * (1024px), so every component reaches the same verdict: desktop. Tests that
  * want the phone layout keep overriding `window.matchMedia` themselves.
@@ -57,6 +58,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetSearch();
   if (baseUiErrors.length === 0) return;
   const logged = baseUiErrors.splice(0);
   throw new Error(`Base UI logged ${logged.length} error(s):\n\n${logged.join("\n\n")}`);

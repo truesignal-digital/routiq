@@ -8,14 +8,14 @@ import { openSidebar, type DriveScript } from "../browser.js";
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("link", { name: t("Camions", "Trucks") }).click();
-  await page.getByRole("heading", { name: t("Vos camions", "Your trucks") }).waitFor();
+  await page.getByRole("heading", { name: t("Camions", "Trucks"), level: 1 }).waitFor();
   await quiet();
   await shot("trucks-list", { caption: "Trucks list" });
 
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor();
   await quiet();
-  await shot("vh003-now", { caption: "VH003 opens on its workspace: what is true about the truck now" });
+  await shot("vh003-overview", { caption: "VH003 opens on its Overview tab" });
   const assetId = /\/assets\/([0-9a-f-]{36})/.exec(page.url())?.[1];
   if (assetId === undefined) throw new Error(`no asset id in ${page.url()}`);
 

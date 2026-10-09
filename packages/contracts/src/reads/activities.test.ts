@@ -10,6 +10,8 @@ const fuelEntry = {
   categoryLabelEn: "Fuel",
   amountMinor: 86_000,
   status: "POSTED",
+  reversesEntryId: null,
+  cancelledBy: null,
 };
 
 describe("activity financial entry read", () => {

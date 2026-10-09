@@ -56,6 +56,8 @@ function membership(enabledModules: ModuleCode[]): MeContext {
     principalId: "22222222-2222-4222-8222-222222222222",
     principalType: "HUMAN",
     membershipId: "33333333-3333-4333-8333-333333333333",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
     role: "ADMIN",
     branchScope: "ALL",
     enabledModules,
@@ -88,7 +90,6 @@ const SCREEN_PATHS = [
   "/assets/new",
   "/finance/entries",
   "/finance/periods",
-  "/more",
 ] as const;
 
 let client = new QueryClient();
@@ -177,38 +178,46 @@ describe("AppShell (sidebar frame)", () => {
     expect(inset?.classList.contains("min-w-0")).toBe(true);
   });
 
-  it("has no bottom navigation left", async () => {
+  it("pins the bottom bar for phones only (#318)", async () => {
     await renderShell("/assets");
 
     const navs = screen.getAllByRole("navigation");
-    // The sidebar and the SiteHeader breadcrumb; nothing pinned to the bottom.
     expect(navs.map((nav) => nav.getAttribute("aria-label")).sort()).toEqual([
       "Breadcrumb",
       "Navigation",
+      "Shortcuts",
     ]);
-    expect(document.querySelector("nav.fixed")).toBeNull();
+    const bar = screen.getByRole("navigation", { name: "Shortcuts" });
+    expect(bar.classList.contains("md:hidden")).toBe(true);
   });
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+  });
+
+  it("groups the rows under Daily work and Company", async () => {
+    await renderShell("/assets");
+    const nav = screen.getByRole("navigation", { name: "Navigation" });
+    const headings = [...nav.querySelectorAll("[data-sidebar='group-label']")].map((h) => h.textContent);
+    expect(headings).toEqual(["Daily work", "Company"]);
   });
 
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "More"]);
+    expect(navLinkNames()).toEqual(["Home", "Assets", "Users"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "More"]);
+    expect(navLinkNames()).toEqual(["Home"]);
   });
 
   it("marks the section owning the route active, and only that one", async () => {
     await renderShell("/finance/periods");
-    expect(activeNavName()).toBe("Finance");
+    expect(activeNavName()).toBe("Money");
   });
 
   it("highlights Home on the landing route without swallowing the others", async () => {
@@ -228,7 +237,7 @@ describe("AppShell (sidebar frame)", () => {
   it("names the current section in the site header", async () => {
     await renderShell("/finance/entries");
     const header = document.querySelector("[data-slot='sidebar-inset'] header");
-    expect(header?.textContent).toContain("Finance");
+    expect(header?.textContent).toContain("Money");
   });
 
   it("overrides the English labels the vendored trigger and rail ship with", async () => {
@@ -310,7 +319,8 @@ describe("AppShell (sidebar frame)", () => {
   it("logs out from the sidebar footer, forgetting every read made under the session", async () => {
     await renderShell("/assets");
     client.setQueryData(["ws", session.workspaceSlug, "me"], me.current);
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Sali Ahmadou/ }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     expect(logout).toHaveBeenCalledWith(session);
     expect(client.getQueryCache().getAll()).toEqual([]);
     expect(await screen.findByText("login screen")).toBeTruthy();
@@ -320,18 +330,28 @@ describe("AppShell (sidebar frame)", () => {
     it("renames the chrome of a single-preset workspace", async () => {
       me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Trucks", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "Users"]);
     });
 
     // Runs after the overlay above: also proves unmounting clears it.
     it("keeps the base vocabulary for a mixed fleet", async () => {
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
     });
   });
 
   describe("mobile", () => {
     beforeEach(() => setViewport(390));
+
+    it("opens the sidebar sheet from the bottom bar's Menu, which steps aside meanwhile (#318)", async () => {
+      await renderShell("/assets");
+
+      const bar = screen.getByRole("navigation", { name: "Shortcuts" });
+      await userEvent.click(within(bar).getByRole("button", { name: "Menu" }));
+
+      expect(await screen.findByRole("dialog", { name: "Navigation menu" })).toBeTruthy();
+      await waitFor(() => expect(screen.queryByRole("navigation", { name: "Shortcuts" })).toBeNull());
+    });
 
     it("keeps the nav behind the trigger until it is opened", async () => {
       await renderShell("/assets");
@@ -340,14 +360,14 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Finance", "More"]);
+      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
     });
 
     it("closes the sheet after navigating", async () => {
       const router = await renderShell("/assets");
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
-      await userEvent.click(screen.getByRole("link", { name: "Finance" }));
+      await userEvent.click(screen.getByRole("link", { name: "Money" }));
 
       expect(router.state.location.pathname).toBe("/finance/entries");
       expect(screen.queryByRole("navigation", { name: "Navigation" })).toBeNull();

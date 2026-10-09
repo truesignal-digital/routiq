@@ -4,7 +4,17 @@ import { describe, expect, it } from "vitest";
 import { renderCompose, renderViteConfig, storageImageFrom } from "./render.js";
 import { PROTECTED_VOLUME, REPO_ROOT, slotPorts } from "./slot.js";
 
-const image = storageImageFrom(readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8"));
+const appliance = readFileSync(path.join(REPO_ROOT, "docker-compose.yml"), "utf8");
+const image = storageImageFrom(appliance);
+
+// #108: a fixed volume name made every `-p <project> --profile appliance up` mount the dev database.
+describe("docker-compose.yml", () => {
+  it("leaves volume names to the compose project", () => {
+    const volumes = appliance.slice(appliance.search(/^volumes:$/m));
+    expect(volumes).toMatch(/^volumes:\n/);
+    expect(volumes).not.toMatch(/^\s+name:/m);
+  });
+});
 
 describe("renderCompose", () => {
   const yaml = renderCompose("routiq-verify-3", slotPorts(3), image, { accessKey: "a", secretKey: "b" });

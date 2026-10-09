@@ -1,6 +1,30 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { MetricStrip, type MetricTiles } from "./metric-strip.js";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { MetricStrip, metricTiles, moneyMetric, type MetricTiles } from "./metric-strip.js";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    to,
+    search,
+    children,
+    ...props
+  }: {
+    to: string;
+    search?: Record<string, string | undefined>;
+    children?: ReactNode;
+  }) => {
+    const query = new URLSearchParams(
+      Object.entries(search ?? {}).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    ).toString();
+    return (
+      <a href={query === "" ? to : `${to}?${query}`} {...props}>
+        {children}
+      </a>
+    );
+  },
+}));
 
 const tiles: MetricTiles = [
   { label: "Fleet", value: "6" },
@@ -142,5 +166,114 @@ describe("MetricStrip", () => {
     const { container } = render(<MetricStrip tiles={tiles} />);
 
     expect(container.innerHTML).not.toMatch(/amber-|emerald-|sky-|red-/);
+  });
+
+  it("leaves a tile without a filter target as plain text", () => {
+    render(<MetricStrip tiles={tiles} />);
+
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("turns a tile with a filter target into a pressed-state button", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <MetricStrip
+        tiles={[
+          { label: "Fleet", value: "6", onSelect, selected: true },
+          { label: "In service", value: "2", onSelect: () => {} },
+        ]}
+      />,
+    );
+
+    const fleet = screen.getByRole("button", { name: "Fleet" });
+    expect(fleet.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: "In service" }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    // Still a description list: the button sits inside the term.
+    expect(container.querySelector("dt button")).toBe(fleet);
+
+    await userEvent.setup().click(fleet);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("turns a tile with a link into a link over the whole card", () => {
+    const { container } = render(
+      <MetricStrip
+        tiles={[
+          { id: "assets", label: "Trucks in service", value: "6", link: { to: "/assets" } },
+          {
+            label: "Expenses",
+            value: "4",
+            link: { to: "/finance/entries", search: { direction: "EXPENSE", periodCode: undefined } },
+          },
+        ]}
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: "Trucks in service" });
+    expect(link.getAttribute("href")).toBe("/assets");
+    expect(container.querySelector("dt a")).toBe(link);
+    expect(link.className).toContain("after:absolute");
+    expect(screen.getByRole("link", { name: "Expenses" }).getAttribute("href")).toBe(
+      "/finance/entries?direction=EXPENSE",
+    );
+    expect(container.querySelector("[data-metric=assets]")).toBeTruthy();
+  });
+
+  it("keeps a secondary line on its own destination, above the tile's link", () => {
+    render(
+      <MetricStrip
+        tiles={[
+          {
+            label: "Waiting",
+            value: "3",
+            link: { to: "/finance/approvals" },
+            secondary: { label: "2 in other branches", to: "/finance/approvals", search: { branch: "all" } },
+          },
+          { label: "Fleet", value: "6" },
+        ]}
+      />,
+    );
+
+    const secondary = screen.getByRole("link", { name: "2 in other branches" });
+    expect(secondary.getAttribute("href")).toBe("/finance/approvals?branch=all");
+    expect(secondary.className).toContain("z-10");
+  });
+
+  it("puts the method behind an info button next to the label", () => {
+    render(
+      <MetricStrip
+        tiles={[
+          { label: "Posted", value: "4", info: "Counted by posting date" },
+          { label: "Fleet", value: "6" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Mode de calcul" })).toBeTruthy();
+  });
+
+  it("shows an amount as its figure with the currency as a small unit", () => {
+    const { container } = render(
+      <MetricStrip
+        tiles={[
+          { label: "Spent", ...moneyMetric(1_250_000, "XAF") },
+          { label: "Unknown", ...moneyMetric(null) },
+        ]}
+      />,
+    );
+
+    const [spent, unknown] = [...container.querySelectorAll("[data-slot=metric-value]")];
+    expect(spent?.querySelector("small")?.textContent).toBe("FCFA");
+    expect(spent?.textContent?.replace(/\s/g, "")).toBe("1250000FCFA");
+    expect(unknown?.textContent).toBe("—");
+  });
+
+  it("builds a strip from a run-time list only when it has one to four tiles", () => {
+    const tile = { label: "Fleet", value: "6" };
+    expect(metricTiles([])).toBeUndefined();
+    expect(metricTiles([tile])).toHaveLength(1);
+    expect(metricTiles([tile, tile, tile, tile, tile])).toBeUndefined();
   });
 });

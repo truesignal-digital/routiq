@@ -288,6 +288,34 @@
       "when": 1791282207774,
       "tag": "0040_observability",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791309018120,
+      "tag": "0041_audit_events_command_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791309618120,
+      "tag": "0042_cancellation_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791326009734,
+      "tag": "0043_direction_note_acknowledgements",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791326609734,
+      "tag": "0044_change_issue_severity_rules",
+      "breakpoints": true
     }
   ]
 }

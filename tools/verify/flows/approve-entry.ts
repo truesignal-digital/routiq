@@ -1,7 +1,7 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Finance → Approvals → approve, from its ⋯ menu (one tap), the oldest pending
+ * Money → "Waiting your approval" → approve, from the row's own button (one tap), the oldest pending
  * entry the viewer may decide (someone else recorded it, and it is inside the
  * viewer's approval band), then read it back as POSTED. Mutates the slot; reset
  * with `pnpm verify up --reseed`. Finance decides up to 1 000 000 XAF; above
@@ -20,18 +20,17 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   if (queue.status !== 200 || entry === undefined) throw new Error(`GET /v1/finance/approvals → ${queue.status}, nothing this role may decide (reseed?)`);
   log(`api: ${pending.length} pending; approving ${entry.entryNumber}`);
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Finances", "Finance") }).click();
-  await page.getByRole("navigation", { name: t("Sections financières", "Finance sections") }).getByRole("tab", { name: new RegExp(`^${t("Approbations", "Approvals")}`) }).click();
-  await page.getByRole("heading", { level: 1, name: t("Approbations", "Approvals") }).waitFor();
+  await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
+  await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
+  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true }).click();
   await quiet();
-  await shot("approvals-queue", { caption: `Approvals queue: ${entry.entryNumber} waits for this role's decision` });
+  await shot("approvals-queue", { caption: `The waiting view: ${entry.entryNumber} waits for this role's decision` });
 
-  await page.getByRole("row").filter({ hasText: entry.entryNumber }).getByRole("button", { name: "Actions" }).click();
-  // Approve is one tap: the menu item sends the command, no dialog first.
-  await page.getByRole("menuitem", { name: t("Approuver l'écriture", "Approve entry") }).click();
+  // Approve is one tap: the row's button sends the command, no dialog first.
+  await page.getByRole("button", { name: `${t("Approuver l'écriture", "Approve entry")} ${entry.entryNumber}`, exact: true }).click();
   await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
   await quiet();
-  await shot("approved", { caption: `Approved in one tap from the row menu: ${entry.entryNumber} is posted` });
+  await shot("approved", { caption: `Approved in one tap from the row: ${entry.entryNumber} is posted` });
 
   const after = await apiGet(`/v1/finance/entries/${entry.id}`);
   const status = (after.body as { status?: string }).status;
