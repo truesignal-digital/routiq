@@ -105,6 +105,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `vehicle-money-numbers` | September locked first through `lock-period` (header of the flow): VH001 → cancel the September repair from its panel → October's Spending by category nets −85,000 with no share; cancel July's fuel entry with no receipt → July's Missing receipts and the row stop asking for it (#472, #473) | yes |
 | `trips` | trips list → a closed trip's detail | no |
+| `driver-sheet-expenses` | as a driver (`--role driver` or `passenger-driver`), Record a sheet: Add expense only, no revenue line or switch, then the sheet records with its expense and the trip's money is that expense (#532). Run with `--viewport 390x844`, fr and en | yes |
 | `trip-day-filter` | arranges two closed trips on VH001 just after local midnight (Mon 00:30, Tue 00:15 Douala) by the sheet command; the "This week" tile's list shows what the tile counts, and a Monday-only date pick lists the Monday trip, not Tuesday's (#511) | yes |
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
