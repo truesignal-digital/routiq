@@ -96,6 +96,22 @@ jobs:
           grep -q '<div id="root"' <<<"$body" || { echo "::error::/assets/<id> did not return the app shell"; exit 1; }
           echo "deep link serves the app shell"
 
+      # A missing storage config leaves the app healthy but drops the upload
+      # routes, so every receipt photo fails with STORAGE_FAILED. An
+      # unauthenticated presign must reach the route (401), not 404, and the
+      # bucket path must reach storage, not fall through to the app shell.
+      - name: Smoke test (uploads)
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST \
+            -H 'content-type: application/json' -d '{}' http://127.0.0.1:8080/v1/artifacts/presign)
+          [ "$code" = 401 ] || { echo "::error::presign answered $code, not 401 — is S3_ENDPOINT set in /srv/routiq/demo.env?"; exit 1; }
+          body=$(curl -s --max-time 5 http://127.0.0.1:8080/artifacts/ || true)
+          if grep -q '<div id="root"' <<<"$body"; then
+            echo "::error::/artifacts/ served the app shell instead of storage"; exit 1
+          fi
+          echo "upload routes and storage proxy reachable"
+
       # The hostname lives in the box env file, not here: swapping nip.io for a
       # real subdomain is then a box change, not a repo change.
       - name: Smoke test (public URL)
