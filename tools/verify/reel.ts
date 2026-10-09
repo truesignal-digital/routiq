@@ -143,7 +143,9 @@ export function compressCast(cast: CastIndex, beats: readonly (number | Frame)[]
     return t === undefined ? [] : [{ t, shot: typeof beat === "number" ? undefined : beat }];
   }).sort((a, b) => a.t - b.t);
   const pauses = cast.pauses.map(([from, to]) => [from, Math.min(to, shots.find((beat) => beat.t > from)?.t ?? to)] as const);
-  const hidden = (t: number) => pauses.some(([from, to]) => t >= from && t <= to);
+  // Repainting (caret, hover) is not progress during a failed action's timeout.
+  const waits = shots.flatMap((beat, i) => beat.shot?.label.startsWith("failed-") ? [[shots[i - 1]?.t ?? 0, beat.t] as const] : []);
+  const hidden = (t: number) => pauses.some(([from, to]) => t >= from && t <= to) || waits.some(([from, to]) => t > from && t < to);
   const events = [
     ...cast.frames.filter((frame) => !hidden(frame.t)).map((frame) => ({ t: frame.t, file: frame.file as string | undefined })),
     ...shots.map(({ t, shot }, i) => ({
@@ -246,7 +248,8 @@ export function compileTimeline(slides: readonly Slide[], tracks: readonly Track
       if (stopped[i] || beat?.t === undefined || track === undefined) return { from, to: from, beat: stopped[i] ? undefined : beat, failed: false };
       return { from, to: Math.max(from, realToReel(track, beat.t)), beat, failed: beat.label.startsWith("failed-") };
     });
-    const play = Math.max(0.3, ...panes.map((pane) => pane.to - pane.from));
+    const duration = Math.max(0.3, ...panes.map((pane) => pane.to - pane.from));
+    const play = steps.length === 0 ? Math.min(MAX_GAP, duration) : duration;
     const dwell = panes.some((pane) => pane.beat?.box !== undefined) ? DWELL_ZOOM : DWELL;
     const caption = slide.kind === "frame" ? slide.after.caption : (slide.after?.caption ?? slide.before?.caption ?? "");
     steps.push({ start: t, play, dwell, caption, panes });
@@ -352,8 +355,9 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
       if (pane === undefined) continue;
       const local = time - step.start;
       if (noteTone !== "bad") note = "";
-      c = local < step.play ? Math.min(pane.from + local, pane.to) : pane.to;
-      if (local >= pane.to - pane.from && pane.beat !== undefined) {
+      const played = n === 0 ? (local / step.play) * (pane.to - pane.from) : local;
+      c = local < step.play ? Math.min(pane.from + played, pane.to) : pane.to;
+      if ((n === 0 ? local >= step.play : local >= pane.to - pane.from) && pane.beat !== undefined) {
         const at = seconds(reelToReal(track, pane.to));
         if (pane.failed) {
           note = `Stopped at ${at}: ${failureReason(pane.beat.caption)}`;

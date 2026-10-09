@@ -133,13 +133,13 @@ describe("compressCast", () => {
 });
 
 describe("compileTimeline", () => {
-  it("plays each pane up to its shot and holds the faster one so both reach the shot together", () => {
+  it("squeezes the lead-in while preserving each pane's shot time", () => {
     const after = compressCast(cast([0.5, 1, 1.5, 2, 2.5, 3]));
     const before = compressCast(cast([0.5, 1, 1.5]));
     const slides = planReel(run([frame("queue", 2)]), run([frame("queue", 1)]));
     const { steps } = compileTimeline(slides, [before, after]);
     const step = steps[0];
-    expect(step?.play).toBeCloseTo(2);
+    expect(step?.play).toBeCloseTo(MAX_GAP);
     expect(step?.panes.map((p) => [p.from, Math.round(p.to * 100) / 100])).toEqual([
       [0, 1],
       [0, 2],
@@ -341,4 +341,37 @@ it("holds the unhighlighted viewport shot when screenshot pauses hide every cast
   const track = compressCast(cast([1.02, 1.12], [[1, 1.3], [1.1, 1.4]]), shots);
   expect(frameAt(track, realToReel(track, 1))).toBe("../frames/dialog.png");
   expect(frameAt(track, realToReel(track, 1.1))).toBe("../frames/typed.png");
+});
+
+it("caps a failed pane's repainting timeout after its last successful shot", () => {
+  const shots = [frame("form", 2), frame("failed-click", 32)];
+  const track = compressCast(cast(Array.from({ length: 321 }, (_, i) => i / 10)), shots);
+  expect(realToReel(track, 32) - realToReel(track, 2)).toBeCloseTo(MAX_GAP);
+  expect(reelToReal(track, realToReel(track, 32))).toBe(32);
+  const after = compressCast(cast([0, 1, 2, 2.1]), [frame("form", 2), frame("saved", 2.1)]);
+  const timeline = compileTimeline(planReel(run([frame("form", 2), frame("saved", 2.1)]), run(shots, { ok: false })), [track, after]);
+  expect(timeline.steps[1]?.play).toBeCloseTo(MAX_GAP);
+  const state = stateAt(timeline.endStart, timeline, [track, after], viewport, computeLayout(2, viewport), (_, file) => file);
+  expect(state.panes[0]?.timer).toBe("32.0 s");
+  expect(state.panes[0]?.note).toContain("Stopped at 32.0 s");
+  expect(state.panes[0]?.src).toBe("../frames/failed-click.png");
+});
+
+it("squeezes both lead-ins to the same length and reaches both first shots together", () => {
+  const before = compressCast(cast(Array.from({ length: 81 }, (_, i) => i / 10)), [frame("form", 8)]);
+  const after = compressCast(cast([0, 0.1, 0.2, 0.3, 0.4]), [frame("form", 0.4)]);
+  const timeline = compileTimeline(planReel(run([frame("form", 0.4)]), run([frame("form", 8)])), [before, after]);
+  const step = timeline.steps[0];
+  if (step === undefined) throw new Error("no step");
+  expect(step.play).toBeCloseTo(MAX_GAP);
+  const at = (offset: number) => stateAt(step.start + offset, timeline, [before, after], viewport, computeLayout(2, viewport), (_, file) => file);
+  expect(at(step.play / 2).panes.map((pane) => pane.timer)).toEqual(["4.0 s", "0.2 s"]);
+  expect(at(step.play / 2).panes.map((pane) => pane.note)).toEqual(["", ""]);
+  expect(at(step.play + 0.01).panes.map((pane) => pane.src)).toEqual(["../frames/form.png", "../frames/form.png"]);
+});
+
+it("keeps all three adjacent add-note beats despite the reported overlapping pauses", () => {
+  const shots = [frame("form", 2.424), frame("summary", 3.474), frame("typed", 4.147)];
+  const track = compressCast(cast([2.41, 2.78, 3.47, 4.26, 4.81], [[2.424, 3.485], [3.474, 4.15], [4.147, 4.824]]), shots);
+  for (const shot of shots) expect(frameAt(track, realToReel(track, shot.t ?? 0))).toBe(`../${shot.frame}`);
 });
