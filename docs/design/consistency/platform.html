@@ -132,7 +132,7 @@
           <tr><td>Money</td><td class="on">On</td><td class="on">On</td><td class="on">On</td><td style="text-align:left">Expenses, revenue, approvals</td></tr>
           <tr><td>Documents</td><td class="on">On</td><td class="on">On</td><td class="on">On</td><td style="text-align:left">Papers and expiry</td></tr>
           <tr><td><b>Customers</b></td><td class="on">On · shippers</td><td class="on">On · parcel and contract customers (Parcels needs it)</td><td class="off">Off</td><td style="text-align:left">Customer records, rates, follow-ups, what they owe</td></tr>
-          <tr><td><b>Stock &amp; purchasing</b></td><td class="opt">Optional</td><td class="opt">Optional</td><td class="opt">Optional</td><td style="text-align:left">Parts, purchase orders, magasins</td></tr>
+          <tr><td><b>Stock &amp; purchasing</b></td><td class="opt">Optional</td><td class="opt">Optional</td><td class="opt">Optional</td><td style="text-align:left">Parts, receipts, magasins</td></tr>
           <tr><td><b>Parcels</b></td><td class="off">Off (optional for groupage)</td><td class="on">On</td><td class="off">Off</td><td style="text-align:left">Parcel counter, loading, collection</td></tr>
           <tr><td>Ticketing</td><td class="fut">—</td><td class="fut">Later</td><td class="fut">—</td><td style="text-align:left">Seats and passenger tickets (deferred, §13)</td></tr>
         </tbody>
@@ -149,7 +149,7 @@
                 <div class="modrow"><div><b>Journeys</b><span>Scheduled journeys between agencies</span></div><span class="badge b-mute">Default</span><span class="toggle y"></span></div>
                 <div class="modrow"><div><b>Parcels</b><span>Parcel counter, loading, collection</span></div><span class="badge b-mute">Default</span><span class="toggle y"></span></div>
                 <div class="modrow"><div><b>Customers</b><span>Parcel and contract customers · required by Parcels</span></div><span class="badge b-mute">Default</span><span class="toggle y"></span></div>
-                <div class="modrow"><div><b>Stock &amp; purchasing</b><span>Parts and purchase orders</span></div><span class="badge b-info">Optional</span><span class="toggle"></span></div>
+                <div class="modrow"><div><b>Stock &amp; purchasing</b><span>Parts and receipts</span></div><span class="badge b-info">Optional</span><span class="toggle"></span></div>
               </div>
               <div class="row" style="justify-content:flex-end"><button class="btn">Back</button><button class="btn primary">Continue</button></div>
             </div>
@@ -162,7 +162,7 @@
             <div class="modrow"><div><b>Vehicles, Journeys, Maintenance, Money, Documents</b><span>Included with the bus preset</span></div><span class="badge b-ok">Active</span></div>
             <div class="modrow"><div><b>Parcels</b><span>Since 4 Oct 2026</span></div><span class="badge b-ok">Active</span></div>
             <div class="modrow"><div><b>Customers</b><span>Since 4 Oct 2026</span></div><span class="badge b-ok">Active</span></div>
-            <div class="modrow"><div><b>Stock &amp; purchasing</b><span>Parts, purchase orders, magasins</span></div><span class="badge b-mute">Not included</span><a class="caption" style="margin:0;font-weight:600;color:var(--foreground)">Ask about it</a></div>
+            <div class="modrow"><div><b>Stock &amp; purchasing</b><span>Parts, receipts, magasins</span></div><span class="badge b-mute">Not included</span><a class="caption" style="margin:0;font-weight:600;color:var(--foreground)">Ask about it</a></div>
             <div class="modrow"><div><b>Ticketing</b><span>Seats and passenger tickets</span></div><span class="badge b-mute">Coming later</span></div>
           </div></div>
         </div>
@@ -376,7 +376,7 @@
           <tr><td class="pri">Customers</td><td>See + charts</td><td>Create, rates, follow-ups, complaints</td><td>Balances, record payment, statements</td><td>Find by phone, add individual, record payment</td><td class="no">—</td><td class="no">Name on the trip only</td></tr>
           <tr><td class="pri">Money</td><td>See all · approve above top band</td><td>Record · see agency</td><td><b>Approve, reverse, accounting months</b></td><td>Record cash in / out (own)</td><td>Expense on a work order</td><td>Own expenses</td></tr>
           <tr><td class="pri">Maintenance</td><td>See</td><td><b>Approve work orders, release vehicle</b></td><td>See costs</td><td class="no">—</td><td><b>Problems, work orders, complete</b></td><td>Report a problem</td></tr>
-          <tr><td class="pri">Stock</td><td>See + charts</td><td>Approve purchase orders, adjustments</td><td>Invoices to Money, stock value</td><td class="no">—</td><td><b>Request PO, receive, use on WO, count</b></td><td class="no">—</td></tr>
+          <tr><td class="pri">Stock</td><td>See + charts</td><td>Approve adjustments</td><td>Invoices to Money, stock value</td><td class="no">—</td><td><b>Receive, use on WO, count</b></td><td class="no">—</td></tr>
           <tr><td class="pri">Company</td><td>Everything, "Your modules"</td><td>Personnel, agencies (own)</td><td>Accounting months</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
           <tr><td class="pri">Phone bar</td><td>Overview · Vehicles · Money</td><td>Home · Vehicles · Money</td><td>Home · Money · Customers</td><td>Home · Parcels · Customers</td><td>Home · Maintenance · Stock</td><td>Home · My vehicle · Trips</td></tr>
         </tbody></table></div>
@@ -389,7 +389,7 @@
           <div class="row" style="margin-top:10px"><button class="btn primary block"><i data-i="plus"></i>Receive a parcel</button></div></div></div>
         <div class="card"><div class="card-h"><div><h2>Technician · Home</h2><div class="d">Workshop, Douala</div></div></div><div class="card-b">
           <div class="metrics" style="grid-template-columns:1fr 1fr"><div><div class="k">My work orders</div><div class="v">2</div></div><div><div class="k">Below minimum</div><div class="v">3</div></div></div>
-          <div class="feed" style="margin-top:8px"><div><span class="dot bad"></span>Start WO-0007 (VH003 brakes)<span class="when"><a>Open</a></span></div><div><span class="dot info"></span>PO-0012 arriving today: receive<span class="when"><a>Receive</a></span></div></div>
+          <div class="feed" style="margin-top:8px"><div><span class="dot bad"></span>Start WO-0007 (VH003 brakes)<span class="when"><a>Open</a></span></div><div><span class="dot info"></span>Brake pads delivery expected today: receive<span class="when"><a>Receive</a></span></div></div>
           <div class="row" style="margin-top:10px"><button class="btn primary block"><i data-i="wrench"></i>Report a problem</button></div></div></div>
         <div class="card"><div class="card-h"><div><h2>Finance · Home</h2><div class="d">All agencies</div></div></div><div class="card-b">
           <div class="metrics" style="grid-template-columns:1fr 1fr"><div><div class="k">Waiting approval</div><div class="v">2</div></div><div><div class="k">Owed to you</div><div class="v">3 450 000</div></div></div>
@@ -399,7 +399,7 @@
       <div class="cols even" style="margin-top:16px">
         <div class="spec-card"><h4>Rules for role scope</h4><ul>
           <li>The sidebar, the phone bar, Home's "Needs you", tile sets, chart visibility and each page's primary button all come from one role definition (data, tested per role).</li>
-          <li>A role-forbidden action is absent. A state-blocked action is shown locked with the reason ("Receive: approve the PO first").</li>
+          <li>A role-forbidden action is absent. A state-blocked action is shown locked with the reason ("Use parts: none left in this magasin").</li>
           <li>Branch scope narrows every list and count to the person's agencies; Direction sees all and gets the branch comparison charts.</li>
           <li>Drivers see only their own vehicle, trips, expenses and problems; they never see other people's money.</li>
           <li>Counts only include work this role can act on (a Technician's Stock count is deliveries to receive, not approvals).</li>
@@ -429,7 +429,7 @@
           <tr><td>Receive a parcel</td><td>Parcels header, phone bottom bar</td><td>Record (phone first)</td><td>No</td><td>Bus (+ groupage)</td></tr>
           <tr><td>Load parcels on a journey</td><td>Journey record, Parcels</td><td>Line items</td><td>No</td><td>Bus</td></tr>
           <tr><td>Hand over a parcel</td><td>Parcel record, Parcels search by code</td><td>Decision</td><td>No</td><td>Bus</td></tr>
-          <tr><td>Purchase order, receive, transfer, adjust</td><td>Stock</td><td>See <a href="stock.html#create">Stock</a></td><td>See Stock</td><td>Both</td></tr>
+          <tr><td>Receive, transfer, adjust (purchase orders later)</td><td>Stock</td><td>See <a href="stock.html#create">Stock</a></td><td>See Stock</td><td>Both</td></tr>
           <tr><td>Supplier</td><td>Company → Suppliers</td><td>Record</td><td>No</td><td>Both</td></tr>
         </tbody>
       </table>
