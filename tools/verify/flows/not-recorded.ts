@@ -1,8 +1,8 @@
 import type { DriveScript } from "../browser.js";
 
 /**
- * Missing values say "Not recorded" in words, never a bare dash (#306): the
- * Trucks list (plate), Money (counterparty), Maintenance (actual cost), then
+ * Missing values say "Not recorded" in words, never a bare dash (#306): Home,
+ * the Trucks list (plate), Money (counterparty), Maintenance (actual cost), then
  * VH003's Details, where an editor gets an inline Add that opens the edit.
  * Read-only. Run: pnpm verify drive flow:not-recorded --lang en [--viewport 390x844]
  */
@@ -17,6 +17,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, nav, log }) => {
     log(`${where}: ${count} "${words}", no bare dash`);
     return count;
   };
+
+  await nav("/");
+  await quiet();
+  await page.locator("[data-slot=metric-strip][data-state=ready]").first().waitFor();
+  await noDash("home");
+  await shot("home-tiles", { caption: "Home: the tiles hold figures or words, never a bare dash" });
 
   await nav("/assets");
   await quiet();
