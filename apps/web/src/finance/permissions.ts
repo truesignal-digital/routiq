@@ -160,10 +160,17 @@ export function canAddWorkOrderCost(
  * "Modifier" on a pending entry (#85): its author only, whatever their role,
  * and only while it waits. Everyone else rejects it instead. The roles are the
  * ones that record entries at all, the workshop included; the server checks
- * authorship and status again on every save.
+ * authorship and status again on every save. A revenue entry only for a role
+ * that records revenue: a driver records expenses only (#572).
  */
 export function canEditPendingEntry(
-  entry: { status: string; recordedBy: { principalId: string | null } } | undefined,
+  entry:
+    | {
+        status: string;
+        direction: "EXPENSE" | "REVENUE";
+        recordedBy: { principalId: string | null };
+      }
+    | undefined,
   viewer: {
     principalId: string | undefined;
     role: Role | undefined;
@@ -175,6 +182,7 @@ export function canEditPendingEntry(
     entry.status === "SUBMITTED" &&
     entry.recordedBy.principalId !== null &&
     entry.recordedBy.principalId === viewer.principalId &&
-    canAttachEvidence(viewer.role, viewer.enabledModules)
+    canAttachEvidence(viewer.role, viewer.enabledModules) &&
+    (entry.direction === "EXPENSE" || canRecordRevenue(viewer.role, viewer.enabledModules))
   );
 }

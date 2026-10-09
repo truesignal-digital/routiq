@@ -88,7 +88,7 @@ function entry(overrides: Partial<FinancialEntryDetail> = {}): FinancialEntryDet
   };
 }
 
-function signedIn(principalId: string, role: "DRIVER" | "ADMIN" = "DRIVER") {
+function signedIn(principalId: string, role: "DRIVER" | "ADMIN" | "CASHIER" = "DRIVER") {
   mocks.me.mockReturnValue({ principalId, role, enabledModules: ["CORE", "FINANCE"] });
 }
 
@@ -143,6 +143,20 @@ describe("Edit on the finance entry detail", () => {
     signedIn(AUTHOR_ID);
     showing(entry({ status: "REJECTED", rejectedReason: "doublon" }));
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  // #572: a driver records expenses only, so their pending revenue entry
+  // offers no edit; the server refuses the save with ROLE_FORBIDDEN too.
+  it("is not offered to a driver on their own pending revenue entry", () => {
+    signedIn(AUTHOR_ID);
+    showing(entry({ direction: "REVENUE" }));
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  it("is offered to a cashier on their own pending revenue entry", () => {
+    signedIn(AUTHOR_ID, "CASHIER");
+    showing(entry({ direction: "REVENUE" }));
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 
   it("is not offered for a split entry the single-line form cannot write back", () => {
