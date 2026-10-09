@@ -706,8 +706,8 @@
     },
     "state": {
       "onTheRoad": "En route",
-      "closed": "Clôturé",
-      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
+      "closed": "Clôturée",
+      "closedWithGaps": "{count, plural, one {Clôturée, # manque} other {Clôturée, # manques}}"
     },
     "completeness": {
       "COMPLETE": "Complète",
@@ -2433,7 +2433,7 @@
       "ended": "Arrivée",
       "distance": "Distance",
       "distanceUnknown": "Connue à la clôture",
-      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
+      "gapsNote": "Clôturée avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
       "linkedMoney": "Argent lié",
       "wholeTrip": "Montants de l'activité entière",
       "noMoney": "Aucune écriture liée à cette activité.",
