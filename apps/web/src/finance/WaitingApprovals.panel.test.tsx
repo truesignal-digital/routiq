@@ -76,6 +76,7 @@ function entry(id: string, number: string, submittedBy = SUBMITTER) {
       activityNumber: null,
       workOrderId: null,
       workOrderAssetId: null,
+      workOrderDescription: null,
     },
     submittedByPrincipalId: submittedBy,
     submittedAt: "2026-07-01T10:00:00.000Z",
