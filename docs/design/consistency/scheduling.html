@@ -289,11 +289,11 @@
             <div class="ptop"><i data-i="back"></i><span class="crumb">My schedule</span><b>DLA → YDE</b></div>
             <div class="page" style="gap:10px;padding-bottom:150px">
               <div><div class="row"><h1 class="pt" style="font-size:19px">Douala → Yaoundé</h1><span class="badge b-ok">In progress</span></div><div class="lead">Brasserie du Wouri · crates · VH001 + TR001</div></div>
-              <div class="steps-v2"><div class="done"><i></i><b>Planned</b><span>by Boris, 6 Oct</span></div><div class="done"><i></i><b>Started</b><span>06:10 · 184 220 km</span></div><div class="now"><i></i><b>On the road</b><span>arrive ~12:30</span></div><div><i></i><b>Delivered</b><span>photo of signed note</span></div><div><i></i><b>Closed</b><span>arrival reading</span></div></div>
+              <div class="steps-v2"><div class="done"><i></i><b>Planned</b><span>by Boris, 6 Oct</span></div><div class="done"><i></i><b>Started</b><span>06:10 · 184 220 km</span></div><div class="now"><i></i><b>On the road</b><span>arrive ~12:30</span></div><div><i></i><b>Delivered</b><span>received by, photo of signed note</span></div><div><i></i><b>Closed</b><span>arrival reading</span></div></div>
               <div class="pinned"><i data-i="user"></i><div><div class="k">Customer contact</div><b>M. Ekambi · 6 90 11 22 33</b></div><a style="margin-left:auto;font-weight:600">Call</a></div>
               <div class="quick" style="gap:8px"><span>Fuel</span><span>Expense</span><span>Problem</span><span>Note</span></div>
             </div>
-            <div class="actionbar" style="grid-template-columns:1fr"><button class="btn primary block"><i data-i="camera"></i>Mark delivered</button></div>
+            <div class="actionbar" style="grid-template-columns:1fr"><button class="btn primary block"><i data-i="camera"></i>Record delivery</button></div>
             <div data-tabbar="trips" data-role="driver"></div>
           </div>
         </div>
@@ -301,14 +301,14 @@
       <div class="cols even" style="margin-top:16px">
         <div class="spec-card"><h4>What the driver can do</h4><ul>
           <li><b>Planned</b>: see details, call the customer, start the trip on the day.</li>
-          <li><b>In progress</b>: log fuel or an expense, report a problem, add a note, mark delivered (photo of the signed delivery note).</li>
-          <li><b>Delivered</b>: close the trip with the arrival reading.</li>
-          <li>One primary button at a time: whatever moves the trip to its next status.</li>
+          <li><b>In progress</b>: log fuel or an expense, report a problem, add a note, record the delivery (who received it, optional photo of the signed delivery note).</li>
+          <li><b>After delivery</b>: the trip is still in progress; close it with the arrival reading.</li>
+          <li>One primary button at a time: the next thing the trip needs.</li>
         </ul></div>
         <div class="spec-card"><h4>Rules</h4><ul>
-          <li>The status line is the same five steps everywhere (board, trip page, driver), so office and driver talk about the same thing.</li>
-          <li>"Delivered" is a new step between On the road and Closed (proof of delivery); it can be skipped when the workspace doesn't use it.</li>
-          <li>Drivers see their own trips only; no prices unless the workspace allows it.</li>
+          <li>The step line is the same everywhere (board, trip page, driver), so office and driver talk about the same thing.</li>
+          <li>Delivered is a recorded fact, not a status (decided 2026-10-08). Recording it stores the time, who received the goods and an optional photo on the trip or its last stage; the trip stays In progress until it is closed. Statuses stay Planned, In progress, Closed, Cancelled.</li>
+          <li>Drivers see their own trips only, without the trip price. The company setting "Show trip price to drivers" is off by default. When the driver collects cash from the customer, the trip shows "Amount to collect" instead (decided 2026-10-08).</li>
           <li>Everything here works offline and syncs later (facts, not decisions).</li>
         </ul></div>
       </div>
@@ -450,7 +450,7 @@
           <li><b>Start trip</b> unlocks on the day; starting asks only the odometer and confirms the crew.</li>
           <li>Changes show as "Changed" with what moved and who moved it, until the driver opens the card.</li>
           <li>Works offline: the schedule is cached when the phone was last online; starting a trip offline is a fact, accepted later.</li>
-          <li>Drivers see only their own trips, never other drivers' or prices (price hidden unless the workspace allows it).</li>
+          <li>Drivers see only their own trips, never other drivers'. The trip price stays hidden unless the company turns on "Show trip price to drivers"; a trip where the driver collects cash shows "Amount to collect".</li>
         </ul></div>
       </div>
     </section>
