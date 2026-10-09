@@ -1,19 +1,43 @@
 {
   "/.ready_ms": {
-    "ceiling": 793,
-    "kind": "time"
+    "ceiling": 1197,
+    "kind": "time",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 793,
+        "to": 1197,
+        "reason": "Home's own code now arrives after sign-in (fetched while the PIN is typed; a scripted sign-in is faster than a person). Develop measured 1032 ms in the same side-by-side run (5b6dd261 vs abd53810), already over 793; sign-in plus Home is still about 1.6 s faster"
+      }
+    ]
   },
   "/.requests": {
-    "ceiling": 6,
-    "kind": "count"
+    "ceiling": 7,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 6,
+        "to": 7,
+        "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 7 requests on Home in the same side-by-side run (navigation counts #322)"
+      }
+    ]
   },
   "/activities.ready_ms": {
     "ceiling": 309,
     "kind": "time"
   },
   "/activities.requests": {
-    "ceiling": 4,
-    "kind": "count"
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 4,
+        "to": 5,
+        "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Trips in the same side-by-side run"
+      }
+    ]
   },
   "/assets.ready_ms": {
     "ceiling": 336,
@@ -24,11 +48,11 @@
     "kind": "count"
   },
   "/assets/:id.ready_ms": {
-    "ceiling": 498,
+    "ceiling": 282,
     "kind": "time"
   },
   "/assets/:id.requests": {
-    "ceiling": 6,
+    "ceiling": 2,
     "kind": "count"
   },
   "/finance/approvals.ready_ms": {
@@ -36,7 +60,7 @@
     "kind": "time"
   },
   "/finance/approvals.requests": {
-    "ceiling": 3,
+    "ceiling": 1,
     "kind": "count"
   },
   "/finance/entries.ready_ms": {
@@ -52,8 +76,16 @@
     "kind": "time"
   },
   "/maintenance.requests": {
-    "ceiling": 4,
-    "kind": "count"
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 4,
+        "to": 5,
+        "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Maintenance in the same side-by-side run"
+      }
+    ]
   },
   "/more.ready_ms": {
     "ceiling": 218,
@@ -63,16 +95,20 @@
     "ceiling": 1,
     "kind": "count"
   },
+  "/my-settings.requests": {
+    "ceiling": 1,
+    "kind": "count"
+  },
   "login.js_bytes": {
-    "ceiling": 560822,
+    "ceiling": 281718,
     "kind": "bytes"
   },
   "login.lcp_ms": {
-    "ceiling": 4188,
+    "ceiling": 2592,
     "kind": "time"
   },
   "login.usable_ms": {
-    "ceiling": 4204,
+    "ceiling": 2648,
     "kind": "time"
   }
 }
