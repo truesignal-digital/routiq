@@ -22,6 +22,8 @@ import {
   type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
+import { currentBusinessDate } from "../reads/business-date.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import { nextActivityNumber } from "./numbering.js";
 import { validateCustomValues } from "./templates.js";
 
@@ -116,7 +118,7 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       tx,
       ctx,
       branch,
-      payload.startedAt.slice(0, 10),
+      currentBusinessDate(startedAt, await workspaceTimezone(tx, ctx.workspaceId)),
     );
 
     await tx.insert(activities).values({

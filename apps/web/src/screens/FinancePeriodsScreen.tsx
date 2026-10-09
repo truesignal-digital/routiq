@@ -85,6 +85,19 @@ export function FinancePeriodsScreen() {
       queryKey: ["ws", session?.workspaceSlug, "finance", "periods"],
     });
 
+  // Both period commands version-check the stored row (§5.3), so they carry
+  // the version this screen shows. The current month may have no row yet; its
+  // implicit version 0 is ignored by lock-period until a row exists (#571).
+  const shownVersion = (periodCode: string) =>
+    periods.find((period) => period.periodCode === periodCode)?.rowVersion ?? 0;
+
+  // A conflict means the shown version is stale: reload the months so a
+  // second try sends the fresh one.
+  const failAction = async (code: string) => {
+    setActionError(code);
+    if (code === "VERSION_CONFLICT") await invalidatePeriods();
+  };
+
   // Every column sorts. `/v1/finance/periods` is unpaginated — the whole list
   // is in memory — so ordering it client-side reorders all of the data, not a
   // loaded prefix. Newest period first is the default view.
@@ -166,10 +179,13 @@ export function FinancePeriodsScreen() {
       1,
     );
 
-    const result = await lockIntentRef.current.submit({ periodCode });
+    const result = await lockIntentRef.current.submit(
+      { periodCode },
+      { expectedVersion: shownVersion(periodCode) },
+    );
 
     if (!result.ok) {
-      setActionError(result.code);
+      await failAction(result.code);
       return;
     }
 
@@ -186,10 +202,13 @@ export function FinancePeriodsScreen() {
       1,
     );
 
-    const result = await reopenIntentRef.current.submit({ periodCode, reason });
+    const result = await reopenIntentRef.current.submit(
+      { periodCode, reason },
+      { expectedVersion: shownVersion(periodCode) },
+    );
 
     if (!result.ok) {
-      setActionError(result.code);
+      await failAction(result.code);
       return;
     }
 
