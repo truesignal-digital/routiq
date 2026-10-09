@@ -24,6 +24,7 @@ import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { useWorkOrder } from "./useMaintenance.js";
 import { WorkOrderStatusBadge } from "./WorkOrderStatusBadge.js";
 import { useCommandLabel } from "../commands/labels.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 export interface WorkOrderSheetPermissions {
   manage: boolean;
@@ -292,24 +293,27 @@ export function WorkOrderSheet({
             </span>,
           ],
           [t("maintenance.workOrders.columns.branch"), header.branch.name],
-          [
-            t("maintenance.workOrders.columns.expectedCost"),
-            header.expectedCostMinor === null
-              ? "—"
-              : formatMoney(header.expectedCostMinor, {
-                  currency: header.currency,
-                  locale,
-                }),
-          ],
-          [
-            t("maintenance.workOrders.columns.actualCost"),
-            header.actualCostMinor === null
-              ? "—"
-              : formatMoney(header.actualCostMinor, {
-                  currency: header.currency,
-                  locale,
-                }),
-          ],
+          // Costs the read withheld (#390) are left out, not called unrecorded.
+          ...(detail?.costLines === null
+            ? []
+            : ([
+                [
+                  t("maintenance.workOrders.columns.expectedCost"),
+                  header.expectedCostMinor === null ? (
+                    <NotRecorded />
+                  ) : (
+                    formatMoney(header.expectedCostMinor, { currency: header.currency, locale })
+                  ),
+                ],
+                [
+                  t("maintenance.workOrders.columns.actualCost"),
+                  header.actualCostMinor === null ? (
+                    <NotRecorded />
+                  ) : (
+                    formatMoney(header.actualCostMinor, { currency: header.currency, locale })
+                  ),
+                ],
+              ] satisfies [string, ReactNode][])),
           [
             t("maintenance.fields.issue"),
             header.issue === null ? (
