@@ -160,6 +160,34 @@ describe("a work order's next step, per role", () => {
     );
     expect(workOrderSteps(submitted, viewer("FINANCE")).offered).toEqual([]);
   });
+
+  it("keeps the cost on a completed order for the late invoice, to the same roles (#82)", () => {
+    const completed = groundingWorkOrder("COMPLETED");
+    const keys = (role: Role) =>
+      workOrderSteps(completed, viewer(role)).offered.map((offered) => offered.step.key);
+    expect(keys("TECHNICIAN")).toEqual(["add-cost"]);
+    expect(keys("ADMIN")).toEqual(["add-cost"]);
+    expect(keys("DIRECTOR")).toEqual(["add-cost"]);
+    expect(keys("FINANCE")).toEqual([]);
+    expect(keys("CASHIER")).toEqual([]);
+    expect(keys("DRIVER")).toEqual([]);
+    for (const status of ["REJECTED", "CANCELLED", "COMPLETION_SUBMITTED"] as const) {
+      expect(
+        workOrderSteps(groundingWorkOrder(status), viewer("TECHNICIAN")).offered.map((o) => o.step.key),
+        status,
+      ).not.toContain("add-cost");
+    }
+  });
+
+  it("sends a cost still to come to whoever books work-order cost (#82)", () => {
+    const item = attention("WORK_ORDER_COST_TO_COME");
+    for (const role of ["TECHNICIAN", "ADMIN", "DIRECTOR"] as const) {
+      expect(token(attentionStep(item, viewer(role), asset())), role).toBe("go:add-cost");
+    }
+    for (const role of ["FINANCE", "CASHIER", "DRIVER"] as const) {
+      expect(token(attentionStep(item, viewer(role), asset())), role).toBe("none");
+    }
+  });
 });
 
 describe("the step beside the status sentence", () => {

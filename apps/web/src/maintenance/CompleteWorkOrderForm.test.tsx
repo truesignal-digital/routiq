@@ -64,6 +64,7 @@ function makeDetail(overrides: Partial<WorkOrderDetail> = {}): WorkOrderDetail {
     actualCostMinor: null,
     declaredCostMinor: null,
     costOutcome: null,
+    costToCome: null,
     currency: "XAF",
     issue: null,
     createdAt: "2026-09-29T08:00:00.000Z",

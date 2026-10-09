@@ -30,6 +30,8 @@ export function attentionText(
     amount: money(p.amountMinor),
     expected: money(p.expectedCostMinor),
     actual: money(p.actualCostMinor),
+    declared: money(p.declaredCostMinor),
+    recorded: money(p.recordedCostMinor),
     reason: p.completionRejectReason ?? "",
     override: p.overrideRequired === true ? "yes" : "no",
     name: recorder,
@@ -46,6 +48,8 @@ export function attentionText(
           ? p.expectedCostMinor !== undefined
             ? "detailCosts"
             : "detailActual"
-          : "detail";
+          : item.code === "WORK_ORDER_COST_TO_COME" && p.declaredCostMinor !== undefined
+            ? "detailDeclared"
+            : "detail";
   return { title: t(`${key}.title`, values), detail: t(`${key}.${detail}`, values) };
 }

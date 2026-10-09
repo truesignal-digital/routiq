@@ -182,7 +182,8 @@
     "WORK_ORDER_ASSET_MISMATCH": "That work order belongs to a different asset.",
     "WORK_ORDER_NOT_COMPLETED": "No completed work order answers the problem that grounded this asset. Complete the work before returning it to service.",
     "WORK_ORDER_ISSUE_MISMATCH": "This work order does not answer the problem that grounded the asset.",
-    "WORK_ORDER_NOT_OPEN": "This work order is not open: costs can only be booked against it after approval and before it is completed, rejected or cancelled.",
+    "WORK_ORDER_NOT_OPEN": "This work order takes no cost now: costs are booked once it is approved, and not while its completion awaits sign-off or after it was rejected or cancelled.",
+    "LATE_COST_REASON_REQUIRED": "This work order is already completed. Say why the cost comes after the close.",
     "WORK_ORDER_COST_ONLY": "A work order collects costs only. Record this revenue on the vehicle without a work order.",
     "WORK_ORDER_COST_MISSING": "Enter the repair cost, or choose “No cost” or “Invoice not received yet”.",
     "WORK_ORDER_HAS_COSTS": "Costs are already recorded on this work order. Reopen the form to see them.",
@@ -505,6 +506,9 @@
       "counterpartyPlaceholder": "Vendor, customer…",
       "descriptionLabel": "Description (optional)",
       "descriptionPlaceholder": "Entry details…",
+      "lateCostReasonLabel": "Reason",
+      "lateCostReasonPlaceholder": "Invoice received after the close",
+      "lateCostHint": "This work is completed: the invoice goes to approval, whatever its amount.",
       "paymentRefLabel": "Payment reference (optional)",
       "paymentRefPlaceholder": "Receipt #, Transfer #…",
       "assetLabel": "Asset (optional)",
@@ -2382,6 +2386,11 @@
         "detailCosts": "{actual} actual vs {expected} expected",
         "detailActual": "{actual} actual"
       },
+      "WORK_ORDER_COST_TO_COME": {
+        "title": "Invoice for repair {ref} to enter",
+        "detail": "{description} · closed before the invoice arrived",
+        "detailDeclared": "{description} · declared {declared}, recorded {recorded}"
+      },
       "ASSET_AWAITING_RELEASE": {
         "title": "Ready to release to service",
         "detail": "{override, select, yes {The problem was closed without a repair; the release needs a reason.} other {The repair is completed.}}"
@@ -2428,6 +2437,7 @@
       "planned": "{amount} planned",
       "noEstimate": "No estimate",
       "overBudget": "+{percent}%",
+      "costToCome": "Cost to come",
       "doneOn": "Done {date}",
       "cancelledOn": "Cancelled {date}",
       "refusedOn": "Refused {date}",
@@ -2659,6 +2669,12 @@
       "actualCostLater": "Set when the work is completed",
       "invoicePending": "Invoice not received yet",
       "noCost": "No cost",
+      "costToCome": {
+        "invoicePending": "Cost to come: the work was closed before the invoice arrived.",
+        "invoiceAwaitingApproval": "Cost to come: the invoice is recorded and awaits approval.",
+        "declared": "Cost to come: declared {declared}, recorded {recorded}.",
+        "declaredAwaitingApproval": "Cost to come: declared {declared}, recorded {recorded}. A cost awaits approval."
+      },
       "completed": "Completed",
       "whatWasDone": "What was done",
       "reason": "Reason",
