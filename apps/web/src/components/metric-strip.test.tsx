@@ -98,7 +98,7 @@ describe("MetricStrip", () => {
     const { container } = render(<MetricStrip tiles={tiles} isError />);
 
     expect(values(container)).toEqual(["—", "—", "—"]);
-    // The dash is the one left in the app (guard H18); it is named for a screen reader.
+    // The dash is the one left in the app (guard H19); it is named for a screen reader.
     expect(screen.getAllByRole("img", { name: "Chargement impossible" })).toHaveLength(3);
     expect(container.querySelector("dl")?.getAttribute("data-state")).toBe("error");
     expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(0);
@@ -115,6 +115,22 @@ describe("MetricStrip", () => {
     );
 
     expect(values(container)).toEqual(["6", "Non renseigné"]);
+  });
+
+  /** "Not recorded" is a claim about the books; a withheld figure was never missing from them. */
+  it("leaves a withheld value out instead of calling it not recorded", () => {
+    const { container } = render(
+      <MetricStrip
+        tiles={[
+          { label: "Fleet", value: "6" },
+          { label: "Waiting", value: null, withheld: true, hint: "Finances indisponibles" },
+        ]}
+      />,
+    );
+
+    expect(values(container)).toEqual(["6", ""]);
+    expect(screen.queryByText("Non renseigné")).toBeNull();
+    expect(screen.getByText("Finances indisponibles")).toBeTruthy();
   });
 
   it("drops the hint whenever the value it qualifies is missing", () => {
@@ -269,7 +285,7 @@ describe("MetricStrip", () => {
     const [spent, unknown] = [...container.querySelectorAll("[data-slot=metric-value]")];
     expect(spent?.querySelector("small")?.textContent).toBe("FCFA");
     expect(spent?.textContent?.replace(/\s/g, "")).toBe("1250000FCFA");
-    expect(unknown?.textContent).toBe("—");
+    expect(unknown?.textContent).toBe("Non renseigné");
   });
 
   it("builds a strip from a run-time list only when it has one to four tiles", () => {

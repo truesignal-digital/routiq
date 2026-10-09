@@ -26,6 +26,11 @@ export interface MetricTile {
    * recorded": the strip never invents a number, and a zero would be a claim (§3.4).
    */
   value: string | null;
+  /**
+   * The API withholds this figure from the viewer. The value is left out, not
+   * called unrecorded: nobody failed to enter it (apps/web/AGENTS.md, Missing values).
+   */
+  withheld?: boolean;
   /** Small text after the value, such as a currency, so long amounts fit a phone tile. */
   unit?: string;
   tone?: MetricTone;
@@ -224,7 +229,7 @@ function Tile({
                     </small>
                   )}
                 </>
-              ) : (
+              ) : tile.withheld === true ? null : (
                 <span className="text-base">{notRecorded()}</span>
               )}
             </span>
