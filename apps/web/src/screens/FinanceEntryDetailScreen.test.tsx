@@ -186,7 +186,7 @@ describe("Cancel entry on a work-order cost, as Finance (#559)", () => {
   const workOrderCost = () =>
     entry({
       status: "POSTED",
-      links: { activityId: null, activityNumber: null, workOrderId: WORK_ORDER_ID, workOrderAssetId: ASSET_ID },
+      links: { activityId: null, activityNumber: null, workOrderId: WORK_ORDER_ID, workOrderAssetId: ASSET_ID, workOrderDescription: "Brake pads front axle" },
     });
 
   it("cancels for wrong details, then offers the work order, never Record again", async () => {
