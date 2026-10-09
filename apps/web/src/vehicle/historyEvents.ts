@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
 import { timelineAct } from "@/components/timeline.js";
-import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
 import type { VehicleGates } from "./context.js";
 import type { PanelRef } from "./model.js";
 
@@ -227,7 +227,7 @@ const asRecord = (value: unknown): Record<string, unknown> =>
  */
 function detailChangeLines(item: VehicleHistoryItem, t: TFunction, locale: string): string | null {
   const shown = (field: string, kind: string, value: unknown): string => {
-    if (value === null || value === undefined || value === "") return t("vehicle.details.notRecorded");
+    if (value === null || value === undefined || value === "") return notRecorded(locale);
     if (kind === "MONEY" && typeof value === "number") return formatMoney(value, { locale });
     if (field === "acquisitionDate" && typeof value === "string") return formatDate(value, locale);
     return String(value);
