@@ -397,9 +397,10 @@ describe("planned trips (ADR-0012)", () => {
     it("starts a PLANNED trip once: actual start, PRIMARY segment, reading and crew, no leg or posting", async () => {
       const vehicle = await truck();
       const id = await planned({ plannedAssetId: vehicle, plannedDriverPersonId: driverPersonId });
+      const readingId = randomUUID();
       const payload = startPayload(id, vehicle, {
         startReading: {
-          readingId: randomUUID(),
+          readingId,
           readingType: "ODOMETER",
           value: 412_300,
           observedAt: "2026-11-05T07:15:00+01:00",
@@ -430,7 +431,7 @@ describe("planned trips (ADR-0012)", () => {
         .from(activityAssetSegments)
         .where(eq(activityAssetSegments.activityId, id));
       expect(segments).toEqual([
-        expect.objectContaining({ assetId: vehicle, role: "PRIMARY", startReadingId: payload.startReading.readingId }),
+        expect.objectContaining({ assetId: vehicle, role: "PRIMARY", startReadingId: readingId }),
       ]);
       const crew = await ctx.db.select().from(activityPeople).where(eq(activityPeople.activityId, id));
       expect(crew).toHaveLength(1);
