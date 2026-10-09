@@ -268,12 +268,12 @@ const DEBOUNCE_MS = 300;
 const DEFAULT_SORT = "postedAt:desc";
 
 /** jsdom never matches a width query; the table needs a nudge to render desktop. */
-function mockDesktop() {
+function mockDesktop(matches: (query: string) => boolean = () => true) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: true,
+      matches: matches(query),
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -497,6 +497,42 @@ describe("FinanceEntriesScreen", () => {
     expect(items).toContain("finance.entries.detail.category");
   });
 
+  it("shows every column, counterparty included, on a 1440 px screen (#436)", () => {
+    render(<FinanceEntriesScreen />);
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.postingDate/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.counterparty/ }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the sorted column on a narrower screen and drops counterparty instead (#436)", async () => {
+    mockDesktop((query) => !query.includes("1440px"));
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    // A list is never sorted by a column the viewer can't see.
+    const sorted = screen
+      .getAllByRole("columnheader")
+      .filter((header) => header.getAttribute("aria-sort") === "descending");
+    expect(sorted.map((header) => header.textContent)).toEqual([
+      expect.stringContaining("finance.entries.detail.postingDate"),
+    ]);
+    expect(
+      screen.queryByRole("columnheader", { name: /finance\.entries\.detail\.counterparty/ }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "dataTable.view" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "finance.entries.detail.counterparty" }),
+    );
+
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.counterparty/ }),
+    ).toBeTruthy();
+  });
+
   it("names the work order an entry belongs to and links to it (#87)", () => {
     render(<FinanceEntriesScreen />);
 
@@ -615,6 +651,39 @@ describe("FinanceEntriesScreen", () => {
       within(drawer).getByText("finance.entries.detail.paymentMethod"),
     ).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("offers Cancel entry on the record panel, opening the same dialog as the full page (#525)", async () => {
+    vi.mocked(canReverseEntry).mockReturnValue(true);
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FinanceEntriesScreen />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
+    const drawer = await screen.findByRole("dialog");
+    await user.click(
+      within(drawer).getByRole("button", { name: "commands.reverse-entry.label" }),
+    );
+
+    const form = await screen.findByRole("dialog", { name: "commands.reverse-entry.label" });
+    expect(within(form).getByText("finance.entries.reversal.description")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "FIN-001" })).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("leaves Cancel entry off the record panel for a role that may not cancel", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
+    const drawer = await screen.findByRole("dialog");
+
+    expect(
+      within(drawer).queryByRole("button", { name: "commands.reverse-entry.label" }),
+    ).toBeNull();
   });
 
   it("signs an expense with a minus in the list and leaves it unsigned on the entry itself (E2.8)", async () => {

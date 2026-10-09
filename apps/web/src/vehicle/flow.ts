@@ -448,7 +448,20 @@ export type GroundedPhase =
   | "awaitingRelease"
   /** Completed through a sign-off (COMPLETION_SUBMITTED, then approved). */
   | "awaitingReleaseSignedOff"
-  | "issueClosedAwaitingRelease";
+  | "issueClosedAwaitingRelease"
+  /**
+   * The three above, while another safety-critical problem is OPEN: nobody can
+   * release until it is closed (SAFETY_ISSUE_OPEN), so no manager is waited on.
+   */
+  | "otherIssueOpen"
+  | "otherIssueOpenSignedOff"
+  | "issueClosedOtherIssueOpen";
+
+const BLOCKED_PHASE: Partial<Record<GroundedPhase, GroundedPhase>> = {
+  awaitingRelease: "otherIssueOpen",
+  awaitingReleaseSignedOff: "otherIssueOpenSignedOff",
+  issueClosedAwaitingRelease: "issueClosedOtherIssueOpen",
+};
 
 export type Situation =
   | { kind: "disposed"; status: DisposedStatus }
@@ -470,6 +483,8 @@ export type Situation =
       repaired: boolean;
       issueId: string;
       workOrderId: string | undefined;
+      /** The first other open safety-critical problem, when it is what blocks the release. */
+      blockedBy?: { id: string; description: string; count: number };
     };
 
 const DAY_MS = 86_400_000;
@@ -549,7 +564,11 @@ export function situationOf(
   }
   const facts = groundingFacts(asset);
   if (facts !== undefined) {
-    const phase = groundedPhase(facts, attention, signedOff);
+    const ready = groundedPhase(facts, attention, signedOff);
+    const others = facts.grounded.otherOpenSafetyIssues;
+    const [first] = others;
+    const blocked = first === undefined ? undefined : BLOCKED_PHASE[ready];
+    const phase = blocked ?? ready;
     return {
       kind: "grounded",
       since: facts.grounded.since,
@@ -563,6 +582,8 @@ export function situationOf(
         ),
       issueId: facts.grounded.issue.id,
       workOrderId: (facts.workOrder ?? facts.refused)?.id,
+      ...(blocked !== undefined &&
+        first !== undefined && { blockedBy: { id: first.id, description: first.description, count: others.length } }),
     };
   }
   if (asset.lifecycleStatus === "REGISTERED") return { kind: "registered" };

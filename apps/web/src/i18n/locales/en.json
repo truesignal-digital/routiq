@@ -468,8 +468,8 @@
         "none": "Every expense and revenue."
       },
       "tiles": {
-        "out": "Out in {month}",
-        "in": "In in {month}",
+        "out": "Expenses in {month}",
+        "in": "Revenue in {month}",
         "waiting": "Waiting your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
@@ -477,8 +477,8 @@
       },
       "lens": {
         "waiting": "Waiting approval",
-        "out": "Out this month",
-        "in": "In this month",
+        "out": "Expenses this month",
+        "in": "Revenue this month",
         "missing": "Missing receipt",
         "clear": "Clear filter: {name}"
       }
@@ -655,7 +655,8 @@
       "statusOpen": "Open",
       "statusLocked": "Locked since {date}",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "lockExplanation": "Once locked, no entries can be created for this period.",
+      "lockExplanation": "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
+      "lockCurrentExplanation": "Entries already posted in this month can no longer change, and nothing can be posted until it is reopened.",
       "reasonLabel": "Reason for reopening",
       "reasonPlaceholder": "Explain why this period needs to be reopened…",
       "cancel": "Cancel",
@@ -1054,6 +1055,7 @@
         "addExpense": "Add expense",
         "remove": "Remove line {position}",
         "empty": "No revenue or expense on this sheet.",
+        "emptyExpensesOnly": "No expense on this sheet yet.",
         "revenue": "Revenue",
         "expense": "Expense",
         "categoryLabel": "Category",
@@ -2262,6 +2264,9 @@
         "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
         "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
         "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
+        "otherIssueOpen": "The repair ({workOrder}) is completed, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
+        "otherIssueOpenSignedOff": "The repair ({workOrder}) is signed off, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
+        "issueClosedOtherIssueOpen": "Problem {issue} was closed without a repair, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
         "doNotDrive": "Do not drive it until a manager releases it to service."
       },
       "repairedLead": "Repair done — waiting for release to service.",

@@ -153,7 +153,10 @@
   "history": {
     "event": {
       "work_order-asset_released": "Truck returned to service",
-      "asset_availability-opened": "Truck grounded"
+      "asset_availability-opened": "Truck grounded",
+      "activity-created": "Trip created",
+      "activity-closed": "Trip closed",
+      "activity-reopened": "Trip reopened"
     }
   },
   "vehicle": {

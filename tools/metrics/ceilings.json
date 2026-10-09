@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 682357,
+    "ceiling": 682090,
     "raises": [
       {
         "date": "2026-10-06",
@@ -167,8 +167,8 @@
       {
         "date": "2026-10-09",
         "from": 681280,
-        "to": 682357,
-        "reason": "Planned-trip command labels and messages (#334)"
+        "to": 682090,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
       }
     ]
   },
@@ -226,7 +226,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 257335,
+    "ceiling": 256557,
     "raises": [
       {
         "date": "2026-10-06",
@@ -387,8 +387,8 @@
       {
         "date": "2026-10-09",
         "from": 256115,
-        "to": 257335,
-        "reason": "Planned-trip command labels and messages (#334)"
+        "to": 256557,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
       }
     ]
   }
