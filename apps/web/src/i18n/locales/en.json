@@ -441,8 +441,8 @@
         "none": "Every expense and revenue."
       },
       "tiles": {
-        "out": "Out in {month}",
-        "in": "In in {month}",
+        "out": "Expenses in {month}",
+        "in": "Revenue in {month}",
         "waiting": "Waiting your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
@@ -450,8 +450,8 @@
       },
       "lens": {
         "waiting": "Waiting approval",
-        "out": "Out this month",
-        "in": "In this month",
+        "out": "Expenses this month",
+        "in": "Revenue this month",
         "missing": "Missing receipt",
         "clear": "Clear filter: {name}"
       }
