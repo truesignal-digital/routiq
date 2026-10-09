@@ -63,6 +63,10 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "pageLoading": "Opening the page…",
+    "screenLoadFailed": "This page could not be opened. Check your connection, then try again.",
+    "screenFailed": "Something went wrong on this page. Try again.",
+    "retry": "Try again",
     "counts": {
       "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",

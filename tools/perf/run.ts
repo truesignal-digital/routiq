@@ -37,7 +37,22 @@ async function settle(page: Page, inflight: () => number, lastActivity: () => nu
   }
 }
 
+/** A run on a saturated machine can hang in the browser; past this it counts as a run that produced nothing. */
+const RUN_TIMEOUT_MS = 180_000;
+
 async function measureOnce(state: SlotState, db: pg.Client, assetId: string): Promise<OneRun> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<OneRun>((resolve) => {
+    timer = setTimeout(() => resolve({ values: {} }), RUN_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([measureOnceUnbounded(state, db, assetId), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function measureOnceUnbounded(state: SlotState, db: pg.Client, assetId: string): Promise<OneRun> {
   const account = resolveAccount("director");
   const browser = await chromium.launch();
   const values: Record<string, number> = {};
@@ -156,36 +171,82 @@ function apiP95(logFile: string, since: number): number | undefined {
 
 const kindOf = (name: string) => (name.endsWith("_bytes") ? "bytes" : name.endsWith(".requests") ? "count" : "time");
 
-export async function measure(state: SlotState, runs: number, log: (line: string) => void): Promise<Run> {
+interface Target {
+  state: SlotState;
+  db: pg.Client;
+  assetId: string;
+}
+
+async function open(state: SlotState): Promise<Target> {
   if (state.web !== "built") throw new Error(`slot ${state.slot} serves the dev server; perf needs a built app: pnpm verify down --slot ${state.slot} && pnpm verify up --slot ${state.slot} --built`);
   const db = new pg.Client({ connectionString: `postgres://routiq:routiq@127.0.0.1:${slotPorts(state.slot).postgres}/routiq_dev` });
   await db.connect();
+  const asset = await db.query<{ id: string }>(`select id from assets order by asset_code limit 1`);
+  const assetId = asset.rows[0]?.id;
+  if (assetId === undefined) {
+    await db.end();
+    throw new Error(`slot ${state.slot} has no vehicles; reseed it`);
+  }
+  return { state, db, assetId };
+}
+
+function summarise(target: Target, all: OneRun[], runs: number, since: number): Run {
+  const names = [...new Set(all.flatMap((one) => Object.keys(one.values)))];
+  const metrics: Measured = {};
+  const incomplete: string[] = [];
+  for (const name of names) {
+    const samples = all.flatMap((one) => (one.values[name] === undefined ? [] : [one.values[name] as number]));
+    if (samples.length < runs) incomplete.push(`${name} (${samples.length} of ${runs} runs)`);
+    metrics[name] = { value: median(samples), samples, kind: kindOf(name) };
+  }
+  const p95 = apiP95(target.state.logs.api, since);
+  if (p95 !== undefined) metrics["api.p95_ms"] = { value: p95, samples: [p95], kind: "time" };
+  return { at: new Date().toISOString(), commit: target.state.commit, profile: PROFILE, runs, metrics, ...(incomplete.length > 0 ? { incomplete } : {}) };
+}
+
+export async function measure(state: SlotState, runs: number, log: (line: string) => void): Promise<Run> {
+  const target = await open(state);
   try {
-    const asset = await db.query<{ id: string }>(`select id from assets order by asset_code limit 1`);
-    const assetId = asset.rows[0]?.id;
-    if (assetId === undefined) throw new Error("the slot has no vehicles; reseed it");
     // One unrecorded run first: a freshly started API compiles and fills its caches on the first requests.
-    await measureOnce(state, db, assetId);
+    await measureOnce(state, target.db, target.assetId);
     log("warm-up run done");
     const since = Date.now();
     const all: OneRun[] = [];
     for (let i = 1; i <= runs; i += 1) {
-      const one = await measureOnce(state, db, assetId);
+      const one = await measureOnce(state, target.db, target.assetId);
       all.push(one);
       log(`run ${i}/${runs}: login ${Math.round(one.values["login.usable_ms"] ?? Number.NaN)} ms, home ${Math.round(one.values["/.ready_ms"] ?? Number.NaN)} ms`);
     }
-    const names = [...new Set(all.flatMap((one) => Object.keys(one.values)))];
-    const metrics: Measured = {};
-    const incomplete: string[] = [];
-    for (const name of names) {
-      const samples = all.flatMap((one) => (one.values[name] === undefined ? [] : [one.values[name] as number]));
-      if (samples.length < runs) incomplete.push(`${name} (${samples.length} of ${runs} runs)`);
-      metrics[name] = { value: median(samples), samples, kind: kindOf(name) };
-    }
-    const p95 = apiP95(state.logs.api, since);
-    if (p95 !== undefined) metrics["api.p95_ms"] = { value: p95, samples: [p95], kind: "time" };
-    return { at: new Date().toISOString(), commit: state.commit, profile: PROFILE, runs, metrics, ...(incomplete.length > 0 ? { incomplete } : {}) };
+    return summarise(target, all, runs, since);
   } finally {
-    await db.end();
+    await target.db.end();
+  }
+}
+
+/**
+ * Before and after on two built slots, runs alternating, so whatever else the
+ * machine is doing lands on both alike. The fair way to show a change's effect
+ * on a busy machine, where absolute numbers drift by hundreds of milliseconds.
+ */
+export async function compare(before: SlotState, after: SlotState, runs: number, log: (line: string) => void): Promise<{ before: Run; after: Run }> {
+  const a = await open(before);
+  const b = await open(after);
+  try {
+    await measureOnce(before, a.db, a.assetId);
+    await measureOnce(after, b.db, b.assetId);
+    log("warm-up runs done");
+    const since = Date.now();
+    const runsA: OneRun[] = [];
+    const runsB: OneRun[] = [];
+    for (let i = 1; i <= runs; i += 1) {
+      const order = i % 2 === 1 ? ([a, runsA, b, runsB] as const) : ([b, runsB, a, runsA] as const);
+      order[1].push(await measureOnce(order[0].state, order[0].db, order[0].assetId));
+      order[3].push(await measureOnce(order[2].state, order[2].db, order[2].assetId));
+      log(`pair ${i}/${runs}: login ${Math.round(runsA.at(-1)?.values["login.usable_ms"] ?? Number.NaN)} → ${Math.round(runsB.at(-1)?.values["login.usable_ms"] ?? Number.NaN)} ms`);
+    }
+    return { before: summarise(a, runsA, runs, since), after: summarise(b, runsB, runs, since) };
+  } finally {
+    await a.db.end();
+    await b.db.end();
   }
 }
