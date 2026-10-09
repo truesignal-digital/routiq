@@ -12,8 +12,10 @@ import { resolveAccount } from "../accounts.js";
  * {month}" (#563); locking a past month says late entries post in the current
  * month and keep their date, and locking the current month says posting stops
  * (#585), both cancelled; a closed trip's History says "Trip closed" (#564).
- * As the passenger company's Administrateur: the same in its own word. As the
- * driver: the empty trip sheet says "No expense on this sheet yet." (#573).
+ * As the passenger company's Administrateur: the same in its own word, and
+ * emptying the trip sheet's revenue line leaves "No revenue or expense on this
+ * sheet." As the driver: the trip sheet opens with no money line (#570) and
+ * says "No expense on this sheet yet." (#573).
  * Mutates the slot (VH003); reset with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:wording-batch-2 --role technician --lang en --reel
  */
@@ -203,15 +205,42 @@ async function tripHistory(ctx: DriveContext, label: string, word: string) {
   await closeDialogs(page);
 }
 
-/** #573: a driver's empty sheet does not mention revenue. */
-async function driverEmptySheet(ctx: DriveContext) {
-  const { page, t, shot, quiet, nav } = ctx;
+async function openSheet(ctx: DriveContext) {
+  const { page, t, quiet, nav } = ctx;
   await nav("/activities/record");
   await page.getByRole("heading", { level: 1, name: t("Saisir une fiche", "Record a sheet") }).waitFor();
   await quiet();
-  // Until #570 lands the sheet may open with a revenue line; removing it empties the section.
-  const remove = page.getByRole("button", { name: t("Retirer la ligne 1", "Remove line 1"), exact: true });
-  if ((await remove.count()) > 0) await remove.click();
+  return page.getByRole("button", { name: t("Retirer la ligne 1", "Remove line 1"), exact: true });
+}
+
+/** #573: a manager may add revenue, so the emptied sheet names both. */
+async function managerEmptySheet(ctx: DriveContext) {
+  const { page, t, shot } = ctx;
+  const remove = await openSheet(ctx);
+  // The manager's passenger sheet opens with one revenue line; removing it empties the section.
+  await remove.click();
+  const empty = page.getByText(t("Aucune recette ni dépense sur cette fiche.", "No revenue or expense on this sheet."), {
+    exact: true,
+  });
+  await empty.waitFor({ timeout: 10_000 });
+  await empty.scrollIntoViewIfNeeded();
+  const driverWords = t("Aucune dépense sur cette fiche pour l'instant.", "No expense on this sheet yet.");
+  if ((await page.getByText(driverWords).count()) > 0) {
+    throw new Error("the manager's empty sheet uses the driver's wording");
+  }
+  await settle(ctx);
+  await shot("manager-empty-sheet", {
+    caption: "A manager's emptied sheet says no revenue or expense",
+    highlight: empty.locator("xpath=.."),
+  });
+}
+
+/** #573: a driver's empty sheet does not mention revenue. */
+async function driverEmptySheet(ctx: DriveContext) {
+  const { page, t, shot } = ctx;
+  const remove = await openSheet(ctx);
+  // #570: the driver's sheet opens with no money line at all.
+  if ((await remove.count()) > 0) throw new Error("the driver's sheet opened with a money line");
   const empty = page.getByText(t("Aucune dépense sur cette fiche pour l'instant.", "No expense on this sheet yet."), {
     exact: true,
   });
@@ -239,6 +268,7 @@ const flow: DriveScript = async (ctx) => {
 
   await signInAs(page, "passenger-admin");
   await tripHistory(ctx, "passenger-history", t("Voyage clôturé", "Trip closed"));
+  await managerEmptySheet(ctx);
 
   await signInAs(page, "driver");
   await driverEmptySheet(ctx);

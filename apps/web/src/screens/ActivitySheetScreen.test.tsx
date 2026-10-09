@@ -320,16 +320,17 @@ describe("activity sheet capture", () => {
   // mention revenue; a manager's still does.
   it("words the empty money section for who may add revenue", async () => {
     const user = userEvent.setup({ delay: 1 });
+    // A driver's sheet opens with no money line at all (#570).
     renderScreen();
-    // A passenger sheet opens with one revenue line; removing it empties the section.
-    await user.click(screen.getByRole("button", { name: "Remove line 1" }));
     expect(await screen.findByText("No expense on this sheet yet.")).toBeTruthy();
     expect(screen.queryByText(/revenue or expense/)).toBeNull();
     cleanup();
 
-    renderScreen({ ...clerk, role: "ADMIN" });
-    await user.click(screen.getByRole("button", { name: "Remove line 1" }));
+    // A manager's passenger sheet opens with one revenue line; removing it empties the section.
+    renderScreen(manager);
+    await user.click(await screen.findByRole("button", { name: "Remove line 1" }));
     expect(await screen.findByText("No revenue or expense on this sheet.")).toBeTruthy();
+    expect(screen.queryByText("No expense on this sheet yet.")).toBeNull();
   });
 
   it("names the money lines still waiting for an approver", async () => {
