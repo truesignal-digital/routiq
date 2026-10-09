@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 585982,
+    "ceiling": 586194,
     "raises": [
       {
         "date": "2026-10-06",
@@ -157,6 +157,12 @@
         "from": 584923,
         "to": 585982,
         "reason": "#334 planned trips: fr and en words for DRIVER_INELIGIBLE, five scheduling warnings, the SCHEDULING module label and six command labels, required by the error-map, warning-map and command-label guards"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 585982,
+        "to": 586194,
+        "reason": "Planned-trip command labels and messages (#334) (re-measured on Linux after develop moved)"
       }
     ]
   },
@@ -208,7 +214,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 585982,
+    "ceiling": 586194,
     "raises": [
       {
         "date": "2026-10-06",
@@ -365,6 +371,12 @@
         "from": 584923,
         "to": 585982,
         "reason": "#334 planned trips: fr and en words for DRIVER_INELIGIBLE, five scheduling warnings, the SCHEDULING module label and six command labels, required by the error-map, warning-map and command-label guards"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 585982,
+        "to": 586194,
+        "reason": "Planned-trip command labels and messages (#334) (re-measured on Linux after develop moved)"
       }
     ]
   }
