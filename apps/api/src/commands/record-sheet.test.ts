@@ -684,7 +684,9 @@ describe("record-haulage-job-sheet.v1 / record-journey-sheet.v1", () => {
       const response = await postHaulage(sheet, undefined, driverToken);
 
       expect(response.statusCode, response.body).toBe(403);
-      expect(response.json()).toMatchObject({ error: { code: "ROLE_FORBIDDEN" } });
+      expect(response.json()).toMatchObject({
+        error: { code: "ROLE_FORBIDDEN", metadata: { command: "record-revenue" } },
+      });
       const trips = await ctx.db.select().from(activities).where(eq(activities.id, sheet.activityId));
       expect(trips).toEqual([]);
       const entries = await ctx.db

@@ -103,6 +103,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
 | `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
+| `driver-sheet-expenses` | as a driver (`--role driver` or `passenger-driver`), Record a sheet: Add expense only, no revenue line or switch, then the sheet records with its expense and the trip's money is that expense (#532). Run with `--viewport 390x844`, fr and en | yes |
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
