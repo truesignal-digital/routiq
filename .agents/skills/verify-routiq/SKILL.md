@@ -91,6 +91,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
 | `add-note` | VH003 → Add note: empty submit shows the error summary and sends nothing, its link focuses the field, then the note lands in `GET /v1/assets/:id/history` (#290). Desktop or `--viewport 390x844` | yes |
+| `log-fuel` | as the driver, VH003 → Log fuel on the Quick entry layout: opens with focus in the amount, empty submit lists what to fix, the optional fold counts what is filled, a fill-up with a reading lands as a FUEL entry and the new last odometer (#292). Desktop or `--viewport 390x844` | yes |
 | `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
 | `issue-severity` | as the driver: report a problem on VH001 unticked, then Mark as safety-critical → grounded, History shows it; `--role admin` after it: take the mark off with a reason → still grounded (#96) | yes |
