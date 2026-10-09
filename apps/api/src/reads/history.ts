@@ -40,7 +40,7 @@ import {
   workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
-import { presentChanges } from "./history-present.js";
+import { presentChanges, shownChanges } from "./history-present.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { canReadEntry } from "./money-scope.js";
 import {
@@ -169,6 +169,22 @@ function projectState(
     projected[key] = stripCredentials(snapshot[key] ?? null);
   }
   return projected;
+}
+
+/**
+ * A vehicle's purchase price is a ledger figure (#121): the same rule as the
+ * vehicle's own detail and its History tab. A work order's amounts follow the
+ * work-order reads (#390). Posting-line totals are money too, under the same
+ * rule.
+ */
+function showsHistoryMoney(
+  entityType: HistoryEntityType,
+  auth: AuthContext,
+  modules: ReadonlySet<string>,
+): boolean {
+  if (entityType === "asset") return canReadLedger(auth.role) && modules.has("FINANCE");
+  if (entityType === "work_order") return canReadWorkOrderCosts(auth.role);
+  return true;
 }
 
 /**
@@ -391,7 +407,7 @@ export function registerHistoryReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/history/:entityType/:entityId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedParams = z
           .object({ entityType: historyEntityType, entityId: z.uuid() })
@@ -458,6 +474,9 @@ export function registerHistoryReadRoutes(
               origin: commands.origin,
               clientOccurredAt: commands.clientOccurredAt,
               changedFields: auditEvents.changedFields,
+              // Read here, never sent: they decide `shownFields` (#465).
+              beforeState: auditEvents.beforeState,
+              afterState: auditEvents.afterState,
               note: noteSql(),
               noteCode: noteCodeSql(),
             })
@@ -497,6 +516,7 @@ export function registerHistoryReadRoutes(
             : reply.status(400).send({ error: { code: result.error } });
         }
 
+        const showMoney = showsHistoryMoney(entityType, auth, modules);
         const hasNextPage = result.rows.length > limit;
         const pageRows = result.rows.slice(0, limit);
         const items = pageRows.map((row) => ({
@@ -516,6 +536,11 @@ export function registerHistoryReadRoutes(
             clientOccurredAt: row.clientOccurredAt?.toISOString() ?? null,
           },
           changedFields: row.changedFields ?? [],
+          shownFields: shownChanges(
+            entityType,
+            diffStates(entityType, row.beforeState, row.afterState),
+            { showMoney },
+          ).map((change) => change.field),
           note: row.note,
           noteCode: row.noteCode,
         }));
@@ -590,19 +615,12 @@ export function registerHistoryReadRoutes(
             .limit(1);
           if (!row) return { row };
 
-          // A vehicle's purchase price is a ledger figure (#121): the same rule
-          // as the vehicle's own detail and its History tab. A work order's
-          // amounts follow the work-order reads (#390). Posting-line totals are
-          // money too, under the same rule.
-          const hidesMoney =
-            (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
-            (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
           const changes = await presentChanges(
             tx,
             auth.workspaceId,
             entityType,
             diffStates(entityType, row.beforeState, row.afterState),
-            { showMoney: !hidesMoney },
+            { showMoney: showsHistoryMoney(entityType, auth, modules) },
           );
           return { row, changes };
         });

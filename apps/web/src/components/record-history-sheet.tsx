@@ -78,51 +78,21 @@ export function isLifecycleEvent(eventType: string): boolean {
 }
 
 /**
- * The member credential and the lockout state guarding it, read off the
- * set-member-pin call site in `apps/api/src/commands/members.ts`. That a PIN
- * was reset is news an operator should see, so the event keeps its place in the
- * timeline — but naming the columns it touched adds nothing and puts the word
- * "pinHash" in front of everyone who opens the sheet.
- */
-const CREDENTIAL_FIELDS = new Set(["pinHash", "failedAttempts", "lockedUntil"]);
-
-/**
- * Defence in depth for credential columns a later command introduces. Whole
- * name segments, never substrings: that catches "pinHash" and a future
- * "passwordHash" or "apiSecret" while leaving "shipping", "grouping" and
- * "lockedAt" alone. The field vocabulary is open by design, and a chip that
- * quietly disappears takes real information out of the timeline with it —
- * "lockedAt" is when a posting period was locked, which is core domain news.
- */
-const CREDENTIAL_SEGMENTS = new Set([
-  "pin",
-  "password",
-  "secret",
-  "hash",
-  "salt",
-  "token",
-]);
-
-function isCredentialField(field: string): boolean {
-  if (CREDENTIAL_FIELDS.has(field)) return true;
-  return field
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .split(/[\s_-]+/)
-    .some((segment) => CREDENTIAL_SEGMENTS.has(segment.toLowerCase()));
-}
-
-/**
- * What decides whether a row is worth showing — bookkeeping only, deliberately
- * blind to credentials. An event that touched nothing but a PIN still moved
- * something real, so it stays visible and simply renders without chips.
+ * What decides whether a row is worth showing: bookkeeping only. An event that
+ * touched nothing but a PIN still moved something real, so it stays visible
+ * and simply renders without chips.
  */
 function dataFields(changedFields: readonly string[]): string[] {
   return changedFields.filter((field) => !BOOKKEEPING_FIELDS.has(field));
 }
 
-/** What is worth naming on the row: the data fields, minus the unspeakable. */
-function chipFields(changedFields: readonly string[]): string[] {
-  return dataFields(changedFields).filter((field) => !isCredentialField(field));
+/**
+ * What is worth naming on the row: the fields its change list shows, as the
+ * server worked them out (`shownFields`), minus the bookkeeping. A chip always
+ * has its row under "Show changes" (#465).
+ */
+function chipFields(item: HistoryItem): string[] {
+  return dataFields(item.shownFields);
 }
 
 /** A row earns its place if data moved, or if its type alone is the news. */
@@ -280,7 +250,7 @@ function HistoryRowChanges({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const changedFields = chipFields(item.changedFields);
+  const changedFields = chipFields(item);
 
   return (
     <>
