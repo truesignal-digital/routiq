@@ -547,7 +547,7 @@
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
         "linkedTo": "Rattachée à",
-        "workOrderLink": "Ordre de travail {ref}",
+        "workOrderLink": "Ordre de travail : {title}",
         "tripLink": "Activité {number}",
         "paymentMethod": "Moyen de paiement",
         "description": "Description",
@@ -1960,16 +1960,6 @@
       "submit": "Rouvrir la période",
       "submitting": "Réouverture…"
     },
-    "enable-module": {
-      "label": "Activer le module",
-      "submit": "Activer le module",
-      "submitting": "Activation…"
-    },
-    "disable-module": {
-      "label": "Désactiver le module",
-      "submit": "Désactiver le module",
-      "submitting": "Désactivation…"
-    },
     "update-approval-threshold": {
       "label": "Modifier les seuils d'approbation",
       "submit": "Enregistrer les seuils",
@@ -1994,11 +1984,6 @@
       "label": "Réactiver la catégorie",
       "submit": "Réactiver la catégorie",
       "submitting": "Réactivation…"
-    },
-    "set-template-preset": {
-      "label": "Choisir les modèles",
-      "submit": "Enregistrer les modèles",
-      "submitting": "Enregistrement…"
     },
     "create-branch": {
       "label": "Créer une agence",

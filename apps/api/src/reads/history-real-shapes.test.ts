@@ -16,6 +16,7 @@ import { platformDb } from "../db/platform.js";
 import { auditEvents, postingPeriods, principals } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule, setPreset } from "../test/vendor.js";
 import { seedAsset } from "../test/seed.js";
 import { diffStates } from "./history.js";
 import "../server.js";
@@ -270,9 +271,9 @@ describe("record history against the shapes the real commands store", () => {
     await ok("reopen-period", { periodCode: "2026-07", reason: "Facture oubliée" }, { expectedVersion: await periodVersion() });
     await ok("update-approval-threshold", { commandType: "record-expense", amountMaxMinor: 250_000 });
     await ok("update-approval-threshold", { commandType: "record-expense", amountMaxMinor: 400_000 });
-    await ok("disable-module", { moduleCode: "DOCUMENTS" });
-    await ok("enable-module", { moduleCode: "DOCUMENTS" });
-    await ok("set-template-preset", { presetCode: "PASSENGER_TRANSPORT", enabled: true });
+    await setModule(ctx.db, workspaceId, "DOCUMENTS", false);
+    await setModule(ctx.db, workspaceId, "DOCUMENTS", true);
+    await setPreset(ctx.db, workspaceId, "PASSENGER_TRANSPORT", true);
   }, 120_000);
 
   afterAll(async () => ctx.close());

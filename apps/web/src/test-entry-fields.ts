@@ -8,5 +8,11 @@ export const entryVehicleFields = {
   evidence: { state: "NOT_SUPPLIED" as const, artifactCount: 0 },
   assetShareMinor: null,
   assetLinks: null,
-  links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+  links: {
+    activityId: null,
+    activityNumber: null,
+    workOrderId: null,
+    workOrderAssetId: null,
+    workOrderDescription: null,
+  },
 };

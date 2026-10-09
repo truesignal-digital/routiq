@@ -14,6 +14,7 @@ import {
 } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 import { currentPeriodCode } from "./periods.js";
 
 describe("record-expense.v1", () => {
@@ -655,10 +656,7 @@ describe("record-expense.v1", () => {
   });
 
   it("enforces the FINANCE module and the actor's branch scope", async () => {
-    const disable = await postCommand(adminToken, "disable-module", {
-      moduleCode: "FINANCE",
-    });
-    expect(disable.statusCode).toBe(200);
+    await setModule(db, workspaceId, "FINANCE", false);
     const disabled = await postCommand(token, "record-expense", {
       entryId: randomUUID(),
       branchCode: "DLA",
@@ -672,10 +670,7 @@ describe("record-expense.v1", () => {
     expect(disabled.json()).toMatchObject({
       error: { code: "MODULE_DISABLED", metadata: { module: "FINANCE" } },
     });
-    const enable = await postCommand(adminToken, "enable-module", {
-      moduleCode: "FINANCE",
-    });
-    expect(enable.statusCode).toBe(200);
+    await setModule(db, workspaceId, "FINANCE", true);
 
     const [otherBranch] = await db
       .insert(branches)

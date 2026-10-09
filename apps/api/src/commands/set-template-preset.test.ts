@@ -9,6 +9,7 @@ import { platformDb, type PlatformDb } from "../db/platform.js";
 import { auditEvents, principals, workspaceTemplates } from "../db/schema.js";
 import { inWorkspace } from "../db/tenant.js";
 import { enabledPresets, presetEnablement } from "../templates/registry.js";
+import { apiClient } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 import { dispatchCommand } from "./dispatcher.js";
@@ -17,9 +18,10 @@ import "../server.js";
 /**
  * The writer `workspace_templates` was missing: enforcement shipped with a
  * grandfather clause for workspaces that predate provisioning, and nothing could
- * move a workspace out of it. This is that command.
+ * move a workspace out of it. This is that command, which only a vendor
+ * operator runs (ADR-0005, #362).
  */
-describe("set-template-preset.v1", () => {
+describe("set-template-preset", () => {
   let testApp: Awaited<ReturnType<typeof createTestApp>>;
   let db: Db;
   let platform: PlatformDb;
@@ -53,7 +55,7 @@ describe("set-template-preset.v1", () => {
       principalId: admin.principal.id,
       workspaceId,
     });
-    return { workspaceId, token: session.token };
+    return { workspaceId, slug: seeded.workspace.slug, token: session.token };
   }
 
   /** A real provisioned tenant, whose enabled set came from the command that owns it. */
@@ -84,27 +86,19 @@ describe("set-template-preset.v1", () => {
 
     const login = await loginWithPin(db, { workspaceSlug: slug, username, pin });
     if (!login.ok) throw new Error("provisioned admin could not log in");
-    return { workspaceId, token: login.session.token };
+    return { workspaceId, slug, token: login.session.token };
   }
 
   function setPreset(
-    token: string,
+    workspaceSlug: string,
     payload: { presetCode: string; enabled: boolean },
     commandId = randomUUID(),
   ) {
-    return testApp.app.inject({
-      method: "POST",
-      url: "/v1/commands/set-template-preset",
-      headers: { authorization: `Bearer ${token}` },
-      payload: {
-        version: 1,
-        envelope: {
-          commandId,
-          idempotencyKey: `idem-${randomUUID()}`,
-          origin: "HUMAN_UI",
-        },
-        payload,
-      },
+    return dispatchCommand(platform, operator, {
+      name: "set-template-preset",
+      version: 2,
+      envelope: { commandId, idempotencyKey: `idem-${randomUUID()}`, origin: "API" },
+      payload: { workspaceSlug, ...payload },
     });
   }
 
@@ -126,7 +120,7 @@ describe("set-template-preset.v1", () => {
   }
 
   it("materializes the whole preset set on the first write, without disabling the untouched one", async () => {
-    const { workspaceId, token } = await grandfatheredTenant();
+    const { workspaceId, slug, token } = await grandfatheredTenant();
     expect(await templateRows(workspaceId)).toHaveLength(0);
     expect(await inWorkspace(db, workspaceId, (tx) => enabledPresets(tx, workspaceId))).toEqual([
       "TRUCKING",
@@ -134,12 +128,8 @@ describe("set-template-preset.v1", () => {
     ]);
 
     const commandId = randomUUID();
-    const response = await setPreset(
-      token,
-      { presetCode: "TRUCKING", enabled: false },
-      commandId,
-    );
-    expect(response.statusCode).toBe(200);
+    const response = await setPreset(slug, { presetCode: "TRUCKING", enabled: false }, commandId);
+    expect(response.status).toBe(200);
 
     const rows = await templateRows(workspaceId);
     expect(rows.map((row) => [row.presetCode, row.enabled])).toEqual([
@@ -163,6 +153,7 @@ describe("set-template-preset.v1", () => {
       .from(auditEvents)
       .where(eq(auditEvents.commandId, commandId));
     const byType = new Map(events.map((event) => [event.eventType, event]));
+    expect(events.every((event) => event.scope === "PLATFORM" && event.workspaceId === workspaceId)).toBe(true);
     expect(byType.get("template_preset.disabled")?.afterState).toMatchObject({
       presetCode: "TRUCKING",
       enabled: false,
@@ -175,11 +166,11 @@ describe("set-template-preset.v1", () => {
   });
 
   it("refuses to disable the last enabled preset", async () => {
-    const { workspaceId, token } = await provisionedTenant(["TRUCKING"]);
+    const { workspaceId, slug, token } = await provisionedTenant(["TRUCKING"]);
 
-    const response = await setPreset(token, { presetCode: "TRUCKING", enabled: false });
-    expect(response.statusCode).toBe(409);
-    expect(response.json().error.code).toBe("LAST_PRESET");
+    const response = await setPreset(slug, { presetCode: "TRUCKING", enabled: false });
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({ error: { code: "LAST_PRESET" } });
 
     expect((await templateRows(workspaceId)).map((row) => [row.presetCode, row.enabled])).toEqual(
       [["TRUCKING", true]],
@@ -188,24 +179,24 @@ describe("set-template-preset.v1", () => {
   });
 
   it("adds a preset the tenant was not provisioned with, then turns it back off", async () => {
-    const { workspaceId, token } = await provisionedTenant(["TRUCKING"]);
+    const { workspaceId, slug, token } = await provisionedTenant(["TRUCKING"]);
 
-    const enable = await setPreset(token, {
+    const enable = await setPreset(slug, {
       presetCode: "PASSENGER_TRANSPORT",
       enabled: true,
     });
-    expect(enable.statusCode).toBe(200);
-    expect(enable.json().rowVersion).toBe(1);
+    expect(enable.status).toBe(200);
+    expect(enable.body).toMatchObject({ rowVersion: 1 });
     expect((await me(token)).enabledPresets).toEqual(["TRUCKING", "PASSENGER_TRANSPORT"]);
 
     const disableCommandId = randomUUID();
     const disable = await setPreset(
-      token,
+      slug,
       { presetCode: "PASSENGER_TRANSPORT", enabled: false },
       disableCommandId,
     );
-    expect(disable.statusCode).toBe(200);
-    expect(disable.json().rowVersion).toBe(2);
+    expect(disable.status).toBe(200);
+    expect(disable.body).toMatchObject({ rowVersion: 2 });
     expect((await me(token)).enabledPresets).toEqual(["TRUCKING"]);
 
     const [audit] = await db
@@ -224,31 +215,43 @@ describe("set-template-preset.v1", () => {
   });
 
   it("refuses a write that would change nothing", async () => {
-    const { token } = await provisionedTenant(["TRUCKING", "PASSENGER_TRANSPORT"]);
+    const { slug } = await provisionedTenant(["TRUCKING", "PASSENGER_TRANSPORT"]);
 
-    const response = await setPreset(token, { presetCode: "TRUCKING", enabled: true });
-    expect(response.statusCode).toBe(409);
-    expect(response.json().error.code).toBe("PRESET_ALREADY_SET");
+    const response = await setPreset(slug, { presetCode: "TRUCKING", enabled: true });
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({ error: { code: "PRESET_ALREADY_SET" } });
   });
 
-  it("is DIRECTOR-only", async () => {
-    const seeded = await seedWorkspace(db);
-    const ops = await seedMember(db, {
-      workspaceId: seeded.workspace.id,
-      role: "ADMIN",
-      allBranches: true,
-    });
-    const session = await createSession(db, {
-      principalId: ops.principal.id,
-      workspaceId: seeded.workspace.id,
-    });
+  it("changes only the workspace it names", async () => {
+    const target = await provisionedTenant(["TRUCKING"]);
+    const bystander = await provisionedTenant(["TRUCKING"]);
 
-    const response = await setPreset(session.token, {
-      presetCode: "TRUCKING",
-      enabled: false,
-    });
-    expect(response.statusCode).toBe(403);
-    expect(response.json().error.code).toBe("ROLE_FORBIDDEN");
+    expect((await setPreset(target.slug, { presetCode: "PASSENGER_TRANSPORT", enabled: true })).status).toBe(200);
+    expect((await me(target.token)).enabledPresets).toEqual(["TRUCKING", "PASSENGER_TRANSPORT"]);
+    expect((await me(bystander.token)).enabledPresets).toEqual(["TRUCKING"]);
+    expect((await templateRows(bystander.workspaceId)).map((row) => row.presetCode)).toEqual(["TRUCKING"]);
+  });
+
+  it("refuses every tenant role on either version and writes nothing", async () => {
+    const seeded = await seedWorkspace(db);
+    const api = apiClient(testApp.app);
+    for (const role of ["DIRECTOR", "ADMIN"] as const) {
+      const member = await seedMember(db, { workspaceId: seeded.workspace.id, role, allBranches: true });
+      const { token } = await createSession(db, { principalId: member.principal.id, workspaceId: seeded.workspace.id });
+      const payload = { presetCode: "TRUCKING", enabled: false };
+      const v1 = await api.send(token, "set-template-preset", payload);
+      const v2 = await api.send(
+        token,
+        "set-template-preset",
+        { workspaceSlug: seeded.workspace.slug, ...payload },
+        {},
+        2,
+      );
+      for (const reply of [v1, v2]) {
+        expect(reply.status, role).toBe(403);
+        expect(reply.body.error?.code, role).toBe("COMMAND_SCOPE_FORBIDDEN");
+      }
+    }
     expect(await templateRows(seeded.workspace.id)).toHaveLength(0);
   });
 });

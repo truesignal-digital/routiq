@@ -322,6 +322,7 @@ export function entryRow(overrides: Partial<FinancialEntryListItem> = {}): Finan
       activityNumber: null,
       workOrderId: WORK_ORDER_ID,
       workOrderAssetId: ASSET_ID,
+      workOrderDescription: "Replace brake pads",
     },
     ...overrides,
   };

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "workspaceSlug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "moduleCode": {
+      "type": "string",
+      "enum": [
+        "ASSETS",
+        "DOCUMENTS",
+        "FINANCE",
+        "ACTIVITIES",
+        "MAINTENANCE"
+      ]
+    }
+  },
+  "required": [
+    "workspaceSlug",
+    "moduleCode"
+  ],
+  "additionalProperties": false
+}

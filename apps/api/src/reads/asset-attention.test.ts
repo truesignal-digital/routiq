@@ -15,6 +15,7 @@ import {
 } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
 /**
@@ -546,11 +547,11 @@ describe("GET /v1/assets/:assetId/attention", () => {
       "DOCUMENT_EXPIRED",
       "ISSUE_UNPLANNED",
     ]);
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "DOCUMENTS" });
+    await setModule(ctx.db, gated.workspace.id, "MAINTENANCE", false);
+    await setModule(ctx.db, gated.workspace.id, "DOCUMENTS", false);
     expect((await attention(gatedAdmin.token, truck)).items).toEqual([]);
 
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ASSETS" });
+    await setModule(ctx.db, gated.workspace.id, "ASSETS", false);
     const refused = await api.get(gatedAdmin.token, `/v1/assets/${truck}/attention`);
     expect(refused.status).toBe(403);
     expect(refused.body).toEqual({ error: { code: "MODULE_DISABLED", metadata: { module: "ASSETS" } } });

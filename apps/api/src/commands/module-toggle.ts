@@ -1,10 +1,13 @@
-import { disableModulePayload, enableModulePayload } from "@routiq/contracts";
-import type { z } from "zod";
+import {
+  disableModulePayload,
+  enableModulePayload,
+  moduleToggleV2Payload,
+  type ModuleToggleV2Payload,
+} from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { workspaceModules } from "../db/schema.js";
-import { appendAuditEvent, registerCommand, type CommandDefinition } from "./dispatcher.js";
-
-type ModuleTogglePayload = z.infer<typeof enableModulePayload>;
+import { appendPlatformAuditEvent, registerPlatformCommand } from "./dispatcher.js";
+import { requiresWorkspaceTarget, workspaceBySlug } from "./platform-target.js";
 
 const FULL_FIELDS = [
   "id",
@@ -16,33 +19,35 @@ const FULL_FIELDS = [
   "rowVersion",
 ];
 
-function moduleToggleCommand(opts: {
-  name: string;
-  enabled: boolean;
-  eventType: string;
-  payloadSchema: typeof enableModulePayload;
-}): CommandDefinition<ModuleTogglePayload> {
-  return {
-    name: opts.name,
-    version: 1,
-    module: "CORE",
-    allowedRoles: ["DIRECTOR"],
-    payloadSchema: opts.payloadSchema,
-    branchAuthorization: { kind: "workspace" },
-    async execute(tx, ctx, envelope, payload) {
+/**
+ * Module flags are entitlements the vendor grants (ADR-0005): only a vendor
+ * operator changes them, through the platform pipeline, naming the workspace.
+ * The receipt and the audit event carry `scope = 'PLATFORM'` and the tenant's
+ * workspace id, so the change is on the platform trail and in the tenant's own
+ * history. Turning a module off only hides it: every record it holds stays.
+ */
+function moduleToggleCommand(name: string, enabled: boolean, eventType: string): void {
+  registerPlatformCommand<ModuleToggleV2Payload>({
+    scope: "platform",
+    name,
+    version: 2,
+    payloadSchema: moduleToggleV2Payload,
+    resolveWorkspace: (tx, _ctx, _envelope, payload) => workspaceBySlug(tx, payload.workspaceSlug),
+
+    async execute(tx, ctx, envelope, payload, workspaceId) {
       const [existingRow] = await tx
         .select()
         .from(workspaceModules)
         .where(
           and(
-            eq(workspaceModules.workspaceId, ctx.workspaceId),
+            eq(workspaceModules.workspaceId, workspaceId),
             eq(workspaceModules.moduleCode, payload.moduleCode),
           ),
         )
         .limit(1);
 
       const patch = {
-        enabled: opts.enabled,
+        enabled,
         updatedByCommandId: envelope.commandId,
         updatedAt: new Date(),
         rowVersion: existingRow ? existingRow.rowVersion + 1 : 1,
@@ -56,12 +61,12 @@ function moduleToggleCommand(opts: {
             .returning()
         : await tx
             .insert(workspaceModules)
-            .values({ workspaceId: ctx.workspaceId, moduleCode: payload.moduleCode, ...patch })
+            .values({ workspaceId, moduleCode: payload.moduleCode, ...patch })
             .returning();
       if (!row) throw new Error("workspace_modules write returned no row");
 
-      await appendAuditEvent(tx, ctx, envelope, {
-        eventType: opts.eventType,
+      await appendPlatformAuditEvent(tx, ctx, workspaceId, envelope, {
+        eventType,
         entityType: "workspace_module",
         entityId: row.id,
         ...(existingRow ? { beforeState: moduleState(existingRow) } : {}),
@@ -73,25 +78,25 @@ function moduleToggleCommand(opts: {
 
       return { recordId: row.id, rowVersion: patch.rowVersion };
     },
-  };
+  });
 }
 
-registerCommand(
-  moduleToggleCommand({
-    name: "enable-module",
-    enabled: true,
-    eventType: "module.enabled",
-    payloadSchema: enableModulePayload,
-  }),
-);
-registerCommand(
-  moduleToggleCommand({
-    name: "disable-module",
-    enabled: false,
-    eventType: "module.disabled",
-    payloadSchema: disableModulePayload,
-  }),
-);
+moduleToggleCommand("enable-module", true, "module.enabled");
+moduleToggleCommand("disable-module", false, "module.disabled");
+
+for (const [name, payloadSchema] of [
+  ["enable-module", enableModulePayload],
+  ["disable-module", disableModulePayload],
+] as const) {
+  registerPlatformCommand({
+    scope: "platform",
+    name,
+    version: 1,
+    payloadSchema,
+    resolveWorkspace: requiresWorkspaceTarget,
+    execute: requiresWorkspaceTarget,
+  });
+}
 
 function moduleState(row: typeof workspaceModules.$inferSelect): Record<string, unknown> {
   return {

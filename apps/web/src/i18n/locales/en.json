@@ -547,7 +547,7 @@
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
         "linkedTo": "Linked to",
-        "workOrderLink": "Work order {ref}",
+        "workOrderLink": "Work order: {title}",
         "tripLink": "Activity {number}",
         "paymentMethod": "Payment method",
         "description": "Description",
@@ -1960,16 +1960,6 @@
       "submit": "Reopen period",
       "submitting": "Reopening…"
     },
-    "enable-module": {
-      "label": "Enable module",
-      "submit": "Enable module",
-      "submitting": "Enabling…"
-    },
-    "disable-module": {
-      "label": "Disable module",
-      "submit": "Disable module",
-      "submitting": "Disabling…"
-    },
     "update-approval-threshold": {
       "label": "Change approval thresholds",
       "submit": "Save thresholds",
@@ -1994,11 +1984,6 @@
       "label": "Reactivate category",
       "submit": "Reactivate category",
       "submitting": "Reactivating…"
-    },
-    "set-template-preset": {
-      "label": "Choose templates",
-      "submit": "Save templates",
-      "submitting": "Saving…"
     },
     "create-branch": {
       "label": "Create a branch",

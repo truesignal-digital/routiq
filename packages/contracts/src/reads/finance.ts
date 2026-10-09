@@ -142,6 +142,11 @@ export const financialEntryListItem = z.object({
     activityNumber: z.string().nullable(),
     workOrderId: z.uuid().nullable(),
     workOrderAssetId: z.uuid().nullable(),
+    /**
+     * The work order's description, its title on the vehicle's Maintenance
+     * tab. Work orders carry no number (#547), so this is how they are named.
+     */
+    workOrderDescription: z.string().nullable(),
   }),
 });
 

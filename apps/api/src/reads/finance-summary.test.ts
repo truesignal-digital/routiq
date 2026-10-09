@@ -5,6 +5,7 @@ import { financeSummaryResponse, type Role } from "@routiq/contracts";
 import { createSession } from "../auth/local.js";
 import { approvalRules } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 import { currentBusinessDate } from "./business-date.js";
 
@@ -132,8 +133,7 @@ describe("GET /v1/finance/summary", () => {
   });
 
   it("is refused when the books are off", async () => {
-    const off = await command(tokens.get("director")!, "disable-module", { moduleCode: "FINANCE" });
-    expect(off.statusCode, off.body).toBe(200);
+    await setModule(ctx.db, workspaceId, "FINANCE", false);
     const response = await ctx.app.inject({
       method: "GET",
       url: "/v1/finance/summary",

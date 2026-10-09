@@ -187,6 +187,11 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
     commands: ["appoint-director.v1"],
     meaning: "the workspace whose director a vendor operator appoints (platform scope, operator session)",
   },
+  {
+    path: "workspaceSlug",
+    commands: ["enable-module.v2", "disable-module.v2", "set-template-preset.v2"],
+    meaning: "the workspace whose modules or presets a vendor operator changes (platform scope, operator session; ADR-0005)",
+  },
 ];
 
 /** Commands with an asset in their payload that legitimately skip the dispatcher's terminal-status check. */

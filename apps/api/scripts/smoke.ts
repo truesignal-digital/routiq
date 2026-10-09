@@ -11,6 +11,7 @@ import { authDb, authPool, db, pool } from "../src/db/client.js";
 import { financialPostings } from "../src/db/schema.js";
 import { buildServer } from "../src/server.js";
 import { seedMember, seedWorkspace } from "../src/test/seed.js";
+import { changeEntitlement } from "./entitlement.js";
 
 const PORT = 3999;
 const BASE = `http://localhost:${PORT}`;
@@ -158,16 +159,22 @@ try {
 
   const r4 = await send(command("disable-module", { moduleCode: "ASSETS" }, `smoke-${randomUUID()}`),
   );
-  check("disable-module ASSETS", r4.status === 200, await r4.json());
+  const r4b = (await r4.json()) as { error?: { code: string } };
+  check(
+    "tenant disable-module → COMMAND_SCOPE_FORBIDDEN",
+    r4.status === 403 && r4b.error?.code === "COMMAND_SCOPE_FORBIDDEN",
+    r4b,
+  );
+  await changeEntitlement(slug, { kind: "module", code: "ASSETS", enabled: false }, () => {});
+  check("vendor disable-module ASSETS", true);
 
   const r5 = await send(command("register-asset", assetPayload(randomUUID(), "SMOKE-003"), `smoke-${randomUUID()}`),
   );
   const r5b = (await r5.json()) as { error?: { code: string } };
   check("register while disabled → MODULE_DISABLED", r5.status === 403 && r5b.error?.code === "MODULE_DISABLED", r5b);
 
-  const r6 = await send(command("enable-module", { moduleCode: "ASSETS" }, `smoke-${randomUUID()}`),
-  );
-  check("enable-module ASSETS", r6.status === 200, await r6.json());
+  await changeEntitlement(slug, { kind: "module", code: "ASSETS", enabled: true }, () => {});
+  check("vendor enable-module ASSETS", true);
 
   const r7 = await send(command("register-asset", assetPayload(randomUUID(), "SMOKE-004"), `smoke-${randomUUID()}`),
   );
