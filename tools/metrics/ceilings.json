@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 584923,
+    "ceiling": 585503,
     "raises": [
       {
         "date": "2026-10-06",
@@ -151,6 +151,12 @@
         "from": 583959,
         "to": 584923,
         "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 585503,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays ship in the initial catalogs"
       }
     ]
   },
@@ -202,7 +208,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 584923,
+    "ceiling": 585503,
     "raises": [
       {
         "date": "2026-10-06",
@@ -353,6 +359,12 @@
         "from": 583959,
         "to": 584923,
         "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 585503,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays ship in the initial catalogs"
       }
     ]
   }
