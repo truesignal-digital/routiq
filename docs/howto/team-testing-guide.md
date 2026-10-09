@@ -4,7 +4,7 @@ For the team testing the October 2026 release on the demo. Read **Start here**, 
 
 ## Start here
 
-**Link:** https://routiq.178.156.253.244.nip.io
+**Link:** https://demo.truesignaldigital.com
 
 **Log in.** The login page has three fields:
 
