@@ -316,6 +316,23 @@ describe("activity sheet capture", () => {
     expect(parsed.data?.legs).toEqual([]);
   }, FULL_SHEET_TIMEOUT_MS);
 
+  // #573: a driver records expenses only (#532), so their empty sheet does not
+  // mention revenue; a manager's still does.
+  it("words the empty money section for who may add revenue", async () => {
+    const user = userEvent.setup({ delay: 1 });
+    // A driver's sheet opens with no money line at all (#570).
+    renderScreen();
+    expect(await screen.findByText("No expense on this sheet yet.")).toBeTruthy();
+    expect(screen.queryByText(/revenue or expense/)).toBeNull();
+    cleanup();
+
+    // A manager's passenger sheet opens with one revenue line; removing it empties the section.
+    renderScreen(manager);
+    await user.click(await screen.findByRole("button", { name: "Remove line 1" }));
+    expect(await screen.findByText("No revenue or expense on this sheet.")).toBeTruthy();
+    expect(screen.queryByText("No expense on this sheet yet.")).toBeNull();
+  });
+
   it("names the money lines still waiting for an approver", async () => {
     mocks.submit.mockResolvedValue({
       ok: true,

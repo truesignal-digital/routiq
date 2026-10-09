@@ -329,6 +329,38 @@ describe("finance period command routing", () => {
     expect(container.querySelector("section")?.className).toContain("max-w-6xl");
   });
 
+  // #585: a locked month still takes late entries, into the current month
+  // (resolvePostingPeriod); only locking the current month stops posting.
+  it("says what locking does to late entries, past month or current", async () => {
+    mocks.usePeriods.mockReturnValue({
+      data: {
+        periods: [
+          { periodCode: currentPeriodCode(), status: "OPEN", lockedAt: null, entryCount: 2, rowVersion: 1 },
+          { periodCode: "2026-05", status: "OPEN", lockedAt: null, entryCount: 3, rowVersion: 1 },
+        ],
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 1, "Lock period");
+    const past = screen.getByRole("alertdialog", { name: "Lock period" });
+    expect(past.textContent).toContain(
+      "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
+    );
+    expect(past.textContent).not.toMatch(/no entries can be created/);
+    await user.click(within(past).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+
+    await chooseRowAction(user, 0, "Lock period");
+    expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
+      "Entries already posted in this month can no longer change, and nothing can be posted until it is reopened.",
+    );
+  });
+
   it("cancels lock from the overlay without dispatching", async () => {
     const user = userEvent.setup();
     renderScreen();

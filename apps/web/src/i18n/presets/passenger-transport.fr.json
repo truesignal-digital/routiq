@@ -161,7 +161,10 @@
   "history": {
     "event": {
       "work_order-asset_released": "Véhicule remis en service",
-      "asset_availability-opened": "Véhicule immobilisé"
+      "asset_availability-opened": "Véhicule immobilisé",
+      "activity-created": "Voyage créé",
+      "activity-closed": "Voyage clôturé",
+      "activity-reopened": "Voyage rouvert"
     }
   },
   "vehicle": {
