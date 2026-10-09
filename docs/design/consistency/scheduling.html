@@ -353,9 +353,9 @@
         </div>
         <div class="spec-card"><h4>Rules</h4><ul>
           <li>Opens from: Planning (button or click on an empty day), a customer record ("New trip for this customer"), and Home.</li>
-          <li>Truck and driver pickers show availability for that date: free, already booked (with which trip), grounded or in maintenance (locked with the reason).</li>
+          <li>Truck and driver pickers show availability for that date: free, already booked (with which trip), grounded or in maintenance (a warning with the reason; booking still goes ahead, ADR-0012 §4). Sold or retired trucks and drivers who can't drive aren't offered.</li>
           <li>Double-booking is a warning, not a block (warn, don't block), but the board marks it in amber until resolved.</li>
-          <li>After booking: Move changes the date, Assign changes the truck or driver, Edit fixes the customer, route or price (ADR-0012 §3). Each is a command with history, needs the server, and the driver sees "changed" on the card.</li>
+          <li>After booking: Move changes the date, Assign changes the truck or driver, Edit fixes the customer, route or price (ADR-0012 §3). Each is a command with history and needs the server. A move or a new truck or driver shows "changed" on the driver's card (ADR-0012 §7).</li>
           <li>Cancelling a planned trip is a decision dialog with a reason; it stays in the customer's history as cancelled.</li>
           <li>Recurring bookings ("every Monday for 6 weeks") create one planned trip per date, each editable.</li>
         </ul></div>
@@ -449,7 +449,7 @@
           <li>Each card answers what the driver asks: where, when, for whom (with a Call link), what cargo, which truck, who booked it.</li>
           <li><b>Start trip</b> unlocks on the day; starting asks only the odometer and confirms the crew.</li>
           <li>Changes show as "Changed" with what moved and who moved it, until the driver opens the card.</li>
-          <li>Offline: the schedule is cached from the last time the phone was online; starting a trip or recording a delivery offline is a fact, accepted later and flagged if the office changed the trip meanwhile (ADR-0012 §5). Needs the offline outbox (#45).</li>
+          <li>Offline: the schedule is cached from the last time the phone was online; starting a trip or recording a delivery offline is a fact, accepted later. A start on a trip the office cancelled meanwhile still goes ahead and is flagged; a start on a trip someone else already started is refused (ADR-0012 §5). Needs the offline outbox (#45).</li>
           <li>Drivers see only their own trips, never other drivers'. The trip price stays hidden unless the company turns on "Show trip price to drivers"; a trip where the driver collects cash shows "Amount to collect".</li>
         </ul></div>
       </div>
