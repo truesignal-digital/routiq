@@ -621,6 +621,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
           },
         },
       ],
+      otherOpenSafetyIssues: [],
     });
 
     // Released by someone other than the completer: available again, since

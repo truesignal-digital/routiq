@@ -2223,6 +2223,7 @@
       "needsSignOff": "Il faut que {ref} soit validé.",
       "needsAll": "Il faut que {ref} soit autorisé et terminé.",
       "needsWorkOrder": "Il faut un ordre de travail terminé, ou le problème clos.",
+      "otherSafetyIssueOpen": "{count, plural, one {Un autre problème critique est encore ouvert : « {description} ». Clôturez-le d'abord.} other {# autres problèmes critiques sont encore ouverts, dont « {description} ». Clôturez-les d'abord.}}",
       "makerCannotApprove": "Vous avez créé {ref} ; une autre personne l'autorise.",
       "completerCannotSignOff": "Vous avez terminé {ref} ; une autre personne le valide.",
       "youRecordedIt": "Vous l'avez saisie ; une autre personne l'examine.",

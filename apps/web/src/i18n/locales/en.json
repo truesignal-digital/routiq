@@ -2223,6 +2223,7 @@
       "needsSignOff": "Needs {ref} signed off.",
       "needsAll": "Needs {ref} authorized and completed.",
       "needsWorkOrder": "Needs a completed work order, or the problem closed.",
+      "otherSafetyIssueOpen": "{count, plural, one {Another safety-critical problem is still open: “{description}”. Close it first.} other {# other safety-critical problems are still open, including “{description}”. Close them first.}}",
       "makerCannotApprove": "You created {ref}; someone else authorizes it.",
       "completerCannotSignOff": "You completed {ref}; someone else signs it off.",
       "youRecordedIt": "You recorded it; someone else reviews it.",

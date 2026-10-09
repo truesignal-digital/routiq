@@ -91,6 +91,7 @@ export type LockKey =
   | "needsSignOff"
   | "needsAll"
   | "needsWorkOrder"
+  | "otherSafetyIssueOpen"
   | "makerCannotApprove"
   | "completerCannotSignOff"
   | "youRecordedIt"
