@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 590845,
+    "ceiling": 592064,
     "raises": [
       {
         "date": "2026-10-06",
@@ -157,6 +157,12 @@
         "from": 584923,
         "to": 590845,
         "reason": "Field kit and the six form layouts (#292), same growth as web.initial-js-gzip: about 5.7 kB gzip with no lazy split yet"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 590845,
+        "to": 592064,
+        "reason": "Planned-trip command labels and messages (#334)"
       }
     ]
   },
@@ -214,7 +220,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 590845,
+    "ceiling": 592064,
     "raises": [
       {
         "date": "2026-10-06",
@@ -371,6 +377,12 @@
         "from": 584923,
         "to": 590845,
         "reason": "Field kit and the six form layouts (#292): FormLayout, FormGroup/FormPair/FormOptional and ten kit fields with required read from the schema, about 5.7 kB gzip (a Base UI combobox was dropped for the existing popover pattern to save about 14 kB); about 29 ms on a pilot phone at about 5 ms per kB; #294 moves the other forms onto it and drops their own markup"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 590845,
+        "to": 592064,
+        "reason": "Planned-trip command labels and messages (#334)"
       }
     ]
   }
