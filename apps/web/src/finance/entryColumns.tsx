@@ -8,6 +8,7 @@ import { EntryLinks } from "@/finance/EntryLinks.js";
 import { EntryEventStatus, foldedAmountClass, isFolded } from "@/finance/EntryCancellation.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 export type FinanceEntryColumnId =
   | "entryNumber"
@@ -116,7 +117,7 @@ function buildColumns(
         label: t("finance.entries.detail.counterparty"),
       },
       cell: ({ row }) => (
-        <span className="whitespace-normal">{row.original.counterpartyName ?? "—"}</span>
+        <span className="whitespace-normal">{row.original.counterpartyName ?? <NotRecorded />}</span>
       ),
     },
     linkedTo: {

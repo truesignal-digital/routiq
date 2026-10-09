@@ -2,16 +2,19 @@ import { randomUUID } from "node:crypto";
 import {
   activityDetail,
   activityListResponse,
+  activitySummary,
   LEDGER_READER_ROLES,
   personListResponse,
   placeListResponse,
 } from "@routiq/contracts";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { branches } from "../db/schema.js";
+import { branches, workspaces } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { apiClient, seedActor } from "../test/client.js";
+import { addDays, currentBusinessDate, isoWeek } from "./business-date.js";
 
 describe("activity, person and place reads", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -313,9 +316,7 @@ describe("activity, person and place reads", () => {
     ).toEqual([yaoundeActivityId]);
     expect(
       (
-        await list(
-          "from=2026-07-09T00%3A00%3A00Z&to=2026-07-12T00%3A00%3A00Z",
-        )
+        await list("from=2026-07-09&to=2026-07-11")
       ).items.map((item) => item.id),
     ).toEqual([closedActivityId]);
   });
@@ -760,6 +761,139 @@ describe("activity detail ledger gate", () => {
       }
     } finally {
       await api.ok(adminToken, "enable-module", { moduleCode: "FINANCE" });
+    }
+  });
+});
+
+/**
+ * #511: a picked date is a day in the workspace's zone, the same days the
+ * summary counts "this week" in. Zones without DST, so the offsets hold all year.
+ */
+describe("activity date filters follow the workspace's days", () => {
+  const ZONES = [
+    { timezone: "Africa/Douala", offsetHours: 1 },
+    { timezone: "Pacific/Kiritimati", offsetHours: 14 },
+    { timezone: "Pacific/Pago_Pago", offsetHours: -11 },
+  ] as const;
+
+  let ctx: Awaited<ReturnType<typeof createTestApp>>;
+  let api: ReturnType<typeof apiClient>;
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    api = apiClient(ctx.app);
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  /** The instant of a wall-clock time in a zone `offsetHours` from UTC. */
+  function localInstant(date: string, time: string, offsetHours: number): string {
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = time.split(":").map(Number);
+    return new Date(
+      Date.UTC(year!, month! - 1, day!, hour!, minute!) - offsetHours * 3_600_000,
+    ).toISOString();
+  }
+
+  function days(from?: string, to?: string): string {
+    return [
+      from === undefined ? undefined : `from=${from}`,
+      to === undefined ? undefined : `to=${to}`,
+    ]
+      .filter((part) => part !== undefined)
+      .join("&");
+  }
+
+  async function zonedWorkspace(timezone: string) {
+    const seeded = await seedWorkspace(ctx.db);
+    await ctx.db
+      .update(workspaces)
+      .set({ timezone })
+      .where(eq(workspaces.id, seeded.workspace.id));
+    const admin = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN" });
+
+    // A vehicle per trip: a vehicle carries one open trip at a time. The
+    // customer name labels the trip, so a failure reads as names, not ids.
+    async function trip(label: string, startedAt: string) {
+      await api.ok(admin.token, "create-activity", {
+        activityId: randomUUID(),
+        branchCode: "DLA",
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: await seedAsset(ctx.app, admin.token, {
+          assetCode: `TZ-${randomUUID().slice(0, 8)}`,
+        }),
+        startedAt,
+        customerName: label,
+      });
+    }
+
+    async function listed(query: string) {
+      const response = await api.get(admin.token, `/v1/activities?${query}`);
+      expect(response.status).toBe(200);
+      return activityListResponse.parse(response.body).items.map((item) => item.customerName);
+    }
+
+    async function summary() {
+      const response = await api.get(admin.token, "/v1/activities/summary");
+      expect(response.status).toBe(200);
+      return activitySummary.parse(response.body);
+    }
+
+    return { trip, listed, summary };
+  }
+
+  it.each(ZONES)(
+    "keeps trips near local midnight on their local day in $timezone",
+    async ({ timezone, offsetHours }) => {
+      const ws = await zonedWorkspace(timezone);
+      await ws.trip("sun 23:30", localInstant("2026-07-12", "23:30", offsetHours));
+      await ws.trip("mon 00:30", localInstant("2026-07-13", "00:30", offsetHours));
+      await ws.trip("mon 23:30", localInstant("2026-07-13", "23:30", offsetHours));
+      await ws.trip("tue 00:30", localInstant("2026-07-14", "00:30", offsetHours));
+
+      expect(await ws.listed(days("2026-07-13", "2026-07-13"))).toEqual(["mon 23:30", "mon 00:30"]);
+      expect(await ws.listed(days("2026-07-12", "2026-07-12"))).toEqual(["sun 23:30"]);
+      expect(await ws.listed(days("2026-07-14"))).toEqual(["tue 00:30"]);
+      expect(await ws.listed(days(undefined, "2026-07-12"))).toEqual(["sun 23:30"]);
+      expect(await ws.listed(days("2026-07-12", "2026-07-14"))).toEqual([
+        "tue 00:30",
+        "mon 23:30",
+        "mon 00:30",
+        "sun 23:30",
+      ]);
+    },
+  );
+
+  it("lists exactly the trips the summary counts this week", async () => {
+    const { timezone, offsetHours } = ZONES[1];
+    const ws = await zonedWorkspace(timezone);
+    const week = isoWeek(currentBusinessDate(new Date(), timezone));
+    await ws.trip("before", localInstant(addDays(week.from, -1), "23:30", offsetHours));
+    await ws.trip("first", localInstant(week.from, "00:30", offsetHours));
+    await ws.trip("last", localInstant(week.to, "23:30", offsetHours));
+    await ws.trip("after", localInstant(addDays(week.to, 1), "00:30", offsetHours));
+
+    const summary = await ws.summary();
+    expect(summary.week).toEqual(week);
+    expect(summary.thisWeek).toBe(2);
+    expect(await ws.listed(days(week.from, week.to))).toEqual(["last", "first"]);
+  });
+
+  it("takes calendar dates only, from no later than to", async () => {
+    const seeded = await seedWorkspace(ctx.db);
+    const { token } = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN" });
+    for (const query of [
+      "from=2026-07-13T00%3A00%3A00.000Z",
+      "to=2026-07-13T23%3A59%3A59.999Z",
+      "from=2026-02-30",
+      "from=2026-07-14&to=2026-07-13",
+    ]) {
+      const response = await api.get(token, `/v1/activities?${query}`);
+      expect({ query, status: response.status }).toEqual({ query, status: 400 });
     }
   });
 });

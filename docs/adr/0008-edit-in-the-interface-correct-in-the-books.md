@@ -1,5 +1,11 @@
 # Edit in the interface, correct in the books
 
+> **Status (2026-10-08, #535).** Level 3 for money is not built (#86). The app
+> ships a two-step correction instead: **Cancel entry** (`reverse-entry`) with
+> the reason "wrong details", then **Record again**, which opens the record form
+> filled in from the cancelled entry and records a new one. The original stays,
+> marked Cancelled. The one-command correction below remains the target.
+
 Users, business owners most of all, expect to change what they see on screen.
 The ledger rule (`ARCHITECTURE.md` §3.4 invariant 4, §4.3) says approved money,
 meter readings and stock are never changed in place. Both hold. **The interface
