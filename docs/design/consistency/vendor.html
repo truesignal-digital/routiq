@@ -295,7 +295,7 @@
         <div class="spec-card"><h4>How it would work</h4><ul>
           <li>Both companies agree to connect (invite + accept); either can disconnect.</li>
           <li>A trip request is a message with chosen fields (date, route, cargo, price). Accepting creates a <b>copy</b> in the receiving company; each keeps its own record and history.</li>
-          <li>Afterwards only status flows back (planned, started, delivered), never money, drivers or other data.</li>
+          <li>Afterwards only status flows back (planned, started, closed, and when it was delivered), never money, drivers or other data.</li>
           <li>Every exchange is logged on both sides.</li>
         </ul>
         <h4 style="margin-top:12px">Recommendation</h4><p>Not for the pilot. It needs its own architecture decision and two companies that actually want it. Isolation stays the default and the guarantee; connections are an add-on, and the "Partners" page only exists once that module is on.</p></div>
