@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 681280,
+    "ceiling": 682090,
     "raises": [
       {
         "date": "2026-10-06",
@@ -163,6 +163,12 @@
         "from": 590845,
         "to": 681280,
         "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB). Measured on Linux (node:24) as CI builds it; macOS gives the same number"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 681280,
+        "to": 682090,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
       }
     ]
   },
@@ -220,7 +226,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 256115,
+    "ceiling": 256557,
     "raises": [
       {
         "date": "2026-10-06",
@@ -377,6 +383,12 @@
         "from": 584923,
         "to": 590845,
         "reason": "Field kit and the six form layouts (#292): FormLayout, FormGroup/FormPair/FormOptional and ten kit fields with required read from the schema, about 5.7 kB gzip (a Base UI combobox was dropped for the existing popover pattern to save about 14 kB); about 29 ms on a pilot phone at about 5 ms per kB; #294 moves the other forms onto it and drops their own markup"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 256115,
+        "to": 256557,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
       }
     ]
   }

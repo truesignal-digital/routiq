@@ -337,6 +337,26 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  // #564: the record history read "Activité clôturée" in a trucking workspace.
+  // The trip's own history events name it in the fleet's word, agreeing in French.
+  it("names the trip in each fleet's own word in the record history", () => {
+    const instance = freshInstance();
+    const events = (lng: "fr" | "en") =>
+      ["created", "closed", "reopened"].map((event) => instance.t(`history.event.activity-${event}`, { lng }));
+
+    expect(events("fr")).toEqual(["Activité créée", "Activité clôturée", "Activité rouverte"]);
+    expect(events("en")).toEqual(["Activity created", "Activity closed", "Activity reopened"]);
+
+    for (const [preset, noun] of [
+      ["TRUCKING", "Trajet"],
+      ["PASSENGER_TRANSPORT", "Voyage"],
+    ] as const) {
+      applyPresetVocabulary(instance, preset);
+      expect(events("fr"), preset).toEqual([`${noun} créé`, `${noun} clôturé`, `${noun} rouvert`]);
+      expect(events("en"), preset).toEqual(["Trip created", "Trip closed", "Trip reopened"]);
+    }
+  });
+
   // The sheet's title is its breadcrumb and the Trips button, and its submit
   // says "la fiche": renaming only the title would leave the page disagreeing.
   it("keeps the trip sheet's title in step with its submit in every preset", () => {

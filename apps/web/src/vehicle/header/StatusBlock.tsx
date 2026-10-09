@@ -73,10 +73,16 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
             report: truncate(situation.report),
           });
       follow = withNodes(
-        (slots) => t(`vehicle.status.grounded.${situation.phase}`, slots),
+        (slots) =>
+          t(`vehicle.status.grounded.${situation.phase}`, {
+            ...slots,
+            count: situation.blockedBy?.count ?? 0,
+            description: truncate(situation.blockedBy?.description ?? ""),
+          }),
         {
           workOrder: refLink("work_order", situation.workOrderId),
           issue: refLink("issue", situation.issueId),
+          otherIssue: refLink("issue", situation.blockedBy?.id),
         },
       );
       if (viewer.role === "DRIVER") {

@@ -400,11 +400,7 @@ export function EntryRows({ control, assetOptions, personOptions, canAddRevenue 
 
   return (
     <div className="flex flex-col gap-3">
-      {fields.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          {t("activities.record.entries.empty")}
-        </p>
-      )}
+      {fields.length === 0 && <NoEntries canAddRevenue={canAddRevenue} />}
 
       {fields.map((field, index) => (
         <EntryRow
@@ -439,5 +435,15 @@ export function EntryRows({ control, assetOptions, personOptions, canAddRevenue 
         </Button>
       </div>
     </div>
+  );
+}
+
+/** A driver adds expenses only (#532), so their empty sheet does not mention revenue (#573). */
+function NoEntries({ canAddRevenue }: { canAddRevenue: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <p className="text-sm text-muted-foreground">
+      {t(canAddRevenue ? "activities.record.entries.empty" : "activities.record.entries.emptyExpensesOnly")}
+    </p>
   );
 }
