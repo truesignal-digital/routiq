@@ -341,6 +341,7 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
       const pane = step.panes[i];
       if (pane === undefined) continue;
       const local = time - step.start;
+      if (noteTone !== "bad") note = "";
       c = local < step.play ? Math.min(pane.from + local, pane.to) : pane.to;
       if (local >= pane.to - pane.from && pane.beat !== undefined) {
         const at = seconds(reelToReal(track, pane.to));
@@ -372,7 +373,7 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
   return {
     panes,
     caption: current?.caption ?? "",
-    captionOpacity: current === undefined ? 0 : ease((time - current.start) / 0.35),
+    captionOpacity: current === undefined || time >= timeline.endStart ? 0 : ease((time - current.start - current.play) / 0.35),
     intro: time < INTRO ? 1 - ease((time - (INTRO - FADE)) / FADE) : 0,
     end: time >= timeline.endStart ? ease((time - timeline.endStart) / FADE) : 0,
   };

@@ -317,3 +317,15 @@ it("shows expected refusals separately without a regression verdict", () => {
   const rows = metricRows(metrics({ expectedRefusals: 2 }), metrics());
   expect(rows.find((row) => row.label === "Expected refusals")).toMatchObject({ after: "2", before: "0", tone: "same" });
 });
+
+it("shows a caption only during its shot dwell and clears the previous step note", () => {
+  const track = compressCast(cast([0, 0.5, 1, 1.5, 2]), [1, 2]);
+  const timeline = compileTimeline(planReel(run([frame("form-open", 1), frame("saved", 2)])), [track]);
+  const at = (time: number) => stateAt(time, timeline, [track], viewport, computeLayout(1, viewport), (_, file) => file);
+  for (const step of timeline.steps) {
+    expect(at(step.start + step.play / 2).captionOpacity).toBe(0);
+    expect(at(step.start + step.play + 0.4).captionOpacity).toBe(1);
+    expect(at(step.start + 0.1).panes[0]?.note).toBe("");
+  }
+  expect(at(timeline.endStart).captionOpacity).toBe(0);
+});
