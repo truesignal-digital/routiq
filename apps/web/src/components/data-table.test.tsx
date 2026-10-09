@@ -2,7 +2,6 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type {
-  ColumnDef,
   RowSelectionState,
   SortingState,
   VisibilityState,
@@ -12,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DataTable,
   DataTableViewOptions,
+  type DataTableColumn,
   type DataTableFilter,
 } from "./data-table.js";
 
@@ -37,6 +37,9 @@ vi.mock("react-i18next", () => ({
         "dataTable.nextPage": "Go to next page",
         "dataTable.lastPage": "Go to last page",
         "dataTable.viewer.close": "Close",
+        "dataTable.filters": "Filters ({count})",
+        "dataTable.filtersTitle": "Filters",
+        "dataTable.showResults": "Show results",
       };
       const template = translations[key] ?? key;
       return Object.entries(options ?? {}).reduce(
@@ -54,30 +57,30 @@ type Person = {
   internalId: string;
 };
 
-const columns: ColumnDef<Person>[] = [
+const columns: DataTableColumn<Person>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    meta: { mobile: "primary" },
+    meta: { phone: "title" },
   },
   {
     accessorKey: "email",
     header: "Email",
-    meta: { mobile: "secondary" },
+    meta: { phone: "meta" },
   },
   {
     accessorKey: "internalId",
     header: "Internal ID",
-    meta: { mobile: "hidden" },
+    meta: { phone: "hidden" },
   },
 ];
 
-const sortableColumns: ColumnDef<Person>[] = [
+const sortableColumns: DataTableColumn<Person>[] = [
   { ...columns[0]!, enableSorting: true },
   ...columns.slice(1),
 ];
 
-const labelledColumns: ColumnDef<Person>[] = columns.map((column, index) => ({
+const labelledColumns: DataTableColumn<Person>[] = columns.map((column, index) => ({
   ...column,
   meta: { ...column.meta!, label: ["Full name", "Email address", "Identifier"][index]! },
 }));
@@ -110,6 +113,16 @@ function mockDesktop(matches: boolean) {
       dispatchEvent: vi.fn(),
     })),
   });
+}
+
+/** The text of each phone-row slot of one kind, in render order. */
+function slotText(
+  root: HTMLElement,
+  slot: "title" | "meta" | "value" | "status",
+): string[] {
+  return [
+    ...root.querySelectorAll(`[data-slot="data-table-row-${slot}"]`),
+  ].map((element) => element.textContent ?? "");
 }
 
 /** Body rows in render order, read through their first data cell. */
@@ -159,14 +172,222 @@ describe("DataTable", () => {
     expect(screen.getByText("No people found.")).toBeTruthy();
   });
 
-  it("renders primary and secondary fields as a mobile card", () => {
+  it("renders title and meta fields as a phone list row", () => {
     mockDesktop(false);
-    render(<DataTable columns={columns} data={[data[0]!]} />);
+    const { container } = render(<DataTable columns={columns} data={[data[0]!]} />);
 
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByText("Ada Lovelace").classList.contains("font-medium")).toBe(true);
-    expect(screen.getByText("ada@example.com")).toBeTruthy();
+    expect(slotText(container, "title")).toEqual(["Ada Lovelace"]);
+    expect(slotText(container, "meta")).toEqual(["ada@example.com"]);
     expect(screen.queryByText("person-1")).toBeNull();
+  });
+
+  describe("phone list rows", () => {
+    type Entry = {
+      entryNumber: string;
+      date: string | null;
+      vehicle: string | null;
+      amount: string;
+      status: string;
+      note: string;
+    };
+
+    const entryColumns: DataTableColumn<Entry>[] = [
+      { accessorKey: "status", header: "Status", meta: { phone: "status" } },
+      { accessorKey: "amount", header: "Amount", meta: { phone: "value" } },
+      { accessorKey: "vehicle", header: "Vehicle", meta: { phone: "meta" } },
+      { accessorKey: "entryNumber", header: "Entry", meta: { phone: "title" } },
+      {
+        accessorKey: "date",
+        header: "Date",
+        meta: { phone: "meta" },
+        // The desktop table prints a dash for a missing date.
+        cell: ({ row }) => row.original.date ?? "–",
+      },
+      { accessorKey: "note", header: "Note", meta: { phone: "hidden" } },
+    ];
+
+    const entries: Entry[] = [
+      {
+        entryNumber: "#14",
+        date: "3 Oct",
+        vehicle: "VH003",
+        amount: "150 000",
+        status: "Waiting",
+        note: "brake pads",
+      },
+      {
+        entryNumber: "#11",
+        date: null,
+        vehicle: "VH001",
+        amount: "135 000",
+        status: "Reversed",
+        note: "fuel",
+      },
+    ];
+
+    function phoneRows(container: HTMLElement) {
+      return [...container.querySelectorAll<HTMLElement>('[data-slot="data-table-row"]')];
+    }
+
+    it("puts title, value, meta and status in their fixed slots", () => {
+      mockDesktop(false);
+      const { container } = render(<DataTable columns={entryColumns} data={entries} />);
+
+      const [first] = phoneRows(container);
+      expect(slotText(first!, "title")).toEqual(["#14"]);
+      expect(slotText(first!, "value")).toEqual(["150 000"]);
+      expect(slotText(first!, "meta")).toEqual(["VH003 · 3 Oct"]);
+      expect(slotText(first!, "status")).toEqual(["Waiting"]);
+      expect(first!.textContent).not.toContain("brake pads");
+    });
+
+    it("leaves an empty meta value out with its separator", () => {
+      mockDesktop(false);
+      const { container } = render(<DataTable columns={entryColumns} data={entries} />);
+
+      const second = phoneRows(container)[1]!;
+      expect(slotText(second, "meta")).toEqual(["VH001"]);
+      expect(second.textContent).not.toContain("·");
+      expect(second.textContent).not.toContain("–");
+    });
+
+    it("lets a column swap its desktop cell for plain phone text", () => {
+      mockDesktop(false);
+      const withText: DataTableColumn<Entry>[] = entryColumns.map((column) =>
+        column.header === "Vehicle"
+          ? {
+              ...column,
+              meta: { phone: "meta", phoneText: (entry) => `Truck ${entry.vehicle ?? ""}` },
+            }
+          : column,
+      );
+      const { container } = render(<DataTable columns={withText} data={[entries[0]!]} />);
+
+      expect(slotText(container, "meta")).toEqual(["Truck VH003 · 3 Oct"]);
+    });
+
+    it("divides rows with a line instead of boxing them as cards", () => {
+      mockDesktop(false);
+      const { container } = render(<DataTable columns={entryColumns} data={entries} />);
+
+      for (const row of phoneRows(container)) {
+        expect(row.className).toContain("min-h-15");
+        expect(row.className).toContain("border-b");
+        expect(row.className).not.toContain("rounded");
+        expect(row.className).not.toContain("bg-card");
+      }
+    });
+
+    it("keeps the title the only way into the row", async () => {
+      mockDesktop(false);
+      const onRowClick = vi.fn();
+      const { container } = render(
+        <DataTable
+          columns={entryColumns}
+          data={entries}
+          primaryColumn={{ columnId: "entryNumber" }}
+          onRowClick={onRowClick}
+        />,
+      );
+
+      const first = phoneRows(container)[0]!;
+      const buttons = within(first).getAllByRole("button");
+      expect(buttons.map((button) => button.textContent)).toEqual(["#14"]);
+      await userEvent.click(buttons[0]!);
+      expect(onRowClick).toHaveBeenCalledExactlyOnceWith(entries[0]);
+    });
+
+    it("ends the row with a 44 px ⋯ menu", () => {
+      mockDesktop(false);
+      const { container } = render(
+        <DataTable
+          columns={entryColumns}
+          data={entries}
+          rowActions={() => [{ key: "open", label: "Open", onSelect: vi.fn() }]}
+        />,
+      );
+
+      const first = phoneRows(container)[0]!;
+      const menu = within(first).getByRole("button", { name: "Actions" });
+      expect(first.lastElementChild).toBe(menu);
+      expect(menu.className).toContain("size-11");
+    });
+
+    // A folded cancellation puts its reason and who/when in the status cell
+    // (#478). Before this, the end column kept its intrinsic width and pushed
+    // the title to 0 px at 390 px. jsdom has no layout, so this locks the
+    // classes that bound the column; the widths themselves were measured in a
+    // real browser (PR #512 fix evidence).
+    it("caps the end column at half the row body so a long status wraps under it", () => {
+      mockDesktop(false);
+      const longStatus = `Cancelled. Reason: ${"entered twice with the wrong truck ".repeat(4)}`;
+      const { container } = render(
+        <DataTable
+          columns={entryColumns}
+          data={[{ ...entries[0]!, status: longStatus }]}
+          rowActions={() => [{ key: "open", label: "Open", onSelect: vi.fn() }]}
+        />,
+      );
+
+      const row = phoneRows(container)[0]!;
+      const body = row.querySelector<HTMLElement>('[data-slot="data-table-row-body"]')!;
+      const main = row.querySelector<HTMLElement>('[data-slot="data-table-row-main"]')!;
+      const end = row.querySelector<HTMLElement>('[data-slot="data-table-row-end"]')!;
+      const value = row.querySelector<HTMLElement>('[data-slot="data-table-row-value"]')!;
+      const status = row.querySelector<HTMLElement>('[data-slot="data-table-row-status"]')!;
+
+      // The half is measured without the ⋯ menu: title and end column share a
+      // body that the 44 px menu sits beside.
+      expect([...body.children]).toEqual([main, end]);
+      expect(row.lastElementChild).toBe(within(row).getByRole("button", { name: "Actions" }));
+      expect(body.className.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "flex-1"]));
+      expect(main.className.split(" ")).toEqual(expect.arrayContaining(["min-w-0", "flex-1"]));
+      expect(end.className.split(" ")).toEqual(expect.arrayContaining(["max-w-1/2", "min-w-0"]));
+      expect(end.className).not.toContain("shrink-0");
+      expect(value.className).toContain("whitespace-nowrap");
+      expect(status.className.split(" ")).toEqual(
+        expect.arrayContaining([
+          "min-w-0",
+          "wrap-anywhere",
+          "[&_[data-slot=badge]]:whitespace-normal",
+          "[&_[data-slot=button]]:whitespace-normal",
+          // h-auto lets a wrapped button grow; min-h-11 keeps the 44 px target.
+          "[&_[data-slot=button]]:h-auto",
+          "[&_[data-slot=button]]:min-h-11",
+        ]),
+      );
+      expect(slotText(row, "title")).toEqual(["#14"]);
+    });
+
+    it("pages a keyset read in the phone layout", async () => {
+      mockDesktop(false);
+      const onLoadMore = vi.fn();
+      const { container } = render(
+        <DataTable
+          columns={entryColumns}
+          data={entries}
+          loadMore={{ hasNextPage: true, isFetching: false, onLoadMore, pageSize: 1 }}
+        />,
+      );
+
+      expect(phoneRows(container)).toHaveLength(1);
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(slotText(phoneRows(container)[0]!, "title")).toEqual(["#11"]);
+      expect(onLoadMore).not.toHaveBeenCalled();
+    });
+
+    it("pages fully loaded data in the phone layout", async () => {
+      mockDesktop(false);
+      const { container } = render(
+        <DataTable columns={entryColumns} data={entries} pagination={{ defaultPageSize: 1 }} />,
+      );
+
+      expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+      await userEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+      expect(slotText(phoneRows(container)[0]!, "title")).toEqual(["#11"]);
+    });
   });
 
   describe("row count footer", () => {
@@ -382,15 +603,28 @@ describe("DataTable", () => {
       expect(onRowClick).toHaveBeenCalledExactlyOnceWith(data[0]);
     });
 
-    it("puts the selection control in the mobile card header", () => {
+    it("starts the phone row with the selection control", async () => {
       mockDesktop(false);
-      render(<DataTable columns={columns} data={[data[0]!]} enableRowSelection />);
+      const onRowSelectionChange = vi.fn();
+      const { container } = render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          enableRowSelection
+          onRowSelectionChange={onRowSelectionChange}
+        />,
+      );
 
       expect(screen.queryByRole("table")).toBeNull();
-      expect(screen.getByRole("checkbox", { name: "Select row" })).toBeTruthy();
-      expect(screen.getByText("Ada Lovelace").classList.contains("font-medium")).toBe(true);
-      expect(screen.getByText("ada@example.com")).toBeTruthy();
+      const row = container.querySelector<HTMLElement>('[data-slot="data-table-row"]')!;
+      const checkbox = within(row).getByRole("checkbox", { name: "Select row" });
+      expect(row.firstElementChild?.contains(checkbox)).toBe(true);
+      expect(slotText(container, "title")).toEqual(["Ada Lovelace"]);
       expect(screen.queryByText("person-1")).toBeNull();
+
+      await userEvent.click(checkbox);
+      expect(onRowSelectionChange).toHaveBeenLastCalledWith({ "0": true });
+      expect(screen.getByText("1 rows selected")).toBeTruthy();
     });
   });
 
@@ -414,7 +648,7 @@ describe("DataTable", () => {
       expect(shell?.querySelector("table")).toBeTruthy();
     });
 
-    it("leaves the mobile card list unwrapped", () => {
+    it("leaves the phone list unwrapped", () => {
       mockDesktop(false);
       const { container } = render(<DataTable columns={columns} data={data} />);
 
@@ -814,7 +1048,7 @@ describe("DataTable", () => {
       expect(onOpen).toHaveBeenCalledExactlyOnceWith(data[0]);
     });
 
-    it("opens from the mobile card's title", async () => {
+    it("opens from the phone row's title", async () => {
       mockDesktop(false);
       render(
         <DataTable
@@ -984,7 +1218,33 @@ describe("DataTable", () => {
       expect(items).toEqual(["Full name", "Email address", "Identifier"]);
     });
 
-    it("puts the menu in the mobile card corner", () => {
+    it("keeps a long action label on one line instead of squeezing it to the ⋯ button's width", async () => {
+      render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          rowActions={() => [
+            { key: "reverse", label: "Contre-passer l'écriture", onSelect: vi.fn() },
+          ]}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Actions" }));
+      const item = await screen.findByRole("menuitem", {
+        name: "Contre-passer l'écriture",
+      });
+      const popup = item.closest<HTMLElement>('[data-slot="dropdown-menu-content"]');
+
+      // jsdom has no layout, so the guard pins the classes that decide wrapping.
+      expect(popup?.className).not.toContain("w-(--anchor-width)");
+      expect(popup?.className).toContain("w-max");
+      expect(popup?.className).toContain("max-w-");
+      expect(within(item).getByText("Contre-passer l'écriture").className).toContain(
+        "truncate",
+      );
+    });
+
+    it("puts the menu at the end of the phone row", () => {
       mockDesktop(false);
       render(
         <DataTable
@@ -1100,6 +1360,83 @@ describe("DataTable", () => {
       expect(screen.getByLabelText("Search people")).toBeTruthy();
       expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
       expect(screen.getByText("No people found.")).toBeTruthy();
+    });
+
+    describe("on a phone", () => {
+      const threeFilters: DataTableFilter[] = [
+        ...filters,
+        {
+          columnId: "team",
+          type: "select",
+          placeholder: "Team",
+          options: [{ value: "OPS", label: "Operations" }],
+        },
+      ];
+
+      it("collapses the filters into one button that counts the active ones", () => {
+        mockDesktop(false);
+        render(
+          <DataTable
+            columns={columns}
+            data={data}
+            filters={threeFilters}
+            filterValues={{ q: "ada", status: "DRAFT" }}
+            onFilterChange={vi.fn()}
+          />,
+        );
+
+        expect(screen.getByRole("button", { name: "Filters (2)" })).toBeTruthy();
+        // No control stacks above the first row.
+        expect(screen.queryByLabelText("Search people")).toBeNull();
+        expect(screen.queryByRole("combobox")).toBeNull();
+      });
+
+      it("opens a bottom sheet with the same controls and a clear action", async () => {
+        mockDesktop(false);
+        const onFilterChange = vi.fn();
+        render(
+          <DataTable
+            columns={columns}
+            data={data}
+            filters={threeFilters}
+            filterValues={{ status: "DRAFT" }}
+            onFilterChange={onFilterChange}
+          />,
+        );
+
+        await userEvent.click(screen.getByRole("button", { name: "Filters (1)" }));
+        const sheet = await screen.findByRole("dialog");
+
+        expect(within(sheet).getByLabelText("Search people")).toBeTruthy();
+        expect(within(sheet).getByRole("combobox", { name: "Status" })).toBeTruthy();
+        expect(within(sheet).getByRole("combobox", { name: "Team" })).toBeTruthy();
+        // Clear before the action that closes the sheet: submit goes last.
+        const footer = within(sheet).getAllByRole("button").slice(-2);
+        expect(footer.map((button) => button.textContent)).toEqual([
+          "Clear filters",
+          "Show results",
+        ]);
+
+        await userEvent.click(within(sheet).getByRole("button", { name: "Clear filters" }));
+        expect(onFilterChange).toHaveBeenCalledExactlyOnceWith({});
+      });
+
+      it("keeps the filters button when a filter empties the list", () => {
+        mockDesktop(false);
+        render(
+          <DataTable
+            columns={columns}
+            data={[]}
+            filters={filters}
+            filterValues={{ q: "nobody" }}
+            onFilterChange={vi.fn()}
+            emptyState={<p>No people found.</p>}
+          />,
+        );
+
+        expect(screen.getByRole("button", { name: "Filters (1)" })).toBeTruthy();
+        expect(screen.getByText("No people found.")).toBeTruthy();
+      });
     });
   });
 });

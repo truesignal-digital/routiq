@@ -15,6 +15,11 @@ export const VALIDATION_ERROR_CODES = ["VALIDATION_FAILED"] as const;
 
 export type ValidationErrorCode = (typeof VALIDATION_ERROR_CODES)[number];
 
+/** A sender past its per-minute telemetry allowance (`POST /v1/telemetry`, ADR-0011). */
+export const TELEMETRY_ERROR_CODES = ["RATE_LIMITED"] as const;
+
+export type TelemetryErrorCode = (typeof TELEMETRY_ERROR_CODES)[number];
+
 export const COMMAND_ERROR_CODES = [
   "COMMAND_NOT_FOUND",
   "ROLE_FORBIDDEN",
@@ -37,6 +42,12 @@ export const COMMAND_ERROR_CODES = [
   "DUPLICATE_REGISTRATION_NUMBER",
   "UNIQUE_CONSTRAINT_VIOLATION",
   "COMMAND_FAILED",
+  /**
+   * A command whose handler returned success without writing an audit event
+   * for itself (#153). The dispatcher rolls the whole command back; nothing it
+   * wrote is kept. A server bug, never the caller's.
+   */
+  "AUDIT_EVENT_MISSING",
   "EXPECTED_VERSION_REQUIRED",
   "VERSION_CONFLICT",
   "INVALID_STATE_TRANSITION",
@@ -49,6 +60,11 @@ export const COMMAND_ERROR_CODES = [
   "DOCUMENT_ALREADY_SUPERSEDED",
   "POSTINGS_SUM_MISMATCH",
   "MAKER_CANNOT_APPROVE",
+  /**
+   * `update-approval-threshold` v2 with a recording threshold at or above the
+   * Finance ceiling (#354): Finance would have no band left to decide.
+   */
+  "RECORDING_THRESHOLD_NOT_BELOW_CEILING",
   /**
    * Editing a pending entry someone else recorded (#85). Only its author may
    * change it while it waits; anyone else with the right role rejects it.
@@ -184,6 +200,22 @@ export const COMMAND_ERROR_CODES = [
    * the vehicle's branch after the move).
    */
   "CUSTODIAN_INELIGIBLE",
+  /**
+   * A severity change that would change nothing (#96): marking safety-critical
+   * a problem already marked so, or taking the mark off one that has none. The
+   * caller's screen is stale.
+   */
+  "ISSUE_SEVERITY_ALREADY_SET",
+  /**
+   * Acknowledging a note that is not Direction's (#98). Only Direction's notes
+   * wait in the To-do for someone to say they saw them.
+   */
+  "NOTE_NOT_FROM_DIRECTION",
+  /**
+   * Direction acknowledging its own note (#98). The note waits for the team;
+   * its author saying "seen" would take it out of the To-do unread.
+   */
+  "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

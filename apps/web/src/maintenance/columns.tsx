@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { DataTableColumn } from "@/components/data-table.js";
 import type { IssueListItem, WorkOrderListItem } from "@routiq/contracts";
 import { ShieldAlert, TriangleAlert } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -25,7 +25,7 @@ function AssetCell({
 }) {
   return (
     <span className="flex flex-col">
-      <span className="font-mono whitespace-nowrap">{asset.assetCode}</span>
+      <span className="tabular-nums whitespace-nowrap">{asset.assetCode}</span>
       {asset.registrationNumber !== null && (
         <span className="text-xs text-muted-foreground">{asset.registrationNumber}</span>
       )}
@@ -33,7 +33,7 @@ function AssetCell({
   );
 }
 
-export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
+export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
 
@@ -43,11 +43,11 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
         id: "reference",
         header: t("maintenance.workOrders.columns.reference"),
         meta: {
-          mobile: "primary",
+          phone: "title",
           label: t("maintenance.workOrders.columns.reference"),
         },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {workOrderReference(row.original.id)}
           </span>
         ),
@@ -55,20 +55,24 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
       {
         id: "asset",
         header: t("maintenance.workOrders.columns.asset"),
-        meta: { mobile: "primary", label: t("maintenance.workOrders.columns.asset") },
+        meta: {
+          phone: "meta",
+          label: t("maintenance.workOrders.columns.asset"),
+          phoneText: (workOrder) => workOrder.asset.assetCode,
+        },
         cell: ({ row }) => <AssetCell asset={row.original.asset} />,
       },
       {
         id: "branch",
         header: t("maintenance.workOrders.columns.branch"),
-        meta: { mobile: "secondary", label: t("maintenance.workOrders.columns.branch") },
+        meta: { phone: "hidden", label: t("maintenance.workOrders.columns.branch") },
         cell: ({ row }) => row.original.branch.name,
       },
       {
         id: "description",
         header: t("maintenance.workOrders.columns.description"),
         meta: {
-          mobile: "secondary",
+          phone: "meta",
           label: t("maintenance.workOrders.columns.description"),
         },
         cell: ({ row }) => (
@@ -87,8 +91,15 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
         id: "expectedCost",
         header: t("maintenance.workOrders.columns.expectedCost"),
         meta: {
-          mobile: "hidden",
+          phone: "value",
           label: t("maintenance.workOrders.columns.expectedCost"),
+          phoneText: (workOrder) =>
+            workOrder.expectedCostMinor === null
+              ? null
+              : formatMoney(workOrder.expectedCostMinor, {
+                  currency: workOrder.currency,
+                  locale,
+                }),
         },
         cell: ({ row }) =>
           row.original.expectedCostMinor === null ? (
@@ -105,7 +116,7 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
       {
         id: "actualCost",
         header: t("maintenance.workOrders.columns.actualCost"),
-        meta: { mobile: "hidden", label: t("maintenance.workOrders.columns.actualCost") },
+        meta: { phone: "hidden", label: t("maintenance.workOrders.columns.actualCost") },
         cell: ({ row }) =>
           row.original.actualCostMinor === null ? (
             <span className="text-muted-foreground">—</span>
@@ -121,7 +132,7 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
       {
         id: "status",
         header: t("maintenance.workOrders.columns.status"),
-        meta: { mobile: "primary", label: t("maintenance.workOrders.columns.status") },
+        meta: { phone: "status", label: t("maintenance.workOrders.columns.status") },
         cell: ({ row }) => (
           <WorkOrderStatusBadge status={row.original.status} />
         ),
@@ -131,7 +142,7 @@ export function useWorkOrderColumns(): ColumnDef<WorkOrderListItem>[] {
   );
 }
 
-export function useIssueColumns(): ColumnDef<IssueListItem>[] {
+export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const categoryLabel = useIssueCategoryLabel();
@@ -141,19 +152,26 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
       {
         id: "asset",
         header: t("maintenance.issues.columns.asset"),
-        meta: { mobile: "primary", label: t("maintenance.issues.columns.asset") },
+        meta: {
+          phone: "title",
+          label: t("maintenance.issues.columns.asset"),
+          phoneText: (issue) => issue.asset.assetCode,
+        },
         cell: ({ row }) => <AssetCell asset={row.original.asset} />,
       },
       {
         id: "description",
         header: t("maintenance.issues.columns.description"),
-        meta: { mobile: "secondary", label: t("maintenance.issues.columns.description") },
+        meta: { phone: "meta", label: t("maintenance.issues.columns.description") },
         cell: ({ row }) => row.original.description,
       },
       {
         id: "safetyCritical",
+        // Blank when neither badge applies, so the phone row drops the "—".
+        accessorFn: (issue) =>
+          issue.safetyCritical || issue.assetUnavailable ? true : null,
         header: t("maintenance.issues.columns.safety"),
-        meta: { mobile: "primary", label: t("maintenance.issues.columns.safety") },
+        meta: { phone: "status", label: t("maintenance.issues.columns.safety") },
         cell: ({ row }) => (
           <span className="flex flex-wrap items-center gap-1.5">
             {row.original.safetyCritical && (
@@ -177,7 +195,7 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
       {
         id: "status",
         header: t("maintenance.issues.columns.status"),
-        meta: { mobile: "primary", label: t("maintenance.issues.columns.status") },
+        meta: { phone: "status", label: t("maintenance.issues.columns.status") },
         cell: ({ row }) => {
           const closingWords =
             row.original.status === "DISMISSED"
@@ -196,13 +214,17 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
       {
         id: "category",
         header: t("maintenance.issues.columns.category"),
-        meta: { mobile: "secondary", label: t("maintenance.issues.columns.category") },
+        meta: {
+          phone: "meta",
+          label: t("maintenance.issues.columns.category"),
+          phoneText: (issue) => categoryLabel(issue.category) ?? null,
+        },
         cell: ({ row }) => categoryLabel(row.original.category) ?? "—",
       },
       {
         id: "reportedAt",
         header: t("maintenance.issues.columns.reportedAt"),
-        meta: { mobile: "secondary", label: t("maintenance.issues.columns.reportedAt") },
+        meta: { phone: "meta", label: t("maintenance.issues.columns.reportedAt") },
         cell: ({ row }) => (
           <span className="tabular-nums whitespace-nowrap">
             {formatDate(row.original.reportedAt, locale)}
@@ -212,7 +234,7 @@ export function useIssueColumns(): ColumnDef<IssueListItem>[] {
       {
         id: "workOrders",
         header: t("maintenance.issues.columns.workOrders"),
-        meta: { mobile: "hidden", label: t("maintenance.issues.columns.workOrders") },
+        meta: { phone: "hidden", label: t("maintenance.issues.columns.workOrders") },
         cell: ({ row }) =>
           row.original.workOrders.length === 0 ? (
             <span className="text-muted-foreground">

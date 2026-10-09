@@ -40,6 +40,7 @@ import {
   workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
+import { presentChanges } from "./history-present.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { canReadEntry } from "./money-scope.js";
 import {
@@ -79,19 +80,45 @@ const occurredAtColumn: KeysetColumn = {
  * will put credential material in there, and nothing reaches a client from it
  * except a key named here.
  */
-const NOTE_STATE_KEYS = ["reason"] as const;
+const NOTE_STATE_KEYS = [
+  "reason",
+  // Decision notes the maintenance and finance commands write (#308).
+  "approvalNote",
+  "rejectReason",
+  "completionRejectReason",
+  "cancelReason",
+  "dismissReason",
+  "resolutionNote",
+  "releaseNote",
+  "overrideReason",
+  "rejectedReason",
+  "supersedeReason",
+  // The trip's close note.
+  "note",
+] as const;
+
+/** A reason picked from a list (#426): a code the client words, never shown raw. */
+const NOTE_CODE_STATE_KEYS = ["reasonCode"] as const;
 
 /**
  * The first allowlisted key holding a JSON string. The `jsonb_typeof` guard
  * matters: `->>` would happily serialise an object into the note line.
  */
-export function noteSql(): SQL<string | null> {
-  const candidates = NOTE_STATE_KEYS.map(
+function firstStringSql(keys: readonly string[]): SQL<string | null> {
+  const candidates = keys.map(
     (key) =>
       sql`case when jsonb_typeof(${auditEvents.afterState} -> ${key}::text) = 'string'
                then ${auditEvents.afterState} ->> ${key}::text end`,
   );
   return sql<string | null>`coalesce(${sql.join(candidates, sql`, `)}, null)`;
+}
+
+export function noteSql(): SQL<string | null> {
+  return firstStringSql(NOTE_STATE_KEYS);
+}
+
+export function noteCodeSql(): SQL<string | null> {
+  return firstStringSql(NOTE_CODE_STATE_KEYS);
 }
 
 /**
@@ -432,6 +459,7 @@ export function registerHistoryReadRoutes(
               clientOccurredAt: commands.clientOccurredAt,
               changedFields: auditEvents.changedFields,
               note: noteSql(),
+              noteCode: noteCodeSql(),
             })
             .from(auditEvents)
             .innerJoin(
@@ -489,6 +517,7 @@ export function registerHistoryReadRoutes(
           },
           changedFields: row.changedFields ?? [],
           note: row.note,
+          noteCode: row.noteCode,
         }));
 
         let nextCursor: string | null = null;
@@ -559,8 +588,23 @@ export function registerHistoryReadRoutes(
               ),
             )
             .limit(1);
+          if (!row) return { row };
 
-          return { row };
+          // A vehicle's purchase price is a ledger figure (#121): the same rule
+          // as the vehicle's own detail and its History tab. A work order's
+          // amounts follow the work-order reads (#390). Posting-line totals are
+          // money too, under the same rule.
+          const hidesMoney =
+            (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
+            (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
+          const changes = await presentChanges(
+            tx,
+            auth.workspaceId,
+            entityType,
+            diffStates(entityType, row.beforeState, row.afterState),
+            { showMoney: !hidesMoney },
+          );
+          return { row, changes };
         });
 
         if ("error" in result) {
@@ -576,18 +620,10 @@ export function registerHistoryReadRoutes(
         }
 
         const { beforeState, afterState, workspaceCurrency } = result.row;
-        // A vehicle's purchase price is a ledger figure (#121): the same rule
-        // as the vehicle's own detail and its History tab. A work order's
-        // amounts follow the work-order reads (#390).
-        const hidesMoney =
-          (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
-          (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
         return historyEventDiff.parse({
           eventId: result.row.eventId,
           currency: diffCurrency(beforeState, afterState, workspaceCurrency),
-          changes: diffStates(entityType, beforeState, afterState).filter(
-            (change) => !hidesMoney || change.kind !== "MONEY",
-          ),
+          changes: result.changes,
         });
       } catch (error) {
         req.log.error({ err: error }, "record history diff read failed");

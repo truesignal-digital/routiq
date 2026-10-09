@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { KeyRound, ShieldCheck, UserMinus, UserPlus, UserRoundCheck, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -11,6 +11,7 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
   type DataTableRowAction,
+  type DataTableColumn,
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -100,13 +101,13 @@ export function UsersScreen() {
     [t],
   );
 
-  const columns = useMemo<ColumnDef<MemberListItem>[]>(
+  const columns = useMemo<DataTableColumn<MemberListItem>[]>(
     () => [
       {
         accessorKey: "displayName",
         header: t("users.columns.displayName"),
         enableSorting: true,
-        meta: { mobile: "primary", label: t("users.columns.displayName") },
+        meta: { phone: "title", label: t("users.columns.displayName") },
         cell: ({ row }) => (
           <span
             className={row.original.status === "DEACTIVATED" ? "text-muted-foreground" : ""}
@@ -118,9 +119,9 @@ export function UsersScreen() {
       {
         accessorKey: "username",
         header: t("users.columns.username"),
-        meta: { mobile: "secondary", label: t("users.columns.username") },
+        meta: { phone: "meta", label: t("users.columns.username") },
         cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
+          <span className="tabular-nums whitespace-nowrap">
             {row.original.username ?? "—"}
           </span>
         ),
@@ -128,20 +129,20 @@ export function UsersScreen() {
       {
         accessorKey: "role",
         header: t("users.columns.role"),
-        meta: { mobile: "secondary", label: t("users.columns.role") },
+        meta: { phone: "meta", label: t("users.columns.role") },
         cell: ({ row }) => t(`users.roles.${row.original.role}`),
       },
       {
         id: "branchScope",
         header: t("users.columns.branchScope"),
-        meta: { mobile: "hidden", label: t("users.columns.branchScope") },
+        meta: { phone: "hidden", label: t("users.columns.branchScope") },
         cell: ({ row }) =>
           branchScopeLabel(row.original.branchScope, branches, t("users.form.allBranches")),
       },
       {
         accessorKey: "status",
         header: t("users.columns.status"),
-        meta: { mobile: "primary", label: t("users.columns.status") },
+        meta: { phone: "status", label: t("users.columns.status") },
         cell: ({ row }) => (
           <MemberStatusBadge status={row.original.status} />
         ),
@@ -174,6 +175,7 @@ export function UsersScreen() {
           </Button>
         }
       />
+      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("users.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions

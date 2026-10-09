@@ -1,13 +1,13 @@
 import { reportIssuePayload } from "@routiq/contracts";
 import type { z } from "zod";
-import { assetAvailabilityIntervals, operationalIssues } from "../db/schema.js";
+import { operationalIssues } from "../db/schema.js";
 import { assetBranchIds } from "./branch-authorization.js";
 import {
   appendAuditEvent,
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
-import { openAvailabilityInterval, requireAsset } from "./work-order-lookup.js";
+import { groundAssetForIssue, requireAsset } from "./work-order-lookup.js";
 
 type ReportIssuePayload = z.infer<typeof reportIssuePayload>;
 
@@ -22,9 +22,8 @@ type ReportIssuePayload = z.infer<typeof reportIssuePayload>;
  * (§3.4) — the truck is still IN_SERVICE, it is simply not available to plan on.
  *
  * A second safety-critical report on an asset already down opens no second
- * interval: the asset cannot be more unavailable than it already is, and two
- * open intervals would need two releases to undo one grounding. The partial
- * unique index says the same thing structurally.
+ * interval (see `groundAssetForIssue`). change-issue-severity grounds through
+ * the same function when a report is marked safety-critical later (#96).
  */
 export const reportIssue: CommandDefinition<ReportIssuePayload> = {
   name: "report-issue",
@@ -85,54 +84,11 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
     });
 
     if (payload.safetyCritical) {
-      const alreadyDown = await openAvailabilityInterval(
-        tx,
-        ctx,
-        payload.assetId,
-        { forUpdate: true },
-      );
-      if (!alreadyDown) {
-        const intervalId = crypto.randomUUID();
-        const [opened] = await tx
-          .insert(assetAvailabilityIntervals)
-          .values({
-            id: intervalId,
-            workspaceId: ctx.workspaceId,
-            assetId: payload.assetId,
-            openedAt: reportedAt,
-            openedByIssueId: payload.issueId,
-            createdByCommandId: envelope.commandId,
-          })
-          // Backstop for two clerks recording the same breakdown at once: the
-          // partial unique index decides, and the loser still records its
-          // signalement rather than failing the whole report.
-          .onConflictDoNothing()
-          .returning({ id: assetAvailabilityIntervals.id });
-
-        if (opened) {
-          await appendAuditEvent(tx, ctx, envelope, {
-            eventType: "asset_availability.opened",
-            entityType: "asset_availability_interval",
-            entityId: opened.id,
-            afterState: {
-              id: opened.id,
-              assetId: payload.assetId,
-              openedAt: reportedAt.toISOString(),
-              openedByIssueId: payload.issueId,
-              closedAt: null,
-              rowVersion: 1,
-            },
-            changedFields: [
-              "id",
-              "assetId",
-              "openedAt",
-              "openedByIssueId",
-              "closedAt",
-              "rowVersion",
-            ],
-          });
-        }
-      }
+      await groundAssetForIssue(tx, ctx, envelope, {
+        assetId: payload.assetId,
+        issueId: payload.issueId,
+        openedAt: reportedAt,
+      });
     }
 
     return {

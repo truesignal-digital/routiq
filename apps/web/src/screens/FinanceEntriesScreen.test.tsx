@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { ReactNode } from "react";
 import type { UseEntriesParams } from "../finance/useEntries.js";
@@ -38,7 +39,9 @@ vi.mock("react-i18next", async () => {
       t: (key: string, options?: Record<string, unknown>) =>
         key === "finance.entries.filters.assetOption"
           ? `${String(options?.["code"])} — ${String(options?.["name"])}`
-          : key,
+          : key === "finance.approvals.decideRow"
+            ? `${String(options?.["action"])} ${String(options?.["number"])}`
+            : key,
       // `errorMessage` consults this instance for the module-disabled state.
       i18n: { resolvedLanguage: "en", exists: () => true, t: (key: string) => key },
     }),
@@ -50,12 +53,13 @@ vi.mock("react-i18next", async () => {
 });
 
 const navigate = vi.fn();
-const emptySearch = vi.hoisted(() => ({}));
+/** The route's search; the waiting view is `view=waiting` (#314). */
+const routeSearch = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
   useParams: () => ({}),
-  useSearch: () => emptySearch,
+  useSearch: () => routeSearch.current,
   Link: ({
     to,
     params,
@@ -89,11 +93,71 @@ vi.mock("../auth/me.js", () => ({
   }),
 }));
 
+const summary = {
+  currency: "XAF",
+  month: "2026-10",
+  openPeriodCode: "2026-10",
+  lastLockedPeriodCode: "2026-09",
+  outMinor: 412_500,
+  inMinor: 450_000,
+  missingReceipt: { count: 1, oldestEconomicDate: "2026-10-01" },
+  waiting: { count: 1, amountMinor: 150_000, oldestSubmittedAt: "2026-10-03T10:00:00.000Z" },
+};
+
+vi.mock("../finance/useFinanceSummary.js", () => ({
+  useFinanceSummary: () => ({ data: summary, isPending: false, isError: false }),
+}));
+
+const pending = (id: string, entryNumber: string, submittedByPrincipalId: string) => ({
+  id,
+  entryNumber,
+  direction: "EXPENSE",
+  status: "SUBMITTED",
+  category: { code: "PARTS", labelFr: "Pièces", labelEn: "Parts" },
+  amountMinor: 150_000,
+  currency: "XAF",
+  economicDate: "2026-10-03",
+  postingPeriodCode: null,
+  isLatePosting: false,
+  branchId: "00000000-0000-4000-8000-000000000020",
+  counterpartyName: null,
+  paymentMethod: "CASH",
+  estimateStatus: "ACTUAL",
+  postedAt: null,
+  rowVersion: 1,
+  reversesEntryId: null,
+  evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
+  submittedByPrincipalId,
+  submittedAt: "2026-10-03T10:00:00.000Z",
+  directionDecides: false,
+});
+
+const waitingEntries = [
+  pending("00000000-0000-4000-8000-0000000000d1", "FIN-014", "someone-else"),
+  // The viewer's own submission: never theirs to decide.
+  pending("00000000-0000-4000-8000-0000000000d2", "FIN-015", "test-user"),
+];
+
+vi.mock("../finance/useApprovals.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../finance/useApprovals.js")>()),
+  useApprovals: () => ({
+    data: { pages: [{ entries: waitingEntries, nextCursor: null, total: waitingEntries.length }] },
+    isPending: false,
+    isError: false,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    refetch: vi.fn(),
+  }),
+}));
+
 vi.mock("../finance/permissions.js", () => ({
+  canReadFinance: vi.fn(() => true),
   canReadFinanceEntries: vi.fn(() => true),
   canRecordFinance: vi.fn(() => true),
   canReverseEntry: vi.fn(() => false),
-  canManagePeriods: () => false,
+  canManagePeriods: vi.fn(() => false),
+  canApproveEntries: vi.fn(() => false),
   entriesScope: vi.fn(() => "LEDGER"),
 }));
 
@@ -174,10 +238,6 @@ vi.mock("../assets/useAssets.js", () => ({
   }),
 }));
 
-vi.mock("../finance/FinanceNav.js", () => ({
-  FinanceNav: () => null,
-}));
-
 // The row drawer mounts EntrySummary, which reads the entry on its own.
 vi.mock("../finance/useEntry.js", () => ({
   useEntry: () => ({
@@ -192,6 +252,9 @@ vi.mock("../finance/useEntry.js", () => ({
 vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
 
 import {
+  canApproveEntries,
+  canManagePeriods,
+  canReadFinance,
   canReadFinanceEntries,
   canRecordFinance,
   canReverseEntry,
@@ -228,8 +291,12 @@ beforeEach(() => {
   // otherwise follow the next one.
   vi.mocked(canRecordFinance).mockReturnValue(true);
   vi.mocked(canReadFinanceEntries).mockReturnValue(true);
+  vi.mocked(canReadFinance).mockReturnValue(true);
   vi.mocked(canReverseEntry).mockReturnValue(false);
   vi.mocked(entriesScope).mockReturnValue("LEDGER");
+  vi.mocked(canApproveEntries).mockReturnValue(false);
+  vi.mocked(canManagePeriods).mockReturnValue(false);
+  routeSearch.current = {};
   mockDesktop();
   issuedQueries.length = 0;
 });
@@ -324,15 +391,50 @@ describe("FinanceEntriesScreen", () => {
     );
   });
 
-  it("offers the view menu and the record action in the toolbar row", () => {
+  it("lets a ledger reader switch to every line in the books (#427)", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+    // One line per event is the default: the read is asked for nothing else.
+    expect(issuedQueries).toEqual([{ sort: DEFAULT_SORT }]);
+
+    await user.click(screen.getByRole("checkbox", { name: "finance.entries.events.booksView" }));
+    const call = navigate.mock.calls.at(-1)?.[0] as { search: (previous: object) => object };
+    expect(call.search({ status: "LEDGER" })).toEqual({ status: "LEDGER", view: "books" });
+    cleanup();
+
+    routeSearch.current = { view: "books" };
+    try {
+      render(<FinanceEntriesScreen />);
+      expect(issuedQueries.at(-1)).toEqual({ view: "books", sort: DEFAULT_SORT });
+      expect(
+        screen.getByRole("checkbox", { name: "finance.entries.events.booksView" }).getAttribute("aria-checked"),
+      ).toBe("true");
+    } finally {
+      routeSearch.current = {};
+    }
+  });
+
+  it("keeps the books view from roles outside the ledger", () => {
+    vi.mocked(canReadFinance).mockReturnValue(false);
+    routeSearch.current = { view: "books" };
+    try {
+      render(<FinanceEntriesScreen />);
+      expect(screen.queryByRole("checkbox", { name: "finance.entries.events.booksView" })).toBeNull();
+      expect(issuedQueries.at(-1)).toEqual({ sort: DEFAULT_SORT });
+    } finally {
+      routeSearch.current = {};
+    }
+  });
+
+  it("offers the view menu, and Record an expense as the page's one primary action", () => {
     render(<FinanceEntriesScreen />);
 
     expect(screen.getByRole("button", { name: "dataTable.view" })).toBeTruthy();
 
-    const action = screen.getByRole("link", {
-      name: /finance\.entries\.recordAction/,
-    });
+    const action = screen.getByRole("link", { name: /record-expense/ });
     expect(action.getAttribute("href")).toBe("/finance/record");
+    // No section tabs: Money is one page (#314).
+    expect(screen.queryByRole("tablist")).toBeNull();
   });
 
   it("drops the record action along with the screen when finance reading is denied", () => {
@@ -340,7 +442,7 @@ describe("FinanceEntriesScreen", () => {
     render(<FinanceEntriesScreen />);
 
     expect(
-      screen.queryByRole("link", { name: /finance\.entries\.recordAction/ }),
+      screen.queryByRole("link", { name: /record-expense/ }),
     ).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -588,5 +690,74 @@ describe("FinanceEntriesScreen", () => {
     } finally {
       mockUseEntriesValue.hasNextPage = false;
     }
+  });
+});
+
+describe("Money page (#314)", () => {
+  it("opens on the four tiles and the month lead line", () => {
+    vi.mocked(canApproveEntries).mockReturnValue(true);
+    render(<FinanceEntriesScreen />);
+
+    expect(screen.getByText("finance.money.lead.both")).toBeTruthy();
+    const tiles = document.querySelectorAll('[data-slot="metric-tile"]');
+    expect(tiles).toHaveLength(4);
+    expect(screen.getByRole("button", { name: "finance.money.tiles.waiting" })).toBeTruthy();
+  });
+
+  it("filters the list from a tile, and clears it from the same tile", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "finance.money.tiles.missing" }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ to: "/finance/entries", search: { evidence: "MISSING" } }),
+    );
+
+    cleanup();
+    routeSearch.current = { evidence: "MISSING" };
+    render(<FinanceEntriesScreen />);
+    expect(issuedQueries.at(-1)).toMatchObject({ evidence: "MISSING" });
+    await user.click(screen.getByRole("button", { name: "finance.money.tiles.missing" }));
+    expect(navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: {} }));
+  });
+
+  it("shows an approver Reject and Approve on each waiting row, never on their own submission", () => {
+    vi.mocked(canApproveEntries).mockReturnValue(true);
+    routeSearch.current = { view: "waiting" };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FinanceEntriesScreen />
+      </QueryClientProvider>,
+    );
+
+    const row = screen.getByRole("row", { name: /FIN-014/ });
+    expect(within(row).getByRole("button", { name: "commands.reject-entry.label FIN-014" })).toBeTruthy();
+    expect(within(row).getByRole("button", { name: "commands.approve-entry.label FIN-014" })).toBeTruthy();
+    expect(within(row).getByText(/finance\.approvals\.noReceipt/)).toBeTruthy();
+    expect(screen.queryByText("FIN-015")).toBeNull();
+  });
+
+  it("gives a non-approver no waiting view and no decisions", () => {
+    routeSearch.current = { view: "waiting" };
+    render(<FinanceEntriesScreen />);
+
+    expect(screen.queryByRole("button", { name: /approve-entry/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /reject-entry/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "finance.money.tiles.waiting" })).toBeNull();
+    // The plain list instead: FIN-001 is the ledger fixture.
+    expect(screen.getByText("FIN-001")).toBeTruthy();
+  });
+
+  it("links Accounting months from the header for the roles that lock them", () => {
+    vi.mocked(canManagePeriods).mockReturnValue(true);
+    render(<FinanceEntriesScreen />);
+    expect(
+      screen.getByRole("link", { name: /finance\.periods\.title/ }).getAttribute("href"),
+    ).toBe("/finance/periods");
+  });
+
+  it("hides Accounting months from everyone else", () => {
+    render(<FinanceEntriesScreen />);
+    expect(screen.queryByRole("link", { name: /finance\.periods\.title/ })).toBeNull();
   });
 });

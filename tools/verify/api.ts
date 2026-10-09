@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DEMO_WORKSPACE, resolveAccount } from "./accounts.js";
+import { resolveAccount } from "./accounts.js";
 import { newRunDir, requireState } from "./stack.js";
 
 function readBody(raw: string | undefined): string | undefined {
@@ -18,7 +18,7 @@ export async function callApi(slot: number, method: string, route: string, role:
   const login = await fetch(`${state.urls.api}/v1/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ workspaceSlug: DEMO_WORKSPACE, username: account.username, pin: account.pin }),
+    body: JSON.stringify({ workspaceSlug: account.workspace, username: account.username, pin: account.pin }),
   });
   const session = (await login.json()) as { token?: string };
   if (login.status !== 200 || session.token === undefined) throw new Error(`login as ${account.username} failed with ${login.status}`);

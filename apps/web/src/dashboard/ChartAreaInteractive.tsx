@@ -142,7 +142,7 @@ export function ChartAreaInteractive({
                             {chartConfig[String(name) as keyof typeof chartConfig]?.label ??
                               String(name)}
                           </span>
-                          <span className="font-mono font-medium tabular-nums">
+                          <span className="font-medium tabular-nums">
                             {formatMoney(Number(value), { currency })}
                           </span>
                         </span>
@@ -151,15 +151,17 @@ export function ChartAreaInteractive({
                   />
                 }
               />
+              {/* Monotone, never "natural": a natural spline overshoots around an
+                  isolated spike and draws money below zero that was never posted (#56). */}
               <Area
                 dataKey="revenue"
-                type="natural"
+                type="monotone"
                 fill="url(#routiq-chart-revenue)"
                 stroke="var(--color-revenue)"
               />
               <Area
                 dataKey="expense"
-                type="natural"
+                type="monotone"
                 fill="url(#routiq-chart-expense)"
                 stroke="var(--color-expense)"
               />

@@ -11,6 +11,7 @@ import {
   Route,
   ShieldAlert,
   ShieldCheck,
+  ShieldOff,
   StickyNote,
   TriangleAlert,
   Undo2,
@@ -19,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { VehicleHistoryItem } from "@routiq/contracts";
-import { historyEventLabelKey } from "@/components/record-history-sheet.js";
+import { timelineAct } from "@/components/timeline.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { VehicleGates } from "./context.js";
 import type { PanelRef } from "./model.js";
@@ -43,7 +44,7 @@ const text = (value: unknown): string | null =>
 /**
  * An event's title is a sentence keyed by its type; its facts are the
  * allowlisted params the read carries. An event type added later still renders,
- * through the record history's label or, last, its raw code.
+ * through the record history's label or, last, "Other change".
  */
 export function describeEvent(
   item: VehicleHistoryItem,
@@ -53,7 +54,7 @@ export function describeEvent(
 ): EventView {
   const p = item.params;
   const key = `vehicle.history.event.${item.eventType.replace(/\./g, "-")}`;
-  const fallback = t(historyEventLabelKey(item.eventType), { defaultValue: item.eventType });
+  const fallback = timelineAct(item.eventType, t);
   const title = (values: Record<string, unknown> = {}) =>
     t(key, { defaultValue: fallback, ...values });
   const label = (fr: unknown, en: unknown) =>
@@ -128,15 +129,22 @@ export function describeEvent(
         detail: text(p["source"]) === null ? null : t(`vehicle.readings.source.${String(p["source"])}`),
         record: gates.trips ? { kind: "readings" } : null,
       };
-    case "operational_issue":
+    case "operational_issue": {
+      // `safetyCritical` is the mark as this event left it (#96).
+      const raised = item.eventType === "operational_issue.severity_raised";
+      const lowered = item.eventType === "operational_issue.severity_lowered";
       return {
-        icon: TriangleAlert,
-        tone: item.eventType === "operational_issue.reported" && p["safetyCritical"] === true ? "critical" : "neutral",
+        icon: raised ? ShieldAlert : lowered ? ShieldOff : TriangleAlert,
+        tone:
+          raised || (item.eventType === "operational_issue.reported" && p["safetyCritical"] === true)
+            ? "critical"
+            : "neutral",
         title: title(),
         titleNumber: null,
         detail: text(p["description"]),
         record: gates.maintenance ? { kind: "issue", id: subject.id } : null,
       };
+    }
     case "work_order":
       return {
         icon: item.eventType === "work_order.asset_released" ? ShieldCheck : Wrench,

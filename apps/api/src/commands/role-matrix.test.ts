@@ -26,6 +26,7 @@ const MATRIX: Readonly<Record<string, Row>> = {
   "assign-asset":                        [x, x, x, _, _, _], // transfer: ADMIN submits, FINANCE/DIRECTOR approve
   "record-meter-reading":                [x, x, _, _, x, x],
   "add-note":                            [x, x, x, x, x, x],
+  "acknowledge-note":                    [x, x, x, x, x, x], // Direction's notes; never their author (#98)
   "add-or-renew-document":               [x, x, x, _, _, _],
   // Maintenance
   "report-issue":                        [x, x, _, _, x, x],
@@ -38,6 +39,7 @@ const MATRIX: Readonly<Record<string, Row>> = {
   "reject-work-order-completion":        [x, x, _, _, _, _],
   "resolve-issue":                       [x, x, _, _, x, _],
   "dismiss-issue":                       [x, x, _, _, x, _],
+  "change-issue-severity":               [x, x, _, _, x, x], // TEC/DRV raise only; lowering is DIR/ADM (#96)
   "release-asset-to-service":            [x, x, _, _, _, _],
   // Trips
   "create-activity":                     [x, x, _, _, _, x],

@@ -182,8 +182,8 @@ describe("vehicle-workspace migrations on a database that predates them", () => 
   it("keeps an asset note's arc and tenant structural", async () => {
     const insert = (values: { assetId: string | null; entityId: string; workspaceId?: string }) =>
       pool.query(
-        `INSERT INTO notes (id, workspace_id, entity_type, entity_id, asset_id, author_membership_id, body, created_by_command_id)
-         VALUES ($1, $2, 'asset', $3, $4, $5, 'x', $6)`,
+        `INSERT INTO notes (id, workspace_id, entity_type, entity_id, asset_id, author_membership_id, author_role, body, created_by_command_id)
+         VALUES ($1, $2, 'asset', $3, $4, $5, 'ADMIN', 'x', $6)`,
         [randomUUID(), values.workspaceId ?? ws, values.entityId, values.assetId, membership, command],
       );
 

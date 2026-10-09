@@ -7,13 +7,11 @@ import { z } from "zod";
 import type { CreateBranchPayload } from "@routiq/contracts";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FormPanel,
+  FormPanelCancel,
+  FormPanelFooter,
+  FormPanelHeader,
+} from "@/components/command-form.js";
 import {
   Form,
   FormControl,
@@ -155,18 +153,18 @@ export function CreateBranchDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{label("create-branch")}</DialogTitle>
-          <DialogDescription>{t("branches.add.description")}</DialogDescription>
-        </DialogHeader>
+    <FormPanel open={open} onClose={() => onOpenChange(false)}>
+        <FormPanelHeader
+          title={label("create-branch")}
+          description={t("branches.add.description")}
+        />
 
         <Form {...form}>
           <form
-            className="flex flex-col gap-4"
+            className="flex flex-1 flex-col"
             onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
           >
+            <div className="flex flex-col gap-4 p-4">
             {errorCode && <ErrorBanner code={errorCode} />}
 
             <FormField
@@ -181,7 +179,7 @@ export function CreateBranchDialog({
                       autoComplete="off"
                       autoCapitalize="characters"
                       maxLength={8}
-                      className="font-mono uppercase"
+                      className="tabular-nums"
                       {...field}
                       onChange={(event) =>
                         field.onChange(event.target.value.toUpperCase())
@@ -239,26 +237,24 @@ export function CreateBranchDialog({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+            </div>
+
+            <FormPanelFooter>
+              <FormPanelCancel onDismiss={() => onOpenChange(false)}>
                 {t("branches.form.cancel")}
-              </Button>
+              </FormPanelCancel>
               <Button
                 type="submit"
+                className="flex-1 sm:flex-none"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting
                   ? label("create-branch", "submitting")
                   : label("create-branch", "submit")}
               </Button>
-            </DialogFooter>
+            </FormPanelFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </FormPanel>
   );
 }

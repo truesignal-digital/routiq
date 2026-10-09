@@ -158,6 +158,8 @@ describe("the status sentence and the step beside it, per role", () => {
       kind,
       occurredAt: `2026-09-24T10:${String(minute).padStart(2, "0")}:00.000Z`,
       actor: actor(ME_ID, "Hervé"),
+      note: null,
+      noteCode: null,
     });
     const direct = workOrderDetail("COMPLETED", {
       chronologie: [event("work_order.created", 1), event("work_order.approved", 2), event("work_order.completed", 3)],
@@ -220,7 +222,7 @@ describe("the status sentence and the step beside it, per role", () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: inRepair, locale: "fr-CM" });
     const block = within(await sentence());
     expect(block.getByText(/« Brake pressure warning on the Kekem descent »/)).toBeTruthy();
-    expect(screen.getByRole("tab", { name: /En ce moment/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Vue d'ensemble/ })).toBeTruthy();
   });
 
   it("says an expired document by its date, never as a legal verdict", async () => {
@@ -297,7 +299,7 @@ describe("header, phone bar and all-actions sheet, per role", () => {
   const bar: Record<Role, string[]> = {
     DIRECTOR: ["Expense", "Problem", "Trip", "More"],
     ADMIN: ["Expense", "Problem", "Trip", "More"],
-    FINANCE: ["Expense", "Reverse", "More"],
+    FINANCE: ["Expense", "Cancel entry", "More"],
     CASHIER: ["Expense", "Revenue", "Note", "More"],
     TECHNICIAN: ["Work order", "Problem", "Note", "More"],
     DRIVER: ["Fuel", "Problem", "Odometer", "More"],
@@ -338,5 +340,80 @@ describe("header, phone bar and all-actions sheet, per role", () => {
     expect(within(sheet).queryByRole("button", { name: /Record expense/ })).toBeNull();
     expect(within(sheet).queryByRole("button", { name: /Release to service/ })).toBeNull();
     expect(within(sheet).getByRole("button", { name: /Record odometer/ })).toBeTruthy();
+  });
+});
+
+// #92: after the repair, an amber middle state until a manager releases the vehicle.
+describe("grounded → repaired, waiting for release → available", () => {
+  const ready = attention("ASSET_AWAITING_RELEASE", { severity: "CRITICAL", partOfGrounding: true });
+  const done = asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) });
+  const block = async (lead: RegExp) => (await screen.findByText(lead)).closest("[role=status]") as HTMLElement;
+  const REPAIRED = /^Repair done — waiting for release to service\.$/;
+
+  it("is red while the repair is open", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      asset: inRepair,
+      attention: [attention("WORK_ORDER_IN_PROGRESS", { partOfGrounding: true })],
+    });
+    expect((await sentence()).dataset.tone).toBe("critical");
+    expect(screen.queryByText(REPAIRED)).toBeNull();
+  });
+
+  it("turns amber once the repair is completed, and offers the release to who may release", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: done, attention: [ready] });
+    const status = await block(REPAIRED);
+    expect(status.dataset.tone).toBe("waiting");
+    expect(status.textContent).toContain(`The repair (${WO_REF}) is completed; waiting on a manager to release it.`);
+    const release = within(status).getByRole("button", { name: "Release to service" }) as HTMLButtonElement;
+    expect(release.disabled).toBe(false);
+  });
+
+  it("tells other roles who releases it, without the button", async () => {
+    for (const role of ["TECHNICIAN", "FINANCE", "DRIVER"] as const) {
+      await openVehicle(`/assets/${ASSET_ID}`, { role, asset: done, attention: [ready] });
+      const status = await block(REPAIRED);
+      expect(status.dataset.tone, role).toBe("waiting");
+      expect(status.textContent, role).toContain("waiting on a manager to release it");
+      expect(within(status).queryByRole("button", { name: "Release to service" }), role).toBeNull();
+      cleanup();
+      await closeVehicle();
+    }
+  });
+
+  it("keeps the release locked for whoever completed the repair", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      asset: asset({
+        availability: grounded([groundingWorkOrder("COMPLETED", { completedBy: actor(ME_ID, "Boris") })]),
+      }),
+      attention: [ready],
+    });
+    const status = await block(REPAIRED);
+    expect(status.dataset.tone).toBe("waiting");
+    expect((within(status).getByRole("button", { name: "Release to service" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(status).getByText(/You vouched for the repair of a safety-critical problem/)).toBeTruthy();
+  });
+
+  it("stays red while another safety-critical problem is open", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      asset: done,
+      attention: [attention("ISSUE_UNPLANNED", { severity: "CRITICAL", params: { safetyCritical: true } })],
+    });
+    expect((await sentence()).dataset.tone).toBe("critical");
+    expect(screen.queryByText(REPAIRED)).toBeNull();
+  });
+
+  it("is green once released", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
+    expect((await block(/^Available\.$/)).dataset.tone).toBe("success");
+  });
+
+  it("says it in French", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: done, attention: [ready], locale: "fr-CM" });
+    const status = await block(/^Réparation terminée — en attente de remise en service\.$/);
+    expect(status.dataset.tone).toBe("waiting");
+    expect(status.textContent).toContain("en attente d'un responsable pour la remise en service");
   });
 });

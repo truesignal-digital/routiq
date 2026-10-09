@@ -9,6 +9,7 @@ import { MeCtx, useMe } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overlay.js";
 import { AppSidebar } from "./AppSidebar.js";
+import { BottomBar } from "./BottomBar.js";
 import { BranchProvider, useCurrentBranch } from "./branch-context.js";
 import { RecordCrumbProvider } from "./record-crumb.js";
 import { SiteHeader } from "./SiteHeader.js";
@@ -47,14 +48,17 @@ export function AppShell() {
         <TooltipProvider>
           <SidebarProvider>
             <AppSidebar />
-            <SidebarInset>
+            {/* A flex item beside the sidebar: without min-w-0 a wide table's
+                min-content width widens the whole page (#450). */}
+            <SidebarInset className="min-w-0 [--bottom-bar:calc(4rem+env(safe-area-inset-bottom))] md:[--bottom-bar:0px]">
               <RecordCrumbProvider>
                 <SiteHeader />
                 <BranchScopeAnnouncer />
                 <ApprovalRulesNotice />
-                <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
                   <Outlet />
                 </div>
+                <BottomBar />
               </RecordCrumbProvider>
             </SidebarInset>
           </SidebarProvider>

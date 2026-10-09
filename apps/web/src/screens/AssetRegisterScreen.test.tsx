@@ -81,6 +81,8 @@ const clerk: MeContext = {
   principalId: "00000000-0000-4000-8000-000000000002",
   principalType: "HUMAN",
   membershipId: "00000000-0000-4000-8000-000000000003",
+  displayName: "Sali Ahmadou",
+  workspaceName: "Transports Ngwa",
   role: "ADMIN",
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS"],
@@ -227,6 +229,71 @@ describe("asset register form", () => {
     expect(mocks.submit).toHaveBeenCalledOnce();
     expect(submittedPayload().capacityValue).toBe(12.5);
     expect(submittedPayload().capacityUnit).toBe("TONNE");
+  });
+});
+
+describe("plate and chassis number (#122: the Details edit's rules)", () => {
+  const LONG_CHASSIS = "WDB9634031L1234567";
+
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("registers through register-asset v2, the plate trimmed", async () => {
+    const user = userEvent.setup();
+    render(<AssetRegisterScreen />);
+
+    await fillRequiredFields(user, "TR-010");
+    await user.type(screen.getByLabelText("Registration number"), "  LT 482 AB ");
+    await user.type(screen.getByLabelText("Chassis number"), "WDB9634031L123456");
+    await user.click(screen.getByRole("button", { name: "Register asset" }));
+
+    await submitSettled();
+    const submission = mocks.submit.mock.calls[0]?.[0];
+    expect(submission.name).toBe("register-asset");
+    expect(submission.version).toBe(2);
+    expect(submission.payload.registrationNumber).toBe("LT 482 AB");
+    expect(submission.payload.chassisNumber).toBe("WDB9634031L123456");
+  });
+
+  it.each([
+    ["en", "Chassis number", "Register asset", "The chassis number is too long (17 characters at most)."],
+    ["fr-CM", "Numéro de châssis", "Enregistrer l'actif", "Le numéro de châssis est trop long (17 caractères au plus)."],
+  ])("refuses a chassis number past 17 characters in the Details edit's words (%s)", async (language, label, submit, message) => {
+    await i18n.changeLanguage(language);
+    const user = userEvent.setup();
+    render(<AssetRegisterScreen />);
+
+    await user.type(screen.getByLabelText(label), LONG_CHASSIS);
+    await user.click(screen.getByRole("button", { name: submit }));
+
+    expect(await screen.findByText(message)).not.toBeNull();
+    expect(mocks.submit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["en", "Another vehicle already has this plate."],
+    ["fr-CM", "Un autre véhicule a déjà cette immatriculation."],
+  ])("puts a plate another vehicle carries on the plate field (%s)", async (language, message) => {
+    mocks.submit.mockResolvedValueOnce({
+      ok: false,
+      code: "DUPLICATE_REGISTRATION_NUMBER",
+      metadata: { assetId: "00000000-0000-4000-8000-000000000099" },
+    });
+    const user = userEvent.setup();
+    render(<AssetRegisterScreen />);
+
+    await fillRequiredFields(user, "TR-011");
+    await user.type(screen.getByLabelText("Registration number"), "LT 482 AB");
+    await act(async () => {
+      await i18n.changeLanguage(language);
+    });
+    await user.click(screen.getByRole("button", { name: language === "en" ? "Register asset" : "Enregistrer l'actif" }));
+
+    const plate = screen.getByRole("textbox", { name: language === "en" ? "Registration number" : "Immatriculation" });
+    await waitFor(() => expect(plate.getAttribute("aria-invalid")).toBe("true"));
+    expect(screen.getAllByText(message).length).toBeGreaterThan(0);
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });
 

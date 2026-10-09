@@ -198,7 +198,7 @@ export function BranchActionDialog({
                     type="text"
                     readOnly
                     disabled
-                    className="font-mono"
+                    className="tabular-nums"
                     value={branch.code}
                   />
                   <p className="text-sm text-muted-foreground">

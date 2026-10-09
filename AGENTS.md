@@ -26,13 +26,16 @@ pnpm typecheck                    # all packages (tsc --noEmit)
 pnpm lint                         # repo guards (tools/guards); see "Guards and the ratchet"
 pnpm lint:tighten                 # lower guard baselines after you remove violations
 pnpm verify --help                # run and drive the real app on an isolated slot, with evidence (skill: verify-routiq)
+pnpm observe report               # what happened in the field: command ledger + web telemetry (ADR-0011), read-only
+pnpm metrics                      # first-load size against its ceilings (after a web build)
+pnpm perf run --slot N            # the performance ledger on a built slot (pnpm verify up --built); docs/performance/README.md is before vs today
 pnpm test                         # all packages (vitest run)
 pnpm --filter @routiq/api test     # one package
 pnpm --filter @routiq/api exec vitest run src/server.test.ts   # single test file
 pnpm db:generate                  # drizzle-kit generate (from apps/api/src/db/schema.ts)
 pnpm db:migrate                   # drizzle-kit migrate
 docker compose up -d              # Postgres 17 on localhost:5435
-docker compose --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev)
+docker compose -p routiq-appliance --profile appliance up   # ROUTIQ cold start (§6a guard 4): API :3001 + Postgres (user/pass/db: routiq/routiq/routiq_dev); its own volumes, not the dev database
 ```
 
 - Env: copy `.env.example` → `.env` (`DATABASE_URL` points at port **5435**, not 5432; API `PORT=3001`).
@@ -68,7 +71,7 @@ Never change the payload shape of a shipped command version. Add `vN+1` with a c
 
 Each registered `name.vN` has its payload's JSON Schema stored in `apps/api/src/commands/contract-snapshots/`. `contract-snapshots.test.ts` fails when a version has no snapshot, when a snapshot has no handler, or when the current schema rejects a payload the stored one accepted (a removed field, a newly required field, a removed enum value, a type change, a tighter bound). Widening passes. After adding a command version or widening one, run `pnpm --filter @routiq/api contracts:snapshot` and commit the files it writes. Never write a snapshot by hand; the script refuses to rewrite a narrowed one.
 
-**Command envelope rules** (`packages/contracts/src/envelope.ts`): tenant, actor, and branch scope are NEVER accepted from the client — the server derives them from auth. Envelope carries `commandId`, `idempotencyKey` (workspace-scoped unique; exact retry returns original result, same key + different payload → 409), `origin`, optional `expectedVersion`, `sourceArtifactIds`.
+**Command envelope rules** (`packages/contracts/src/envelope.ts`): tenant, actor, and branch scope are NEVER accepted from the client — the server derives them from auth. The dispatcher refuses a request naming them anywhere in its body (`VALIDATION_FAILED`, `packages/contracts/src/client-scope.ts`), and an identity-shaped payload field that names a target (`branchId`, `principalId`, `branchScope`) needs an entry in `SCOPE_TARGETS` (`commands/registry.test.ts`) saying what it points at. Envelope carries `commandId`, `idempotencyKey` (workspace-scoped unique; exact retry returns original result, same key + different payload → 409), `origin`, optional `expectedVersion`, `sourceArtifactIds`.
 
 **Reads** are GET routes in `apps/api/src/reads/`, running inside `inWorkspace`. Every read must declare and check its gates itself: the module it belongs to, the roles allowed to see it, and the branch scope of the caller. Reads that skipped a gate caused #40, #58 and #59; a `defineRead` wrapper that makes the gates required is planned. List reads use `listQuery`/`listResponse` with keyset cursors from `reads/cursor.ts` (ADR-0003). Business days come from `reads/business-date.ts` (workspace time zone).
 
@@ -109,11 +112,17 @@ The UI consistency system and the product direction live in [`docs/design/consis
 2. Writes go through `registerCommand`; reads check module, role and branch scope.
 3. The UI follows the paved paths in `apps/web/AGENTS.md`.
 4. `pnpm typecheck`, `pnpm lint` and `pnpm test` pass, and no guard baseline went up.
-5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions.
+5. The PR targets `develop`, and its body has a **Walkthrough video** section linking a recording that shows the feature working in the app and nothing around it breaking. English app UI and English captions. The default is a reel: `pnpm verify drive flow:<name> --reel`, plus `pnpm verify reel --before <base run>` when behaviour changed (skill: verify-routiq). A long narrated walkthrough only when the owner asks.
 6. Before requesting merge, a reviewer using a different model from the author runs `.agents/skills/code-review/SKILL.md` against the linked issue and exact current PR head. The report records author/reviewer models, base/head SHAs, one verdict per acceptance line, file:line evidence, and reproduction steps for blockers. Link the report in the PR body. Missing spec or unverified acceptance prevents approval. Runtime reports, including Sentry intake reports, must first be triaged into reproducible behavior and explicit acceptance criteria; telemetry and a review video alone do not approve a fix.
 7. While testing, review the rest of the app for anything that looks wrong or broken. File each finding as its own issue (labels `walkthrough-finding` and `needs-triage`) or its own PR, and never fix it inside the feature PR. List them under **Found while testing**, or write "none".
 
+## Observability
+
+`pnpm observe report` reads the command ledger (every write: outcome, failure code, user and server time, `duration_ms`) and field telemetry (`telemetry.events`: errors, devices, vitals, journeys; ADR-0011). Prove performance in the lab (`pnpm verify ... --throttle phone`); use the field for errors, refusals and real devices.
+
 ## Guards and the ratchet
+
+Performance is ratcheted too. `pnpm perf run` measures every screen on the pilot-phone profile against `tools/perf/ceilings.json`; a PR that makes the app faster runs `pnpm perf run --record` and `pnpm perf tighten`, and a slower number needs `pnpm perf raise <metric> --reason "..."`. First-load size is ratcheted the same way: `pnpm metrics` in CI, `pnpm metrics tighten` to lock a gain in, and `pnpm metrics raise <metric> --reason "..."` when growth is worth it (a hand-edited ceiling fails).
 
 `pnpm lint` runs the rules in `tools/guards/rules.ts`. Each rule names a mistake that must not spread and says what to do instead. Known violations are counted per file in `tools/guards/baselines.json`, and those counts may only go down:
 
@@ -138,6 +147,7 @@ Each row is a mistake agents made at least twice here, paired with what now fail
 - Merge rule for humans and agents: merge only with green `ci` and evidence/ratchet checks when present, resolved blocking findings, and `review:approve` backed by a different-model report for the current base/head SHAs. Every acceptance line must PASS. `review:changes` blocks merge. Any new commit invalidates approval; remove stale approval before requesting another review. Re-fetch the live PR before merging and bind the merge to its reviewed head SHA. CodeRabbit summaries, skipped reviews and a green status alone are not independent acceptance review.
 - `.github/branch-protection.json` records the required GitHub settings for `main` and `develop`: a PR, current green `ci` and resolved conversations, including for administrators. GitHub requires no separate approving review or latest-push approval; independent review remains mandatory through the report/label rule above. Read back the live API settings before claiming protection. GitHub does not enforce model identity, report SHA or `review:approve`; the human or authorized agent merger checks them. See `docs/agents/review-workflow.md`.
 - Commit messages: short imperative subject; body only when the why isn't obvious.
+- Write PR bodies with the `pr` skill (`.agents/skills/pr/SKILL.md`).
 - Issues live in GitHub (`docs/agents/issue-tracker.md`). `.scratch/` is read-only history; add nothing there.
 
 ## Agent skills
@@ -153,3 +163,7 @@ Default five roles, label string = role name (`needs-triage`, `needs-info`, `rea
 ### Domain docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`. Use the glossary's terms; don't drift to the synonyms it lists under _Avoid_.
+
+### Standing briefs
+
+An outcome an agent owns over many sessions, in `docs/agents/briefs/`. A session takes one only when the owner names it: [`speed-and-evidence.md`](docs/agents/briefs/speed-and-evidence.md).

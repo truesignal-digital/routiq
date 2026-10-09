@@ -29,6 +29,13 @@ const ISSUE_RESOLVERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"];
 
 const ISSUE_DISMISSERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"];
 
+/**
+ * Taking the safety-critical mark off a problem overrules a report that called
+ * the vehicle unsafe: the managers' call (#96). Adding it is open to whoever
+ * reports problems.
+ */
+const SEVERITY_LOWERERS: readonly Role[] = ["DIRECTOR", "ADMIN"];
+
 const WORK_ORDER_WRITERS: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"];
 
 /**
@@ -68,6 +75,22 @@ export function canDismissIssues(
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
   return allowed(ISSUE_DISMISSERS, role, enabledModules);
+}
+
+/** Marking an open problem safety-critical after it was reported (#96). */
+export function canRaiseIssueSeverity(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return allowed(ISSUE_REPORTERS, role, enabledModules);
+}
+
+/** Taking the safety-critical mark off an open problem (#96). */
+export function canLowerIssueSeverity(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return allowed(SEVERITY_LOWERERS, role, enabledModules);
 }
 
 /** Opening, declaring completion on, and cancelling a work order. */

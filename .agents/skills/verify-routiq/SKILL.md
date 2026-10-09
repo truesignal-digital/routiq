@@ -5,7 +5,7 @@ description: "Run the real ROUTIQ app (Postgres, S3 storage, Fastify API, Vite w
 
 # Verify ROUTIQ
 
-`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa demo workspace, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature.
+`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa and Littoral Voyages demo workspaces, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature.
 
 Never touch the owner's dev stack: Postgres on 5435 with volume `routiq_pgdata`, the API on 3001, web on 5173, the demo box on 8080. The CLI refuses those ports and only ever removes `routiq-verify-N` compose projects.
 
@@ -25,7 +25,8 @@ pnpm verify up                       # slot 1; pick another with --slot N (0-99)
 
 Slot N owns ports 24000+10N: Postgres +0, storage +1, API +2, web +3. Slot 1 is web `http://127.0.0.1:24013`, API `http://127.0.0.1:24012`. Ready means `up` printed `web up, proxying /v1 to the slot API`; it takes about 15 s warm. PIDs, ports and log paths are in `.verify/slots/N/state.json`.
 
-- Already up: `up` says so and does nothing. `pnpm verify up --reseed` resets the demo workspace (`seed-demo --reset`) on a running slot; do this between runs that mutate data.
+- `pnpm verify up --built` builds the web app and serves the build with `vite preview` (same port, same `/v1` proxy), so load times match a deployed app. `pnpm perf` needs it; the dev server's unbundled cold load says nothing about users. Rebuild by `down` then `up --built` after web changes.
+- Already up: `up` says so and does nothing. `pnpm verify up --reseed` resets both demo workspaces (`seed-demo --reset`) on a running slot; do this between runs that mutate data.
 - A port in use means another checkout holds that slot. Pick another `--slot`; never kill its processes.
 - Two checkouts can run at once on different slots. Code changes in this checkout reload in the web app (Vite HMR); API changes need `down` then `up`.
 
@@ -51,7 +52,7 @@ pnpm verify api POST /v1/commands/approve-entry --role finance --json @body.json
 pnpm verify db "select entry_number, status from financial_entries order by 1"
 ```
 
-Options for `login` and `drive`: `--role` (default `director`), `--lang fr|en` (default `fr`), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
+Options for `login` and `drive`: `--role` (default `director`), `--lang fr|en` (default `fr`), `--reel` (records the screen and builds `reel.mp4`, see Reel), `--throttle phone` (CPU 4x slower and slow 4G: 150 ms RTT, 1.6 Mbps down, like the pilot users' phones; applied after sign-in, because the dev server's unbundled cold load says nothing about a built app's), `--video` (records `drive.webm`), `--viewport 360x740` (phone; the sidebar becomes a sheet), `--strict` (fail on console errors), `--headed`.
 
 Every drive logs in through the real form (Workspace `transports-ngwa`, Username, PIN code, "Se connecter"). Seeded accounts, from `apps/api/scripts/seed-demo.ts`:
 
@@ -66,7 +67,18 @@ Every drive logs in through the real form (Workspace `transports-ngwa`, Username
 | `driver` (`field`) | sali | 333333 | DRIVER (Chauffeur) | all |
 | `driver-yde` | patrice | 444444 | DRIVER | YDE only (sees no trucks) |
 
-Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do what: `docs/reference/roles-and-access.md`.
+The seed also creates a passenger company, `littoral-voyages` (Littoral Voyages, PASSENGER_TRANSPORT, branches DLA and YDE), from `apps/api/scripts/seed-demo-passenger.ts`. Its accounts log in to that workspace automatically:
+
+| `--role` | User | PIN | Role | Branches |
+|---|---|---|---|---|
+| `passenger-director` | josiane | 101010 | DIRECTOR | all |
+| `passenger-admin` | paul | 202020 | ADMIN | all |
+| `passenger-finance` | aline | 404040 | FINANCE | all |
+| `passenger-cashier` | grace | 606060 | CASHIER | DLA only |
+| `passenger-technician` | bertrand | 505050 | TECHNICIAN | all |
+| `passenger-driver` | eric | 303030 | DRIVER | all |
+
+Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare role code picks the trucking account. Who may do what: `docs/reference/roles-and-access.md`.
 
 **Language.** The app starts in French. A choice made on More is stored per device in `localStorage["routiq-language"]` and survives full loads (#127). `--lang en` switches through the UI (Plus → English) after login, so every run starts from a clean browser and proves the switch. Navigate by clicking or with `ctx.nav(route)`; `page.goto` is fine for deep links now that the choice persists.
 
@@ -78,18 +90,30 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`). Who may do
 | `switch-user` | sign out, sign in as the cashier, role from `GET /v1/me` | no |
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
+| `add-note` | VH003 → Add note: empty submit shows the error summary and sends nothing, its link focuses the field, then the note lands in `GET /v1/assets/:id/history` (#290). Desktop or `--viewport 390x844` | yes |
+| `assigned-driver` | VH003 → All actions → Change assigned driver → Details and History say assigned driver, never custodian (#91) | yes |
 | `work-order` | create a work order from a problem, complete it with a 55,000 XAF cost | yes |
+| `issue-severity` | as the driver: report a problem on VH001 unticked, then Mark as safety-critical → grounded, History shows it; `--role admin` after it: take the mark off with a reason → still grounded (#96) | yes |
+| `direction-note` | as Direction: write a note on VH001 → it waits in Now → To do; `--role driver` after it: the note is in the To do, Mark as seen → it leaves, the note says "Seen by" (#98) | yes |
 | `finance-entry` | entries list → drawer → Open full screen → detail | no |
-| `approve-entry` | approvals queue → ⋯ → Approve (one tap) → entry POSTED | yes |
-| `approve-from-panel` | approvals queue → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
-| `reverse-entry` | detail → Reverse with reason → reversal entry linked back | yes |
+| `approve-entry` | Money → Waiting your approval → row Approve (one tap) → entry POSTED | yes |
+| `money-page` | Money: lead line, tiles = `GET /v1/finance/summary`, waiting tile → row Reject dialog / Approve, `/finance/approvals` redirect, Accounting months link (#314) | yes |
+| `approve-from-panel` | Money waiting view → entry number → record panel (receipt, history) → Approve → entry POSTED, row gone | yes |
+| `repaired-awaiting-release` | as the technician: VH003 red → Complete work → amber "Repair done — waiting for release to service", no release button; as the Administrateur: amber with Release to service → release → green (#92) | yes |
+| `record-and-approve-expense` | as the cashier, record a 150,000 XAF expense → sign in as Finance → approve it; after each command the entry's history holds that command's audit event (#153). Run with `--role cashier` | yes |
+| `reverse-entry` | detail → Cancel entry, reason Wrong details → Record again pre-filled → new entry; original REVERSED with its reason | yes |
 | `trips` | trips list → a closed trip's detail | no |
+| `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
-| `settings` | More → Branches, Users, People against their reads | no |
+| `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
+| `phone-list-rows` | every module list at 390 px: rows at least 60 px, no card border, no stray " · –"; entries → Filters → pick a status → "Filters (1)" and the rows match `GET /v1/finance/entries?status=POSTED` (#300). Run with `--viewport 390x844` | no |
+| `form-fits-viewport` | entry detail → Edit (Sali's pending entry), Reject (pending, as Finance), Reverse (posted, as Finance) at 1440 × 900, 1366 × 768 and 390 × 844 in fr and en: the form's surface, title and submit stay inside the window and the submit is not covered (#470) | no |
+| `design-figures` | Home, Money, an entry's detail and Trucks: no visible text in a monospace face or CSS uppercase; fails naming each offender (DS-1, DS-4, #310). Run at 1440 and `--viewport 390x844`, fr and en | no |
+| `scoped-header` | Douala picked, light and dark, on Home scrolled under the header: header background opaque, `::before` tint at primary 5% covering it at z-index -10, controls win the hit test, header pixels unchanged by scrolling; then all branches: plain header (#57). Checks the run's `--lang` and `--viewport` | no |
 | `desktop-fit` | the finance entries list at 1440 × 900 and 1280 × 800, sidebar open, fr and en, as admin, finance, cashier and driver: no table scrolls inside its card, no row ⋯ menu past the card's edge, opening the menu doesn't hide the entry number (#436) | no |
 
-A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label)`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. Copy a flow as a starting point. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
+A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `tools/verify/browser.ts`. `ctx` gives `page` (Playwright), `nav`, `shot(label, { caption, highlight })`, `quiet()` (waits for `/v1` traffic to settle), `t(fr, en)` for labels, `log(line)`, `apiGet(path)` as the logged-in user, plus `account`, `lang` and `state`. `caption` is one English sentence saying what the frame proves; `highlight` is a locator the shot outlines, and the reel zooms into it. Copy a flow as a starting point; `approve-from-panel` uses both. Prefer roles and accessible names (`getByRole("button", { name, exact: true })`), scope to a `dialog` or `row` when a name repeats, and look record numbers up through `apiGet` instead of hardcoding them.
 
 `api` prints the status and pretty JSON and never prints the token. Commands take `{ "version": 1, "envelope": { "commandId": "<uuid>", "idempotencyKey": "<unique>", "origin": "HUMAN_UI", "expectedVersion": <n> }, "payload": { ... } }`. Quote paths with `?` in zsh: `pnpm verify api GET '/v1/finance/entries?status=POSTED'`.
 
@@ -100,9 +124,11 @@ A DriveScript is a default export `async (ctx) => {}`; see `DriveContext` in `to
 Each `drive`, `login` and `api` run writes a new directory, printed on stdout: `.verify/<UTC time>-<command>-s<slot>/`.
 
 - `NN-<label>.png`: full-page screenshots, one per route or `shot()`; `failed-<step>.png` when a step fails.
+- `frames/NN-<label>.png`: the same moment at viewport size, for the contact sheet.
+- `cast/` with `--reel`: every painted frame as a JPEG and `index.json` with their times.
 - `console-errors.txt`: `console.error` and uncaught errors, message plus first app frame.
 - `failed-requests.txt`: responses with status 400 or higher and network failures. Requests the app cancels itself (`net::ERR_ABORTED` on navigation) are counted on stdout, not listed.
-- `summary.json`: slot, commit, account, language, each step with PASS/FAIL and URL, counts.
+- `summary.json`: slot, commit, account, language, each step with PASS/FAIL and URL, the shots with their captions, times and highlight boxes, and `metrics`: API requests, console errors, failed requests, layout shifts and CLS since the last full load, DOM nodes at the end.
 - `drive.webm` with `--video`.
 - `request.json` and `response.json` for `api`.
 - `up` writes `api.log`, `web.log`, `seed.log` and `compose.log` to its own run directory.
@@ -113,7 +139,31 @@ Proof standards:
 - Capture the action and the resulting state, not only the final screen.
 - Cross-check side effects with a read: `apiGet` inside the flow, or `pnpm verify api GET ...` and `pnpm verify db "select ..."` after. A toast is not proof.
 - Open the screenshots you cite. Report console errors and failed requests even when the drive passes.
-- For walkthrough videos (English UI, English captions) use the `review-video` kit against a slot's web URL; `--video` here is raw evidence, not a walkthrough.
+- For PR evidence build a reel (below). The long narrated walkthrough (the `review-video` kit) is only for when the owner asks; `--video` here is raw evidence, not a walkthrough.
+
+## Reel
+
+```bash
+pnpm verify drive flow:approve-from-panel --role finance --lang en --reel   # records the screen, writes reel.mp4 at the end
+pnpm verify reel .verify/<after-run> --before /path/to/base-checkout/.verify/<before-run> --title "What changed (#NN)"
+```
+
+A reel is the PR evidence: a 1080p mp4 of the real flow, usually 10 to 25 seconds, plus `reel-sheet.png`, a contact sheet of every shot. `--reel` records every frame the page paints (Chrome screencast, `cast/` in the run directory) and marks each `shot()` as a beat. The reel replays the recording in the app's own fonts and colours (read from `apps/web/src/styles.css`): it plays up to each shot, holds there while the caption shows and the camera eases into the highlight, then moves on, and it ends on the run's counts. Idle stretches longer than 0.6 s play at 0.6 s; the clock above each pane always shows real seconds.
+
+With `--before`, both runs play side by side, synced at each shot (`reel-compare.mp4`), and the end card shows each count before and after. A before run that failed stops at the first screen it never reached, with the reason in red ("Stopped at 31.2 s: couldn't click within 30 s"), and its counts are shown without a win/loss verdict. To get a before run: `git worktree add --detach <dir> origin/develop`, `pnpm install` there, `pnpm verify up --slot <other>` from it, then drive the same flow file by its absolute path from that checkout with `--reel`. The base checkout's `tools/verify` must already record casts; for an older base, copy this checkout's `tools/verify/*.ts` over it first. Remove the extra worktree and `down` its slot afterwards.
+
+Before uploading, open `reel-sheet.png` and pull a few frames out of the mp4 (`ffmpeg -ss 5 -i reel.mp4 -frames:v 1 check.png`) to check the captions match what's on screen. Needs `ffmpeg` on the machine.
+
+## Observe
+
+Drives send real telemetry, and every command lands in the ledger, so a slot is a small field:
+
+```bash
+pnpm observe report --slot N            # ledger, refusals, write lag, approval wait, client errors, devices, journeys, vitals, server routes
+pnpm observe report --slot N --json     # the same for scripts
+```
+
+Use it to read a change's effect on journeys (`command:<name>`, `route:<template>`, `app:usable`) and on server time, and to check a drive caused no client errors. Lab percentiles from a handful of drives are anecdotes; say n when you quote them.
 
 ## Cleanup
 

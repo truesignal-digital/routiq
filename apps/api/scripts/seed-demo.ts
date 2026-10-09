@@ -1,22 +1,31 @@
 import "dotenv/config";
-import { DOCUMENT_EXPIRING_WINDOW_DAYS, type Role } from "@routiq/contracts";
-import type { CommandOutcome } from "../src/commands/dispatcher.js";
-import type { AuthContext } from "../src/auth/types.js";
+import { DOCUMENT_EXPIRING_WINDOW_DAYS } from "@routiq/contracts";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { resolveAuthContext } from "../src/auth/context.js";
-import { authDb, authPool, db, pool } from "../src/db/client.js";
+import { authDb, authPool, pool } from "../src/db/client.js";
 import * as schema from "../src/db/schema.js";
-import { dispatchCommand } from "../src/commands/dispatcher.js";
-import { addDays, currentBusinessDate } from "../src/reads/business-date.js";
+import { addDays } from "../src/reads/business-date.js";
 import "../src/server.js";
-import { appointDirector } from "./appoint-director.js";
-import { deterministicProvisionId, provisionTenant } from "./provision.js";
+import {
+  demoKit,
+  demoUtcOffset,
+  type AddedMember,
+  type DemoUser,
+} from "./seed-demo-kit.js";
+import { seedLittoralVoyages } from "./seed-demo-passenger.js";
+import { assertResettable, DEMO_WORKSPACE_SLUGS } from "./seed-demo-slugs.js";
 
 const demoWorkspaceSlug = "transports-ngwa";
 const workspaceSlug = demoWorkspaceSlug;
 const branchCode = "DLA";
-const demoId = (name: string) =>
-  deterministicProvisionId(`seed-demo:${workspaceSlug}:${name}`);
+const kit = demoKit(workspaceSlug);
+const demoId = kit.id;
+const {
+  actor,
+  runCommand,
+  assetState,
+  assetRowVersion,
+  workOrderRowVersion,
+} = kit;
 
 const ids = {
   workspace: demoId("workspace"),
@@ -77,14 +86,6 @@ const ids = {
   vh001AirConCost: demoId("entry:VH001:air-conditioning"),
 };
 
-interface DemoUser {
-  id: string;
-  username: string;
-  displayName: string;
-  pin: string;
-  role: Role;
-}
-
 /**
  * Provisioned with the workspace; all three see every branch. Émilienne is the
  * provisioned first account, so she is the workspace's DIRECTOR (ADR-0009).
@@ -129,11 +130,6 @@ const bafoussamBranch = {
   name: "Bafoussam",
 };
 const extraBranches = [yaoundeBranch, bafoussamBranch];
-
-interface AddedMember extends DemoUser {
-  /** `ALL`, or the branches the member is scoped to. */
-  branches: "ALL" | Array<{ id: string; code: string }>;
-}
 
 /**
  * Members added after provisioning, one for every role the three provisioned
@@ -184,20 +180,8 @@ const addedMembers: AddedMember[] = [
   },
 ];
 
-function commandId(name: string): string {
-  return demoId(`command:${name}`);
-}
-
-function idempotencyKey(name: string): string {
-  return `seed-demo:${workspaceSlug}:${name}`;
-}
-
 async function resetDemoWorkspace(slug: string): Promise<boolean> {
-  if (slug !== demoWorkspaceSlug) {
-    throw new Error(
-      `Refusing to reset workspace "${slug}"; only "${demoWorkspaceSlug}" may be reset.`,
-    );
-  }
+  assertResettable(slug);
 
   return authDb.transaction(async (tx) => {
     const [workspace] = await tx
@@ -244,6 +228,9 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
         ENABLE TRIGGER financial_postings_pending_delete,
         ENABLE TRIGGER financial_postings_balance_on_delete
     `);
+    await tx
+      .delete(schema.noteAcknowledgements)
+      .where(eq(schema.noteAcknowledgements.workspaceId, workspace.id));
     await tx
       .delete(schema.notes)
       .where(eq(schema.notes.workspaceId, workspace.id));
@@ -356,246 +343,8 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
   });
 }
 
-async function existingWorkspaceId(slug: string): Promise<string | undefined> {
-  const [workspace] = await authDb
-    .select({ id: schema.workspaces.id })
-    .from(schema.workspaces)
-    .where(eq(schema.workspaces.slug, slug))
-    .limit(1);
-  return workspace?.id;
-}
-
-/**
- * Provisioning is skipped, not replayed, when the workspace is already there.
- * Its idempotency key moved to `provision-workspace.v2` with issue #20 (and
- * `.v3` with ADR-0009), so a
- * workspace provisioned under the old key finds no receipt: the command
- * re-executes and answers 409 DUPLICATE_WORKSPACE_SLUG. Every demo seeded
- * before that bump — the deployed one included — is in exactly that state, so
- * it is the existence check rather than the receipt that lets a re-seed reach
- * the commands after it.
- */
-async function provisionOnce(): Promise<void> {
-  const existing = await existingWorkspaceId(workspaceSlug);
-  if (existing === ids.workspace) {
-    console.log(`Already provisioned: workspace id=${existing} slug=${workspaceSlug}`);
-    return;
-  }
-  if (existing !== undefined) {
-    throw new Error(
-      `Workspace "${workspaceSlug}" exists under id ${existing}, not the deterministic ${ids.workspace}; refusing to seed into it.`,
-    );
-  }
-
-  await provisionTenant(
-    {
-      workspace: {
-        id: ids.workspace,
-        slug: workspaceSlug,
-        name: "Transports Ngwa",
-      },
-      branches: [
-        {
-          id: ids.branch,
-          code: branchCode,
-          name: "Douala",
-        },
-      ],
-      admin: {
-        id: ids.emilienne,
-        displayName: "Émilienne",
-        username: "emilienne",
-        pin: "111111",
-      },
-      users: users.slice(1).map((user) => ({
-        ...user,
-        branchScope: "ALL",
-      })),
-      enabledPresets: ["TRUCKING"],
-    },
-    console.log,
-    {
-      commandId: commandId("provision-workspace"),
-      /**
-       * Versioned on this one command: provisioning changed shape (issue #20,
-       * then ADR-0009's roles), and reusing a key across a shape change is a
-       * 409 rather than a replay. Every other seed command keeps its key, or a
-       * re-seed would write its records a second time.
-       */
-      idempotencyKey: idempotencyKey("provision-workspace.v3"),
-    },
-  );
-}
-
-async function branchCodesOf(workspaceId: string): Promise<string[]> {
-  const rows = await authDb
-    .select({ code: schema.branches.code })
-    .from(schema.branches)
-    .where(eq(schema.branches.workspaceId, workspaceId));
-  return rows.map((row) => row.code).sort();
-}
-
-async function actor(principalId: string): Promise<AuthContext> {
-  const context = await resolveAuthContext(authDb, {
-    workspaceId: ids.workspace,
-    principalId,
-  });
-  if (!context) throw new Error(`Unable to resolve demo user ${principalId}`);
-  return context;
-}
-
-async function runCommand(
-  context: AuthContext,
-  operation: string,
-  payload: unknown,
-  options: { expectedVersion?: number; clientOccurredAt?: string; version?: number } = {},
-): Promise<CommandOutcome | undefined> {
-  const name = operation.split(":", 1)[0]!;
-  const result = await dispatchCommand(db, context, {
-    name,
-    version: options.version ?? 1,
-    envelope: {
-      commandId: commandId(operation),
-      idempotencyKey: idempotencyKey(operation),
-      origin: "API",
-      ...(options.expectedVersion === undefined
-        ? {}
-        : { expectedVersion: options.expectedVersion }),
-      ...(options.clientOccurredAt === undefined
-        ? {}
-        : { clientOccurredAt: options.clientOccurredAt }),
-    },
-    payload,
-  });
-  if ("error" in result.body) {
-    /**
-     * A reused key means this step already ran, under a payload that has since
-     * been edited in this file — `close: true` joined the Garoua sheet after
-     * the demo was first seeded, and a re-seed has met a 409 there ever since.
-     * The step is done: the record it wrote is the one the demo has been
-     * telling its story about, and rewriting it is precisely what a re-seed
-     * must not do. So it is skipped loudly rather than fatally, and the
-     * commands added to this file after it still get their turn.
-     */
-    if (result.body.error.code === "IDEMPOTENCY_KEY_REUSED") {
-      console.warn(
-        `Skipped ${operation}: already seeded under an earlier version of its payload.`,
-      );
-      return undefined;
-    }
-    throw new Error(
-      `${operation} failed (${result.status} ${result.body.error.code}): ${JSON.stringify(result.body.error.metadata ?? {})}`,
-    );
-  }
-  return result.body;
-}
-
-/**
- * The demo workspace is in Douala, and Cameroon keeps UTC+1 all year, so a
- * fixed offset turns a local wall-clock time into an exact instant.
- */
-const demoTimezone = "Africa/Douala";
-const demoUtcOffset = "+01:00";
-
 /** The command whose receipt dates the vehicle workspace story. */
 const storyAnchorOperation = "report-issue:VH003:brakes";
-
-/**
- * The vehicle workspace story is dated relative to the day it was first seeded
- * (DECISIONS 6), so "expired three days ago" is true on the day it is shown.
- * The anchor is read back from the first story command's receipt: a re-seed on
- * a later day then sends the same payloads again and replays, where anchoring
- * on today would change every dated payload and meet IDEMPOTENCY_KEY_REUSED.
- * `--reset` deletes that receipt, so a fresh seed re-anchors on today.
- */
-async function storyToday(): Promise<string> {
-  const [receipt] = await authDb
-    .select({ executedAt: schema.commands.executedAt })
-    .from(schema.commands)
-    .where(
-      and(
-        eq(schema.commands.workspaceId, ids.workspace),
-        eq(schema.commands.idempotencyKey, idempotencyKey(storyAnchorOperation)),
-        eq(schema.commands.status, "EXECUTED"),
-      ),
-    )
-    .limit(1);
-  return currentBusinessDate(receipt?.executedAt ?? new Date(), demoTimezone);
-}
-
-async function assetState(assetId: string) {
-  const [asset] = await authDb
-    .select({
-      lifecycleStatus: schema.assets.lifecycleStatus,
-      registrationNumber: schema.assets.registrationNumber,
-      rowVersion: schema.assets.rowVersion,
-    })
-    .from(schema.assets)
-    .where(and(eq(schema.assets.workspaceId, ids.workspace), eq(schema.assets.id, assetId)));
-  if (!asset) throw new Error(`Asset ${assetId} is missing`);
-  return asset;
-}
-
-async function assetRowVersion(assetId: string): Promise<number> {
-  return (await assetState(assetId)).rowVersion;
-}
-
-async function workOrderRowVersion(workOrderId: string): Promise<number> {
-  const [workOrder] = await authDb
-    .select({ rowVersion: schema.workOrders.rowVersion })
-    .from(schema.workOrders)
-    .where(
-      and(
-        eq(schema.workOrders.workspaceId, ids.workspace),
-        eq(schema.workOrders.id, workOrderId),
-      ),
-    );
-  if (!workOrder) throw new Error(`Work order ${workOrderId} is missing`);
-  return workOrder.rowVersion;
-}
-
-/** Every login in the workspace, read back rather than assembled from the payloads above. */
-async function accountsSummary() {
-  const pins = new Map(
-    [...users, ...addedMembers].map((user) => [user.username, user.pin]),
-  );
-  const branchCodes = new Map(
-    (
-      await authDb
-        .select({ id: schema.branches.id, code: schema.branches.code })
-        .from(schema.branches)
-        .where(eq(schema.branches.workspaceId, ids.workspace))
-    ).map((branch) => [branch.id, branch.code]),
-  );
-  const rows = await authDb
-    .select({
-      username: schema.credentials.username,
-      displayName: schema.principals.displayName,
-      role: schema.memberships.role,
-      allBranches: schema.memberships.allBranches,
-      branchIds: schema.memberships.branchIds,
-    })
-    .from(schema.memberships)
-    .innerJoin(schema.principals, eq(schema.principals.id, schema.memberships.principalId))
-    .innerJoin(
-      schema.credentials,
-      and(
-        eq(schema.credentials.workspaceId, schema.memberships.workspaceId),
-        eq(schema.credentials.principalId, schema.memberships.principalId),
-      ),
-    )
-    .where(eq(schema.memberships.workspaceId, ids.workspace))
-    .orderBy(asc(schema.credentials.username));
-  return rows.map((row) => ({
-    username: row.username,
-    displayName: row.displayName,
-    role: row.role,
-    branchScope: row.allBranches
-      ? "ALL"
-      : row.branchIds.map((branchId) => branchCodes.get(branchId) ?? branchId),
-    pin: pins.get(row.username) ?? null,
-  }));
-}
 
 /** What the vehicle workspace shows for one truck, read back after seeding. */
 async function vehicleSummary(assetId: string, today: string) {
@@ -748,31 +497,42 @@ async function vehicleSummary(assetId: string, today: string) {
   };
 }
 
-try {
-  if (process.argv.includes("--reset")) {
-    const deleted = await resetDemoWorkspace(workspaceSlug);
-    console.log(
-      deleted
-        ? "Reset: deleted existing workspace"
-        : "Reset: no existing workspace to delete",
-    );
-  }
-
-  await provisionOnce();
-  // A demo seeded before ADR-0009 was migrated with no DIRECTOR; the vendor
-  // path gives Émilienne the role a fresh provisioning gives her.
-  const [emilienneMembership] = await authDb
-    .select({ role: schema.memberships.role })
-    .from(schema.memberships)
-    .where(
-      and(
-        eq(schema.memberships.workspaceId, ids.workspace),
-        eq(schema.memberships.principalId, ids.emilienne),
-      ),
-    );
-  if (emilienneMembership?.role !== "DIRECTOR") {
-    await appointDirector(workspaceSlug, "emilienne", console.log);
-  }
+/**
+ * The trucking company. Its provisioning key is versioned on this one command:
+ * provisioning changed shape (issue #20, then ADR-0009's roles), and reusing a
+ * key across a shape change is a 409 rather than a replay. Every other seed
+ * command keeps its key, or a re-seed would write its records a second time.
+ */
+async function seedTransportsNgwa() {
+  await kit.provisionOnce(
+    {
+      workspace: {
+        id: ids.workspace,
+        slug: workspaceSlug,
+        name: "Transports Ngwa",
+      },
+      branches: [
+        {
+          id: ids.branch,
+          code: branchCode,
+          name: "Douala",
+        },
+      ],
+      admin: {
+        id: ids.emilienne,
+        displayName: "Émilienne",
+        username: "emilienne",
+        pin: "111111",
+      },
+      users: users.slice(1).map((user) => ({
+        ...user,
+        branchScope: "ALL",
+      })),
+      enabledPresets: ["TRUCKING"],
+    },
+    "provision-workspace.v3",
+  );
+  await kit.ensureDirector(ids.emilienne, "emilienne");
 
   const [emilienne, boris, sali] = await Promise.all([
     actor(ids.emilienne),
@@ -780,35 +540,9 @@ try {
     actor(ids.sali),
   ]);
 
-  await Promise.all(
-    extraBranches.map((branch) =>
-      runCommand(emilienne, `create-branch:${branch.key}`, {
-        branchId: branch.id,
-        code: branch.code,
-        name: branch.name,
-      }),
-    ),
-  );
-
-  // After the branches exist: add-member proves every branch id in the scope
-  // belongs to this workspace before it writes the membership. Through the
-  // command rather than the provisioning payload, which is frozen behind its key.
-  for (const member of addedMembers) {
-    await runCommand(
-      emilienne,
-      `add-member:${member.username}`,
-      {
-        principalId: member.id,
-        displayName: member.displayName,
-        username: member.username,
-        pin: member.pin,
-        role: member.role,
-        branchScope:
-          member.branches === "ALL" ? "ALL" : member.branches.map((branch) => branch.id),
-      },
-      { version: 2 },
-    );
-  }
+  // Through the commands rather than the provisioning payload, which is frozen
+  // behind its key.
+  await kit.addBranchesAndMembers(emilienne, extraBranches, addedMembers);
 
   const [herve, nadege] = await Promise.all([actor(ids.herve), actor(ids.nadege)]);
 
@@ -1081,7 +815,7 @@ try {
   // what the recorded demos show. Each step goes through its command as the
   // member who would do it in the yard, and dates hang off `today` (see
   // storyToday) so the story reads the same on the day it is shown.
-  const today = await storyToday();
+  const today = await kit.storyToday(storyAnchorOperation);
   const day = (offset: number) => addDays(today, offset);
   const at = (offset: number, time: string) => `${day(offset)}T${time}:00${demoUtcOffset}`;
 
@@ -1192,7 +926,7 @@ try {
       noteId: ids.vh003HandoverNote,
       entityType: "asset",
       entityId: ids.vh003,
-      body: "Custodian handover checked: tools and spare wheel on board",
+      body: "Assigned driver handover checked: tools and spare wheel on board",
     },
     { clientOccurredAt: at(-1, "09:05") },
   );
@@ -1339,75 +1073,88 @@ try {
     ],
   });
 
-  console.log(
-    JSON.stringify(
-      {
-        workspace: {
-          id: ids.workspace,
-          slug: workspaceSlug,
-          // Read back rather than assembled from the payloads above, so the
-          // line reports what the workspace has and not what was asked for.
-          branches: await branchCodesOf(ids.workspace),
+  return {
+    workspace: {
+      id: ids.workspace,
+      slug: workspaceSlug,
+      // Read back rather than assembled from the payloads above, so the
+      // line reports what the workspace has and not what was asked for.
+      branches: await kit.branchCodes(),
+    },
+    accounts: await kit.accountsSummary([...users, ...addedMembers]),
+    summary: {
+      assets: ["VH001", "VH003", "TR001"],
+      journeys: [
+        {
+          route: "Douala → Garoua",
+          asset: "VH003",
+          status: "CLOSED",
+          completeness: garoua?.recordStatus ?? "already-seeded",
         },
-        accounts: await accountsSummary(),
-        summary: {
-          assets: ["VH001", "VH003", "TR001"],
-          journeys: [
-            {
-              route: "Douala → Garoua",
-              asset: "VH003",
-              status: "CLOSED",
-              completeness: garoua?.recordStatus ?? "already-seeded",
-            },
-            {
-              route: "Douala → Bafoussam",
-              asset: "VH001",
-              status: "CLOSED",
-              completeness: bafoussam?.recordStatus ?? "already-seeded",
-            },
-            {
-              route: "Douala → Yaoundé",
-              asset: "VH003",
-              status: "IN_PROGRESS",
-              persistedStatus: yaounde?.recordStatus ?? "already-seeded",
-            },
-          ],
-          garouaFinancials: {
-            currency: "XAF",
-            revenueMinor: 2_850_000,
-            expenseMinor: 1_345_000,
-            expenseStatusesBeforeApproval: expenseResults.map(
-              (result) => result?.recordStatus ?? "already-seeded",
-            ),
-            approvedEntryIds: [
-              ids.garouaRevenue,
-              ids.garouaFuel,
-              ids.garouaAllowance,
-            ],
-          },
-          pendingRepair: {
-            asset: "VH003",
-            amountMinor: 450_000,
-            currency: "XAF",
-            status: repair?.recordStatus ?? "already-seeded",
-          },
+        {
+          route: "Douala → Bafoussam",
+          asset: "VH001",
+          status: "CLOSED",
+          completeness: bafoussam?.recordStatus ?? "already-seeded",
         },
-        vehicleWorkspace: {
-          storyDate: today,
-          VH003: await vehicleSummary(ids.vh003, today),
-          VH001: await vehicleSummary(ids.vh001, today),
-          notSeeded: [
-            "A work order completion awaiting sign-off (COMPLETION_SUBMITTED): complete-work-order has no amount bounds in the default rules, so every completion lands COMPLETED.",
-            "A receipt file: attaching one needs object storage; the brake parts entry is left with evidence not supplied.",
-          ],
+        {
+          route: "Douala → Yaoundé",
+          asset: "VH003",
+          status: "IN_PROGRESS",
+          persistedStatus: yaounde?.recordStatus ?? "already-seeded",
         },
+      ],
+      garouaFinancials: {
+        currency: "XAF",
+        revenueMinor: 2_850_000,
+        expenseMinor: 1_345_000,
+        expenseStatusesBeforeApproval: expenseResults.map(
+          (result) => result?.recordStatus ?? "already-seeded",
+        ),
+        approvedEntryIds: [
+          ids.garouaRevenue,
+          ids.garouaFuel,
+          ids.garouaAllowance,
+        ],
       },
-      null,
-      2,
-    ),
-  );
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+      pendingRepair: {
+        asset: "VH003",
+        amountMinor: 450_000,
+        currency: "XAF",
+        status: repair?.recordStatus ?? "already-seeded",
+      },
+    },
+    vehicleWorkspace: {
+      storyDate: today,
+      VH003: await vehicleSummary(ids.vh003, today),
+      VH001: await vehicleSummary(ids.vh001, today),
+      notSeeded: [
+        "A work order completion awaiting sign-off (COMPLETION_SUBMITTED): complete-work-order has no amount bounds in the default rules, so every completion lands COMPLETED.",
+        "A receipt file: attaching one needs object storage; the brake parts entry is left with evidence not supplied.",
+      ],
+    },
+  };
+}
+
+try {
+  if (process.argv.includes("--reset")) {
+    for (const slug of DEMO_WORKSPACE_SLUGS) {
+      const deleted = await resetDemoWorkspace(slug);
+      console.log(
+        deleted
+          ? `Reset: deleted existing workspace ${slug}`
+          : `Reset: no existing workspace ${slug} to delete`,
+      );
+    }
+  }
+
+  // One JSON document, keyed by workspace slug, after everything is seeded.
+  const summary = {
+    [workspaceSlug]: await seedTransportsNgwa(),
+    "littoral-voyages": await seedLittoralVoyages(),
+  };
+  console.log(JSON.stringify(summary, null, 2));
+} catch (error) {  console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 } finally {
   await Promise.all([pool.end(), authPool.end()]);

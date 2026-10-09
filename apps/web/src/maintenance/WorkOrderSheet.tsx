@@ -10,7 +10,7 @@ import type {
   WorkOrderPendingCostLine,
 } from "@routiq/contracts";
 import { ErrorState, LoadingState } from "@/components/page";
-import { historyEventLabelKey } from "@/components/record-history-sheet.js";
+import { historyNote, Timeline, timelineAct } from "@/components/timeline.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Button } from "@/components/ui/button";
@@ -45,17 +45,14 @@ function Facts({ facts }: { facts: ReadonlyArray<[string, ReactNode]> }) {
 }
 
 /**
- * The work order's life, oldest first, straight off the audit trail. The kind
- * vocabulary is open — a command added later writes a code this list has never
- * seen — so the label is a lookup with the raw code as its own fallback, the
- * same contract the record history sheet keeps.
+ * The work order's (or problem's) life, oldest first, straight off the audit
+ * trail, on the same timeline as every other record's history: a decision's
+ * note shows under the decision.
  */
 export function Chronologie({
   events,
-  locale,
 }: {
   events: readonly WorkOrderChronologieEvent[];
-  locale: string;
 }) {
   const { t } = useTranslation();
 
@@ -68,40 +65,17 @@ export function Chronologie({
   }
 
   return (
-    <ol className="flex flex-col">
-      {events.map((event) => {
-        const isPlatform = event.actor.scope === "PLATFORM";
-        const actorLabel = isPlatform
-          ? t("history.actor.platform")
-          : (event.actor.displayName ?? t("history.actor.unknown"));
-
-        return (
-          <li
-            key={event.eventId}
-            className="relative border-l border-border pb-5 pl-4 last:pb-0"
-          >
-            <span
-              className="absolute -left-[3.5px] top-1.5 size-1.5 rounded-full bg-foreground/30"
-              aria-hidden
-            />
-            {/* Actor then act, each its own message: the sentence is assembled
-                from elements rather than glued together (i18n rule). */}
-            <p className="text-sm">
-              <span className="font-medium">{actorLabel}</span>{" "}
-              <span className="text-muted-foreground">
-                {t(historyEventLabelKey(event.kind), { defaultValue: event.kind })}
-              </span>
-            </p>
-            <time
-              dateTime={event.occurredAt}
-              className="text-xs tabular-nums text-muted-foreground"
-            >
-              {t("maintenance.detail.recordedAt", { date: formatDateTime(event.occurredAt, locale) })}
-            </time>
-          </li>
-        );
-      })}
-    </ol>
+    <Timeline
+      // Recorded, not happened: a problem's report time can be earlier (#396).
+      timeLabel={(date) => t("maintenance.detail.recordedAt", { date })}
+      events={events.map((event) => ({
+        id: event.eventId,
+        occurredAt: event.occurredAt,
+        actor: event.actor,
+        act: timelineAct(event.kind, t),
+        note: historyNote(event, t),
+      }))}
+    />
   );
 }
 
@@ -126,7 +100,7 @@ export function CostLines({
         >
           <span className="flex min-w-0 flex-col">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs">{line.entryNumber}</span>
+              <span className="tabular-nums text-xs">{line.entryNumber}</span>
               <EntryStatusBadge status={line.entryStatus} />
             </span>
             <span className="text-xs text-muted-foreground">
@@ -313,7 +287,7 @@ export function WorkOrderSheet({
           ],
           [
             t("maintenance.workOrders.columns.asset"),
-            <span key="asset" className="font-mono">
+            <span key="asset" className="tabular-nums">
               {header.asset.assetCode}
             </span>,
           ],
@@ -400,7 +374,7 @@ export function WorkOrderSheet({
             onRetry={() => void detailQuery.refetch()}
           />
         ) : (
-          <Chronologie events={detail?.chronologie ?? []} locale={locale} />
+          <Chronologie events={detail?.chronologie ?? []} />
         )}
       </div>
 

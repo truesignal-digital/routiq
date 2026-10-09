@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DateField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CommandResult, FinancialEntryDetail } from "@routiq/contracts";
@@ -90,6 +90,12 @@ export interface RecordEntryFormProps {
    * this only for a single-line entry, which is all this form writes.
    */
   editing?: FinancialEntryDetail | undefined;
+  /**
+   * Record again after a "wrong details" cancellation (#426): a new entry,
+   * pre-filled from the cancelled one for the person to fix. Nothing links
+   * the two; it is a normal recording.
+   */
+  recordAgainFrom?: FinancialEntryDetail | undefined;
 }
 
 type RecordPayload = ReturnType<typeof toRecordExpensePayload>;
@@ -149,6 +155,7 @@ export function RecordEntryForm({
   onRecorded,
   onDismiss,
   editing,
+  recordAgainFrom,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
   const label = useCommandLabel();
@@ -157,8 +164,9 @@ export function RecordEntryForm({
   const intentExpenseRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
   const intentRevenueRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
   const intentUpdateRef = useRef<CommandIntent<UpdatePayload> | undefined>(undefined);
-  const entryLink = editing === undefined ? link : lineLink(editing);
-  const directionLocked = lockDirection || editing !== undefined;
+  const prefill = editing ?? recordAgainFrom;
+  const entryLink = prefill === undefined ? link : lineLink(prefill);
+  const directionLocked = lockDirection || prefill !== undefined;
   const reference = useAssetRegistrationReference();
   const branches = reference.data?.branches ?? [];
   const createdElsewhereNotice = useCreatedElsewhereNotice();
@@ -192,7 +200,7 @@ export function RecordEntryForm({
     // hand-wired setValue calls used to pass.
     mode: "onChange",
     defaultValues:
-      editing === undefined
+      prefill === undefined
         ? {
             direction: initialDirection,
             branchCode: defaultBranchCode ?? "",
@@ -206,16 +214,16 @@ export function RecordEntryForm({
             assetId: pinnedAssetId ?? "",
           }
         : {
-            direction: editing.direction,
+            direction: prefill.direction,
             branchCode: "",
-            categoryCode: editing.category.code,
-            amountInput: String(editing.amountMinor),
-            paymentMethod: editing.paymentMethod,
-            economicDate: editing.economicDate,
-            counterpartyName: editing.counterpartyName ?? "",
-            description: editing.description ?? "",
-            paymentReference: editing.paymentReference ?? "",
-            assetId: editing.postings[0]?.assetId ?? pinnedAssetId ?? "",
+            categoryCode: prefill.category.code,
+            amountInput: String(prefill.amountMinor),
+            paymentMethod: prefill.paymentMethod,
+            economicDate: prefill.economicDate,
+            counterpartyName: prefill.counterpartyName ?? "",
+            description: prefill.description ?? "",
+            paymentReference: prefill.paymentReference ?? "",
+            assetId: prefill.postings[0]?.assetId ?? pinnedAssetId ?? "",
           },
   });
   const direction = form.watch("direction");
@@ -237,7 +245,7 @@ export function RecordEntryForm({
   const [attachmentsUploading, setAttachmentsUploading] = useState(false);
 
   // A branch the host named stands; only an open form follows the shell.
-  const followsShell = defaultBranchCode === undefined && editing === undefined;
+  const followsShell = defaultBranchCode === undefined && prefill === undefined;
   useFollowShellBranch(
     followsShell ? branches : [],
     branchCode,
@@ -249,6 +257,16 @@ export function RecordEntryForm({
   );
   const editedBranch =
     editing === undefined ? undefined : branches.find((branch) => branch.id === editing.branchId);
+  // Recording again books to the branch the cancelled entry was in.
+  const againBranchCode =
+    recordAgainFrom === undefined
+      ? undefined
+      : branches.find((branch) => branch.id === recordAgainFrom.branchId)?.code;
+  useEffect(() => {
+    if (againBranchCode !== undefined && form.getValues("branchCode") === "") {
+      form.setValue("branchCode", againBranchCode, { shouldValidate: true });
+    }
+  }, [againBranchCode, form]);
 
   const amountMinor = parseMoneyXaf(amountInput);
   const isValid = Boolean(
@@ -325,7 +343,7 @@ export function RecordEntryForm({
       return;
     }
 
-    // A transaction recorded into another agency would land off the list the
+    // An entry recorded into another agency would land off the list the
     // shell is showing, with nothing said about it.
     notifyCommandSuccess(
       "finance",
@@ -338,7 +356,7 @@ export function RecordEntryForm({
 
   const title = editing !== undefined
     ? <RecordText text={t("finance.edit.title", { number: editing.entryNumber })} numbers={[editing.entryNumber]} />
-    : !lockDirection
+    : !directionLocked
     ? t("finance.record.title")
     : label(direction === "EXPENSE" ? "record-expense" : "record-revenue");
   const chrome =
@@ -384,11 +402,9 @@ export function RecordEntryForm({
                     if (value !== "EXPENSE" && value !== "REVENUE") return;
                     field.onChange(value);
                     // Expense and revenue draw from different category lists, so
-                    // the old pick cannot survive the flip.
-                    form.setValue("categoryCode", "", {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    });
+                    // the old pick cannot survive the flip. Clearing is not the
+                    // user leaving the field empty, so it raises no error (#449).
+                    form.setValue("categoryCode", "", { shouldDirty: true });
                   }}
                 >
                   <TabsList className="w-full">

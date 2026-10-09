@@ -242,7 +242,7 @@ Each report exposes which layers it includes, matching the concept's measure lad
 
 | Command | Approval default |
 |---|---|
-| RegisterAsset / CommissionAsset | Auto (asset manager permission) |
+| RegisterAsset / CommissionAsset | Auto (asset manager permission). RegisterAsset v2 holds the plate and chassis number to UpdateAssetDetails' rules and refuses a plate another vehicle in the workspace carries (#122); v1 stays as shipped, and an edit never re-checks a field it does not change |
 | UpdateAssetDetails | Auto (DIRECTOR, ADMIN). ADR-0008 level 1: a plain edit of plate, make, model, year, chassis, acquisition and template specifications, with before/after on the audit event. `expectedVersion` required; the acquisition amount only from ledger readers with FINANCE on; refused on SOLD/RETIRED/WRITTEN_OFF; never queued. Fleet code and class stay fixed |
 | AssignAsset (branch/custodian) | Auto; cross-branch transfer → 1 approval. A custodian must be an active member whose branch scope covers the vehicle's branch (`CUSTODIAN_INELIGIBLE`) |
 | **RecordJourneySheet** / **RecordHaulageJobSheet** | Auto — composite: one form emits activity + segments + crew + legs + readings atomically |
@@ -250,7 +250,7 @@ Each report exposes which layers it includes, matching the concept's measure lad
 | CloseActivity | Auto; sets completeness state, warnings not blocks |
 | ReopenActivity | 1 approval |
 | RecordRevenue / RecordExpense | **Auto-post below threshold; approval above** (thresholds per category/branch, tenant-editable; 100 000 XAF by default for every recording role except DIRECTOR, whose own entries post at any amount since no one is above it. Finance's and the Administrateur's own entries above the band wait like everyone else's: an Administrateur's goes to Finance up to its band, then to Direction; a Finance member's never to themselves, so in practice to Direction (#412, migration 0038)) |
-| ApproveEntry / RejectEntry | FINANCE up to its band (1 000 000 XAF by default, owner decision 2026-10-05; DIRECTOR moves it with UpdateApprovalThreshold on `approve-entry`, which moves both); DIRECTOR at any amount. The maker may not decide their own entry |
+| ApproveEntry / RejectEntry | FINANCE up to its band (1 000 000 XAF by default, owner decision 2026-10-05; DIRECTOR moves it with UpdateApprovalThreshold on `approve-entry`, which moves both; v2, sent from Company settings → Approvals, moves this band and the recording band together and keeps the recording band below it, #354); DIRECTOR at any amount. The maker may not decide their own entry |
 | UpdatePendingEntry | The entry's **author only**, while it is SUBMITTED, at `expectedVersion` (#85, ADR-0008 level 2). Replaces its facts and lines in place; branch and direction stay as recorded. RecordExpense's or RecordRevenue's rules run again on the new amount, so an edit into the band posts it. Anyone else rejects instead. Never queued |
 | ReportIssue | Auto (DIRECTOR, ADMIN, TECHNICIAN, DRIVER); a fact, queueable offline. Safety-critical → asset grounded immediately (opens an availability interval; a second report on a grounded asset opens none) |
 | ResolveIssue / DismissIssue | Auto (DIRECTOR, ADMIN, TECHNICIAN). A driver reports; the workshop resolves or dismisses. Neither ends a grounding |

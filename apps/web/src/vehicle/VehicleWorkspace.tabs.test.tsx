@@ -11,6 +11,7 @@ import {
   documentRow,
   entryDetail,
   entryRow,
+  finance,
   historyItem,
   issueRow,
   tripRow,
@@ -45,29 +46,29 @@ describe("which sections a viewer gets", () => {
   it("gives every section to a manager with every module", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "Maintenance", "Money", "Trips", "Documents", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Money", "Trips", "Documents", "History", "Details"]);
   });
 
   it("keeps the books from the workshop, and each module's section from a workspace without it", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "TECHNICIAN" });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "Documents", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Documents", "History", "Details"]);
     cleanup();
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", modules: ["CORE", "ASSETS"] });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "History", "Details"]);
   });
 
   it("keeps the books from the counter and the drivers, and documents from the counter (#264)", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "CASHIER", asset: asset({ finance: undefined }) });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "History", "Details"]);
     expect(requested(recorded, `/v1/assets/${ASSET_ID}/documents`)).toEqual([]);
     expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`)).toEqual([]);
     cleanup();
     const driver = await openVehicle(`/assets/${ASSET_ID}`, { role: "DRIVER", asset: asset({ finance: undefined }) });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Now", "Maintenance", "Trips", "Documents", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Documents", "History", "Details"]);
     expect(requested(driver, `/v1/assets/${ASSET_ID}/finance`)).toEqual([]);
   });
 
@@ -223,6 +224,62 @@ describe("Money", () => {
       expect(screen.getAllByText(name).length).toBeGreaterThanOrEqual(2);
       expect(screen.queryByText(/^Pending$|^En attente$/)).toBeNull();
     });
+  });
+
+  it("lists one line per event: a folded cancellation, a later month's, and a cancellation's own line (#427)", async () => {
+    const cancellation = {
+      entryId: "00000000-0000-4000-8000-0000000000e9",
+      entryNumber: "DLA-2026-00009",
+      postingPeriodCode: "2026-08",
+      postedAt: "2026-08-20T10:00:00.000Z",
+      reasonCode: null,
+      reasonText: "Entered twice",
+      recordedBy: { principalId: null, displayName: "Awa", scope: "WORKSPACE" as const },
+      folded: true,
+    };
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
+      role: "FINANCE",
+      finance: (periodCode) =>
+        finance(periodCode ?? "2026-08", {
+          posted: { basis: "POSTING_PERIOD", expenseMinor: 310_000, revenueMinor: 0, entryCount: 4, eventCount: 3 },
+        }),
+      entries: [
+        entryRow({ id: "00000000-0000-4000-8000-0000000000e1", entryNumber: "DLA-2026-00008", status: "REVERSED", postingPeriodCode: "2026-08", cancelledBy: cancellation }),
+        entryRow({
+          id: "00000000-0000-4000-8000-0000000000e2",
+          entryNumber: "DLA-2026-00010",
+          status: "REVERSED",
+          postingPeriodCode: "2026-08",
+          cancelledBy: { ...cancellation, entryNumber: "DLA-2026-00011", postingPeriodCode: "2026-09", folded: false },
+        }),
+        entryRow({
+          id: "00000000-0000-4000-8000-0000000000e3",
+          entryNumber: "DLA-2026-00012",
+          status: "POSTED",
+          amountMinor: -50_000,
+          assetShareMinor: -50_000,
+          postingPeriodCode: "2026-08",
+          reversesEntryId: "00000000-0000-4000-8000-0000000000e4",
+          cancels: { entryId: "00000000-0000-4000-8000-0000000000e4", entryNumber: "DLA-2026-00002", postingPeriodCode: "2026-07" },
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    const folded = (await screen.findByText("DLA-2026-00008")).closest("li")!;
+    const later = screen.getByText("DLA-2026-00010").closest("li")!;
+    const own = screen.getByText("DLA-2026-00012").closest("li")!;
+
+    // The chip counts the lines it lists, not the rows in the books.
+    expect(screen.getByRole("radio", { name: /Posted/ }).textContent).toContain("3");
+    expect(folded.querySelector(".line-through")).not.toBeNull();
+    expect(later.querySelector(".line-through")).toBeNull();
+    expect(within(later).getByText("Cancelled in September 2026")).toBeTruthy();
+    expect(own.textContent).toContain("Cancellation of entry DLA-2026-00002 (July 2026)");
+
+    await user.click(within(folded).getByRole("button", { name: "Show cancellation" }));
+    expect(within(folded).getByText("Reason: Entered twice")).toBeTruthy();
+    // Opening the details does not open the entry's panel.
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("steps back a month and keeps the lifetime figures at the foot", async () => {

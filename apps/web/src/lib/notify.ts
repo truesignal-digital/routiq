@@ -13,6 +13,7 @@ export type NotifyNamespace =
   | "documents"
   | "finance"
   | "maintenance"
+  | "settings"
   | "users"
   | "vehicle";
 

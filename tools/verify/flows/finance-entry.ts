@@ -13,22 +13,22 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   log(`api: ${entries.length} posted entries; opening ${entry.entryNumber}`);
 
   const sidebar = await openSidebar(page);
-  await sidebar.getByRole("link", { name: t("Finances", "Finance") }).click();
-  await page.getByRole("heading", { level: 1, name: t("Écritures comptables", "Entries") }).waitFor();
+  await sidebar.getByRole("link", { name: t("Argent", "Money") }).click();
+  await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  await shot("entries-list");
+  await shot("entries-list", { caption: "Finance entries list" });
 
   await page.getByRole("button", { name: entry.entryNumber, exact: true }).first().click();
   const drawer = page.getByRole("dialog");
   await drawer.waitFor();
   await quiet();
-  await shot("entry-drawer");
+  await shot("entry-drawer", { caption: "An entry opens in the side panel from the list" });
 
   await drawer.getByRole("button", { name: t("Ouvrir en plein écran", "Open full screen") }).click();
   await page.waitForURL((url) => url.pathname === `/finance/entries/${entry.id}`);
   await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
   await quiet();
-  await shot("entry-detail");
+  await shot("entry-detail", { caption: "Open full screen shows the entry's detail page" });
 
   const detail = await apiGet(`/v1/finance/entries/${entry.id}`);
   const body = detail.body as { entryNumber?: string; status?: string; amountMinor?: number; currency?: string };

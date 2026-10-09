@@ -1,10 +1,13 @@
 import type {
+  HistoryCodeSet,
+  HistoryDiffChange,
   HistoryEntityType,
-  HistoryFieldChange,
   HistoryItem,
+  HistoryName,
 } from "@routiq/contracts";
 import { ChevronDown, History } from "lucide-react";
 import { useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -17,25 +20,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { HISTORY_CODE_LABEL_KEY } from "@/history/code-labels.js";
 import { useHistory, useHistoryEvent } from "@/history/useHistory.js";
 import {
   formatDate,
   formatDateTime,
-  formatDayLong,
   formatMoney,
-  formatRelativeTime,
-  localDayKey,
 } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
-
-/**
- * The event vocabulary is open — new commands add codes without touching this
- * file — so the label is a lookup with the raw code as its own fallback. i18next
- * reads "." as a key separator, hence the dashes.
- */
-export function historyEventLabelKey(eventType: string): string {
-  return `history.event.${eventType.split(".").join("-")}`;
-}
+import { historyNote, Timeline, timelineAct } from "@/components/timeline.js";
 
 /**
  * Bookkeeping columns every write touches: the row's own identity, the version
@@ -137,25 +130,6 @@ function isDataChange(item: HistoryItem): boolean {
   return dataFields(item.changedFields).length > 0 || isLifecycleEvent(item.eventType);
 }
 
-type HistoryDay = { key: string; occurredAt: string; items: HistoryItem[] };
-
-/**
- * The server returns the feed newest-first and we never reorder it, so a day
- * only ever ends where the local calendar date changes. Breaking on that
- * boundary alone is also what lets an appended page continue the run it belongs
- * to instead of raising a second heading for the same date.
- */
-function groupByDay(items: HistoryItem[]): HistoryDay[] {
-  const days: HistoryDay[] = [];
-  for (const item of items) {
-    const key = localDayKey(item.occurredAt);
-    const current = days.at(-1);
-    if (current !== undefined && current.key === key) current.items.push(item);
-    else days.push({ key, occurredAt: item.occurredAt, items: [item] });
-  }
-  return days;
-}
-
 export interface RecordHistorySheetProps {
   entityType: HistoryEntityType;
   entityId: string;
@@ -185,19 +159,7 @@ export function RecordHistorySheet({
 
   const locale = i18n.language;
   const items = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const days = groupByDay(showAll ? items : items.filter(isDataChange));
-
-  const today = new Date();
-  const todayKey = localDayKey(today);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = localDayKey(yesterday);
-
-  function dayHeading(day: HistoryDay): string {
-    if (day.key === todayKey) return t("history.today");
-    if (day.key === yesterdayKey) return t("history.yesterday");
-    return formatDayLong(day.occurredAt, locale);
-  }
+  const shown = showAll ? items : items.filter(isDataChange);
 
   return (
     <Sheet
@@ -249,31 +211,39 @@ export function RecordHistorySheet({
                 </Button>
               </div>
 
-              {days.length === 0 ? (
+              {shown.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {t("history.emptyChanges")}
                 </p>
               ) : (
-                <ol className="flex flex-col gap-4">
-                  {days.map((day) => (
-                    <li key={day.key}>
-                      <h3 className="pb-2 text-xs font-semibold text-muted-foreground">
-                        {dayHeading(day)}
-                      </h3>
-                      <ol className="flex flex-col">
-                        {day.items.map((item) => (
-                          <HistoryRow
-                            key={item.eventId}
-                            item={item}
-                            entityType={entityType}
-                            entityId={entityId}
-                            locale={locale}
-                          />
-                        ))}
-                      </ol>
-                    </li>
-                  ))}
-                </ol>
+                <Timeline
+                  groupByDay
+                  events={shown.map((item) => ({
+                    id: item.eventId,
+                    occurredAt: item.occurredAt,
+                    actor: item.actor,
+                    act: timelineAct(item.eventType, t),
+                    note: historyNote(item, t),
+                    // Plain web is the norm and needs no label; anything else
+                    // changes how much the line can be trusted, so it is stamped.
+                    aside:
+                      item.command.origin === "HUMAN_UI" ? undefined : (
+                        <StatusBadge tone="info" icon={null}>
+                          {t(`history.origin.${item.command.origin}`, {
+                            defaultValue: item.command.origin,
+                          })}
+                        </StatusBadge>
+                      ),
+                    children: (
+                      <HistoryRowChanges
+                        item={item}
+                        entityType={entityType}
+                        entityId={entityId}
+                        locale={locale}
+                      />
+                    ),
+                  }))}
+                />
               )}
             </>
           )}
@@ -296,7 +266,8 @@ export function RecordHistorySheet({
   );
 }
 
-function HistoryRow({
+/** The changed-field chips and the before/after toggle under one event. */
+function HistoryRowChanges({
   item,
   entityType,
   entityId,
@@ -309,66 +280,10 @@ function HistoryRow({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-
-  const isPlatform = item.actor.scope === "PLATFORM";
-  const actorLabel = isPlatform
-    ? t("history.actor.platform")
-    : (item.actor.displayName ?? t("history.actor.unknown"));
   const changedFields = chipFields(item.changedFields);
-  const hasNote = item.note !== null && item.note !== "";
 
   return (
-    <li className="relative border-l border-border pb-5 pl-4 last:pb-0">
-      <span
-        className="absolute -left-[3.5px] top-1.5 size-1.5 rounded-full bg-foreground/30"
-        aria-hidden
-      />
-
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        {/* One sentence, assembled from elements rather than from glued-together
-            translations: fr and en both read actor, act, motif in that order,
-            and each part stays a message of its own. */}
-        <p className="text-sm">
-          <span
-            className={cn(
-              "font-medium",
-              isPlatform && "rounded-full bg-primary/10 px-2 py-0.5 text-primary",
-            )}
-          >
-            {actorLabel}
-          </span>{" "}
-          <span className="text-muted-foreground">
-            {t(historyEventLabelKey(item.eventType), {
-              defaultValue: item.eventType,
-            })}
-          </span>
-          {hasNote && (
-            <>
-              {" — "}
-              <span className="italic text-muted-foreground">{item.note}</span>
-            </>
-          )}
-        </p>
-        {/* Plain web is the norm and needs no label; anything else changes how
-            much the line can be trusted, so it is stamped. */}
-        {item.command.origin !== "HUMAN_UI" && (
-          <StatusBadge tone="info" icon={null}>
-            {t(`history.origin.${item.command.origin}`, {
-              defaultValue: item.command.origin,
-            })}
-          </StatusBadge>
-        )}
-      </div>
-
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <time dateTime={item.occurredAt} className="tabular-nums">
-          {formatDateTime(item.occurredAt, locale)}
-        </time>
-        <span className="text-muted-foreground/70">
-          {formatRelativeTime(item.occurredAt, locale)}
-        </span>
-      </div>
-
+    <>
       {changedFields.length > 0 && (
         <ul className="mt-1.5 flex flex-wrap gap-1">
           {changedFields.map((field) => (
@@ -403,7 +318,7 @@ function HistoryRow({
           locale={locale}
         />
       )}
-    </li>
+    </>
   );
 }
 
@@ -461,20 +376,28 @@ function HistoryDiff({
     <dl className="mt-1.5 flex flex-col gap-1.5 rounded-md bg-foreground/[0.035] px-3 py-2">
       {changes.map((change) => (
         <div key={change.field} className="flex flex-col gap-0.5">
-          <dt className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+          <dt className="text-[0.7rem] text-muted-foreground">
             {t(`history.field.${change.field}`, { defaultValue: change.field })}
           </dt>
-          <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
-            <span className="text-muted-foreground">
-              {formatChangeValue(change, "before", currency, locale, t)}
-            </span>
-            <span aria-hidden className="text-muted-foreground/60">
-              →
-            </span>
-            <span className="font-medium">
-              {formatChangeValue(change, "after", currency, locale, t)}
-            </span>
-          </dd>
+          {/* The field changed, but its value cannot be shown: say so rather
+              than hide the change or invent a before/after. */}
+          {change.kind === "UNAVAILABLE" ? (
+            <dd className="text-xs italic text-muted-foreground">
+              {t("history.diff.unavailable")}
+            </dd>
+          ) : (
+            <dd className="flex flex-wrap items-baseline gap-1.5 text-xs">
+              <span className="text-muted-foreground">
+                {formatChangeValue(change, "before", currency, locale, t)}
+              </span>
+              <span aria-hidden className="text-muted-foreground/60">
+                →
+              </span>
+              <span className="font-medium">
+                {formatChangeValue(change, "after", currency, locale, t)}
+              </span>
+            </dd>
+          )}
         </div>
       ))}
     </dl>
@@ -486,33 +409,77 @@ const ISO_DATE_TIME =
   /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
 
 /**
- * Money goes through the money formatter — minor units, never divided. Anything
- * else renders as it was recorded, because guessing at an unknown field's
- * meaning is how a timeline starts lying.
+ * One side of a change, in words. The server has already resolved ids to
+ * names and tagged every code with its set (#110, #119), so each kind has one
+ * way to read: codes through the labels the rest of the app uses for them,
+ * money through the money formatter (minor units, never divided), and free
+ * values as they were recorded — guessing at an unknown field's meaning is how
+ * a timeline starts lying.
  */
 function formatChangeValue(
-  change: HistoryFieldChange,
+  change: Exclude<HistoryDiffChange, { kind: "UNAVAILABLE" }>,
   side: "before" | "after",
   currency: string,
   locale: string,
-  t: (key: string) => string,
+  t: TFunction,
 ): string {
-  const value = change[side];
+  const none = t("history.diff.none");
+  const list = (items: string[]) =>
+    items.length === 0
+      ? none
+      : new Intl.ListFormat(locale, { type: "unit", style: "short" }).format(items);
+  const name = ({ fr, en }: HistoryName) => (locale.startsWith("en") ? en : fr);
+  const codeLabel = (codeSet: HistoryCodeSet, code: string) =>
+    t(HISTORY_CODE_LABEL_KEY[codeSet](code));
 
-  if (value === null || value === undefined) return t("history.diff.none");
-  if (change.kind === "MONEY" && typeof value === "number") {
-    return formatMoney(value, { currency, locale });
+  switch (change.kind) {
+    case "MONEY": {
+      const value = change[side];
+      return value === null ? none : formatMoney(value, { currency, locale });
+    }
+    case "CODE": {
+      const value = change[side];
+      return value === null ? none : codeLabel(change.codeSet, value);
+    }
+    case "CODES": {
+      const value = change[side];
+      return value === null
+        ? none
+        : list(value.map((code) => codeLabel(change.codeSet, code)));
+    }
+    case "NAME": {
+      const value = change[side];
+      return value === null ? none : name(value);
+    }
+    case "NAMES": {
+      const value = change[side];
+      return value === null ? none : list(value.map(name));
+    }
+    case "COUNT": {
+      const value = change[side];
+      return value === null ? none : String(value);
+    }
+    case "LINES": {
+      const value = change[side];
+      if (value === null) return none;
+      return value.totalMinor === null
+        ? t("history.diff.linesCount", { count: value.count })
+        : t("history.diff.lines", {
+            count: value.count,
+            total: formatMoney(value.totalMinor, { currency, locale }),
+          });
+    }
+    case "VALUE": {
+      const value = change[side];
+      if (value === null || value === "") return none;
+      if (typeof value === "boolean") {
+        return t(value ? "history.diff.yes" : "history.diff.no");
+      }
+      if (typeof value === "number") return String(value);
+      if (!ISO_DATE_TIME.test(value)) return value;
+      return value.length === 10
+        ? formatDate(value, locale)
+        : formatDateTime(value, locale);
+    }
   }
-  if (typeof value === "boolean") {
-    return t(value ? "history.diff.yes" : "history.diff.no");
-  }
-  if (typeof value === "string") {
-    if (value === "") return t("history.diff.none");
-    if (!ISO_DATE_TIME.test(value)) return value;
-    return value.length === 10
-      ? formatDate(value, locale)
-      : formatDateTime(value, locale);
-  }
-  if (typeof value === "number") return String(value);
-  return JSON.stringify(value);
 }

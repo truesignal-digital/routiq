@@ -8,6 +8,7 @@ import {
   entrySteps,
   groundingFacts,
   groundingStep,
+  issueSteps,
   releaseBlocker,
   situationOf,
   tabMarkers,
@@ -369,6 +370,44 @@ describe("the status sentence", () => {
     expect(situation.kind === "grounded" && situation.phase).toBe("completionSentBack");
   });
 
+  // #92: amber "repair done, waiting for release" only when the server says the
+  // release is next for this grounding (ASSET_AWAITING_RELEASE).
+  describe("repaired, waiting for release", () => {
+    const ready = attention("ASSET_AWAITING_RELEASE", { severity: "CRITICAL", partOfGrounding: true });
+    const repaired = (workOrders: Parameters<typeof grounded>[0], items = [ready], issue = {}) => {
+      const situation = situationOf(asset({ availability: grounded(workOrders, issue) }), items, now);
+      return situation.kind === "grounded" && situation.repaired;
+    };
+
+    it("is repaired once every work order on the problem is completed and the release is next", () => {
+      expect(repaired([groundingWorkOrder("COMPLETED")])).toBe(true);
+      expect(repaired([groundingWorkOrder("COMPLETED"), groundingWorkOrder("CANCELLED")])).toBe(true);
+    });
+
+    it("stays grounded while a repair on the problem is still open", () => {
+      for (const status of ["SUBMITTED", "APPROVED", "COMPLETION_SUBMITTED"] as const) {
+        expect(repaired([groundingWorkOrder(status), groundingWorkOrder("COMPLETED")]), status).toBe(false);
+      }
+    });
+
+    it("stays grounded while another safety-critical problem is open: the server withholds the release item", () => {
+      const other = attention("ISSUE_UNPLANNED", { severity: "CRITICAL", params: { safetyCritical: true } });
+      expect(repaired([groundingWorkOrder("COMPLETED")], [other])).toBe(false);
+      expect(repaired([groundingWorkOrder("COMPLETED")], [])).toBe(false);
+    });
+
+    it("is not a repair when the problem was closed without one", () => {
+      expect(repaired([], [ready], { status: "DISMISSED" })).toBe(false);
+    });
+
+    it("ignores a release item for another grounding", () => {
+      const stale = attention("ASSET_AWAITING_RELEASE", {
+        subject: { entityType: "asset_availability_interval", id: OTHER_ID, number: null, rowVersion: 1 },
+      });
+      expect(repaired([groundingWorkOrder("COMPLETED")], [stale])).toBe(false);
+    });
+  });
+
   it("closes the problem without a repair as the override case", () => {
     const vehicle = asset({ availability: grounded([], { status: "DISMISSED" }) });
     const situation = situationOf(vehicle, [], now);
@@ -508,5 +547,59 @@ describe("an entry's steps", () => {
     expect(keys(entry(), "ADMIN")).toEqual(["attach-evidence"]);
     expect(keys(entry({ status: "POSTED", evidence: { state: "SUPPLIED" } }), "ADMIN")).toEqual([]);
     expect(keys(entry(), "DIRECTOR")).toEqual(["attach-evidence", "approve-entry", "reject-entry"]);
+  });
+});
+
+describe("the safety-critical mark on a problem (#96)", () => {
+  const issueKeys = (role: Role, issue: { status?: "OPEN" | "RESOLVED" | "DISMISSED"; safetyCritical: boolean }) =>
+    issueSteps(
+      { id: ISSUE_ID, status: issue.status ?? "OPEN", safetyCritical: issue.safetyCritical, planned: true },
+      viewer(role),
+    ).offered.map((offered) => offered.step.key);
+
+  it.each(ROLES)("offers Mark as safety-critical to the roles that report problems: %s", (role) => {
+    const offers = issueKeys(role, { safetyCritical: false }).includes("raise-severity");
+    expect(offers).toBe(["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"].includes(role));
+  });
+
+  it.each(ROLES)("offers taking the mark off to the managers only: %s", (role) => {
+    const offers = issueKeys(role, { safetyCritical: true }).includes("lower-severity");
+    expect(offers).toBe(["DIRECTOR", "ADMIN"].includes(role));
+  });
+
+  it("offers the step that changes the mark, never the one that would change nothing", () => {
+    expect(issueKeys("ADMIN", { safetyCritical: true })).not.toContain("raise-severity");
+    expect(issueKeys("ADMIN", { safetyCritical: false })).not.toContain("lower-severity");
+  });
+
+  it("offers neither once the problem is closed", () => {
+    for (const status of ["RESOLVED", "DISMISSED"] as const) {
+      for (const safetyCritical of [true, false]) {
+        const keys = issueKeys("ADMIN", { status, safetyCritical });
+        expect(keys).not.toContain("raise-severity");
+        expect(keys).not.toContain("lower-severity");
+      }
+    }
+  });
+
+  it("keeps the mark out of the driver's headline", () => {
+    const steps = issueSteps(
+      { id: ISSUE_ID, status: "OPEN", safetyCritical: false, planned: false },
+      viewer("DRIVER"),
+    );
+    expect(token(steps.primary)).toBe("none");
+  });
+});
+
+describe("Direction's notes (#98)", () => {
+  const note = (author: string) => attention("DIRECTION_NOTE", { makerPrincipalIds: [author] });
+
+  it.each(ROLES)("lets %s mark someone else's Direction note as seen", (role) => {
+    expect(token(attentionStep(note(OTHER_ID), viewer(role), asset()))).toBe("go:acknowledge-note");
+  });
+
+  it("leaves the author's own note waiting on the team, on its record", () => {
+    const [todo] = buildTodos([note(ME_ID)], asset(), viewer("DIRECTOR"));
+    expect(todo).toMatchObject({ step: { kind: "none" }, who: "team", record: { kind: "note" } });
   });
 });
