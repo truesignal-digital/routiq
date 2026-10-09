@@ -27,12 +27,12 @@ import { activityRequirements, evaluateCompleteness } from "./completeness.js";
 import {
   appendAuditEvent,
   CommandError,
-  resolveCommand,
   type CommandContext,
   type CommandOutcomeChild,
   type Tx,
 } from "./dispatcher.js";
 import { writeFinancialEntry } from "./financial-entry-writer.js";
+import { requireRecordRole } from "./record-financial-entry.js";
 import { nextActivityNumber } from "./numbering.js";
 import { resolveOrCreatePlace } from "./places.js";
 import { validateCustomValues } from "./templates.js";
@@ -104,21 +104,6 @@ async function assertAssetsOperational(
 }
 
 /**
- * Each money line passes the role gate of its standalone command, as it passes
- * that command's approval rules below: a driver records expenses, never revenue
- * (#532, docs/business-rules.md §10). Refused before anything is written.
- */
-function requireStandaloneRoles(ctx: CommandContext, entries: readonly SheetEntry[]): void {
-  for (const direction of new Set(entries.map((entry) => entry.direction))) {
-    const command = direction === "EXPENSE" ? "record-expense" : "record-revenue";
-    const definition = resolveCommand(command, 1);
-    if (!("allowedRoles" in definition) || !definition.allowedRoles.includes(ctx.role)) {
-      throw new CommandError(403, "ROLE_FORBIDDEN", { command });
-    }
-  }
-}
-
-/**
  * The whole sheet, in one transaction: activity, segments, crew, legs, readings
  * and money. One implementation for every flavour — what differs between a
  * journey and a haulage job is the payload schema and its mapper, never this.
@@ -136,7 +121,12 @@ export async function writeSheet(
   envelope: CommandEnvelope,
   write: SheetWrite,
 ): Promise<SheetResult> {
-  requireStandaloneRoles(ctx, write.entries);
+  // Each money line passes the role gate of its standalone command, as it passes
+  // that command's approval rules below: a driver records expenses, never
+  // revenue (#532, docs/business-rules.md §10). Refused before anything is written.
+  for (const direction of new Set(write.entries.map((entry) => entry.direction))) {
+    requireRecordRole(ctx.role, direction === "EXPENSE" ? "record-expense" : "record-revenue");
+  }
   const { branch, warnings: branchWarnings } = await resolveTargetBranch(
     tx,
     ctx,
