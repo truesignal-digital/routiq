@@ -19,6 +19,8 @@ import {
   movementLegs,
   persons,
 } from "../db/schema.js";
+import { currentBusinessDate } from "../reads/business-date.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import { evaluateApproval } from "./approvals.js";
 import { resolveTargetBranch } from "./branch-authorization.js";
 import { activityRequirements, evaluateCompleteness } from "./completeness.js";
@@ -214,7 +216,12 @@ export async function writeSheet(
     }
   }
 
-  const activityNumber = await nextActivityNumber(tx, ctx, branch, write.startedAt.slice(0, 10));
+  const activityNumber = await nextActivityNumber(
+    tx,
+    ctx,
+    branch,
+    currentBusinessDate(startedAt, await workspaceTimezone(tx, ctx.workspaceId)),
+  );
 
   await tx.insert(activities).values({
     id: write.activityId,
