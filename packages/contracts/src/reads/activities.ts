@@ -21,13 +21,18 @@ export const activityListQuery = listQuery(
     branchId: z.uuid().optional(),
     assetId: z.uuid().optional(),
     activityTypeCode: z.string().min(1).optional(),
-    from: z.iso.datetime({ offset: true }).optional(),
-    to: z.iso.datetime({ offset: true }).optional(),
+    /**
+     * Calendar days on `startedAt`, both inclusive, in the workspace time zone:
+     * the same days the summary's `week` names, so a tile and the list it
+     * filters count the same trips (#511).
+     */
+    from: z.iso.date().optional(),
+    to: z.iso.date().optional(),
   },
   { sortFields: activityListSortFields },
 ).refine(
-  ({ from, to }) =>
-    from === undefined || to === undefined || new Date(from) <= new Date(to),
+  // ISO dates order as strings.
+  ({ from, to }) => from === undefined || to === undefined || from <= to,
   { message: "from must not be after to", path: ["to"] },
 );
 
