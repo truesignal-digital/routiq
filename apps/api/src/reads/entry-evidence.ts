@@ -1,6 +1,6 @@
 import type { EntryEvidenceFile } from "@routiq/contracts";
 import { REFERENCE_PAYMENT_METHODS } from "@routiq/domain";
-import { and, asc, eq, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
   auditEvents,
   categories,
@@ -28,12 +28,21 @@ import { toActor } from "./actors.js";
 
 export const EVIDENCE_ATTACHED_EVENT = "financial_entry.evidence_attached";
 
+/**
+ * A column of the outer entry, always written with its table. Drizzle drops
+ * the table name when the outer select reads `financial_entries` alone, and a
+ * bare name inside a subquery binds to the subquery's own table first (#483).
+ */
+function outerEntry(column: AnyColumn): SQL {
+  return sql`${sql.identifier("financial_entries")}.${sql.identifier(column.name)}`;
+}
+
 /** The receipts of every `attach-evidence` call on the outer entry. */
 function attachCommandIdsSql(): SQL {
   return sql`select ${auditEvents.commandId} from ${auditEvents}
-    where ${auditEvents.workspaceId} = ${financialEntries.workspaceId}
+    where ${auditEvents.workspaceId} = ${outerEntry(financialEntries.workspaceId)}
       and ${auditEvents.entityType} = 'financial_entry'
-      and ${auditEvents.entityId} = ${financialEntries.id}
+      and ${auditEvents.entityId} = ${outerEntry(financialEntries.id)}
       and ${auditEvents.eventType} = ${EVIDENCE_ATTACHED_EVENT}`;
 }
 
@@ -42,9 +51,9 @@ export function entryArtifactCountSql(): SQL<number> {
   return sql<number>`(
     select count(distinct ${commandSourceArtifacts.artifactId})::int
     from ${commandSourceArtifacts}
-    where ${commandSourceArtifacts.workspaceId} = ${financialEntries.workspaceId}
+    where ${commandSourceArtifacts.workspaceId} = ${outerEntry(financialEntries.workspaceId)}
       and (
-        ${commandSourceArtifacts.commandId} = ${financialEntries.createdByCommandId}
+        ${commandSourceArtifacts.commandId} = ${outerEntry(financialEntries.createdByCommandId)}
         or ${commandSourceArtifacts.commandId} in (${attachCommandIdsSql()})
       )
   )`;
@@ -54,8 +63,8 @@ export function entryArtifactCountSql(): SQL<number> {
 function evidencePolicySql(): SQL {
   return sql`(
     select ${categories.evidencePolicy} from ${categories}
-    where ${categories.workspaceId} = ${financialEntries.workspaceId}
-      and ${categories.id} = ${financialEntries.categoryId}
+    where ${categories.workspaceId} = ${outerEntry(financialEntries.workspaceId)}
+      and ${categories.id} = ${outerEntry(financialEntries.categoryId)}
   )`;
 }
 
@@ -71,11 +80,15 @@ export function entryEvidenceStateSql(): SQL<string> {
 }
 
 /**
- * Still waiting for paperwork: NOT_SUPPLIED, and not a reversal — a reversal
- * cancels a spend and needs no receipt of its own.
+ * Still waiting for paperwork: NOT_SUPPLIED, and neither half of a
+ * cancellation. A reversal needs no receipt of its own, and once it has posted
+ * the spend it cancelled asks for none either (#473). The client's copy is
+ * `missingReceipt` in apps/web/src/vehicle/flow.ts.
  */
 export function entryEvidenceMissingSql(): SQL {
-  return sql`(${entryEvidenceStateSql()} = 'NOT_SUPPLIED' and ${financialEntries.reversesEntryId} is null)`;
+  return sql`(${entryEvidenceStateSql()} = 'NOT_SUPPLIED'
+    and ${financialEntries.reversesEntryId} is null
+    and ${financialEntries.status} <> 'REVERSED')`;
 }
 
 /**

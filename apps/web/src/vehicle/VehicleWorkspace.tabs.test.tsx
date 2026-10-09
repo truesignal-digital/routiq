@@ -282,6 +282,74 @@ describe("Money", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  describe("spending by category's shares", () => {
+    const categoryCard = async () =>
+      (await screen.findByText("Spending by category")).closest<HTMLElement>('[data-slot="card"]')!;
+
+    it("gives each category its share of a month that spent", async () => {
+      await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09`, { role: "FINANCE" });
+      const card = await categoryCard();
+      // 421,000 and 240,000 of 661,000.
+      expect(within(card).getByText("64%")).toBeTruthy();
+      expect(within(card).getByText("36%")).toBeTruthy();
+    });
+
+    it("shows no share when a cancellation leaves the month negative (#472)", async () => {
+      await openVehicle(`/assets/${ASSET_ID}/money?period=2026-10`, {
+        role: "FINANCE",
+        finance: (periodCode) =>
+          finance(periodCode ?? "2026-10", {
+            byCategory: [
+              { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs", layer: "MAINTENANCE", expenseMinor: -85_000 },
+            ],
+          }),
+      });
+      const card = await categoryCard();
+      expect(within(card).getByText("Repairs")).toBeTruthy();
+      expect(card.textContent).toContain("85,000");
+      // It read "-8500000%" before.
+      expect(card.textContent).not.toContain("%");
+    });
+
+    it("shows no share when the month nets to zero", async () => {
+      await openVehicle(`/assets/${ASSET_ID}/money?period=2026-10`, {
+        role: "FINANCE",
+        finance: (periodCode) =>
+          finance(periodCode ?? "2026-10", {
+            byCategory: [
+              { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel", layer: "DIRECT", expenseMinor: 40_000 },
+              { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs", layer: "MAINTENANCE", expenseMinor: -40_000 },
+            ],
+          }),
+      });
+      expect((await categoryCard()).textContent).not.toContain("%");
+    });
+  });
+
+  it("asks for the receipt of a posted entry, not of one whose cancellation has posted (#473)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
+      role: "FINANCE",
+      entries: [
+        entryRow({
+          id: "00000000-0000-4000-8000-0000000000e1",
+          entryNumber: "DLA-2026-00008",
+          status: "REVERSED",
+          postingPeriodCode: "2026-08",
+        }),
+        entryRow({
+          id: "00000000-0000-4000-8000-0000000000e2",
+          entryNumber: "DLA-2026-00009",
+          status: "POSTED",
+          postingPeriodCode: "2026-08",
+        }),
+      ],
+    });
+    const cancelled = (await screen.findByText("DLA-2026-00008")).closest("li")!;
+    const posted = screen.getByText("DLA-2026-00009").closest("li")!;
+    expect(within(posted).getByText("No receipt")).toBeTruthy();
+    expect(within(cancelled).queryByText("No receipt")).toBeNull();
+  });
+
   it("steps back a month and keeps the lifetime figures at the foot", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "ADMIN" });
     const user = userEvent.setup();

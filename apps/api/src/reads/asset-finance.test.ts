@@ -126,8 +126,8 @@ describe("GET /v1/assets/:assetId/finance", () => {
     body = await finance(admin.token);
     expect(body.posted).toMatchObject({ expenseMinor: 0, entryCount: 2 });
     expect(body.byCategory).toEqual([]);
-    // The reversal row never counts as missing paperwork.
-    expect(body.evidenceMissing.postedCount).toBe(1);
+    // Neither half of a cancellation asks for paperwork (#473).
+    expect(body.evidenceMissing.postedCount).toBe(0);
   });
 
   it("books a reversal of a locked month into the current one — or refuses if that is locked too", async () => {

@@ -343,9 +343,12 @@ function CategoryBars({
               </span>
               <span className="shrink-0 tabular-nums">
                 {money(category.expenseMinor)}
-                <span className="ml-2 inline-block w-9 text-right text-xs text-muted-foreground">
-                  {Math.round((category.expenseMinor / Math.max(1, total)) * 100)}%
-                </span>
+                {/* A month that nets to nothing or less has no shares (#472). */}
+                {total > 0 && (
+                  <span className="ml-2 inline-block w-9 text-right text-xs text-muted-foreground">
+                    {Math.round((category.expenseMinor / total) * 100)}%
+                  </span>
+                )}
               </span>
             </div>
             <div className="mt-1.5 h-2 overflow-hidden rounded-sm bg-muted">
