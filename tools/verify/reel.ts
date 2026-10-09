@@ -133,15 +133,25 @@ export interface Track {
 }
 
 /**
- * Beats (shot times) become anchors too, holding the last painted frame, so the
- * clock reads exactly at every shot even when nothing repainted, as when a step
- * waits out a 30 s timeout.
+ * Shots anchor the clock and hold their unhighlighted viewport capture. Numeric
+ * beats (older callers) use the first paint before the next beat, or the last
+ * earlier paint when nothing changed. Screenshot pauses never swallow a beat.
  */
-export function compressCast(cast: CastIndex, beats: readonly number[] = []): Track {
-  const hidden = (t: number) => cast.pauses.some(([from, to]) => t >= from && t <= to);
+export function compressCast(cast: CastIndex, beats: readonly (number | Frame)[] = []): Track {
+  const shots = beats.flatMap((beat) => {
+    const t = typeof beat === "number" ? beat : beat.t;
+    return t === undefined ? [] : [{ t, shot: typeof beat === "number" ? undefined : beat }];
+  }).sort((a, b) => a.t - b.t);
+  const pauses = cast.pauses.map(([from, to]) => [from, Math.min(to, shots.find((beat) => beat.t > from)?.t ?? to)] as const);
+  const hidden = (t: number) => pauses.some(([from, to]) => t >= from && t <= to);
   const events = [
     ...cast.frames.filter((frame) => !hidden(frame.t)).map((frame) => ({ t: frame.t, file: frame.file as string | undefined })),
-    ...beats.map((t) => ({ t, file: undefined })),
+    ...shots.map(({ t, shot }, i) => ({
+      t,
+      file: shot === undefined
+        ? cast.frames.find((frame) => frame.t >= t && frame.t < (shots[i + 1]?.t ?? Infinity))?.file
+        : path.posix.join("..", shot.frame),
+    })),
   ].sort((a, b) => a.t - b.t);
   if (!events.some((event) => event.file !== undefined)) throw new Error("the cast has no frames to play");
   const anchors: Track["anchors"] = [];
@@ -534,7 +544,7 @@ export async function buildReel(afterDir: string, beforeDir: string | undefined,
   if (after.frames.length === 0) throw new Error(`${afterDir} has no shots; a reel needs at least one shot()`);
 
   const viewport = casts.at(-1)?.viewport ?? { width: 1440, height: 900 };
-  const tracks = casts.map((cast, i) => compressCast(cast, (runs[i]?.frames ?? []).flatMap((frame) => (frame.t === undefined ? [] : [frame.t]))));
+  const tracks = casts.map((cast, i) => compressCast(cast, runs[i]?.frames ?? []));
   const timeline = compileTimeline(planReel(after, before), tracks);
   const layout = computeLayout(runs.length, viewport);
   const theme = appTheme(readFileSync(path.join(REPO_ROOT, "apps/web/src/styles.css"), "utf8"));

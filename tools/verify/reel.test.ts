@@ -329,3 +329,16 @@ it("shows a caption only during its shot dwell and clears the previous step note
   }
   expect(at(timeline.endStart).captionOpacity).toBe(0);
 });
+
+it("holds the first painted frame at a beat despite overlapping screenshot pauses", () => {
+  const track = compressCast(cast([3.3, 3.5, 3.7, 4], [[3.385, 3.688], [3.592, 3.955]]), [3.385, 3.592]);
+  expect(frameAt(track, realToReel(track, 3.385))).toBe("1.jpg");
+  expect(frameAt(track, realToReel(track, 3.592))).toBe("2.jpg");
+});
+
+it("holds the unhighlighted viewport shot when screenshot pauses hide every cast frame", () => {
+  const shots = [frame("dialog", 1), frame("typed", 1.1)];
+  const track = compressCast(cast([1.02, 1.12], [[1, 1.3], [1.1, 1.4]]), shots);
+  expect(frameAt(track, realToReel(track, 1))).toBe("../frames/dialog.png");
+  expect(frameAt(track, realToReel(track, 1.1))).toBe("../frames/typed.png");
+});
