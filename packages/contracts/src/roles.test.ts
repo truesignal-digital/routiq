@@ -12,6 +12,8 @@ import {
   LEGACY_ROLE_MAP,
   legacyRoleInput,
   MONEY_READ_SCOPE,
+  readsOwnTripsOnly,
+  TRIP_READ_SCOPE,
   ROLES,
 } from "./roles.js";
 
@@ -60,6 +62,11 @@ describe("role registry", () => {
       TECHNICIAN: "WORK_ORDER_COSTS",
       DRIVER: "OWN_ENTRIES",
     });
+  });
+
+  it("narrows only the driver to their own trips (#545)", () => {
+    expect(ROLES.filter(readsOwnTripsOnly)).toEqual(["DRIVER"]);
+    expect(TRIP_READ_SCOPE.DRIVER).toBe("OWN_TRIPS");
   });
 
   it("derives the role lists from the scope, so they cannot drift", () => {

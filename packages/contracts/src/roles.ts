@@ -83,6 +83,24 @@ export function moneyReadScope(role: Role): MoneyReadScope {
 }
 
 /**
+ * Which trips a role reads (roles-and-access.md, Trips): every trip of its
+ * branches, or only its own (ADR-0012 §3: recorded by them, planned for them,
+ * or crewed by them as a driver). Branch scope applies on top of both.
+ */
+export const TRIP_READ_SCOPE = {
+  DIRECTOR: "BRANCH_TRIPS",
+  ADMIN: "BRANCH_TRIPS",
+  FINANCE: "BRANCH_TRIPS",
+  CASHIER: "BRANCH_TRIPS",
+  TECHNICIAN: "BRANCH_TRIPS",
+  DRIVER: "OWN_TRIPS",
+} as const satisfies Record<Role, "BRANCH_TRIPS" | "OWN_TRIPS">;
+
+export function readsOwnTripsOnly(role: Role): boolean {
+  return TRIP_READ_SCOPE[role] === "OWN_TRIPS";
+}
+
+/**
  * Whether a role reads a work order's money: its estimate, its actual cost and
  * its cost lines. Every scope but OWN_ENTRIES: a work order's figures sum over
  * other people's entries, and a driver reads only the entries they recorded.
