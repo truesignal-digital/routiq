@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 682663,
+    "ceiling": 683186,
     "raises": [
       {
         "date": "2026-10-06",
@@ -175,6 +175,12 @@
         "from": 682090,
         "to": 682663,
         "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 682663,
+        "to": 683186,
+        "reason": "Issue 559: the work-order hand-off in Cancel entry (fr and en copy, the role check and its three hosts)"
       }
     ]
   },
@@ -232,7 +238,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 257700,
+    "ceiling": 257927,
     "raises": [
       {
         "date": "2026-10-06",
@@ -401,6 +407,12 @@
         "from": 256557,
         "to": 257700,
         "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 257700,
+        "to": 257927,
+        "reason": "Issue 559: Cancel entry hands a work-order cost Finance may not book to the work order; its fr and en sentences ship in the initial locale bundle"
       }
     ]
   }
