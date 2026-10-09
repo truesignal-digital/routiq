@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 584121,
+    "ceiling": 584923,
     "raises": [
       {
         "date": "2026-10-06",
@@ -149,8 +149,8 @@
       {
         "date": "2026-10-09",
         "from": 583959,
-        "to": 584121,
-        "reason": "Cancel entry and Record again in the Money record panel (#525) and the narrow-screen column default for the entries list (#436)"
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
       }
     ]
   },
@@ -202,7 +202,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 584121,
+    "ceiling": 584923,
     "raises": [
       {
         "date": "2026-10-06",
@@ -351,8 +351,8 @@
       {
         "date": "2026-10-09",
         "from": 583959,
-        "to": 584121,
-        "reason": "Cancel entry and Record again in the Money record panel (#525) and the narrow-screen column default for the entries list (#436)"
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
       }
     ]
   }
