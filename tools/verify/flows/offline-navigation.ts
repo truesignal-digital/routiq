@@ -8,7 +8,8 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * failed code request. Its data waits in the loading skeleton (TanStack Query
  * pauses while the browser is offline). The app has no service worker yet, so a
  * full reload while offline is out of scope. It starts from a cold load of
- * Users, so Home proves a signed-in deep-link start fetches Home too.
+ * My settings (every role may open it), so Home proves that a signed-in
+ * deep-link start fetches Home too.
  * Run: pnpm verify drive flow:offline-navigation --role director --lang en
  */
 
@@ -31,7 +32,7 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
 
   // Start signed in on a deep link, not Home: Home's code then only arrives
   // through the background fetch, which must include it.
-  await page.goto(new URL("/more/users", page.url()).href);
+  await page.goto(new URL("/my-settings", page.url()).href);
   await page.getByRole("heading", { level: 1 }).first().waitFor({ timeout: 60_000 });
   // The background fetch is done when no new code file has arrived for 3 s.
   await quiet();
