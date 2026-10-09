@@ -28,6 +28,7 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
+import { contributes } from "../modules/manifest.js";
 import { groundingFacts, isDisposed, releaseBlocker, releaseLockFor } from "./flow.js";
 import {
   recordReference,
@@ -67,7 +68,11 @@ export interface VehicleActionDef {
   key: VehicleActionKey;
   group: ActionGroup;
   icon: LucideIcon;
-  module: ModuleCode;
+  /**
+   * The module that owns the action, for actions core still assigns itself.
+   * A module's own actions are named in its manifest (`src/modules/`) instead.
+   */
+  module?: ModuleCode;
   /** The roles the command's default rules accept, as the permission helpers list them. */
   roles: readonly Role[];
   open: ActionOpen;
@@ -109,16 +114,15 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
     key: "report-issue",
     group: "maintenance",
     icon: TriangleAlert,
-    module: "MAINTENANCE",
     roles: FIELD_REPORTERS,
     open: "form",
   },
-  { key: "create-work-order", group: "maintenance", icon: ClipboardPlus, module: "MAINTENANCE", roles: WORKSHOP, open: "form" },
-  { key: "approve-work-order", group: "maintenance", icon: BadgeCheck, module: "MAINTENANCE", roles: WORK_ORDER_DECIDERS, open: "record-form" },
-  { key: "complete-work-order", group: "maintenance", icon: ClipboardCheck, module: "MAINTENANCE", roles: WORKSHOP, open: "record-form" },
-  { key: "approve-completion", group: "maintenance", icon: ClipboardCheck, module: "MAINTENANCE", roles: WORK_ORDER_DECIDERS, open: "record-form" },
-  { key: "cancel-work-order", group: "maintenance", icon: Ban, module: "MAINTENANCE", roles: WORKSHOP, open: "record-form" },
-  { key: "release", group: "maintenance", icon: ShieldCheck, module: "MAINTENANCE", roles: MANAGERS, open: "record-form" },
+  { key: "create-work-order", group: "maintenance", icon: ClipboardPlus, roles: WORKSHOP, open: "form" },
+  { key: "approve-work-order", group: "maintenance", icon: BadgeCheck, roles: WORK_ORDER_DECIDERS, open: "record-form" },
+  { key: "complete-work-order", group: "maintenance", icon: ClipboardCheck, roles: WORKSHOP, open: "record-form" },
+  { key: "approve-completion", group: "maintenance", icon: ClipboardCheck, roles: WORK_ORDER_DECIDERS, open: "record-form" },
+  { key: "cancel-work-order", group: "maintenance", icon: Ban, roles: WORKSHOP, open: "record-form" },
+  { key: "release", group: "maintenance", icon: ShieldCheck, roles: MANAGERS, open: "record-form" },
   { key: "start-trip", group: "operations", icon: Route, module: "ACTIVITIES", roles: TRIP_RUNNERS, open: "navigate" },
   { key: "change-custodian", group: "operations", icon: UserRound, module: "ASSETS", roles: MANAGERS, open: "form" },
   {
@@ -145,7 +149,8 @@ export function actionDef(key: VehicleActionKey): VehicleActionDef {
 
 /** Role and module: whether the action exists for this viewer at all. */
 export function actionPermitted(def: VehicleActionDef, viewer: Viewer): boolean {
-  if (def.module !== "CORE" && !viewer.enabledModules.includes(def.module)) return false;
+  if (!contributes("vehicleActions", def.key, viewer.enabledModules)) return false;
+  if (def.module !== undefined && def.module !== "CORE" && !viewer.enabledModules.includes(def.module)) return false;
   return def.roles.includes(viewer.role);
 }
 

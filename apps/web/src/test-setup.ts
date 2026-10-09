@@ -1,6 +1,10 @@
 import { configure } from "@testing-library/react";
 import { afterEach, beforeEach } from "vitest";
+import { installAppModules } from "./modules/index.js";
 import { resetSearch } from "./test-router.js";
+
+// As main.tsx does: every test sees the application's module manifests.
+installAppModules();
 
 /**
  * `findBy*` and `waitFor` give up after testing-library's 1 s default, and a

@@ -29,11 +29,10 @@ import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
   const { asset, attention, viewer, panel, gates } = useVehicle();
-  const query = useWorkOrder(gates.maintenance ? id : undefined);
+  const query = useWorkOrder(id);
   const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordReference(id) }));
   const locale = i18n.language;
 
-  if (!gates.maintenance) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
   if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
   const wo = query.data;

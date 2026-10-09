@@ -158,6 +158,72 @@ describe("enable-module / disable-module", () => {
     expect((await moduleRows(a.id)).map((row) => row.moduleCode)).toEqual(["MAINTENANCE"]);
   });
 
+  it("keeps Maintenance's records through off and on, refusing its reads and commands meanwhile", async () => {
+    const a = await tenant();
+    const assetId = await seedAsset(ctx.app, a.director.token);
+    const issueId = randomUUID();
+    const workOrderId = randomUUID();
+    await api.ok(a.director.token, "report-issue", {
+      issueId,
+      assetId,
+      description: "Frein avant qui grince",
+      safetyCritical: true,
+    });
+    await api.ok(a.director.token, "create-work-order", {
+      workOrderId,
+      assetId,
+      issueId,
+      description: "Changer les plaquettes",
+      expectedCostMinor: 0,
+    });
+    const reads = [`/v1/issues/${issueId}`, `/v1/work-orders/${workOrderId}`, "/v1/issues", "/v1/work-orders"];
+    const before = await Promise.all(reads.map((url) => api.get(a.director.token, url)));
+    expect(before.map((reply) => reply.status)).toEqual([200, 200, 200, 200]);
+
+    expect((await toggle("disable-module", a.slug, "MAINTENANCE")).status).toBe(200);
+    for (const url of reads) {
+      const off = await api.get(a.director.token, url);
+      expect(off, url).toEqual({ status: 403, body: { error: { code: "MODULE_DISABLED", metadata: { module: "MAINTENANCE" } } } });
+    }
+    const refused = await api.send(a.director.token, "report-issue", {
+      issueId: randomUUID(),
+      assetId,
+      description: "Phare cassé",
+      safetyCritical: false,
+    });
+    expect(refused).toMatchObject({ status: 403, body: { error: { code: "MODULE_DISABLED" } } });
+
+    expect((await toggle("enable-module", a.slug, "MAINTENANCE")).status).toBe(200);
+    const after = await Promise.all(reads.map((url) => api.get(a.director.token, url)));
+    expect(after).toEqual(before);
+  });
+
+  it("keeps Trips on while Scheduling needs it, and Scheduling off until Trips is on", async () => {
+    const a = await tenant();
+    const state = async () =>
+      new Map((await moduleRows(a.id)).map((row) => [row.moduleCode, row.enabled]));
+
+    expect((await toggle("enable-module", a.slug, "SCHEDULING")).status).toBe(200);
+    const stillRequired = await toggle("disable-module", a.slug, "ACTIVITIES");
+    expect(stillRequired).toMatchObject({
+      status: 409,
+      body: { error: { code: "MODULE_STILL_REQUIRED", metadata: { module: "ACTIVITIES", requiredBy: ["SCHEDULING"] } } },
+    });
+    expect(await state()).toEqual(new Map([["SCHEDULING", true]]));
+
+    expect((await toggle("disable-module", a.slug, "SCHEDULING")).status).toBe(200);
+    expect((await toggle("disable-module", a.slug, "ACTIVITIES")).status).toBe(200);
+    const dependencyOff = await toggle("enable-module", a.slug, "SCHEDULING");
+    expect(dependencyOff).toMatchObject({
+      status: 409,
+      body: { error: { code: "MODULE_DEPENDENCY_DISABLED", metadata: { module: "SCHEDULING", requires: ["ACTIVITIES"] } } },
+    });
+    expect(await state()).toEqual(new Map([["SCHEDULING", false], ["ACTIVITIES", false]]));
+
+    expect((await toggle("enable-module", a.slug, "ACTIVITIES")).status).toBe(200);
+    expect((await toggle("enable-module", a.slug, "SCHEDULING")).status).toBe(200);
+  });
+
   it("keeps CORE always on, names an unknown workspace, and points v1 at the target it lacks", async () => {
     const a = await tenant();
     const core = await toggle("disable-module", a.slug, "CORE");

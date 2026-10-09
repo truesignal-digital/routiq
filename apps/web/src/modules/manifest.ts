@@ -1,0 +1,186 @@
+import type {
+  ModuleCode,
+  NavCountKey,
+  ToggleableModuleCode,
+  VehicleHistoryKind,
+} from "@routiq/contracts";
+import type { DashboardCardKey } from "../dashboard/cards.js";
+import { isRouteActive } from "../lib/route-match.js";
+import type { ShellSection } from "../shell/sections.js";
+import type { VehicleTab } from "../vehicle/VehicleTabsNav.js";
+import type { PanelRef, VehicleActionKey } from "../vehicle/model.js";
+
+/**
+ * The module contract on the web side (AGENTS.md, "Core vs modules"). Core
+ * owns the slots: the sidebar, the phone bar, Home, the vehicle's tabs,
+ * actions, record panel and timeline, and the fields listed in FIELD_SLOTS.
+ * A module fills them through its manifest under `src/modules/<module>/`;
+ * the composition entry (`src/modules/index.ts`) installs the manifests, and
+ * core reads them here without importing any module. A slot entry no
+ * manifest claims belongs to core and is always there.
+ *
+ * Turning a module off removes every contribution its manifest names, for
+ * every role, and a direct link to one of its pages shows that the module is
+ * not included without loading its data. The server's module, role and
+ * branch gates stay the authority; this only keeps the UI from offering
+ * what the server will refuse.
+ */
+
+/** A field one module adds to a record another part of the app shows. */
+export const FIELD_SLOTS = [
+  /** A money entry's link to the work order it pays for (finance entry page, vehicle Money). */
+  "entry.workOrderLink",
+] as const;
+export type FieldSlot = (typeof FIELD_SLOTS)[number];
+
+/** A sidebar row a module adds, placed after the row named by `after` in its group. */
+export interface ModuleNavRow extends Omit<ShellSection, "module"> {
+  after: string;
+}
+
+/** A count on a module's row; `listKey` is the query key its list refreshes under. */
+export interface ModuleNavCount {
+  key: NavCountKey;
+  listKey: (workspaceSlug: string | undefined) => unknown[];
+}
+
+export type PanelKind = PanelRef["kind"];
+
+export interface WebModuleManifest {
+  code: ToggleableModuleCode;
+  navRows: readonly ModuleNavRow[];
+  navCounts: readonly ModuleNavCount[];
+  homeCards: readonly DashboardCardKey[];
+  vehicleTabs: readonly VehicleTab[];
+  vehicleActions: readonly VehicleActionKey[];
+  /** Record kinds the vehicle's panel opens from `?panel=`. */
+  recordPanels: readonly PanelKind[];
+  /** The vehicle timeline's filters. */
+  historyKinds: readonly VehicleHistoryKind[];
+  fields: readonly FieldSlot[];
+}
+
+/** The slots a manifest fills by key, as opposed to nav rows, which it defines whole. */
+export type KeyedSlot =
+  | "navCounts"
+  | "homeCards"
+  | "vehicleTabs"
+  | "vehicleActions"
+  | "recordPanels"
+  | "historyKinds"
+  | "fields";
+
+const KEYED_SLOTS: readonly KeyedSlot[] = [
+  "navCounts",
+  "homeCards",
+  "vehicleTabs",
+  "vehicleActions",
+  "recordPanels",
+  "historyKinds",
+  "fields",
+];
+
+function keysOf(manifest: WebModuleManifest, slot: KeyedSlot): readonly string[] {
+  return slot === "navCounts" ? manifest.navCounts.map((count) => count.key) : manifest[slot];
+}
+
+let installed: readonly WebModuleManifest[] = [];
+
+/** Called once by the composition entry before the app renders (and by the test setup). */
+export function installModules(manifests: readonly WebModuleManifest[]): void {
+  installed = manifests;
+}
+
+export function installedModules(): readonly WebModuleManifest[] {
+  return installed;
+}
+
+/** The module whose manifest claims this slot entry; undefined means core owns it. */
+export function contributionOwner(slot: KeyedSlot, key: string): ToggleableModuleCode | undefined {
+  return installed.find((manifest) => keysOf(manifest, slot).includes(key))?.code;
+}
+
+/**
+ * Whether a slot entry shows for these modules: a core entry always, a
+ * module's only while it is on. Unknown modules (membership still loading)
+ * show no module's entries.
+ */
+export function contributes(
+  slot: KeyedSlot,
+  key: string,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  const owner = contributionOwner(slot, key);
+  return owner === undefined || (enabledModules?.includes(owner) ?? false);
+}
+
+/** Every module's sidebar rows, each with its owner as `module`. */
+export function moduleNavRows(): Array<ShellSection & { after: string }> {
+  return installed.flatMap((manifest) =>
+    manifest.navRows.map((row) => ({ ...row, module: manifest.code })),
+  );
+}
+
+/** The module owning a page, by the subtree of one of its sidebar rows. */
+export function pageOwner(pathname: string): { code: ToggleableModuleCode; row: ModuleNavRow } | undefined {
+  for (const manifest of installed) {
+    for (const row of manifest.navRows) {
+      if (isRouteActive(row.match ?? row.to, pathname)) return { code: manifest.code, row };
+    }
+  }
+  return undefined;
+}
+
+/** What each core slot holds, for checking the references a manifest makes. */
+export interface SlotCatalogue {
+  keys: Record<KeyedSlot, readonly string[]>;
+  /** Entries core still assigns to a module inline (`module:` on the entry); a manifest may not claim them too. */
+  inlineOwned: Partial<Record<KeyedSlot, readonly string[]>>;
+  /** Sidebar rows core defines itself, by key. */
+  coreNavRows: readonly string[];
+  /** Codes with a contract manifest (`MODULE_MANIFESTS`). */
+  modules: readonly ToggleableModuleCode[];
+}
+
+/**
+ * Everything wrong with a set of web manifests, in words; empty when they
+ * hold: a module without a contract manifest or with two web ones, a key no
+ * slot has, an entry two owners claim, and a row placed after a row that
+ * does not exist.
+ */
+export function webManifestProblems(
+  manifests: readonly WebModuleManifest[],
+  catalogue: SlotCatalogue,
+): string[] {
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const manifest of manifests) {
+    if (seen.has(manifest.code)) problems.push(`${manifest.code} has two web manifests`);
+    seen.add(manifest.code);
+    if (!catalogue.modules.includes(manifest.code)) problems.push(`${manifest.code} has no contract manifest`);
+  }
+
+  for (const slot of KEYED_SLOTS) {
+    const owners = new Map<string, string>();
+    for (const key of catalogue.inlineOwned[slot] ?? []) owners.set(key, "core's inline module");
+    for (const manifest of manifests) {
+      for (const key of keysOf(manifest, slot)) {
+        if (!catalogue.keys[slot].includes(key)) problems.push(`${manifest.code} names ${slot} "${key}", which does not exist`);
+        const owner = owners.get(key);
+        if (owner !== undefined) problems.push(`${slot} "${key}" is claimed by ${owner} and ${manifest.code}`);
+        owners.set(key, manifest.code);
+      }
+    }
+  }
+
+  const rowKeys = new Set(catalogue.coreNavRows);
+  const rows = manifests.flatMap((manifest) => manifest.navRows.map((row) => ({ code: manifest.code, row })));
+  for (const { code, row } of rows) {
+    if (rowKeys.has(row.key)) problems.push(`sidebar row "${row.key}" of ${code} already exists`);
+    rowKeys.add(row.key);
+  }
+  for (const { code, row } of rows) {
+    if (!rowKeys.has(row.after)) problems.push(`sidebar row "${row.key}" of ${code} follows "${row.after}", which does not exist`);
+  }
+  return problems;
+}

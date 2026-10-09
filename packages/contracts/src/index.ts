@@ -2,6 +2,7 @@ export * from "./auth.js";
 export * from "./envelope.js";
 export * from "./errors.js";
 export * from "./modules.js";
+export * from "./module-manifest.js";
 export * from "./roles.js";
 export * from "./client/submission.js";
 export * from "./commands/add-or-renew-document.js";

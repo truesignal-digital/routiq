@@ -8,7 +8,6 @@ import {
   SlidersHorizontal,
   Truck,
   UserRound,
-  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { moneyReadScope, type ModuleCode, type NavCountKey, type Role } from "@routiq/contracts";
@@ -16,6 +15,7 @@ import { canAdministerBranches } from "../branches/permissions.js";
 import { canManagePeriods, canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 import { canAdministerMembers } from "../members/permissions.js";
+import { moduleNavRows } from "../modules/manifest.js";
 import { canManageCompanySettings } from "../settings/permissions.js";
 
 /** The sidebar's groups, in order: the work of the day, then the company's own set-up. */
@@ -40,7 +40,10 @@ export interface ShellSection {
   match?: string;
   /** The consistency kit's icon for the place (`docs/design/consistency/kit.js`, ICONS). */
   icon: LucideIcon;
-  /** Module that owns this section; sections without one are always visible. */
+  /**
+   * Module that owns this section; sections without one are always visible.
+   * A module's own rows come from its manifest (`src/modules/`), which sets it.
+   */
   module?: ModuleCode;
   /**
    * role-config: whether this role has work on the page. Absent means every
@@ -68,11 +71,12 @@ const onlyFor =
     roles.includes(role);
 
 /**
- * Every row, in sidebar order within its group. A row is a place (a page of
- * records), never an action or a single record. Rows hide when their module
- * is off or the role has no work there; they are never greyed (#64).
+ * Core's rows, in sidebar order within its group; modules add theirs through
+ * their manifests (`allSections`). A row is a place (a page of records), never
+ * an action or a single record. Rows hide when their module is off or the role
+ * has no work there; they are never greyed (#64).
  */
-const ALL_SECTIONS: readonly ShellSection[] = [
+const CORE_SECTIONS: readonly ShellSection[] = [
   // The landing route, and the one section every member keeps: its cards are
   // module-gated individually, so the page is never empty of everything.
   { key: "home", group: "daily", labelKey: "home.title", to: "/", icon: House },
@@ -86,22 +90,6 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     module: "ACTIVITIES",
     // The counter and the workshop have no trips to run (ADR-0009).
     reads: onlyFor(["DIRECTOR", "ADMIN", "FINANCE", "DRIVER"]),
-  },
-  {
-    key: "maintenance",
-    group: "daily",
-    labelKey: "maintenance.title",
-    to: "/maintenance",
-    icon: Wrench,
-    module: "MAINTENANCE",
-    reads: onlyFor(["DIRECTOR", "ADMIN", "TECHNICIAN"]),
-    // Opens the Problems tab on the open ones (#302 reads `tab` and `issueStatus`).
-    count: {
-      key: "maintenanceNew",
-      labelKey: "shell.counts.maintenanceNew",
-      to: "/maintenance",
-      search: { tab: "issues", issueStatus: "OPEN" },
-    },
   },
   {
     key: "finances",
@@ -170,6 +158,31 @@ const ALL_SECTIONS: readonly ShellSection[] = [
   },
 ];
 
+/** Core's rows keys, for the manifest checks. */
+export const CORE_SECTION_KEYS: readonly string[] = CORE_SECTIONS.map((section) => section.key);
+
+/** Every row, core's and the installed modules', each module row placed after the row it names. */
+export function allSections(): ShellSection[] {
+  const rows: ShellSection[] = [...CORE_SECTIONS];
+  let pending = moduleNavRows();
+  // A row may follow another module's row, so keep placing until none moves.
+  while (pending.length > 0) {
+    const waiting = pending.filter(({ after, ...row }) => {
+      const index = rows.findIndex((placed) => placed.key === after);
+      if (index === -1) return true;
+      rows.splice(index + 1, 0, row);
+      return false;
+    });
+    if (waiting.length === pending.length) {
+      // An anchor that does not exist (the manifest checks name it): last.
+      rows.push(...waiting.map(({ after: _after, ...row }) => row));
+      break;
+    }
+    pending = waiting;
+  }
+  return rows;
+}
+
 /**
  * The rows this role sees, in sidebar order. While membership is loading
  * (no modules, no role) only rows with neither a module nor a role rule show.
@@ -178,7 +191,7 @@ export function visibleSections(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): ShellSection[] {
-  return ALL_SECTIONS.filter((section) => {
+  return allSections().filter((section) => {
     if (section.module !== undefined && !(enabledModules?.includes(section.module) ?? false)) {
       return false;
     }
