@@ -1,10 +1,24 @@
 import { z } from "zod";
-import { ACTIVITY_COMPLETENESS_CODES } from "../errors.js";
+import { TRIP_CANCELLATION_REASONS } from "../commands/plan-trip.js";
+import { ACTIVITY_COMPLETENESS_CODES, TRIP_DISCREPANCY_CODES } from "../errors.js";
 import { entryCancellation } from "./finance.js";
 import { listQuery, listResponse } from "./list.js";
 
-export const activityStatuses = ["OPEN", "CLOSED"] as const;
+/**
+ * A trip's lifecycle (ADR-0012): PLANNED and CANCELLED come with Scheduling
+ * and carry no actual start. The trip reads that predate it list only the
+ * started ones unless asked (`STARTED_ACTIVITY_STATUSES`).
+ */
+export const activityStatuses = ["PLANNED", "OPEN", "CLOSED", "CANCELLED"] as const;
 export const activityStatus = z.enum(activityStatuses);
+export type ActivityStatus = (typeof activityStatuses)[number];
+
+/**
+ * What `/v1/activities`, its summary and a vehicle's recent trips return when
+ * no status is asked for (ADR-0012 §7): trips that have started, so a client
+ * built before Scheduling never meets a trip with no start date.
+ */
+export const STARTED_ACTIVITY_STATUSES = ["OPEN", "CLOSED"] as const satisfies readonly ActivityStatus[];
 
 export const activityCompletenessValues = [
   "COMPLETE",
@@ -16,6 +30,7 @@ export const activityListSortFields = ["startedAt", "activityNumber"] as const;
 
 export const activityListQuery = listQuery(
   {
+    /** Absent: OPEN and CLOSED only. PLANNED and CANCELLED are listed when asked by name. */
     status: activityStatus.optional(),
     completeness: activityCompleteness.optional(),
     branchId: z.uuid().optional(),
@@ -136,6 +151,37 @@ export const activityFinancialEntryRead = z.object({
   cancelledBy: entryCancellation.nullable(),
 });
 
+/**
+ * The agreed price and the amount to collect (ADR-0012 §7), minor units of
+ * `priceCurrency`. Present only for the roles that read the ledger, with
+ * FINANCE on (`tripPricesVisible` on the server); every other caller gets the
+ * keys omitted, never null and never 0. Null means none was agreed.
+ */
+export const tripPriceFields = {
+  agreedPriceMinor: z.number().int().nonnegative().nullable().optional(),
+  amountToCollectMinor: z.number().int().nonnegative().nullable().optional(),
+};
+
+/** The plan of a trip (ADR-0012), beside the facts: who and what the office booked. */
+const tripPlanFields = {
+  plannedAsset: z.object({ id: z.uuid(), assetCode: z.string() }).nullable(),
+  plannedDriver: z.object({ personId: z.uuid(), displayName: z.string() }).nullable(),
+  /** The planned route's ends (place name, else the typed text); not legs. */
+  plannedOriginName: z.string().nullable(),
+  plannedDestinationName: z.string().nullable(),
+  /** Kept with its reason once cancelled, and still there if a late start revived it. */
+  cancellation: z
+    .object({
+      at: z.iso.datetime(),
+      reason: z.enum(TRIP_CANCELLATION_REASONS),
+      note: z.string().nullable(),
+    })
+    .nullable(),
+  discrepancyCodes: z.array(z.enum(TRIP_DISCREPANCY_CODES)),
+  priceCurrency: z.string().length(3),
+  ...tripPriceFields,
+};
+
 export const activityDetail = activityListItem.extend({
   /** Financial commands address branches by code, not id; the detail has to carry it. */
   branchCode: z.string(),
@@ -167,6 +213,7 @@ export const activityDetail = activityListItem.extend({
    * that would claim the trip had no money.
    */
   financialEntries: z.array(activityFinancialEntryRead).nullable(),
+  ...tripPlanFields,
 });
 
 const queryBoolean = z

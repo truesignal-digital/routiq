@@ -8,6 +8,7 @@ import {
   personListQuery,
   personListResponse,
   placeListResponse,
+  STARTED_ACTIVITY_STATUSES,
   type ListSort,
 } from "@routiq/contracts";
 import {
@@ -19,6 +20,7 @@ import {
   ilike,
   inArray,
   lt,
+  ne,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -42,7 +44,6 @@ import {
   movementLegs,
   persons,
   places,
-  workspaces,
 } from "../db/schema.js";
 import { addDays, currentBusinessDate, isoWeek } from "./business-date.js";
 import { cancelledBySql, toEntryCancellation } from "./entry-cancellation.js";
@@ -60,6 +61,16 @@ import {
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
 import { readableEntrySql } from "./money-scope.js";
+import {
+  cancellationOf,
+  plannedAssetCodeSql,
+  plannedDriverNameSql,
+  plannedRouteEndSql,
+  tripPrices,
+  tripPricesVisible,
+  tripRevenueVisible,
+} from "./trip-plan.js";
+import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -72,24 +83,6 @@ const activitySortColumns: Record<ActivitySortField, KeysetColumn> = {
   startedAt: timestampKeyset(activities.startedAt, { nullable: true }),
   activityNumber: { column: activities.activityNumber, bind: bindText },
 };
-
-/**
- * Trip days are workspace days, for the list's date filter and the summary's
- * week alike. Branches carry their own zone too; neither read uses it yet, and
- * moving one alone would split the tile from the list it filters (#511).
- */
-async function workspaceTimezone(tx: ReadTx, workspaceId: string): Promise<string> {
-  const [workspace] = await tx
-    .select({ timezone: workspaces.timezone })
-    .from(workspaces)
-    .where(eq(workspaces.id, workspaceId));
-  return workspace?.timezone ?? "Africa/Douala";
-}
-
-/** The instant a calendar day starts in `timezone`. */
-function dayStartSql(isoDate: string, timezone: string): SQL {
-  return sql`(${isoDate}::date)::timestamp at time zone ${timezone}`;
-}
 
 interface ActivitySortRow {
   /** `startedAt` as microsecond keyset text. */
@@ -145,7 +138,7 @@ function legCountSql(): SQL<number> {
  * as the detail read names it — the place, else the text typed for an ad-hoc
  * stop. Null for an activity with no legs.
  */
-function legEndSql(end: "origin" | "destination"): SQL<string | null> {
+export function legEndSql(end: "origin" | "destination"): SQL<string | null> {
   const placeId = end === "origin" ? movementLegs.originPlaceId : movementLegs.destinationPlaceId;
   const text = end === "origin" ? movementLegs.originText : movementLegs.destinationText;
   const order = end === "origin" ? sql`asc` : sql`desc`;
@@ -246,7 +239,13 @@ export function registerActivityReadRoutes(
             conditions.push(inArray(activities.branchId, auth.branchScope));
           }
           if (branchId) conditions.push(eq(activities.branchId, branchId));
-          if (status) conditions.push(eq(activities.status, status));
+          // Unasked, only trips that have started (ADR-0012 §7): a client
+          // from before Scheduling never meets one with no start date.
+          conditions.push(
+            status === undefined
+              ? inArray(activities.status, [...STARTED_ACTIVITY_STATUSES])
+              : eq(activities.status, status),
+          );
           if (completeness) {
             conditions.push(eq(activities.completeness, completeness));
           }
@@ -404,7 +403,11 @@ export function registerActivityReadRoutes(
 
           // The same scope the list applies: session branches, then the
           // optional branch inside them, never instead of them.
-          const conditions: SQL[] = [eq(activities.workspaceId, auth.workspaceId)];
+          // Started trips only, as the list lists them unasked.
+          const conditions: SQL[] = [
+            eq(activities.workspaceId, auth.workspaceId),
+            inArray(activities.status, [...STARTED_ACTIVITY_STATUSES]),
+          ];
           if (auth.branchScope !== "ALL") {
             conditions.push(inArray(activities.branchId, auth.branchScope));
           }
@@ -511,6 +514,19 @@ export function registerActivityReadRoutes(
               destinationName: legEndSql("destination"),
               distanceKm: distanceKmSql(),
               driverName: driverNameSql(),
+              plannedAssetId: activities.plannedAssetId,
+              plannedAssetCode: plannedAssetCodeSql(),
+              plannedDriverPersonId: activities.plannedDriverPersonId,
+              plannedDriverName: plannedDriverNameSql(),
+              plannedOriginName: plannedRouteEndSql("origin"),
+              plannedDestinationName: plannedRouteEndSql("destination"),
+              cancelledAt: activities.cancelledAt,
+              cancellationReason: activities.cancellationReason,
+              cancellationNote: activities.cancellationNote,
+              discrepancyCodes: activities.discrepancyCodes,
+              priceCurrency: activities.priceCurrency,
+              agreedPriceMinor: activities.agreedPriceMinor,
+              amountToCollectMinor: activities.amountToCollectMinor,
             })
             .from(activities)
             .innerJoin(
@@ -759,6 +775,20 @@ export function registerActivityReadRoutes(
               cancelledBy:
                 entry.cancelledBy === null ? null : toEntryCancellation(entry.cancelledBy, true),
             })) ?? null,
+          plannedAsset:
+            header.plannedAssetId === null || header.plannedAssetCode === null
+              ? null
+              : { id: header.plannedAssetId, assetCode: header.plannedAssetCode },
+          plannedDriver:
+            header.plannedDriverPersonId === null || header.plannedDriverName === null
+              ? null
+              : { personId: header.plannedDriverPersonId, displayName: header.plannedDriverName },
+          plannedOriginName: header.plannedOriginName,
+          plannedDestinationName: header.plannedDestinationName,
+          cancellation: cancellationOf(header),
+          discrepancyCodes: header.discrepancyCodes,
+          priceCurrency: header.priceCurrency,
+          ...tripPrices(tripPricesVisible(auth, modules), header),
         });
       } catch (error) {
         req.log.error({ err: error }, "activity detail read failed");
@@ -877,6 +907,9 @@ function activityFinancialRows(tx: ReadTx, auth: AuthContext, activityId: string
         eq(financialPostings.workspaceId, auth.workspaceId),
         eq(financialPostings.activityId, activityId),
         readableEntrySql(auth),
+        // A trip's revenue is its price (ADR-0012 §7, #583): withheld here,
+        // not only on the screen, from whoever may not read it.
+        tripRevenueVisible(auth.role) ? undefined : ne(financialEntries.direction, "REVENUE"),
       ),
     )
     .orderBy(

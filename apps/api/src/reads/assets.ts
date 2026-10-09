@@ -7,6 +7,7 @@ import {
   assetSummary,
   canReadLedger,
   listQuery,
+  STARTED_ACTIVITY_STATUSES,
   type AssetFinancialSummary,
   type AssetLifecycleStatus,
   type AssetListSortField,
@@ -553,6 +554,8 @@ export function registerAssetReadRoutes(
 
           const activityConditions: SQL[] = [
             eq(activities.workspaceId, auth.workspaceId),
+            // Started trips only, as the trips list unasked (ADR-0012 §7).
+            inArray(activities.status, [...STARTED_ACTIVITY_STATUSES]),
             // An asset can hold several segments on one activity (substitution,
             // trailer swap); EXISTS keeps the activity a single row.
             exists(

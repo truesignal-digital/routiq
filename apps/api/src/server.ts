@@ -50,6 +50,7 @@ import { principals, workspaces } from "./db/schema.js";
 import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
+import { registerPlanningReadRoutes } from "./reads/planning.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
 import { registerNavCountsReadRoutes } from "./reads/nav-counts.js";
@@ -141,6 +142,7 @@ export function buildServer({
   registerDashboardReadRoutes(app, db, requireAuth);
   registerNavCountsReadRoutes(app, db, requireAuth);
   registerActivityReadRoutes(app, db, requireAuth);
+  registerPlanningReadRoutes(app, db, requireAuth);
   registerMemberReadRoutes(app, db, requireAuth);
   registerBranchReadRoutes(app, db, requireAuth);
   registerHistoryReadRoutes(app, db, requireAuth);
