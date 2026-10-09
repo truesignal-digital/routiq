@@ -11,6 +11,7 @@ import {
   assetAvailabilityIntervals,
   branches,
   sourceArtifacts,
+  workspaces,
 } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
@@ -384,6 +385,49 @@ describe("GET /v1/assets/:assetId/attention", () => {
       }),
     ]);
   });
+
+  it.each([
+    { timezone: "Pacific/Kiritimati", offsetHours: 14 },
+    { timezone: "Pacific/Pago_Pago", offsetHours: -11 },
+  ])(
+    "dates a document's attention from the workspace's midnight in $timezone",
+    async ({ timezone, offsetHours }) => {
+      const zoned = await seedWorkspace(ctx.db);
+      await ctx.db
+        .update(workspaces)
+        .set({ timezone })
+        .where(eq(workspaces.id, zoned.workspace.id));
+      const zonedAdmin = await seedActor(ctx.db, { workspaceId: zoned.workspace.id, role: "ADMIN" });
+      const truck = await seedAsset(ctx.app, zonedAdmin.token);
+      for (const [typeCode, expiresAt] of [
+        ["INSURANCE", "2026-08-31"],
+        ["PERMIT", "2026-10-01"],
+      ] as const) {
+        await api.ok(zonedAdmin.token, "add-or-renew-document", {
+          documentId: randomUUID(),
+          assetId: truck,
+          documentTypeCode: typeCode,
+          expiresAt,
+        });
+      }
+
+      // Midday on 1 September wherever the workspace is.
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(Date.UTC(2026, 8, 1, 12) - offsetHours * 3_600_000));
+      const body = await attention(zonedAdmin.token, truck);
+      vi.useRealTimers();
+
+      const localMidnight = (date: string) =>
+        new Date(Date.parse(`${date}T00:00:00Z`) - offsetHours * 3_600_000).toISOString();
+      expect(body.businessDate).toBe("2026-09-01");
+      expect(body.items.map(({ code, since }) => ({ code, since }))).toEqual([
+        // Expired since the day it expired began.
+        { code: "DOCUMENT_EXPIRED", since: localMidnight("2026-08-31") },
+        // Expiring since 30 days before its last day.
+        { code: "DOCUMENT_EXPIRING", since: localMidnight("2026-09-01") },
+      ]);
+    },
+  );
 
   it("drops a renewed document", async () => {
     const truck = await seedAsset(ctx.app, admin.token);

@@ -97,6 +97,8 @@ describe("activities schema", () => {
       activityNumber: number,
       activityTypeId,
       templateCode: "TRUCKING",
+      // An OPEN trip always has an actual start (activities_started_at_ck, 0045).
+      startedAt: new Date("2026-07-01T06:00:00Z"),
       createdByCommandId: commandId,
     });
     return id;

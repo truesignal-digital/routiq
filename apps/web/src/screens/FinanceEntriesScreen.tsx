@@ -23,6 +23,8 @@ import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
+import { ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
+import { RecordAgainSheet } from "@/finance/RecordAgainSheet.js";
 import {
   canApproveEntries,
   canManagePeriods,
@@ -36,6 +38,7 @@ import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
 import { WaitingApprovals } from "@/finance/WaitingApprovals.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
+  useEntryListDefaultVisibility,
   useFinanceEntryColumns,
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
@@ -144,8 +147,14 @@ function FinanceEntriesContent() {
       }),
     });
   // Owned here so the view menu can sit in the toolbar row beside the tabs.
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const defaultVisibility = useEntryListDefaultVisibility();
+  const [chosenVisibility, setColumnVisibility] = useState<VisibilityState>();
+  const columnVisibility = chosenVisibility ?? defaultVisibility;
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  // Cancel entry from the record panel (#525): the panel closes and the dialog
+  // takes over, as Reject does in the waiting view.
+  const [cancelling, setCancelling] = useState<{ id: string; rowVersion: number }>();
+  const [recordingAgainId, setRecordingAgainId] = useState<string>();
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
   const sort = toSortParam(sorting);
 
@@ -361,8 +370,8 @@ function FinanceEntriesContent() {
                       icon: Undo2,
                       destructive: true,
                       onSelect: () =>
-                        // The dialog lives on the detail screen; opening it
-                        // there beats a second copy of the same command.
+                        // The row menu hands off to the detail page with the
+                        // dialog open; the record panel opens it in place.
                         void navigate({
                           to: "/finance/entries/$entryId",
                           params: { entryId: entry.id },
@@ -387,6 +396,21 @@ function FinanceEntriesContent() {
                     params: { entryId: entry.id },
                   }),
               },
+              // role-config: the same gate as the row menu and the detail page.
+              actions: (entry, drawer) =>
+                canReverseEntry(me?.role, entry) ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="min-h-11"
+                    onClick={() => {
+                      drawer.close();
+                      setCancelling({ id: entry.id, rowVersion: entry.rowVersion });
+                    }}
+                  >
+                    {label("reverse-entry")}
+                  </Button>
+                ) : null,
             }}
             loadMore={{
               hasNextPage: entriesQuery.hasNextPage,
@@ -414,6 +438,24 @@ function FinanceEntriesContent() {
         </div>
       )}
       </>
+      )}
+
+      {cancelling !== undefined && (
+        <ReverseEntryForm
+          surface="dialog"
+          entry={cancelling}
+          onRecordAgain={() => {
+            setRecordingAgainId(cancelling.id);
+            setCancelling(undefined);
+          }}
+          onDismiss={() => setCancelling(undefined)}
+        />
+      )}
+      {recordingAgainId !== undefined && (
+        <RecordAgainSheet
+          entryId={recordingAgainId}
+          onClose={() => setRecordingAgainId(undefined)}
+        />
       )}
     </PageContainer>
   );

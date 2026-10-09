@@ -320,8 +320,15 @@
     {
       "idx": 45,
       "version": "7",
+      "when": 1791510512406,
+      "tag": "0045_planned_trips",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
       "when": 1791512798565,
-      "tag": "0045_platform_scope_entitlement_rules",
+      "tag": "0046_platform_scope_entitlement_rules",
       "breakpoints": true
     }
   ]

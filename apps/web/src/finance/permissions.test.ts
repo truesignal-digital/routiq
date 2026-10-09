@@ -98,8 +98,13 @@ describe("finance permissions", () => {
   describe("canEditPendingEntry", () => {
     const AUTHOR = "00000000-0000-4000-8000-00000000a001";
     const OTHER = "00000000-0000-4000-8000-00000000a002";
-    const entry = (status: string, principalId: string | null = AUTHOR) => ({
+    const entry = (
+      status: string,
+      principalId: string | null = AUTHOR,
+      direction: "EXPENSE" | "REVENUE" = "EXPENSE",
+    ) => ({
       status,
+      direction,
       recordedBy: { principalId },
     });
     const viewer = (principalId: string, role: Role | undefined = "DRIVER") => ({
@@ -110,6 +115,16 @@ describe("finance permissions", () => {
 
     it("offers the edit to the author while the entry waits", () => {
       expect(canEditPendingEntry(entry("SUBMITTED"), viewer(AUTHOR))).toBe(true);
+    });
+
+    // #572: a driver records expenses only, so their pending revenue entry
+    // offers no edit; the roles that record revenue keep it.
+    it("not on a revenue entry for a role that does not record revenue", () => {
+      expect(canEditPendingEntry(entry("SUBMITTED", AUTHOR, "REVENUE"), viewer(AUTHOR))).toBe(false);
+      expect(canEditPendingEntry(entry("SUBMITTED", AUTHOR, "REVENUE"), viewer(AUTHOR, "TECHNICIAN"))).toBe(false);
+      for (const role of ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER"] as const) {
+        expect(canEditPendingEntry(entry("SUBMITTED", AUTHOR, "REVENUE"), viewer(AUTHOR, role))).toBe(true);
+      }
     });
 
     it("never to anyone else, an admin included", () => {

@@ -8,6 +8,7 @@ import { and, desc, eq, isNull, max, sql, type SQL } from "drizzle-orm";
 import type { AuthContext } from "../auth/types.js";
 import {
   ISSUE_CLOSURE_EVENTS,
+  otherOpenSafetyIssues,
   WORK_ORDER_COMPLETION_EVENTS,
 } from "../commands/work-order-lookup.js";
 import {
@@ -169,6 +170,7 @@ export async function loadAvailability(
     orders.map((order) => order.id),
     WORK_ORDER_COMPLETION_EVENTS,
   );
+  const otherOpen = await otherOpenSafetyIssues(tx, workspaceId, assetId, issue.id);
 
   return {
     state: "GROUNDED",
@@ -198,6 +200,7 @@ export async function loadAvailability(
         ? (completers.get(order.id) ?? null)
         : null,
     })),
+    otherOpenSafetyIssues: otherOpen,
   };
 }
 

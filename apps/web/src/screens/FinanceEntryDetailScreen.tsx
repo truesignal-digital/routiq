@@ -165,7 +165,7 @@ function FinanceEntryDetailContent() {
           {canDecide && rejectOpen && (
             <RejectEntryForm
               surface="dialog"
-              entry={{ id: entryQuery.data.id, rowVersion: entryQuery.data.rowVersion }}
+              entry={entryQuery.data}
               onDismiss={() => setRejectOpen(false)}
             />
           )}

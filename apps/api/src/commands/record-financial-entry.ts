@@ -8,6 +8,7 @@ import { canBookWorkOrderCost, type Role } from "@routiq/contracts";
 import {
   CommandError,
   registerCommand,
+  resolveCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
 import {
@@ -52,6 +53,22 @@ export function requireWorkOrderAttribution(
       command,
       reason: "WORK_ORDER_REQUIRED",
     });
+  }
+}
+
+/**
+ * A write under record-expense's or record-revenue's rules (a pending-entry
+ * edit, each money line of a sheet) passes that command's role gate too, read from its registration so the roles live in one
+ * place: a driver records expenses, never revenue (#532), and so may not edit
+ * a pending revenue entry either (#572).
+ */
+export function requireRecordRole(
+  role: Role,
+  recordCommand: "record-expense" | "record-revenue",
+): void {
+  const definition = resolveCommand(recordCommand, 1);
+  if (!("allowedRoles" in definition) || !definition.allowedRoles.includes(role)) {
+    throw new CommandError(403, "ROLE_FORBIDDEN", { command: recordCommand });
   }
 }
 

@@ -119,7 +119,8 @@
           "DOCUMENTS",
           "FINANCE",
           "ACTIVITIES",
-          "MAINTENANCE"
+          "MAINTENANCE",
+          "SCHEDULING"
         ]
       }
     },

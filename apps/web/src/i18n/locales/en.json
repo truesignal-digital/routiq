@@ -63,6 +63,10 @@
     "sidebarDescription": "Displays the navigation menu on mobile.",
     "sidebarTitle": "Navigation menu",
     "toggleSidebar": "Show or hide the menu",
+    "pageLoading": "Opening the page…",
+    "screenLoadFailed": "This page could not be opened. Check your connection, then try again.",
+    "screenFailed": "Something went wrong on this page. Try again.",
+    "retry": "Try again",
     "counts": {
       "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
@@ -193,6 +197,7 @@
     "ISSUE_SEVERITY_ALREADY_SET": "This problem is already marked that way. Refresh the page.",
     "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
+    "DRIVER_INELIGIBLE": "This person cannot drive this activity: they are no longer active, or their usual job is not driver.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
   },
   "assets": {
@@ -350,7 +355,27 @@
       "max": "Must not exceed {max}.",
       "invalid": "Invalid value.",
       "tooShort": "At least {min} characters.",
-      "tooLong": "At most {max} characters."
+      "tooLong": "At most {max} characters.",
+      "above": "Must be more than {min}."
+    },
+    "optional": {
+      "title": "More details (optional)",
+      "filled": "{filled} of {total}"
+    },
+    "group": {
+      "howMuch": "How much",
+      "odometer": "Odometer"
+    },
+    "reading": {
+      "last": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}"
+    },
+    "units": {
+      "km": "km",
+      "hours": "h"
+    },
+    "search": {
+      "placeholder": "Type to search",
+      "empty": "Nothing matches"
     }
   },
   "fileUpload": {
@@ -365,7 +390,9 @@
       "megabytes": "MB"
     },
     "add": "Add a photo or document",
-    "retry": "Retry"
+    "retry": "Retry",
+    "takePhoto": "Take a photo",
+    "chooseFile": "Or choose a file"
   },
   "documents": {
     "notify": {
@@ -419,7 +446,7 @@
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
         "EVIDENCE_MISSING": "Missing evidence: this category requires supporting documentation or a photo.",
-        "LATE_POSTING": "This entry was posted to a previous accounting period.",
+        "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
       },
       "errors": {
@@ -441,8 +468,8 @@
         "none": "Every expense and revenue."
       },
       "tiles": {
-        "out": "Out in {month}",
-        "in": "In in {month}",
+        "out": "Expenses in {month}",
+        "in": "Revenue in {month}",
         "waiting": "Waiting your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
@@ -450,8 +477,8 @@
       },
       "lens": {
         "waiting": "Waiting approval",
-        "out": "Out this month",
-        "in": "In this month",
+        "out": "Expenses this month",
+        "in": "Revenue this month",
         "missing": "Missing receipt",
         "clear": "Clear filter: {name}"
       }
@@ -604,6 +631,7 @@
       "notePlaceholder": "Add a note…",
       "reasonLabel": "Rejection reason",
       "reasonPlaceholder": "Explain why this entry is being rejected…",
+      "rejectDescription": "{number} · {what} · {amount}. {named, select, yes {Your reason is shown to {recorder}.} other {Your reason is shown to whoever recorded it.}} The entry stays in the history as rejected and never counts in the books.",
       "approved": "Entry approved",
       "rejected": "Entry rejected",
       "warningsLabel": "Notices",
@@ -627,7 +655,8 @@
       "statusOpen": "Open",
       "statusLocked": "Locked since {date}",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "lockExplanation": "Once locked, no entries can be created for this period.",
+      "lockExplanation": "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
+      "lockCurrentExplanation": "Entries already posted in this month can no longer change, and nothing can be posted until it is reopened.",
       "reasonLabel": "Reason for reopening",
       "reasonPlaceholder": "Explain why this period needs to be reopened…",
       "cancel": "Cancel",
@@ -682,7 +711,7 @@
   },
   "warnings": {
     "EVIDENCE_MISSING": "No receipt attached to this expense.",
-    "LATE_POSTING": "Posted late: the economic period was already closed.",
+    "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
     "PERIOD_HAS_SUBMITTED_ENTRIES": "Entries awaiting approval remain in this period.",
     "ACTIVITY_MISSING_START_READING": "Start meter reading missing",
     "ACTIVITY_MISSING_END_READING": "End meter reading missing",
@@ -693,7 +722,12 @@
     "METER_READING_DECREASED": "The reading is lower than the previous one",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts.",
     "BRANCH_INACTIVE_AT_COMMIT": "Branch closed: this record was captured before the branch was deactivated.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open."
+    "GROUNDING_ISSUE_STILL_OPEN": "Vehicle released, but the problem that grounded it is still open.",
+    "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another activity at the same time.",
+    "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another activity at the same time.",
+    "VEHICLE_GROUNDED": "This vehicle is grounded right now. It must be released to service before it leaves.",
+    "TRIP_STARTED_OFF_PLAN": "Started with a vehicle or driver other than the one planned.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "This activity had been cancelled, but it was started offline. It is running again."
   },
   "activities": {
     "title": "Activities",
@@ -902,7 +936,7 @@
         "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "An open segment was closed automatically",
         "METER_READING_DECREASED": "The reading is lower than the previous one",
         "EVIDENCE_MISSING": "No receipt attached to this expense.",
-        "LATE_POSTING": "Posted late: the economic period was already closed.",
+        "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
         "POSTING_DEFERRED_PERIOD_LOCKED": "Period locked: the entry waits for approval before it posts."
       },
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
@@ -1021,6 +1055,7 @@
         "addExpense": "Add expense",
         "remove": "Remove line {position}",
         "empty": "No revenue or expense on this sheet.",
+        "emptyExpensesOnly": "No expense on this sheet yet.",
         "revenue": "Revenue",
         "expense": "Expense",
         "categoryLabel": "Category",
@@ -1667,7 +1702,8 @@
         "DOCUMENTS": "Documents",
         "FINANCE": "Finance",
         "ACTIVITIES": "Activities",
-        "MAINTENANCE": "Maintenance"
+        "MAINTENANCE": "Maintenance",
+        "SCHEDULING": "Scheduling"
       },
       "categoryKind": {
         "ASSET_CLASS": "Asset class",
@@ -1760,6 +1796,37 @@
       "label": "Create an activity",
       "submit": "Create activity",
       "submitting": "Creating…"
+    },
+    "plan-trip": {
+      "label": "Plan an activity",
+      "submit": "Plan activity",
+      "submitting": "Planning…"
+    },
+    "assign-trip": {
+      "label": "Assign vehicle and driver",
+      "submit": "Save assignment",
+      "submitting": "Saving…"
+    },
+    "reschedule-trip": {
+      "label": "Change the date",
+      "submit": "Save new date",
+      "submitting": "Saving…"
+    },
+    "update-planned-trip": {
+      "label": "Edit the booking",
+      "submit": "Save changes",
+      "submitting": "Saving…"
+    },
+    "cancel-planned-trip": {
+      "label": "Cancel the activity",
+      "submit": "Cancel activity",
+      "submitting": "Cancelling…",
+      "dismiss": "Keep activity"
+    },
+    "start-planned-trip": {
+      "label": "Start the activity",
+      "submit": "Start activity",
+      "submitting": "Starting…"
     },
     "record-movement-leg": {
       "label": "Add a leg",
@@ -2054,6 +2121,15 @@
         "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
         "readingSaved": "Odometer reading saved"
       },
+      "logFuel": {
+        "amount": "Amount paid",
+        "paymentMethod": "Paid by",
+        "when": "Date and time",
+        "odometer": "Reading",
+        "station": "Station",
+        "receipt": "Receipt photo",
+        "hint": "Above the approval limit, it waits for an approver."
+      },
       "note": {
         "description": "A remark on the vehicle's history. Notes are never edited; a correction is another note.",
         "label": "Note",
@@ -2173,6 +2249,9 @@
         "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
         "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
         "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
+        "otherIssueOpen": "The repair ({workOrder}) is completed, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
+        "otherIssueOpenSignedOff": "The repair ({workOrder}) is signed off, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
+        "issueClosedOtherIssueOpen": "Problem {issue} was closed without a repair, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
         "doNotDrive": "Do not drive it until a manager releases it to service."
       },
       "repairedLead": "Repair done — waiting for release to service.",
@@ -2208,6 +2287,7 @@
       "needsSignOff": "Needs {ref} signed off.",
       "needsAll": "Needs {ref} authorized and completed.",
       "needsWorkOrder": "Needs a completed work order, or the problem closed.",
+      "otherSafetyIssueOpen": "{count, plural, one {Another safety-critical problem is still open: “{description}”. Close it first.} other {# other safety-critical problems are still open, including “{description}”. Close them first.}}",
       "makerCannotApprove": "You created {ref}; someone else authorizes it.",
       "completerCannotSignOff": "You completed {ref}; someone else signs it off.",
       "youRecordedIt": "You recorded it; someone else reviews it.",
@@ -2732,6 +2812,7 @@
     "step": "{bound, select, upTo {Up to {amount}} above {Above {amount}} other {Any amount}}: {outcome, select, POSTS_DIRECTLY {posts directly} FINANCE_APPROVES {Finance approves} FINANCE_PEER_APPROVES {another Finance member or Direction approves} DIRECTION_APPROVES {Direction approves} other {waits for approval}}",
     "hint": {
       "posts": "Your entries post directly at any amount.",
+      "postsAt": "At this amount, the entry posts directly.",
       "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}.",
       "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}."
     }

@@ -35,7 +35,7 @@ import type { PendingApprovalItem } from "@routiq/contracts";
 import { NotRecorded } from "@/components/not-recorded.js";
 
 /** Only Reject asks anything first; Approve is one tap. */
-type RejectDialogState = { open: false } | { open: true; entryId: string; rowVersion: number };
+type RejectDialogState = { open: false } | { open: true; entry: PendingApprovalItem };
 
 /** Mirrors the read's own default — oldest first is the queue's honest order. */
 const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
@@ -99,7 +99,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
   );
 
   const openReject = (entry: PendingApprovalItem) =>
-    setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });
+    setRejectDialog({ open: true, entry });
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -355,7 +355,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
       {rejectDialog.open && (
         <RejectEntryForm
           surface="dialog"
-          entry={{ id: rejectDialog.entryId, rowVersion: rejectDialog.rowVersion }}
+          entry={rejectDialog.entry}
           onDismiss={() => setRejectDialog({ open: false })}
         />
       )}

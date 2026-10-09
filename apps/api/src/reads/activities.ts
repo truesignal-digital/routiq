@@ -42,7 +42,6 @@ import {
   movementLegs,
   persons,
   places,
-  workspaces,
 } from "../db/schema.js";
 import { addDays, currentBusinessDate, isoWeek } from "./business-date.js";
 import { cancelledBySql, toEntryCancellation } from "./entry-cancellation.js";
@@ -60,6 +59,7 @@ import {
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
 import { readableEntrySql } from "./money-scope.js";
+import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -72,24 +72,6 @@ const activitySortColumns: Record<ActivitySortField, KeysetColumn> = {
   startedAt: timestampKeyset(activities.startedAt, { nullable: true }),
   activityNumber: { column: activities.activityNumber, bind: bindText },
 };
-
-/**
- * Trip days are workspace days, for the list's date filter and the summary's
- * week alike. Branches carry their own zone too; neither read uses it yet, and
- * moving one alone would split the tile from the list it filters (#511).
- */
-async function workspaceTimezone(tx: ReadTx, workspaceId: string): Promise<string> {
-  const [workspace] = await tx
-    .select({ timezone: workspaces.timezone })
-    .from(workspaces)
-    .where(eq(workspaces.id, workspaceId));
-  return workspace?.timezone ?? "Africa/Douala";
-}
-
-/** The instant a calendar day starts in `timezone`. */
-function dayStartSql(isoDate: string, timezone: string): SQL {
-  return sql`(${isoDate}::date)::timestamp at time zone ${timezone}`;
-}
 
 interface ActivitySortRow {
   /** `startedAt` as microsecond keyset text. */

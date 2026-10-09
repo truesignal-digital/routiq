@@ -4,6 +4,7 @@ import {
   type CommandEnvelope,
   type CommandErrorCode,
   type CommandWarningCode,
+  type CommandWarningMetadata,
   type ModuleCode,
   type Role,
   type TemplateCode,
@@ -62,6 +63,8 @@ export interface CommandOutcome {
   /** Post-command record state where it matters (POSTED vs SUBMITTED entries). */
   recordStatus?: string;
   warnings: CommandWarningCode[];
+  /** Details for a warning that names other records (ADR-0012 §4 `tripIds`). */
+  warningMetadata?: CommandWarningMetadata;
   /** Composite commands only; absent for the single-record majority. */
   children?: CommandOutcomeChild[];
   idempotentReplay: boolean;
@@ -90,6 +93,7 @@ export interface CommandExecuteResult {
   rowVersion: number;
   recordStatus?: string;
   warnings?: CommandWarningCode[];
+  warningMetadata?: CommandWarningMetadata;
   children?: CommandOutcomeChild[];
 }
 
@@ -623,6 +627,9 @@ export async function dispatchCommand(
           rowVersion: result.rowVersion,
           ...(result.recordStatus === undefined ? {} : { recordStatus: result.recordStatus }),
           warnings: result.warnings ?? [],
+          ...(result.warningMetadata === undefined
+            ? {}
+            : { warningMetadata: result.warningMetadata }),
           ...(result.children === undefined ? {} : { children: result.children }),
           idempotentReplay: false,
         };

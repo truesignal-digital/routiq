@@ -63,6 +63,10 @@
     "sidebarDescription": "Affiche le menu de navigation sur mobile.",
     "sidebarTitle": "Menu de navigation",
     "toggleSidebar": "Afficher ou masquer le menu",
+    "pageLoading": "Ouverture de la page…",
+    "screenLoadFailed": "Impossible d'ouvrir cette page. Vérifiez votre connexion, puis réessayez.",
+    "screenFailed": "Un problème est survenu sur cette page. Réessayez.",
+    "retry": "Réessayer",
     "counts": {
       "moneyWaiting": "{count, plural, one {# dépense attend votre approbation} other {# dépenses attendent votre approbation}}",
       "maintenanceNew": "{count, plural, one {# nouveau problème à traiter} other {# nouveaux problèmes à traiter}}",
@@ -193,6 +197,7 @@
     "ISSUE_SEVERITY_ALREADY_SET": "Ce problème est déjà marqué ainsi. Actualisez la page.",
     "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue.",
+    "DRIVER_INELIGIBLE": "Cette personne ne peut pas conduire cette activité : elle n'est plus active, ou son poste habituel n'est pas chauffeur.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
   },
   "assets": {
@@ -350,7 +355,27 @@
       "max": "Ne doit pas dépasser {max}.",
       "invalid": "Valeur invalide.",
       "tooShort": "Au moins {min} caractères.",
-      "tooLong": "Au plus {max} caractères."
+      "tooLong": "Au plus {max} caractères.",
+      "above": "Doit être supérieur à {min}."
+    },
+    "optional": {
+      "title": "Plus de détails (facultatif)",
+      "filled": "{filled} sur {total}"
+    },
+    "group": {
+      "howMuch": "Combien",
+      "odometer": "Compteur"
+    },
+    "reading": {
+      "last": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}"
+    },
+    "units": {
+      "km": "km",
+      "hours": "h"
+    },
+    "search": {
+      "placeholder": "Tapez pour chercher",
+      "empty": "Aucun résultat"
     }
   },
   "fileUpload": {
@@ -365,7 +390,9 @@
       "megabytes": "Mo"
     },
     "add": "Ajouter une photo ou un document",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "takePhoto": "Prendre une photo",
+    "chooseFile": "Ou choisir un fichier"
   },
   "documents": {
     "notify": {
@@ -419,7 +446,7 @@
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
         "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
-        "LATE_POSTING": "Cette écriture a été comptabilisée dans une période précédente.",
+        "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
       "errors": {
@@ -604,6 +631,7 @@
       "notePlaceholder": "Ajoutez une remarque…",
       "reasonLabel": "Motif du rejet",
       "reasonPlaceholder": "Expliquez pourquoi cette écriture est rejetée…",
+      "rejectDescription": "{number} · {what} · {amount}. {named, select, yes {Votre motif sera visible par {recorder}.} other {Votre motif sera visible par la personne qui l'a saisie.}} L'écriture reste dans l'historique comme rejetée et n'entre jamais dans les comptes.",
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
@@ -627,7 +655,8 @@
       "statusOpen": "Ouverte",
       "statusLocked": "Verrouillée depuis le {date}",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "lockExplanation": "Une fois verrouillée, aucune écriture ne pourra être créée pour cette période.",
+      "lockExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer. Une écriture tardive datée de ce mois sera comptabilisée dans le mois en cours et gardera sa date.",
+      "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et plus rien ne pourra être comptabilisé avant sa réouverture.",
       "reasonLabel": "Motif de la réouverture",
       "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
       "cancel": "Annuler",
@@ -682,7 +711,7 @@
   },
   "warnings": {
     "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
-    "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+    "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
     "PERIOD_HAS_SUBMITTED_ENTRIES": "Des écritures en attente d'approbation restent sur cette période.",
     "ACTIVITY_MISSING_START_READING": "Relevé compteur de départ manquant",
     "ACTIVITY_MISSING_END_READING": "Relevé compteur d'arrivée manquant",
@@ -693,7 +722,12 @@
     "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
     "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée.",
     "BRANCH_INACTIVE_AT_COMMIT": "Agence fermée : cette saisie a été effectuée avant sa désactivation.",
-    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le problème qui l'avait immobilisé est encore ouvert."
+    "GROUNDING_ISSUE_STILL_OPEN": "Véhicule remis en service, mais le problème qui l'avait immobilisé est encore ouvert.",
+    "VEHICLE_DOUBLE_BOOKED": "Ce véhicule est déjà prévu sur une autre activité au même moment.",
+    "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur une autre activité au même moment.",
+    "VEHICLE_GROUNDED": "Ce véhicule est immobilisé en ce moment. Il doit être remis en service avant de partir.",
+    "TRIP_STARTED_OFF_PLAN": "Démarré avec un autre véhicule ou un autre chauffeur que ceux prévus.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "Cette activité avait été annulée, mais elle a été démarrée hors connexion. Elle est de nouveau en cours."
   },
   "activities": {
     "title": "Activités",
@@ -709,8 +743,8 @@
     },
     "state": {
       "onTheRoad": "En route",
-      "closed": "Clôturé",
-      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
+      "closed": "Clôturée",
+      "closedWithGaps": "{count, plural, one {Clôturée, # manque} other {Clôturée, # manques}}"
     },
     "completeness": {
       "COMPLETE": "Complète",
@@ -902,7 +936,7 @@
         "ACTIVITY_OPEN_SEGMENT_AUTOCLOSED": "Un segment resté ouvert a été clôturé automatiquement",
         "METER_READING_DECREASED": "Le relevé est inférieur au précédent",
         "EVIDENCE_MISSING": "Aucun justificatif joint pour cette dépense.",
-        "LATE_POSTING": "Comptabilisée en retard : la période économique était close.",
+        "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "POSTING_DEFERRED_PERIOD_LOCKED": "Période verrouillée : l'écriture attend une approbation pour être comptabilisée."
       },
       "pendingEntries": "{count, plural, one {# ligne en attente d'approbation} other {# lignes en attente d'approbation}}"
@@ -1021,6 +1055,7 @@
         "addExpense": "Ajouter une dépense",
         "remove": "Retirer la ligne {position}",
         "empty": "Aucune recette ni dépense sur cette fiche.",
+        "emptyExpensesOnly": "Aucune dépense sur cette fiche pour l'instant.",
         "revenue": "Recette",
         "expense": "Dépense",
         "categoryLabel": "Catégorie",
@@ -1667,7 +1702,8 @@
         "DOCUMENTS": "Documents",
         "FINANCE": "Finances",
         "ACTIVITIES": "Activités",
-        "MAINTENANCE": "Maintenance"
+        "MAINTENANCE": "Maintenance",
+        "SCHEDULING": "Planification"
       },
       "categoryKind": {
         "ASSET_CLASS": "Classe d'actif",
@@ -1760,6 +1796,37 @@
       "label": "Créer une activité",
       "submit": "Créer l'activité",
       "submitting": "Création…"
+    },
+    "plan-trip": {
+      "label": "Planifier une activité",
+      "submit": "Planifier l'activité",
+      "submitting": "Planification…"
+    },
+    "assign-trip": {
+      "label": "Affecter véhicule et chauffeur",
+      "submit": "Enregistrer l'affectation",
+      "submitting": "Enregistrement…"
+    },
+    "reschedule-trip": {
+      "label": "Changer la date",
+      "submit": "Enregistrer la nouvelle date",
+      "submitting": "Enregistrement…"
+    },
+    "update-planned-trip": {
+      "label": "Modifier la réservation",
+      "submit": "Enregistrer les modifications",
+      "submitting": "Enregistrement…"
+    },
+    "cancel-planned-trip": {
+      "label": "Annuler l'activité",
+      "submit": "Annuler l'activité",
+      "submitting": "Annulation…",
+      "dismiss": "Garder l'activité"
+    },
+    "start-planned-trip": {
+      "label": "Démarrer l'activité",
+      "submit": "Démarrer l'activité",
+      "submitting": "Démarrage…"
     },
     "record-movement-leg": {
       "label": "Ajouter une étape",
@@ -2054,6 +2121,15 @@
         "expenseStands": "La dépense de carburant est enregistrée. Le relevé du compteur n'a pas été enregistré.",
         "readingSaved": "Relevé du compteur enregistré"
       },
+      "logFuel": {
+        "amount": "Montant payé",
+        "paymentMethod": "Payé par",
+        "when": "Date et heure",
+        "odometer": "Relevé",
+        "station": "Station",
+        "receipt": "Photo du reçu",
+        "hint": "Au-delà du seuil, elle attend une approbation."
+      },
       "note": {
         "description": "Une remarque dans l'historique du véhicule. Une note n'est jamais modifiée ; une correction est une nouvelle note.",
         "label": "Note",
@@ -2173,6 +2249,9 @@
         "awaitingRelease": "La réparation ({workOrder}) est terminée ; en attente d'un responsable pour la remise en service.",
         "awaitingReleaseSignedOff": "La réparation ({workOrder}) est validée ; en attente d'un responsable pour la remise en service.",
         "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
+        "otherIssueOpen": "La réparation ({workOrder}) est terminée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
+        "otherIssueOpenSignedOff": "La réparation ({workOrder}) est validée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
+        "issueClosedOtherIssueOpen": "Le problème {issue} a été clos sans réparation, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
         "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
       },
       "repairedLead": "Réparation terminée — en attente de remise en service.",
@@ -2208,6 +2287,7 @@
       "needsSignOff": "Il faut que {ref} soit validé.",
       "needsAll": "Il faut que {ref} soit autorisé et terminé.",
       "needsWorkOrder": "Il faut un ordre de travail terminé, ou le problème clos.",
+      "otherSafetyIssueOpen": "{count, plural, one {Un autre problème critique est encore ouvert : « {description} ». Clôturez-le d'abord.} other {# autres problèmes critiques sont encore ouverts, dont « {description} ». Clôturez-les d'abord.}}",
       "makerCannotApprove": "Vous avez créé {ref} ; une autre personne l'autorise.",
       "completerCannotSignOff": "Vous avez terminé {ref} ; une autre personne le valide.",
       "youRecordedIt": "Vous l'avez saisie ; une autre personne l'examine.",
@@ -2417,7 +2497,7 @@
       "ended": "Arrivée",
       "distance": "Distance",
       "distanceUnknown": "Connue à la clôture",
-      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
+      "gapsNote": "Clôturée avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
       "linkedMoney": "Argent lié",
       "wholeTrip": "Montants de l'activité entière",
       "noMoney": "Aucune écriture liée à cette activité.",
@@ -2732,6 +2812,7 @@
     "step": "{bound, select, upTo {Jusqu'à {amount}} above {Au-delà de {amount}} other {Tout montant}} : {outcome, select, POSTS_DIRECTLY {enregistrée directement} FINANCE_APPROVES {la Finance approuve} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction approuve} DIRECTION_APPROVES {la Direction approuve} other {attend une approbation}}",
     "hint": {
       "posts": "Vos saisies sont enregistrées directement, quel que soit le montant.",
+      "postsAt": "À ce montant, la saisie est enregistrée directement.",
       "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
       "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
     }

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import type { VisibilityState } from "@tanstack/react-table";
 import type { DataTableColumn } from "@/components/data-table.js";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -78,7 +79,9 @@ function buildColumns(
       id: "category",
       header: t("finance.entries.detail.category"),
       meta: { phone: "meta", label: t("finance.entries.detail.category") },
-      cell: ({ row }) => localizedLabel(row.original.category),
+      cell: ({ row }) => (
+        <span className="whitespace-normal">{localizedLabel(row.original.category)}</span>
+      ),
     },
     amount: {
       id: "amount",
@@ -113,13 +116,19 @@ function buildColumns(
         phone: "meta",
         label: t("finance.entries.detail.counterparty"),
       },
-      cell: ({ row }) => row.original.counterpartyName ?? <NotRecorded />,
+      cell: ({ row }) => (
+        <span className="whitespace-normal">{row.original.counterpartyName ?? <NotRecorded />}</span>
+      ),
     },
     linkedTo: {
       id: "linkedTo",
       header: t("finance.entries.detail.linkedTo"),
       meta: { phone: "hidden", label: t("finance.entries.detail.linkedTo") },
-      cell: ({ row }) => <EntryLinks links={row.original.links} />,
+      cell: ({ row }) => (
+        <span className="whitespace-normal">
+          <EntryLinks links={row.original.links} />
+        </span>
+      ),
     },
   };
 }
@@ -139,4 +148,32 @@ export function useFinanceEntryColumns(
     // `t` is stable across a language change, so the language itself is the dep
     // that rebuilds the localized headers and cells.
   }, [ids, i18n.resolvedLanguage, t]);
+}
+
+/**
+ * The full entries list needs about 1045 px in French, which a 1440 px screen
+ * with the sidebar open has and a 1280 px one (990 px card) does not (#436).
+ * Below that the list starts without Counterparty — the drawer and the detail
+ * still show it, and the view menu brings it back — so the row actions stay on
+ * screen. Posting date stays: the list is sorted by it, and a list is never
+ * sorted by a column the viewer can't see.
+ */
+const ROOMY_SCREEN_QUERY = "(min-width: 1440px)";
+const ROOMY_VISIBILITY: VisibilityState = {};
+const NARROW_VISIBILITY: VisibilityState = { counterpartyName: false };
+
+function subscribeRoomy(onChange: () => void): () => void {
+  const query = window.matchMedia(ROOMY_SCREEN_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** Column visibility for the entries list until the operator picks their own. */
+export function useEntryListDefaultVisibility(): VisibilityState {
+  const roomy = useSyncExternalStore(
+    subscribeRoomy,
+    () => window.matchMedia(ROOMY_SCREEN_QUERY).matches,
+    () => true,
+  );
+  return roomy ? ROOMY_VISIBILITY : NARROW_VISIBILITY;
 }

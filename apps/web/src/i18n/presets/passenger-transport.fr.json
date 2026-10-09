@@ -71,7 +71,9 @@
     "emptyHint": "Aucun voyage pour l'instant. Les feuilles de route saisies apparaîtront ici.",
     "branchEmptyHint": "Aucun voyage pour cette agence.",
     "completeness": {
-      "exceptionsHint": "Le voyage est clôturé, mais il manque les éléments suivants :"
+      "exceptionsHint": "Le voyage est clôturé, mais il manque les éléments suivants :",
+      "COMPLETE": "Complet",
+      "COMPLETE_WITH_EXCEPTIONS": "Clôturé avec réserves"
     },
     "columns": {
       "activityNumber": "N° de voyage",
@@ -93,7 +95,8 @@
       "moneySummary": {
         "ownOnly": "Seules les écritures que vous avez saisies sur ce voyage.",
         "branchOnly": "Seules les écritures de vos agences sur ce voyage."
-      }
+      },
+      "closedAt": "Clôturé le {date}"
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
@@ -117,7 +120,14 @@
         "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche."
       }
     },
-    "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture."
+    "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture.",
+    "status": {
+      "CLOSED": "Clôturé"
+    },
+    "state": {
+      "closed": "Clôturé",
+      "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -151,7 +161,10 @@
   "history": {
     "event": {
       "work_order-asset_released": "Véhicule remis en service",
-      "asset_availability-opened": "Véhicule immobilisé"
+      "asset_availability-opened": "Véhicule immobilisé",
+      "activity-created": "Voyage créé",
+      "activity-closed": "Voyage clôturé",
+      "activity-reopened": "Voyage rouvert"
     }
   },
   "vehicle": {
@@ -168,7 +181,8 @@
       "noMoney": "Aucune écriture liée à ce voyage.",
       "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce voyage.",
       "noBranchMoney": "Aucune écriture de vos agences sur ce voyage pour l'instant.",
-      "openFull": "Ouvrir le voyage complet"
+      "openFull": "Ouvrir le voyage complet",
+      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais."
     },
     "history": {
       "filters": {

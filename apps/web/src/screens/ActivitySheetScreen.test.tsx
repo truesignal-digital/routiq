@@ -88,6 +88,9 @@ const clerk: MeContext = {
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
 };
 
+/** The office side: records the fares and freight a driver does not (#532). */
+const manager: MeContext = { ...clerk, displayName: "Boris Ekane", role: "ADMIN" };
+
 function renderScreen(me: MeContext = clerk): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -242,7 +245,7 @@ const FULL_SHEET_TIMEOUT_MS = 20_000;
 describe("activity sheet capture", () => {
   it("dispatches a journey sheet the contract accepts", async () => {
     const user = userEvent.setup({ delay: 1 });
-    renderScreen();
+    renderScreen(manager);
     await fillMinimalSheet(user);
 
     // Crew: the driver named on the sheet, picked from the branch's people.
@@ -313,6 +316,23 @@ describe("activity sheet capture", () => {
     expect(parsed.data?.legs).toEqual([]);
   }, FULL_SHEET_TIMEOUT_MS);
 
+  // #573: a driver records expenses only (#532), so their empty sheet does not
+  // mention revenue; a manager's still does.
+  it("words the empty money section for who may add revenue", async () => {
+    const user = userEvent.setup({ delay: 1 });
+    // A driver's sheet opens with no money line at all (#570).
+    renderScreen();
+    expect(await screen.findByText("No expense on this sheet yet.")).toBeTruthy();
+    expect(screen.queryByText(/revenue or expense/)).toBeNull();
+    cleanup();
+
+    // A manager's passenger sheet opens with one revenue line; removing it empties the section.
+    renderScreen(manager);
+    await user.click(await screen.findByRole("button", { name: "Remove line 1" }));
+    expect(await screen.findByText("No revenue or expense on this sheet.")).toBeTruthy();
+    expect(screen.queryByText("No expense on this sheet yet.")).toBeNull();
+  });
+
   it("names the money lines still waiting for an approver", async () => {
     mocks.submit.mockResolvedValue({
       ok: true,
@@ -330,7 +350,7 @@ describe("activity sheet capture", () => {
       },
     });
     const user = userEvent.setup({ delay: 1 });
-    renderScreen();
+    renderScreen(manager);
     await fillMinimalSheet(user);
     await pickFirstOption(user, "Category of line 1");
     await user.type(screen.getByLabelText("Amount of line 1"), "480000");
@@ -373,6 +393,44 @@ describe("activity sheet capture", () => {
     expect(mocks.navigate).toHaveBeenCalledWith({
       to: "/activities/$activityId",
       params: { activityId: UUID },
+    });
+  });
+
+  describe("a driver's money lines (#532)", () => {
+    it("opens a driver's journey with no revenue line, and offers expenses only", async () => {
+      const user = userEvent.setup({ delay: 1 });
+      renderScreen();
+      await screen.findByRole("button", { name: "Add expense" });
+
+      expect(screen.queryByRole("button", { name: "Add revenue" })).toBeNull();
+      expect(screen.queryByLabelText("Category of line 1")).toBeNull();
+
+      await user.click(screen.getByRole("button", { name: "Add expense" }));
+      // An expense line with nothing to flip it to revenue.
+      expect(screen.queryByRole("tablist", { name: "Direction of line 1" })).toBeNull();
+      expect(screen.queryByRole("tab", { name: "Revenue" })).toBeNull();
+
+      await fillMinimalSheet(user);
+      await pickFirstOption(user, "Category of line 1");
+      await user.type(screen.getByLabelText("Amount of line 1"), "25000");
+      await user.click(screen.getByRole("button", { name: "Record sheet" }));
+
+      await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
+      const parsed = recordJourneySheetPayload.safeParse(submittedPayload());
+      expect(parsed.error?.issues ?? []).toEqual([]);
+      expect(parsed.data?.entries).toEqual([
+        expect.objectContaining({ direction: "EXPENSE", categoryCode: "FUEL", amountMinor: 25_000 }),
+      ]);
+    }, FULL_SHEET_TIMEOUT_MS);
+
+    it.each([
+      ["an Administrateur", manager],
+      ["Direction", { ...manager, role: "DIRECTOR" } satisfies MeContext],
+    ])("still gives %s a revenue line and the button to add one", async (_who, me) => {
+      renderScreen(me);
+      await screen.findByRole("button", { name: "Add revenue" });
+      expect(screen.getByRole("tablist", { name: "Direction of line 1" })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: "Revenue", selected: true })).toBeTruthy();
     });
   });
 

@@ -18,12 +18,43 @@ import {
   appendAuditEvent,
   CommandError,
   registerCommand,
+  type CommandContext,
   type CommandDefinition,
+  type Tx,
 } from "./dispatcher.js";
+import { currentBusinessDate } from "../reads/business-date.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import { nextActivityNumber } from "./numbering.js";
 import { validateCustomValues } from "./templates.js";
 
 type CreateActivityPayload = z.infer<typeof createActivityPayload>;
+
+/** An active ACTIVITY_TYPE category by code, or REFERENCE_NOT_FOUND. Shared with plan-trip. */
+export async function resolveActivityType(
+  tx: Tx,
+  ctx: CommandContext,
+  activityTypeCode: string,
+): Promise<{ id: string }> {
+  const [activityType] = await tx
+    .select({ id: categories.id })
+    .from(categories)
+    .where(
+      and(
+        eq(categories.workspaceId, ctx.workspaceId),
+        eq(categories.kind, "ACTIVITY_TYPE"),
+        eq(categories.code, activityTypeCode),
+        eq(categories.active, true),
+      ),
+    )
+    .limit(1);
+  if (!activityType) {
+    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
+      referenceType: "activityType",
+      referenceCode: activityTypeCode,
+    });
+  }
+  return activityType;
+}
 
 const createActivity: CommandDefinition<CreateActivityPayload> = {
   name: "create-activity",
@@ -60,24 +91,7 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       payload.branchCode,
     );
 
-    const [activityType] = await tx
-      .select({ id: categories.id })
-      .from(categories)
-      .where(
-        and(
-          eq(categories.workspaceId, ctx.workspaceId),
-          eq(categories.kind, "ACTIVITY_TYPE"),
-          eq(categories.code, payload.activityTypeCode),
-          eq(categories.active, true),
-        ),
-      )
-      .limit(1);
-    if (!activityType) {
-      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-        referenceType: "activityType",
-        referenceCode: payload.activityTypeCode,
-      });
-    }
+    const activityType = await resolveActivityType(tx, ctx, payload.activityTypeCode);
 
     const templateMeta = validateCustomValues(payload.templateCode, payload.customValues, "activity");
 
@@ -104,7 +118,7 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       tx,
       ctx,
       branch,
-      payload.startedAt.slice(0, 10),
+      currentBusinessDate(startedAt, await workspaceTimezone(tx, ctx.workspaceId)),
     );
 
     await tx.insert(activities).values({

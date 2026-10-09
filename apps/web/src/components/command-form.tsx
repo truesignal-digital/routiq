@@ -45,6 +45,19 @@ import { cn } from "@/lib/utils"
  */
 export type CommandSurface = "dialog" | "sheet" | "panel" | "page"
 
+/**
+ * The six form layouts (docs/design/consistency/form-layouts.html). Set by
+ * `FormLayout`, which also picks the surface; it gives the header, body and
+ * footer their fixed measures.
+ */
+export type FormLayoutKind =
+  | "quick-entry"
+  | "record"
+  | "line-items"
+  | "decision"
+  | "long-capture"
+  | "edit-in-place"
+
 /** The record a panel form was opened from: the back arrow returns to it. */
 export interface CommandFormBack {
   label: string
@@ -68,7 +81,7 @@ type CommandFormChrome =
   | { surface: "dialog" | "sheet" | "panel"; title: ReactNode }
 
 export type CommandFormProps = CommandFormChrome & {
-  description?: string | undefined
+  description?: ReactNode | undefined
   /** Sheet only: repeating rows (cost lines) take the 560 px Line items width. */
   width?: FormPanelWidth | undefined
   /** Panel only: the record this form belongs to. */
@@ -110,6 +123,10 @@ export type CommandFormProps = CommandFormChrome & {
   onSubmit: () => void
   onDismiss: () => void
   className?: string | undefined
+  /** Set by `FormLayout`: the layout whose measures this form takes. */
+  kind?: FormLayoutKind | undefined
+  /** What happens after submit, left of the buttons (FormLayout forms). */
+  hint?: ReactNode | undefined
   children: ReactNode
 }
 
@@ -137,6 +154,7 @@ export function CommandForm(props: CommandFormProps) {
         <DialogContent
           className={cn(
             "grid-rows-[auto_minmax(0,1fr)] overflow-hidden",
+            props.kind === "decision" && "sm:max-w-[440px]",
             props.className,
           )}
         >
@@ -380,7 +398,12 @@ function CommandFormPanel(props: CommandFormProps) {
 
   return (
     <>
-      <div className="border-b px-4 pt-3 pb-4 pr-12">
+      <div
+        className={cn(
+          "border-b pr-12",
+          props.kind === undefined ? "px-4 pt-3 pb-4" : "py-4 pl-[18px]",
+        )}
+      >
         {props.back !== undefined && (
           <button
             type="button"
@@ -396,7 +419,9 @@ function CommandFormPanel(props: CommandFormProps) {
           {props.title}
         </SheetTitle>
         {props.description !== undefined && (
-          <SheetDescription className="mt-1">{props.description}</SheetDescription>
+          <SheetDescription className={cn("mt-1", props.kind !== undefined && "text-[13px]")}>
+            {props.description}
+          </SheetDescription>
         )}
       </div>
       <CommandFormBody {...props} />
@@ -546,7 +571,8 @@ function CommandFormBody(props: CommandFormProps) {
         data-slot="command-form-body"
         className={cn(
           "flex flex-col gap-4",
-          (surface === "panel" || surface === "sheet") && "p-4",
+          (surface === "panel" || surface === "sheet") &&
+            (props.kind === undefined ? "p-4" : "px-[18px] py-4"),
           surface === "dialog" && "-mx-4 -my-1 min-h-0 overflow-y-auto px-4 py-1",
         )}
       >
@@ -573,7 +599,9 @@ function CommandFormBody(props: CommandFormProps) {
         {props.children}
       </div>
       {/* Submit is last on every surface, desktop and phone. */}
-      <Footer surface={surface}>{[cancel, submit]}</Footer>
+      <Footer surface={surface} kind={props.kind} hint={props.hint}>
+        {[cancel, submit]}
+      </Footer>
     </form>
   )
 }
@@ -646,16 +674,81 @@ function surfaceBodyClass(surface: CommandSurface): string {
 
 function Footer({
   surface,
+  kind,
+  hint,
   children,
 }: {
   surface: CommandSurface
+  kind?: FormLayoutKind | undefined
+  hint?: ReactNode | undefined
   children: ReactNode
 }) {
+  if (kind !== undefined) return <LayoutFooter surface={surface} kind={kind} hint={hint}>{children}</LayoutFooter>
   if (surface === "dialog") {
     return <DialogFooter className="flex-row justify-end">{children}</DialogFooter>
   }
   if (surface === "page") return <div className="flex gap-2">{children}</div>
   return <FormPanelFooter>{children}</FormPanelFooter>
+}
+
+/**
+ * A layout's footer: the hint on the left (above on a phone), Cancel then the
+ * submit on the right. 64 px tall and sticky wherever the body scrolls.
+ */
+function LayoutFooter({
+  surface,
+  kind,
+  hint,
+  children,
+}: {
+  surface: CommandSurface
+  kind: FormLayoutKind
+  hint: ReactNode
+  children: ReactNode
+}) {
+  const row = (
+    <>
+      {hint !== undefined && hint !== null && (
+        <p data-slot="form-hint" className="line-clamp-2 text-xs text-muted-foreground sm:min-w-0 sm:flex-1">
+          {hint}
+        </p>
+      )}
+      <div
+        className={cn(
+          "flex w-full gap-2 sm:ml-auto sm:w-auto",
+          // A decision's buttons stack on a phone, the verb last.
+          kind === "decision" && "flex-col sm:flex-row",
+        )}
+      >
+        {children}
+      </div>
+    </>
+  )
+  const measures = "flex min-h-16 flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:gap-4"
+  if (surface === "dialog") {
+    return <DialogFooter className={cn(measures, "sm:justify-start")}>{row}</DialogFooter>
+  }
+  if (surface === "page") {
+    return (
+      <div
+        data-slot="form-footer"
+        className={cn(
+          measures,
+          kind === "long-capture" && "sticky bottom-0 z-20 border-t bg-background",
+        )}
+      >
+        {row}
+      </div>
+    )
+  }
+  return (
+    <SheetFooter
+      data-slot="form-footer"
+      className={cn(measures, "sticky bottom-0 z-20 border-t bg-popover px-[18px]")}
+    >
+      {row}
+    </SheetFooter>
+  )
 }
 
 /**

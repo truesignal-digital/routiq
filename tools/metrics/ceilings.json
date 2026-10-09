@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 583959,
+    "ceiling": 682663,
     "raises": [
       {
         "date": "2026-10-06",
@@ -145,11 +145,41 @@
         "from": 583829,
         "to": 583959,
         "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292), same growth as web.initial-js-gzip: about 5.7 kB gzip with no lazy split yet"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 590845,
+        "to": 681280,
+        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB). Measured on Linux (node:24) as CI builds it; macOS gives the same number"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 681280,
+        "to": 682090,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 682090,
+        "to": 682663,
+        "reason": "Planned-trip command labels and messages (#334)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22212,
+    "ceiling": 22508,
     "raises": [
       {
         "date": "2026-10-06",
@@ -192,11 +222,17 @@
         "from": 22136,
         "to": 22212,
         "reason": "#322: navigation count badge and rail dot styles on the sidebar and phone bottom bar, about 80 B gzip (re-recorded on develop 6444c6bf)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 22212,
+        "to": 22508,
+        "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 583959,
+    "ceiling": 257700,
     "raises": [
       {
         "date": "2026-10-06",
@@ -341,6 +377,30 @@
         "from": 583829,
         "to": 583959,
         "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292): FormLayout, FormGroup/FormPair/FormOptional and ten kit fields with required read from the schema, about 5.7 kB gzip (a Base UI combobox was dropped for the existing popover pattern to save about 14 kB); about 29 ms on a pilot phone at about 5 ms per kB; #294 moves the other forms onto it and drops their own markup"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 256115,
+        "to": 256557,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 256557,
+        "to": 257700,
+        "reason": "Planned-trip command labels and messages (#334)"
       }
     ]
   }
