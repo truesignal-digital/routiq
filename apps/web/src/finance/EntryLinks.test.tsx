@@ -54,6 +54,13 @@ const none: FinancialEntryListItem["links"] = {
   activityNumber: null,
   workOrderId: null,
   workOrderAssetId: null,
+  workOrderDescription: null,
+};
+
+const workOrder = {
+  workOrderId: WORK_ORDER_ID,
+  workOrderAssetId: ASSET_ID,
+  workOrderDescription: "Replace brake pads",
 };
 
 beforeAll(async () => {
@@ -67,10 +74,11 @@ afterAll(async () => {
 afterEach(cleanup);
 
 describe("entry links", () => {
-  it("opens the work order in its vehicle's workspace", () => {
-    renderLinks({ ...none, workOrderId: WORK_ORDER_ID, workOrderAssetId: ASSET_ID });
+  it("names the work order by its description and opens it in its vehicle's workspace (#547)", () => {
+    renderLinks({ ...none, ...workOrder });
 
-    const link = screen.getByRole("link", { name: "Work order 3F1A9C40" });
+    const link = screen.getByRole("link", { name: "Work order: Replace brake pads" });
+    expect(document.body.textContent).not.toMatch(/3F1A9C40/i);
     expect(link.getAttribute("href")).toBe(
       `/assets/${ASSET_ID}/maintenance?panel=work_order%3A${WORK_ORDER_ID}`,
     );
@@ -86,19 +94,16 @@ describe("entry links", () => {
   it("says it in French by default", async () => {
     await i18n.changeLanguage("fr-CM");
     try {
-      renderLinks({ ...none, workOrderId: WORK_ORDER_ID, workOrderAssetId: ASSET_ID });
-      expect(screen.getByRole("link", { name: "Ordre de travail 3F1A9C40" })).toBeTruthy();
+      renderLinks({ ...none, ...workOrder });
+      expect(screen.getByRole("link", { name: "Ordre de travail : Replace brake pads" })).toBeTruthy();
     } finally {
       await i18n.changeLanguage("en");
     }
   });
 
   it("leaves the work order out while Maintenance is off, keeping the trip", () => {
-    renderLinks(
-      { workOrderId: WORK_ORDER_ID, workOrderAssetId: ASSET_ID, activityId: TRIP_ID, activityNumber: "DLA-2026-00042" },
-      ["CORE", "FINANCE", "ACTIVITIES"],
-    );
-    expect(screen.queryByRole("link", { name: "Work order 3F1A9C40" })).toBeNull();
+    renderLinks({ ...workOrder, activityId: TRIP_ID, activityNumber: "DLA-2026-00042" }, ["CORE", "FINANCE", "ACTIVITIES"]);
+    expect(screen.queryByRole("link", { name: "Work order: Replace brake pads" })).toBeNull();
     expect(screen.getByRole("link", { name: "Activity DLA-2026-00042" })).toBeTruthy();
   });
 

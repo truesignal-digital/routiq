@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { RecordText } from "@/components/record-number";
 import { contributes } from "@/modules/manifest.js";
-import { recordReference } from "@/vehicle/model.js";
 
 const LINK_CLASS =
   "inline-flex min-h-11 items-center underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground";
@@ -21,6 +20,7 @@ export function visibleEntryLinks(
     workOrder:
       links.workOrderId !== null &&
       links.workOrderAssetId !== null &&
+      links.workOrderDescription !== null &&
       contributes("fields", "entry.workOrderLink", enabledModules),
     trip: links.activityId !== null && links.activityNumber !== null,
   };
@@ -28,14 +28,17 @@ export function visibleEntryLinks(
 
 /**
  * What an entry belongs to: the work order, opened in its vehicle's workspace,
- * and the trip (#87). Renders nothing when the entry names neither.
+ * and the trip (#87). Renders nothing when the entry names neither. Work orders
+ * have no number, so the link names the order by its description, the title it
+ * carries on the vehicle's Maintenance tab (#547).
  */
 export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }) {
   const { t } = useTranslation();
   const me = useMeContext();
-  const { workOrderId, workOrderAssetId, activityId, activityNumber } = links;
+  const { workOrderId, workOrderAssetId, workOrderDescription, activityId, activityNumber } = links;
   const shown = visibleEntryLinks(links, me?.enabledModules);
-  const hasWorkOrder = shown.workOrder && workOrderId !== null && workOrderAssetId !== null;
+  const hasWorkOrder =
+    shown.workOrder && workOrderId !== null && workOrderAssetId !== null && workOrderDescription !== null;
   const hasTrip = shown.trip && activityId !== null && activityNumber !== null;
   if (!hasWorkOrder && !hasTrip) return null;
 
@@ -46,9 +49,9 @@ export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }
           to="/assets/$assetId/maintenance"
           params={{ assetId: workOrderAssetId }}
           search={{ panel: `work_order:${workOrderId}` }}
-          className={LINK_CLASS}
+          className={`${LINK_CLASS} max-w-full`}
         >
-          <span>{t("finance.entries.detail.workOrderLink", { ref: recordReference(workOrderId) })}</span>
+          <span className="line-clamp-2 min-w-0">{t("finance.entries.detail.workOrderLink", { title: workOrderDescription })}</span>
         </Link>
       )}
       {hasTrip && (

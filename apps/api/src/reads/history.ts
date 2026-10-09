@@ -4,6 +4,7 @@ import {
   canReadLedger,
   canReadWorkOrderCosts,
   moneyReadScope,
+  readsOwnTripsOnly,
   HISTORY_ENTITY_MODULE,
   HISTORY_MONEY_STATE_KEYS,
   HISTORY_STATE_KEYS,
@@ -43,6 +44,7 @@ import type { TenantTx } from "../db/tenant.js";
 import { presentChanges, shownChanges } from "./history-present.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { canReadEntry } from "./money-scope.js";
+import { canReadTrip } from "./trip-scope.js";
 import {
   afterKeyset,
   bindTimestampText,
@@ -368,7 +370,8 @@ const HISTORY_BRANCH_SCOPE: Record<HistoryEntityType, BranchOf | "WORKSPACE"> = 
  * An entry's snapshots carry its amounts, so its timeline follows the
  * caller's money scope (`readableEntrySql`): a driver's own entries, the
  * workshop's work-order costs; any other entry is the same 404. A document's
- * timeline is for the roles that read documents.
+ * timeline is for the roles that read documents. A trip's timeline, and its
+ * legs' and segments', follows the trip scope: a driver's own trips only.
  */
 async function canReadHistory(
   tx: TenantTx,
@@ -389,8 +392,35 @@ async function canReadHistory(
     }
   }
   if (entityType === "document") return canReadDocuments(auth.role);
+  const tripOf = HISTORY_TRIP_OF[entityType];
+  if (tripOf !== undefined && readsOwnTripsOnly(auth.role)) {
+    // A driver's own trips only (#545), by the rule the trip reads apply.
+    const tripId = await tripOf(tx, auth.workspaceId, entityId);
+    return tripId !== undefined && (await canReadTrip(tx, auth, tripId));
+  }
   return true;
 }
+
+/** The trip a trip-scoped record belongs to: itself, or its parent. */
+type TripOf = (tx: TenantTx, workspaceId: string, entityId: string) => Promise<string | undefined>;
+
+function childTrip(table: typeof activityAssetSegments | typeof movementLegs): TripOf {
+  return async (tx, workspaceId, entityId) =>
+    (
+      await tx
+        .select({ activityId: table.activityId })
+        .from(table)
+        .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+        .limit(1)
+    )[0]?.activityId;
+}
+
+/** The entity types whose history is a trip's: they follow the trip scope. */
+const HISTORY_TRIP_OF: Partial<Record<HistoryEntityType, TripOf>> = {
+  activity: async (_tx, _workspaceId, entityId) => entityId,
+  activity_asset_segment: childTrip(activityAssetSegments),
+  movement_leg: childTrip(movementLegs),
+};
 
 export function registerHistoryReadRoutes(
   app: FastifyInstance,
