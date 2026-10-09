@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 583959,
+    "ceiling": 584051,
     "raises": [
       {
         "date": "2026-10-06",
@@ -145,6 +145,12 @@
         "from": 583829,
         "to": 583959,
         "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584051,
+        "reason": "#532: the trip sheet hides revenue from drivers (role rule, prop and expense-only row label), +92 B gzip"
       }
     ]
   },
@@ -196,7 +202,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 583959,
+    "ceiling": 584051,
     "raises": [
       {
         "date": "2026-10-06",
@@ -341,6 +347,12 @@
         "from": 583829,
         "to": 583959,
         "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584051,
+        "reason": "#532: the trip sheet hides revenue from drivers (role rule, prop and expense-only row label), +92 B gzip"
       }
     ]
   }
