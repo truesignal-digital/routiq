@@ -13,6 +13,7 @@ import { persons } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * #545: a driver reads their own trips, never the branch's (roles-and-access.md,
@@ -84,10 +85,9 @@ describe("a driver reads only their own trips (#545)", () => {
     const seeded = await seedWorkspace(ctx.db);
     const workspaceId = seeded.workspace.id;
     admin = await seedActor(ctx.db, { workspaceId, role: "ADMIN" });
-    const director = await seedActor(ctx.db, { workspaceId, role: "DIRECTOR" });
     moussa = await seedActor(ctx.db, { workspaceId, role: "DRIVER", branchIds: [seeded.branch.id] });
     paul = await seedActor(ctx.db, { workspaceId, role: "DRIVER", branchIds: [seeded.branch.id] });
-    await api.ok(director.token, "enable-module", { moduleCode: "SCHEDULING" });
+    await setModule(ctx.db, workspaceId, "SCHEDULING", true);
 
     moussaPersonId = await person("Moussa Bello", moussa.membershipId);
     paulPersonId = await person("Paul Etoundi", paul.membershipId);
