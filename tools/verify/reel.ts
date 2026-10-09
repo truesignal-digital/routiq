@@ -397,7 +397,7 @@ export function appTheme(css: string): AppTheme {
 }
 
 const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const short = (commit: string) => commit.slice(0, 7);
+const short = (commit: string) => `${commit.slice(0, 7)}${commit.endsWith("-dirty") ? "-dirty" : ""}`;
 
 export function titleOf(run: RunSummary, options: ReelOptions): string {
   if (options.title !== undefined) return options.title;

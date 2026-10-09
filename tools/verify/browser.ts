@@ -5,6 +5,7 @@ import { chromium, type Browser, type BrowserContext, type Locator, type Page } 
 import { resolveAccount, type DemoAccount } from "./accounts.js";
 import { startCast, type Cast } from "./cast.js";
 import type { DriveOptions, Lang } from "./args.js";
+import { run } from "./proc.js";
 import { REPO_ROOT } from "./slot.js";
 import { newRunDir, requireState, type SlotState } from "./stack.js";
 
@@ -283,6 +284,9 @@ async function switchToEnglish(page: Page, rec: Recorder): Promise<void> {
 
 export async function drive(slot: number, targets: readonly string[], options: DriveOptions, command: "drive" | "login"): Promise<boolean> {
   const state = requireState(slot);
+  const head = run("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT }).stdout.trim();
+  const dirty = run("git", ["status", "--porcelain"], { cwd: REPO_ROOT }).stdout.trim() !== "";
+  const commit = `${head}${dirty ? "-dirty" : ""}`;
   const account = resolveAccount(options.role);
   const evidenceDir = newRunDir(command, slot);
   const initCwd = process.env["INIT_CWD"] ?? process.cwd();
@@ -455,7 +459,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
     writeFileSync(requestsFile, rec.failedRequests.join("\n") + (rec.failedRequests.length ? "\n" : ""));
     writeFileSync(
       path.join(evidenceDir, "summary.json"),
-      `${JSON.stringify({ slot, commit: state.commit, account: account.username, role: account.role, lang: options.lang, viewport: options.viewport, targets, ok, steps, frames, metrics, finalUrl: page.url(), consoleErrors: rec.consoleErrors.length, failedRequests: rec.failedRequests.length, abortedRequests: rec.aborted }, null, 2)}\n`,
+      `${JSON.stringify({ slot, commit, account: account.username, role: account.role, lang: options.lang, viewport: options.viewport, targets, ok, steps, frames, metrics, finalUrl: page.url(), consoleErrors: rec.consoleErrors.length, failedRequests: rec.failedRequests.length, abortedRequests: rec.aborted }, null, 2)}\n`,
     );
     say(`console errors: ${rec.consoleErrors.length} → ${consoleFile}`);
     say(`failed requests (status >= 400 or network): ${rec.failedRequests.length} → ${requestsFile}`);

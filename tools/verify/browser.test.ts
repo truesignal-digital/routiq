@@ -4,10 +4,13 @@ import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { drive } from "./browser.js";
 
-const harness = vi.hoisted(() => ({ dir: "", commit: "slot-start", url: "http://localhost/" }));
+const harness = vi.hoisted(() => ({ dir: "", commit: "slot-start", url: "http://localhost/", dirty: false }));
 vi.mock("./stack.js", () => ({
   requireState: () => ({ commit: harness.commit, urls: { web: "http://localhost", api: "http://localhost" } }),
   newRunDir: () => harness.dir,
+}));
+vi.mock("./proc.js", () => ({
+  run: (_command: string, args: string[]) => ({ stdout: args[0] === "rev-parse" ? "drive-head\n" : harness.dirty ? " M tools/verify/browser.ts\n" : "" }),
 }));
 vi.mock("playwright-core", () => {
   const locator = { fill: async () => {}, click: async () => {} };
@@ -46,5 +49,14 @@ describe("drive script loading", () => {
     expect(summary()).toMatchObject({ ok: false, steps: [
       { ok: true }, { step: expect.stringContaining(name), ok: false, detail: expect.stringMatching(message) },
     ] });
+  });
+});
+
+
+describe("drive provenance", () => {
+  it.each([false, true])("records HEAD at drive time, dirty=%s", async (dirty) => {
+    harness.dirty = dirty;
+    expect(await drive(1, [], options, "drive")).toBe(true);
+    expect(summary().commit).toBe(dirty ? "drive-head-dirty" : "drive-head");
   });
 });
