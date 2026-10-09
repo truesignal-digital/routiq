@@ -6,6 +6,7 @@ import type { Role } from "@routiq/contracts";
 import {
   ASSET_ID,
   ME_ID,
+  OTHER_ISSUE_ID,
   WORK_ORDER_ID,
   actor,
   asset,
@@ -205,6 +206,38 @@ describe("the status sentence and the step beside it, per role", () => {
         ),
       );
       expect(block.textContent).not.toMatch(/validée/);
+    });
+  });
+
+  // #562: nobody can release while another safety-critical problem is open, so
+  // the sentence names that problem instead of sending people to a manager.
+  describe("another safety-critical problem still open", () => {
+    const steering = { id: OTHER_ISSUE_ID, description: "Steering locks on the left" };
+    const OTHER_REF = OTHER_ISSUE_ID.slice(0, 8).toUpperCase();
+    const blocked = asset({ availability: grounded([groundingWorkOrder("COMPLETED")], {}, [steering]) });
+
+    it("names the open problem, not a manager", async () => {
+      await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", asset: blocked });
+      const block = await sentence();
+      await waitFor(() =>
+        expect(block.textContent).toContain(
+          `The repair (${WO_REF}) is completed, but another safety-critical problem is still open: “Steering locks on the left” (${OTHER_REF}). It must be closed before release.`,
+        ),
+      );
+      expect(block.textContent).not.toMatch(/waiting on a manager/);
+      // Fixture ids share a prefix: the work order and the other problem both link.
+      expect(within(block).getAllByRole("button", { name: OTHER_REF })).toHaveLength(2);
+    });
+
+    it("says it in French", async () => {
+      await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", asset: blocked, locale: "fr-CM" });
+      const block = await sentence();
+      await waitFor(() =>
+        expect(block.textContent).toContain(
+          `La réparation (${WO_REF}) est terminée, mais un autre problème critique est encore ouvert : « Steering locks on the left » (${OTHER_REF}). Il doit être clos avant la remise en service.`,
+        ),
+      );
+      expect(block.textContent).not.toMatch(/en attente d'un responsable/);
     });
   });
 

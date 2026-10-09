@@ -380,6 +380,22 @@ describe("the status sentence", () => {
     expect(phase(true)).toBe("awaitingReleaseSignedOff");
   });
 
+  // #562: the server refuses the release while another safety-critical problem
+  // is open (SAFETY_ISSUE_OPEN), so the sentence names it instead of a manager.
+  it("names another open safety-critical problem instead of waiting on a release", () => {
+    const steering = { id: OTHER_ID, description: "Steering locks on the left" };
+    const read = (workOrders: Parameters<typeof grounded>[0], issue = {}, signedOff = false) => {
+      const situation = situationOf(asset({ availability: grounded(workOrders, issue, [steering]) }), [], now, signedOff);
+      return situation.kind === "grounded" ? { phase: situation.phase, blockedBy: situation.blockedBy } : null;
+    };
+    const blockedBy = { id: OTHER_ID, description: steering.description, count: 1 };
+    expect(read([groundingWorkOrder("COMPLETED")])).toEqual({ phase: "otherIssueOpen", blockedBy });
+    expect(read([groundingWorkOrder("COMPLETED")], {}, true)).toEqual({ phase: "otherIssueOpenSignedOff", blockedBy });
+    expect(read([], { status: "DISMISSED" })).toEqual({ phase: "issueClosedOtherIssueOpen", blockedBy });
+    // An unfinished repair is still the first thing the sentence says.
+    expect(read([groundingWorkOrder("APPROVED")])?.phase).toBe("inProgress");
+  });
+
   it("reads the sign-off off the work order's timeline, the last settling event deciding", () => {
     const events = (...kinds: string[]) => kinds.map((kind) => ({ kind }));
     expect(completionSignedOff(undefined)).toBe(false);

@@ -2189,6 +2189,9 @@
         "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
         "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
         "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
+        "otherIssueOpen": "The repair ({workOrder}) is completed, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
+        "otherIssueOpenSignedOff": "The repair ({workOrder}) is signed off, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
+        "issueClosedOtherIssueOpen": "Problem {issue} was closed without a repair, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
         "doNotDrive": "Do not drive it until a manager releases it to service."
       },
       "repairedLead": "Repair done — waiting for release to service.",
