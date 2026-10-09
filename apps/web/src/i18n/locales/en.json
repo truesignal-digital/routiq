@@ -648,6 +648,9 @@
   },
   "common": {
     "close": "Close",
+    "notRecorded": "Not recorded",
+    "add": "Add",
+    "readFailed": "Could not load",
     "howCalculated": "How this is calculated"
   },
   "dataTable": {
@@ -781,7 +784,6 @@
         "title": "Planned vs actual",
         "planned": "Planned",
         "actual": "Actual",
-        "notRecorded": "Not recorded",
         "openEnd": "no end recorded"
       },
       "readings": {
@@ -1430,7 +1432,6 @@
       "loading": "Loading changes…",
       "loadFailed": "Could not load the changes.",
       "empty": "No detailed changes",
-      "none": "—",
       "yes": "Yes",
       "no": "No",
       "lines": "{count, plural, one {# line} other {# lines}}, {total}",
@@ -2190,7 +2191,6 @@
       "chassis": "Chassis number",
       "acquired": "Acquired",
       "acquiredWithAmount": "{date} · {amount}",
-      "notRecorded": "Not recorded",
       "noSpecifications": "No specifications for this template.",
       "edit": {
         "tooltip": "Edit vehicle details",
@@ -2461,8 +2461,8 @@
       "route": "{from} → {to}",
       "tripNumber": "Activity {number}",
       "km": "{value, number} km",
-      "startedAt": "Started {time}",
-      "endedAt": "Ended {time}",
+      "startedAt": "Started: {time}",
+      "endedAt": "Ended: {time}",
       "customer": "Customer",
       "none": "None",
       "driver": "Driver",

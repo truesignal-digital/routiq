@@ -8,6 +8,7 @@ import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
 import { useIssueCategoryLabel } from "./issue-category.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 /**
  * A work order has no number of its own — the read publishes only its id — so
@@ -103,7 +104,7 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
         },
         cell: ({ row }) =>
           row.original.expectedCostMinor === null ? (
-            <span className="text-muted-foreground">—</span>
+            <NotRecorded />
           ) : (
             <span className="tabular-nums whitespace-nowrap">
               {formatMoney(row.original.expectedCostMinor, {
@@ -119,7 +120,7 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
         meta: { phone: "hidden", label: t("maintenance.workOrders.columns.actualCost") },
         cell: ({ row }) =>
           row.original.actualCostMinor === null ? (
-            <span className="text-muted-foreground">—</span>
+            <NotRecorded />
           ) : (
             <span className="tabular-nums whitespace-nowrap">
               {formatMoney(row.original.actualCostMinor, {
@@ -186,9 +187,6 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
                 {t("maintenance.issues.unavailable")}
               </StatusBadge>
             )}
-            {!row.original.safetyCritical && !row.original.assetUnavailable && (
-              <span className="text-muted-foreground">—</span>
-            )}
           </span>
         ),
       },
@@ -219,7 +217,7 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
           label: t("maintenance.issues.columns.category"),
           phoneText: (issue) => categoryLabel(issue.category) ?? null,
         },
-        cell: ({ row }) => categoryLabel(row.original.category) ?? "—",
+        cell: ({ row }) => categoryLabel(row.original.category) ?? <NotRecorded />,
       },
       {
         id: "reportedAt",
