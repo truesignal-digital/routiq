@@ -75,6 +75,7 @@ _Avoid_: comment thread, description, edit
 
 **Correction**:
 What saving "Modifier" does to approved or posted money, a meter reading or stock. One command reverses the original and records the replacement, so the original stays. Lists show the current value with a "corrigé" badge; history shows the old value struck through. A changed amount goes back for approval. Users never choose between an edit and a correction; the **Edit Level** decides (ADR-0008).
+Not built yet for money (#86). Today a posted entry is corrected in two steps: **Cancel entry** with the reason "wrong details", then **Record again** with the form filled in from the cancelled entry (see **Cancellation**).
 _Avoid_: edit (for approved money), reversal (in the interface), void, overwrite
 
 **Cancellation (of an entry)**:
