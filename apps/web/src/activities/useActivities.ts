@@ -15,6 +15,7 @@ export async function fetchActivities(
     branchId?: string;
     assetId?: string;
     activityTypeCode?: string;
+    /** ISO dates; the server reads them as workspace days (#511). */
     from?: string;
     to?: string;
     sort?: string;
@@ -26,13 +27,7 @@ export async function fetchActivities(
   const url = new URL("/v1/activities", window.location.origin);
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === "") continue;
-    const normalizedValue =
-      key === "from" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-        ? `${value}T00:00:00.000Z`
-        : key === "to" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-          ? `${value}T23:59:59.999Z`
-          : value;
-    url.searchParams.append(key, normalizedValue);
+    url.searchParams.append(key, value);
   }
 
   const response = await fetchImpl(url.pathname + url.search, {
