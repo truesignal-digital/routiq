@@ -64,7 +64,7 @@ describe("command notifications", () => {
       type: "success",
       title: "Entry recorded and posted",
       description:
-        "This entry was posted to a previous accounting period.\n" +
+        "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.\n" +
         "Missing evidence: this category requires supporting documentation or a photo.",
     });
   });
@@ -101,7 +101,7 @@ describe("command notifications", () => {
       // cancel what happened to it, so the caller's line joins the warnings.
       title: "Entry recorded and posted",
       description:
-        "This entry was posted to a previous accounting period.\n" +
+        "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.\n" +
         "Saved in Yaoundé",
       actionProps: { children: "View", onClick },
     });

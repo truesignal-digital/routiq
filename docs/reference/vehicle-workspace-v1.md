@@ -76,7 +76,7 @@ Fixture: one company, Douala branch, vehicle VEH-001, September open. A scoped D
 
 1. Recording the expense creates one entry. Exact retry with the same command identity returns the same result; it does not create a second charge. The vehicle shows 150,000 awaiting review and 0 posted for this example.
 2. A FINANCE member with the required branch scope reviews the entry/evidence and approves through the existing command. Pending becomes 0; posted expense becomes 150,000. Approval is not payment.
-3. The executive opens the vehicle's 150,000 figure, sees the matching posting and original entry, and opens history/evidence without write controls. The company/branch, vehicle and period remain consistent through navigation.
+3. Direction opens the vehicle's 150,000 figure, sees the matching posting and original entry, and opens history/evidence. Direction's write controls follow its role (ADR-0009); nothing in this step writes. The company/branch, vehicle and period remain consistent through navigation.
 4. Finance identifies a duplicate and reverses the posted entry with a reason and current record version. The original stays in history as REVERSED; a second POSTED entry carries -150,000. In the same open period the pair nets to 0. The receipt remains attached to its original record; it is not deleted or silently reassigned.
 5. If the original period is locked, the existing late-posting/reversal rules use the current calendar month in the workspace timezone. If that month is also locked, refuse with PERIOD_LOCKED; do not search for an arbitrary open month. Otherwise show the negative amount there, not a rewritten closed-period total. Explain the link back to the original.
 
@@ -166,7 +166,7 @@ Allocate migration numbers from the current integration baseline; never reserve 
 - Multi-line allocation (60,000/40,000), shared-vehicle expense, rejected and pending exclusions, no double-counted acquisition/document/maintenance expense, and empty vs unknown coverage.
 - Named date basis: calendar date in French/English across Douala/UTC/Chicago; month boundaries, locked-period late postings and pending entries without posting periods.
 - Cross-company and restricted-branch list, aggregate, detail, history and attachment denial, including an asset visible in one branch whose historical expense belongs to another. Authorization must happen before data or signed URLs leave the server.
-- Executive read-only from navigation and direct links; field capture and finance review use the existing command permissions and branch rules.
+- Each role sees only the actions [roles and access](roles-and-access.md) gives it, from navigation and direct links. Direction is not read-only since ADR-0009. Field capture and finance review use the existing command permissions and branch rules.
 - Preset compatibility: old trucking/passenger records remain valid; internal fleet needs no invented trip/revenue; disabled presets are rejected; mixed-fleet vocabulary remains coherent.
 - Browser phone/desktop and French/English: overview → vehicle → capture → review → total → entry/evidence → reversal → history; loading, errors, no data, recovery and return-filter preservation. No production prototype records.
 

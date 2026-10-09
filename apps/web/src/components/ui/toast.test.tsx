@@ -26,7 +26,7 @@ describe("toast surface", () => {
     await waitFor(() => expect(screen.getByText("Entry approved")).toBeDefined());
     expect(
       screen.getByText(
-        "This entry was posted to a previous accounting period.",
+        "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
       ),
     ).toBeDefined();
   });

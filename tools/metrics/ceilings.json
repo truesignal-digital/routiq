@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 673717,
+    "ceiling": 675130,
     "raises": [
       {
         "date": "2026-10-06",
@@ -149,8 +149,14 @@
       {
         "date": "2026-10-09",
         "from": 583959,
-        "to": 673717,
-        "reason": "Screens load on demand (#488): one file became 149, and separately gzipped files compress worse in total (the same files concatenated gzip to 610 kB); a phone now downloads 249 kB before sign-in instead of 570 kB and the rest in the background after Home settles"
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 675130,
+        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB)"
       }
     ]
   },
@@ -202,7 +208,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 254500,
+    "ceiling": 255631,
     "raises": [
       {
         "date": "2026-10-06",
@@ -347,6 +353,12 @@
         "from": 583829,
         "to": 583959,
         "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
       }
     ]
   }

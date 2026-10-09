@@ -16,11 +16,15 @@ person held before.
 | Role (fr) | Role (en) | Who it is for | Branches |
 |---|---|---|---|
 | **Direction** | Director | Owner, DG, stakeholder. Sees everything, approves anything, runs settings and access. | Always all |
-| **Administrateur** | Administrator | Runs daily operations of their branches: vehicles, trips, work orders, people. In the org chart: the Chef d'agence. | Listed branches, usually one |
-| **Finance** | Finance | Validates money entries, keeps the books and documents, pays suppliers (planned). | Listed branches, usually all |
-| **Caissier** | Cashier | Records money in and out at the counter, with receipts. Approves nothing. | Listed branches |
-| **Technicien** | Technician | Workshop: problems, work orders, parts and labour, readings. No books. | Listed branches |
-| **Chauffeur** | Driver | Trips, fuel and expenses, readings, reports problems. Sees own records. | Listed branches |
+| **Administrateur** | Administrator | Runs daily operations of their branches: vehicles, trips, work orders, people. In the org chart: the Chef d'agence. | Listed branches or all, usually one |
+| **Finance** | Finance | Validates money entries, keeps the books and documents, pays suppliers (planned). | Listed branches or all, usually all |
+| **Caissier** | Cashier | Records money in and out at the counter, with receipts. Approves nothing. | Listed branches or all |
+| **Technicien** | Technician | Workshop: problems, work orders, parts and labour, readings. No books. | Listed branches or all |
+| **Chauffeur** | Driver | Trips, fuel and expenses, readings, reports problems. Sees own records. | Listed branches or all |
+
+Every role but Direction is given either a list of branches or **All**. All
+also covers branches added later. Direction always covers all branches,
+whatever its access says.
 
 ## People and app access
 
@@ -95,7 +99,7 @@ person held before.
 | Money | Approve or reject an entry | A | — | A | — | — | — |
 | Money | Reverse a posted entry | ✓ | — | ✓ | — | — | — |
 | Money | See entries and the ledger | ✓ | ✓ | ✓ | V branch entries | V work-order costs | V own |
-| Money | Lock a period | ✓ | — | ✓ | — | — | — |
+| Money | Lock a period (the whole company's month; open question below) | ✓ | — | ✓ | — | — | — |
 | Money | Reopen a locked period | ✓ | — | — | — | — | — |
 | Money | Pay suppliers, in instalments, with receipts *(planned)* | A | V | ✓ | ✓ cash | — | — |
 | Money | Suppliers list *(planned)* | ✓ | ✓ | ✓ | V | V | — |
@@ -104,9 +108,9 @@ person held before.
 | Documents | See documents and expiry | ✓ | ✓ | ✓ | — | V | V |
 | People | See Personnel | ✓ | ✓ | V | — | — | — |
 | People | Add a person (driver, hostess, mechanic…) | ✓ | ✓ | — | — | — | — |
-| People | Give, change or remove app access; reset PIN | ✓ all roles | ✓ Chauffeur, Technicien, Caissier only | — | — | — | — |
+| People | Give, change or remove app access; reset PIN | ✓ every role but Direction | ✓ Chauffeur, Technicien, Caissier only | — | — | — | — |
 | Settings | Branches, categories, approval bands, presets | ✓ | — | — | — | — | — |
-| Settings | Modules | vendor only (ADR-0005) | — | — | — | — | — |
+| Settings | Modules | vendor only (ADR-0005); the app still lets Direction change them until #362 (open question below) | — | — | — | — | — |
 | Any | Approve something you submitted | — | — | — | — | — | — |
 
 ## Migration from the built roles
@@ -129,3 +133,13 @@ A plain map that promotes nobody (owner, 2026-10-04). Nobody becomes Direction a
 - **Who approves work orders:** does the Administrateur approve work orders
   alone, or does Finance also sign costs above a band? The default above
   follows the team's use-case document (Admin validates, Finance pays).
+- **Open question: who turns modules on and off?** ADR-0005 makes modules
+  entitlements the vendor grants, so the rule in this document is "vendor
+  only". The app does not enforce that yet: Direction can still enable and
+  disable a module until #362 restricts it to vendor operators. Owner to
+  confirm the rule before #362 ships.
+- **Open question: may a Finance member limited to some branches lock the
+  month for the whole company?** A month is one per company, not per branch,
+  so a lock stops posting into that month in every branch. Today any Finance
+  member may lock it, whatever their branches. Owner to decide whether that
+  is intended, or whether locking needs all branches (or Direction).
