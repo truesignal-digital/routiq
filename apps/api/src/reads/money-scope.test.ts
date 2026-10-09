@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { ROLES, type Role } from "@routiq/contracts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { branches } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import { branches, persons } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { plantWorkOrderRevenue, seedWorkspace } from "../test/seed.js";
@@ -73,6 +74,19 @@ describe("money read scope, role by read", () => {
 
     truckId = await registerTruck("DLA");
     ydeTruckId = await registerTruck("YDE");
+    // The driver is on the crew, so the trip is theirs to read (#545, ADR-0012
+    // §3); the other driver spent on it without being crewed.
+    const driverPersonId = randomUUID();
+    await api.ok(actors.DIRECTOR.token, "register-person", {
+      personId: driverPersonId,
+      displayName: "Chauffeur",
+      branchCode: "DLA",
+      defaultRole: "DRIVER",
+    });
+    await ctx.db
+      .update(persons)
+      .set({ membershipId: actors.DRIVER.membershipId })
+      .where(eq(persons.id, driverPersonId));
     tripId = randomUUID();
     await api.ok(actors.DIRECTOR.token, "create-activity", {
       activityId: tripId,
@@ -82,6 +96,7 @@ describe("money read scope, role by read", () => {
       primarySegmentId: randomUUID(),
       primaryAssetId: truckId,
       startedAt: "2026-08-12T05:00:00Z",
+      crew: [{ activityPersonId: randomUUID(), personId: driverPersonId, role: "DRIVER" }],
     });
     workOrderId = randomUUID();
     await api.ok(actors.DIRECTOR.token, "create-work-order", {
