@@ -8,6 +8,14 @@
 # Only the web container is published, on loopback. Public TLS is terminated by
 # the box's existing Caddy, which reaches `routiq-demo-web` over the shared
 # proxy network the deploy workflow attaches it to.
+#
+# Artifact uploads need these keys in the env file; without S3_ENDPOINT the API
+# registers no upload routes and every receipt photo fails:
+#   S3_ENDPOINT=http://storage:9000
+#   S3_PUBLIC_ENDPOINT=<the public URL, e.g. https://demo.truesignaldigital.com>
+#   S3_BUCKET=artifacts         (must match the location in apps/web/nginx.conf)
+#   S3_ACCESS_KEY_ID=<openssl rand -hex 16>
+#   S3_SECRET_ACCESS_KEY=<openssl rand -hex 32>
 name: routiq-demo
 
 services:
@@ -25,6 +33,32 @@ services:
       retries: 10
     networks: [internal]
 
+  # Same pinned RustFS image as docker-compose.yml. Not published: the browser
+  # reaches it through the web container (nginx.conf), so presigned URLs are
+  # same-origin and the proxy needs no extra hostname.
+  storage:
+    image: rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
+    restart: unless-stopped
+    env_file:
+      - ${ROUTIQ_ENV_FILE:-/srv/routiq/demo.env}
+    # RustFS reads its own variable names. Mapping them from the S3_* pair the
+    # API reads keeps one copy of the credentials in the env file.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        : "$${S3_ACCESS_KEY_ID:?unset in the env file}" "$${S3_SECRET_ACCESS_KEY:?unset in the env file}";
+        RUSTFS_ACCESS_KEY="$$S3_ACCESS_KEY_ID" RUSTFS_SECRET_KEY="$$S3_SECRET_ACCESS_KEY"
+        exec /entrypoint.sh rustfs
+    volumes:
+      - storagedata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [internal]
+
   api:
     build:
       context: .
@@ -34,6 +68,9 @@ services:
       - ${ROUTIQ_ENV_FILE:-/srv/routiq/demo.env}
     depends_on:
       postgres:
+        condition: service_healthy
+      # The API creates the bucket once, at boot.
+      storage:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health || exit 1"]
@@ -59,6 +96,8 @@ services:
 volumes:
   pgdata:
     name: routiq_demo_pgdata
+  storagedata:
+    name: routiq_demo_storagedata
 
 networks:
   internal:
