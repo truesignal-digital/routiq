@@ -68,7 +68,7 @@ type CommandFormChrome =
   | { surface: "dialog" | "sheet" | "panel"; title: ReactNode }
 
 export type CommandFormProps = CommandFormChrome & {
-  description?: string | undefined
+  description?: ReactNode | undefined
   /** Sheet only: repeating rows (cost lines) take the 560 px Line items width. */
   width?: FormPanelWidth | undefined
   /** Panel only: the record this form belongs to. */

@@ -604,6 +604,7 @@
       "notePlaceholder": "Add a note…",
       "reasonLabel": "Rejection reason",
       "reasonPlaceholder": "Explain why this entry is being rejected…",
+      "rejectDescription": "{number} · {what} · {amount}. {named, select, yes {Your reason is shown to {recorder}.} other {Your reason is shown to whoever recorded it.}} The entry stays in the history as rejected and never counts in the books.",
       "approved": "Entry approved",
       "rejected": "Entry rejected",
       "warningsLabel": "Notices",

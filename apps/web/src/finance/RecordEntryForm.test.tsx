@@ -335,7 +335,41 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
 });
 
 describe("entry decisions on a record panel", () => {
-  const entry = { id: ENTRY_ID, rowVersion: 3 };
+  const entry = {
+    id: ENTRY_ID,
+    rowVersion: 3,
+    entryNumber: "DLA-2026-00014",
+    description: "Brake pads",
+    category: { code: "MAINTENANCE", labelFr: "Entretien", labelEn: "Maintenance", layer: null },
+    amountMinor: 180_000,
+    currency: "XAF",
+    recordedBy: { principalId: "00000000-0000-4000-8000-000000000070", displayName: "Hervé", scope: "WORKSPACE" as const },
+  };
+
+  it("names the entry it rejects and says what happens next (#515)", () => {
+    const description = () => {
+      const id = screen.getByRole("dialog").getAttribute("aria-describedby") ?? "";
+      const node = document.getElementById(id);
+      return {
+        // Money keeps its no-break space; compare words, not space characters.
+        text: node?.textContent?.replace(/\s/g, " "),
+        unbroken: node?.querySelector("[data-record-number]")?.textContent,
+      };
+    };
+    inPanel(<RejectEntryForm surface="panel" entry={entry} client={recordingClient(posted)} onDismiss={vi.fn()} />);
+    expect(description()).toEqual({
+      text: "DLA-2026-00014 · Brake pads · FCFA 180,000. Your reason is shown to Hervé. The entry stays in the history as rejected and never counts in the books.",
+      unbroken: "DLA-2026-00014",
+    });
+    cleanup();
+
+    // Without a description it names the category, and nobody it cannot name.
+    const bare = { ...entry, description: null, recordedBy: { ...entry.recordedBy, displayName: null } };
+    inPanel(<RejectEntryForm surface="panel" entry={bare} client={recordingClient(posted)} onDismiss={vi.fn()} />);
+    expect(description().text).toBe(
+      "DLA-2026-00014 · Maintenance · FCFA 180,000. Your reason is shown to whoever recorded it. The entry stays in the history as rejected and never counts in the books.",
+    );
+  });
 
   it("approves at the version the approver was shown", async () => {
     const client = recordingClient(posted);

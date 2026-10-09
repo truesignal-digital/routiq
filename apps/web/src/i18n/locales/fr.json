@@ -604,6 +604,7 @@
       "notePlaceholder": "Ajoutez une remarque…",
       "reasonLabel": "Motif du rejet",
       "reasonPlaceholder": "Expliquez pourquoi cette écriture est rejetée…",
+      "rejectDescription": "{number} · {what} · {amount}. {named, select, yes {Votre motif sera visible par {recorder}.} other {Votre motif sera visible par la personne qui l'a saisie.}} L'écriture reste dans l'historique comme rejetée et n'entre jamais dans les comptes.",
       "approved": "Écriture approuvée",
       "rejected": "Écriture rejetée",
       "warningsLabel": "Avis",
