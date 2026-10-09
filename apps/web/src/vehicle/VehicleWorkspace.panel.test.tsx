@@ -149,7 +149,7 @@ it("reads a close with the invoice still to come as such, not as a zero cost", a
   expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
-it("gives a driver the work order without its money: dashes, no cost lines (#390)", async () => {
+it("gives a driver the work order without its money: no cost facts, no cost lines (#390)", async () => {
   await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
     ...scenario,
     role: "DRIVER",
@@ -159,9 +159,9 @@ it("gives a driver the work order without its money: dashes, no cost lines (#390
     ],
   });
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-  const fact = (label: string) => within(panel).getByText(label).nextElementSibling?.textContent;
-  expect(fact("Expected cost")).toBe("—");
-  expect(fact("Actual cost")).toBe("—");
+  // Withheld is not "not recorded": the cost facts are left out (#306).
+  expect(within(panel).queryByText("Expected cost")).toBeNull();
+  expect(within(panel).queryByText("Actual cost")).toBeNull();
   expect(within(panel).queryByText("No estimate")).toBeNull();
   expect(within(panel).queryByText("Costs")).toBeNull();
   expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
