@@ -63,6 +63,7 @@ import {
   type KeysetColumn,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { readableTripSql } from "./trip-scope.js";
 import type { AuthContext } from "../auth/types.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
@@ -553,7 +554,8 @@ export function registerAssetReadRoutes(
             : undefined;
 
           const activityConditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
+            // The caller's trips: their branches, and a driver's own only.
+            readableTripSql(auth),
             // Started trips only, as the trips list unasked (ADR-0012 §7).
             inArray(activities.status, [...STARTED_ACTIVITY_STATUSES]),
             // An asset can hold several segments on one activity (substitution,
@@ -574,11 +576,6 @@ export function registerAssetReadRoutes(
                 ),
             ),
           ];
-          if (auth.branchScope !== "ALL") {
-            activityConditions.push(
-              inArray(activities.branchId, auth.branchScope),
-            );
-          }
 
           const activityRows = await tx
             .select({

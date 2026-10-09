@@ -96,7 +96,13 @@ describe("finance reads", () => {
       evidence: { state: "NOT_SUPPLIED" as const, artifactCount: 0 },
       assetShareMinor: null,
       assetLinks: null,
-      links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+      links: {
+        activityId: null,
+        activityNumber: null,
+        workOrderId: null,
+        workOrderAssetId: null,
+        workOrderDescription: null,
+      },
     };
 
     it("parses financialEntryListItem", () => {
@@ -1626,6 +1632,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       activityNumber: jobNumber,
       workOrderId,
       workOrderAssetId: truckA,
+      workOrderDescription: "Plaquettes",
     });
     const tolls = all.find((entry) => entry.category.code === "TOLLS");
     expect(tolls?.links).toEqual({
@@ -1633,6 +1640,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       activityNumber: null,
       workOrderId: null,
       workOrderAssetId: null,
+      workOrderDescription: null,
     });
     // The same answer under a filter on the other truck: the entry belongs to
     // the work order even where this vehicle's own line does not.
@@ -1648,6 +1656,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       activityNumber: jobNumber,
       workOrderId,
       workOrderAssetId: truckA,
+      workOrderDescription: "Plaquettes",
     });
   });
 
@@ -1762,7 +1771,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       postings: [{ assetId: truckA, amountMinor: 30_000 }],
     });
     const revenue = await plantWorkOrderRevenue(ctx.db, { revenueEntryId: template, workOrderId });
-    const noWorkOrder = { workOrderId: null, workOrderAssetId: null };
+    const noWorkOrder = { workOrderId: null, workOrderAssetId: null, workOrderDescription: null };
 
     const onA = (await entries(`?assetId=${truckA}`)).find((entry) => entry.id === revenue);
     expect({ assetLinks: onA?.assetLinks, links: onA?.links }).toMatchObject({

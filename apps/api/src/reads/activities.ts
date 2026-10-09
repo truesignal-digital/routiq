@@ -70,6 +70,7 @@ import {
   tripPricesVisible,
   tripRevenueVisible,
 } from "./trip-plan.js";
+import { readableTripSql } from "./trip-scope.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
@@ -232,12 +233,7 @@ export function registerActivityReadRoutes(
             return { error: "VALIDATION_FAILED" as const };
           }
 
-          const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
-          ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          const conditions: SQL[] = [readableTripSql(auth)];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
           // Unasked, only trips that have started (ADR-0012 §7): a client
           // from before Scheduling never meets one with no start date.
@@ -401,16 +397,13 @@ export function registerActivityReadRoutes(
           const timezone = await workspaceTimezone(tx, auth.workspaceId);
           const week = isoWeek(currentBusinessDate(new Date(), timezone));
 
-          // The same scope the list applies: session branches, then the
-          // optional branch inside them, never instead of them.
+          // The same scope the list applies: session branches and a driver's
+          // own trips, then the optional branch inside them, never instead.
           // Started trips only, as the list lists them unasked.
           const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
+            readableTripSql(auth),
             inArray(activities.status, [...STARTED_ACTIVITY_STATUSES]),
           ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
           if (branchId) conditions.push(eq(activities.branchId, branchId));
 
           // Week edges are local midnights, so a trip started at 00:30 Monday
@@ -473,13 +466,8 @@ export function registerActivityReadRoutes(
         const entriesVisible = canReadEntries(auth.role) && modules.has("FINANCE");
 
         const result = await read(async (tx) => {
-          const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
-            eq(activities.id, activityId),
-          ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          // Outside the caller's trips is the same 404 as no such trip.
+          const conditions: SQL[] = [eq(activities.id, activityId), readableTripSql(auth)];
 
           const [header] = await tx
             .select({

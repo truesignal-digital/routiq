@@ -173,6 +173,7 @@ describe("EntrySummary", () => {
           activityNumber: "DLA-2026-00042",
           workOrderId: "3f1a9c40-0000-4000-8000-0000000000c1",
           workOrderAssetId: "00000000-0000-4000-8000-0000000000a1",
+          workOrderDescription: "Replace brake pads",
         },
       },
       refetch: vi.fn(),

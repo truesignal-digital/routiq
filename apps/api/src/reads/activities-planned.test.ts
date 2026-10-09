@@ -5,10 +5,13 @@ import {
   activitySummary,
   assetDetail,
 } from "@routiq/contracts";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { persons } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { plantDriverRevenue, seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * ADR-0012 §7 on the trip reads that predate Scheduling (#336): they keep
@@ -27,6 +30,7 @@ describe("trip reads with planned trips (#336, #583)", () => {
   let driver: Actor;
   let truck: string;
   let plannedId: string;
+  let driverPlannedId: string;
   let cancelledId: string;
   let startedId: string;
   let sheetId: string;
@@ -55,7 +59,7 @@ describe("trip reads with planned trips (#336, #583)", () => {
     technician = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     cashier = await seedActor(ctx.db, { workspaceId, role: "CASHIER", branchIds: [seeded.branch.id] });
     driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
-    await api.ok(director.token, "enable-module", { moduleCode: "SCHEDULING" });
+    await setModule(ctx.db, workspaceId, "SCHEDULING", true);
     truck = await seedAsset(ctx.app, admin.token, { assetCode: "PLN-READS" });
 
     const planTrip = async (extra: Record<string, unknown> = {}) => {
@@ -77,6 +81,16 @@ describe("trip reads with planned trips (#336, #583)", () => {
       return activityId;
     };
     plannedId = await planTrip();
+    // The driver's own planned trip: a driver opens only trips that are theirs (#545).
+    const driverPersonId = randomUUID();
+    await api.ok(admin.token, "register-person", {
+      personId: driverPersonId,
+      displayName: "Moussa Bello",
+      branchCode: "DLA",
+      defaultRole: "DRIVER",
+    });
+    await ctx.db.update(persons).set({ membershipId: driver.membershipId }).where(eq(persons.id, driverPersonId));
+    driverPlannedId = await planTrip({ plannedDriverPersonId: driverPersonId });
     cancelledId = await planTrip();
     await api.ok(
       admin.token,
@@ -139,7 +153,7 @@ describe("trip reads with planned trips (#336, #583)", () => {
     expect(unasked).toContain(startedId);
     expect(unasked).not.toContain(plannedId);
     expect(unasked).not.toContain(cancelledId);
-    expect(await list(admin, "&status=PLANNED")).toEqual([plannedId]);
+    expect((await list(admin, "&status=PLANNED")).sort()).toEqual([plannedId, driverPlannedId].sort());
     expect(await list(admin, "&status=CANCELLED")).toEqual([cancelledId]);
   });
 
@@ -172,11 +186,14 @@ describe("trip reads with planned trips (#336, #583)", () => {
       expect(parsed.agreedPriceMinor).toBe(900_000);
       expect(parsed.amountToCollectMinor).toBe(300_000);
     }
-    for (const actor of [technician, cashier, driver]) {
+    for (const actor of [technician, cashier]) {
       const { raw } = await detail(actor, plannedId);
       expect(Object.keys(raw)).not.toContain("agreedPriceMinor");
       expect(Object.keys(raw)).not.toContain("amountToCollectMinor");
     }
+    const { raw: forDriver } = await detail(driver, driverPlannedId);
+    expect(Object.keys(forDriver)).not.toContain("agreedPriceMinor");
+    expect(Object.keys(forDriver)).not.toContain("amountToCollectMinor");
   });
 
   it("withholds the trip's revenue lines from the driver, keeping their expenses (#583)", async () => {

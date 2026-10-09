@@ -5,6 +5,7 @@ import { branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * #336, ADR-0012 §7: the planning board's read. Transports Ngwa books
@@ -83,7 +84,7 @@ describe("GET /v1/planning (#336)", () => {
     technician = await seedActor(ctx.db, { workspaceId, role: "TECHNICIAN" });
     cashier = await seedActor(ctx.db, { workspaceId, role: "CASHIER", branchIds: [seeded.branch.id] });
     driver = await seedActor(ctx.db, { workspaceId, role: "DRIVER" });
-    await api.ok(director.token, "enable-module", { moduleCode: "SCHEDULING" });
+    await setModule(ctx.db, workspaceId, "SCHEDULING", true);
 
     truckA = await seedAsset(ctx.app, admin.token, { assetCode: "PLN-A" });
     truckB = await seedAsset(ctx.app, admin.token, { assetCode: "PLN-B" });
@@ -364,11 +365,13 @@ describe("GET /v1/planning with modules off (#336)", () => {
   let director: Actor;
   let admin: Actor;
   let truck: string;
+  let workspaceId: string;
 
   beforeAll(async () => {
     ctx = await createTestApp();
     api = apiClient(ctx.app);
     const seeded = await seedWorkspace(ctx.db);
+    workspaceId = seeded.workspace.id;
     director = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "DIRECTOR" });
     admin = await seedActor(ctx.db, { workspaceId: seeded.workspace.id, role: "ADMIN" });
     truck = await seedAsset(ctx.app, admin.token);
@@ -385,7 +388,7 @@ describe("GET /v1/planning with modules off (#336)", () => {
   });
 
   it("reports availability as unknown, not as none, with Maintenance off", async () => {
-    await api.ok(director.token, "enable-module", { moduleCode: "SCHEDULING" });
+    await setModule(ctx.db, workspaceId, "SCHEDULING", true);
     await api.ok(admin.token, "report-issue", {
       issueId: randomUUID(),
       assetId: truck,
@@ -400,14 +403,14 @@ describe("GET /v1/planning with modules off (#336)", () => {
       plannedStartAt: "2026-11-02T08:00:00+01:00",
       plannedAssetId: truck,
     });
-    await api.ok(director.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await setModule(ctx.db, workspaceId, "MAINTENANCE", false);
     const response = await api.get(admin.token, "/v1/planning?from=2026-11-02&to=2026-11-02");
     expect(response.status).toBe(200);
     const body = planningResponse.parse(response.body);
     expect(body.vehicles.map((vehicle) => vehicle.blocks)).toEqual([null]);
     expect(body.trips.map((row) => row.conflicts)).toEqual([[]]);
 
-    await api.ok(director.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, workspaceId, "FINANCE", false);
     const noFinance = planningResponse.parse(
       (await api.get(director.token, "/v1/planning?from=2026-11-02&to=2026-11-02")).body,
     );
