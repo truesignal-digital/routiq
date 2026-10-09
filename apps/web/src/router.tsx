@@ -352,13 +352,14 @@ export const router = createRouter({ routeTree, defaultPendingComponent: ScreenP
  * While someone types their PIN, fetch the shell and Home, so signing in does
  * not wait on another download over a slow network.
  */
+export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
+
 export function preloadAfterSignIn(): void {
-  void AppShell.preload?.();
-  void DashboardScreen.preload?.();
+  for (const screen of AFTER_SIGN_IN) void screen.preload?.();
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
-const SCREENS_BY_USE = [
+export const SCREENS_BY_USE = [
   AssetsStub,
   VehicleWorkspaceScreen,
   NowTab,
@@ -387,9 +388,13 @@ const SCREENS_BY_USE = [
 /**
  * Once the first screen after sign-in has settled, fetch the other screens'
  * code one at a time, so moving around later does not wait on a download.
+ * Before each one it waits while `busy` says the app is loading something of
+ * its own, so on a slow connection a screen's data never queues behind code
+ * for screens nobody has opened yet.
  */
-export async function preloadScreens(): Promise<void> {
+export async function preloadScreens(busy: () => boolean = () => false): Promise<void> {
   for (const screen of SCREENS_BY_USE) {
+    while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
     await screen.preload?.()?.catch(() => undefined);
   }
 }

@@ -27,11 +27,8 @@ if (!sessionStore.getActive()) {
 const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
   if (toLocation.pathname === "/login") return;
   stopWatching();
-  const startWhenQuiet = () => {
-    if (queryClient.isFetching() > 0) window.setTimeout(startWhenQuiet, 250);
-    else void preloadScreens();
-  };
-  window.setTimeout(startWhenQuiet, 250);
+  const busy = () => queryClient.isFetching() > 0 || router.state.status === "pending";
+  window.setTimeout(() => void preloadScreens(busy), 250);
 });
 
 const root = document.getElementById("root");
