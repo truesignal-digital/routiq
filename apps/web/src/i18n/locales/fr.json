@@ -584,6 +584,9 @@
         "recordAgainTitle": "Écriture annulée",
         "recordAgainBody": "Enregistrez-la à nouveau avec les bons détails. Le formulaire s'ouvre rempli à partir de l'écriture annulée.",
         "recordAgain": "Enregistrer à nouveau",
+        "workOrderHandOffHint": "Ce coût est sur un ordre de travail. Seuls la Direction, l'Administrateur ou un technicien enregistrent ces coûts : l'un d'eux l'enregistrera à nouveau après l'annulation.",
+        "workOrderHandOffBody": "Ce coût est sur un ordre de travail. Demandez à la Direction, à l'Administrateur ou au technicien de l'ordre de travail de l'enregistrer à nouveau sur l'ordre de travail.",
+        "openWorkOrder": "Ouvrir l'ordre de travail",
         "done": "Terminé"
       },
       "filters": {

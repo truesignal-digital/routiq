@@ -430,7 +430,7 @@ describe("entry decisions on a record panel", () => {
     expect(submit.disabled).toBe(false);
   });
 
-  function openCancel(client: CommandClient, extra: { onReversed?: (id: string, code: string) => void; onRecordAgain?: () => void } = {}) {
+  function openCancel(client: CommandClient, extra: { onReversed?: (id: string, code: string) => void; onRecordAgain?: () => void; onOpenWorkOrder?: () => void } = {}) {
     inPanel(<ReverseEntryForm surface="panel" entry={entry} client={client} onDismiss={vi.fn()} {...extra} />);
     return screen.getByRole("dialog", { name: "Cancel entry" });
   }
@@ -502,6 +502,23 @@ describe("entry decisions on a record panel", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Record again" }));
     expect(onRecordAgain).toHaveBeenCalledOnce();
+  });
+
+  it("hands a work-order cost to the work order instead of Record again (#559)", async () => {
+    const onOpenWorkOrder = vi.fn();
+    const client = recordingClient(posted);
+    const panel = openCancel(client, { onOpenWorkOrder });
+
+    expect(within(panel).queryByText(/books work-order costs/)).toBeNull();
+    await userEvent.click(within(panel).getByRole("radio", { name: "Wrong details, to record again" }));
+    expect(within(panel).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("button", { name: "Cancel entry" }));
+
+    expect(await screen.findByText(/Ask Direction, the Administrator or the work order's technician/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Open the work order" }));
+    expect(onOpenWorkOrder).toHaveBeenCalledOnce();
+    expect(client.seen.map((sent) => sent.name)).toEqual(["reverse-entry"]);
   });
 
   it("closes straight away for the other reasons", async () => {

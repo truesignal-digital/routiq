@@ -584,6 +584,9 @@
         "recordAgainTitle": "Entry cancelled",
         "recordAgainBody": "Record it again with the right details. The form opens filled in from the cancelled entry.",
         "recordAgain": "Record again",
+        "workOrderHandOffHint": "This cost is on a work order. Only Direction, the Administrator or a technician books work-order costs, so one of them records it again after you cancel.",
+        "workOrderHandOffBody": "This cost is on a work order. Ask Direction, the Administrator or the work order's technician to record it again on the work order.",
+        "openWorkOrder": "Open the work order",
         "done": "Done"
       },
       "filters": {

@@ -544,9 +544,10 @@ describe("Cancel entry from the vehicle panel (#426)", () => {
       rowVersion: 2,
     });
 
+  // The fixture entry is a work-order cost: Direction books those, so it records it again (#559).
   it("cancels for wrong details, then records again pre-filled through record-expense", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
-      role: "FINANCE",
+      role: "DIRECTOR",
       entryDetails: [posted()],
     });
     const user = userEvent.setup();
@@ -578,6 +579,36 @@ describe("Cancel entry from the vehicle panel (#426)", () => {
     expect(recorded.commands[1]?.name).toBe("record-expense");
     expect(recorded.commands[1]?.body.payload).toMatchObject({ amountMinor: 300_000 });
     expect(recorded.commands[1]?.body.payload).not.toMatchObject({ entryId: ENTRY_ID });
+  });
+
+  it("hands a work-order cost Finance cancelled for wrong details to the work order, never offering Record again (#559)", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+      role: "FINANCE",
+      entryDetails: [posted()],
+      workOrders: [workOrderRow("COMPLETED")],
+      workOrderDetails: [workOrderDetail("COMPLETED")],
+    });
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+    await user.click(within(panel).getByRole("button", { name: "Cancel entry" }));
+
+    const form = await screen.findByRole("dialog", { name: "Cancel entry" });
+    await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
+    // Said before the cancellation, not discovered after it.
+    expect(within(form).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.name).toBe("reverse-entry");
+    const done = await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Open the work order" }));
+    await screen.findByRole("dialog", { name: /Brake repair/ });
+    expect(decodeURIComponent(recorded.history.location.search)).toContain(`panel=work_order:${WORK_ORDER_ID}`);
+    expect(done.isConnected).toBe(false);
+    // Nothing else was sent: no record-expense the server would refuse.
+    expect(recorded.commands).toHaveLength(1);
   });
 
   it("shows a cancelled entry's reason in words", async () => {

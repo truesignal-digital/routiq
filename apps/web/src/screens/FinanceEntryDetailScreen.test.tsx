@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { FinancialEntryDetail } from "@routiq/contracts";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
@@ -15,14 +15,20 @@ const BRANCH_ID = "00000000-0000-4000-8000-000000000070";
 const mocks = vi.hoisted(() => ({
   me: vi.fn(),
   entry: vi.fn(),
+  navigate: vi.fn(),
+  submit: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mocks.navigate,
   useParams: () => ({ entryId: "00000000-0000-4000-8000-000000000060" }),
   useSearch: () => ({}),
 }));
 vi.mock("@/auth/me.js", () => ({ useMeContext: mocks.me }));
+vi.mock("../commands/instance.js", async () => {
+  const { CommandStatusStore } = await import("../commands/store.js");
+  return { commandStatusStore: new CommandStatusStore(), commandClient: { submit: mocks.submit } };
+});
 vi.mock("@/finance/useEntry.js", () => ({ useEntry: mocks.entry }));
 vi.mock("@/finance/EntrySummary.js", () => ({ EntrySummary: () => null }));
 vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
@@ -88,7 +94,7 @@ function entry(overrides: Partial<FinancialEntryDetail> = {}): FinancialEntryDet
   };
 }
 
-function signedIn(principalId: string, role: "DRIVER" | "ADMIN" | "CASHIER" = "DRIVER") {
+function signedIn(principalId: string, role: "DRIVER" | "ADMIN" | "CASHIER" | "FINANCE" = "DRIVER") {
   mocks.me.mockReturnValue({ principalId, role, enabledModules: ["CORE", "FINANCE"] });
 }
 
@@ -171,5 +177,40 @@ describe("Edit on the finance entry detail", () => {
       }),
     );
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+});
+
+describe("Cancel entry on a work-order cost, as Finance (#559)", () => {
+  const WORK_ORDER_ID = "00000000-0000-4000-8000-00000000d001";
+  const ASSET_ID = "00000000-0000-4000-8000-0000000000a1";
+  const workOrderCost = () =>
+    entry({
+      status: "POSTED",
+      links: { activityId: null, activityNumber: null, workOrderId: WORK_ORDER_ID, workOrderAssetId: ASSET_ID },
+    });
+
+  it("cancels for wrong details, then offers the work order, never Record again", async () => {
+    mocks.submit.mockResolvedValue({
+      ok: true,
+      outcome: { commandId: "c1", recordId: "r1", rowVersion: 1, recordStatus: "POSTED", warnings: [], idempotentReplay: false },
+    });
+    signedIn(OTHER_ID, "FINANCE");
+    showing(workOrderCost());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Cancel entry" }));
+    const form = await screen.findByRole("dialog", { name: "Cancel entry" });
+    await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
+    await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
+
+    await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
+    expect(mocks.submit).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Open the work order" }));
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: "/assets/$assetId/maintenance",
+      params: { assetId: ASSET_ID },
+      search: { panel: `work_order:${WORK_ORDER_ID}` },
+    });
   });
 });
