@@ -59,6 +59,8 @@ function event(overrides: Partial<HistoryItem> = {}): HistoryItem {
       clientOccurredAt: null,
     },
     changedFields: ["status", "rowVersion"],
+    // A fixture that names its own changed fields names its shown ones too.
+    shownFields: overrides.changedFields === undefined ? ["status"] : [],
     note: null,
     noteCode: null,
     ...overrides,
@@ -243,6 +245,8 @@ describe("record history sheet", () => {
           "updatedAt",
           "createdByCommandId",
         ],
+        // A financial entry's change list does show createdAt.
+        shownFields: ["status", "createdAt"],
       }),
     ]);
     await openSheet();
@@ -260,6 +264,7 @@ describe("record history sheet", () => {
       event({
         eventType: "member.pin-reset",
         changedFields: ["pinHash", "failedAttempts", "lockedUntil"],
+        shownFields: [],
       }),
     ]);
     await openSheet();
@@ -276,6 +281,7 @@ describe("record history sheet", () => {
       event({
         eventType: "posting_period.locked",
         changedFields: ["lockedAt", "status", "lockedByCommandId"],
+        shownFields: ["status", "lockedAt"],
       }),
     ]);
     await openSheet();
@@ -284,17 +290,23 @@ describe("record history sheet", () => {
     expect(screen.getByText("status")).toBeTruthy();
   });
 
-  it("hides a credential column a later command adds, but not a lookalike", async () => {
+  it("chips only the fields its change list shows (#465)", async () => {
+    // A trip's creation records every column; most were empty and stayed so,
+    // and its custom fields are never listed. The server says which fields the
+    // change list shows, and the chips follow it.
     stubHistory([
-      event({ changedFields: ["passwordHash", "apiSecret", "shippingRef"] }),
+      event({
+        eventType: "activity.created",
+        changedFields: ["status", "customValues", "plannedEndAt", "crew", "rowVersion"],
+        shownFields: ["status"],
+      }),
     ]);
     await openSheet();
 
-    expect(screen.queryByText("passwordHash")).toBeNull();
-    expect(screen.queryByText("apiSecret")).toBeNull();
-    // "shipping" only contains "pin" as a substring, and the field vocabulary
-    // is open — matching whole segments is what keeps this one visible.
-    expect(screen.getByText("shippingRef")).toBeTruthy();
+    expect(screen.getByText("status")).toBeTruthy();
+    expect(screen.queryByText("custom fields")).toBeNull();
+    expect(screen.queryByText("planned end")).toBeNull();
+    expect(screen.queryByText("crew")).toBeNull();
   });
 
   it("walks the keyset with load more", async () => {
@@ -547,7 +559,7 @@ describe("record history diff", () => {
     ]);
     await expandRow();
 
-    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("Not recorded")).toBeTruthy();
     expect(screen.queryByText("null")).toBeNull();
   });
 

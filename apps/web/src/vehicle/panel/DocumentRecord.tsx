@@ -3,7 +3,7 @@ import { DocumentForm } from "@/documents/DocumentForm.js";
 import { DocumentStatusBadge } from "@/documents/DocumentStatusBadge.js";
 import { expiryState, type AssetDocument } from "@/documents/model.js";
 import { useAssetDocuments } from "@/documents/useDocuments.js";
-import { formatDate, localizedLabel } from "@/lib/format.js";
+import { formatDate, localizedLabel, notRecorded } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import { may } from "../flow.js";
@@ -65,7 +65,7 @@ function DocumentRecordBody({ id, form }: { id: string; form: PanelForm | undefi
     primary: canRenew && due ? { kind: "go", step: { key: "renew-document", record: { kind: "document", id } } } : { kind: "none" },
     offered: canRenew ? [{ step: { key: "renew-document", record: { kind: "document", id } } }] : [],
   };
-  const notRecorded = t("vehicle.details.notRecorded");
+  const notRecordedText = notRecorded();
 
   return (
     <>
@@ -83,8 +83,8 @@ function DocumentRecordBody({ id, form }: { id: string; form: PanelForm | undefi
         {!current && <Note>{t("vehicle.documents.supersededNote")}</Note>}
         <FactList
           rows={[
-            [t("documents.fields.number"), doc.documentNumber ?? notRecorded],
-            [t("documents.fields.issuedAt"), doc.issuedAt === null ? notRecorded : formatDate(doc.issuedAt, locale)],
+            [t("documents.fields.number"), doc.documentNumber ?? notRecordedText],
+            [t("documents.fields.issuedAt"), doc.issuedAt === null ? notRecordedText : formatDate(doc.issuedAt, locale)],
             [
               t("documents.fields.expiresAt"),
               doc.expiresAt === null ? t("vehicle.documents.noExpiry") : formatDate(doc.expiresAt, locale),

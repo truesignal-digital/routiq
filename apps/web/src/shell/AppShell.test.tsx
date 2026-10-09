@@ -48,7 +48,13 @@ vi.mock("../assets/reference.js", () => ({
   }),
 }));
 
+/** The notice's own behaviour has its own test; here only where it sits. */
+vi.mock("../approval-rules/ApprovalRulesNotice.js", () => ({
+  ApprovalRulesNotice: () => <div data-testid="rules-notice" />,
+}));
+
 const { AppShell } = await import("./AppShell.js");
+const { PageContainer } = await import("../components/page-container.js");
 
 function membership(enabledModules: ModuleCode[]): MeContext {
   return {
@@ -113,9 +119,20 @@ async function renderShell(initialPath: string) {
       component: () => <div data-testid="screen">{path}</div>,
     }),
   );
+  const pageRoute = createRoute({
+    getParentRoute: () => shellRoute,
+    path: "/narrow-page",
+    component: () => (
+      <PageContainer width="narrow">
+        <h1 data-testid="screen">Narrow page</h1>
+        {/* A tab's permission screen is a container inside the page. */}
+        <PageContainer>inner</PageContainer>
+      </PageContainer>
+    ),
+  });
   const routeTree = rootRoute.addChildren([
     loginRoute,
-    shellRoute.addChildren(screenRoutes),
+    shellRoute.addChildren([...screenRoutes, pageRoute]),
   ]);
   const router = createRouter({
     routeTree,
@@ -314,6 +331,16 @@ describe("AppShell (sidebar frame)", () => {
         queryKey: ["ws", session.workspaceSlug, "approval-chain"],
       }),
     );
+  });
+
+  it("puts the approval-rules notice in the page's own column, once (#467)", async () => {
+    await renderShell("/narrow-page");
+
+    const notices = screen.getAllByTestId("rules-notice");
+    expect(notices).toHaveLength(1);
+    const column = screen.getByTestId("screen").closest("section");
+    expect(column?.className).toContain("max-w-xl");
+    expect(notices[0]?.parentElement).toBe(column);
   });
 
   it("logs out from the sidebar footer, forgetting every read made under the session", async () => {
