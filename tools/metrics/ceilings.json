@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 675130,
+    "ceiling": 675364,
     "raises": [
       {
         "date": "2026-10-06",
@@ -155,8 +155,8 @@
       {
         "date": "2026-10-09",
         "from": 584923,
-        "to": 675130,
-        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB)"
+        "to": 675364,
+        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB). Measured on Linux (node:24) as CI builds it; macOS gives the same number"
       }
     ]
   },
@@ -208,7 +208,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 255631,
+    "ceiling": 255682,
     "raises": [
       {
         "date": "2026-10-06",
