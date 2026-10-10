@@ -261,7 +261,7 @@ describe("AppShell (sidebar frame)", () => {
   });
 
   it("names a switched-off module's page in the site header, not just Home (#617)", async () => {
-    await renderShell("/maintenance", () => screen.findByText("This module is not enabled for your workspace."));
+    await renderShell("/maintenance", () => screen.findByText("This module is not enabled for your company."));
     const header = document.querySelector("[data-slot='sidebar-inset'] header");
     expect(header?.querySelector("[data-slot='breadcrumb-page']")?.textContent).toBe("Maintenance");
     expect(screen.queryByTestId("screen")).toBeNull();
