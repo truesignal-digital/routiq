@@ -22,14 +22,29 @@ if (!sessionStore.getActive()) {
   window.addEventListener("load", () => setTimeout(preloadAfterSignIn, 0), { once: true });
 }
 
-// After the first signed-in screen has rendered and its data has arrived, so
-// other screens' code never competes with it for a slow connection.
+// Once the first signed-in screen has rendered and nothing has loaded for two
+// seconds (the member is reading it), so other screens' code and data never
+// compete with it for a slow connection (#497). Offline it waits too: a file
+// fetched offline fails, and the page then keeps it failed.
+const QUIET_BEFORE_PRELOAD_MS = 2_000;
 const stopWatching = router.subscribe("onRendered", ({ toLocation }) => {
   if (toLocation.pathname === "/login") return;
   stopWatching();
-  // Offline it waits too: a file fetched offline fails, and the page then keeps it failed.
   const busy = () => !navigator.onLine || queryClient.isFetching() > 0 || router.state.status === "pending";
-  window.setTimeout(() => void preloadScreens(busy), 250);
+  let quietSince = performance.now();
+  const startWhenQuiet = () => {
+    if (busy()) quietSince = performance.now();
+    if (performance.now() - quietSince < QUIET_BEFORE_PRELOAD_MS) {
+      window.setTimeout(startWhenQuiet, 250);
+      return;
+    }
+    // The rows this member can tap first, data included; then the rest's code.
+    void import("./shell/preload-sidebar.js")
+      .then(({ preloadSidebarScreens }) => preloadSidebarScreens(router, queryClient, busy))
+      .catch(() => undefined)
+      .then(() => preloadScreens(busy));
+  };
+  window.setTimeout(startWhenQuiet, 250);
 });
 
 // A screen that could not open while offline opens by itself once the
