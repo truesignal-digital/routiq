@@ -1,6 +1,8 @@
 import { activitiesQueryOptions, activitySummaryQueryOptions, type UseActivitiesParams } from "../activities/useActivities.js";
 import { assetsQueryOptions } from "../assets/useAssets.js";
 import { categoriesQueryOptions } from "../categories/useCategories.js";
+import { fleetUsageQueryOptions, PAGE_USAGE_RANGE } from "../overview/useFleetUsage.js";
+import { ambientBranchId } from "../shell/branch-context.js";
 import { scopedParams } from "../shell/branch-scope.js";
 import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 
@@ -39,8 +41,11 @@ export async function activities(args: LoaderArgs & { deps: ActivitiesSearch }):
   );
 }
 
-/** The Trips Overview as TripsOverview first asks for it: one summary read (#665). */
+/** The Trips Overview as TripsOverview first asks for it: the summary (#665) and the km read (#668). */
 export async function tripsOverview(args: LoaderArgs): Promise<void> {
   const { client, slug, branch } = await scope(args);
-  await ensure(client, activitySummaryQueryOptions(slug, scopedParams({}, branch)));
+  await settle(
+    ensure(client, activitySummaryQueryOptions(slug, scopedParams({}, branch))),
+    ensure(client, fleetUsageQueryOptions(slug, PAGE_USAGE_RANGE, ambientBranchId(branch))),
+  );
 }

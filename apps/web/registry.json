@@ -374,13 +374,37 @@
           "path": "src/components/overview/summary-notice.ts",
           "type": "registry:file",
           "target": "components/overview/summary-notice.ts"
+        },
+        {
+          "path": "src/components/overview/chart-view-toggle.tsx",
+          "type": "registry:file",
+          "target": "components/overview/chart-view-toggle.tsx"
+        },
+        {
+          "path": "src/components/overview/fleet-board.tsx",
+          "type": "registry:file",
+          "target": "components/overview/fleet-board.tsx"
+        },
+        {
+          "path": "src/components/overview/ranked-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/ranked-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/month-columns.tsx",
+          "type": "registry:file",
+          "target": "components/overview/month-columns.tsx"
         }
       ],
       "registryDependencies": [
-        "button"
+        "button",
+        "data-table",
+        "not-recorded"
       ],
       "dependencies": [
-        "@tanstack/react-router"
+        "@tanstack/react-router",
+        "lucide-react",
+        "react-i18next"
       ]
     },
     {

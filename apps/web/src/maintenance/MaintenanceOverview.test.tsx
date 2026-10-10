@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
 import { sessionStore } from "../auth/store.js";
+import { testUsage } from "../overview/test-usage.js";
 import { MaintenanceOverview } from "./MaintenanceOverview.js";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -59,12 +60,14 @@ const ISSUES = {
   nextCursor: null,
 };
 
-function renderWith(summary: unknown) {
+function renderWith(summary: unknown, usage: unknown = testUsage()) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: RequestInfo | URL) =>
-      new Response(JSON.stringify(String(url).startsWith("/v1/issues") ? ISSUES : summary), { status: 200 }),
-    ),
+    vi.fn(async (url: RequestInfo | URL) => {
+      const href = String(url);
+      const body = href.startsWith("/v1/issues") ? ISSUES : href.startsWith("/v1/assets/usage") ? usage : summary;
+      return new Response(JSON.stringify(body), { status: 200 });
+    }),
   );
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -143,5 +146,19 @@ describe("Maintenance › Overview (#665)", () => {
     expect(region.textContent).toContain("2 problems are open, 1 of them safety-critical.");
     expect(region.textContent).toContain("1 vehicle is off the road.");
     expect(region.textContent).toContain("VH003 was grounded on October 7 and is still off the road.");
+  });
+
+  it("draws days off the road per month, the current month partial and said so (#668)", async () => {
+    const { container } = renderWith(SUMMARY);
+    await vi.waitFor(() => expect(container.querySelectorAll("[data-slot=month-column]")).toHaveLength(12));
+    expect(screen.getByRole("img", { name: "October (so far): 12 vehicle-days off the road" })).toBeTruthy();
+    expect(screen.getByText("October is partial (9 days).")).toBeTruthy();
+    expect(linkOf("Open Work orders")).toBe("/maintenance/work-orders");
+  });
+
+  it("leaves the chart out while Maintenance is off", async () => {
+    const { container } = renderWith(SUMMARY, { ...testUsage(), offRoadByMonth: null });
+    await screen.findByText("VH003 · since 10/1/26");
+    await vi.waitFor(() => expect(container.querySelector("[data-slot=days-off-road]")).toBeNull());
   });
 });

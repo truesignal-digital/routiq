@@ -1,18 +1,19 @@
 import { Link } from "@tanstack/react-router";
-import type { AssetOverview, AssetSummary, ComingUpResponse, FinanceOverviewResponse } from "@routiq/contracts";
-import { MONEY_OVERVIEW_READER_ROLES, type Role } from "@routiq/contracts";
+import type { AssetOverview, AssetSummary, ComingUpResponse, FinanceOverviewResponse, FleetUsageResponse } from "@routiq/contracts";
+import { FLEET_BOARD_DAYS, MONEY_OVERVIEW_READER_ROLES, type Role } from "@routiq/contracts";
 import { CalendarClock, CalendarX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
 import { OverviewSummary } from "@/components/overview/overview-summary.js";
+import { FleetBoard } from "@/components/overview/fleet-board.js";
 import { ProfitBars } from "@/components/overview/profit-bars.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, localizedLabel, profitOrLoss } from "@/lib/format.js";
+import { formatDate, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
 import {
   FLEET_DOCUMENT_WINDOW_DAYS,
@@ -22,6 +23,7 @@ import {
   type FleetDocumentRow,
 } from "@/overview/fleet-documents.js";
 import { useComingUp, useTodo } from "@/overview/useFleetAttention.js";
+import { onTheRoadShare, PAGE_USAGE_RANGE, pointsChange, useFleetUsage } from "@/overview/useFleetUsage.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { canReadFleetDocuments } from "./trucksTabs.js";
 import { useAssetOverview } from "./useAssetOverview.js";
@@ -62,6 +64,8 @@ export function TrucksOverview() {
   const todoQuery = useTodo(documentsShown);
   const moneyShown = readsMoneyOverview(me?.role, me?.enabledModules);
   const moneyQuery = useMoneyOverview("THIS_MONTH", moneyShown);
+  // Km and daily status are every vehicle reader's (#668); the money in it is left to the server.
+  const usageQuery = useFleetUsage(PAGE_USAGE_RANGE);
   const groundingCounted = contributes("fields", "assets.attentionGrounding", me?.enabledModules);
   const vehicles = moneyQuery.data?.vehicles ?? null;
   const overview = overviewQuery.data;
@@ -72,6 +76,7 @@ export function TrucksOverview() {
       overview: overviewQuery.data,
       summary: summaryQuery.data,
       comingUp: documentsShown ? comingUpQuery.data : null,
+      usage: usageQuery.data,
       groundingCounted,
       t,
       language: i18n.resolvedLanguage,
@@ -119,6 +124,9 @@ export function TrucksOverview() {
           />
         )}
       </OverviewSummary>
+      {usageQuery.data !== undefined && <KmCoverage usage={usageQuery.data} />}
+
+      <FleetBoardCard usage={usageQuery.data} isPending={usageQuery.isPending} isError={usageQuery.isError} onRetry={() => void usageQuery.refetch()} />
 
       {(moneyShown || documentsShown) && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -174,6 +182,7 @@ export function overviewTiles({
   overview,
   summary,
   comingUp,
+  usage,
   groundingCounted,
   t,
   language,
@@ -182,6 +191,8 @@ export function overviewTiles({
   summary: AssetSummary | undefined;
   /** Null when this viewer gets no Documents tab. */
   comingUp: ComingUpResponse | undefined | null;
+  /** The km and daily-status read; its board days give "on the road". */
+  usage?: FleetUsageResponse | undefined;
   groundingCounted: boolean;
   t: Translate;
   language: string | undefined;
@@ -222,14 +233,8 @@ export function overviewTiles({
       link: list("GROUNDED"),
     });
   }
-  tiles.push({
-    id: "attention",
-    label: t("assets.metrics.attention"),
-    value: summary === undefined ? null : String(summary.attention),
-    tone: (summary?.attention ?? 0) > 0 ? "warning" : "neutral",
-    hint: t(groundingCounted ? "assets.metrics.attentionHint" : "assets.metrics.attentionHintNoGrounding"),
-    link: { to: "/assets/list", search: { status: "ATTENTION" } },
-  });
+  // Trips off: no day can be on the road, so the tile goes rather than reading 0 %.
+  if (usage === undefined || usage.trips !== null) tiles.push(onTheRoadTile(usage, t, language));
   if (comingUp !== null) {
     const due = comingUp?.rows.filter((row) => row.code === "DOCUMENT_DUE") ?? [];
     const first = due[0];
@@ -273,7 +278,128 @@ export function overviewTiles({
       link: list("IDLE"),
     });
   }
+  // Five tiles at most (dashboards.html#trucks): Attention keeps its place only while there is room.
+  if (tiles.length < 5) {
+    tiles.push({
+      id: "attention",
+      label: t("assets.metrics.attention"),
+      value: summary === undefined ? null : String(summary.attention),
+      tone: (summary?.attention ?? 0) > 0 ? "warning" : "neutral",
+      hint: t(groundingCounted ? "assets.metrics.attentionHint" : "assets.metrics.attentionHintNoGrounding"),
+      link: { to: "/assets/list", search: { status: "ATTENTION" } },
+    });
+  }
   return tiles;
+}
+
+/**
+ * Days on a trip ÷ days recorded over the board's 30 days, against the 30
+ * before, in points. Days nobody could record are left out of both and said
+ * in the hint; with none recorded the share is not recorded, never 0 %.
+ */
+function onTheRoadTile(usage: FleetUsageResponse | undefined, t: Translate, language: string | undefined): MetricTile {
+  const days = FLEET_BOARD_DAYS;
+  const tile: MetricTile = {
+    id: "on-the-road",
+    label: t("assets.overview.tiles.onTheRoad", { days }),
+    value: null,
+    info: t("assets.overview.tiles.onTheRoadInfo", { days }),
+  };
+  if (usage === undefined) return tile;
+  const { last, previous } = usage.onTheRoad;
+  const share = onTheRoadShare(last);
+  const change = pointsChange(share, onTheRoadShare(previous));
+  const changeText =
+    change === null
+      ? undefined
+      : change.kind === "same"
+        ? t("assets.overview.tiles.onTheRoadSame", { days })
+        : t("assets.overview.tiles.onTheRoadChange", { arrow: change.arrow, points: change.points, days });
+  const missing = last.notRecordedDays;
+  const hint =
+    missing === 0
+      ? changeText
+      : changeText === undefined
+        ? t("assets.overview.tiles.onTheRoadNotRecorded", { count: missing })
+        : t("assets.overview.tiles.onTheRoadChangeNotRecorded", { change: changeText, count: missing });
+  return {
+    ...tile,
+    value: share === null ? null : formatPercent(share, language),
+    ...(hint === undefined ? {} : { hint }),
+  };
+}
+
+/** Whose km are known this month, and why some are not: every per-km figure leaves the unknown out. */
+function KmCoverage({ usage }: { usage: FleetUsageResponse }) {
+  const { t } = useTranslation();
+  if (usage.km === null) return null;
+  const { vehicles, knownVehicles } = usage.km.period;
+  if (vehicles === 0) return null;
+  const tripsWithoutKm = usage.vehicles.reduce((sum, vehicle) => sum + (vehicle.period?.tripsWithoutKm ?? 0), 0);
+  return (
+    <p data-slot="km-coverage" className="-mt-2 text-xs text-muted-foreground">
+      {knownVehicles === vehicles
+        ? t("assets.overview.km.all", { count: vehicles })
+        : t("assets.overview.km.some", { known: knownVehicles, total: vehicles, missing: tripsWithoutKm })}
+    </p>
+  );
+}
+
+/** The basis line names what the statuses come from, and what an off module leaves unrecorded. */
+function boardBasis(usage: FleetUsageResponse): string {
+  const trips = usage.trips !== null;
+  const maintenance = usage.offRoadByMonth !== null;
+  if (trips && maintenance) return "assets.overview.board.basis.all";
+  if (trips) return "assets.overview.board.basis.noMaintenance";
+  if (maintenance) return "assets.overview.board.basis.noTrips";
+  return "assets.overview.board.basis.none";
+}
+
+function FleetBoardCard({
+  usage,
+  isPending,
+  isError,
+  onRetry,
+}: {
+  usage: FleetUsageResponse | undefined;
+  isPending: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Card data-slot="fleet-board-card">
+      <CardHeader>
+        <CardTitle>{t("assets.overview.board.title")}</CardTitle>
+        <CardDescription>{t("assets.overview.board.question", { days: FLEET_BOARD_DAYS })}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {isError ? (
+          <ErrorState message={t("assets.overview.board.loadFailed")} retryLabel={t("assets.retry")} onRetry={onRetry} />
+        ) : isPending || usage === undefined ? (
+          <Skeleton className="h-48 w-full" />
+        ) : usage.vehicles.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">{t("assets.overview.board.empty")}</p>
+        ) : (
+          <FleetBoard
+            days={usage.boardDays}
+            rows={usage.vehicles.map((vehicle) => ({
+              key: vehicle.assetId,
+              label: vehicle.assetCode,
+              to: `/assets/${vehicle.assetId}`,
+              days: vehicle.days,
+            }))}
+          />
+        )}
+        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
+          {usage !== undefined && <span>{t(boardBasis(usage))}</span>}
+          <Link to="/assets/list" className="ms-auto text-sm font-medium text-foreground underline-offset-4 hover:underline">
+            {t("assets.overview.board.open")}
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function documentItem(row: FleetDocumentRow, t: Translate, language: string | undefined): ToDoItem {

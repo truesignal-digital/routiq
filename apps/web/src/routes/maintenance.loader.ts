@@ -7,6 +7,8 @@ import {
   workOrdersQueryOptions,
   type UseWorkOrdersParams,
 } from "../maintenance/useMaintenance.js";
+import { fleetUsageQueryOptions, PAGE_USAGE_RANGE } from "../overview/useFleetUsage.js";
+import { ambientBranchId } from "../shell/branch-context.js";
 import { scopedParams } from "../shell/branch-scope.js";
 import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 
@@ -24,10 +26,13 @@ export async function maintenance(args: LoaderArgs): Promise<void> {
   );
 }
 
-/** The Overview's To do: the open problems, ranked by the screen. */
+/** The Overview's To do (the open problems, ranked by the screen) and its days off the road (#668). */
 export async function maintenanceOverview(args: LoaderArgs): Promise<void> {
   const { client, slug, branch } = await scope(args);
-  await ensureList(client, issuesQueryOptions(slug, scopedParams(issueListParams({ status: "OPEN" }), branch)));
+  await settle(
+    ensureList(client, issuesQueryOptions(slug, scopedParams(issueListParams({ status: "OPEN" }), branch))),
+    ensure(client, fleetUsageQueryOptions(slug, PAGE_USAGE_RANGE, ambientBranchId(branch))),
+  );
 }
 
 /** The Problems tab under the URL's status. */
