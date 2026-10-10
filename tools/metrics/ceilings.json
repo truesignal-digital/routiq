@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 713858,
+    "ceiling": 713902,
     "raises": [
       {
         "date": "2026-10-06",
@@ -257,31 +257,31 @@
       {
         "date": "2026-10-10",
         "from": 694679,
-        "to": 694794,
-        "reason": "Named shift regions on the shell's header, page and rules notice for flow:no-shift and pnpm perf (#494)"
+        "to": 694831,
+        "reason": "#653 trucking overlays for the grounded-vehicle warning"
       },
       {
         "date": "2026-10-10",
-        "from": 694794,
-        "to": 703743,
+        "from": 694831,
+        "to": 703751,
         "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
       },
       {
         "date": "2026-10-10",
-        "from": 703743,
-        "to": 710739,
+        "from": 703751,
+        "to": 710828,
         "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
       },
       {
         "date": "2026-10-10",
-        "from": 710739,
-        "to": 713275,
+        "from": 710828,
+        "to": 713353,
         "reason": "Intent preloading and the sidebar preloader (#497)"
       },
       {
         "date": "2026-10-10",
-        "from": 713275,
-        "to": 713858,
+        "from": 713353,
+        "to": 713902,
         "reason": "Page-type skeletons for each screen route (#498)"
       }
     ]
@@ -346,7 +346,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 266258,
+    "ceiling": 266200,
     "raises": [
       {
         "date": "2026-10-06",
@@ -579,25 +579,25 @@
       {
         "date": "2026-10-10",
         "from": 261561,
-        "to": 263813,
+        "to": 263756,
         "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
       },
       {
         "date": "2026-10-10",
-        "from": 263813,
-        "to": 264569,
+        "from": 263756,
+        "to": 264506,
         "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
       },
       {
         "date": "2026-10-10",
-        "from": 264569,
-        "to": 265673,
+        "from": 264506,
+        "to": 265616,
         "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
       },
       {
         "date": "2026-10-10",
-        "from": 265673,
-        "to": 266258,
+        "from": 265616,
+        "to": 266200,
         "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
       }
     ]
