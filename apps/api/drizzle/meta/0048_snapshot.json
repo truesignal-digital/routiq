@@ -1,6 +1,6 @@
 {
-  "id": "ff8237d8-cd0d-4de8-aa83-cc12dcd7273b",
-  "prevId": "9abf609c-277b-4f26-aaca-295a248f996d",
+  "id": "17115a02-c68e-430d-b9b5-b1b2e20592f7",
+  "prevId": "ff8237d8-cd0d-4de8-aa83-cc12dcd7273b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4409,6 +4409,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "description": {
           "name": "description",
           "type": "text",
@@ -4496,6 +4502,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "operational_issues_ws_number_uq": {
+          "name": "operational_issues_ws_number_uq",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -5621,6 +5648,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "description": {
           "name": "description",
           "type": "text",
@@ -5761,6 +5794,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "work_orders_ws_number_uq": {
+          "name": "work_orders_ws_number_uq",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -94,7 +94,15 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
 
     // App access. The handlers narrow ADMIN to the field roles in its branches.
     ...wildcard(
-      ["add-member", "update-member-role", "deactivate-member", "reactivate-member", "reset-member-pin"],
+      [
+        "add-member",
+        "update-member-role",
+        "deactivate-member",
+        "reactivate-member",
+        "reset-member-pin",
+        "link-person-login",
+        "unlink-person-login",
+      ],
       DIRECTOR_ADMIN,
     ),
 

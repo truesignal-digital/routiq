@@ -720,6 +720,47 @@ export const persons = pgTable(
   (t) => [
     uniqueIndex("persons_ws_code_uq").on(t.workspaceId, t.personCode),
     index("persons_ws_branch_idx").on(t.workspaceId, t.branchId),
+    // One login, one person (ADR-0010). `membership_id` is the current link,
+    // which `link-person-login` and `unlink-person-login` alone write.
+    uniqueIndex("persons_ws_membership_uq")
+      .on(t.workspaceId, t.membershipId)
+      .where(sql`${t.membershipId} is not null`),
+  ],
+);
+
+/**
+ * Every link between a Person and a login (#569), one row per period. A link
+ * is ended, never rewritten: relinking ends the current row and opens a new
+ * one, unlinking only ends it. `persons.membership_id` mirrors the open row.
+ * Only `ended_at` and `ended_by_command_id` may be updated (migration 0047).
+ */
+export const personLogins = pgTable(
+  "person_logins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => persons.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    endedByCommandId: uuid("ended_by_command_id").references(() => commands.id),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("person_logins_open_person_uq")
+      .on(t.workspaceId, t.personId)
+      .where(sql`${t.endedAt} is null`),
+    uniqueIndex("person_logins_open_membership_uq")
+      .on(t.workspaceId, t.membershipId)
+      .where(sql`${t.endedAt} is null`),
   ],
 );
 

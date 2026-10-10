@@ -334,8 +334,15 @@
     {
       "idx": 47,
       "version": "7",
-      "when": 1791604394095,
-      "tag": "0047_maintenance_numbers",
+      "when": 1791604216616,
+      "tag": "0047_person_logins",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1791606347235,
+      "tag": "0048_maintenance_numbers",
       "breakpoints": true
     }
   ]
