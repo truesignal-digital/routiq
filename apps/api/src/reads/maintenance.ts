@@ -1,5 +1,4 @@
 import {
-  canReadWorkOrderCosts,
   issueDetail,
   issueListQuery,
   issueListResponse,
@@ -12,7 +11,7 @@ import {
   type ListSort,
   type ModuleCode,
 } from "@routiq/contracts";
-import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -54,7 +53,9 @@ import {
   parseActualCost,
   workOrderActualCostSql,
   workOrderCostToComeColumns,
+  workOrderMoneyVisibility,
   type CostToComeFacts,
+  type WorkOrderMoneyVisibility,
 } from "./work-order-cost.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
@@ -97,39 +98,26 @@ function serializeOptionalMinor(value: bigint | null): number | null {
 }
 
 /**
- * Work-order money is Finance's (#328): the estimate and the cost summed from
- * entries show only to a role that reads work-order costs (#390) while FINANCE
- * is on.
- */
-function workOrderCostsVisible(auth: AuthContext, modules: ReadonlySet<ModuleCode>): boolean {
-  return canReadWorkOrderCosts(auth.role) && modules.has("FINANCE");
-}
-
-/**
- * A work order's three amounts and its cost still to come (#82), or null for
- * each when work-order costs are hidden from the caller. Null, never zero:
- * a hidden figure must not read as a free repair.
+ * A work order's amounts and its cost still to come (#82), each null when the
+ * caller may not read it. Null, never zero: a hidden figure must not read as a
+ * free repair.
  */
 function workOrderAmounts(
-  visible: boolean,
+  visible: WorkOrderMoneyVisibility,
   row: CostToComeFacts & {
     expectedCostMinor: bigint | null;
     actualCostMinor: string | null;
   },
 ) {
-  if (!visible) {
-    return {
-      expectedCostMinor: null,
-      actualCostMinor: null,
-      declaredCostMinor: null,
-      costToCome: null,
-    };
-  }
   return {
-    expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
-    actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
-    declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
-    costToCome: costToCome(row),
+    expectedCostMinor: visible.estimate ? serializeOptionalMinor(row.expectedCostMinor) : null,
+    ...(visible.actual
+      ? {
+          actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
+          declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+          costToCome: costToCome(row),
+        }
+      : { actualCostMinor: null, declaredCostMinor: null, costToCome: null }),
   };
 }
 
@@ -296,6 +284,7 @@ export function registerMaintenanceReadRoutes(
           const rows = await tx
             .select({
               id: workOrders.id,
+              number: workOrders.number,
               status: workOrders.status,
               description: workOrders.description,
               assetId: workOrders.assetId,
@@ -311,6 +300,7 @@ export function registerMaintenanceReadRoutes(
               ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
+              issueNumber: operationalIssues.number,
               safetyCritical: operationalIssues.safetyCritical,
               createdAt: commands.executedAt,
               createdAtKey: microsecondKey(commands.executedAt),
@@ -374,6 +364,7 @@ export function registerMaintenanceReadRoutes(
         const pageRows = result.rows.slice(0, limit);
         const items = pageRows.map((row) => ({
           id: row.id,
+          number: row.number,
           status: row.status,
           description: row.description,
           asset: {
@@ -386,13 +377,13 @@ export function registerMaintenanceReadRoutes(
             code: row.branchCode,
             name: row.branchName,
           },
-          ...workOrderAmounts(workOrderCostsVisible(auth, modules), row),
+          ...workOrderAmounts(workOrderMoneyVisibility(auth, modules), row),
           costOutcome: row.costOutcome,
           currency: row.currency,
           issue:
             row.issueId === null
               ? null
-              : { id: row.issueId, safetyCritical: row.safetyCritical ?? false },
+              : { id: row.issueId, number: row.issueNumber, safetyCritical: row.safetyCritical ?? false },
           createdAt: row.createdAt.toISOString(),
           completedAt: row.completedAt?.toISOString() ?? null,
           cancelledAt: row.cancelledAt?.toISOString() ?? null,
@@ -452,6 +443,7 @@ export function registerMaintenanceReadRoutes(
           const [header] = await tx
             .select({
               id: workOrders.id,
+              number: workOrders.number,
               status: workOrders.status,
               description: workOrders.description,
               assetId: workOrders.assetId,
@@ -467,6 +459,7 @@ export function registerMaintenanceReadRoutes(
               ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
+              issueNumber: operationalIssues.number,
               safetyCritical: operationalIssues.safetyCritical,
               summary: workOrders.summary,
               cancelReason: workOrders.cancelReason,
@@ -549,8 +542,14 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
-          if (!workOrderCostsVisible(auth, modules)) {
-            return { header, eventRows, costRows: null, completedBy: completers.get(header.id) ?? null };
+          if (!workOrderMoneyVisibility(auth, modules).actual) {
+            return {
+              header,
+              eventRows,
+              costRows: null,
+              otherBranchesCostMinor: null,
+              completedBy: completers.get(header.id) ?? null,
+            };
           }
 
           // A cost line is a financial record: its entry's branch is read
@@ -563,7 +562,25 @@ export function registerMaintenanceReadRoutes(
             eq(financialPostings.direction, "EXPENSE"),
             inArray(financialEntries.status, ["POSTED", "REVERSED", "SUBMITTED"]),
           ];
+          // The lines outside the reader's branches still count in the actual
+          // cost (#81). They come back as one sum and nothing else (#643), so
+          // the list adds up without exposing another branch's records.
+          let otherBranchesCostMinor = 0n;
           if (auth.branchScope !== "ALL") {
+            const [other] = await tx
+              .select({
+                sum: sql<string>`coalesce(sum(${financialPostings.amountMinor}), 0)::text`,
+              })
+              .from(financialPostings)
+              .innerJoin(
+                financialEntries,
+                and(
+                  eq(financialEntries.workspaceId, financialPostings.workspaceId),
+                  eq(financialEntries.id, financialPostings.financialEntryId),
+                ),
+              )
+              .where(and(...costConditions, notInArray(financialEntries.branchId, auth.branchScope)));
+            otherBranchesCostMinor = BigInt(other?.sum ?? "0");
             costConditions.push(inArray(financialEntries.branchId, auth.branchScope));
           }
           const costRows = await tx
@@ -592,7 +609,13 @@ export function registerMaintenanceReadRoutes(
               asc(financialPostings.lineNo),
             );
 
-          return { header, eventRows, costRows, completedBy: completers.get(header.id) ?? null };
+          return {
+            header,
+            eventRows,
+            costRows,
+            otherBranchesCostMinor,
+            completedBy: completers.get(header.id) ?? null,
+          };
         });
 
         if (!result) {
@@ -601,13 +624,14 @@ export function registerMaintenanceReadRoutes(
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { header, eventRows, costRows, completedBy } = result;
+        const { header, eventRows, costRows, otherBranchesCostMinor, completedBy } = result;
         const costLine = (line: NonNullable<typeof costRows>[number]) => ({
           ...line,
           amountMinor: serializeMinor(line.amountMinor),
         });
         return workOrderDetail.parse({
           id: header.id,
+          number: header.number,
           status: header.status,
           description: header.description,
           asset: {
@@ -620,7 +644,7 @@ export function registerMaintenanceReadRoutes(
             code: header.branchCode,
             name: header.branchName,
           },
-          ...workOrderAmounts(workOrderCostsVisible(auth, modules), header),
+          ...workOrderAmounts(workOrderMoneyVisibility(auth, modules), header),
           costOutcome: header.costOutcome,
           currency: header.currency,
           issue:
@@ -628,6 +652,7 @@ export function registerMaintenanceReadRoutes(
               ? null
               : {
                   id: header.issueId,
+                  number: header.issueNumber,
                   safetyCritical: header.safetyCritical ?? false,
                 },
           summary: header.summary,
@@ -663,6 +688,7 @@ export function registerMaintenanceReadRoutes(
             costRows?.filter((line) => line.entryStatus !== "SUBMITTED").map(costLine) ?? null,
           pendingCostLines:
             costRows?.filter((line) => line.entryStatus === "SUBMITTED").map(costLine) ?? null,
+          otherBranchesCostMinor: serializeOptionalMinor(otherBranchesCostMinor),
         });
       } catch (error) {
         req.log.error({ err: error }, "work order detail read failed");
@@ -726,6 +752,7 @@ export function registerMaintenanceReadRoutes(
           const rows = await tx
             .select({
               id: operationalIssues.id,
+              number: operationalIssues.number,
               assetId: operationalIssues.assetId,
               assetCode: assets.assetCode,
               registrationNumber: assets.registrationNumber,
@@ -780,6 +807,7 @@ export function registerMaintenanceReadRoutes(
               : await tx
                   .select({
                     id: workOrders.id,
+                    number: workOrders.number,
                     issueId: workOrders.issueId,
                     status: workOrders.status,
                   })
@@ -790,7 +818,7 @@ export function registerMaintenanceReadRoutes(
                       inArray(workOrders.issueId, issueIds),
                     ),
                   )
-                  .orderBy(asc(workOrders.id));
+                  .orderBy(asc(workOrders.number));
 
           const groundedAssets =
             pageAssetIds.length === 0
@@ -825,18 +853,19 @@ export function registerMaintenanceReadRoutes(
 
         const workOrdersByIssue = new Map<
           string,
-          Array<{ id: string; status: string }>
+          Array<{ id: string; number: number; status: string }>
         >();
         for (const workOrder of result.linkedWorkOrders) {
           if (workOrder.issueId === null) continue;
           const bucket = workOrdersByIssue.get(workOrder.issueId) ?? [];
-          bucket.push({ id: workOrder.id, status: workOrder.status });
+          bucket.push({ id: workOrder.id, number: workOrder.number, status: workOrder.status });
           workOrdersByIssue.set(workOrder.issueId, bucket);
         }
         const groundedAssetIds = new Set(result.groundedAssetIds);
 
         const items = pageRows.map((row) => ({
           id: row.id,
+          number: row.number,
           asset: {
             id: row.assetId,
             assetCode: row.assetCode,
@@ -902,6 +931,7 @@ export function registerMaintenanceReadRoutes(
           const [row] = await tx
             .select({
               id: operationalIssues.id,
+              number: operationalIssues.number,
               assetId: operationalIssues.assetId,
               assetCode: assets.assetCode,
               registrationNumber: assets.registrationNumber,
@@ -934,10 +964,10 @@ export function registerMaintenanceReadRoutes(
           if (!row) throw notFound();
 
           const linkedWorkOrders = await tx
-            .select({ id: workOrders.id, status: workOrders.status })
+            .select({ id: workOrders.id, number: workOrders.number, status: workOrders.status })
             .from(workOrders)
             .where(and(eq(workOrders.workspaceId, auth.workspaceId), eq(workOrders.issueId, row.id)))
-            .orderBy(asc(workOrders.id));
+            .orderBy(asc(workOrders.number));
 
           const [grounded] = await tx
             .select({ id: assetAvailabilityIntervals.id })
@@ -985,6 +1015,7 @@ export function registerMaintenanceReadRoutes(
 
           return {
             id: row.id,
+            number: row.number,
             asset: { id: row.assetId, assetCode: row.assetCode, registrationNumber: row.registrationNumber },
             branch: { id: row.branchId, code: row.branchCode, name: row.branchName },
             description: row.description,

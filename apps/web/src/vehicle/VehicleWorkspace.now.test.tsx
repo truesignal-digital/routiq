@@ -7,6 +7,7 @@ import {
   ME_ID,
   NOTE_ID,
   OTHER_ID,
+  TRIP_ID,
   WORK_ORDER_ID,
   actor,
   attention,
@@ -105,8 +106,8 @@ describe("Direction's notes in the To do (#98)", () => {
     const title = await within(card).findByRole("button", { name: BODY });
     const row = title.closest("li");
     expect(row?.className).toContain("bg-info/10");
-    expect(within(row!).getByRole("img", { name: "Note from Direction" })).toBeTruthy();
-    expect(within(row!).getByText(/^Note from Direction · Émilienne · /)).toBeTruthy();
+    expect(within(row!).getByRole("img", { name: "Note from the Director" })).toBeTruthy();
+    expect(within(row!).getByText(/^Note from the Director · Émilienne · /)).toBeTruthy();
 
     const user = userEvent.setup();
     await user.click(within(row!).getByRole("button", { name: "Mark as seen" }));
@@ -130,8 +131,30 @@ describe("Direction's notes in the To do (#98)", () => {
   });
 });
 
+describe("entries waiting on someone else (#542)", () => {
+  it("names the Director above Finance's band, and a colleague on Finance's own entry", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "FINANCE",
+      attention: [
+        attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true, approver: "DIRECTION_APPROVES" } }),
+        attention("ENTRY_AWAITING_REVIEW", {
+          makerPrincipalIds: [ME_ID],
+          subject: { entityType: "financial_entry", id: OTHER_ID, number: "DLA-2026-00007", rowVersion: 1 },
+          params: { approver: "FINANCE_PEER_APPROVES" },
+        }),
+      ],
+    });
+    const card = await todoCard();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /^Waiting on others/ }));
+    expect(within(card).getByText("The Director")).toBeTruthy();
+    expect(within(card).getByText("Another Finance member or the Director")).toBeTruthy();
+    expect(within(card).queryByText("Finance")).toBeNull();
+  });
+});
+
 describe("a repair whose invoice is still to come (#82)", () => {
-  const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
+  const WO_REF = "WO-0007";
 
   it("asks the workshop to enter the invoice, and opens the late invoice form on the order", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, {
@@ -247,5 +270,60 @@ describe("the Overview tab and its To do section (#90)", () => {
       get.mockRestore();
       set.mockRestore();
     }
+  });
+});
+
+describe("a vehicle on two unfinished trips (#577)", () => {
+  const doubleBooked = (tripNumbers: string[]) =>
+    attention("VEHICLE_DOUBLE_BOOKED", { params: { tripNumbers } });
+
+  it("flags the trip, names the other one, and opens the trip from the row", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      attention: [doubleBooked(["DLA-2026-00012"])],
+    });
+    const card = await todoCard();
+    // Closing a trip happens on the trip, so the flag waits on operations.
+    expect(await within(card).findByText(EMPTY)).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /Waiting on others/ }));
+    const row = within(card).getByRole("button", { name: /Trip DLA-2026-00009 overlaps another open trip/ });
+    expect(
+      within(row).getByText("This truck is also on DLA-2026-00012. Close whichever trip has ended."),
+    ).toBeTruthy();
+    expect(within(row).getByText("Operations")).toBeTruthy();
+
+    await user.click(row);
+    await waitFor(() =>
+      expect(recorded.requests.some(({ url }) => url.pathname === `/v1/activities/${TRIP_ID}`)).toBe(true),
+    );
+  });
+
+  it("still says close the stale one when the other trip is not the reader's to see", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "DRIVER", attention: [doubleBooked([])] });
+    const card = await todoCard();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /Waiting on others/ }));
+    expect(
+      within(card).getByText("This truck is also on another open trip. Close the one that has ended."),
+    ).toBeTruthy();
+  });
+
+  // The harness workspace runs the trucking preset alone, so its words apply.
+  it("speaks the preset's words in French", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      locale: "fr-CM",
+      attention: [doubleBooked(["DLA-2026-00012", "DLA-2026-00014"])],
+    });
+    const card = await todoCard(/^À faire/);
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /En attente des autres/ }));
+    expect(within(card).getByText(/^Le trajet DLA-2026-00009 chevauche un autre trajet ouvert$/)).toBeTruthy();
+    expect(
+      within(card).getByText(
+        "Ce camion est aussi sur DLA-2026-00012 et DLA-2026-00014. Clôturez le trajet terminé.",
+      ),
+    ).toBeTruthy();
   });
 });

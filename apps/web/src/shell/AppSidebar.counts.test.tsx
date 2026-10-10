@@ -41,6 +41,7 @@ function membership(role: Role, enabledModules: ModuleCode[] = EVERY): MeContext
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
     displayName: "Emilienne Ngo",
     workspaceName: "Transports Ngwa",
   };
@@ -101,7 +102,7 @@ describe("navigation counts (#322)", () => {
     serverSays({ moneyWaiting: 3, maintenanceNew: null });
     await renderSidebar(membership("FINANCE"));
 
-    const count = await nav().findByRole("link", { name: "3 expenses waiting for your approval" });
+    const count = await nav().findByRole("link", { name: "3 entries waiting for your approval" });
     expect(count.textContent).toBe("3");
     expect(count.getAttribute("href")).toBe("/finance/approvals?branch=all");
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -122,7 +123,7 @@ describe("navigation counts (#322)", () => {
     serverSays({ moneyWaiting: 2, maintenanceNew: 4 });
     await renderSidebar(membership("DIRECTOR"));
 
-    await nav().findByRole("link", { name: "2 expenses waiting for your approval" });
+    await nav().findByRole("link", { name: "2 entries waiting for your approval" });
     await nav().findByRole("link", { name: "4 new problems to handle" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -160,7 +161,7 @@ describe("navigation counts (#322)", () => {
       expect(found).not.toBeNull();
       return found!;
     });
-    expect(dot.textContent).toBe("3 expenses waiting for your approval");
+    expect(dot.textContent).toBe("3 entries waiting for your approval");
     expect(dot.closest("a")?.getAttribute("href")).toBe("/finance/entries");
   });
 
@@ -169,7 +170,7 @@ describe("navigation counts (#322)", () => {
     serverSays({ moneyWaiting: 1, maintenanceNew: 2 });
     await renderSidebar(membership("DIRECTOR"));
 
-    await nav().findByRole("link", { name: "1 dépense attend votre approbation" });
+    await nav().findByRole("link", { name: "1 écriture attend votre approbation" });
     await nav().findByRole("link", { name: "2 nouveaux problèmes à traiter" });
   });
 });

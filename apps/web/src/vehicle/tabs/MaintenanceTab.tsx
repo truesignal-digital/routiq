@@ -10,7 +10,8 @@ import { useIssues, useWorkOrders } from "@/maintenance/useMaintenance.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { useVehicle } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps, workOrderSteps } from "../flow.js";
-import { recordReference } from "../model.js";
+import { RecordNumber, RecordText } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
@@ -144,6 +145,7 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
   const active = isActiveWorkOrder(wo.status);
   const steps = workOrderSteps(wo, viewer, groundingFacts(asset));
   const safety = wo.issue?.safetyCritical === true;
+  const issueRef = wo.issue === null ? "" : recordNumberText(t, "issue", wo.issue.number);
   const money = (minor: number) => formatMoney(minor, { currency: wo.currency, locale });
   const over =
     wo.actualCostMinor !== null && wo.expectedCostMinor !== null && wo.expectedCostMinor > 0 &&
@@ -169,11 +171,16 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       muted={!active}
       detail={
         <span className="flex flex-wrap items-center gap-x-1.5">
-          <span className="tabular-nums">{recordReference(wo.id)}</span>
+          <RecordNumber>{recordNumberText(t, "work_order", wo.number)}</RecordNumber>
           {wo.issue !== null && (
             <>
               <Sep />
-              <span>{t("vehicle.maintenance.fromProblem", { ref: recordReference(wo.issue.id) })}</span>
+              <span>
+                <RecordText
+                  text={t("vehicle.maintenance.fromProblem", { ref: issueRef })}
+                  numbers={[issueRef]}
+                />
+              </span>
             </>
           )}
           {active && safety && (
@@ -195,7 +202,15 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       aside={
         <>
           {/* Without work-order costs (#390) the amounts never came: no line,
-              rather than a "No estimate" that would not be true. */}
+              rather than a "No estimate" that would not be true. With FINANCE
+              off the estimate alone is the workshop's to show (#640). */}
+          {gates.workOrderEstimate && !gates.workOrderCosts && (
+            <div className={cn(!active && "text-muted-foreground")}>
+              {wo.expectedCostMinor !== null
+                ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
+                : t("vehicle.maintenance.noEstimate")}
+            </div>
+          )}
           {gates.workOrderCosts && (
             <div className={cn(!active && "text-muted-foreground")}>
               {closedWithoutCost !== null
@@ -232,7 +247,7 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       }
       menu={
         <RowMenu
-          label={t("vehicle.panel.workOrderTitle", { ref: recordReference(wo.id) })}
+          label={t("vehicle.panel.workOrderTitle", { ref: recordNumberText(t, "work_order", wo.number) })}
           steps={offered}
           onStep={panel.openStep}
         />
@@ -268,7 +283,7 @@ function IssueRow({ issue }: { issue: IssueListItem }) {
       muted={!open}
       detail={
         <span className="flex flex-wrap items-center gap-x-1.5">
-          <span className="tabular-nums">{recordReference(issue.id)}</span>
+          <RecordNumber>{recordNumberText(t, "issue", issue.number)}</RecordNumber>
           {category !== null && (
             <>
               <Sep />
@@ -294,7 +309,7 @@ function IssueRow({ issue }: { issue: IssueListItem }) {
       }
       menu={
         <RowMenu
-          label={t("vehicle.panel.issueTitle", { ref: recordReference(issue.id) })}
+          label={t("vehicle.panel.issueTitle", { ref: recordNumberText(t, "issue", issue.number) })}
           steps={steps.offered}
           onStep={panel.openStep}
         />

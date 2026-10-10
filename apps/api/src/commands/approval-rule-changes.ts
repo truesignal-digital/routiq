@@ -3,6 +3,7 @@ import {
   type ApprovalChainCommandType,
   type ApprovalChainOutcome,
   type ApprovalChainStep,
+  type EntryApprover,
   type Role,
 } from "@routiq/contracts";
 import { approvalRuleChanges } from "../db/schema.js";
@@ -51,10 +52,28 @@ export async function recordApprovalRuleChange(
 }
 
 /** Who decides a pending entry, in the order the chain names them (ADR-0009). */
-const DECIDERS: ReadonlyArray<readonly ["FINANCE" | "DIRECTOR", ApprovalChainOutcome]> = [
+const DECIDERS: ReadonlyArray<readonly ["FINANCE" | "DIRECTOR", EntryApprover]> = [
   ["FINANCE", "FINANCE_APPROVES"],
   ["DIRECTOR", "DIRECTION_APPROVES"],
 ];
+
+/**
+ * Who decides a pending entry recorded by `makerRole`: the first role on the
+ * chain the decision rules authorize at its amount and branch. No one decides
+ * their own entry (MAKER_CANNOT_APPROVE), so Finance's own entry goes to a
+ * colleague or Direction.
+ */
+export function entryDecider(
+  decisionRules: readonly ApprovalRuleRow[],
+  makerRole: Role | null,
+  context: { amountMinor: bigint; branchId?: string },
+): EntryApprover {
+  const decider = DECIDERS.find(
+    ([decidingRole]) => matchApproval(decisionRules, decidingRole, context).outcome === "AUTO_APPROVED",
+  );
+  if (decider === undefined) return "WAITS";
+  return decider[0] === "FINANCE" && makerRole === "FINANCE" ? "FINANCE_PEER_APPROVES" : decider[1];
+}
 
 /**
  * What happens to `role`'s own entry at each amount, as bands. Computed by
@@ -89,13 +108,7 @@ export function chainSteps(
     if (matchApproval(records, role, { amountMinor }).outcome === "AUTO_APPROVED") {
       return "POSTS_DIRECTLY";
     }
-    const decider = DECIDERS.find(
-      ([decidingRole]) =>
-        matchApproval(decisions, decidingRole, { amountMinor }).outcome === "AUTO_APPROVED",
-    );
-    if (decider === undefined) return "WAITS";
-    // No one decides their own entry (MAKER_CANNOT_APPROVE).
-    return decider[0] === "FINANCE" && role === "FINANCE" ? "FINANCE_PEER_APPROVES" : decider[1];
+    return entryDecider(decisions, role, { amountMinor });
   };
 
   const steps: ApprovalChainStep[] = [];

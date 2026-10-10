@@ -22,6 +22,7 @@ import {
 import type { VehicleHistoryItem } from "@routiq/contracts";
 import { timelineAct } from "@/components/timeline.js";
 import { formatDate, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import type { VehicleGates } from "./context.js";
 import type { PanelRef } from "./model.js";
 
@@ -60,6 +61,14 @@ export function describeEvent(
   const label = (fr: unknown, en: unknown) =>
     localizedLabel({ labelFr: text(fr), labelEn: text(en) }, locale);
   const subject = item.subject;
+  // "OT-0007 · Brake pads", the way an entry reads "number · category" (#608).
+  const numbered = (kind: "work_order" | "issue", description: unknown) =>
+    [
+      typeof p["recordNumber"] === "number" ? recordNumberText(t, kind, p["recordNumber"]) : null,
+      text(description),
+    ]
+      .filter((part): part is string => part !== null)
+      .join(" · ") || null;
 
   switch (subject.entityType) {
     case "financial_entry": {
@@ -141,7 +150,7 @@ export function describeEvent(
             : "neutral",
         title: title(),
         titleNumber: null,
-        detail: text(p["description"]),
+        detail: numbered("issue", p["description"]),
         record: gates.maintenance ? { kind: "issue", id: subject.id } : null,
       };
     }
@@ -151,7 +160,7 @@ export function describeEvent(
         tone: item.eventType === "work_order.asset_released" ? "success" : "neutral",
         title: title(),
         titleNumber: null,
-        detail: text(p["description"]),
+        detail: numbered("work_order", p["description"]),
         record: gates.maintenance ? { kind: "work_order", id: subject.id } : null,
       };
     case "asset_availability_interval": {

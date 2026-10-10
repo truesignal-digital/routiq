@@ -89,6 +89,20 @@ describe("locale catalogs", () => {
     }
   });
 
+  // #590: with an ordinary space, « broke away from its words on a phone.
+  // French puts a narrow no-break space (U+202F) inside the quotes.
+  it("keeps French quotes on their words with a narrow no-break space", () => {
+    for (const [name, catalog] of [
+      ["fr", fr],
+      ["trucking.fr", truckingFr],
+      ["passenger-transport.fr", passengerFr],
+    ] as const) {
+      for (const [key, value] of flattenEntries(catalog)) {
+        expect(value, `${name} ${key}`).not.toMatch(/«(?! )|(?<! )»/);
+      }
+    }
+  });
+
   // One word per concept (#288): a reported fault is a "problem" in English and
   // a « problème » in French, on every screen, toast, error and history line.
   it("calls a reported fault a problem, never an issue or a signalement", () => {

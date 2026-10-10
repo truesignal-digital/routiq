@@ -49,7 +49,7 @@ import {
 import { nextActivityNumber } from "./numbering.js";
 import { assertOwnTrip } from "./own-records.js";
 import { resolveOrCreatePlace } from "./places.js";
-import { tripConflicts } from "./trip-conflicts.js";
+import { startedTripDoubleBooking, tripConflicts } from "./trip-conflicts.js";
 import { validateCustomValues } from "./templates.js";
 
 /**
@@ -709,7 +709,22 @@ const startPlannedTrip: CommandDefinition<StartPlannedTripPayload> = {
       changedFields: ["status", "startedAt", "discrepancyCodes", "rowVersion", "segments", "crew"],
     });
 
-    return { recordId: trip.id, rowVersion: trip.rowVersion, recordStatus: "OPEN", warnings };
+    // The vehicle may still be on another unfinished trip: the truck left, so
+    // the start stands and says so, live or replayed (#577).
+    const doubleBooking = await startedTripDoubleBooking(
+      tx,
+      { workspaceId: ctx.workspaceId, timezone: await workspaceTimezone(tx, ctx.workspaceId) },
+      trip.id,
+    );
+    return {
+      recordId: trip.id,
+      rowVersion: trip.rowVersion,
+      recordStatus: "OPEN",
+      warnings: [...warnings, ...doubleBooking.warnings],
+      ...(doubleBooking.warningMetadata === undefined
+        ? {}
+        : { warningMetadata: doubleBooking.warningMetadata }),
+    };
   },
 };
 

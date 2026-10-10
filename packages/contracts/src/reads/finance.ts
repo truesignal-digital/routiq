@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { PROFITABILITY_LAYERS } from "../commands/categories.js";
+import { periodCode } from "../commands/lock-period.js";
 import { cancellationReasonCode } from "../commands/reverse-entry.js";
+import { entryApprover } from "./approval-chain.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
 
@@ -130,6 +132,8 @@ export const financialEntryListItem = z.object({
       activityId: z.uuid().nullable(),
       activityNumber: z.string().nullable(),
       workOrderId: z.uuid().nullable(),
+      /** The work order's number (#608); the client words the prefix. */
+      workOrderNumber: z.number().int().positive().nullable(),
     })
     .nullable(),
   /**
@@ -142,10 +146,9 @@ export const financialEntryListItem = z.object({
     activityNumber: z.string().nullable(),
     workOrderId: z.uuid().nullable(),
     workOrderAssetId: z.uuid().nullable(),
-    /**
-     * The work order's description, its title on the vehicle's Maintenance
-     * tab. Work orders carry no number (#547), so this is how they are named.
-     */
+    /** The work order's number (#608); the client words the prefix. */
+    workOrderNumber: z.number().int().positive().nullable(),
+    /** The work order's description, its title on the vehicle's Maintenance tab (#547). */
     workOrderDescription: z.string().nullable(),
   }),
 });
@@ -209,6 +212,15 @@ export const financialEntryDetail = entryRecord.extend({
    * decide it, and for roles outside the entry chain.
    */
   directionDecides: z.boolean().default(false),
+  /** Who decides it while it waits, the same for every viewer (#542); null once it no longer waits. */
+  approver: entryApprover.nullable().default(null),
+  /**
+   * A line names a COMPLETED work order, so a cost recorded on it now, again
+   * or by an edit, is a late invoice (#82): it waits for review whatever its
+   * amount and needs a reason (LATE_COST_REASON_REQUIRED). Lets the form ask
+   * for the reason up front (#613). Absent reads as false.
+   */
+  lateWorkOrderCost: z.boolean().optional(),
 });
 
 export type EntryEvidenceState = z.infer<typeof entryEvidenceState>;
@@ -260,6 +272,11 @@ export const periodRead = z.object({
 
 export const periodsResponse = z.object({
   periods: z.array(periodRead),
+  /**
+   * The month it is now in the workspace's time zone, the one late postings
+   * fall into. Clients use it instead of the device clock (#591).
+   */
+  currentPeriodCode: periodCode,
 });
 
 export type PendingApprovalItem = z.infer<typeof pendingApprovalItem>;
@@ -281,8 +298,12 @@ export const financeSummaryResponse = z.object({
   currency: z.string(),
   /** The current business month, `YYYY-MM`, that `out` and `in` cover. */
   month: monthCode,
-  /** Latest OPEN and latest LOCKED accounting month; null when there is none. */
-  openPeriodCode: z.string().nullable(),
+  /**
+   * Accounting months before `month` still OPEN, oldest first: what the lead
+   * says is not locked yet (#526). `month` itself is left out, open or not.
+   */
+  unlockedPeriodCodes: z.array(periodCode),
+  /** Latest LOCKED accounting month; null when there is none. */
   lastLockedPeriodCode: z.string().nullable(),
   /** Signed ledger totals (POSTED + REVERSED) by economic date in `month`. */
   outMinor: z.number().int(),

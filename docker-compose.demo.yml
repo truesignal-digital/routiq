@@ -83,6 +83,9 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      # Stamps the app version telemetry reports; the deploy workflow sets it.
+      args:
+        ROUTIQ_VERSION: ${ROUTIQ_VERSION:-}
     # Fixed name so the reverse proxy has a stable upstream across redeploys.
     container_name: routiq-demo-web
     restart: unless-stopped

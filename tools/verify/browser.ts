@@ -29,6 +29,12 @@ export interface Frame {
   t?: number;
   /** The highlighted element in viewport pixels; the reel's camera eases into it. */
   box?: Box;
+  /**
+   * The username signed in when the shot was taken, "" when no one was. A flow
+   * may sign in as someone else; the reel labels the pane from this. Absent in
+   * older runs.
+   */
+  account?: string;
 }
 
 /** Counts a reel or a before/after comparison can put side by side. */
@@ -253,6 +259,22 @@ async function clearHighlight(page: Page): Promise<void> {
   await page.evaluate((id) => document.getElementById(id)?.remove(), HIGHLIGHT_ID);
 }
 
+/**
+ * The active username in the app's stored sessions (apps/web/src/auth/session.ts),
+ * "" when no one is signed in, undefined when the value can't be read.
+ */
+export function signedInUsername(raw: unknown): string | undefined {
+  if (raw === null) return "";
+  if (typeof raw !== "string") return undefined;
+  try {
+    const parsed = JSON.parse(raw) as { activeKey?: string; sessions?: Record<string, { username?: string }> };
+    if (parsed.activeKey === undefined) return "";
+    return parsed.sessions?.[parsed.activeKey]?.username ?? "";
+  } catch {
+    return undefined;
+  }
+}
+
 /** "approvals-queue" → "Approvals queue". */
 export function captionFromLabel(label: string): string {
   const words = label.replace(/^\//, "").replace(/[-_/]+/g, " ").trim();
@@ -356,6 +378,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
       const t = cast?.now();
       const resume = cast?.pause();
       let box: Box | undefined;
+      const account = signedInUsername(await page.evaluate(() => window.localStorage.getItem("routiq.sessions.v1")).catch(() => undefined));
       try {
         if (shotOptions.highlight !== undefined) box = await showHighlight(page, shotOptions.highlight);
         await page.screenshot({ path: file, fullPage: true });
@@ -373,6 +396,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
         url: page.url(),
         ...(t === undefined ? {} : { t }),
         ...(box === undefined ? {} : { box }),
+        ...(account === undefined ? {} : { account }),
       });
       say(`  screenshot ${file}`);
       return file;
@@ -481,6 +505,11 @@ export async function drive(slot: number, targets: readonly string[], options: D
       ...pageMetrics,
     };
 
+    // Before summary.json, which reels and later tooling read the verdict from (#567).
+    if (options.strict && rec.consoleErrors.length > 0) {
+      ok = false;
+      say("FAIL  --strict: console errors present");
+    }
     const consoleFile = path.join(evidenceDir, "console-errors.txt");
     const requestsFile = path.join(evidenceDir, "failed-requests.txt");
     writeFileSync(consoleFile, rec.consoleErrors.join("\n") + (rec.consoleErrors.length ? "\n" : ""));
@@ -493,10 +522,6 @@ export async function drive(slot: number, targets: readonly string[], options: D
     say(`failed requests (status >= 400 or network): ${rec.failedRequests.length} → ${requestsFile}`);
     if (rec.aborted > 0) say(`requests the app cancelled itself (ERR_ABORTED, not failures): ${rec.aborted}`);
     say(`api requests: ${metrics.apiRequests}, layout shifts: ${metrics.layoutShifts} (CLS ${metrics.cumulativeLayoutShift}), DOM nodes: ${metrics.domNodes}`);
-    if (options.strict && rec.consoleErrors.length > 0) {
-      ok = false;
-      say("FAIL  --strict: console errors present");
-    }
   } finally {
     // Close the tab the way a user does, so the app's pagehide handler sends
     // its last telemetry batch, and give that keepalive request time to land.
