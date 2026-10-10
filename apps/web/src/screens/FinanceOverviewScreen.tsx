@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type {
   FinanceOverviewResponse,
   FinanceSummaryResponse,
+  FleetUsageResponse,
   OverviewRange,
   PeriodRead,
 } from "@routiq/contracts";
@@ -12,13 +13,16 @@ import { useMeContext } from "@/auth/me.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
+import { RankedBars } from "@/components/overview/ranked-bars.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { canApproveEntries, canManagePeriods, canReadMoneyOverview } from "@/finance/permissions.js";
+import { canApproveEntries, canManagePeriods, canReadFinance, canReadMoneyOverview } from "@/finance/permissions.js";
 import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
+import { useFleetUsage } from "@/overview/useFleetUsage.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
+import { windowLabel } from "@/overview/window-label.js";
 import { usePeriods } from "@/finance/usePeriods.js";
 import {
   formatDate,
@@ -80,6 +84,9 @@ function MoneyOverview() {
   const lastMonth = closeMonth(periodsQuery.data?.currentPeriodCode);
   const lastPeriod = periodsQuery.data?.periods.find((period) => period.periodCode === lastMonth);
   const windows = useWindowLabels(overview);
+  // role-config: fuel per km is vehicle money, read by the ledger roles; the cashier gets none, so never asks.
+  const fuelShown = canReadFinance(me?.role, me?.enabledModules);
+  const usageQuery = useFleetUsage(range, fuelShown);
 
   return (
     <div data-slot="money-overview" className="flex flex-col gap-5">
@@ -143,8 +150,99 @@ function MoneyOverview() {
             )}
           </CardContent>
         </Card>
+        {fuelShown && (usageQuery.isPending || usageQuery.data?.money != null) && (
+          <FuelPerKmCard usage={usageQuery.data} />
+        )}
       </div>
     </div>
+  );
+}
+
+type FuelNotCounted = "kmUnknown" | "noKm" | "noFuel";
+
+/** Why a vehicle has no fuel per km: km not known, no km, or no fuel on file (the server's own rule). */
+function fuelNotCounted(vehicle: FleetUsageResponse["vehicles"][number]): FuelNotCounted | null {
+  if (vehicle.money?.fuelPerKmMinor != null) return null;
+  if (vehicle.period === null || !vehicle.period.known) return "kmUnknown";
+  if (vehicle.period.km <= 0) return "noKm";
+  return "noFuel";
+}
+
+/**
+ * Is any vehicle spending more on fuel than it should? (dashboards.html#money):
+ * fuel per km by vehicle, highest first, against the fleet median; a vehicle
+ * more than FUEL_OUTLIER_PERCENT above it is flagged. Vehicles with no fuel
+ * per km are said as not counted, never drawn as 0.
+ */
+function FuelPerKmCard({ usage }: { usage: FleetUsageResponse | undefined }) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage;
+  const money = usage?.money ?? null;
+  const currency = money?.currency ?? "XAF";
+  const format = (minor: number) => formatMoney(minor, { currency });
+  const vehicles = usage?.vehicles ?? [];
+  const reasons = vehicles.map(fuelNotCounted);
+  const count = (reason: FuelNotCounted) => reasons.filter((candidate) => candidate === reason).length;
+  const notes = (["kmUnknown", "noKm", "noFuel"] as const)
+    .filter((reason) => count(reason) > 0)
+    .map((reason) => t(`finance.overview.fuel.notCounted.${reason}`, { count: count(reason) }));
+  const rows = vehicles.flatMap((vehicle) => {
+    const perKm = vehicle.money?.fuelPerKmMinor;
+    if (perKm == null) return [];
+    const above = vehicle.money?.fuelAboveMedianPercent ?? null;
+    const trips = t("dashboard.vehicles.tripsCount", { count: vehicle.period?.tripsClosed ?? 0 });
+    return [
+      {
+        key: vehicle.assetId,
+        label: vehicle.assetCode,
+        value: perKm,
+        to: `/assets/${vehicle.assetId}`,
+        flagged: above !== null,
+        detail: above === null ? trips : t("finance.overview.fuel.detailAbove", { percent: formatPercent(above, language), tally: trips }),
+      },
+    ];
+  });
+  const median = money?.fuelPerKmMedianMinor ?? null;
+
+  return (
+    <Card data-slot="fuel-per-km-by-truck">
+      <CardHeader>
+        <CardTitle>{t("finance.overview.fuel.title")}</CardTitle>
+        <CardDescription>
+          {usage === undefined
+            ? t("finance.overview.fuel.questionShort")
+            : t("finance.overview.fuel.question", { period: windowLabel(usage.period, usage.range, language), currency })}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {usage === undefined ? (
+          <Skeleton className="h-40 w-full" />
+        ) : rows.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">{t("finance.overview.fuel.empty")}</p>
+        ) : (
+          <RankedBars
+            rows={rows}
+            format={format}
+            {...(median === null ? {} : { reference: { value: median, label: t("finance.overview.fuel.median", { amount: format(median) }) } })}
+            flagLabel={t("finance.overview.fuel.above")}
+            labelHeader={t("dashboard.vehicles.columns.vehicle")}
+            valueHeader={t("finance.overview.fuel.valueHeader")}
+            moreLabel={(hidden) => t("finance.overview.fuel.more", { count: hidden })}
+          />
+        )}
+        {notes.length > 0 && (
+          <p data-slot="fuel-not-counted" className="text-xs text-muted-foreground">
+            {notes.join(" ")}
+          </p>
+        )}
+        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
+          <span>{t("finance.overview.fuel.basis")}</span>
+          <Link to="/assets/list" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
+            {t("finance.overview.fuel.open")}
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -156,24 +254,6 @@ export function closeMonth(current: string | undefined): string | undefined {
   const [year, month] = current.split("-").map(Number);
   if (year === undefined || month === undefined) return undefined;
   return month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, "0")}`;
-}
-
-function utcDate(iso: string): Date {
-  return new Date(`${iso.slice(0, 10)}T00:00:00Z`);
-}
-
-/** "October 1 – 10" for a month so far, "July – September 2026" for whole months. */
-export function windowLabel(
-  window: { from: string; to: string },
-  range: OverviewRange,
-  language: string | undefined,
-  style: "long" | "short" = "long",
-): string {
-  const options: Intl.DateTimeFormatOptions =
-    range === "THIS_MONTH"
-      ? { month: style, day: "numeric", timeZone: "UTC" }
-      : { month: style, year: "numeric", timeZone: "UTC" };
-  return new Intl.DateTimeFormat(language, options).formatRange(utcDate(window.from), utcDate(window.to));
 }
 
 function useWindowLabels(overview: FinanceOverviewResponse | undefined) {

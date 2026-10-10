@@ -3,11 +3,12 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ComingUpResponse, FinanceOverviewResponse, ModuleCode, Role, TodoResponse } from "@routiq/contracts";
+import type { ComingUpResponse, FinanceOverviewResponse, FleetUsageResponse, ModuleCode, Role, TodoResponse } from "@routiq/contracts";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { DLA, internalFleetOverview, testOverview } from "../finance/dashboard/test-overview.js";
 import { i18n } from "../i18n/index.js";
 import { formatMoney } from "../lib/format.js";
+import { testUsage } from "../overview/test-usage.js";
 
 const navigate = vi.fn();
 
@@ -43,10 +44,18 @@ const state = vi.hoisted(() => ({
   mobile: false,
   todo: undefined as TodoResponse | undefined,
   comingUp: undefined as ComingUpResponse | undefined,
+  usage: undefined as FleetUsageResponse | undefined,
+  usageEnabled: [] as boolean[],
 }));
 
 vi.mock("../overview/useMoneyOverview.js", () => ({
   useMoneyOverview: () => ({ data: state.overview, isPending: false, isError: false, refetch: vi.fn() }),
+}));
+vi.mock("../overview/useFleetUsage.js", () => ({
+  useFleetUsage: (_range: string, enabled: boolean) => {
+    state.usageEnabled.push(enabled);
+    return { data: enabled ? state.usage : undefined, isPending: false, isError: false };
+  },
 }));
 vi.mock("../assets/useAssetSummary.js", () => ({
   useAssetSummary: () => ({ data: { total: 14, inService: 12, canDrive: 10, attention: 3 }, isPending: false }),
@@ -132,6 +141,8 @@ beforeEach(async () => {
   state.mobile = false;
   state.todo = todo(7);
   state.comingUp = COMING_UP;
+  state.usage = undefined;
+  state.usageEnabled = [];
   vi.stubGlobal("ResizeObserver", class {
     observe() {}
     unobserve() {}
@@ -287,6 +298,27 @@ describe("Dashboard › Overview", () => {
   it("leaves the vehicles tile out when the Vehicles module is off", () => {
     renderTab(<DashboardOverviewTab />, me("DIRECTOR", ["CORE", "FINANCE"]));
     expect(tileIds()).toEqual(["revenue", "expenses", "profit"]);
+    expect(state.usageEnabled.every((enabled) => !enabled)).toBe(true);
+  });
+
+  it("tiles cost per km against the same days of last month (#668)", () => {
+    state.usage = testUsage();
+    renderTab(<DashboardOverviewTab />);
+    expect(tileIds()).toEqual(["revenue", "expenses", "profit", "cost-per-km", "canDrive"]);
+    expect(digits(tileValue("cost-per-km"))).toBe("498");
+    expect(tileText("cost-per-km")).toContain("/km");
+    expect(tileText("cost-per-km")).toContain("▲ 4%");
+  });
+
+  it("says whose km are known when there is no cost per km to compare, and leaves the tile out without money", () => {
+    const usage = testUsage();
+    state.usage = { ...usage, money: usage.money === null ? null : { ...usage.money, comparison: { ...usage.money.comparison, costPerKmMinor: null } } };
+    renderTab(<DashboardOverviewTab />);
+    expect(tileText("cost-per-km")).toContain("Km known for 3 of 4 vehicles");
+    cleanup();
+    state.usage = { ...usage, money: null, vehicles: usage.vehicles.map((vehicle) => ({ ...vehicle, money: null })) };
+    renderTab(<DashboardOverviewTab />);
+    expect(tileIds()).not.toContain("cost-per-km");
   });
 });
 

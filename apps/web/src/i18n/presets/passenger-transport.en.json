@@ -53,7 +53,17 @@
     },
     "overview": {
       "tiles": {
-        "idle": "No trip for {days}+ days"
+        "idle": "No trip for {days}+ days",
+        "onTheRoadInfo": "Vehicle-days on a trip ÷ vehicle-days recorded, last {days} days. Days nobody could record are left out."
+      },
+      "km": {
+        "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, one {# trip has} other {# trips have}} no km."
+      },
+      "board": {
+        "basis": {
+          "all": "Status from trips, work orders and grounding.",
+          "noMaintenance": "Status from trips. Work orders and grounding are not counted: Maintenance is off."
+        }
       }
     }
   },
@@ -139,6 +149,9 @@
     "overview": {
       "weeks": {
         "title": "Trips per week"
+      },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
       }
     }
   },
@@ -317,6 +330,14 @@
         "TRIPS_PLANNED": {
           "title": "{count, plural, one {# trip planned} other {# trips planned}}"
         }
+      }
+    }
+  },
+  "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "On a trip",
+        "AVAILABLE": "Available, no trip"
       }
     }
   }

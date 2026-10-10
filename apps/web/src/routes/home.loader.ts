@@ -4,6 +4,7 @@ import { rangeFromParam, type DashboardRangeParam } from "../dashboard/tabs.js";
 import { dashboardQueryOptions, HOME_RANGE_DAYS } from "../dashboard/useDashboard.js";
 import { comingUpQueryOptions, todoQueryOptions } from "../dashboard/useFleetAttention.js";
 import { entriesQueryOptions } from "../finance/useEntries.js";
+import { fleetUsageQueryOptions } from "../overview/useFleetUsage.js";
 import { moneyOverviewQueryOptions } from "../overview/useMoneyOverview.js";
 import { contributes } from "../modules/manifest.js";
 import { ambientBranchId } from "../shell/branch-context.js";
@@ -29,16 +30,20 @@ function moneyRead(s: Scope, range: DashboardRangeParam | undefined) {
   return ensure(s.client, moneyOverviewQueryOptions(s.slug, rangeFromParam(range), ambientBranchId(s.branch)));
 }
 
-/** Dashboard › Overview (#666): the money read for the range, To do, Coming up and the fleet counts. */
+/**
+ * Dashboard › Overview (#666): the money read for the range, To do, Coming up,
+ * the fleet counts and, with the fleet, cost per km for the range (#668).
+ */
 export async function dashboardOverview(args: LoaderArgs & { deps: RangeSearch }): Promise<void> {
   const s = await scope(args);
   if (!showsDashboardOverview(s.me?.role, s.me?.enabledModules)) return;
+  const fleet = contributes("homeCards", "assets", s.me?.enabledModules);
   await settle(
     moneyRead(s, args.deps.range),
     ensure(s.client, todoQueryOptions(s.slug)),
     ensure(s.client, comingUpQueryOptions(s.slug, 14)),
-    contributes("homeCards", "assets", s.me?.enabledModules) &&
-      ensure(s.client, assetSummaryQueryOptions(s.slug, scopedParams({}, s.branch))),
+    fleet && ensure(s.client, assetSummaryQueryOptions(s.slug, scopedParams({}, s.branch))),
+    fleet && ensure(s.client, fleetUsageQueryOptions(s.slug, rangeFromParam(args.deps.range), ambientBranchId(s.branch))),
   );
 }
 

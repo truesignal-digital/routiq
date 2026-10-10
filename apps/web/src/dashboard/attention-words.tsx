@@ -4,13 +4,14 @@ import {
   CalendarCheck,
   CalendarClock,
   ClipboardCheck,
+  Fuel,
   ReceiptText,
   Route,
   TriangleAlert,
   Wrench,
 } from "lucide-react";
 import type { ToDoItem } from "@/components/overview/to-do-list.js";
-import { formatDate, formatMoney, formatMonth, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMoney, formatMonth, formatPercent, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 /** The icon's colour by how urgent the row is: safety red, warning amber, the rest muted. */
@@ -57,6 +58,8 @@ export function todoTarget(row: TodoRow): AttentionTarget {
 export function todoItem(row: TodoRow, t: TFunction, locale: string | undefined): ToDoItem {
   const p = row.params;
   const key = `dashboard.todo.rows.${row.code}`;
+  const money = (minor: number | undefined) =>
+    minor === undefined ? "" : formatMoney(minor, { currency: p.currency ?? "XAF", ...(locale === undefined ? {} : { locale }) });
   const values = {
     asset: row.asset?.assetCode ?? "",
     days: p.days ?? 0,
@@ -69,7 +72,9 @@ export function todoItem(row: TodoRow, t: TFunction, locale: string | undefined)
     date: formatDate(p.expiresAt ?? row.since, locale),
     since: formatDate(row.since, locale),
     count: p.count ?? 0,
-    amount: p.amountMinor === undefined ? "" : formatMoney(p.amountMinor, { currency: p.currency ?? "XAF", ...(locale === undefined ? {} : { locale }) }),
+    amount: money(p.amountMinor),
+    median: money(p.medianMinor),
+    percent: p.percentAbove === undefined ? "" : formatPercent(p.percentAbove, locale),
     month: formatMonth(p.periodCode, locale),
     submitted: p.submittedCount ?? 0,
     missing: p.evidenceMissingCount ?? 0,
@@ -110,6 +115,8 @@ function TodoIcon({ row }: { row: TodoRow }) {
       return <ReceiptText className={className} aria-hidden />;
     case "PERIOD_OPEN":
       return <CalendarCheck className={className} aria-hidden />;
+    case "FUEL_PER_KM_HIGH":
+      return <Fuel className={className} aria-hidden />;
   }
 }
 
