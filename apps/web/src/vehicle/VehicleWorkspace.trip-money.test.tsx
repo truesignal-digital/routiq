@@ -32,6 +32,13 @@ function emptyTrip(): ActivityDetail {
     crew: [],
     legs: [],
     readings: [],
+    plannedAsset: null,
+    plannedDriver: null,
+    plannedOriginName: null,
+    plannedDestinationName: null,
+    cancellation: null,
+    discrepancyCodes: [],
+    priceCurrency: "XAF",
     financialEntries: [],
   };
 }
