@@ -444,6 +444,19 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "D1",
+    bad: [
+      file("apps/api/src/reads/dashboard.ts", "const [workspace] = await tx.select({ timezone: workspaces.timezone }).from(workspaces);"),
+      file("apps/api/src/commands/periods.ts", "sql`select ${workspaces.timezone} from ${workspaces}`"),
+    ],
+    good: [
+      file("apps/api/src/reads/workspace-day.ts", "const [workspace] = await tx.select({ timezone: workspaces.timezone }).from(workspaces);"),
+      file("apps/api/src/reads/dashboard.ts", "const timezone = await workspaceTimezone(tx, auth.workspaceId);"),
+      file("apps/api/src/reads/branches.ts", "timezone: branches.timezone,"),
+      file("apps/api/src/reads/dashboard.test.ts", "await ctx.db.update(workspaces).set({ timezone: \"Asia/Tokyo\" }); expect(workspaces.timezone).toBeDefined();"),
+    ],
+  },
+  {
     id: "B1",
     bad: [file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";')],
     good: [

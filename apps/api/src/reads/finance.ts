@@ -15,6 +15,7 @@ import { and, asc, desc, eq, exists, gte, inArray, lt, not, sql, type SQL } from
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
+import { currentPeriodCode } from "../commands/periods.js";
 import type { Db } from "../db/client.js";
 import {
   activities,
@@ -63,6 +64,7 @@ import {
 import { canReadEntry, readableEntrySql } from "./money-scope.js";
 import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { workspaceTimezone } from "./workspace-day.js";
 
 const entrySortFields = [
   "economicDate",
@@ -1031,10 +1033,10 @@ export function registerFinanceReadRoutes(
             .groupBy(postingPeriods.id, postingPeriods.periodCode, postingPeriods.status, postingPeriods.lockedAt, postingPeriods.rowVersion)
             .orderBy(desc(postingPeriods.periodCode));
 
-          return { rows };
+          const current = currentPeriodCode(new Date(), await workspaceTimezone(tx, auth.workspaceId));
+          return { rows, current };
         });
-
-        const { rows } = result || { rows: [] };
+        const { rows, current } = result;
 
         const periods = rows.map((row) => ({
           periodCode: row.periodCode,
@@ -1044,7 +1046,7 @@ export function registerFinanceReadRoutes(
           rowVersion: row.rowVersion,
         }));
 
-        return periodsResponse.parse({ periods });
+        return periodsResponse.parse({ periods, currentPeriodCode: current });
       } catch (error) {
         req.log.error({ err: error }, "finance periods read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });
