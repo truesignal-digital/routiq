@@ -1,5 +1,5 @@
 import type { EnsureInfiniteQueryDataOptions, EnsureQueryDataOptions, QueryClient, QueryKey } from "@tanstack/react-query";
-import { assetRegistrationReferenceQueryOptions } from "../assets/reference.js";
+import { assetRegistrationReferenceQueryOptions } from "../reference/asset-registration.js";
 import { meQueryOptions, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { ALL_BRANCHES, readStoredBranch, resolveCurrentBranchId, type CurrentBranchId } from "../shell/branch-context.js";

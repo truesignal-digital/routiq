@@ -10,11 +10,9 @@ import type {
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
+import { maintenanceQueryKey } from "./query-key.js";
 
-/** Every maintenance read hangs off one key prefix, so one write invalidates all of them. */
-export function maintenanceQueryKey(workspaceSlug: string | undefined): unknown[] {
-  return ["ws", workspaceSlug, "maintenance"];
-}
+export { maintenanceQueryKey };
 
 function buildUrl(path: string, params: object): string {
   const url = new URL(path, window.location.origin);

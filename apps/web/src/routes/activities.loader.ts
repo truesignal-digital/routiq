@@ -1,6 +1,6 @@
 import { activitiesQueryOptions, activitySummaryQueryOptions, type UseActivitiesParams } from "../activities/useActivities.js";
 import { assetsQueryOptions } from "../assets/useAssets.js";
-import { categoriesQueryOptions } from "../documents/useCategories.js";
+import { categoriesQueryOptions } from "../categories/useCategories.js";
 import { scopedParams } from "../shell/branch-scope.js";
 import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 

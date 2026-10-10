@@ -14,10 +14,7 @@ import { median, type Measured, type Run } from "./perf.js";
  * row, or a link on the screen or on Home (#494). `:asset` is the first vehicle
  * in the list, tapped from /assets; My settings opens from the name menu.
  */
-export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/finance/approvals", "/maintenance", "/my-settings"] as const;
-
-/** Screens whose link redirects: the tap lands on another path (#314). */
-const LANDS_ON: Partial<Record<(typeof SCREENS)[number], string>> = { "/finance/approvals": "/finance/entries" };
+export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/maintenance", "/my-settings"] as const;
 
 /** How long a run stays on Home after sign-in before opening the next screen. */
 export const HOME_DWELL_MS = 3_000;
@@ -129,7 +126,7 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, asset: Vehi
       const start = await pageNow(page);
       if (screen === "/assets/:asset") await tapText(page, asset.code);
       else if (screen === "/my-settings") await tapMySettings(page);
-      else await tapTo(page, screen, LANDS_ON[screen]);
+      else await tapTo(page, screen);
       await settle(page, () => inflight, () => lastActivity);
       values[`${key}.requests`] = apiRequests - before;
       values[`${key}.shifts`] = named(await readShifts(page, start)).length;

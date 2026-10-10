@@ -20,7 +20,6 @@ Latest run: 2026-10-09T01:45:57.486Z on abd53810, 7 runs each. Runs recorded: 3.
 | `/assets/:id.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/approvals.ready_ms` | 272 ms (2026-10-06) | – | – | – | 272 ms | 286 ms |
 | `/finance/approvals.requests` | 3 (2026-10-06) | 1 | 1 | −67% | 1 | 1 |
-| `/finance/approvals.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/entries.ready_ms` | 346 ms (2026-10-06) | 455 ms | 371 ms | +7% | 346 ms | 363 ms |
 | `/finance/entries.requests` | 4 (2026-10-06) | 4 | 4 | 0% | 4 | 4 |
 | `/finance/entries.shifts` | – (–) | – | – | – | – | 0 |
