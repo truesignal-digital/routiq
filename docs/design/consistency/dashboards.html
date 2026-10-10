@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: dashboards</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  /* Chart roles: same validated hues as insights.html (slots 1-3 pass CVD in light mode). */
+  .viz-root {
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-muted: #c9ced6;
+    --grid: oklch(0.93 0 0);
+    --axis-text: oklch(0.52 0 0);
+    --ref: oklch(0.55 0 0);
+  }
+  .tile { padding: 12px 16px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tile:last-child { border-right: 0; }
+  .tile .k { font-size: 12px; color: var(--muted-foreground); }
+  .tile .v { font: 650 22px/1.2 var(--font-heading); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tile .v small { font-size: 12px; font-weight: 600; color: var(--muted-foreground); margin-left: 3px; }
+  .tile .d { font-size: 12px; font-weight: 600; display: flex; gap: 4px; align-items: center; }
+  .tile .d.bad { color: var(--destructive); } .tile .d.good { color: var(--success-foreground); } .tile .d.flat { color: var(--muted-foreground); }
+  .tile .d span { color: var(--muted-foreground); font-weight: 500; }
+  .tile svg.spark { width: 100%; height: 26px; margin-top: 4px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 14px; background: white; }
+  .kpis.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .phone .kpis { grid-template-columns: 1fr 1fr; }
+  .phone .kpis .tile:nth-child(2n) { border-right: 0; }
+  .phone .kpis .tile:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .phone .tile .v { font-size: 18px; }
+
+  /* Page tabs: the same bar as the truck page. Overview is always first. */
+  .ptabs { margin: -6px 0 0; }
+  .ptabs div { gap: 6px; }
+  .ptabs .count { height: 18px; min-width: 18px; font-size: 11px; }
+  .phone .ptabs { overflow: hidden; margin: -4px -14px 0; padding: 0 14px; }
+  .phone .ptabs div { padding: 0 10px; font-size: 13px; }
+
+  /* Summary: one sentence, with what it is based on. */
+  .summary { border: 1px solid var(--border); border-radius: 14px; background: white; padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 24px; }
+  .summary .say { font: 600 17px/1.45 var(--font-heading); max-width: 780px; }
+  .summary .say b { font-variant-numeric: tabular-nums; }
+  .summary .pace { font-size: 13px; color: oklch(0.38 0.01 256); }
+  .summary .side { grid-row: span 3; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; justify-content: center; }
+  .basis { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--muted-foreground); padding-top: 8px; margin-top: 4px; border-top: 1px dashed var(--border); }
+  .basis b { color: var(--foreground); font-weight: 600; }
+  .basis a { color: var(--foreground); font-weight: 600; white-space: nowrap; }
+  .phone .summary { grid-template-columns: 1fr; padding: 14px; }
+  /* The summary is a notice: it has a close button and a line saying when it was sent. */
+  .summary { position: relative; padding-right: 52px; }
+  .summary .when { grid-column: 1 / -1; font-size: 12px; font-weight: 600; color: var(--muted-foreground); display: flex; gap: 6px; align-items: center; }
+  .summary .x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--muted-foreground); border: 1px solid transparent; }
+  .summary .x:hover { border-color: var(--border); }
+  .counted { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted-foreground); margin-top: -8px; }
+  .counted a { color: var(--foreground); font-weight: 600; }
+  .sched { display: flex; flex-direction: column; gap: 8px; }
+  .sched label { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+  .sched label.on { border-color: var(--foreground); }
+  .sched .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--muted-foreground); flex: none; }
+  .sched .on .radio { border: 5px solid var(--foreground); }
+  .phone .summary .say { font-size: 15px; }
+
+  .chart-card { border: 1px solid var(--border); border-radius: 14px; background: white; padding: 14px 16px 10px; position: relative; min-width: 0; }
+  .chart-card h2 { margin: 0; font: 650 14.5px/1.3 var(--font-heading); }
+  .chart-card .q { font-size: 12.5px; color: var(--muted-foreground); margin: 2px 0 8px; }
+  .chart-card .foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted-foreground); margin-top: 4px; gap: 8px; }
+  .chart-card .foot a { font-weight: 600; color: var(--foreground); white-space: nowrap; }
+  .chart-card svg.chart { width: 100%; display: block; overflow: visible; }
+  .legend-row { display: flex; gap: 14px; font-size: 12px; color: oklch(0.35 0 0); margin-bottom: 6px; flex-wrap: wrap; }
+  .legend-row span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-row i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .legend-row i.ln { height: 3px; width: 14px; border-radius: 2px; }
+  .legend-row i.tick { width: 3px; height: 12px; border-radius: 1px; background: var(--foreground); }
+  .grid2 { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+  .grid2.even { grid-template-columns: 1fr 1fr; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+
+  .todo .row-d { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .todo .row-d:last-child { border-bottom: 0; }
+  .todo .row-d > div { flex: 1; min-width: 0; }
+  .todo .row-d .t { font-weight: 600; }
+  .todo .row-d .s { font-size: 12px; color: var(--muted-foreground); }
+  .todo .row-d .ic { color: var(--muted-foreground); }
+  .todo .row-d .ic.bad { color: var(--destructive); } .todo .row-d .ic.warn { color: var(--warning-foreground); }
+
+  .moves > div { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .moves > div:last-child { border-bottom: 0; }
+  .moves .amt { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .moves .sub { color: var(--muted-foreground); font-size: 12px; }
+  .moves .total { font-weight: 650; }
+
+  .ue td, .ue th { white-space: nowrap; }
+  .ue .bar { position: relative; height: 10px; width: 90px; display: inline-block; vertical-align: middle; }
+  .ue .bar::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ref); opacity: .5; }
+  .ue .bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .ue td.muted { color: var(--muted-foreground); }
+  .ue tr.sum td { font-weight: 650; background: oklch(0.985 0 0); }
+
+  .board-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin-bottom: 6px; }
+  .board-legend span { display: inline-flex; gap: 6px; align-items: center; }
+  .board-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  .vtip { position: fixed; z-index: 100; pointer-events: none; background: white; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); padding: 8px 10px; font-size: 12px; display: none; min-width: 140px; }
+  .vtip b { display: block; margin-bottom: 4px; font-size: 12px; }
+  .vtip .r { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+  .vtip .r i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  .seg.small div { padding: 6px 10px; font-size: 12px; }
+
+  /* The tab bar of every page, side by side. */
+  .bars td { vertical-align: middle; }
+  .bars .tabs { height: 36px; border-bottom: 0; }
+  .bars .tabs div { font-size: 12.5px; padding: 0 10px; }
+  .formula { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font: 600 17px/1.3 var(--font-heading); padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: white; }
+  .formula .op { color: var(--muted-foreground); font-weight: 500; }
+  .formula .term { display: flex; flex-direction: column; gap: 2px; }
+  .formula .term small { font: 500 12px var(--font-sans); color: var(--muted-foreground); }
+  .formula .term b { font-variant-numeric: tabular-nums; }
+  .say-list li { margin: 6px 0; }
+  .no { color: var(--destructive); font-weight: 600; text-decoration: line-through; }
+  .yes { color: var(--success-foreground); font-weight: 650; }
+</style>
+</head>
+<body class="viz-root">
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-10 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="dashboards.html">Dashboards</a>
+    <a href="fullpages.html">Full pages</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#rule">Overview first, then tabs</a>
+    <a href="#words">Money words</a>
+    <a href="#home">Dashboard (Home)</a>
+    <a href="#home-phone">Dashboard on phone</a>
+    <a href="#money">Money: Overview</a>
+    <a href="#money-entries">Money: Entries tab</a>
+    <a href="#trucks">Trucks: Overview</a>
+    <a href="#trips">Trips: Overview</a>
+    <a href="#maintenance">Maintenance: Overview</a>
+    <a href="#truck">A truck: Overview</a>
+    <a href="#roles">Who sees what</a>
+    <a href="#components">Parts of an overview</a>
+    <a href="#data">Data we have, data we need</a>
+    <a href="#decide">Decisions</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Dashboards</h2>
+      <p class="lede">Every page opens the way a truck's page already does: an <b>Overview</b> tab first, then the tabs where the work happens. The Overview is that page's dashboard: how things are going, why, and what needs you. Home is the company <b>Dashboard</b>. Money words are kept to the ones everyone uses: <b>revenue</b>, <b>expenses</b>, <b>profit</b>.</p>
+      <div class="legend"><span style="--c: var(--layer-overview)">Overview (summary, tiles)</span><span style="--c: var(--layer-details)">Details (why, by truck)</span><span style="--c: var(--layer-act)">Act (to do)</span></div>
+    </header>
+
+    <section class="section" id="rule">
+      <div class="kicker">The rule</div>
+      <h3>Overview first, then tabs</h3>
+      <p class="rule">A truck's page opens on Overview, then Trips, Money, Maintenance, Documents, Details and History (History moves to the end, as on every page). Every place in the app now works the same way. The header (title, one sentence, the one main button) stays the same on every tab; only the area under the tabs changes.</p>
+      <table class="spec-table bars">
+        <thead><tr><th style="width:170px">Page</th><th>Tabs (opens on the first)</th><th style="width:300px">The Overview answers</th></tr></thead>
+        <tbody>
+          <tr><td><b>Dashboard</b> (Home)</td><td><div class="tabs"><div class="on">Overview</div><div>To do <span class="count hot">5</span></div><div>Profit by truck</div><div>Profit by branch</div></div></td><td>Are we making money? What changed? What needs me?</td></tr>
+          <tr><td><b>Money</b></td><td><div class="tabs"><div class="on">Overview</div><div>Entries</div><div>To approve <span class="count hot">6</span></div></div></td><td>What did we spend and earn, on what, and what waits?</td></tr>
+          <tr><td><b>Trucks</b></td><td><div class="tabs"><div class="on">Overview</div><div>Trucks</div><div>Documents</div></div></td><td>Can the fleet work? Which truck earns, which costs?</td></tr>
+          <tr><td><b>Trips</b></td><td><div class="tabs"><div class="on">Overview</div><div>Trips</div><div>Planning</div></div></td><td>How many trips, how full, what's left to close?</td></tr>
+          <tr><td><b>Maintenance</b></td><td><div class="tabs"><div class="on">Overview</div><div>Problems <span class="count hot">2</span></div><div>Work orders</div></div></td><td>What's off the road, for how long, at what cost?</td></tr>
+          <tr><td><b>Personnel</b></td><td><div class="tabs"><div class="on">Overview</div><div>People</div><div>Licences and papers</div></div></td><td>Who drove, who is free, whose papers expire?</td></tr>
+          <tr><td><b>Stock</b> (later)</td><td><div class="tabs"><div class="on">Overview</div><div>Receipts</div><div>Parts</div></div></td><td>What did we buy, from whom, for which truck?</td></tr>
+          <tr><td><b>A truck</b> (today)</td><td><div class="tabs"><div class="on">Overview</div><div>Trips</div><div>Money</div><div>Maintenance</div><div>Documents</div><div>Details</div><div>History</div></div></td><td>Is it working, what did it earn, what's due?</td></tr>
+        </tbody>
+      </table>
+      <div class="cols three" style="margin-top:16px">
+        <div class="spec-card"><h4>How tabs behave</h4><ul>
+          <li>The page opens on Overview. The tab is in the address, so a link or the back button lands on the same tab.</li>
+          <li>A tile on the Overview opens its tab with the filter already set ("Missing receipt 4" opens Entries filtered).</li>
+          <li>A count on a tab only where someone waits (To approve 6, Problems 2).</li>
+          <li>Tabs a role can't use are hidden, never greyed.</li>
+        </ul></div>
+        <div class="spec-card"><h4>What an Overview holds</h4><ul>
+          <li>A summary notice: one sentence that shows on a schedule and can be closed. What it counted stays as one line under the tiles.</li>
+          <li>4–5 tiles, compared with the same days last month.</li>
+          <li>One or two charts that explain the change.</li>
+          <li>"To do": up to 5 things, ranked by money or safety, one button each.</li>
+          <li>Every role gets an Overview; what's in it follows the role.</li>
+        </ul></div>
+        <div class="spec-card"><h4>What changes from today</h4><ul>
+          <li>The tiles at the top of each list move into the Overview; the list tab starts with its search and filters.</li>
+          <li>"Waiting approval" becomes the Money tab "To approve" (same list, saved filter).</li>
+          <li>Settings pages (Branches, Categories, Company settings) keep one list and no tabs: there's nothing to oversee.</li>
+          <li>The "Module list" archetype becomes "Module page" in README.md.</li>
+        </ul></div>
+      </div>
+      <h4 style="margin:28px 0 8px;font:650 16px var(--font-heading)">The summary is a notice, not a fixture</h4>
+      <div class="cols three">
+        <div class="spec-card"><h4>When it shows</h4><ul>
+          <li>On the schedule the company picks: by default every Monday morning and on the 1st of the month (last month's result).</li>
+          <li>It also shows when something big changes: a truck grounded, spending 20% above last month.</li>
+          <li>Each person closes it for themselves. It stays closed until the next one.</li>
+        </ul></div>
+        <div class="spec-card"><h4>When it's closed</h4><ul>
+          <li>The Overview starts with the tiles.</li>
+          <li>The "what was counted" line moves under the tiles, so the warning about missing data never disappears.</li>
+          <li>"Show summary" in that line brings it back.</li>
+          <li>Same behaviour on every Overview tab (Money, Trucks, Trips…), on one schedule.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Company settings › Dashboard summary</h4>
+          <div class="sched">
+            <label class="on"><span class="radio"></span>Every Monday and on the 1st of the month</label>
+            <label><span class="radio"></span>Every Monday</label>
+            <label><span class="radio"></span>On the 1st of the month only</label>
+            <label><span class="radio"></span>Never: tiles only</label>
+          </div>
+          <p class="caption">Administrators set it. Each person can still close it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="words">
+      <div class="kicker">Money words</div>
+      <h3>Revenue, expenses, profit</h3>
+      <p class="rule">Three words, the ones every transporter already uses, and two helpers. They mean the same thing on every screen, in reports and in the summary sentences. The French words are the ones the app already uses for entries (Recette, Dépense).</p>
+      <table class="spec-table">
+        <thead><tr><th>English</th><th>Français</th><th>What it means</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><b>Revenue</b></td><td><b>Recettes</b></td><td>Money the company earns for its work: freight paid by a customer, tickets sold. Each one is a revenue entry.</td><td>Douala → Yaoundé freight: 450 000 XAF</td></tr>
+          <tr><td><b>Expenses</b></td><td><b>Dépenses</b></td><td>Money spent to run the company: fuel, repairs, tolls, driver allowances, insurance, office rent. Each one is an expense entry.</td><td>Fuel for VH001: 210 000 XAF</td></tr>
+          <tr><td><b>Profit</b></td><td><b>Bénéfice</b></td><td>Revenue minus expenses, for the period on screen.</td><td>9 560 000 − 7 690 000 = 1 870 000 XAF</td></tr>
+          <tr><td><b>Loss</b></td><td><b>Perte</b></td><td>When expenses are bigger than revenue. Shown as "Loss 420 000", never "Profit −420 000".</td><td>VH003 this month: loss 420 000 XAF</td></tr>
+          <tr><td><b>Truck profit</b> (bus profit, by preset)</td><td><b>Bénéfice du camion</b></td><td>Revenue recorded on one truck minus expenses recorded on it.</td><td>VH001: 1 480 000 − 900 000 = 580 000 XAF</td></tr>
+          <tr><td><b>Company costs</b></td><td><b>Frais généraux</b></td><td>Expenses not recorded on any truck: office rent, office staff, phones, the yard guard.</td><td>640 000 XAF this month</td></tr>
+          <tr><td><b>Cost per km</b></td><td><b>Coût au km</b></td><td>Truck expenses divided by km driven, counted only over trucks whose km we know.</td><td>498 XAF/km</td></tr>
+        </tbody>
+      </table>
+      <div class="cols even" style="margin-top:16px;align-items:stretch">
+        <div class="formula">
+          <div class="term"><small>Company profit</small><b>1 870 000</b></div><span class="op">=</span>
+          <div class="term"><small>Profit of all trucks</small><b>2 510 000</b></div><span class="op">−</span>
+          <div class="term"><small>Company costs</small><b>640 000</b></div>
+        </div>
+        <div class="spec-card"><h4>Why company costs stay separate</h4><p>Office rent isn't split across trucks. Splitting it would make every truck look worse in a way nobody on the road can fix. So each truck's profit shows what that truck earned and spent, and the office costs appear once, as their own line.</p></div>
+      </div>
+      <div class="cols three" style="margin-top:16px">
+        <div class="spec-card"><h4>Words we stop using</h4><ul class="say-list">
+          <li><span class="no">Contribution</span> → profit (it meant truck profit before office costs)</li>
+          <li><span class="no">Margin, marge</span> → profit, with "20% of revenue" beside it</li>
+          <li><span class="no">Money in / money out</span>, <span class="no">Entrées / Sorties</span> → revenue / expenses. The French Money tiles say "Sorties" while the English ones already say "Expenses"; both become the same words.</li>
+        </ul></div>
+        <div class="spec-card"><h4>What profit in ROUTIQ is not</h4><p>It's the profit from what was recorded in ROUTIQ. It doesn't include taxes, loan repayments or the truck losing value over the years. Every Overview says so in one line under the summary, so nobody takes it for the accountant's figure.</p></div>
+        <div class="spec-card"><h4>Companies with no revenue</h4><p>An internal fleet (a company running trucks for its own work) records no revenue, so profit means nothing there. Its Overviews show expenses, cost per km, cost per truck per day and how many trucks can work. Profit appears only when the company records revenue.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="home">
+      <div class="kicker">Dashboard</div>
+      <h3>Dashboard (Home): Overview tab, administrator, all branches</h3>
+      <p class="rule">The page the app opens on for Direction, administrators and finance. Branch and range change every region, except "To do": like every attention signal, it counts all your branches (CONTEXT.md, Ambient Branch). Hover a chart for exact values.</p>
+      <div class="frame desktop" style="min-height:1560px">
+        <div data-sidebar="home" data-role="admin"></div>
+        <div class="main">
+          <div class="topbar"><b>Dashboard</b><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Dashboard</h1><div class="lead">Transports Ngwa · October 1–9 · compared with September 1–9</div></div>
+              <div class="seg small" style="width:300px"><div class="on">This month</div><div>3 months</div><div>12 months</div></div></div>
+            <div class="tabs ptabs"><div class="on">Overview</div><div>To do <span class="count hot">5</span></div><div>Profit by truck</div><div>Profit by branch</div></div>
+
+            <div class="layer l-overview"><span class="tag">Summary</span>
+              <div class="summary">
+                <div class="say">October so far: <b>1 870 000 XAF profit</b> on <b>9 560 000 XAF</b> revenue. Revenue is up 7%, but VH003's brake repair and fuel took the gain: profit is <b>100 000 XAF below</b> September at the same day.</div>
+                <div class="side"><span class="badge b-warn">A little behind September</span></div>
+                <div class="pace">At this pace October ends near <b class="num">6 440 000 XAF</b> profit. September ended at 6 900 000.</div>
+                <div class="basis"><i data-i="check"></i><span>Profit = revenue − expenses recorded in ROUTIQ; taxes and loan repayments aren't in it. Counted: <b>27 closed trips</b>. Not yet: <b>5 open trips</b> and <b>3 trips missing fuel</b>. Expenses reach ROUTIQ <b>2 days</b> late on average (Bafoussam: 5), so the last days will rise.</span><a>See what's missing →</a></div>
+              </div>
+            </div>
+
+            <div class="layer l-overview"><span class="tag">Tiles</span>
+              <div class="kpis">
+                <div class="tile"><div class="k">Revenue</div><div class="v">9 560 000<small>XAF</small></div><div class="d good">▲ 7% <span>vs Sep 1–9</span></div><svg class="spark" data-spark="27.1,28.4,26.9,27.8,29.5,28.8,30.2,29.6,29.1,30.8,31.4,30.6"></svg></div>
+                <div class="tile"><div class="k">Expenses</div><div class="v">7 690 000<small>XAF</small></div><div class="d bad">▲ 11% <span>vs Sep 1–9</span></div><svg class="spark" data-spark="22.3,23.6,22.8,22.9,24.4,23.7,24.8,24.1,24.6,25,25.5,23.7"></svg></div>
+                <div class="tile"><div class="k">Profit</div><div class="v">1 870 000<small>XAF</small></div><div class="d bad">▼ 100 000 <span>· 20% of revenue</span></div><svg class="spark" data-spark="4.8,4.8,4.1,4.9,5.1,5.1,5.4,5.5,4.5,5.8,5.9,6.9"></svg></div>
+                <div class="tile"><div class="k">Trucks that can drive</div><div class="v">10<small>of 12</small></div><div class="d bad">▼ 2 <span>vs Sep 30</span></div><svg class="spark" data-spark="12,12,11,12,12,12,11,12,12,11,12,10"></svg></div>
+                <div class="tile"><div class="k">Cost per km</div><div class="v">498<small>XAF/km</small></div><div class="d bad">▲ 4% <span>vs Sep 1–9</span></div><svg class="spark" data-spark="462,470,466,471,476,474,480,478,479,482,479,498"></svg></div>
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div class="layer l-details"><span class="tag">Why</span>
+                <div class="chart-card"><h2>What changed the profit</h2><div class="q">From September 1–9 to October 1–9, XAF. Blue raised the profit, orange lowered it.</div>
+                  <svg class="chart" id="c-bridge" viewBox="0 0 580 330"></svg>
+                  <div class="foot"><span>Click a bar to see its entries.</span><a>Table</a></div></div>
+              </div>
+              <div class="layer l-act"><span class="tag">To do</span>
+                <div class="card todo" style="height:100%"><div class="card-h"><div><h2>To do</h2><div class="d">Ranked by money and safety · all your branches</div></div><a class="btn sm">See all 5</a></div>
+                  <div class="card-b">
+                    <div class="row-d"><i data-i="money"></i><div><div class="t">6 expenses wait for your approval</div><div class="s"><span class="num">1 140 000 XAF</span> · oldest 3 days</div></div><span class="btn sm">Review</span></div>
+                    <div class="row-d"><i data-i="alert" data-c="bad"></i><div><div class="t">VH003 off the road since October 1</div><div class="s">Grounded 2 days · WO-0012 waits for brake parts · ~45 000 XAF a day in lost trips</div></div><span class="btn sm">Open</span></div>
+                    <div class="row-d"><i data-i="fuel" data-c="warn"></i><div><div class="t">VH007 spends 24% more on fuel per km than the fleet</div><div class="s">360 vs 290 XAF/km · 3 trips this month</div></div><span class="btn sm">Check fuel</span></div>
+                    <div class="row-d"><i data-i="cal" data-c="warn"></i><div><div class="t">VH005 visite technique expires in 6 days</div><div class="s">October 15 · renewal not booked</div></div><span class="btn sm">Open</span></div>
+                    <div class="row-d"><i data-i="lock"></i><div><div class="t">September is still open</div><div class="s">2 things block closing it</div></div><span class="btn sm">Close month</span></div>
+                  </div></div>
+              </div>
+            </div>
+
+            <div class="layer l-details"><span class="tag">By truck</span>
+              <div class="card"><div class="card-h"><div><h2>Profit by truck</h2><div class="d">October 1–9 · revenue and expenses recorded on each truck · losses first</div></div><a class="btn sm">Open the tab</a></div>
+                <div class="dt-wrap" style="margin:0 16px 14px"><table class="dt ue" id="t-ue"></table></div>
+              </div>
+            </div>
+
+            <div class="grid3">
+              <div class="layer l-details"><span class="tag">Why</span>
+                <div class="chart-card"><h2>Revenue and expenses per month</h2><div class="q">Is revenue staying ahead of expenses? Last 12 closed months, XAF.</div>
+                  <div class="legend-row"><span><i class="ln" style="background:var(--series-1)"></i>Revenue</span><span><i class="ln" style="background:var(--series-2)"></i>Expenses</span></div>
+                  <svg class="chart" id="c-inout" viewBox="0 0 360 170"></svg><div class="foot"><span>Oct 2025 – Sep 2026</span><a>Open Money →</a></div></div>
+              </div>
+              <div class="layer l-details"><span class="tag">By branch</span>
+                <div class="chart-card"><h2>Truck profit by branch</h2><div class="q">Which branch's trucks earn the most? October 1–9, XAF.</div>
+                  <svg class="chart" id="c-branch" viewBox="0 0 360 120"></svg><div class="foot"><span>Company costs not split by branch</span><a>Open the tab →</a></div></div>
+              </div>
+              <div class="layer l-act"><span class="tag">Coming up</span>
+                <div class="card todo"><div class="card-h"><div><h2>Coming up</h2><div class="d">Next 14 days</div></div></div>
+                  <div class="card-b">
+                    <div class="row-d"><i data-i="cal"></i><div><div class="t">VH005 visite technique</div><div class="s">October 15</div></div></div>
+                    <div class="row-d"><i data-i="cal"></i><div><div class="t">VH001 insurance renewal</div><div class="s">October 21</div></div></div>
+                    <div class="row-d"><i data-i="wrench"></i><div><div class="t">VH002 oil change due</div><div class="s">in about 900 km</div></div></div>
+                    <div class="row-d"><i data-i="route"></i><div><div class="t">14 trips planned</div><div class="s">2 without a truck yet</div></div></div>
+                  </div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">Numbers are illustrative: 12 trucks across Douala, Yaoundé and Bafoussam, priced like the Douala–Yaoundé corridor (diesel ~294 XAF/km). The bridge sums exactly: 1 970 000 + 660 000 − 420 000 − 360 000 − 40 000 + 100 000 − 40 000 = 1 870 000.</p>
+    </section>
+
+    <section class="section" id="home-phone">
+      <div class="kicker">Phone</div>
+      <h3>Dashboard on phone</h3>
+      <div class="cols">
+        <div class="frame phone" style="position:relative;min-height:1420px">
+          <div class="ptop"><b>Dashboard</b><span class="crumb" style="margin-left:auto">All branches</span></div>
+          <div class="page">
+            <div class="tabs ptabs"><div class="on">Overview</div><div>To do <span class="count hot">5</span></div><div>Profit by truck</div></div>
+            <div class="kpis">
+              <div class="tile"><div class="k">Revenue</div><div class="v">9 560 000</div><div class="d good">▲ 7%</div></div>
+              <div class="tile"><div class="k">Expenses</div><div class="v">7 690 000</div><div class="d bad">▲ 11%</div></div>
+              <div class="tile"><div class="k">Profit</div><div class="v">1 870 000</div><div class="d bad">▼ 100 000</div></div>
+              <div class="tile"><div class="k">Can drive</div><div class="v">10<small>of 12</small></div><div class="d bad">▼ 2</div></div>
+            </div>
+            <div class="counted"><i data-i="check"></i><span>27 closed trips counted · 5 open not yet</span><a>Show summary</a></div>
+            <div class="card todo"><div class="card-h"><h2>To do</h2><span class="count hot">5</span></div><div class="card-b">
+              <div class="row-d"><i data-i="money"></i><div><div class="t">6 expenses to approve</div><div class="s num">1 140 000 XAF · oldest 3 days</div></div><i data-i="chev"></i></div>
+              <div class="row-d"><i data-i="alert" data-c="bad"></i><div><div class="t">VH003 off the road since Oct 1</div><div class="s">Grounded 2 days · waits for brake parts</div></div><i data-i="chev"></i></div>
+              <div class="row-d"><i data-i="fuel" data-c="warn"></i><div><div class="t">VH007 fuel 24% above fleet</div><div class="s">360 vs 290 XAF/km</div></div><i data-i="chev"></i></div>
+            </div></div>
+            <div class="card"><div class="card-h"><h2>What changed the profit</h2></div><div class="card-b moves">
+              <div><span>September 1–9</span><span class="amt">1 970 000</span></div>
+              <div><span>Revenue</span><span class="amt">+660 000</span></div>
+              <div><span>Fuel <span class="sub">· mostly VH007</span></span><span class="amt">−420 000</span></div>
+              <div><span>Repairs <span class="sub">· VH003 brakes</span></span><span class="amt">−360 000</span></div>
+              <div><span>Tolls and checkpoints</span><span class="amt">−40 000</span></div>
+              <div><span>Other truck costs</span><span class="amt">+100 000</span></div>
+              <div><span>Company costs</span><span class="amt">−40 000</span></div>
+              <div class="total"><span>October 1–9</span><span class="amt">1 870 000</span></div>
+            </div></div>
+            <div class="card"><div class="card-h"><h2>Trucks at a loss</h2></div><div class="card-b" style="padding-top:0">
+              <div class="mrow"><div><b>VH003</b><span>Off the road since Oct 1 · 0 trips</span></div><div class="end"><b class="num">Loss 420 000</b></div></div>
+              <div class="mrow"><div><b>VH010</b><span>In the workshop since Oct 1</span></div><div class="end"><b class="num">Loss 120 000</b></div></div>
+              <div class="mrow" style="border-bottom:0"><div><b>VH012</b><span>No trip since September 30</span></div><div class="end"><b class="num">Loss 40 000</b></div></div>
+            </div></div>
+          </div>
+          <div data-tabbar="home" data-role="admin"></div>
+        </div>
+        <div class="spec-card"><h4>Phone rules</h4><ul>
+          <li>The tabs sit under the top bar and scroll sideways; Overview is first.</li>
+          <li>Shown here with the summary closed: tiles first, the counted line under them, "Show summary" to bring it back. When it shows, it's two lines without the pace line.</li>
+          <li>Four tiles in a 2 × 2 grid, no sparklines.</li>
+          <li>"To do" comes before any chart: on a phone, people act first.</li>
+          <li>The profit bridge becomes a list that adds up top to bottom.</li>
+          <li>"Profit by truck" becomes "Trucks at a loss" (the bottom three); the full table is the next tab.</li>
+          <li>Offline, the last copy shows with "As of 08:12" in the top bar.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="money">
+      <div class="kicker">Money</div>
+      <h3>Money: Overview tab, finance, all branches</h3>
+      <p class="rule">The Overview explains the month's spending. The work happens in the next tabs: Entries (every revenue and expense) and To approve.</p>
+      <div class="frame desktop" style="min-height:1180px">
+        <div data-sidebar="money" data-role="finance"></div>
+        <div class="main">
+          <div class="topbar"><b>Money</b><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Money</h1><div class="lead">Every revenue and expense · October 1–9 vs September 1–9</div></div><div class="row"><div class="seg small" style="width:300px"><div class="on">This month</div><div>3 months</div><div>12 months</div></div><span class="btn primary"><i data-i="plus"></i>Record an expense</span></div></div>
+            <div class="tabs ptabs"><div class="on">Overview</div><div>Entries</div><div>To approve <span class="count hot">6</span></div></div>
+            <div class="layer l-overview"><span class="tag">Summary</span>
+              <div class="summary">
+                <div class="say">Expenses are <b>11% above</b> September at the same day. Two reasons: VH003's brake repair (<b>420 000 XAF</b>) and fuel (<b>+420 000 XAF</b>, a third of it VH007).</div>
+                <div class="side"><span class="badge b-warn">Spending up</span></div>
+                <div class="basis"><i data-i="check"></i><span>Counted: <b>148 approved entries</b>. Not counted: <b>6 waiting approval</b> (1 140 000 XAF) and <b>4 without a receipt</b>.</span><a>See them →</a></div>
+              </div>
+            </div>
+            <div class="layer l-overview"><span class="tag">Tiles</span>
+              <div class="kpis">
+                <div class="tile"><div class="k">Expenses</div><div class="v">7 690 000<small>XAF</small></div><div class="d bad">▲ 11% <span>vs Sep 1–9</span></div><svg class="spark" data-spark="22.3,23.6,22.8,22.9,24.4,23.7,24.8,24.1,24.6,25,25.5,23.7"></svg></div>
+                <div class="tile"><div class="k">Revenue</div><div class="v">9 560 000<small>XAF</small></div><div class="d good">▲ 7% <span>vs Sep 1–9</span></div><svg class="spark" data-spark="27.1,28.4,26.9,27.8,29.5,28.8,30.2,29.6,29.1,30.8,31.4,30.6"></svg></div>
+                <div class="tile"><div class="k">To approve</div><div class="v">6<small>· 1 140 000</small></div><div class="d flat">Oldest 3 days</div></div>
+                <div class="tile"><div class="k">Missing receipt</div><div class="v">4<small>· 586 000</small></div><div class="d flat">2 from VH007</div></div>
+                <div class="tile"><div class="k">September close</div><div class="v">2<small>blockers</small></div><div class="d flat">1 trip open · 1 not approved</div></div>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="layer l-details"><span class="tag">Why</span>
+                <div class="chart-card"><h2>Expenses by category</h2><div class="q">Where did spending change? October 1–9 (bar) vs September 1–9 (mark), XAF.</div>
+                  <div class="legend-row"><span><i style="background:var(--series-1)"></i>October 1–9</span><span><i class="tick"></i>September 1–9</span></div>
+                  <svg class="chart" id="c-cat" viewBox="0 0 560 260"></svg><div class="foot"><span>Click a category to open Entries filtered.</span><a>Table</a></div></div>
+              </div>
+              <div class="layer l-details"><span class="tag">By truck</span>
+                <div class="chart-card"><h2>Fuel per km by truck</h2><div class="q">Is any truck spending more on fuel than it should? October 1–9, XAF per km. Line = fleet median.</div>
+                  <svg class="chart" id="c-fuel" viewBox="0 0 420 250"></svg><div class="foot"><span>Fuel expenses ÷ km from meter readings</span><a>Open VH007 →</a></div></div>
+              </div>
+            </div>
+            <div class="layer l-act"><span class="tag">To do</span>
+              <div class="card todo"><div class="card-h"><div><h2>To do</h2><div class="d">Ranked by amount</div></div></div><div class="card-b">
+                <div class="row-d"><i data-i="money"></i><div><div class="t">6 expenses to approve · 1 140 000 XAF</div><div class="s">Oldest: two tyres for VH005, 380 000, 3 days</div></div><span class="btn sm">Open To approve</span></div>
+                <div class="row-d"><i data-i="receipt" data-c="warn"></i><div><div class="t">4 expenses without a receipt · 586 000 XAF</div><div class="s">2 from VH007 (fuel, Bafoussam)</div></div><span class="btn sm">Open in Entries</span></div>
+                <div class="row-d"><i data-i="lock"></i><div><div class="t">Close September</div><div class="s">1 trip still open · 1 expense not approved</div></div><span class="btn sm">Review</span></div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="money-entries">
+      <div class="kicker">Money</div>
+      <h3>Money: Entries tab</h3>
+      <p class="rule">The second tab is where people work: search, filter, open an entry. Same header and button as the Overview. The filters carry counts so the tiles aren't repeated.</p>
+      <div class="frame desktop" style="min-height:700px">
+        <div data-sidebar="money" data-role="finance"></div>
+        <div class="main">
+          <div class="topbar"><b>Money</b><span class="sep">›</span><span>Entries</span><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Money</h1><div class="lead">Every revenue and expense · October 1–9 vs September 1–9</div></div><span class="btn primary"><i data-i="plus"></i>Record an expense</span></div>
+            <div class="tabs ptabs"><div>Overview</div><div class="on">Entries</div><div>To approve <span class="count hot">6</span></div></div>
+            <div class="toolbar"><span class="input" style="width:260px">Search entries</span><span class="chip set">October</span><span class="chip">Expenses and revenue</span><span class="chip">Category</span><span class="chip">Truck</span><span class="chip">Missing receipt · 4</span></div>
+            <div class="dt-wrap"><table class="dt">
+              <thead><tr><th>Date</th><th>What</th><th>Truck</th><th>Branch</th><th class="r">Amount</th><th>Receipt</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>Oct 9</td><td class="pri">Fuel</td><td>VH001</td><td>Douala</td><td class="r">−210 000</td><td>Attached</td><td><span class="badge b-ok">Approved</span></td><td class="dots">⋯</td></tr>
+                <tr><td>Oct 9</td><td class="pri">Freight Douala → Yaoundé</td><td>VH002</td><td>Douala</td><td class="r">+450 000</td><td>—</td><td><span class="badge b-ok">Approved</span></td><td class="dots">⋯</td></tr>
+                <tr><td>Oct 8</td><td class="pri">Fuel</td><td>VH007</td><td>Bafoussam</td><td class="r">−185 000</td><td class="gap">Missing</td><td><span class="badge b-warn">To approve</span></td><td class="dots">⋯</td></tr>
+                <tr><td>Oct 8</td><td class="pri">Brake pads and discs</td><td>VH003</td><td>Douala</td><td class="r">−420 000</td><td>Attached</td><td><span class="badge b-ok">Approved</span></td><td class="dots">⋯</td></tr>
+                <tr><td>Oct 7</td><td class="pri">Office rent, October</td><td>—</td><td>Douala</td><td class="r">−250 000</td><td>Attached</td><td><span class="badge b-ok">Approved</span></td><td class="dots">⋯</td></tr>
+                <tr><td>Oct 6</td><td class="pri">Two tyres</td><td>VH005</td><td>Yaoundé</td><td class="r">−380 000</td><td>Attached</td><td><span class="badge b-warn">To approve</span></td><td class="dots">⋯</td></tr>
+              </tbody></table><div class="pager"><span>154 entries</span><span>Page 1 of 26</span></div></div>
+            <p class="caption" style="margin:0">Office rent has no truck: it counts in company costs, not in any truck's profit.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="trucks">
+      <div class="kicker">Trucks</div>
+      <h3>Trucks: Overview tab, administrator, all branches</h3>
+      <p class="rule">Can the fleet work, and what does each truck earn? ("Buses" in the passenger preset.) The fleet board shows the last 30 days: every row a truck, every cell a day.</p>
+      <div class="frame desktop" style="min-height:1240px">
+        <div data-sidebar="trucks" data-role="admin"></div>
+        <div class="main">
+          <div class="topbar"><b>Trucks</b><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Trucks</h1><div class="lead">12 trucks · Douala, Yaoundé, Bafoussam</div></div><span class="btn primary"><i data-i="plus"></i>Add a truck</span></div>
+            <div class="tabs ptabs"><div class="on">Overview</div><div>Trucks</div><div>Documents</div></div>
+            <div class="layer l-overview"><span class="tag">Summary</span>
+              <div class="summary">
+                <div class="say"><b>10 of 12</b> trucks can drive today. VH003 has been off the road <b>since October 1</b> and grounded for 2 days, waiting for brake parts. VH012 has had <b>no trip since September 30</b>.</div>
+                <div class="side"><span class="badge b-bad">1 grounded</span></div>
+                <div class="basis"><i data-i="check"></i><span>Status from work orders and grounding. Km known for <b>11 of 12</b> trucks: VH012's last trip has no end km.</span><a>Add the reading →</a></div>
+              </div>
+            </div>
+            <div class="layer l-overview"><span class="tag">Tiles</span>
+              <div class="kpis">
+                <div class="tile"><div class="k">Can drive</div><div class="v">10<small>of 12</small></div><div class="d bad">▼ 2 <span>vs Sep 30</span></div></div>
+                <div class="tile"><div class="k">Grounded</div><div class="v">1</div><div class="d flat">VH003 · 2 days</div></div>
+                <div class="tile"><div class="k">On the road, last 30 days</div><div class="v">63<small>%</small></div><div class="d bad">▼ 4 pts <span>vs the 30 before</span></div><svg class="spark" data-spark="64,66,65,68,67,69,70,68,66,69,67,63"></svg></div>
+                <div class="tile"><div class="k">Documents due ≤ 30 days</div><div class="v">3</div><div class="d flat">First: VH005 · Oct 15</div></div>
+                <div class="tile"><div class="k">No trip for 5+ days</div><div class="v">1</div><div class="d flat">VH012 · 9 days</div></div>
+              </div>
+            </div>
+            <div class="layer l-details"><span class="tag">Why</span>
+              <div class="chart-card"><h2>Fleet board</h2><div class="q">What did each truck do, day by day? Last 30 days.</div>
+                <div class="board-legend"><span><i style="background:var(--series-1)"></i>On a trip</span><span><i style="background:var(--series-muted)"></i>Available, no trip</span><span><i style="background:var(--warning)"></i>In the workshop</span><span><i style="background:var(--destructive)"></i>Grounded</span><span><i style="background:white;border:1px dashed var(--border)"></i>Not recorded</span></div>
+                <svg class="chart" id="c-board" viewBox="0 0 1000 300"></svg><div class="foot"><span>Click a row to open the truck, a cell to open that day's trip or work order.</span><a>Table</a></div></div>
+            </div>
+            <div class="grid2">
+              <div class="layer l-details"><span class="tag">By truck</span>
+                <div class="chart-card"><h2>Profit by truck</h2><div class="q">Which trucks earn, which lose? October 1–9, XAF.</div>
+                  <svg class="chart" id="c-profit" viewBox="0 0 560 300"></svg><div class="foot"><span>Revenue − expenses recorded on the truck</span><a>Dashboard › Profit by truck →</a></div></div>
+              </div>
+              <div class="layer l-act"><span class="tag">To do</span>
+                <div class="card todo"><div class="card-h"><div><h2>Documents and services due</h2><div class="d">Next 30 days</div></div></div><div class="card-b">
+                  <div class="row-d"><i data-i="cal" data-c="warn"></i><div><div class="t">VH005 · visite technique</div><div class="s">October 15 · in 6 days</div></div><span class="btn sm">Record renewal</span></div>
+                  <div class="row-d"><i data-i="cal"></i><div><div class="t">VH001 · insurance</div><div class="s">October 21 · in 12 days</div></div><span class="btn sm">Record renewal</span></div>
+                  <div class="row-d"><i data-i="cal"></i><div><div class="t">VH002 · insurance</div><div class="s">November 5 · in 27 days</div></div><span class="btn sm">Record renewal</span></div>
+                  <div class="row-d"><i data-i="wrench"></i><div><div class="t">VH002 · oil change</div><div class="s">at 412 000 km · about 900 km left</div></div><span class="btn sm">Plan</span></div>
+                </div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="trips">
+      <div class="kicker">Trips</div>
+      <h3>Trips: Overview tab</h3>
+      <p class="rule">How much work was done, how well it paid, and what's left to close. Planning appears as a tab when the Scheduling module is on.</p>
+      <div class="frame desktop" style="min-height:930px">
+        <div data-sidebar="trips" data-role="admin"></div>
+        <div class="main">
+          <div class="topbar"><b>Trips</b><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Trips</h1><div class="lead">Freight trips · October 1–9 vs September 1–9</div></div><span class="btn primary"><i data-i="plus"></i>Start a trip</span></div>
+            <div class="tabs ptabs"><div class="on">Overview</div><div>Trips</div><div>Planning</div></div>
+            <div class="summary">
+              <div class="say"><b>27 trips</b> closed and <b>5</b> still open. Revenue per km is <b>675 XAF</b>, flat on September. <b>18%</b> of km were driven empty, mostly returns from N'Djamena.</div>
+              <div class="side"><span class="badge b-mute">Steady</span></div>
+              <div class="basis"><i data-i="check"></i><span>Km from trip legs. <b>3 closed trips</b> have no fuel recorded and <b>2</b> no end km.</span><a>Complete them →</a></div>
+            </div>
+            <div class="kpis">
+              <div class="tile"><div class="k">Trips closed</div><div class="v">27</div><div class="d good">▲ 2 <span>vs Sep 1–9</span></div></div>
+              <div class="tile"><div class="k">Open</div><div class="v">5</div><div class="d flat">Oldest started Oct 6</div></div>
+              <div class="tile"><div class="k">Revenue per km</div><div class="v">675<small>XAF</small></div><div class="d flat">= <span>vs Sep 1–9</span></div></div>
+              <div class="tile"><div class="k">Km driven empty</div><div class="v">18<small>%</small></div><div class="d bad">▲ 3 pts <span>vs Sep 1–9</span></div></div>
+              <div class="tile"><div class="k">Closed with missing data</div><div class="v">5</div><div class="d flat">3 fuel · 2 end km</div></div>
+            </div>
+            <div class="grid2">
+              <div class="chart-card"><h2>Trips per week</h2><div class="q">Is the work growing? Closed trips, last 12 weeks.</div><svg class="chart" id="c-tripsweek" viewBox="0 0 560 210"></svg><div class="foot"><span>This week is partial (Mon–Fri).</span><a>Open Trips →</a></div></div>
+              <div class="chart-card"><h2>Revenue per km by route</h2><div class="q">Which routes pay best? October 1–9, XAF per km.</div><svg class="chart" id="c-routes" viewBox="0 0 420 180"></svg><div class="foot"><span>Km includes empty returns</span><a>Table</a></div></div>
+            </div>
+            <div class="card todo"><div class="card-h"><div><h2>To do</h2><div class="d">Trips to finish</div></div></div><div class="card-b">
+              <div class="row-d"><i data-i="route"></i><div><div class="t">5 open trips</div><div class="s">Oldest: VH006 Douala → Yaoundé, started October 6</div></div><span class="btn sm">Open in Trips</span></div>
+              <div class="row-d"><i data-i="fuel" data-c="warn"></i><div><div class="t">3 closed trips without fuel</div><div class="s">Their profit is too high until fuel is added</div></div><span class="btn sm">Add fuel</span></div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="maintenance">
+      <div class="kicker">Maintenance</div>
+      <h3>Maintenance: Overview tab, technician</h3>
+      <p class="rule">What's off the road, for how long, and what it costs to fix. A technician sees repair costs from work orders only, never revenue or profit.</p>
+      <div class="frame desktop" style="min-height:900px">
+        <div data-sidebar="maintenance" data-role="workshop"></div>
+        <div class="main">
+          <div class="topbar"><b>Maintenance</b><div class="right"><span class="chip set">Douala</span></div></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">Maintenance</h1><div class="lead">Problems reported and work orders · Douala</div></div><span class="btn primary"><i data-i="plus"></i>Report a problem</span></div>
+            <div class="tabs ptabs"><div class="on">Overview</div><div>Problems <span class="count hot">2</span></div><div>Work orders</div></div>
+            <div class="summary">
+              <div class="say"><b>VH003</b> is off the road since October 1, grounded for 2 days waiting for brake parts. Other repairs took <b>3.5 days</b> on average this month.</div>
+              <div class="side"><span class="badge b-bad">1 safety problem</span></div>
+              <div class="basis"><i data-i="check"></i><span>Repair cost from work orders. <b>WO-0012</b> has no final invoice yet.</span></div>
+            </div>
+            <div class="kpis">
+              <div class="tile"><div class="k">New problems</div><div class="v">2</div><div class="d bad">1 safety</div></div>
+              <div class="tile"><div class="k">Off the road</div><div class="v">1</div><div class="d flat">VH003 · since Oct 1</div></div>
+              <div class="tile"><div class="k">Work orders open</div><div class="v">1</div><div class="d flat">Waits for parts</div></div>
+              <div class="tile"><div class="k">Average days to repair</div><div class="v">3.5</div><div class="d good">▼ 1.2 <span>vs Sep</span></div></div>
+              <div class="tile"><div class="k">Repair cost</div><div class="v">640 000<small>XAF</small></div><div class="d bad">▲ 410 000 <span>vs Sep 1–9</span></div></div>
+            </div>
+            <div class="grid2">
+              <div class="chart-card"><h2>Days off the road per month</h2><div class="q">Are repairs keeping trucks off the road longer? All Douala trucks, truck-days.</div><svg class="chart" id="c-down" viewBox="0 0 560 210"></svg><div class="foot"><span>October is partial (9 days).</span><a>Open Work orders →</a></div></div>
+              <div class="card todo"><div class="card-h"><div><h2>To do</h2><div class="d">Safety first</div></div></div><div class="card-b">
+                <div class="row-d"><i data-i="alert" data-c="bad"></i><div><div class="t">VH006 · brakes squeal</div><div class="s">Reported by Sali Ahmadou · today · safety</div></div><span class="btn sm">Triage</span></div>
+                <div class="row-d"><i data-i="wrench"></i><div><div class="t">VH001 · left mirror broken</div><div class="s">Reported yesterday</div></div><span class="btn sm">Triage</span></div>
+                <div class="row-d"><i data-i="clock" data-c="warn"></i><div><div class="t">WO-0012 · VH003 brakes</div><div class="s">Waits for parts since October 7</div></div><span class="btn sm">Open</span></div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="truck">
+      <div class="kicker">A truck</div>
+      <h3>A truck: Overview tab (the model the rest follows)</h3>
+      <p class="rule">The truck page already opens on Overview with its To do. It gains the same summary and tiles, so every Overview in the app reads the same way.</p>
+      <div class="frame desktop" style="min-height:560px">
+        <div data-sidebar="trucks" data-role="admin"></div>
+        <div class="main">
+          <div class="topbar"><span>Trucks</span><span class="sep">›</span><b>VH007</b></div>
+          <div class="page">
+            <div class="ph"><div><h1 class="pt">VH007 · Renault Kerax</h1><div class="lead">Bafoussam · assigned driver Sali Ahmadou · <span class="badge b-ok">Available</span></div></div><span class="btn primary"><i data-i="fuel"></i>Log fuel</span></div>
+            <div class="tabs ptabs"><div class="on">Overview</div><div>Trips</div><div>Money</div><div>Maintenance</div><div>Documents</div><div>Details</div><div>History</div></div>
+            <div class="summary">
+              <div class="say">VH007 made <b>140 000 XAF profit</b> on 3 trips this month. It spends <b>24% more on fuel per km</b> than the rest of the fleet.</div>
+              <div class="side"><span class="badge b-warn">Fuel high</span></div>
+              <div class="basis"><i data-i="check"></i><span>2 fuel expenses have no receipt.</span><a>Open Money →</a></div>
+            </div>
+            <div class="kpis">
+              <div class="tile"><div class="k">Profit</div><div class="v">140 000<small>XAF</small></div><div class="d bad">▼ 90 000 <span>vs Sep 1–9</span></div></div>
+              <div class="tile"><div class="k">Revenue</div><div class="v">960 000<small>XAF</small></div><div class="d flat">3 trips</div></div>
+              <div class="tile"><div class="k">Expenses</div><div class="v">820 000<small>XAF</small></div><div class="d bad">▲ 18%</div></div>
+              <div class="tile"><div class="k">Fuel per km</div><div class="v">360<small>XAF</small></div><div class="d bad">Fleet: 290</div></div>
+              <div class="tile"><div class="k">Days on the road</div><div class="v">7<small>of 9</small></div><div class="d flat">0 in the workshop</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="roles">
+      <div class="kicker">Roles</div>
+      <h3>Who sees what</h3>
+      <p class="rule">Every role opens on an Overview. What's in it follows the role. Hidden, never greyed. Branch-scoped people see their branches only.</p>
+      <table class="spec-table">
+        <thead><tr><th>Role</th><th>Opens on</th><th>Sees</th><th>Doesn't see</th></tr></thead>
+        <tbody>
+          <tr><td>Direction</td><td>Dashboard, all branches</td><td>Everything, read-only. "To do" shows only what waits for Direction, plus one line per branch ("Douala: 4 waiting, oldest 3 days").</td><td>Buttons for other people's work</td></tr>
+          <tr><td>Administrator</td><td>Dashboard, own branches</td><td>Everything for their branches, including profit, with the full To do</td><td>Other branches</td></tr>
+          <tr><td>Finance</td><td>Dashboard, all branches</td><td>Same as Direction plus approvals in To do</td><td>Workshop triage</td></tr>
+          <tr><td>Cashier</td><td>Money Overview, own branch</td><td>Revenue and expenses of the branch, missing receipts</td><td>Profit, other branches</td></tr>
+          <tr><td>Technician</td><td>Maintenance Overview</td><td>Problems, days off the road, repair costs from work orders</td><td>Revenue, profit, the rest of Money</td></tr>
+          <tr><td>Driver</td><td>Dashboard as "My day": today's trip, my truck's papers, amount to collect, my expenses waiting</td><td>Own trips and expenses</td><td>Company numbers; the trip price unless the company turns it on (decided 2026-10-08)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="components">
+      <div class="kicker">Parts</div>
+      <h3>Parts of an overview</h3>
+      <p class="rule">Built once in <code>apps/web/src/components/overview/</code>, used by every Overview tab. They sit on kit pieces that exist (card, badge, MetricStrip, DataTable, segmented control).</p>
+      <table class="spec-table">
+        <thead><tr><th>Part</th><th>Question</th><th>Used on</th><th>On phone</th><th>Data</th></tr></thead>
+        <tbody>
+          <tr><td><b>OverviewSummary</b></td><td>How are we doing, in one sentence?</td><td>Every Overview, as a closable notice on the company's schedule</td><td>Two lines</td><td>Server picks one of a fixed set of sentence templates and fills its numbers (no AI, no stitched phrases); closed state stored per person until the next scheduled one</td></tr>
+          <tr><td><b>CountedLine</b></td><td>Can I trust these numbers?</td><td>Inside the summary</td><td>One line</td><td>Closed vs open trips, approved vs waiting, missing readings, entry delay</td></tr>
+          <tr><td><b>Tile</b> (MetricStrip)</td><td>How much, going up or down?</td><td>Every Overview</td><td>2 × 2, no sparkline</td><td>Value, same days last period, 12 points</td></tr>
+          <tr><td><b>ProfitBridge</b></td><td>What changed the profit?</td><td>Dashboard, a truck</td><td>A list that adds up</td><td>Revenue and expenses by category, two periods</td></tr>
+          <tr><td><b>CompareBars</b></td><td>Where did spending change?</td><td>Money, Stock</td><td>Ranked list</td><td>Grouped sums, two periods</td></tr>
+          <tr><td><b>RankedBars</b> with median</td><td>Which one is out of line?</td><td>Money (fuel/km), Trips (route)</td><td>Top 3</td><td>Grouped sums ÷ km</td></tr>
+          <tr><td><b>ProfitBars</b></td><td>Which earn, which lose?</td><td>Trucks, Dashboard (branch)</td><td>Bottom 3</td><td>Profit per truck or branch</td></tr>
+          <tr><td><b>TruckProfitTable</b></td><td>What does each truck earn?</td><td>Dashboard (and its tab)</td><td>"Trucks at a loss"</td><td>Per truck: revenue, expenses, km, days on the road</td></tr>
+          <tr><td><b>FleetBoard</b></td><td>What did each truck do each day?</td><td>Trucks, Maintenance</td><td>Today's status list</td><td>Daily status per truck from trips, work orders, grounding</td></tr>
+          <tr><td><b>ToDo</b></td><td>What needs me?</td><td>Every Overview</td><td>Top 3</td><td>Today's attention items, fleet-wide, plus fuel outliers and month close</td></tr>
+          <tr><td><b>ComingUp</b></td><td>What's due soon?</td><td>Dashboard, Trucks, Personnel</td><td>Same rows</td><td>Document expiry, service by km, planned trips</td></tr>
+          <tr><td><b>RangePicker</b></td><td>Which period, which branch?</td><td>Overview header</td><td>Sheet</td><td>This month / 3 months / 12 months; branch from the switcher</td></tr>
+        </tbody>
+      </table>
+      <div class="cols even" style="margin-top:16px">
+        <div class="spec-card"><h4>Summary sentence rules</h4><ul>
+          <li>Each page has 4–8 templates: ahead, behind, flat, no data yet, first month.</li>
+          <li>The named reason is the biggest bar in the bridge or the biggest change by category.</li>
+          <li>Before the 3rd of the month, it talks about last month instead.</li>
+          <li>If fewer than half the month's trips are closed, it says so and gives no profit.</li>
+          <li>Whole sentences in fr-CM and en; no stitched phrases.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Comparison rules</h4><ul>
+          <li>This month is compared with the same days of last month (Oct 1–9 vs Sep 1–9).</li>
+          <li>Colour follows meaning: expenses up is red, revenue up is green, always with ▲▼ so colour is never alone.</li>
+          <li>Small changes show the amount, not a percent ("+20 000").</li>
+          <li>Whole numbers, space between thousands. The currency label (FCFA or XAF) is decision 9; these mockups use XAF until it's picked.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="data">
+      <div class="kicker">Data</div>
+      <h3>Data we have, data we need</h3>
+      <p class="rule">Checked against develop @ <code>51d4a7d</code>.</p>
+      <table class="spec-table">
+        <thead><tr><th>Part</th><th>Have today</th><th>Need</th></tr></thead>
+        <tbody>
+          <tr><td>Revenue, expenses (this month)</td><td class="ok">Yes: <code>/v1/finance/summary</code> (<code>reads/finance-summary.ts:36</code>); daily series in <code>/v1/dashboard</code> (<code>reads/dashboard.ts:74</code>)</td><td>Same days of last month and 12 periods in the same read</td></tr>
+          <tr><td>Can drive, grounded</td><td class="ok">Yes: <code>/v1/assets/summary</code>, <code>/v1/maintenance/summary</code></td><td>—</td></tr>
+          <tr><td>Profit bridge, expenses by category</td><td>Per truck only (<code>reads/asset-finance.ts</code>)</td><td>Grouped by category for two periods, company or branch</td></tr>
+          <tr><td>Truck profit, company costs, by branch</td><td>Postings carry truck, trip and branch (<code>db/schema.ts:636-642</code>); read is one truck at a time</td><td>Grouped by truck and branch; entries with no truck summed as company costs</td></tr>
+          <tr><td>To do</td><td>Counts in <code>/v1/nav-counts</code>; attention items one truck at a time (<code>reads/asset-attention.ts:608</code>)</td><td>Fleet-wide attention read, plus fuel outliers and month close</td></tr>
+          <tr><td>Counted line</td><td>Incomplete trips, missing receipts, waiting</td><td>Open trips and entry delay per branch</td></tr>
+          <tr><td>Cost per km, fuel per km</td><td>Week km only; meter readings per truck (<code>reads/asset-readings.ts:63</code>)</td><td>Km per truck per period, with coverage. XAF per km only: <span class="gap">fuel litres aren't recorded</span></td></tr>
+          <tr><td>Fleet board, on the road %</td><td class="gap">No</td><td>Daily status per truck from trips, work orders and grounding</td></tr>
+          <tr><td>Coming up</td><td>Document expiry per truck; planning counts (<code>reads/planning.ts:163</code>)</td><td>Fleet-wide read. <span class="gap">Visite technique and carte grise aren't document types</span> (<code>provisioning/packs/core.ts:185</code>)</td></tr>
+          <tr><td>Km driven empty, seats filled</td><td>Legs record load state and passengers (<code>db/schema.ts:954-956</code>)</td><td>Summary by route</td></tr>
+          <tr><td>Summary sentence</td><td class="gap">No</td><td>Server returns a template code + numbers; the web renders it</td></tr>
+        </tbody>
+      </table>
+      <div class="spec-card" style="margin-top:16px"><h4>Build order</h4><ol>
+        <li>Tabs on every module page with Overview first; move today's tiles into the Overview. No new data needed.</li>
+        <li>Dashboard v1 on data that exists: summary, tiles with same-day comparison, counted line, To do. Rename French Sorties/Entrées to Dépenses/Recettes.</li>
+        <li>Fleet-wide attention read: completes To do and Coming up. Add visite technique and carte grise document types.</li>
+        <li>Money grouped by category, truck and branch: profit bridge, truck profit, company costs, Money Overview.</li>
+        <li>Km and daily status: cost per km, fuel per km, fleet board, Trucks Overview. Then Trips, Maintenance, Personnel, Stock Overviews.</li>
+      </ol></div>
+    </section>
+
+    <section class="section" id="decide">
+      <div class="kicker">Decisions</div>
+      <h3>Decisions</h3>
+      <p class="rule">Decided on 2026-10-10: the summary is a closable notice on a schedule, not a fixed block; <b>Dashboard</b> / <b>Tableau de bord</b> for Home, <b>Overview</b> / <b>Vue d'ensemble</b> as the first tab of every page, and the money words above (revenue, expenses, profit, loss, company costs). Still open, recommendation first:</p>
+      <table class="spec-table">
+        <thead><tr><th>#</th><th>Question</th><th>Recommendation</th><th>Other options</th><th>Pick</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>French word for revenue?</td><td><b>Recettes</b>: the transport word, already used for revenue entries in the app</td><td>Chiffre d'affaires (formal; fine in reports)</td><td>☐</td></tr>
+          <tr><td>2</td><td>What is "this month" compared with?</td><td><b>The same days of last month</b></td><td>All of last month (every month looks bad until the 30th)</td><td>☐</td></tr>
+          <tr><td>3</td><td>Where does trip revenue come from?</td><td><b>Revenue entries</b>, so the Dashboard and Money always agree</td><td>The agreed trip price (earlier, but not yet earned or collected)</td><td>☐</td></tr>
+          <tr><td>4</td><td>Who writes the summary sentence?</td><td><b>Fixed templates</b> picked from the numbers</td><td>AI later, through Ask ROUTIQ as a restricted user (ARCHITECTURE §7)</td><td>☐</td></tr>
+          <tr><td>5</td><td>Does a branch administrator see profit?</td><td><b>Yes</b>, for their branches</td><td>Direction and finance only</td><td>☐</td></tr>
+          <tr><td>6</td><td>Add visite technique and carte grise as document types?</td><td><b>Yes</b>, in the starter pack</td><td>Leave to each company's categories</td><td>☐</td></tr>
+          <tr><td>7</td><td>When does the summary show by default?</td><td><b>Every Monday and on the 1st</b>, plus big changes; each person can close it</td><td>Monday only; month start only; never</td><td>☐</td></tr>
+          <tr><td>8</td><td>"To approve": a Money tab, or only a filter?</td><td><b>A tab</b>, with its count: finance opens it every day</td><td>A filter inside Entries (decided 2026-10-04, superseded if this is a tab)</td><td>☐</td></tr>
+          <tr><td>9</td><td>How is money written?</td><td><b>"450 000 FCFA"</b>: space between thousands, FCFA after, in both languages, as people write it in Cameroon. Applies to every page, including <a href="fullpages.html">Full pages</a></td><td>"FCFA 450,000" (the app today, in English) · "450 000 XAF" (these mockups)</td><td>☐</td></tr>
+          <tr><td>10</td><td>Do settings pages get an Overview too?</td><td><b>No</b>: a settings page is one list with nothing to oversee; it keeps a one-sentence description</td><td>An Overview everywhere, for strict sameness</td><td>☐</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+<div class="vtip" id="vtip"></div>
+<script>
+// Row label = page title: Home is the Dashboard.
+NAV[0].items[0][2] = "Dashboard";
+Object.values(PHONE).forEach((items) => { if (items[0][0] === "home") items[0][2] = "Dashboard"; });
+
+const NS = "http://www.w3.org/2000/svg";
+const fmt = (n) => Math.round(n).toLocaleString("fr-FR").replace(/[  ]/g, " ");
+const sfmt = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n));
+const pl = (n) => (n < 0 ? "Loss " + fmt(-n) : fmt(n));
+const tip = document.getElementById("vtip");
+function showTip(ev, title, rows) {
+  tip.innerHTML = `<b>${title}</b>` + rows.map(([c, l, v]) => `<div class="r"><span>${c ? `<i style="background:${c}"></i>` : ""}${l}</span><span>${v}</span></div>`).join("");
+  tip.style.display = "block";
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px";
+}
+const hideTip = () => (tip.style.display = "none");
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+function txt(parent, x, y, s, a = {}) { const t = el("text", { x, y, "font-size": 10.5, fill: css("--axis-text"), ...a }, parent); t.textContent = s; return t; }
+function css(v) { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p) * p; }
+function vb(svg) { return svg.getAttribute("viewBox").split(" ").slice(2).map(Number); }
+function rrect(x, y, w, h, r, side) {
+  // Round only the data end of a bar.
+  r = Math.max(0, Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2));
+  if (side === "top") return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  if (side === "bottom") return `M${x},${y}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w - r}Q${x + w},${y + h} ${x + w},${y + h - r}V${y}Z`;
+  if (side === "left") return `M${x + w},${y}H${x + r}Q${x},${y} ${x},${y + r}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w}Z`;
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+function hover(target, mark, fn) {
+  target.addEventListener("mousemove", (ev) => { mark && mark.setAttribute("fill-opacity", 0.75); fn(ev); });
+  target.addEventListener("mouseleave", () => { mark && mark.setAttribute("fill-opacity", 1); hideTip(); });
+}
+
+function bridge(svg, steps) {
+  const [W, H] = vb(svg); const m = { l: 44, r: 8, t: 22, b: 34 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  let run = 0; const bars = steps.map((s) => { if (s.total) { run = s.v; return { ...s, a: 0, b: s.v }; } const a = run; run += s.v; return { ...s, a, b: run }; });
+  const max = niceMax(Math.max(...bars.map((b) => Math.max(b.a, b.b))));
+  const ys = (v) => m.t + ih - (v / max) * ih;
+  for (let i = 0; i <= 3; i++) { const v = (max * i) / 3; el("line", { x1: m.l, x2: W - m.r, y1: ys(v), y2: ys(v), stroke: css("--grid") }, svg); txt(svg, m.l - 6, ys(v) + 4, +(v / 1e6).toFixed(1) + "M", { "text-anchor": "end", "font-size": 10 }); }
+  const bw = iw / bars.length;
+  bars.forEach((b, i) => {
+    const x = m.l + i * bw + 6, w = bw - 12, top = ys(Math.max(b.a, b.b)), h = Math.max(2, Math.abs(ys(b.a) - ys(b.b)));
+    const color = b.total ? css("--foreground") : b.v >= 0 ? css("--series-1") : css("--series-2");
+    const p = el("path", { d: rrect(x, top, w, h, 4, b.total || b.v >= 0 ? "top" : "bottom"), fill: color, "fill-opacity": 1, opacity: b.total ? 0.82 : 1 }, svg);
+    if (i < bars.length - 1) el("line", { x1: x + w, x2: x + bw + 6, y1: ys(b.b), y2: ys(b.b), stroke: css("--ref"), "stroke-dasharray": "2 2" }, svg);
+    txt(svg, x + w / 2, top - 6, b.total ? fmt(b.v) : sfmt(b.v), { "text-anchor": "middle", fill: css("--foreground"), "font-weight": 600, "font-size": 10 });
+    b.label.split("|").forEach((ln, k) => txt(svg, x + w / 2, H - 20 + k * 12, ln, { "text-anchor": "middle", "font-size": 10 }));
+    const hit = el("rect", { x: m.l + i * bw, y: m.t, width: bw, height: ih, fill: "transparent", style: "cursor:pointer" }, svg);
+    hover(hit, p, (ev) => showTip(ev, b.label.replace("|", " "), b.total ? [[color, "Profit", fmt(b.v) + " XAF"]] : [[color, b.v >= 0 ? "Raised profit" : "Lowered profit", sfmt(b.v) + " XAF"], [null, b.note ?? "", ""]]));
+  });
+}
+
+function lines(svg, labels, series) {
+  const [W, H] = vb(svg); const m = { l: 36, r: 64, t: 8, b: 22 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const all = series.flatMap((s) => s.values); const lo = Math.floor((Math.min(...all) * 0.8) / 5) * 5, max = niceMax(Math.max(...all));
+  const xs = (i) => m.l + (iw * i) / (labels.length - 1), ys = (v) => m.t + ih - ((v - lo) / (max - lo)) * ih;
+  for (let i = 0; i <= 3; i++) { const v = lo + ((max - lo) * i) / 3; el("line", { x1: m.l, x2: m.l + iw, y1: ys(v), y2: ys(v), stroke: css("--grid") }, svg); txt(svg, m.l - 6, ys(v) + 4, fmt(v) + "M", { "text-anchor": "end", "font-size": 10 }); }
+  labels.forEach((l, i) => { if (i % 3 === 0 || i === labels.length - 1) txt(svg, xs(i), H - 6, l, { "text-anchor": "middle", "font-size": 10 }); });
+  series.forEach((s) => el("path", { d: s.values.map((v, i) => `${i ? "L" : "M"}${xs(i)},${ys(v)}`).join(""), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round" }, svg));
+  const ends = series.map((s) => ({ s, y: ys(s.values.at(-1)) + 4 })).sort((a, b) => a.y - b.y);
+  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 13) ends[k].y = ends[k - 1].y + 13;
+  ends.forEach(({ s, y }) => txt(svg, xs(labels.length - 1) + 6, y, s.name, { fill: css("--foreground") }));
+  const cross = el("line", { y1: m.t, y2: m.t + ih, stroke: css("--ref"), "stroke-dasharray": "2 2", opacity: 0 }, svg);
+  const dots = series.map((s) => el("circle", { r: 4.5, fill: s.color, stroke: "white", "stroke-width": 2, opacity: 0 }, svg));
+  const hit = el("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" }, svg);
+  hit.addEventListener("mousemove", (ev) => {
+    const r = svg.getBoundingClientRect(); const px = ((ev.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(labels.length - 1, Math.round(((px - m.l) / iw) * (labels.length - 1))));
+    cross.setAttribute("x1", xs(i)); cross.setAttribute("x2", xs(i)); cross.setAttribute("opacity", 1);
+    dots.forEach((d, k) => { d.setAttribute("cx", xs(i)); d.setAttribute("cy", ys(series[k].values[i])); d.setAttribute("opacity", 1); });
+    const rows = series.map((s) => [s.color, s.name, fmt(s.values[i] * 1e6) + " XAF"]);
+    rows.push([null, "Profit", fmt((series[0].values[i] - series[1].values[i]) * 1e6) + " XAF"]);
+    showTip(ev, labels[i], rows);
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("opacity", 0); dots.forEach((d) => d.setAttribute("opacity", 0)); hideTip(); });
+}
+
+function columns(svg, labels, values, { unit = "", partialLast = false } = {}) {
+  const [W, H] = vb(svg); const m = { l: 34, r: 6, t: 10, b: 22 }, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const max = Math.ceil(Math.max(...values) / 5) * 5, color = css("--series-1");
+  for (let i = 0; i <= 5; i++) { const y = m.t + ih - (ih * i) / 5; el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: css("--grid") }, svg); txt(svg, m.l - 6, y + 4, fmt((max * i) / 5), { "text-anchor": "end", "font-size": 10 }); }
+  const bw = iw / values.length;
+  values.forEach((v, i) => {
+    const h = (v / max) * ih, x = m.l + i * bw + 2, w = bw - 4, y = m.t + ih - h, last = partialLast && i === values.length - 1;
+    const p = el("path", { d: rrect(x, y, w, h, 4, "top"), fill: color, "fill-opacity": last ? 0.45 : 1 }, svg);
+    if (last) el("path", { d: rrect(x, y, w, h, 4, "top"), fill: "none", stroke: color, "stroke-width": 1.5, "stroke-dasharray": "3 2" }, svg);
+    txt(svg, x + w / 2, H - 6, labels[i], { "text-anchor": "middle", "font-size": 10 });
+    const hit = el("rect", { x: m.l + i * bw, y: m.t, width: bw, height: ih, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", (ev) => { p.setAttribute("fill-opacity", 0.7); showTip(ev, labels[i] + (last ? " (so far)" : ""), [[color, unit, fmt(v)]]); });
+    hit.addEventListener("mouseleave", () => { p.setAttribute("fill-opacity", last ? 0.45 : 1); hideTip(); });
+  });
+}
+
+// Horizontal bars. Signed: centre line, blue = profit, orange = loss. Optional median line.
+function hbars(svg, rows, { signed = false, ref = null, refLabel = "", unit = "XAF", flag = () => false, lw = 74, label = "Value" } = {}) {
+  const [W, H] = vb(svg); const m = { l: lw, r: 84, t: ref !== null ? 16 : 4, b: 4 }, iw = W - m.l - m.r;
+  const minV = signed ? Math.min(0, ...rows.map((r) => r[1])) : 0, maxV = Math.max(...rows.map((r) => r[1]));
+  const span = signed ? maxV - minV : ref !== null ? niceMax(maxV) : maxV;
+  const xs = (v) => m.l + ((v - minV) / span) * iw, bh = (H - m.t - m.b) / rows.length;
+  if (signed) el("line", { x1: xs(0), x2: xs(0), y1: m.t, y2: H - m.b, stroke: css("--ref") }, svg);
+  rows.forEach(([name, v, note], i) => {
+    const y = m.t + i * bh + bh * 0.2, h = bh * 0.6, neg = v < 0, x0 = xs(0), x1 = xs(v), x = Math.min(x0, x1), w = Math.max(2, Math.abs(x1 - x0));
+    const color = signed && neg ? css("--series-2") : css("--series-1"), hot = flag(name, v);
+    txt(svg, m.l - 8, y + h / 2 + 4, name, { "text-anchor": "end", "font-size": 11.5, fill: css("--foreground"), "font-weight": hot ? 700 : 400 });
+    const p = el("path", { d: rrect(x, y, w, h, 4, neg ? "left" : "right"), fill: v === 0 ? css("--series-muted") : color, "fill-opacity": 1 }, svg);
+    const shown = signed ? pl(v) : fmt(v) + (hot ? "  ▲" : "");
+    txt(svg, neg ? x0 + 6 : x + w + 6, y + h / 2 + 4, shown, { "font-size": 11, fill: hot ? css("--destructive") : css("--axis-text"), "font-weight": hot ? 700 : 400 });
+    const hit = el("rect", { x: 0, y: y - bh * 0.2, width: W, height: bh, fill: "transparent", style: "cursor:pointer" }, svg);
+    hover(hit, p, (ev) => showTip(ev, name, [[color, signed ? (neg ? "Loss" : "Profit") : label, (signed ? fmt(Math.abs(v)) : fmt(v)) + " " + unit], ...(note ? [[null, note, ""]] : [])]));
+  });
+  if (ref !== null) { el("line", { x1: xs(ref), x2: xs(ref), y1: m.t - 4, y2: H - m.b, stroke: css("--ref"), "stroke-dasharray": "4 3" }, svg); txt(svg, xs(ref), m.t - 6, refLabel, { "text-anchor": "middle", "font-size": 10 }); }
+}
+
+function compareBars(svg, rows) {
+  const [W, H] = vb(svg); const m = { l: 140, r: 120, t: 4, b: 4 }, iw = W - m.l - m.r;
+  const max = niceMax(Math.max(...rows.flatMap((r) => [r[1], r[2]])));
+  const xs = (v) => m.l + (v / max) * iw, bh = (H - m.t - m.b) / rows.length;
+  rows.forEach(([name, now, prev], i) => {
+    const y = m.t + i * bh + bh * 0.22, h = bh * 0.56, d = now - prev;
+    txt(svg, m.l - 10, y + h / 2 + 4, name, { "text-anchor": "end", "font-size": 11.5, fill: css("--foreground") });
+    const p = el("path", { d: rrect(m.l, y, Math.max(2, xs(now) - m.l), h, 4, "right"), fill: css("--series-1"), "fill-opacity": 1 }, svg);
+    el("rect", { x: xs(prev) - 1.5, y: y - 4, width: 3, height: h + 8, rx: 1, fill: css("--foreground") }, svg);
+    txt(svg, Math.max(xs(now), xs(prev)) + 8, y + h / 2 + 4, fmt(now), { "font-size": 11, fill: css("--foreground"), "font-weight": 600 });
+    txt(svg, W - 2, y + h / 2 + 4, d === 0 ? "same" : sfmt(d), { "text-anchor": "end", "font-size": 11, fill: d > 0 ? css("--destructive") : css("--axis-text"), "font-weight": d > 0 ? 650 : 400 });
+    const hit = el("rect", { x: 0, y: y - bh * 0.22, width: W, height: bh, fill: "transparent", style: "cursor:pointer" }, svg);
+    hover(hit, p, (ev) => showTip(ev, name, [[css("--series-1"), "October 1–9", fmt(now) + " XAF"], [css("--foreground"), "September 1–9", fmt(prev) + " XAF"], [null, "Change", sfmt(d) + " XAF"]]));
+  });
+}
+
+function board(svg, trucks) {
+  const [W, H] = vb(svg); const m = { l: 62, r: 6, t: 4, b: 18 }, days = 30;
+  const cw = (W - m.l - m.r) / days, ch = (H - m.t - m.b) / trucks.length;
+  const col = { T: css("--series-1"), A: css("--series-muted"), W: css("--warning"), G: css("--destructive"), N: "white" };
+  const name = { T: "On a trip", A: "Available, no trip", W: "In the workshop", G: "Grounded", N: "Not recorded" };
+  const day = (d) => new Date(2026, 8, 10 + d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  trucks.forEach(([code, row], r) => {
+    txt(svg, m.l - 8, m.t + r * ch + ch / 2 + 4, code, { "text-anchor": "end", "font-size": 11, fill: css("--foreground") });
+    [...row].forEach((s, d) => {
+      const c = el("rect", { x: m.l + d * cw + 1, y: m.t + r * ch + 1, width: cw - 2, height: ch - 2, rx: 2, fill: col[s], stroke: s === "N" ? css("--border") : "none", "stroke-dasharray": s === "N" ? "2 2" : "" }, svg);
+      c.addEventListener("mousemove", (ev) => { c.setAttribute("opacity", 0.75); showTip(ev, `${code} · ${day(d)}`, [[col[s], name[s], ""]]); });
+      c.addEventListener("mouseleave", () => { c.setAttribute("opacity", 1); hideTip(); });
+    });
+  });
+  [0, 7, 14, 21, 29].forEach((d) => txt(svg, m.l + d * cw + cw / 2, H - 4, d === 29 ? "Today" : day(d), { "text-anchor": "middle", "font-size": 10 }));
+}
+
+function sparks() {
+  document.querySelectorAll("svg.spark").forEach((svg) => {
+    const v = svg.dataset.spark.split(",").map(Number), W = 120, H = 26; svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none");
+    const min = Math.min(...v), span = Math.max(...v) - min || 1;
+    const pts = v.map((y, i) => [(W * i) / (v.length - 1), H - 3 - ((y - min) / span) * (H - 6)]);
+    el("path", { d: pts.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(""), fill: "none", stroke: css("--series-1"), "stroke-width": 1.6, "vector-effect": "non-scaling-stroke" }, svg);
+    const lp = pts.at(-1); el("circle", { cx: lp[0], cy: lp[1], r: 2.5, fill: css("--series-1") }, svg);
+  });
+}
+
+// The illustrative fleet, one source for every region: [code, branch, trips, km, revenue, expenses, status, note].
+const FLEET = [
+  ["VH001", "Douala", 4, 2140, 1480000, 900000, "ok"],
+  ["VH002", "Douala", 4, 1980, 1360000, 840000, "ok"],
+  ["VH004", "Yaoundé", 3, 1870, 1290000, 820000, "ok"],
+  ["VH005", "Yaoundé", 3, 1760, 1180000, 780000, "ok"],
+  ["VH006", "Douala", 3, 1650, 1120000, 760000, "ok"],
+  ["VH008", "Bafoussam", 3, 1420, 940000, 640000, "ok"],
+  ["VH011", "Bafoussam", 2, 860, 600000, 430000, "ok"],
+  ["VH009", "Yaoundé", 2, 980, 630000, 480000, "ok"],
+  ["VH007", "Bafoussam", 3, 1510, 960000, 820000, "fuel", "24% above fleet"],
+  ["VH012", "Douala", 0, 0, 0, 40000, "idle", "9 days"],
+  ["VH010", "Yaoundé", 0, 0, 0, 120000, "workshop", "Engine work since Oct 1"],
+  ["VH003", "Douala", 0, 0, 0, 420000, "grounded", "2 days · brakes"],
+];
+const COMPANY_COSTS = 640000;
+
+function profitTable(t) {
+  const rows = FLEET.map((f) => ({ code: f[0], branch: f[1], trips: f[2], km: f[3], rev: f[4], exp: f[5], st: f[6], note: f[7], p: f[4] - f[5] })).sort((a, b) => a.p - b.p);
+  const maxAbs = Math.max(...rows.map((r) => Math.abs(r.p)));
+  const badge = { ok: "", fuel: '<span class="badge b-warn">Fuel high</span>', idle: '<span class="badge b-mute">No trips</span>', workshop: '<span class="badge b-warn">Workshop</span>', grounded: '<span class="badge b-bad">Grounded</span>' };
+  const total = rows.reduce((s, r) => s + r.p, 0);
+  t.innerHTML = `<thead><tr><th>Truck</th><th>Branch</th><th class="r">Trips</th><th class="r">Km</th><th class="r">Revenue</th><th class="r">Expenses</th><th class="r">Profit</th><th></th><th>Status</th></tr></thead><tbody>` +
+    rows.slice(0, 6).map((r) => {
+      const w = (Math.abs(r.p) / maxAbs) * 50, left = r.p < 0 ? 50 - w : 50;
+      return `<tr><td class="pri">${r.code}</td><td>${r.branch}</td><td class="r">${r.trips}</td><td class="r">${r.km ? fmt(r.km) : "—"}</td><td class="r">${r.rev ? fmt(r.rev) : "—"}</td><td class="r">${fmt(r.exp)}</td><td class="r" style="font-weight:650">${pl(r.p)}</td><td><span class="bar"><i style="left:${left}%;width:${w}%;background:${r.p < 0 ? "var(--series-2)" : "var(--series-1)"}"></i></span></td><td>${badge[r.st]} <span style="font-size:12px;color:var(--muted-foreground)">${r.note ?? ""}</span></td></tr>`;
+    }).join("") +
+    `<tr class="sum"><td colspan="6">All 12 trucks</td><td class="r">${fmt(total)}</td><td colspan="2"></td></tr>` +
+    `<tr class="sum"><td colspan="6">Company costs (office rent, office staff, phones)</td><td class="r">−${fmt(COMPANY_COSTS)}</td><td colspan="2"></td></tr>` +
+    `<tr class="sum"><td colspan="6">Company profit</td><td class="r">${fmt(total - COMPANY_COSTS)}</td><td colspan="2"></td></tr></tbody>`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".summary").forEach((el) => {
+    el.insertAdjacentHTML("afterbegin", `<div class="when">${icon("cal")}Summary for Monday, October 5 · numbers updated today 08:12</div>`);
+    el.insertAdjacentHTML("beforeend", `<span class="x" title="Close until the next summary">${icon("x")}</span>`);
+  });
+  bridge(document.getElementById("c-bridge"), [
+    { label: "Sep 1–9", v: 1970000, total: true },
+    { label: "Revenue", v: 660000, note: "27 closed trips vs 25" },
+    { label: "Fuel", v: -420000, note: "VH007 accounts for 140 000" },
+    { label: "Repairs|and parts", v: -360000, note: "VH003 brakes 420 000" },
+    { label: "Tolls and|checkpoints", v: -40000, note: "More Bafoussam trips" },
+    { label: "Other|truck costs", v: 100000, note: "Lower insurance and misc." },
+    { label: "Company|costs", v: -40000, note: "New phone contract" },
+    { label: "Oct 1–9", v: 1870000, total: true },
+  ]);
+  const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"];
+  lines(document.getElementById("c-inout"), months, [
+    { name: "Revenue", color: css("--series-1"), values: [27.1, 28.4, 26.9, 27.8, 29.5, 28.8, 30.2, 29.6, 29.1, 30.8, 31.4, 30.6] },
+    { name: "Expenses", color: css("--series-2"), values: [22.3, 23.6, 22.8, 22.9, 24.4, 23.7, 24.8, 24.1, 24.6, 25.0, 25.5, 23.7] },
+  ]);
+  hbars(document.getElementById("c-branch"), [["Douala", 1000000, "5 trucks · VH003 grounded"], ["Yaoundé", 900000, "4 trucks"], ["Bafoussam", 610000, "3 trucks · VH007 fuel"]], { signed: true, lw: 78 });
+  compareBars(document.getElementById("c-cat"), [
+    ["Fuel", 4160000, 3740000], ["Repairs and parts", 1080000, 720000], ["Driver allowances", 760000, 760000], ["Company costs", 640000, 600000],
+    ["Tolls and checkpoints", 430000, 390000], ["Insurance and papers", 310000, 330000], ["Other", 310000, 390000],
+  ]);
+  hbars(document.getElementById("c-fuel"), [["VH007", 360, "3 trips · Bafoussam"], ["VH009", 318], ["VH005", 305], ["VH004", 296], ["VH001", 290], ["VH002", 288], ["VH006", 285], ["VH011", 281], ["VH008", 279]],
+    { ref: 290, refLabel: "Fleet median 290", unit: "XAF/km", flag: (n) => n === "VH007", lw: 54, label: "Fuel per km" });
+  hbars(document.getElementById("c-profit"), FLEET.map((f) => [f[0], f[4] - f[5], f[7]]).sort((a, b) => b[1] - a[1]), { signed: true, lw: 54 });
+  const B = (s) => s.replace(/\s/g, "");
+  board(document.getElementById("c-board"), [
+    ["VH001", B("TTTAT TTATT TTTAA TTTTA TTATT TTTAT")],
+    ["VH002", B("TTATT TATTT ATTTA TTWTT TTATT ATTTT")],
+    ["VH003", B("TTTAT TTATT AATTT TTATT TWWWW WWWGG")],
+    ["VH004", B("ATTTA TTTAT TTATT TATTT ATTTA TTTAT")],
+    ["VH005", B("TTATT TTTAA TTTTA TTTAT TTATT TAATT")],
+    ["VH006", B("TATTT ATTTA AATTT TATTA TTTAT TTATA")],
+    ["VH007", B("TTTAT TATTT ATTTT AATTT ATTTA TTTAT")],
+    ["VH008", B("ATTAT TTATA TTTAA TTATT TATTA ATTTA")],
+    ["VH009", B("AATTA TTAAT TATTA ATTAA TTATA TTAAT")],
+    ["VH010", B("TTATT TATTA TTTAT ATTTA TWWWW WWWWW")],
+    ["VH011", B("ATTAA TTATT AATTA TTAAT ATTAA TATTA")],
+    ["VH012", B("TTATT ATTAT TATTN NAATT TAAAA AAAAA")],
+  ]);
+  columns(document.getElementById("c-tripsweek"), ["W30", "W31", "W32", "W33", "W34", "W35", "W36", "W37", "W38", "W39", "W40", "W41"], [18, 21, 19, 22, 20, 23, 21, 24, 22, 20, 23, 19], { unit: "Trips", partialLast: true });
+  hbars(document.getElementById("c-routes"), [["Douala–Yaoundé", 720, "11 trips"], ["Douala–Bafoussam", 690, "7 trips"], ["Yaoundé–Bafoussam", 610, "5 trips"], ["Douala–N'Djamena", 540, "4 trips · empty returns"]], { unit: "XAF/km", lw: 120, label: "Revenue per km" });
+  columns(document.getElementById("c-down"), months.slice(1).concat("Oct"), [3, 8, 5, 2, 7, 4, 9, 5, 3, 6, 5, 9], { unit: "Truck-days", partialLast: true });
+  profitTable(document.getElementById("t-ue"));
+  sparks();
+});
+</script>
+</body>
+</html>
