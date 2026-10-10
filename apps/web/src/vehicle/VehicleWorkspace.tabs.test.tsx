@@ -285,7 +285,7 @@ describe("Money", () => {
 
   describe("spending by category's shares", () => {
     const categoryCard = async () =>
-      (await screen.findByText("Spending by category")).closest<HTMLElement>('[data-slot="card"]')!;
+      (await screen.findByText("Expenses by category")).closest<HTMLElement>('[data-slot="card"]')!;
 
     it("gives each category its share of a month that spent", async () => {
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09`, { role: "FINANCE" });
@@ -358,7 +358,10 @@ describe("Money", () => {
     await user.click(screen.getByRole("button", { name: "Previous month" }));
     await screen.findByRole("heading", { name: "Money · July 2026" });
     expect(recorded.history.location.search).toContain("period=2026-07");
-    expect(screen.getByText(/Lifetime, all posted entries since registration/).textContent).toMatch(/2,850,000/);
+    const lifetime = screen.getByText(/Lifetime, all posted entries since registration/).textContent;
+    expect(lifetime).toMatch(/2,850,000/);
+    expect(lifetime).toMatch(/Profit FCFA\s1,505,000/);
+    expect(lifetime).not.toMatch(/\bnet\b/i);
   });
 });
 
