@@ -228,7 +228,8 @@ export function workOrderSteps(
           lock: { key: "needsCompletion", params: reference(wo.id) },
         };
       }
-      // Costs attach only to open work (WORK_ORDER_NOT_OPEN otherwise).
+      // Costs attach to open work, and to completed work for the late invoice
+      // (#82); WORK_ORDER_NOT_OPEN otherwise.
       if (may.addCost(viewer)) offer("add-cost");
       if (managing) offer("cancel-work-order");
       break;
@@ -261,6 +262,8 @@ export function workOrderSteps(
           ? { kind: "locked", step: step("release"), lock }
           : { kind: "go", step: step("release") };
       }
+      // The invoice that arrives after the close; it always waits for review (#82).
+      if (may.addCost(viewer)) offer("add-cost");
       break;
     }
     case "REJECTED":
@@ -616,6 +619,7 @@ const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   WORK_ORDER_AWAITING_AUTHORIZATION: "manager",
   WORK_ORDER_IN_PROGRESS: "workshop",
   WORK_ORDER_AWAITING_SIGN_OFF: "manager",
+  WORK_ORDER_COST_TO_COME: "workshop",
   ASSET_AWAITING_RELEASE: "manager",
   DOCUMENT_EXPIRED: "operations",
   DOCUMENT_EXPIRING: "operations",
@@ -688,6 +692,8 @@ export function attentionStep(
       return maker
         ? locked("approve-completion", { key: "completerCannotSignOff", params: ref })
         : go("approve-completion");
+    case "WORK_ORDER_COST_TO_COME":
+      return may.addCost(viewer) ? go("add-cost") : { kind: "none" };
     case "ASSET_AWAITING_RELEASE": {
       if (!may.release(viewer)) return { kind: "none" };
       if (viewer.principalType !== "HUMAN") return locked("release", { key: "humanOnly" });

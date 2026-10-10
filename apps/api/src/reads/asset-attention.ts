@@ -39,7 +39,7 @@ import { addDays, currentBusinessDate } from "./business-date.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
-import { workOrderActualCostSql } from "./work-order-cost.js";
+import { costToCome, workOrderActualCostSql, workOrderCostToComeColumns } from "./work-order-cost.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 import { directionDecidesEntries } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
@@ -86,10 +86,12 @@ async function lastReleases(
   return new Map(rows.map((row) => [row.issueId, row.closedAt]));
 }
 
+/** `books`: FINANCE is on, so a cost still to come can be booked (#82). */
 async function maintenanceItems(
   tx: TenantTx,
   auth: AuthContext,
   assetId: string,
+  books: boolean,
 ): Promise<{ items: AssetAttentionItem[]; grounding: Grounding | undefined }> {
   const ws = auth.workspaceId;
   const items: AssetAttentionItem[] = [];
@@ -154,6 +156,9 @@ async function maintenanceItems(
       description: workOrders.description,
       expectedCostMinor: workOrders.expectedCostMinor,
       actualCostMinor: workOrderActualCostSql(),
+      costOutcome: workOrders.costOutcome,
+      declaredCostMinor: workOrders.declaredCostMinor,
+      ...workOrderCostToComeColumns(),
       currency: workOrders.currency,
       completionRejectReason: workOrders.completionRejectReason,
       completedAt: workOrders.completedAt,
@@ -293,6 +298,30 @@ async function maintenanceItems(
         makerPrincipalIds: maker ? [maker] : [],
         params: { description: clip(order.description), ...costs },
       });
+    } else if (order.status === "COMPLETED" && costsVisible && books) {
+      const toCome = costToCome(order);
+      // A line awaiting review is already on the list as ENTRY_AWAITING_REVIEW.
+      if (toCome !== null && !toCome.awaitingApproval) {
+        items.push({
+          code: "WORK_ORDER_COST_TO_COME",
+          severity: "WARNING",
+          subject,
+          since: (order.completedAt ?? order.createdAt).toISOString(),
+          // The grounding sentence speaks of the release, never of the invoice.
+          partOfGrounding: false,
+          makerPrincipalIds: [],
+          params: {
+            description: clip(order.description),
+            currency: order.currency,
+            ...(toCome.reason === "DECLARED_NOT_RECORDED"
+              ? {
+                  declaredCostMinor: toCome.declaredCostMinor,
+                  recordedCostMinor: toCome.recordedCostMinor,
+                }
+              : {}),
+          },
+        });
+      }
     }
   }
 
@@ -542,7 +571,7 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
   // Notes are CORE: whoever sees the vehicle sees Direction's notes on it (#98).
   const items: AssetAttentionItem[] = await directionNoteItems(tx, auth, assetId);
   if (modules.has("MAINTENANCE")) {
-    items.push(...(await maintenanceItems(tx, auth, assetId)).items);
+    items.push(...(await maintenanceItems(tx, auth, assetId, modules.has("FINANCE"))).items);
   }
   if (modules.has("DOCUMENTS") && canReadDocuments(auth.role)) {
     items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate, timezone)));

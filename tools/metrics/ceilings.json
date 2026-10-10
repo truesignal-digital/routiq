@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 683318,
+    "ceiling": 683412,
     "raises": [
       {
         "date": "2026-10-06",
@@ -179,8 +179,8 @@
       {
         "date": "2026-10-09",
         "from": 682663,
-        "to": 683318,
-        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
+        "to": 683412,
+        "reason": "Late repair invoices (#82): cost-to-come strings in fr and en and the late-invoice form state on the vehicle panel"
       }
     ]
   },
@@ -238,7 +238,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 257853,
+    "ceiling": 258261,
     "raises": [
       {
         "date": "2026-10-06",
@@ -411,8 +411,8 @@
       {
         "date": "2026-10-09",
         "from": 257700,
-        "to": 257853,
-        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
+        "to": 258261,
+        "reason": "Late repair invoices (#82): cost-to-come strings in fr and en and the late-invoice form state on the vehicle panel"
       }
     ]
   }

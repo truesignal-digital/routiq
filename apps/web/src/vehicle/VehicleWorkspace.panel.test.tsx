@@ -149,6 +149,85 @@ it("reads a close with the invoice still to come as such, not as a zero cost", a
   expect(within(panel).getByText("Invoice not received yet")).toBeTruthy();
 });
 
+describe("the invoice that arrives after the close (#82)", () => {
+  const closedPending = {
+    ...scenario,
+    asset: asset({ availability: { state: "AVAILABLE", since: null } }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 0,
+        costOutcome: "INVOICE_PENDING",
+        costToCome: { reason: "INVOICE_PENDING", awaitingApproval: false },
+      }),
+    ],
+  };
+
+  it("says the cost is still to come, and adds the invoice with a required reason", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, closedPending);
+    const user = userEvent.setup();
+    const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+    expect(
+      within(panel).getByText("Cost to come: the work was closed before the invoice arrived."),
+    ).toBeTruthy();
+
+    await user.click(within(panel).getByRole("button", { name: "Record expense" }));
+    const form = await screen.findByRole("dialog", { name: "Record expense" });
+    expect(
+      within(form).getByText("This work is completed: the invoice goes to approval, whatever its amount."),
+    ).toBeTruthy();
+    await openSelect(user, within(form).getByLabelText("Category"));
+    await user.click(await screen.findByRole("option", { name: "Repairs" }));
+    await user.type(within(form).getByLabelText("Amount (FCFA)"), "62000");
+    const submit = within(form).getByRole("button", { name: "Record the expense" });
+    // No reason, no invoice: the server would refuse it (LATE_COST_REASON_REQUIRED).
+    expect(submit.hasAttribute("disabled")).toBe(true);
+    await user.type(within(form).getByLabelText("Reason"), "Invoice received after the close");
+    await user.click(submit);
+
+    await waitFor(() => expect(recorded.commands).toHaveLength(1));
+    expect(recorded.commands[0]?.name).toBe("record-expense");
+    expect(recorded.commands[0]?.body.payload).toMatchObject({
+      amountMinor: 62_000,
+      categoryCode: "REPAIRS",
+      description: "Invoice received after the close",
+      postings: [{ assetId: ASSET_ID, workOrderId: WORK_ORDER_ID, amountMinor: 62_000 }],
+    });
+  });
+
+  it("says when the invoice is in and waits for approval, and what a v1 close declared", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+      ...closedPending,
+      workOrderDetails: [
+        workOrderDetail("COMPLETED", {
+          completedAt: "2026-09-30T10:00:00.000Z",
+          actualCostMinor: 0,
+          declaredCostMinor: 50_000,
+          costToCome: {
+            reason: "DECLARED_NOT_RECORDED",
+            declaredCostMinor: 50_000,
+            recordedCostMinor: 0,
+            awaitingApproval: false,
+          },
+        }),
+      ],
+    });
+    const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+    expect(within(panel).getByText(/^Cost to come: declared FCFA\s50,000, recorded FCFA\s0\.$/)).toBeTruthy();
+  });
+
+  it("gives Finance no cost to add on it (#414)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+      ...closedPending,
+      role: "FINANCE",
+    });
+    const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+    expect(within(panel).getByText(/^Cost to come/)).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Record expense" })).toBeNull();
+  });
+});
+
 it("gives a driver the work order without its money: no cost facts, no cost lines (#390)", async () => {
   await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
     ...scenario,
