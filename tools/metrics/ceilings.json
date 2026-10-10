@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 764263,
+    "ceiling": 764827,
     "raises": [
       {
         "date": "2026-10-06",
@@ -286,27 +286,9 @@
       },
       {
         "date": "2026-10-10",
-        "from": 694679,
-        "to": 694965,
-        "reason": "Loss/Profit helper and money words (#659)"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 694679,
-        "to": 699097,
-        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's 286 B until that PR merges"
-      },
-      {
-        "date": "2026-10-10",
         "from": 713902,
-        "to": 742646,
-        "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 713902,
-        "to": 764263,
-        "reason": "Summary notice on every Overview (#667): component, money sentence helper, verdict badge and fr/en words, about 6.3 kB gzip across the catalogs and the five Overview chunks. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge"
+        "to": 764827,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): notice component, money sentence helper, verdict badge, fr/en words across the catalogs and the five Overview chunks, plus the Company settings section, form and read hook, about 6.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge (re-recorded on develop 4dee04a4)"
       }
     ]
   },
@@ -388,7 +370,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 279795,
+    "ceiling": 280366,
     "raises": [
       {
         "date": "2026-10-06",
@@ -644,21 +626,9 @@
       },
       {
         "date": "2026-10-10",
-        "from": 261561,
-        "to": 262681,
-        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
-      },
-      {
-        "date": "2026-10-10",
         "from": 266200,
-        "to": 273236,
-        "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 266200,
-        "to": 279795,
-        "reason": "Summary notice on every Overview (#667): its fr/en ICU sentences (five money templates for profit and expenses, the module Overviews' sentences, trip-word overlays for both presets) in the first-load i18n catalog plus the notice component, about 2.3 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge"
+        "to": 280366,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): the notice's fr/en ICU sentences (money templates, module Overview sentences, trip-word overlays for both presets), the notice component, the summary setting's fr/en words and the schedule list in contracts, about 2.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge (re-recorded on develop 4dee04a4)"
       }
     ]
   }

@@ -86,6 +86,7 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
         "create-branch",
         "rename-branch",
         "set-branch-status",
+        "set-summary-schedule",
       ],
       ["DIRECTOR"],
     ),

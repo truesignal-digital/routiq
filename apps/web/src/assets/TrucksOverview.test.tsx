@@ -168,7 +168,7 @@ describe("Trucks › Overview (#665)", () => {
     localStorage.clear();
     renderAs("ADMIN", undefined, {
       ...OVERVIEW,
-      notice: { today: "2026-10-05", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] },
+      notice: { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] },
     });
     const region = await screen.findByRole("region", { name: "Summary" });
     expect(region.textContent).toMatch(/Can drive today: 10 of 12 (vehicles|trucks)\./);
@@ -179,7 +179,7 @@ describe("Trucks › Overview (#665)", () => {
   });
 
   it("names a grounding once: as the big change, not again as the longest off the road (#667)", () => {
-    const notice = { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+    const notice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START" as const, scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
     const t = i18n.getFixedT("en");
     const grounded = { ...OVERVIEW, notice } as AssetOverview;
     expect(truckSummaryDetails(grounded, t, "en")).toHaveLength(1);

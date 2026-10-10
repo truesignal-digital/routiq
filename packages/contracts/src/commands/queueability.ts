@@ -65,6 +65,8 @@ export const COMMAND_QUEUEABILITY = {
   "lock-period": false,
   "reopen-period": false,
   "update-approval-threshold": false,
+  // A company setting, Direction's decision like the approval bands.
+  "set-summary-schedule": false,
   "create-category": false,
   "relabel-category": false,
   "deactivate-category": false,

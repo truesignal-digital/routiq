@@ -12,6 +12,9 @@ vi.mock("../auth/me.js", async (importOriginal) => ({
 vi.mock("../settings/ApprovalSettings.js", () => ({
   ApprovalSettings: () => <section aria-label="approvals" />,
 }));
+vi.mock("../settings/SummaryScheduleSettings.js", () => ({
+  SummaryScheduleSettings: () => <section aria-label="dashboard summary" />,
+}));
 
 const { CompanySettingsScreen } = await import("./CompanySettingsScreen.js");
 
@@ -28,11 +31,12 @@ afterAll(async () => {
 });
 afterEach(cleanup);
 
-describe("CompanySettingsScreen (#354)", () => {
-  it("shows Direction the approvals section", () => {
+describe("CompanySettingsScreen (#354, #669)", () => {
+  it("shows Direction the approvals and Dashboard summary sections", () => {
     as("DIRECTOR");
     expect(screen.getByRole("heading", { name: "Company settings" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "approvals" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "dashboard summary" })).toBeTruthy();
   });
 
   it.each(["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const)(
@@ -40,6 +44,7 @@ describe("CompanySettingsScreen (#354)", () => {
     (role) => {
       as(role);
       expect(screen.queryByRole("region", { name: "approvals" })).toBeNull();
+      expect(screen.queryByRole("region", { name: "dashboard summary" })).toBeNull();
       expect(screen.getByText("Your role does not allow this action.")).toBeTruthy();
     },
   );

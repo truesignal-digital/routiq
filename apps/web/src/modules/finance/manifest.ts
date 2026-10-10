@@ -50,7 +50,7 @@ export const financeManifest: WebModuleManifest = {
       labelKey: "settings.title",
       to: "/more/company",
       icon: SlidersHorizontal,
-      // The approval chain is its only section so far (#354).
+      // The approval chain (#354) and the Dashboard summary schedule (#669).
       reads: canManageCompanySettings,
     },
   ],

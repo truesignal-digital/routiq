@@ -560,7 +560,8 @@ describe("module overviews", () => {
       for (const [name, read] of Object.entries(reads)) {
         const { notice } = await read(director);
         expect(notice.today, name).toBe(today);
-        expect(notice.scheduledOn <= today, name).toBe(true);
+        expect(notice.schedule, name).toBe("MONDAY_AND_MONTH_START");
+        expect(notice.scheduledOn !== null && notice.scheduledOn <= today, name).toBe(true);
         expect(grounded(notice), name).toEqual(["VH002", "VH003"]);
         // The key is the grounding's: the same one every day until it ends.
         expect((await read(director)).notice.changes.map((change) => change.key), name).toEqual(

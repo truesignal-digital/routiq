@@ -20,6 +20,8 @@ export * from "./commands/asset-lifecycle.js";
 export * from "./reads/list.js";
 export * from "./reads/assets.js";
 export * from "./reads/overview-notice.js";
+export * from "./reads/company-settings.js";
+export * from "./commands/set-summary-schedule.js";
 export * from "./reads/dashboard.js";
 export * from "./reads/nav-counts.js";
 export * from "./reads/artifacts.js";

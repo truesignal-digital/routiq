@@ -52,7 +52,7 @@ describe("activity summary contract", () => {
     closedMissing: { fuel: 3, km: 2 },
     weekKm: null,
     weeks,
-    notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+    notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
   };
 
   it("accepts the overview, with fuel withheld while Money is off", () => {

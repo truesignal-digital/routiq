@@ -10,6 +10,7 @@ import "./commands/add-or-renew-document.js";
 import "./commands/module-toggle.js";
 import "./commands/update-approval-threshold.js";
 import "./commands/update-approval-threshold-v2.js";
+import "./commands/set-summary-schedule.js";
 import "./commands/asset-lifecycle.js";
 import "./commands/record-financial-entry.js";
 import "./commands/entry-decisions.js";
@@ -65,6 +66,7 @@ import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
 import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
 import { registerApprovalThresholdsReadRoutes } from "./reads/approval-thresholds.js";
+import { registerCompanySettingsReadRoutes } from "./reads/company-settings.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
 import { enabledModuleSet } from "./reads/read-gate.js";
 import { workspaceTimezone } from "./reads/workspace-day.js";
@@ -155,6 +157,7 @@ export function buildServer({
   registerMaintenanceReadRoutes(app, db, requireAuth);
   registerApprovalChainReadRoutes(app, db, requireAuth);
   registerApprovalThresholdsReadRoutes(app, db, requireAuth);
+  registerCompanySettingsReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {

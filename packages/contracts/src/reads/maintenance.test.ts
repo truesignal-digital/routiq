@@ -197,7 +197,7 @@ describe("maintenance summary contract", () => {
     repairsCounted: 3,
     repairWindowDays: 90,
     repairCost: { amountMinor: 100_000, currency: "XAF", workOrders: 2 },
-    notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+    notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
   };
 
   it("accepts the overview, with the cost withheld as null", () => {

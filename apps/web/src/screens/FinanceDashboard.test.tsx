@@ -212,6 +212,7 @@ describe("Dashboard › Overview", () => {
       },
       notice: {
         today: "2026-11-01",
+        schedule: "MONDAY_AND_MONTH_START",
         scheduledOn: "2026-11-01",
         scheduledToday: "MONTH_START",
         changes: [{ kind: "EXPENSES_UP", key: "EXPENSES_UP:2026-10-01", expenseMinor: 7_690_000, comparisonExpenseMinor: 6_100_000, percent: 26 }],

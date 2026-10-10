@@ -2240,6 +2240,11 @@
       "submit": "Save thresholds",
       "submitting": "Saving…"
     },
+    "set-summary-schedule": {
+      "label": "Change Dashboard summary",
+      "submit": "Save",
+      "submitting": "Saving…"
+    },
     "create-category": {
       "label": "Create a category",
       "submit": "Create category",
@@ -3140,6 +3145,24 @@
     "title": "Company settings",
     "description": "Rules that apply to everyone in the company. Only the Director can change them.",
     "retry": "Try again",
+    "summary": {
+      "title": "Dashboard summary",
+      "description": "When the summary shows on the Dashboard and every Overview. It also shows when something big changes, except under Never.",
+      "loading": "Loading the Dashboard summary setting",
+      "loadFailed": "The Dashboard summary setting could not be loaded.",
+      "closable": "Each person can still close it.",
+      "schedule": {
+        "MONDAY_AND_MONTH_START": "Every Monday and on the 1st of the month",
+        "MONDAY": "Every Monday",
+        "MONTH_START": "On the 1st of the month only",
+        "NEVER": "Never: tiles only"
+      },
+      "form": {
+        "description": "Applies to everyone in the company, from the next visit on.",
+        "now": "Now",
+        "field": "Show the summary"
+      }
+    },
     "approvals": {
       "title": "Approvals",
       "description": "Up to which amount a money entry posts without review, and who decides it above that.",
@@ -3174,7 +3197,8 @@
     },
     "notify": {
       "success": {
-        "thresholdsSaved": "Approval thresholds saved"
+        "thresholdsSaved": "Approval thresholds saved",
+        "summaryScheduleSaved": "Dashboard summary saved"
       }
     }
   },

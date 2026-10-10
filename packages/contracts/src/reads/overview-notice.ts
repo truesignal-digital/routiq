@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SUMMARY_SCHEDULES } from "../commands/set-summary-schedule.js";
 import { moneyMinor } from "../envelope.js";
 
 /**
@@ -6,9 +7,10 @@ import { moneyMinor } from "../envelope.js";
  * sentence that shows on a schedule and when something big changes, and that
  * each person can close until the next one.
  *
- * The schedule is fixed for now: every Monday and the 1st of the month (the
- * 1st talks about last month). When a day is both, it is the 1st. The company
- * setting that picks another schedule comes with #669.
+ * The company picks the schedule (Company settings › Dashboard summary, #669):
+ * every Monday and the 1st of the month by default (the 1st talks about last
+ * month), Mondays only, the 1st only, or never. When a day is both, it is the
+ * 1st.
  */
 export const SUMMARY_SCHEDULE_REASONS = ["MONDAY", "MONTH_START"] as const;
 export type SummaryScheduleReason = (typeof SUMMARY_SCHEDULE_REASONS)[number];
@@ -52,11 +54,17 @@ export function overviewNoticeSchema() {
     /** The workspace's business date. */
     today: z.iso.date(),
     /**
-     * The latest scheduled day on or before today: the last Monday or the
-     * 1st, whichever is later. A person who closes the notice closes it for
-     * this day's summary; the next scheduled day brings it back.
+     * The company's schedule. NEVER shows tiles only: no scheduled summary
+     * and no notice for a big change; "Show summary" still opens it.
      */
-    scheduledOn: z.iso.date(),
+    schedule: z.enum(SUMMARY_SCHEDULES),
+    /**
+     * The latest scheduled day on or before today under `schedule`: the last
+     * Monday or the 1st, whichever is later, by default. A person who closes
+     * the notice closes it for this day's summary; the next scheduled day
+     * brings it back. Null when the schedule is NEVER.
+     */
+    scheduledOn: z.iso.date().nullable(),
     /** Why today is a scheduled day; null on the other days. */
     scheduledToday: z.enum(SUMMARY_SCHEDULE_REASONS).nullable(),
     /**

@@ -7,7 +7,8 @@ import type { OverviewNotice } from "@routiq/contracts";
  * there is no per-person preference store on the server yet.
  */
 export interface ClosedSummary {
-  scheduledOn: string;
+  /** Null when it was closed while the company's schedule was NEVER. */
+  scheduledOn: string | null;
   changeKeys: string[];
 }
 
@@ -21,7 +22,7 @@ function isClosedSummary(value: unknown): value is ClosedSummary {
   if (typeof value !== "object" || value === null) return false;
   const closed = value as Record<string, unknown>;
   return (
-    typeof closed["scheduledOn"] === "string" &&
+    (typeof closed["scheduledOn"] === "string" || closed["scheduledOn"] === null) &&
     Array.isArray(closed["changeKeys"]) &&
     closed["changeKeys"].every((key) => typeof key === "string")
   );
@@ -53,9 +54,11 @@ export type NoticeReason = "MONDAY" | "MONTH_START" | "CHANGE";
  * Due on a scheduled day the person has not closed, or when a big change
  * shows that their last close did not cover. Closing covers today's
  * scheduled summary and the changes on screen; the next scheduled day, or a
- * new change, brings it back.
+ * new change, brings it back. The company's schedule decides the scheduled
+ * days (#669); under NEVER nothing is due, big changes included.
  */
 export function noticeReason(notice: OverviewNotice, closed: ClosedSummary | undefined): NoticeReason | null {
+  if (notice.schedule === "NEVER") return null;
   if (notice.scheduledToday !== null && closed?.scheduledOn !== notice.scheduledOn) return notice.scheduledToday;
   if (notice.changes.some((change) => !(closed?.changeKeys.includes(change.key) ?? false))) return "CHANGE";
   return null;
