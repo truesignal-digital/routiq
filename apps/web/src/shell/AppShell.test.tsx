@@ -49,9 +49,17 @@ vi.mock("../reference/asset-registration.js", () => ({
 }));
 
 /** The notice's own behaviour has its own test; here only where it sits. */
-vi.mock("../approval-rules/ApprovalRulesNotice.js", () => ({
-  ApprovalRulesNotice: () => <div data-testid="rules-notice" />,
-}));
+/** The real notice only where a test reads the approval chain through it (#496). */
+const realNotice = { current: false };
+vi.mock("../approval-rules/ApprovalRulesNotice.js", async () => {
+  const actual = await vi.importActual<typeof import("../approval-rules/ApprovalRulesNotice.js")>(
+    "../approval-rules/ApprovalRulesNotice.js",
+  );
+  return {
+    ApprovalRulesNotice: () =>
+      realNotice.current ? <actual.ApprovalRulesNotice /> : <div data-testid="rules-notice" />,
+  };
+});
 
 const { AppShell } = await import("./AppShell.js");
 const { PageContainer } = await import("../components/page-container.js");
@@ -359,15 +367,45 @@ describe("AppShell (sidebar frame)", () => {
     expect(live?.textContent).toBe("You are viewing: Yaoundé");
   });
 
-  it("asks for the approval rules again on every new screen (#422)", async () => {
-    const router = await renderShell("/assets");
-    const invalidate = vi.spyOn(client, "invalidateQueries");
-    await router.navigate({ to: "/finance/entries" });
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({
-        queryKey: ["ws", session.workspaceSlug, "approval-chain"],
+  it("shows the approval-rules notice another member's change raised, on the next screen once a minute has passed (#422, #496)", async () => {
+    const { APPROVAL_CHAIN_RECHECK_MS } = await import("../approval-rules/useApprovalChain.js");
+    let notice: { changeId: string; changedAt: string; changedBy: string } | null = null;
+    const chainReads = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (new URL(String(input), "http://app.test").pathname !== "/v1/approval-chain") return new Response(null, { status: 404 });
+        chainReads();
+        return Response.json({ currency: "XAF", chains: [], notice });
       }),
     );
+    realNotice.current = true;
+    try {
+      // The notice sits in the page's own column (#467), so only a page container shows it.
+      const router = await renderShell("/narrow-page");
+      await waitFor(() => expect(chainReads).toHaveBeenCalledTimes(1));
+
+      // Direction changes the rules; within the minute, moving screens asks nothing.
+      notice = { changeId: "change-1", changedAt: "2026-10-05T09:00:00.000Z", changedBy: "Mme Ngo" };
+      await router.navigate({ to: "/finance/entries" });
+      await screen.findByText("/finance/entries");
+      await router.navigate({ href: "/narrow-page" });
+      await screen.findByText("Narrow page");
+      expect(chainReads).toHaveBeenCalledTimes(1);
+      expect(document.querySelector("[data-slot='approval-rules-notice']")).toBeNull();
+
+      // A minute later, the next screen asks again and the notice appears.
+      const key = ["ws", session.workspaceSlug, "approval-chain"];
+      client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - APPROVAL_CHAIN_RECHECK_MS });
+      await router.navigate({ to: "/assets" });
+      await screen.findByText("/assets");
+      await router.navigate({ href: "/narrow-page" });
+      await waitFor(() => expect(document.querySelector("[data-slot='approval-rules-notice']")).not.toBeNull());
+      expect(chainReads).toHaveBeenCalledTimes(2);
+    } finally {
+      realNotice.current = false;
+      vi.unstubAllGlobals();
+    }
   });
 
   it("puts the approval-rules notice in the page's own column, once (#467)", async () => {

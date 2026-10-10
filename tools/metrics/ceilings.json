@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 703751,
+    "ceiling": 710828,
     "raises": [
       {
         "date": "2026-10-06",
@@ -265,6 +265,12 @@
         "from": 694831,
         "to": 703751,
         "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 703751,
+        "to": 710828,
+        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
       }
     ]
   },
@@ -328,7 +334,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 263756,
+    "ceiling": 264506,
     "raises": [
       {
         "date": "2026-10-06",
@@ -563,6 +569,12 @@
         "from": 261561,
         "to": 263756,
         "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 263756,
+        "to": 264506,
+        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
       }
     ]
   }

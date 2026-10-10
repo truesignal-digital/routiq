@@ -1,10 +1,11 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { queryOptions, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type {
   ActivityDetail,
   ActivityListResponse,
   ActivitySummary,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { authed, listQueryOptions } from "../lib/list-query.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
 
 export async function fetchActivities(
@@ -53,20 +54,12 @@ export interface UseActivitiesParams {
 /** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
 export function useActivities(callerParams: UseActivitiesParams = {}) {
   const session = useActiveSession();
-  const params = useBranchScopedParams(callerParams);
+  return useInfiniteQuery(activitiesQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams)));
+}
 
-  return useInfiniteQuery<ActivityListResponse>({
-    queryKey: ["ws", session?.workspaceSlug, "activities", params],
-    enabled: session !== undefined,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage: ActivityListResponse) => lastPage.nextCursor ?? undefined,
-    queryFn: ({ signal, pageParam }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      const cursor = pageParam as string | undefined;
-      return fetchActivities(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
-    },
-  });
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function activitiesQueryOptions(workspaceSlug: string | undefined, params: UseActivitiesParams) {
+  return listQueryOptions(["ws", workspaceSlug, "activities", params], workspaceSlug, params, fetchActivities);
 }
 
 export async function fetchActivity(
@@ -137,15 +130,14 @@ export async function fetchActivitySummary(
  */
 export function useActivitySummary() {
   const session = useActiveSession();
-  const params = useBranchScopedParams({});
+  return useQuery(activitySummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams({})));
+}
 
-  return useQuery<ActivitySummary>({
-    queryKey: ["ws", session?.workspaceSlug, "activities", "summary", params],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchActivitySummary(token, params, signal);
-    },
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function activitySummaryQueryOptions(workspaceSlug: string | undefined, params: { branchId?: string }) {
+  return queryOptions<ActivitySummary>({
+    queryKey: ["ws", workspaceSlug, "activities", "summary", params],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchActivitySummary(token, params, signal)),
   });
 }
