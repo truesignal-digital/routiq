@@ -221,7 +221,7 @@ describe("Cancel entry on a work-order cost, as Finance (#559)", () => {
     await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
     await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
 
-    await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    await screen.findByText(/Ask the Director, the Administrator or the work order's technician/);
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
     expect(mocks.submit).toHaveBeenCalledOnce();
     await user.click(screen.getByRole("button", { name: "Open the work order" }));

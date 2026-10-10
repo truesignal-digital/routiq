@@ -143,7 +143,7 @@ async function approverHint(ctx: DriveContext) {
 
   await amount.fill("1500000");
   const direction = form.getByText(
-    new RegExp(t("^Au-delà de 1.000.000.FCFA, cette saisie attend la Direction\\.$", "^Above FCFA.1,000,000, this entry waits for Direction\\.$")),
+    new RegExp(t("^Au-delà de 1.000.000.FCFA, cette saisie attend la Direction\\.$", "^Above FCFA.1,000,000, this entry waits for the Director\\.$")),
   );
   await direction.waitFor({ timeout: 5_000 }).catch(() => {
     throw new Error("at 1,500,000 the hint does not name Direction");

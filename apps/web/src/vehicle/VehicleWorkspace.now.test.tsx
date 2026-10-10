@@ -105,8 +105,8 @@ describe("Direction's notes in the To do (#98)", () => {
     const title = await within(card).findByRole("button", { name: BODY });
     const row = title.closest("li");
     expect(row?.className).toContain("bg-info/10");
-    expect(within(row!).getByRole("img", { name: "Note from Direction" })).toBeTruthy();
-    expect(within(row!).getByText(/^Note from Direction · Émilienne · /)).toBeTruthy();
+    expect(within(row!).getByRole("img", { name: "Note from the Director" })).toBeTruthy();
+    expect(within(row!).getByText(/^Note from the Director · Émilienne · /)).toBeTruthy();
 
     const user = userEvent.setup();
     await user.click(within(row!).getByRole("button", { name: "Mark as seen" }));

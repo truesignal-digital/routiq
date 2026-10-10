@@ -106,14 +106,14 @@ describe("ApprovalSettings (#354)", () => {
     expect(within(summary).getAllByRole("listitem").map((item) => plain(item.textContent))).toEqual([
       "Up to FCFA 100,000: posts directly",
       "Up to FCFA 1,000,000: Finance approves",
-      "Above FCFA 1,000,000: Direction approves",
+      "Above FCFA 1,000,000: the Director approves",
     ]);
 
     const finance = screen.getByRole("list", { name: "Finance" });
     expect(within(finance).getAllByRole("listitem").map((item) => plain(item.textContent))).toEqual([
       "Up to FCFA 100,000: posts directly",
-      "Up to FCFA 1,000,000: another Finance member or Direction approves",
-      "Above FCFA 1,000,000: Direction approves",
+      "Up to FCFA 1,000,000: another Finance member or the Director approves",
+      "Above FCFA 1,000,000: the Director approves",
     ]);
     expect(screen.getByText("Emilienne Mbarga changed them on October 5, 2026.")).toBeTruthy();
   });

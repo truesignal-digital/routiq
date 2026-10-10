@@ -446,7 +446,7 @@
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
-        "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
+        "EVIDENCE_MISSING": "Joignez le justificatif dès que vous l'avez.",
         "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
