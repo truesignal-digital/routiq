@@ -1,6 +1,8 @@
 # Home dashboard
 
-Home (`/`) shows KPI cards for the signed-in role, a spending and revenue chart, and recent entries. Finance cards and the chart need a finance reader; the pending-approvals card needs FINANCE or DIRECTOR.
+Home (`/`) is the Dashboard ("Tableau de bord" / "Dashboard"). Direction, Finance and the Administrator get its tabs: Overview (`/`), To do (`/to-do`), Profit by truck (`/profit-by-vehicle`) and Profit by branch (`/profit-by-branch`), the range in `?range=3-months|12-months` (#666). Drive it with `pnpm verify drive flow:dashboard --role director --lang en` (add `--viewport 390x844` for the phone layout, `--role admin-yde` for the costs view of a branch with no revenue). On a fresh seed this month holds almost no posted money; the 12-month range has the July trips.
+
+The cashier, the technician and the driver keep the older Home below: KPI cards for the role, a spending and revenue chart, and recent entries. Finance cards and the chart need a finance reader; the pending-approvals card needs FINANCE or DIRECTOR.
 
 ## Sub-features
 
@@ -12,7 +14,7 @@ Home (`/`) shows KPI cards for the signed-in role, a spending and revenue chart,
 ## How to get to it (user POV)
 
 - Sign in; Home is the landing page.
-- Sidebar "Accueil" / "Home".
+- Sidebar "Tableau de bord" / "Dashboard".
 
 ## Driving it with pnpm verify
 

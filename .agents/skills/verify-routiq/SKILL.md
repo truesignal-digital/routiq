@@ -87,6 +87,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | Flow | Proves | Mutates |
 |---|---|---|
 | `home` | dashboard cards match `GET /v1/dashboard` | no |
+| `dashboard` | Home is the Dashboard for Direction, Finance and the Administrator: Overview tiles = `GET /v1/finance/overview` (12 months) and `GET /v1/assets/summary`, the profit bridge adds up from the comparison profit to this one's, profit by truck with the company lines, branch profit and Coming up, To do lists every row of `GET /v1/todo`, Profit by truck and Profit by branch keep the range; a branch or company with no revenue gets the costs view (no profit); cashier, technician and driver keep Home's tiles (#666). Desktop or `--viewport 390x844` | no |
 | `switch-user` | sign out, sign in as the cashier, role from `GET /v1/me` | no |
 | `vehicle-workspace` | trucks list → VH003 → every tab the role sees | no |
 | `edit-details` | Details → Edit details → make and model saved | yes |
