@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 713902,
+    "ceiling": 770159,
     "raises": [
       {
         "date": "2026-10-06",
@@ -30,7 +30,7 @@
         "date": "2026-10-06",
         "from": 561383,
         "to": 561479,
-        "reason": "#91: Assigned driver / Chauffeur attitr\u00e9 replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
       },
       {
         "date": "2026-10-06",
@@ -307,11 +307,17 @@
         "from": 713902,
         "to": 742646,
         "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 770159,
+        "reason": "Km and daily status (#668): the fleet board, ranked bars with a median, month columns, the usage read's hook and loaders, the fuel per km, cost per km, km driven empty, revenue per km by route and days off the road cards, about 12.2 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's raises until they merge"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22832,
+    "ceiling": 23293,
     "raises": [
       {
         "date": "2026-10-06",
@@ -384,11 +390,17 @@
         "from": 22832,
         "to": 23091,
         "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23293,
+        "reason": "Km and daily status (#668): the fleet board cell and ranked-bar classes, 55 B gzip against the merged #665 + #666 build; the rest is #665's and #666's classes until they merge"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 266200,
+    "ceiling": 280436,
     "raises": [
       {
         "date": "2026-10-06",
@@ -418,7 +430,7 @@
         "date": "2026-10-06",
         "from": 561383,
         "to": 561479,
-        "reason": "#91: Assigned driver / Chauffeur attitr\u00e9 replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
       },
       {
         "date": "2026-10-06",
@@ -659,6 +671,12 @@
         "from": 266200,
         "to": 273236,
         "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 280436,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge"
       }
     ]
   }
