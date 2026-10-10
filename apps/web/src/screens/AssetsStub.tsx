@@ -24,7 +24,6 @@ import {
 import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
 import {
   AssetActionDialog,
@@ -34,8 +33,9 @@ import {
 } from "@/assets/AssetActions.js";
 import { useAssetColumns, type AssetColumnId } from "@/assets/assetColumns.js";
 import { assetFilterQuery, isAssetFilter } from "@/assets/display.js";
-import { canManageAssets, canViewAssets } from "@/assets/permissions.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { canManageAssets } from "@/assets/permissions.js";
+import { contributes } from "@/modules/manifest.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";
@@ -64,12 +64,13 @@ export function AssetsStub() {
   const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
-  const canView = canViewAssets(me?.enabledModules);
+  // The shell opens this page only while Assets is on (`ModulePageGate`).
   const canManage = canManageAssets(me?.role, me?.enabledModules);
-  const documentsEnabled = me?.enabledModules.includes("DOCUMENTS") ?? false;
+  // The row's Documents entry opens the vehicle's Documents tab, so it goes with the tab.
+  const documentsEnabled = contributes("vehicleTabs", "documents", me?.enabledModules);
   // Grounding is a MAINTENANCE fact; the server counts it only while the
   // module is on, so the hint says which set the number covers.
-  const groundingCounted = me?.enabledModules.includes("MAINTENANCE") ?? false;
+  const groundingCounted = contributes("fields", "assets.attentionGrounding", me?.enabledModules);
 
   // The status bucket lives in the URL, where the tiles put it (#302); the
   // other toolbar filters stay local to the visit.
@@ -199,17 +200,6 @@ export function AssetsStub() {
       },
     ];
   }, [summaryQuery.data, t, groundingCounted, urlSearch.status]);
-
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        width="wide"
-        title={t("assets.title")}
-        icon={<Truck className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("ASSETS"))}
-      />
-    );
-  }
 
   return (
     <PageContainer width="wide">

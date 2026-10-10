@@ -1,22 +1,9 @@
-import {
-  Banknote,
-  Building,
-  Calendar,
-  House,
-  Route,
-  ShieldUser,
-  SlidersHorizontal,
-  Truck,
-  UserRound,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
-import { moneyReadScope, type ModuleCode, type NavCountKey, type Role } from "@routiq/contracts";
+import { Building, House, ShieldUser, type LucideIcon } from "lucide-react";
+import type { ModuleCode, NavCountKey, Role, ToggleableModuleCode } from "@routiq/contracts";
 import { canAdministerBranches } from "../branches/permissions.js";
-import { canManagePeriods, canReadFinanceEntries } from "../finance/permissions.js";
 import { isRouteActive } from "../lib/route-match.js";
 import { canAdministerMembers } from "../members/permissions.js";
-import { canManageCompanySettings } from "../settings/permissions.js";
+import { moduleNavRows } from "../modules/manifest.js";
 
 /** The sidebar's groups, in order: the work of the day, then the company's own set-up. */
 export const SECTION_GROUPS = [
@@ -40,8 +27,11 @@ export interface ShellSection {
   match?: string;
   /** The consistency kit's icon for the place (`docs/design/consistency/kit.js`, ICONS). */
   icon: LucideIcon;
-  /** Module that owns this section; sections without one are always visible. */
-  module?: ModuleCode;
+  /**
+   * The module whose manifest adds this row (`src/modules/`); core's rows have
+   * none and are always there. Set from the manifest, never written on a row.
+   */
+  module?: ToggleableModuleCode;
   /**
    * role-config: whether this role has work on the page. Absent means every
    * role; a row with one stays hidden until the role is known.
@@ -62,76 +52,16 @@ export interface SectionCount {
   search: Record<string, string>;
 }
 
-const onlyFor =
-  (roles: readonly Role[]) =>
-  (role: Role): boolean =>
-    roles.includes(role);
-
 /**
- * Every row, in sidebar order within its group. A row is a place (a page of
- * records), never an action or a single record. Rows hide when their module
- * is off or the role has no work there; they are never greyed (#64).
+ * Core's rows, in sidebar order within its group; every module adds its own
+ * through its manifest (`allSections`). A row is a place (a page of records),
+ * never an action or a single record. Rows hide when their module is off or
+ * the role has no work there; they are never greyed (#64).
  */
-const ALL_SECTIONS: readonly ShellSection[] = [
+const CORE_SECTIONS: readonly Omit<ShellSection, "module">[] = [
   // The landing route, and the one section every member keeps: its cards are
   // module-gated individually, so the page is never empty of everything.
   { key: "home", group: "daily", labelKey: "home.title", to: "/", icon: House },
-  { key: "assets", group: "daily", labelKey: "assets.title", to: "/assets", icon: Truck, module: "ASSETS" },
-  {
-    key: "activities",
-    group: "daily",
-    labelKey: "activities.title",
-    to: "/activities",
-    icon: Route,
-    module: "ACTIVITIES",
-    // The counter and the workshop have no trips to run (ADR-0009).
-    reads: onlyFor(["DIRECTOR", "ADMIN", "FINANCE", "DRIVER"]),
-  },
-  {
-    key: "maintenance",
-    group: "daily",
-    labelKey: "maintenance.title",
-    to: "/maintenance",
-    icon: Wrench,
-    module: "MAINTENANCE",
-    reads: onlyFor(["DIRECTOR", "ADMIN", "TECHNICIAN"]),
-    // Opens the Problems tab on the open ones (#302 reads `tab` and `issueStatus`).
-    count: {
-      key: "maintenanceNew",
-      labelKey: "shell.counts.maintenanceNew",
-      to: "/maintenance",
-      search: { tab: "issues", issueStatus: "OPEN" },
-    },
-  },
-  {
-    key: "finances",
-    group: "daily",
-    labelKey: "finance.entries.title",
-    to: "/finance/entries",
-    match: "/finance",
-    icon: Banknote,
-    module: "FINANCE",
-    // A driver reads only the entries they recorded, on their truck and trips.
-    reads: (role, enabledModules) =>
-      canReadFinanceEntries(role, enabledModules) && moneyReadScope(role) !== "OWN_ENTRIES",
-    // The approvals route opens the waiting view (#314), across every branch
-    // the count covers.
-    count: {
-      key: "moneyWaiting",
-      labelKey: "shell.counts.moneyWaiting",
-      to: "/finance/approvals",
-      search: { branch: "all" },
-    },
-  },
-  {
-    key: "persons",
-    group: "company",
-    labelKey: "persons.title",
-    to: "/more/persons",
-    icon: UserRound,
-    module: "ACTIVITIES",
-    reads: onlyFor(["DIRECTOR", "ADMIN", "FINANCE"]),
-  },
   {
     key: "users",
     group: "company",
@@ -148,27 +78,33 @@ const ALL_SECTIONS: readonly ShellSection[] = [
     icon: Building,
     reads: canAdministerBranches,
   },
-  {
-    key: "accountingMonths",
-    group: "company",
-    labelKey: "finance.periods.title",
-    to: "/finance/periods",
-    icon: Calendar,
-    module: "FINANCE",
-    // The roles that lock a month; the page is theirs alone (#314).
-    reads: canManagePeriods,
-  },
-  {
-    key: "companySettings",
-    group: "company",
-    labelKey: "settings.title",
-    to: "/more/company",
-    icon: SlidersHorizontal,
-    module: "FINANCE",
-    // The approval chain is its only section so far (#354).
-    reads: canManageCompanySettings,
-  },
 ];
+
+/** Core's rows keys, for the manifest checks. */
+export const CORE_SECTION_KEYS: readonly string[] = CORE_SECTIONS.map((section) => section.key);
+
+/** Every row, core's and the installed modules', each module row placed beside the row it names. */
+export function allSections(): ShellSection[] {
+  const rows: ShellSection[] = [...CORE_SECTIONS];
+  let pending = moduleNavRows();
+  // A row may be placed by another module's row, so keep placing until none moves.
+  while (pending.length > 0) {
+    const waiting = pending.filter(({ place, ...row }) => {
+      const anchor = "after" in place ? place.after : place.before;
+      const index = rows.findIndex((placed) => placed.key === anchor);
+      if (index === -1) return true;
+      rows.splice("after" in place ? index + 1 : index, 0, row);
+      return false;
+    });
+    if (waiting.length === pending.length) {
+      // An anchor that does not exist (the manifest checks name it): last.
+      rows.push(...waiting.map(({ place: _place, ...row }) => row));
+      break;
+    }
+    pending = waiting;
+  }
+  return rows;
+}
 
 /**
  * The rows this role sees, in sidebar order. While membership is loading
@@ -178,7 +114,7 @@ export function visibleSections(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): ShellSection[] {
-  return ALL_SECTIONS.filter((section) => {
+  return allSections().filter((section) => {
     if (section.module !== undefined && !(enabledModules?.includes(section.module) ?? false)) {
       return false;
     }

@@ -1,10 +1,33 @@
-import type { FinancialEntryListItem } from "@routiq/contracts";
+import type { FinancialEntryListItem, ModuleCode } from "@routiq/contracts";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { useMeContext } from "@/auth/me.js";
 import { RecordText } from "@/components/record-number";
+import { contributes } from "@/modules/manifest.js";
 
 const LINK_CLASS =
   "inline-flex min-h-11 items-center underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground";
+
+/**
+ * Which of an entry's links this viewer gets: each only while the module that
+ * adds it is on (`entry.workOrderLink`, `entry.tripLink`).
+ */
+export function visibleEntryLinks(
+  links: FinancialEntryListItem["links"],
+  enabledModules: readonly ModuleCode[] | undefined,
+): { workOrder: boolean; trip: boolean } {
+  return {
+    workOrder:
+      links.workOrderId !== null &&
+      links.workOrderAssetId !== null &&
+      links.workOrderDescription !== null &&
+      contributes("fields", "entry.workOrderLink", enabledModules),
+    trip:
+      links.activityId !== null &&
+      links.activityNumber !== null &&
+      contributes("fields", "entry.tripLink", enabledModules),
+  };
+}
 
 /**
  * What an entry belongs to: the work order, opened in its vehicle's workspace,
@@ -14,9 +37,12 @@ const LINK_CLASS =
  */
 export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }) {
   const { t } = useTranslation();
+  const me = useMeContext();
   const { workOrderId, workOrderAssetId, workOrderDescription, activityId, activityNumber } = links;
-  const hasWorkOrder = workOrderId !== null && workOrderAssetId !== null && workOrderDescription !== null;
-  const hasTrip = activityId !== null && activityNumber !== null;
+  const shown = visibleEntryLinks(links, me?.enabledModules);
+  const hasWorkOrder =
+    shown.workOrder && workOrderId !== null && workOrderAssetId !== null && workOrderDescription !== null;
+  const hasTrip = shown.trip && activityId !== null && activityNumber !== null;
   if (!hasWorkOrder && !hasTrip) return null;
 
   return (

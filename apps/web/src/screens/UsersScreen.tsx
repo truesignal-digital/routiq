@@ -18,7 +18,7 @@ import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
 import { MemberStatusBadge } from "@/members/MemberStatusBadge.js";
 import { useMeContext } from "@/auth/me.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { AddMemberDialog } from "@/members/AddMemberDialog.js";
 import { branchScopeLabel } from "@/members/BranchScopeField.js";

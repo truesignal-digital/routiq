@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { notifyInfo } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 

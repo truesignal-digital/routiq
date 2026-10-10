@@ -36,7 +36,7 @@ vi.mock("../auth/store.js", () => ({
   useActiveSession: () => session,
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: {
       assetClasses: [],
