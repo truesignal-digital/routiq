@@ -98,7 +98,7 @@ whatever its access says.
 | Money | Attach a receipt or photo | ✓ | ✓ | ✓ | ✓ | ✓ own | ✓ own |
 | Money | Approve or reject an entry | A | — | A | — | — | — |
 | Money | Reverse a posted entry | ✓ | — | ✓ | — | — | — |
-| Money | See entries and the ledger | ✓ | ✓ | ✓ | V branch entries | V work-order costs | V own |
+| Money | See entries and the ledger | ✓ | ✓ | ✓ | V branch entries | V work-order costs | V own expenses |
 | Money | Lock a period (the whole company's month; open question below) | ✓ | — | ✓ | — | — | — |
 | Money | Reopen a locked period | ✓ | — | — | — | — | — |
 | Money | Pay suppliers, in instalments, with receipts *(planned)* | A | V | ✓ | ✓ cash | — | — |
