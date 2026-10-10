@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 713353,
+    "ceiling": 742024,
     "raises": [
       {
         "date": "2026-10-06",
@@ -289,11 +289,17 @@
         "from": 710828,
         "to": 713353,
         "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713353,
+        "to": 742024,
+        "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22941,
+    "ceiling": 23070,
     "raises": [
       {
         "date": "2026-10-06",
@@ -354,11 +360,17 @@
         "from": 22832,
         "to": 22941,
         "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23070,
+        "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 265616,
+    "ceiling": 272640,
     "raises": [
       {
         "date": "2026-10-06",
@@ -611,6 +623,12 @@
         "from": 264506,
         "to": 265616,
         "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265616,
+        "to": 272640,
+        "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
       }
     ]
   }
