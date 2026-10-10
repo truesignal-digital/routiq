@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 686158,
+    "ceiling": 686938,
     "raises": [
       {
         "date": "2026-10-06",
@@ -199,6 +199,12 @@
         "from": 684895,
         "to": 686158,
         "reason": "Module manifests (#326): the manifest contract and slot lookups, the Maintenance manifest, the page gate, and the two module-dependency error messages in fr and en"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 686158,
+        "to": 686938,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
       }
     ]
   },
