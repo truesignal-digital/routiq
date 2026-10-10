@@ -97,6 +97,7 @@ describe("read gates (#59)", () => {
     for (const [url, module] of [
       ["/v1/assets", "ASSETS"],
       ["/v1/assets/summary", "ASSETS"],
+      ["/v1/assets/overview", "ASSETS"],
       [`/v1/assets/${randomUUID()}`, "ASSETS"],
       ["/v1/activities", "ACTIVITIES"],
       ["/v1/persons", "ACTIVITIES"],

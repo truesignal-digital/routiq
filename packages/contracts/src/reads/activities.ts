@@ -43,6 +43,13 @@ export const activityListQuery = listQuery(
      */
     from: z.iso.date().optional(),
     to: z.iso.date().optional(),
+    /**
+     * Closed trips missing fuel or km (ACTIVITY_MISSING_FILTERS); lists CLOSED
+     * trips only, so with any other `status` both apply and nothing lists.
+     * `fuel` while Money (FINANCE) is off is 400 VALIDATION_FAILED: not
+     * counted, so not filterable.
+     */
+    missing: z.enum(["fuel", "km"]).optional(),
   },
   { sortFields: activityListSortFields },
 ).refine(
@@ -267,21 +274,71 @@ export const activitySummaryQuery = z.object({
   branchId: z.uuid().optional(),
 });
 
+/** How many business weeks the Trips Overview's chart covers, the current one last. */
+export const ACTIVITY_OVERVIEW_WEEKS = 12;
+
+/**
+ * What a closed trip can be missing, as the Trips list filters it (#665):
+ * `fuel`, no fuel expense (category FUEL) waiting or posted on the trip;
+ * `km`, no leg that records a distance. Both list CLOSED trips only.
+ */
+export const ACTIVITY_MISSING_FILTERS = ["fuel", "km"] as const;
+export type ActivityMissingFilter = (typeof ACTIVITY_MISSING_FILTERS)[number];
+
 /**
  * The Trips overview, counted in SQL over the caller's workspace and branch
  * scope. `week` is the current business week (Monday to Sunday, workspace
- * time zone) that `thisWeek` and `weekKm` cover, so a tile can filter the list
- * to exactly the days it counted. `open` and `incomplete` are all-time and
- * equal what `status=OPEN` and `completeness=COMPLETE_WITH_EXCEPTIONS` list.
- * `weekKm` sums the legs that carry a distance; null when none does.
+ * time zone) that `thisWeek`, `weekClosed` and `weekKm` cover, so a tile can
+ * filter the list to exactly the days it counted. `open` and `incomplete` are
+ * all-time and equal what `status=OPEN` and
+ * `completeness=COMPLETE_WITH_EXCEPTIONS` list. `weekKm` sums the legs that
+ * carry a distance; null when none does.
+ *
+ * Built inside a pure call: the web reads it by its type only.
  */
-export const activitySummary = z.object({
-  week: z.object({ from: z.iso.date(), to: z.iso.date() }),
-  thisWeek: z.number().int().nonnegative(),
-  open: z.number().int().nonnegative(),
-  incomplete: z.number().int().nonnegative(),
-  weekKm: z.number().int().nonnegative().nullable(),
-});
+export const activitySummary = /* @__PURE__ */ (() =>
+  z.object({
+    week: z.object({ from: z.iso.date(), to: z.iso.date() }),
+    thisWeek: z.number().int().nonnegative(),
+    /** Of `thisWeek`, the trips now CLOSED: what `status=CLOSED&from&to` lists for the week. */
+    weekClosed: z.number().int().nonnegative(),
+    open: z.number().int().nonnegative(),
+    /** The open trip that started first; null when none is open. */
+    oldestOpen: z
+      .object({
+        id: z.uuid(),
+        activityNumber: z.string(),
+        startedAt: z.iso.datetime(),
+        /** The vehicle on its first segment; null when it has none. */
+        assetCode: z.string().nullable(),
+      })
+      .nullable(),
+    incomplete: z.number().int().nonnegative(),
+    /**
+     * Closed trips (all-time) missing a fact, each equal to what
+     * `missing=fuel` and `missing=km` list. `fuel` is null while Money is off:
+     * fuel is a money fact, so it is not counted rather than counted as none.
+     */
+    closedMissing: z.object({
+      fuel: z.number().int().nonnegative().nullable(),
+      km: z.number().int().nonnegative(),
+    }),
+    weekKm: z.number().int().nonnegative().nullable(),
+    /**
+     * Started trips per business week, oldest first, the current (partial)
+     * week last; `closed` is how many of them are now closed. Zero-filled.
+     */
+    weeks: z
+      .array(
+        z.object({
+          from: z.iso.date(),
+          to: z.iso.date(),
+          started: z.number().int().nonnegative(),
+          closed: z.number().int().nonnegative(),
+        }),
+      )
+      .length(ACTIVITY_OVERVIEW_WEEKS),
+  }))();
 
 export type ActivitySummaryQuery = z.infer<typeof activitySummaryQuery>;
 export type ActivitySummary = z.infer<typeof activitySummary>;

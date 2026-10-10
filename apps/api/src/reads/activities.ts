@@ -8,7 +8,9 @@ import {
   personListQuery,
   personListResponse,
   placeListResponse,
+  ACTIVITY_OVERVIEW_WEEKS,
   STARTED_ACTIVITY_STATUSES,
+  type ActivityMissingFilter,
   type ListSort,
 } from "@routiq/contracts";
 import {
@@ -19,6 +21,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNotNull,
   lt,
   ne,
   sql,
@@ -167,6 +170,68 @@ function distanceKmSql(): SQL<number | null> {
   )`;
 }
 
+const fuelCategory = alias(categories, "fuel_category");
+
+/**
+ * A fuel expense on the trip (#665): an expense line attributed to it, in the
+ * FUEL category, whose entry waits (SUBMITTED) or is POSTED. A reversed line is
+ * no fuel: its original turns REVERSED and its reversal (an entry that
+ * `reverses_entry_id` another) is no fuel bought either. Counted whoever
+ * recorded it: the fact is the trip's, not the caller's money scope.
+ */
+function fuelExpenseOnTripSql(): SQL {
+  return sql`exists (
+    select 1
+    from ${financialPostings}
+    inner join ${financialEntries}
+      on ${financialEntries.workspaceId} = ${financialPostings.workspaceId}
+      and ${financialEntries.id} = ${financialPostings.financialEntryId}
+    where ${financialPostings.workspaceId} = ${activities.workspaceId}
+      and ${financialPostings.activityId} = ${activities.id}
+      and ${financialPostings.direction} = 'EXPENSE'
+      and ${financialEntries.status} in ('SUBMITTED', 'POSTED')
+      and ${financialEntries.reversesEntryId} is null
+      and ${financialPostings.categoryId} in (
+        select ${fuelCategory.id} from ${categories} as ${sql.identifier("fuel_category")}
+        where ${fuelCategory.workspaceId} = ${financialPostings.workspaceId}
+          and ${fuelCategory.kind} = 'EXPENSE_CATEGORY'
+          and ${fuelCategory.code} = 'FUEL'
+      )
+  )`;
+}
+/**
+ * The trip's type, as the list joins it. Every trip read selecting a
+ * correlated subquery joins it: a single-table select renders its columns
+ * unqualified, which a correlated subquery cannot survive.
+ */
+function activityTypeJoin(): SQL {
+  return and(
+    eq(categories.workspaceId, activities.workspaceId),
+    eq(categories.id, activities.activityTypeId),
+    eq(categories.kind, "ACTIVITY_TYPE"),
+  )!;
+}
+
+/** A leg of the trip records a distance. */
+function legDistanceOnTripSql(): SQL {
+  return sql`exists (
+    select 1 from ${movementLegs}
+    where ${movementLegs.workspaceId} = ${activities.workspaceId}
+      and ${movementLegs.activityId} = ${activities.id}
+      and ${movementLegs.distanceKm} is not null
+  )`;
+}
+
+/**
+ * A CLOSED trip missing `filter`'s fact, as a condition on an `activities`
+ * row. The list's `missing` filter and the summary's `closedMissing` both read
+ * it, so a tile counts exactly the trips its filter lists.
+ */
+function missingSql(filter: ActivityMissingFilter): SQL {
+  const present = filter === "fuel" ? fuelExpenseOnTripSql() : legDistanceOnTripSql();
+  return sql`(${activities.status} = 'CLOSED' and not ${present})`;
+}
+
 /**
  * The first DRIVER put on the crew; the trip row names one driver. Crew given
  * in one command shares a timestamp, so the name breaks the tie — the order
@@ -205,10 +270,15 @@ export function registerActivityReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/activities", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = activityListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        // Fuel is a money fact: while FINANCE is off it is not counted, so it
+        // cannot be filtered either.
+        if (parsedQuery.data.missing === "fuel" && !modules.has("FINANCE")) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
 
@@ -220,6 +290,7 @@ export function registerActivityReadRoutes(
           activityTypeCode,
           from,
           to,
+          missing,
           cursor,
           limit,
         } = parsedQuery.data;
@@ -246,6 +317,8 @@ export function registerActivityReadRoutes(
           if (completeness) {
             conditions.push(eq(activities.completeness, completeness));
           }
+          // CLOSED trips only; with another `status`, both apply and nothing lists.
+          if (missing) conditions.push(missingSql(missing));
           if (activityTypeCode) {
             conditions.push(eq(categories.code, activityTypeCode));
           }
@@ -386,17 +459,19 @@ export function registerActivityReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/activities/summary", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = activitySummaryQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { branchId } = parsedQuery.data;
+        const fuelCounted = modules.has("FINANCE");
 
         const summary = await read(async (tx) => {
           const timezone = await workspaceTimezone(tx, auth.workspaceId);
           const week = isoWeek(currentBusinessDate(new Date(), timezone));
+          const firstWeekFrom = addDays(week.from, -7 * (ACTIVITY_OVERVIEW_WEEKS - 1));
 
           // The same scope the list applies: session branches and a driver's
           // own trips, then the optional branch inside them, never instead.
@@ -408,16 +483,23 @@ export function registerActivityReadRoutes(
           if (branchId) conditions.push(eq(activities.branchId, branchId));
 
           // Week edges are local midnights, so a trip started at 00:30 Monday
-          // in Douala belongs to this week, not the last.
+          // in Douala belongs to this week, not the last. The same edges as
+          // the list's `from` and `to`.
           const startsAt = dayStartSql(week.from, timezone);
           const endsBefore = dayStartSql(addDays(week.to, 1), timezone);
           const inWeek = sql`${activities.startedAt} >= ${startsAt} and ${activities.startedAt} < ${endsBefore}`;
+          const closed = sql`${activities.status} = 'CLOSED'`;
 
           const [counts] = await tx
             .select({
               thisWeek: sql<number>`count(*) filter (where ${inWeek})::int`,
+              weekClosed: sql<number>`count(*) filter (where ${inWeek} and ${closed})::int`,
               open: sql<number>`count(*) filter (where ${activities.status} = 'OPEN')::int`,
               incomplete: sql<number>`count(*) filter (where ${activities.completeness} = 'COMPLETE_WITH_EXCEPTIONS')::int`,
+              missingKm: sql<number>`count(*) filter (where ${missingSql("km")})::int`,
+              missingFuel: fuelCounted
+                ? sql<number | null>`count(*) filter (where ${missingSql("fuel")})::int`
+                : sql<number | null>`null::int`,
               weekKm: sql<number | null>`(
                 select sum(${movementLegs.distanceKm})::int
                 from ${movementLegs}
@@ -429,14 +511,68 @@ export function registerActivityReadRoutes(
               )`,
             })
             .from(activities)
+            .innerJoin(categories, activityTypeJoin())
             .where(and(...conditions));
+
+          const [oldestOpen] = await tx
+            .select({
+              id: activities.id,
+              activityNumber: activities.activityNumber,
+              startedAt: activities.startedAt,
+              assetCode: primaryAssetCodeSql(),
+            })
+            .from(activities)
+            .innerJoin(categories, activityTypeJoin())
+            .where(and(...conditions, eq(activities.status, "OPEN"), isNotNull(activities.startedAt)))
+            .orderBy(asc(activities.startedAt), asc(activities.id))
+            .limit(1);
+
+          // Each week by the Monday of its local start date, which is what
+          // `from`/`to` on the list compare against.
+          const weekRows = await tx
+            .select({
+              from: sql<string>`to_char(date_trunc('week', ${activities.startedAt} at time zone ${timezone}), 'YYYY-MM-DD')`,
+              started: sql<number>`count(*)::int`,
+              closed: sql<number>`count(*) filter (where ${closed})::int`,
+            })
+            .from(activities)
+            .innerJoin(categories, activityTypeJoin())
+            .where(
+              and(
+                ...conditions,
+                gte(activities.startedAt, dayStartSql(firstWeekFrom, timezone)),
+                lt(activities.startedAt, endsBefore),
+              ),
+            )
+            .groupBy(sql`1`);
+          const byFrom = new Map(weekRows.map((row) => [row.from, row]));
+          const weeks = Array.from({ length: ACTIVITY_OVERVIEW_WEEKS }, (_, index) => {
+            const from = addDays(firstWeekFrom, 7 * index);
+            const row = byFrom.get(from);
+            return { from, to: addDays(from, 6), started: row?.started ?? 0, closed: row?.closed ?? 0 };
+          });
 
           return {
             week,
             thisWeek: counts?.thisWeek ?? 0,
+            weekClosed: counts?.weekClosed ?? 0,
             open: counts?.open ?? 0,
+            oldestOpen:
+              oldestOpen?.startedAt == null
+                ? null
+                : {
+                    id: oldestOpen.id,
+                    activityNumber: oldestOpen.activityNumber,
+                    startedAt: oldestOpen.startedAt.toISOString(),
+                    assetCode: oldestOpen.assetCode,
+                  },
             incomplete: counts?.incomplete ?? 0,
+            closedMissing: {
+              fuel: fuelCounted ? (counts?.missingFuel ?? 0) : null,
+              km: counts?.missingKm ?? 0,
+            },
             weekKm: counts?.weekKm ?? null,
+            weeks,
           };
         });
 
