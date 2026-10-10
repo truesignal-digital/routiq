@@ -1,96 +1,152 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Money is one page (#314): the lead line names the open and last locked
- * month, the tiles match `GET /v1/finance/summary`, the "Waiting for your approval"
- * tile opens the queue with Reject and Approve on each row, Reject asks for a
- * reason, Approve is one tap, the old /finance/approvals link lands on the same
- * view, and Accounting months is one click from the header. Mutates the slot
- * (one approval); reset with `pnpm verify up --reseed`.
+ * Money is a module page (#664): one header (Money, one sentence, Record an
+ * expense) over Overview · Entries · To approve. The Overview's tiles match
+ * `GET /v1/finance/overview` and `GET /v1/finance/summary`, the range picker
+ * lives in the address, a tile opens its tab already filtered, Entries starts
+ * with its filters (Missing receipt with its count, no tiles), To approve
+ * decides an entry, Back lands on the tab you came from, and the old links
+ * land on To approve. A role with no queue (the cashier) sees no To approve
+ * tab and no profit. Mutates the slot for an approver (one approval); reset
+ * with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:money-page --role finance --lang en --reel
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
+  type Window = { revenueMinor: number; expenseMinor: number };
+  const overview = await apiGet("/v1/finance/overview");
+  const ov = overview.body as { view?: string; period?: Window; currency?: string };
+  if (overview.status !== 200 || ov.period === undefined) throw new Error(`GET /v1/finance/overview → ${overview.status}`);
   const summary = await apiGet("/v1/finance/summary");
   const body = summary.body as { waiting?: { count: number } | null; missingReceipt?: { count: number } };
-  if (summary.status !== 200 || !body.waiting) throw new Error(`GET /v1/finance/summary → ${summary.status}, no waiting tile for this role`);
-  const queue = await apiGet("/v1/finance/approvals");
-  const me = await apiGet("/v1/me");
-  const principalId = (me.body as { principalId?: string }).principalId;
-  const decidable = ((queue.body as {
-    entries?: Array<{ id: string; entryNumber: string; submittedByPrincipalId: string; directionDecides: boolean }>;
-  }).entries ?? []).filter((item) => !item.directionDecides && item.submittedByPrincipalId !== principalId);
-  if (decidable.length !== body.waiting.count) {
-    throw new Error(`waiting tile counts ${body.waiting.count}, queue holds ${decidable.length} this role may decide`);
-  }
-  const [entry, second] = decidable;
-  if (entry === undefined) throw new Error("nothing waiting for this role (reseed?)");
-  log(`api: summary waiting ${body.waiting.count} = decidable rows in the queue`);
+  if (summary.status !== 200 || body.missingReceipt === undefined) throw new Error(`GET /v1/finance/summary → ${summary.status}`);
+  const approver = body.waiting != null;
+  log(`api: overview view ${ov.view}, expenses ${ov.period.expenseMinor}, revenue ${ov.period.revenueMinor}; waiting ${body.waiting?.count ?? "none"}; missing ${body.missingReceipt.count}`);
+
+  const digits = (text: string | null) => (text ?? "").replace(/\D/g, "");
+  const heading = page.getByRole("heading", { level: 1, name: t("Argent", "Money") });
+  const tabs = page.getByRole("navigation", { name: t("Sections de l’argent", "Money sections") });
+  const tab = (fr: string, en: string) => tabs.getByRole("tab", { name: new RegExp(`^${t(fr, en)}`) });
+  const assertSelected = async (fr: string, en: string) => {
+    if ((await tab(fr, en).getAttribute("aria-selected")) !== "true") throw new Error(`${en} is not the selected tab at ${page.url()}`);
+  };
 
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
-  const heading = page.getByRole("heading", { level: 1, name: t("Argent", "Money") });
+  await page.waitForURL((url) => url.pathname === "/finance");
   await heading.waitFor();
+  await page.locator("[data-slot='metric-tile'][data-metric='expenses'] [data-slot='metric-value']").waitFor();
   await quiet();
-  const lead = page.locator("[data-slot='money-lead']");
-  await lead.waitFor();
-  if ((await page.getByRole("tablist").count()) !== 0) throw new Error("the Money page still shows section tabs");
-  await shot("money-page", {
-    caption: "Money is one page: the lead line names the open and locked month, the tiles count this month",
-    highlight: page.locator("[data-slot='metric-strip']"),
-  });
-
-  const waitingTile = page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true });
-  const shown = (await page.locator("[data-slot='metric-tile']").filter({ has: waitingTile }).locator("[data-slot='metric-value']").textContent())?.trim();
-  if (shown !== String(body.waiting.count)) throw new Error(`waiting tile shows ${shown}, API says ${body.waiting.count}`);
-  await waitingTile.click();
-  await page.waitForURL((url) => url.searchParams.get("view") === "waiting");
-  // A table row on desktop, a list row on a phone (#300).
-  const row = page.locator("tr, [data-slot='data-table-row']").filter({ hasText: entry.entryNumber, visible: true });
-  await row.waitFor();
-  await quiet();
-  await shot("waiting-view", {
-    caption: `The waiting tile filters the list: ${entry.entryNumber} shows Reject and Approve on its row`,
-    highlight: row,
-  });
-
-  await row.getByRole("button", { name: `${t("Rejeter l'écriture", "Reject entry")} ${entry.entryNumber}`, exact: true }).click();
-  const dialog = page.getByRole("dialog").filter({ has: page.getByRole("textbox") });
-  await dialog.waitFor();
-  await shot("reject-dialog", { caption: "Reject opens the decision dialog and asks for a reason", highlight: dialog });
-  await dialog.getByRole("button", { name: t("Garder l'écriture", "Keep entry"), exact: true }).click();
-  await dialog.waitFor({ state: "hidden" });
-
-  await row.getByRole("button", { name: `${t("Approuver l'écriture", "Approve entry")} ${entry.entryNumber}`, exact: true }).click();
-  await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
-  await row.waitFor({ state: "detached" });
-  await quiet();
-  await shot("approved", { caption: `Approve is one tap: ${entry.entryNumber} posts and leaves the waiting view` });
-  const after = await apiGet(`/v1/finance/entries/${entry.id}`);
-  const status = (after.body as { status?: string }).status;
-  if (status !== "POSTED") throw new Error(`${entry.entryNumber} is ${status ?? after.status} after approval`);
-  log(`api cross-check: ${entry.entryNumber} is now ${status}`);
-
-  // A full load of the old link, as a notification or bookmark would open it;
-  // `nav` waits for the URL it was given, which a redirect never reaches.
-  await page.goto(new URL("/finance/approvals", page.url()).href);
-  await heading.waitFor();
-  await page.getByRole("button", { name: t("Retirer le filtre : En attente d’approbation", "Clear filter: Waiting approval") }).waitFor();
-  await quiet();
-  const landed = new URL(page.url());
-  if (landed.pathname !== "/finance/entries" || landed.searchParams.get("view") !== "waiting") {
-    throw new Error(`/finance/approvals landed on ${landed.pathname}${landed.search}`);
+  await assertSelected("Vue d'ensemble", "Overview");
+  const tabNames = await tabs.getByRole("tab").allTextContents();
+  log(`tabs: ${tabNames.join(" | ")}`);
+  if (approver !== tabNames.some((name) => name.startsWith(t("À approuver", "To approve")))) {
+    throw new Error(`To approve tab ${approver ? "missing for" : "shown to"} this role: ${tabNames.join(", ")}`);
   }
-  log(`old link: /finance/approvals → ${landed.pathname}${landed.search}`);
-  await shot("old-link", {
-    caption: second === undefined
-      ? "The old /finance/approvals link lands on the same waiting view"
-      : `The old /finance/approvals link lands on the same waiting view, ${second.entryNumber} next`,
+  for (const [metric, minor] of [["expenses", ov.period.expenseMinor], ["revenue", ov.period.revenueMinor]] as const) {
+    const shown = digits(await page.locator(`[data-metric='${metric}'] [data-slot='metric-value']`).textContent());
+    if (shown !== String(Math.abs(minor))) throw new Error(`${metric} tile shows ${shown}, overview read says ${minor}`);
+  }
+  const main = (await page.locator("main").textContent()) ?? "";
+  if (ov.view === "REVENUE_AND_EXPENSES" && /\b(profit|loss|bénéfice|perte)\b/i.test(main)) {
+    throw new Error("the cashier's Overview names a profit or loss");
+  }
+  await shot("overview", {
+    caption: approver
+      ? "Money opens on Overview: tiles from the overview read, expenses by category, and To do"
+      : "A cashier's Money Overview: revenue and expenses, missing receipts; no profit, no To approve tab",
   });
 
-  // The header's link, not the Company row of the same name in the sidebar.
-  await page.getByRole("main").getByRole("link", { name: t("Mois comptables", "Accounting months") }).click();
-  await page.getByRole("heading", { level: 1, name: t("Mois comptables", "Accounting months") }).waitFor();
+  await page.getByRole("radio", { name: t("3 mois", "3 months") }).click();
+  await page.waitForURL((url) => url.searchParams.get("range") === "3-months");
   await quiet();
-  await shot("accounting-months", { caption: "Accounting months is one click from the Money header, titled the same" });
+  await shot("range", {
+    caption: "The range picker sits on Overview only and lives in the address: 3 closed months vs the 3 before",
+    highlight: page.locator("[data-slot='money-overview-period']"),
+  });
+  await page.getByRole("radio", { name: t("Ce mois", "This month") }).click();
+  await page.waitForURL((url) => url.pathname === "/finance" && !url.searchParams.has("range"));
+  await quiet();
+
+  await page.locator("[data-metric='missing'] a").click();
+  await page.waitForURL((url) => url.pathname === "/finance/entries" && url.searchParams.get("evidence") === "MISSING");
+  await heading.waitFor();
+  await quiet();
+  await assertSelected("Écritures", "Entries");
+  if ((await page.locator("[data-slot='metric-strip']").count()) !== 0) throw new Error("Entries still shows tiles");
+  // On a phone the filters fold into one Filters button (#300).
+  const phone = (page.viewportSize()?.width ?? 1440) < 768;
+  if (phone) await page.getByRole("button", { name: new RegExp(`^${t("Filtres", "Filters")}`) }).first().click();
+  const missingFilter = page.locator("[data-slot='money-missing-filter']").filter({ visible: true }).first();
+  if ((await missingFilter.getAttribute("aria-pressed")) !== "true") throw new Error("Missing receipt filter is not on");
+  if (!digits(await missingFilter.textContent()).endsWith(String(body.missingReceipt.count))) {
+    throw new Error(`Missing receipt filter count ${await missingFilter.textContent()} ≠ ${body.missingReceipt.count}`);
+  }
+  await shot("entries-missing", {
+    caption: "The Missing receipt tile opens Entries filtered; the list starts with its filters, the count on the filter",
+    highlight: missingFilter,
+  });
+  if (phone) {
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+  }
+
+  if (approver) {
+    const queue = await apiGet("/v1/finance/approvals");
+    const me = await apiGet("/v1/me");
+    const principalId = (me.body as { principalId?: string }).principalId;
+    const decidable = ((queue.body as {
+      entries?: Array<{ id: string; entryNumber: string; submittedByPrincipalId: string; directionDecides: boolean }>;
+    }).entries ?? []).filter((item) => !item.directionDecides && item.submittedByPrincipalId !== principalId);
+    const [entry] = decidable;
+    if (entry === undefined) throw new Error("nothing waiting for this role (reseed?)");
+    const count = digits(await tab("À approuver", "To approve").locator("[data-slot='module-page-tab-count']").textContent());
+    if (!count.startsWith(String(body.waiting?.count))) throw new Error(`To approve tab counts ${count}, summary says ${body.waiting?.count}`);
+
+    await tab("À approuver", "To approve").click();
+    await page.waitForURL((url) => url.pathname === "/finance/approve");
+    const row = page.locator("tr, [data-slot='data-table-row']").filter({ hasText: entry.entryNumber, visible: true });
+    await row.waitFor();
+    await quiet();
+    await assertSelected("À approuver", "To approve");
+    await shot("to-approve", {
+      caption: `To approve: the same header, ${entry.entryNumber} with Reject and Approve on its row`,
+      highlight: row,
+    });
+    await row.getByRole("button", { name: `${t("Approuver l'écriture", "Approve entry")} ${entry.entryNumber}`, exact: true }).click();
+    await page.getByText(t("Écriture approuvée", "Entry approved")).first().waitFor();
+    await row.waitFor({ state: "detached" });
+    await quiet();
+    const after = await apiGet(`/v1/finance/entries/${entry.id}`);
+    const status = (after.body as { status?: string }).status;
+    if (status !== "POSTED") throw new Error(`${entry.entryNumber} is ${status ?? after.status} after approval`);
+    log(`api cross-check: ${entry.entryNumber} is now ${status}`);
+    await shot("approved", { caption: `Approve is one tap: ${entry.entryNumber} posts and leaves To approve` });
+
+    await page.goBack();
+    await page.waitForURL((url) => url.pathname === "/finance/entries" && url.searchParams.get("evidence") === "MISSING");
+    await heading.waitFor();
+    await quiet();
+    await assertSelected("Écritures", "Entries");
+    await shot("back", { caption: "Back lands on the tab you came from, its filter still on" });
+
+    for (const old of ["/finance/approvals", "/finance/entries?view=waiting"]) {
+      // A full load, as a notification or bookmark would open it.
+      await page.goto(new URL(old, page.url()).href);
+      await page.waitForURL((url) => url.pathname === "/finance/approve");
+      await heading.waitFor();
+      await quiet();
+      log(`old link: ${old} → ${new URL(page.url()).pathname}`);
+    }
+    await shot("old-link", { caption: "The old approvals links land on the To approve tab" });
+  } else {
+    // A full load: `nav` waits for the address it was given, which a redirect never reaches.
+    await page.goto(new URL("/finance/approve", page.url()).href);
+    await page.waitForURL((url) => url.pathname === "/finance/entries");
+    await heading.waitFor();
+    await quiet();
+    log("a role with no queue sent to /finance/approve lands on Entries");
+    await shot("no-queue", { caption: "With nothing to decide, a link to To approve lands on Entries" });
+  }
 };
 
 export default flow;

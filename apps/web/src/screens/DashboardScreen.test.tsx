@@ -321,13 +321,13 @@ describe("DashboardScreen — KPI cards", () => {
     });
     // Landing on the queue as preset would re-apply the very narrowing this
     // line is counting around, so it carries the widening with it.
-    expect(overflow.getAttribute("href")).toBe("/finance/approvals?branch=all");
+    expect(overflow.getAttribute("href")).toBe("/finance/approve?branch=all");
     // The card itself still lands preset.
     expect(
       screen
         .getByRole("link", { name: "Pending approvals" })
         .getAttribute("href"),
-    ).toBe("/finance/approvals");
+    ).toBe("/finance/approve");
   });
 
   it("says nothing about other branches when the count is the whole queue", async () => {

@@ -130,7 +130,7 @@ describe("row label = page title (#312)", () => {
     assets: "screens/AssetsStub.tsx",
     activities: "screens/ActivitiesScreen.tsx",
     maintenance: "screens/MaintenanceScreen.tsx",
-    finances: "screens/FinanceEntriesScreen.tsx",
+    finances: "screens/FinanceScreen.tsx",
     persons: "screens/PersonsScreen.tsx",
     users: "screens/UsersScreen.tsx",
     branches: "screens/BranchesScreen.tsx",

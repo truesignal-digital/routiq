@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+  formatPercent,
   formatMoney,
   formatDate,
   formatDateTime,
@@ -304,5 +305,13 @@ describe("format", () => {
       await i18n.changeLanguage("fr-CM");
       expect(notRecorded()).toBe("Non renseigné");
     });
+  });
+});
+
+describe("formatPercent", () => {
+  it("writes a whole percent the reader's way, with plain spaces", () => {
+    expect(formatPercent(11, "en")).toBe("11%");
+    expect(formatPercent(11, "fr-CM")).toBe("11 %");
+    expect(formatPercent(7.4, "en")).toBe("7%");
   });
 });

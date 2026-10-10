@@ -65,6 +65,11 @@
       "filters": {
         "asset": "Camion"
       }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# trajet est encore ouvert} other {# trajets sont encore ouverts}} : leur argent peut encore arriver."
+      }
     }
   },
   "activities": {

@@ -35,11 +35,9 @@ describe("money words", () => {
     });
   }
 
-  it("titles the Money page tiles and lenses with the same words in both languages", () => {
-    expect(fr.finance.money.tiles).toMatchObject({ out: "Dépenses en {month}", in: "Recettes en {month}" });
-    expect(en.finance.money.tiles).toMatchObject({ out: "Expenses in {month}", in: "Revenue in {month}" });
-    expect(fr.finance.money.lens).toMatchObject({ out: "Dépenses du mois", in: "Recettes du mois" });
-    expect(en.finance.money.lens).toMatchObject({ out: "Expenses this month", in: "Revenue this month" });
+  it("titles the Money Overview tiles with the same words in both languages", () => {
+    expect(fr.finance.overview.tiles).toMatchObject({ expenses: "Dépenses", revenue: "Recettes" });
+    expect(en.finance.overview.tiles).toMatchObject({ expenses: "Expenses", revenue: "Revenue" });
   });
 
   it("names a balance Profit or Loss", () => {

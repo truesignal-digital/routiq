@@ -2,6 +2,7 @@ import {
   canBookWorkOrderCost,
   canReadEntries,
   canReadLedger,
+  MONEY_OVERVIEW_READER_ROLES,
   moneyReadScope,
   type ModuleCode,
   type MoneyReadScope,
@@ -37,6 +38,22 @@ export function canReadFinanceEntries(
     (enabledModules?.includes("FINANCE") ?? false) &&
     role !== undefined &&
     canReadEntries(role)
+  );
+}
+
+/**
+ * The Money page's Overview tab: the server's own list (`GET
+ * /v1/finance/overview`, `MONEY_OVERVIEW_READER_ROLES`). The cashier is in it
+ * and reads revenue and expenses with no profit; a driver is not.
+ */
+export function canReadMoneyOverview(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return (
+    (enabledModules?.includes("FINANCE") ?? false) &&
+    role !== undefined &&
+    (MONEY_OVERVIEW_READER_ROLES as readonly Role[]).includes(role)
   );
 }
 

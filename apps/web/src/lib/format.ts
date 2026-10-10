@@ -191,6 +191,15 @@ export function formatDate(iso: string | null | undefined, locale?: string): str
   }).format(date);
 }
 
+/** A whole percent as the reader's language writes it: "11%", "11 %". */
+export function formatPercent(percent: number, locale?: string): string {
+  return plainSpaces(
+    new Intl.NumberFormat(locale ?? i18n.resolvedLanguage, { style: "percent", maximumFractionDigits: 0 }).format(
+      percent / 100,
+    ),
+  );
+}
+
 /** "septembre 2026" for the period "2026-09": a posting month in words. */
 export function formatMonth(periodCode: string | null | undefined, locale?: string): string {
   if (periodCode == null || !/^\d{4}-\d{2}$/.test(periodCode)) return periodCode ?? "";

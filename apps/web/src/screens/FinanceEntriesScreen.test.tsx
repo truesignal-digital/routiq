@@ -429,34 +429,17 @@ describe("FinanceEntriesScreen", () => {
     }
   });
 
-  it("offers the view menu, and Record an expense as the page's one primary action", () => {
+  it("puts the view menu in the toolbar, and leaves the header to the Money page (#664)", () => {
     render(<FinanceEntriesScreen />);
 
     expect(screen.getByRole("button", { name: "dataTable.view" })).toBeTruthy();
-
-    const action = screen.getByRole("link", { name: /record-expense/ });
-    expect(action.getAttribute("href")).toBe("/finance/record");
-    // No section tabs: Money is one page (#314).
-    expect(screen.queryByRole("tablist")).toBeNull();
+    // Title, sentence, Record an expense and the tabs belong to FinanceScreen.
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.queryByRole("link", { name: /record-expense/ })).toBeNull();
   });
 
-  it("drops the record action along with the screen when finance reading is denied", () => {
-    vi.mocked(canReadFinanceEntries).mockReturnValue(false);
-    render(<FinanceEntriesScreen />);
-
-    expect(
-      screen.queryByRole("link", { name: /record-expense/ }),
-    ).toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
-  });
-
-  it("tells a driver the list holds only what they recorded (#264)", () => {
+  it("leaves the driver's scope to the Money header, which already says it (#264, #664)", () => {
     vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
-    render(<FinanceEntriesScreen />);
-    expect(screen.getByText("finance.entries.ownScope")).toBeTruthy();
-  });
-
-  it("says nothing about scope to a ledger reader", () => {
     render(<FinanceEntriesScreen />);
     expect(screen.queryByText("finance.entries.ownScope")).toBeNull();
   });
@@ -752,79 +735,59 @@ describe("FinanceEntriesScreen", () => {
   });
 });
 
-describe("Money page (#314)", () => {
-  it("opens on the four tiles and the month lead line", () => {
-    vi.mocked(canApproveEntries).mockReturnValue(true);
+describe("Entries tab (#664)", () => {
+  it("starts with its search and filters: no tiles above the list", () => {
     render(<FinanceEntriesScreen />);
 
-    expect(screen.getByText("finance.money.lead.both")).toBeTruthy();
-    const tiles = document.querySelectorAll('[data-slot="metric-tile"]');
-    expect(tiles).toHaveLength(4);
-    expect(screen.getByRole("button", { name: "finance.money.tiles.waiting" })).toBeTruthy();
+    expect(document.querySelector('[data-slot="metric-strip"]')).toBeNull();
+    expect(screen.getByPlaceholderText("finance.entries.filters.periodPlaceholder")).toBeTruthy();
+    // The count the Overview tile used to repeat rides on the filter itself.
+    const missing = screen.getByRole("button", { name: /finance\.money\.lens\.missing/ });
+    expect(missing.textContent).toContain("1");
+    expect(missing.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("tells a driver the page holds their expenses, not every expense and revenue (#619)", () => {
-    vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
-    render(<FinanceEntriesScreen />);
-
-    expect(screen.getByText("finance.money.lead.own.both")).toBeTruthy();
-    expect(screen.queryByText("finance.money.lead.both")).toBeNull();
-  });
-
-  it("filters the list from a tile, and clears it from the same tile", async () => {
+  it("filters to missing receipts and clears it from the same button", async () => {
     const user = userEvent.setup();
     render(<FinanceEntriesScreen />);
 
-    await user.click(screen.getByRole("button", { name: "finance.money.tiles.missing" }));
+    await user.click(screen.getByRole("button", { name: /finance\.money\.lens\.missing/ }));
     expect(navigate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ to: "/finance/entries", search: { evidence: "MISSING" } }),
+      expect.objectContaining({ to: "/finance/entries", search: expect.objectContaining({ evidence: "MISSING" }) }),
     );
 
     cleanup();
     routeSearch.current = { evidence: "MISSING" };
     render(<FinanceEntriesScreen />);
     expect(issuedQueries.at(-1)).toMatchObject({ evidence: "MISSING" });
-    await user.click(screen.getByRole("button", { name: "finance.money.tiles.missing" }));
-    expect(navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: {} }));
-  });
-
-  it("shows an approver Reject and Approve on each waiting row, never on their own submission", () => {
-    vi.mocked(canApproveEntries).mockReturnValue(true);
-    routeSearch.current = { view: "waiting" };
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <FinanceEntriesScreen />
-      </QueryClientProvider>,
+    const pressed = screen.getByRole("button", { name: /finance\.money\.lens\.missing/ });
+    expect(pressed.getAttribute("aria-pressed")).toBe("true");
+    await user.click(pressed);
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: expect.objectContaining({ evidence: undefined }) }),
     );
-
-    const row = screen.getByRole("row", { name: /FIN-014/ });
-    expect(within(row).getByRole("button", { name: "commands.reject-entry.label FIN-014" })).toBeTruthy();
-    expect(within(row).getByRole("button", { name: "commands.approve-entry.label FIN-014" })).toBeTruthy();
-    expect(within(row).getByText(/finance\.approvals\.noReceipt/)).toBeTruthy();
-    expect(screen.queryByText("FIN-015")).toBeNull();
   });
 
-  it("gives a non-approver no waiting view and no decisions", () => {
+  it("names the month an Overview tile opened it on, and drops it on request", async () => {
+    const user = userEvent.setup();
+    routeSearch.current = { status: "LEDGER", direction: "EXPENSE", economicMonth: "2026-10" };
+    render(<FinanceEntriesScreen />);
+
+    expect(issuedQueries.at(-1)).toMatchObject({ status: "LEDGER", direction: "EXPENSE", economicMonth: "2026-10" });
+    await user.click(screen.getByRole("button", { name: "finance.money.lens.clear" }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        search: expect.objectContaining({ economicMonth: undefined, status: "LEDGER", direction: "EXPENSE" }),
+      }),
+    );
+  });
+
+  it("never renders the approval queue: that is the To approve tab", () => {
+    vi.mocked(canApproveEntries).mockReturnValue(true);
     routeSearch.current = { view: "waiting" };
     render(<FinanceEntriesScreen />);
 
     expect(screen.queryByRole("button", { name: /approve-entry/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /reject-entry/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "finance.money.tiles.waiting" })).toBeNull();
-    // The plain list instead: FIN-001 is the ledger fixture.
     expect(screen.getByText("FIN-001")).toBeTruthy();
-  });
-
-  it("links Accounting months from the header for the roles that lock them", () => {
-    vi.mocked(canManagePeriods).mockReturnValue(true);
-    render(<FinanceEntriesScreen />);
-    expect(
-      screen.getByRole("link", { name: /finance\.periods\.title/ }).getAttribute("href"),
-    ).toBe("/finance/periods");
-  });
-
-  it("hides Accounting months from everyone else", () => {
-    render(<FinanceEntriesScreen />);
-    expect(screen.queryByRole("link", { name: /finance\.periods\.title/ })).toBeNull();
   });
 });

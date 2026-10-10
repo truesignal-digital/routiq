@@ -34,6 +34,9 @@ const PersonsScreen = lazyScreen(() => import("./screens/PersonsScreen.js"), "Pe
 const UsersScreen = lazyScreen(() => import("./screens/UsersScreen.js"), "UsersScreen");
 const FinanceRecordScreen = lazyScreen(() => import("./screens/FinanceRecordScreen.js"), "FinanceRecordScreen");
 const FinanceEntriesScreen = lazyScreen(() => import("./screens/FinanceEntriesScreen.js"), "FinanceEntriesScreen");
+const FinanceScreen = lazyScreen(() => import("./screens/FinanceScreen.js"), "FinanceScreen");
+const FinanceOverviewScreen = lazyScreen(() => import("./screens/FinanceOverviewScreen.js"), "FinanceOverviewScreen");
+const FinanceApproveScreen = lazyScreen(() => import("./screens/FinanceApproveScreen.js"), "FinanceApproveScreen");
 const ActivitiesScreen = lazyScreen(() => import("./screens/ActivitiesScreen.js"), "ActivitiesScreen");
 const MaintenanceScreen = lazyScreen(() => import("./screens/MaintenanceScreen.js"), "MaintenanceScreen");
 const ActivityDetailScreen = lazyScreen(() => import("./screens/ActivityDetailScreen.js"), "ActivityDetailScreen");
@@ -184,24 +187,69 @@ const vehicleDetailsRoute = createRoute({
   errorComponent: SectionError,
 });
 
-const financeRecordRoute = createRoute({
+/**
+ * The Money page (#664): one header over its tabs, each tab a child route with
+ * its own address — Overview at `/finance`, then Entries and To approve.
+ * Recording an entry opens its panel over the Entries tab. The entry page,
+ * the accounting months and the old approvals link sit outside the frame.
+ */
+const financeRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: "/finance/record",
+  path: "/finance",
+  component: FinanceScreen,
+});
+
+const financeOverviewRoute = createRoute({
+  getParentRoute: () => financeRoute,
+  path: "/",
+  // The range picker; this month is the bare address.
+  validateSearch: z.object({
+    range: z.enum(["3-months", "12-months"]).optional().catch(undefined),
+  }),
+  component: FinanceOverviewScreen,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const financeRecordRoute = createRoute({
+  getParentRoute: () => financeRoute,
+  path: "record",
   component: FinanceRecordScreen,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const financeEntriesRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: "/finance/entries",
-  // `view=waiting` is the "Waiting for your approval" view (#314), beside the
-  // read's own events / books views (#427). `branch=all` arrives from an
-  // overflow line that has already named the work outside the shell's agency,
-  // so the queue opens widened.
+  getParentRoute: () => financeRoute,
+  path: "entries",
+  // `branch=all` arrives from an overflow line that has already named the
+  // work outside the shell's agency. The waiting view became the To approve
+  // tab: an old `view=waiting` link lands there.
   validateSearch: financialEntryFilters.omit({ branchId: true }).extend({
     view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
     branch: z.literal("all").optional().catch(undefined),
   }),
+  beforeLoad: ({ search }) => {
+    if (search.view === "waiting") {
+      throw redirect({
+        to: "/finance/approve",
+        search: search.branch === "all" ? { branch: "all" } : {},
+        replace: true,
+      });
+    }
+  },
   component: FinanceEntriesScreen,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const financeApproveRoute = createRoute({
+  getParentRoute: () => financeRoute,
+  path: "approve",
+  validateSearch: z.object({ branch: z.literal("all").optional().catch(undefined) }),
+  component: FinanceApproveScreen,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const activitiesRoute = createRoute({
@@ -256,16 +304,16 @@ const financeEntryDetailRoute = createRoute({
   component: FinanceEntryDetailScreen,
 });
 
-// The Approvals page became the Money page's waiting view (#314). Old links,
-// notifications and the dashboard keep landing on the same work.
+// The Approvals page became the Money page's To approve tab (#314, #664). Old
+// links, notifications and the dashboard keep landing on the same work.
 const financeApprovalsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/approvals",
   validateSearch: z.object({ branch: z.literal("all").optional().catch(undefined) }),
   beforeLoad: ({ search }) => {
     throw redirect({
-      to: "/finance/entries",
-      search: { view: "waiting", ...(search.branch === "all" ? { branch: "all" } : {}) },
+      to: "/finance/approve",
+      search: search.branch === "all" ? { branch: "all" } : {},
       replace: true,
     });
   },
@@ -339,8 +387,12 @@ const routeTree = rootRoute.addChildren([
     activityRecordRoute,
     activityDetailRoute,
     maintenanceRoute,
-    financeRecordRoute,
-    financeEntriesRoute,
+    financeRoute.addChildren([
+      financeOverviewRoute,
+      financeRecordRoute,
+      financeEntriesRoute,
+      financeApproveRoute,
+    ]),
     financeEntryDetailRoute,
     financeApprovalsRoute,
     financePeriodsRoute,
@@ -378,6 +430,8 @@ export const SCREENS_BY_USE = [
   VehicleWorkspaceScreen,
   NowTab,
   ActivitiesScreen,
+  FinanceScreen,
+  FinanceOverviewScreen,
   FinanceEntriesScreen,
   MaintenanceScreen,
   ActivityDetailScreen,
@@ -389,6 +443,7 @@ export const SCREENS_BY_USE = [
   HistoryTab,
   DetailsTab,
   FinanceRecordScreen,
+  FinanceApproveScreen,
   ActivitySheetScreen,
   AssetRegisterScreen,
   MySettingsScreen,

@@ -473,28 +473,12 @@
       "record": "Record"
     },
     "money": {
-      "lead": {
-        "both": "Every expense and revenue. {open} is open; {locked} is locked.",
-        "open": "Every expense and revenue. {open} is open.",
-        "none": "Every expense and revenue.",
-        "own": {
-          "both": "Your expenses. {open} is open; {locked} is locked.",
-          "open": "Your expenses. {open} is open.",
-          "none": "Your expenses."
-        }
-      },
       "tiles": {
-        "out": "Expenses in {month}",
-        "in": "Revenue in {month}",
-        "waiting": "Waiting for your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
         "missingHint": "Oldest {date}"
       },
       "lens": {
-        "waiting": "Waiting approval",
-        "out": "Expenses this month",
-        "in": "Revenue this month",
         "missing": "Missing receipt",
         "clear": "Clear filter: {name}"
       }
@@ -540,7 +524,6 @@
       "retry": "Try again",
       "empty": "No entries recorded yet.",
       "branchEmpty": "No entry recorded for this branch.",
-      "ownScope": "Only the entries you recorded appear here.",
       "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
       "status": {
@@ -615,7 +598,8 @@
         "ledger": "Posted and cancelled",
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
-        "assetOption": "{code} — {name}"
+        "assetOption": "{code} — {name}",
+        "economicMonth": "Dated {month}"
       },
       "events": {
         "cancelledIn": "Cancelled in {month}",
@@ -695,6 +679,68 @@
       "decidedTitle": "This entry has already been decided",
       "decidedBody": "An approver approved or rejected it while you were editing. Your changes were not saved.",
       "branchUnknown": "The branch it was recorded in"
+    },
+    "page": {
+      "description": "Every revenue and expense.",
+      "descriptionOwn": "The expenses you recorded.",
+      "tabs": {
+        "label": "Money sections",
+        "overview": "Overview",
+        "entries": "Entries",
+        "approve": "To approve",
+        "waitingCount": "{count, plural, one {entry waiting} other {entries waiting}}"
+      }
+    },
+    "overview": {
+      "loadFailed": "Could not load the overview. Try again.",
+      "range": {
+        "label": "Period",
+        "month": "This month",
+        "3-months": "3 months",
+        "12-months": "12 months"
+      },
+      "period": "{period} compared with {comparison}",
+      "change": {
+        "moved": "{arrow} {change} vs {period}",
+        "same": "Same as {period}"
+      },
+      "tiles": {
+        "expenses": "Expenses",
+        "revenue": "Revenue",
+        "approve": "To approve",
+        "monthClose": "{month} close"
+      },
+      "counted": {
+        "posted": "Counted: {count, plural, one {# posted entry} other {# posted entries}}.",
+        "waiting": "Not counted: {count, plural, one {# entry in the period waits} other {# entries in the period wait}} for approval ({amount}).",
+        "missingReceipt": "{count, plural, one {# entry in the period has} other {# entries in the period have}} no receipt.",
+        "openTrips": "{count, plural, one {# activity is still open} other {# activities are still open}}: their money may still come.",
+        "otherCurrency": "{count, plural, one {# entry in another currency is} other {# entries in another currency are}} left out."
+      },
+      "categories": {
+        "title": "Expenses by category",
+        "question": "Where did spending change?",
+        "description": "Where did spending change? {period} (bar) against {comparison} (mark).",
+        "versus": "vs {amount}",
+        "other": "{count, plural, one {# other category} other {# other categories}}",
+        "empty": "No expenses in either period.",
+        "open": "Open Entries"
+      },
+      "todo": {
+        "title": "To do",
+        "empty": "Nothing waits for you.",
+        "approve": "{count, plural, one {# entry waits} other {# entries wait}} for your approval",
+        "missing": "{count, plural, one {# entry has} other {# entries have}} no receipt",
+        "openApprove": "Open To approve",
+        "openEntries": "Open in Entries",
+        "review": "Review",
+        "closeMonth": "Close {month}"
+      },
+      "monthClose": {
+        "locked": "Locked",
+        "open": "Open",
+        "none": "No entries"
+      }
     }
   },
   "common": {

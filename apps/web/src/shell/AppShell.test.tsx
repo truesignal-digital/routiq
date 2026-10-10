@@ -432,7 +432,7 @@ describe("AppShell (sidebar frame)", () => {
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
       await userEvent.click(screen.getByRole("link", { name: "Money" }));
 
-      expect(router.state.location.pathname).toBe("/finance/entries");
+      expect(router.state.location.pathname).toBe("/finance");
       expect(screen.queryByRole("navigation", { name: "Navigation" })).toBeNull();
     });
 

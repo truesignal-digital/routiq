@@ -163,7 +163,7 @@ function homeTile(
   const base = { id: key, label: t(`home.cards.${key}.title`) };
 
   if (key === "pendingApprovals") {
-    const link = { to: "/finance/approvals" };
+    const link = { to: "/finance/approve" };
     if (data === undefined) return { ...base, link, value: null };
     // Null only when the API withholds finance from this caller; the tile is
     // gated to approvers, so this is the brief window before /v1/me agrees.
@@ -191,7 +191,7 @@ function homeTile(
         : {
             secondary: {
               label: t("home.cards.pendingApprovals.outsideBranch", { count: outsideBranchCount }),
-              to: "/finance/approvals",
+              to: "/finance/approve",
               search: { branch: "all" },
             },
           }),

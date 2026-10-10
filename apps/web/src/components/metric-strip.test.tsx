@@ -157,9 +157,9 @@ describe("MetricStrip", () => {
     expect(failed.queryByText("all branches")).toBeNull();
   });
 
-  it("lays two, three and four tiles out without spilling a row", () => {
+  it("lays two to five tiles out without spilling a row", () => {
     const tile = { label: "A", value: "1" };
-    const columns = ([2, 3, 4] as const).map((count) => {
+    const columns = ([2, 3, 4, 5] as const).map((count) => {
       const { container, unmount } = render(
         <MetricStrip
           tiles={
@@ -178,6 +178,7 @@ describe("MetricStrip", () => {
     expect(columns[0]).toContain("grid-cols-2");
     expect(columns[1]).toContain("sm:grid-cols-3");
     expect(columns[2]).toContain("sm:grid-cols-4");
+    expect(columns[3]).toContain("lg:grid-cols-5");
   });
 
   it("colours itself from semantic tokens only", () => {
@@ -288,10 +289,11 @@ describe("MetricStrip", () => {
     expect(unknown?.textContent).toBe("Non renseigné");
   });
 
-  it("builds a strip from a run-time list only when it has one to four tiles", () => {
+  it("builds a strip from a run-time list only when it has one to five tiles", () => {
     const tile = { label: "Fleet", value: "6" };
     expect(metricTiles([])).toBeUndefined();
     expect(metricTiles([tile])).toHaveLength(1);
-    expect(metricTiles([tile, tile, tile, tile, tile])).toBeUndefined();
+    expect(metricTiles([tile, tile, tile, tile, tile])).toHaveLength(5);
+    expect(metricTiles([tile, tile, tile, tile, tile, tile])).toBeUndefined();
   });
 });

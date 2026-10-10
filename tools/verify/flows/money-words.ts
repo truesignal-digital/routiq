@@ -21,8 +21,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  const expensesTile = page.getByRole("button", { name: new RegExp(`^${t("Dépenses en", "Expenses in")} \\p{L}+`, "u") }).first();
-  const revenueTile = page.getByRole("button", { name: new RegExp(`^${t("Recettes en", "Revenue in")} \\p{L}+`, "u") }).first();
+  // The Money Overview's tiles (#664) are links to their tab, named by the word itself.
+  const expensesTile = page.locator("[data-metric='expenses']").getByText(t("Dépenses", "Expenses"), { exact: true });
+  const revenueTile = page.locator("[data-metric='revenue']").getByText(t("Recettes", "Revenue"), { exact: true });
   await expensesTile.waitFor();
   await revenueTile.waitFor();
   await assertNoRetiredWords("the Money page");

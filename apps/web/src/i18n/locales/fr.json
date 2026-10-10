@@ -473,28 +473,12 @@
       "record": "Saisie"
     },
     "money": {
-      "lead": {
-        "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
-        "open": "Toutes les dépenses et recettes. {open} est ouvert.",
-        "none": "Toutes les dépenses et recettes.",
-        "own": {
-          "both": "Vos dépenses. {open} est ouvert ; {locked} est clôturé.",
-          "open": "Vos dépenses. {open} est ouvert.",
-          "none": "Vos dépenses."
-        }
-      },
       "tiles": {
-        "out": "Dépenses en {month}",
-        "in": "Recettes en {month}",
-        "waiting": "En attente de votre approbation",
         "waitingHint": "{amount} · la plus ancienne {age}",
         "missing": "Justificatif manquant",
         "missingHint": "Le plus ancien : {date}"
       },
       "lens": {
-        "waiting": "En attente d’approbation",
-        "out": "Dépenses du mois",
-        "in": "Recettes du mois",
         "missing": "Justificatif manquant",
         "clear": "Retirer le filtre : {name}"
       }
@@ -540,7 +524,6 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture enregistrée pour l'instant.",
       "branchEmpty": "Aucune écriture pour cette agence.",
-      "ownScope": "Seules les écritures que vous avez saisies apparaissent ici.",
       "ownEmpty": "Vous n'avez saisi aucune écriture. Celles que vous saisirez apparaîtront ici.",
       "loadMore": "Charger plus",
       "status": {
@@ -615,7 +598,8 @@
         "ledger": "Comptabilisées et annulées",
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
-        "assetOption": "{code} — {name}"
+        "assetOption": "{code} — {name}",
+        "economicMonth": "Datées de {month}"
       },
       "events": {
         "cancelledIn": "Annulée en {month}",
@@ -695,6 +679,68 @@
       "decidedTitle": "Cette écriture a déjà été traitée",
       "decidedBody": "Un approbateur l'a approuvée ou rejetée pendant que vous la modifiiez. Vos changements n'ont pas été enregistrés.",
       "branchUnknown": "L'agence d'origine"
+    },
+    "page": {
+      "description": "Toutes les recettes et dépenses.",
+      "descriptionOwn": "Les dépenses que vous avez enregistrées.",
+      "tabs": {
+        "label": "Sections de l’argent",
+        "overview": "Vue d'ensemble",
+        "entries": "Écritures",
+        "approve": "À approuver",
+        "waitingCount": "{count, plural, one {écriture en attente} other {écritures en attente}}"
+      }
+    },
+    "overview": {
+      "loadFailed": "Impossible de charger la vue d'ensemble. Réessayez.",
+      "range": {
+        "label": "Période",
+        "month": "Ce mois",
+        "3-months": "3 mois",
+        "12-months": "12 mois"
+      },
+      "period": "{period} comparé à {comparison}",
+      "change": {
+        "moved": "{arrow} {change} vs {period}",
+        "same": "Comme {period}"
+      },
+      "tiles": {
+        "expenses": "Dépenses",
+        "revenue": "Recettes",
+        "approve": "À approuver",
+        "monthClose": "Clôture de {month}"
+      },
+      "counted": {
+        "posted": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}}.",
+        "waiting": "Non compté : {count, plural, one {# écriture de la période attend} other {# écritures de la période attendent}} une approbation ({amount}).",
+        "missingReceipt": "{count, plural, one {# écriture de la période n’a} other {# écritures de la période n’ont}} pas de justificatif.",
+        "openTrips": "{count, plural, one {# activité est encore ouverte} other {# activités sont encore ouvertes}} : leur argent peut encore arriver.",
+        "otherCurrency": "{count, plural, one {# écriture dans une autre devise est laissée} other {# écritures dans une autre devise sont laissées}} de côté."
+      },
+      "categories": {
+        "title": "Dépenses par catégorie",
+        "question": "Où les dépenses ont-elles changé ?",
+        "description": "Où les dépenses ont-elles changé ? {period} (barre) face à {comparison} (repère).",
+        "versus": "vs {amount}",
+        "other": "{count, plural, one {# autre catégorie} other {# autres catégories}}",
+        "empty": "Aucune dépense sur les deux périodes.",
+        "open": "Ouvrir les écritures"
+      },
+      "todo": {
+        "title": "À faire",
+        "empty": "Rien ne vous attend.",
+        "approve": "{count, plural, one {# écriture attend} other {# écritures attendent}} votre approbation",
+        "missing": "{count, plural, one {# écriture n’a} other {# écritures n’ont}} pas de justificatif",
+        "openApprove": "Ouvrir À approuver",
+        "openEntries": "Ouvrir dans les écritures",
+        "review": "Vérifier",
+        "closeMonth": "Clôturer {month}"
+      },
+      "monthClose": {
+        "locked": "Verrouillé",
+        "open": "Ouvert",
+        "none": "Aucune écriture"
+      }
     }
   },
   "common": {

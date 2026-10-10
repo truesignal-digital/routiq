@@ -18,18 +18,18 @@ export const financeManifest: WebModuleManifest = {
       group: "daily",
       place: { after: "maintenance" },
       labelKey: "finance.entries.title",
-      to: "/finance/entries",
+      // The Money page opens on its Overview; a role without one lands on Entries.
+      to: "/finance",
       match: "/finance",
       icon: Banknote,
       // A driver reads only the entries they recorded, on their truck and trips.
       reads: (role, enabledModules) =>
         canReadFinanceEntries(role, enabledModules) && moneyReadScope(role) !== "OWN_ENTRIES",
-      // The approvals route opens the waiting view (#314), across every branch
-      // the count covers.
+      // The count opens the To approve tab (#664), across every branch it covers.
       count: {
         key: "moneyWaiting",
         labelKey: "shell.counts.moneyWaiting",
-        to: "/finance/approvals",
+        to: "/finance/approve",
         search: { branch: "all" },
       },
     },
