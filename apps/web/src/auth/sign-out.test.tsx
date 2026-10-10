@@ -40,7 +40,7 @@ it("never renders or reads as the previous member after an account switch", asyn
   await user.type(screen.getByLabelText("PIN code"), "666666");
   await user.click(signIn);
 
-  await screen.findByRole("heading", { name: "Home" });
+  await screen.findByRole("heading", { name: "Dashboard" });
   await waitFor(() =>
     expect(recorded.requests.slice(from).some((request) => request.url.pathname === "/v1/dashboard")).toBe(true),
   );

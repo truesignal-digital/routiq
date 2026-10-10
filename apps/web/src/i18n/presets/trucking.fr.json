@@ -305,5 +305,73 @@
     "VEHICLE_DOUBLE_BOOKED": "Ce camion est déjà prévu sur un autre trajet au même moment.",
     "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre trajet au même moment.",
     "TRIP_STARTED_AFTER_CANCELLATION": "Ce trajet avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# trajet clôturé} other {# trajets clôturés}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Trajets",
+        "vehicle": "Camion"
+      },
+      "tripsCount": "{count, plural, one {# trajet} other {# trajets}}",
+      "tripsWithoutKm": "{count, plural, one {# trajet sans km} other {# trajets sans km}}",
+      "lossDetail": "{count, plural, =0 {Aucun trajet} one {# trajet} other {# trajets}} · {amount} dépensés",
+      "title": {
+        "profit": "Bénéfice par camion",
+        "costs": "Coût par camion"
+      },
+      "description": {
+        "profit": "{period} · recettes et dépenses enregistrées sur chaque camion · pertes d’abord",
+        "costs": "{period} · dépenses enregistrées sur chaque camion · les plus coûteux d’abord"
+      },
+      "atALossTitle": "Camions en perte",
+      "noneAtALoss": "Aucun camion n’a fait de perte sur cette période.",
+      "empty": "Aucun camion sur cette période.",
+      "lines": {
+        "allVehicles": "Bénéfice de tous les camions ({count})",
+        "branchVehicles": "Bénéfice des camions de l’agence ({count})",
+        "otherVehicles": "Camions d’autres agences dans les écritures de l’agence",
+        "revenueWithoutVehicle": "Recettes enregistrées sans camion",
+        "allVehicleCosts": "Coûts de tous les camions ({count})",
+        "branchVehicleCosts": "Coûts des camions de l’agence ({count})",
+        "otherVehicleCosts": "Camions d’autres agences dans les écritures de l’agence"
+      }
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# trajet prévu} other {# trajets prévus}}",
+          "detail": "{without, plural, =0 {camions affectés} one {# sans camion pour l’instant} other {# sans camion pour l’instant}}"
+        }
+      }
+    },
+    "tabs": {
+      "vehicles": "Bénéfice par camion"
+    },
+    "tiles": {
+      "vehicleCosts": "Coûts des camions",
+      "canDrive": "Camions disponibles",
+      "allCanDrive": "Tous les camions en service peuvent rouler"
+    },
+    "branches": {
+      "title": {
+        "profit": "Bénéfice des camions par agence",
+        "costs": "Coûts des camions par agence"
+      },
+      "description": {
+        "profit": "Les camions de quelle agence rapportent le plus ? {period}, {currency}.",
+        "costs": "Les camions de quelle agence coûtent le plus ? {period}, {currency}."
+      },
+      "empty": "Aucune agence n’a de camion sur cette période.",
+      "hover": "{count, plural, one {# camion} other {# camions}} · recettes {revenue} · dépenses {expenses}",
+      "hoverCosts": "{count, plural, one {# camion} other {# camions}} · dépenses {expenses}",
+      "vehicleCount": "{count, plural, one {# camion} other {# camions}}",
+      "columns": {
+        "vehicles": "Camions",
+        "profit": "Bénéfice des camions"
+      }
+    }
   }
 }

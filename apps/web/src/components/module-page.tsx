@@ -9,6 +9,8 @@ export interface ModulePageTab<K extends string = string> {
   key: K;
   label: string;
   to: string;
+  /** Search the tab keeps, such as the range the page's tabs share. */
+  search?: Record<string, string | undefined> | undefined;
   /**
    * Only where someone waits (To approve, Problems). Zero shows nothing: a
    * count on every tab would stop meaning "this needs you".
@@ -62,7 +64,7 @@ export function ModulePage<K extends string>({
                   value={tab.key}
                   className="h-full flex-none gap-1.5 px-0.5 text-sm group-data-horizontal/tabs:after:bottom-0"
                   nativeButton={false}
-                  render={<Link to={tab.to} />}
+                  render={<Link to={tab.to} {...(tab.search === undefined ? {} : { search: tab.search })} />}
                 >
                   {tab.label}
                   {tab.count !== undefined && tab.count > 0 && (

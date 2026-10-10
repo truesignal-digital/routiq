@@ -284,5 +284,25 @@
     "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another trip at the same time.",
     "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another trip at the same time.",
     "TRIP_STARTED_AFTER_CANCELLATION": "This trip had been cancelled, but it was started offline. It is running again."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed trip} other {# closed trips}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Trips"
+      },
+      "tripsCount": "{count, plural, one {# trip} other {# trips}}",
+      "tripsWithoutKm": "{count, plural, one {# trip without km} other {# trips without km}}",
+      "lossDetail": "{count, plural, =0 {No trip} one {# trip} other {# trips}} · {amount} spent"
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# trip planned} other {# trips planned}}"
+        }
+      }
+    }
   }
 }

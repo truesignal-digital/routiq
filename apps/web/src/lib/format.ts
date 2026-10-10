@@ -200,6 +200,18 @@ export function formatPercent(percent: number, locale?: string): string {
   );
 }
 
+/** A whole count grouped as the reader's language writes it: "4,800", "4 800". */
+export function formatCount(value: number, locale?: string): string {
+  return plainSpaces(new Intl.NumberFormat(locale ?? i18n.resolvedLanguage, { maximumFractionDigits: 0 }).format(value));
+}
+
+/** A chart axis figure, short: "2M", "2 M", "450K". The exact amount is in the hover and the table. */
+export function formatCompact(value: number, locale?: string): string {
+  return plainSpaces(
+    new Intl.NumberFormat(locale ?? i18n.resolvedLanguage, { notation: "compact", maximumFractionDigits: 1 }).format(value),
+  );
+}
+
 /** "septembre 2026" for the period "2026-09": a posting month in words. */
 export function formatMonth(periodCode: string | null | undefined, locale?: string): string {
   if (periodCode == null || !/^\d{4}-\d{2}$/.test(periodCode)) return periodCode ?? "";

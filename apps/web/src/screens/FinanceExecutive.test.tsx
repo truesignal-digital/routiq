@@ -9,6 +9,7 @@ import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { router as applicationRouter } from "../router.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
+import { testOverview } from "../finance/dashboard/test-overview.js";
 
 const identity = { username: "executive-test", workspaceSlug: "executive-test" };
 const branchId = "00000000-0000-4000-8000-000000000020";
@@ -86,6 +87,15 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
           openPeriod: { periodCode: "2026-09", postedExpenseMinor: 25000, postedRevenueMinor: 0, currency: "XAF" },
           pendingApprovals: { count: 0, outsideBranchCount: 0 }, series: [],
         };
+        break;
+      case "/v1/finance/overview":
+        body = testOverview();
+        break;
+      case "/v1/todo":
+        body = { businessDate: "2026-10-09", scope: { ambientBranch: "IGNORED", branchIds: [branchId] }, rows: [], totalCount: 0 };
+        break;
+      case "/v1/coming-up":
+        body = { businessDate: "2026-10-09", windowDays: 14, scope: { ambientBranch: "IGNORED", branchIds: [branchId] }, rows: [], totalCount: 0, notCounted: [] };
         break;
       case `/v1/finance/entries/${entry.id}`:
         body = entry;
@@ -170,9 +180,10 @@ it("does not expose a reversal form to an Administrateur following a direct reve
 it("opens a dashboard total in its period and retains branch/period after inspecting an entry", async () => {
   const { requests, history } = await openFinance("/");
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("link", { name: "Period expense" }));
+  // The Dashboard's Expenses tile opens the posted expenses of the month on screen.
+  await user.click(await screen.findByRole("link", { name: /^Expenses/ }));
   await screen.findByRole("button", { name: "FIN-EXEC" });
-  expect(screen.getByPlaceholderText("Period (YYYY-MM)").getAttribute("value")).toBe("2026-09");
+  expect(history.location.search).toContain("economicMonth=2026-10");
   expect(history.location.search).toContain("direction=EXPENSE");
   expect(history.location.search).toContain("status=LEDGER");
   const period = screen.getByPlaceholderText("Period (YYYY-MM)");
@@ -189,7 +200,7 @@ it("opens a dashboard total in its period and retains branch/period after inspec
   await act(async () => { history.back(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
   expect(screen.getByPlaceholderText("Period (YYYY-MM)").getAttribute("value")).toBe("2026-08");
-  await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries" && url.searchParams.get("periodCode") === "2026-09")).toBe(true));
+  await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries" && url.searchParams.get("periodCode") === "2026-08")).toBe(true));
   expect(requests.filter(({ url }) => url.pathname === "/v1/finance/entries").every(({ url }) => url.searchParams.get("branchId") === branchId)).toBe(true);
 });
 

@@ -29,6 +29,10 @@ const AssetsStub = lazyScreen(() => import("./screens/AssetsStub.js"), "AssetsSt
 const BranchesScreen = lazyScreen(() => import("./screens/BranchesScreen.js"), "BranchesScreen");
 const CompanySettingsScreen = lazyScreen(() => import("./screens/CompanySettingsScreen.js"), "CompanySettingsScreen");
 const DashboardScreen = lazyScreen(() => import("./screens/DashboardScreen.js"), "DashboardScreen");
+const DashboardTodoTab = lazyScreen(() => import("./dashboard/DashboardTodoTab.js"), "DashboardTodoTab");
+const DashboardOverviewTab = lazyScreen(() => import("./screens/FinanceDashboard.js"), "DashboardOverviewTab");
+const DashboardVehiclesTab = lazyScreen(() => import("./screens/FinanceDashboard.js"), "DashboardVehiclesTab");
+const DashboardBranchesTab = lazyScreen(() => import("./screens/FinanceDashboard.js"), "DashboardBranchesTab");
 const MySettingsScreen = lazyScreen(() => import("./screens/MySettingsScreen.js"), "MySettingsScreen");
 const PersonsScreen = lazyScreen(() => import("./screens/PersonsScreen.js"), "PersonsScreen");
 const UsersScreen = lazyScreen(() => import("./screens/UsersScreen.js"), "UsersScreen");
@@ -78,10 +82,50 @@ const appRoute = createRoute({
   pendingComponent: ShellPending,
 });
 
-const indexRoute = createRoute({
+/**
+ * Home: the Dashboard's header and tabs for the ledger readers, Home's tiles
+ * for everyone else (DashboardScreen decides). Each tab is its own address;
+ * the money tabs share the range picker, this month being the bare address.
+ */
+const homeRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: "/",
+  id: "home",
+  validateSearch: z.object({
+    range: z.enum(["3-months", "12-months"]).optional().catch(undefined),
+  }),
   component: DashboardScreen,
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/",
+  component: DashboardOverviewTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const dashboardTodoRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/to-do",
+  component: DashboardTodoTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const dashboardVehiclesRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/profit-by-vehicle",
+  component: DashboardVehiclesTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const dashboardBranchesRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/profit-by-branch",
+  component: DashboardBranchesTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const assetsRoute = createRoute({
@@ -373,7 +417,7 @@ const companySettingsRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
-    indexRoute,
+    homeRoute.addChildren([indexRoute, dashboardTodoRoute, dashboardVehiclesRoute, dashboardBranchesRoute]),
     assetsRoute,
     // Before the $assetId route, or "new" reads as an asset id.
     assetsNewRoute,
@@ -422,7 +466,7 @@ router.subscribe("onBeforeLoad", () => {
  * While someone types their PIN, fetch the shell and Home, so signing in does
  * not wait on another download over a slow network.
  */
-export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
+export const AFTER_SIGN_IN = [AppShell, DashboardScreen, DashboardOverviewTab];
 
 export function preloadAfterSignIn(): void {
   for (const screen of AFTER_SIGN_IN) void screen.preload();
@@ -430,6 +474,9 @@ export function preloadAfterSignIn(): void {
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
 export const SCREENS_BY_USE = [
+  DashboardTodoTab,
+  DashboardVehiclesTab,
+  DashboardBranchesTab,
   AssetsStub,
   VehicleWorkspaceScreen,
   NowTab,

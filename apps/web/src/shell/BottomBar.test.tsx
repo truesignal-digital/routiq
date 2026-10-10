@@ -105,7 +105,7 @@ describe("BottomBar", () => {
   it("shows the role's places, then Menu, on phones only", async () => {
     const bar = await renderBar(membership("TECHNICIAN"));
     expect(within(bar).getAllByRole("link").map((link) => link.textContent)).toEqual([
-      "Home",
+      "Dashboard",
       "Maintenance",
       "Assets",
     ]);

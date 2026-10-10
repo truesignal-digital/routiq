@@ -28,6 +28,11 @@ describe("ToDoList", () => {
     expect(screen.queryByText("Thing 6")).toBeNull();
   });
 
+  it("lists every row when the To do tab lifts the limit", () => {
+    render(<ToDoList items={[1, 2, 3, 4, 5, 6, 7].map(item)} empty="Nothing" limit={Number.POSITIVE_INFINITY} />);
+    expect(screen.getAllByRole("listitem")).toHaveLength(7);
+  });
+
   it("says when nothing waits instead of drawing an empty card", () => {
     render(<ToDoList items={[]} empty="Nothing waits for you." />);
     expect(screen.getByText("Nothing waits for you.")).toBeTruthy();
