@@ -115,8 +115,8 @@ async function moneyTiles(ctx: DriveContext) {
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  const out = page.getByRole("button", { name: new RegExp(`^${t("Sorties en", "Expenses in")} \\p{L}+`, "u") }).first();
-  const incoming = page.getByRole("button", { name: new RegExp(`^${t("Entrées en", "Revenue in")} \\p{L}+`, "u") }).first();
+  const out = page.getByRole("button", { name: new RegExp(`^${t("Dépenses en", "Expenses in")} \\p{L}+`, "u") }).first();
+  const incoming = page.getByRole("button", { name: new RegExp(`^${t("Recettes en", "Revenue in")} \\p{L}+`, "u") }).first();
   await out.waitFor();
   await incoming.waitFor();
   const body = (await page.locator("main").textContent()) ?? "";
