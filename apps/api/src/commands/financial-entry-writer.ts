@@ -1,4 +1,4 @@
-import type { CommandEnvelope, CommandWarningCode } from "@routiq/contracts";
+import type { CommandEnvelope, CommandOrigin, CommandWarningCode } from "@routiq/contracts";
 import { entryEvidenceState } from "@routiq/domain";
 import { and, eq, inArray } from "drizzle-orm";
 import {
@@ -19,6 +19,7 @@ import {
   type Tx,
 } from "./dispatcher.js";
 import { nextEntryNumber } from "./numbering.js";
+import { assertOwnTrip } from "./own-records.js";
 import { resolvePostingPeriod } from "./periods.js";
 
 export interface FinancialEntryPostingWriteRequest {
@@ -115,7 +116,12 @@ export async function writeFinancialEntry(
     envelope,
     request.branchCode,
   );
-  const { category, lateWorkOrderCost } = await resolveEntryReferences(tx, ctx, request);
+  const { category, lateWorkOrderCost } = await resolveEntryReferences(
+    tx,
+    ctx,
+    request,
+    envelope.origin,
+  );
   // record-expense asks for review already (`requiresReview`); this holds for
   // every other caller, so no path posts a late repair invoice unseen (#82).
   const decision = lateWorkOrderCost ? LATE_COST_REVIEW : approval;
@@ -267,6 +273,7 @@ export async function resolveEntryReferences(
     FinancialEntryFacts,
     "direction" | "categoryCode" | "categoryKind" | "categoryRefType" | "postings" | "description"
   >,
+  origin: CommandOrigin,
 ): Promise<EntryReferences> {
   let lateWorkOrderCost = false;
   const categoryMatches = await tx
@@ -367,6 +374,10 @@ export async function resolveEntryReferences(
         referenceType: "activity",
         missing,
       });
+    }
+    // A driver puts money on their own trips only (#592).
+    for (const activityId of requestedActivityIds) {
+      await assertOwnTrip(tx, ctx, ["DRIVER"], { id: activityId }, origin);
     }
   }
 

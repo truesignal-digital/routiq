@@ -731,7 +731,9 @@ async function seedTransportsNgwa() {
     ),
   );
 
-  await runCommand(boris, "create-activity:douala-bafoussam", {
+  // Sali logs the run herself: she books its fuel below, and a driver puts
+  // money only on her own trips (#592).
+  await runCommand(sali, "create-activity:douala-bafoussam", {
     activityId: ids.bafoussamJourney,
     branchCode,
     activityTypeCode: "HAULAGE_JOB",
