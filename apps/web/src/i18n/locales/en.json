@@ -705,6 +705,10 @@
     "add": "Add",
     "readFailed": "Could not load",
     "howCalculated": "How this is calculated",
+    "profit": "Profit",
+    "loss": "Loss",
+    "profitAmount": "Profit {amount}",
+    "lossAmount": "Loss {amount}",
     "recordNumber": {
       "workOrder": "WO-{number}",
       "issue": "PRB-{number}",
@@ -830,14 +834,13 @@
       "endedAt": "Ended",
       "assets": "Assets and crew",
       "legs": "Legs",
-      "money": "Revenue and costs",
-      "moneyCosts": "Costs",
+      "money": "Revenue and expenses",
+      "moneyCosts": "Expenses",
       "km": "{count} km",
       "closedAt": "Closed {date}",
       "overview": {
         "started": "Started",
         "ended": "Ended",
-        "net": "Net",
         "postedOnly": "posted lines only",
         "legs": "Legs"
       },
@@ -874,10 +877,9 @@
         "passengers": "Passengers"
       },
       "moneySummary": {
-        "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
-        "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
+        "pendingHint": "Lines awaiting approval are listed but stay out of the profit.",
         "ownOnly": "Only the entries you recorded on this activity.",
         "branchOnly": "Only the entries of your branches on this activity."
       }
@@ -985,7 +987,7 @@
         "flavourJourney": "Seats",
         "flavourHaulage": "Cargo",
         "money": "Revenue and expenses",
-        "moneyCosts": "Costs"
+        "moneyCosts": "Expenses"
       },
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch",
@@ -998,7 +1000,7 @@
       "clientReferenceLabel": "Client ref. (optional)",
       "clientReferencePlaceholder": "Order or docket number",
       "descriptionLabel": "Notes (optional)",
-      "descriptionPlaceholder": "What the sheet notes in the margin",
+      "descriptionPlaceholder": "Anything else the sheet says",
       "primaryAssetLabel": "Primary asset",
       "chooseAsset": "Choose an asset",
       "startedAtLabel": "Departure",
@@ -2522,7 +2524,7 @@
       "revenue": "Posted revenue",
       "revenueHint": "Posted is not cash received",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "byCategory": "Spending by category",
+      "byCategory": "Expenses by category",
       "byCategoryHint": "Posted, {period}",
       "lastSixMonths": "Last 6 months",
       "lastSixMonthsHint": "Posted entries by posting period",
@@ -2546,7 +2548,7 @@
       "forTrip": "for activity {number}",
       "forWorkOrder": "for work order {ref}",
       "ofEntry": "of a {amount} entry",
-      "lifetime": "Lifetime, all posted entries since registration: revenue {revenue} · expenses {expenses} · net {net}. Recorded figures, not cash paid or profit."
+      "lifetime": "Lifetime, all posted entries since registration: Revenue {revenue} · Expenses {expenses} · {result}. Recorded in ROUTIQ: not cash paid, and taxes and loan repayments are not in it."
     },
     "layers": {
       "DIRECT": "Direct",

@@ -3,7 +3,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
 /**
  * A truck's Money numbers after cancellations (#472, #473), on VH001 as Finance.
  * With September locked, cancel its 85,000 repair so the cancellation posts in
- * October: October's Spending by category nets negative and shows no share
+ * October: October's Expenses by category nets negative and shows no share
  * (it read "-8500000%"). Then cancel July's fuel entry that had no receipt:
  * July's Missing receipts drops to 0 and the cancelled row asks for nothing.
  * September is locked through the command first (the Accounting months button
@@ -67,7 +67,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await nav(`/assets/${truck.id}/money?period=2026-10`);
   await page.getByRole("heading", { name: t("Argent · octobre 2026", "Money · October 2026") }).waitFor();
   await quiet();
-  const categories = page.locator('[data-slot="card"]').filter({ hasText: t("Dépenses par catégorie", "Spending by category") });
+  const categories = page.locator('[data-slot="card"]').filter({ hasText: t("Dépenses par catégorie", "Expenses by category") });
   await categories.waitFor();
   await shot("october-negative", {
     caption: `October nets −85,000 after cancelling ${repair.entryNumber}: no share is shown`,

@@ -12,7 +12,7 @@ import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useCategories } from "@/categories/useCategories.js";
-import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
+import { formatDate, formatMoney, localizedLabel, profitOrLoss, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { contributes } from "@/modules/manifest.js";
 import { useVehicle } from "../context.js";
@@ -250,7 +250,7 @@ function MoneySection() {
           {t("vehicle.money.lifetime", {
             revenue: money(lifetime.revenueMinor),
             expenses: money(lifetime.expenseMinor),
-            net: money(lifetime.netMinor, { context: "net" }),
+            result: profitOrLoss(lifetime.netMinor, { currency: asset.currency, locale }).text,
           })}
         </p>
       )}

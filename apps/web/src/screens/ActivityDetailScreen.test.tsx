@@ -314,7 +314,7 @@ describe("activity detail — a full haulage job", () => {
       "Planned vs actual",
       "Assets and crew",
       "Legs",
-      "Revenue and costs",
+      "Revenue and expenses",
     ]);
   });
 
@@ -376,10 +376,10 @@ describe("activity detail — a sparse open journey", () => {
     expect(screen.getByText(/PASSENGER_TRANSPORT v1/)).toBeTruthy();
   });
 
-  it("keeps a zero net honest rather than hiding the tile", () => {
+  it("keeps a zero profit honest rather than hiding the tile", () => {
     renderScreen();
 
-    const net = screen.getByText("Net").nextElementSibling;
+    const net = screen.getByText("Profit").nextElementSibling;
     expect((net?.textContent ?? "").replace(/[^\d+-]/g, "")).toBe("0");
   });
 });
@@ -394,12 +394,12 @@ describe("activity detail — a reader the server keeps the ledger from (#103)",
     });
   });
 
-  it("shows the trip without its money section or net", () => {
+  it("shows the trip without its money section or profit", () => {
     renderScreen();
 
     expect(screen.getByRole("heading", { name: "DLA-2026-00042" })).toBeTruthy();
     expect(sectionTitles()).toEqual(["Planned vs actual", "Assets and crew", "Legs"]);
-    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.queryByText("Profit")).toBeNull();
     expect(screen.queryByRole("link", { name: /FIN-2026-0001/ })).toBeNull();
     expect(screen.getByText("Legs", { selector: "dt" })).toBeTruthy();
   });

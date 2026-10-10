@@ -70,7 +70,7 @@ describe("activity overview band", () => {
     expect(screen.queryByText("Running")).toBeNull();
   });
 
-  it("nets only the posted lines, and says so", () => {
+  it("counts only the posted lines as profit, and says so", () => {
     render(
       <ActivityOverview
         showNet
@@ -118,13 +118,13 @@ describe("activity overview band", () => {
       />,
     );
 
-    const net = tile("Net");
-    expect(digits(net)).toBe("+500000");
-    expect(net.textContent).toContain("posted lines only");
-    expect(tone("Net")).toBe("neutral");
+    const profit = tile("Profit");
+    expect(digits(profit)).toBe("500000");
+    expect(profit.textContent).toContain("posted lines only");
+    expect(tone("Profit")).toBe("neutral");
   });
 
-  it("flags a loss and signs it, so colour is never the only signal", () => {
+  it("names a loss in words, never a negative profit, and flags it (#659)", () => {
     render(
       <ActivityOverview
         showNet
@@ -147,21 +147,23 @@ describe("activity overview band", () => {
       />,
     );
 
-    expect(digits(tile("Net"))).toBe("-120000");
-    expect(tone("Net")).toBe("warning");
+    expect(digits(tile("Loss"))).toBe("120000");
+    expect(tile("Loss").textContent).not.toContain("\u2212");
+    expect(screen.queryByText("Profit")).toBeNull();
+    expect(tone("Loss")).toBe("warning");
   });
 
-  it("leaves the net out for a driver, whose entries are only their own (#264)", () => {
+  it("leaves the profit out for a driver, whose entries are only their own (#264)", () => {
     render(<ActivityOverview showNet={false} activity={overview()} />);
 
-    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.queryByText("Profit")).toBeNull();
     expect(tile("Legs").textContent).toContain("2");
   });
 
-  it("leaves the net out when the server kept the ledger back (#103)", () => {
+  it("leaves the profit out when the server kept the ledger back (#103)", () => {
     render(<ActivityOverview showNet activity={overview({ financialEntries: null })} />);
 
-    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.queryByText("Profit")).toBeNull();
     expect(tile("Legs").textContent).toContain("2");
   });
 });

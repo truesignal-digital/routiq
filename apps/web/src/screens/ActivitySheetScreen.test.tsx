@@ -400,13 +400,13 @@ describe("activity sheet capture", () => {
   describe("a driver's money lines (#532)", () => {
     it("titles the money card by who may add revenue (#594)", async () => {
       renderScreen();
-      expect(await screen.findByText("Costs")).toBeTruthy();
+      expect(await screen.findByText("Expenses")).toBeTruthy();
       expect(screen.queryByText("Revenue and expenses")).toBeNull();
       cleanup();
 
       renderScreen(manager);
       expect(await screen.findByText("Revenue and expenses")).toBeTruthy();
-      expect(screen.queryByText("Costs")).toBeNull();
+      expect(screen.queryByText("Expenses")).toBeNull();
     });
 
     it("opens a driver's journey with no revenue line, and offers expenses only", async () => {
