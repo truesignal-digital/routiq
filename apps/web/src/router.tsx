@@ -196,6 +196,19 @@ const vehicleDetailsRoute = createRoute({
 const financeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance",
+  // The waiting view became the To approve tab: an old
+  // `/finance/entries?view=waiting` link lands there. Here rather than on the
+  // Entries route, which then always renders the address it was given.
+  beforeLoad: ({ location }) => {
+    const search = location.search as { view?: unknown; branch?: unknown };
+    if (location.pathname === "/finance/entries" && search.view === "waiting") {
+      throw redirect({
+        to: "/finance/approve",
+        search: search.branch === "all" ? { branch: "all" } : {},
+        replace: true,
+      });
+    }
+  },
   component: FinanceScreen,
 });
 
@@ -223,21 +236,12 @@ const financeEntriesRoute = createRoute({
   getParentRoute: () => financeRoute,
   path: "entries",
   // `branch=all` arrives from an overflow line that has already named the
-  // work outside the shell's agency. The waiting view became the To approve
-  // tab: an old `view=waiting` link lands there.
+  // work outside the shell's agency. An old `view=waiting` link is sent on to
+  // To approve by the Money route above.
   validateSearch: financialEntryFilters.omit({ branchId: true }).extend({
     view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
     branch: z.literal("all").optional().catch(undefined),
   }),
-  beforeLoad: ({ search }) => {
-    if (search.view === "waiting") {
-      throw redirect({
-        to: "/finance/approve",
-        search: search.branch === "all" ? { branch: "all" } : {},
-        replace: true,
-      });
-    }
-  },
   component: FinanceEntriesScreen,
   pendingComponent: SectionPending,
   errorComponent: SectionError,
