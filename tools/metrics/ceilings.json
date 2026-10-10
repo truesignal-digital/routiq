@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 694679,
+    "ceiling": 694831,
     "raises": [
       {
         "date": "2026-10-06",
@@ -253,6 +253,12 @@
         "from": 694047,
         "to": 694679,
         "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 694831,
+        "reason": "#653 trucking overlays for the grounded-vehicle warning"
       }
     ]
   },
