@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { isRedirect } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { sessionStore } from "../auth/store.js";
+import { retryRead } from "../lib/query-retry.js";
 import { loadShell } from "./shell-loader.js";
 
 const identity = { username: "ada", workspaceSlug: "transports-douala" };
@@ -12,7 +13,7 @@ afterEach(() => {
   sessionStore.logout(identity);
 });
 
-function serve(meStatus: number | "offline") {
+function serve(meStatus: number | "offline", extrasStatus = 200) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(String(input), "http://app.test").pathname;
     if (path === "/v1/me") {
@@ -21,6 +22,7 @@ function serve(meStatus: number | "offline") {
         ? Response.json({ workspaceId: "w", principalId: "p", principalType: "USER", membershipId: "m", role: "DIRECTOR", branchScope: "ALL", enabledModules: [], enabledPresets: ["TRUCKING"] })
         : new Response(null, { status: meStatus });
     }
+    if (extrasStatus !== 200) return new Response(null, { status: extrasStatus });
     if (path === "/v1/approval-chain") return Response.json({ steps: [], notice: null });
     if (path === "/v1/reference/asset-registration") return Response.json({ assetClasses: [], branches: [] });
     throw new Error(`unexpected ${path}`);
@@ -55,4 +57,14 @@ it("draws the shell without the member when the read fails for any other reason,
   const client = new QueryClient();
   await expect(loadShell(client, "/assets")).resolves.toBeUndefined();
   expect(sessionStore.getActive()).toBeDefined();
+});
+
+it("asks for the notice and branches once, so a server error does not hold the shell through the app's retries", async () => {
+  const fetchMock = serve(200, 500);
+  sessionStore.save({ ...identity, token: "t", expiresAt: "2099-01-01T00:00:00Z" });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: retryRead } } });
+  const me = await loadShell(client, "/assets");
+  expect(me?.role).toBe("DIRECTOR");
+  const paths = fetchMock.mock.calls.map(([input]) => new URL(String(input), "http://app.test").pathname).sort();
+  expect(paths).toEqual(["/v1/approval-chain", "/v1/me", "/v1/reference/asset-registration"]);
 });
