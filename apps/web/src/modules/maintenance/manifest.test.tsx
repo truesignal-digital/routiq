@@ -33,6 +33,7 @@ const OPEN_GATES: VehicleGates = {
 const WORK_ORDER_LINK = {
   workOrderId: WORK_ORDER_ID,
   workOrderAssetId: ASSET_ID,
+  workOrderNumber: 7,
   workOrderDescription: "Changer les plaquettes",
   activityId: null,
   activityNumber: null,

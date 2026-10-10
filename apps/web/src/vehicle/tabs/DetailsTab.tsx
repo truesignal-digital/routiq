@@ -45,7 +45,8 @@ import {
   type DetailsProblem,
 } from "../details/model.js";
 import { makeAndModel } from "../header/IdentityStrip.js";
-import { recordReference } from "../model.js";
+import { RecordNumber } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { LinkButton } from "../parts.js";
 
 type Row = readonly [string, ReactNode];
@@ -173,7 +174,7 @@ function useNowRows(): Row[] {
           {t("vehicle.details.groundedSince", { date: formatDateTime(availability.since, locale) })}
           {" · "}
           <LinkButton onClick={() => panel.openRecord({ kind: "issue", id: availability.issue.id })}>
-            {recordReference(availability.issue.id)}
+            <RecordNumber>{recordNumberText(t, "issue", availability.issue.number)}</RecordNumber>
           </LinkButton>
         </>
       ) : availability.state === "AVAILABLE" ? (

@@ -26,6 +26,15 @@ export const issueStatuses = ["OPEN", "RESOLVED", "DISMISSED"] as const;
 export const issueStatus = z.enum(issueStatuses);
 
 /**
+ * A work order's or problem's number (#608): a per-workspace sequence the
+ * server draws when the creating command commits; the uuid stays the key. The
+ * client adds the prefix in its own words ("OT-0007", "WO-0007"). Every record
+ * the server holds has one. Null is for a record the client holds before it
+ * reaches the server (captured offline), which shows as "number pending".
+ */
+export const maintenanceRecordNumber = z.number().int().positive().nullable();
+
+/**
  * An asset seen from the maintenance module: identity plus the two labels the
  * fleet is read by, same pair the asset list publishes. Registration is null
  * for anything not yet plated.
@@ -54,6 +63,7 @@ export const maintenanceBranchRef = z.object({
  */
 export const workOrderIssueRef = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   safetyCritical: z.boolean(),
 });
 
@@ -99,6 +109,7 @@ export const workOrderListQuery = listQuery({
 
 export const workOrderListItem = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   status: workOrderStatus,
   description: z.string(),
   asset: maintenanceAssetRef,
@@ -275,11 +286,13 @@ export const issueListQuery = listQuery({
 /** A work order spawned by this signalement; an issue may spawn several. */
 export const issueWorkOrderRef = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   status: workOrderStatus,
 });
 
 export const issueListItem = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   asset: maintenanceAssetRef,
   branch: maintenanceBranchRef,
   description: z.string(),

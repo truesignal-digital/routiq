@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { RecordText } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { contributes } from "@/modules/manifest.js";
 
 const LINK_CLASS =
@@ -31,14 +32,15 @@ export function visibleEntryLinks(
 
 /**
  * What an entry belongs to: the work order, opened in its vehicle's workspace,
- * and the trip (#87). Renders nothing when the entry names neither. Work orders
- * have no number, so the link names the order by its description, the title it
- * carries on the vehicle's Maintenance tab (#547).
+ * and the trip (#87). Renders nothing when the entry names neither. The work
+ * order reads by its number and its description, the title it carries on the
+ * vehicle's Maintenance tab (#547, #608).
  */
 export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }) {
   const { t } = useTranslation();
   const me = useMeContext();
   const { workOrderId, workOrderAssetId, workOrderDescription, activityId, activityNumber } = links;
+  const workOrderRef = recordNumberText(t, "work_order", links.workOrderNumber);
   const shown = visibleEntryLinks(links, me?.enabledModules);
   const hasWorkOrder =
     shown.workOrder && workOrderId !== null && workOrderAssetId !== null && workOrderDescription !== null;
@@ -54,7 +56,12 @@ export function EntryLinks({ links }: { links: FinancialEntryListItem["links"] }
           search={{ panel: `work_order:${workOrderId}` }}
           className={`${LINK_CLASS} max-w-full`}
         >
-          <span className="line-clamp-2 min-w-0">{t("finance.entries.detail.workOrderLink", { title: workOrderDescription })}</span>
+          <span className="line-clamp-2 min-w-0">
+            <RecordText
+              text={t("finance.entries.detail.workOrderLink", { ref: workOrderRef, title: workOrderDescription })}
+              numbers={[workOrderRef]}
+            />
+          </span>
         </Link>
       )}
       {hasTrip && (

@@ -9,6 +9,7 @@ import {
   ME_ID,
   OTHER_ID,
   WORK_ORDER_ID,
+  WORK_ORDER_NUMBER,
   actor,
   asset,
   attention,
@@ -47,15 +48,15 @@ afterEach(async () => {
   await closeVehicle();
 });
 
-const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
-const ISSUE_REF = ISSUE_ID.slice(0, 8).toUpperCase();
+const WO_REF = "WO-0007";
+const ISSUE_REF = "PRB-0003";
 
 const scenario = {
   role: "TECHNICIAN" as const,
   asset: asset({ availability: grounded([groundingWorkOrder("APPROVED")]) }),
   workOrders: [workOrderRow("APPROVED")],
   workOrderDetails: [workOrderDetail("APPROVED")],
-  issueDetails: [issueDetail({ workOrders: [{ id: WORK_ORDER_ID, status: "APPROVED" }] })],
+  issueDetails: [issueDetail({ workOrders: [{ id: WORK_ORDER_ID, number: WORK_ORDER_NUMBER, status: "APPROVED" }] })],
 };
 
 it("opens a record from the URL and keeps it across a reload", async () => {
@@ -74,6 +75,32 @@ it.each([
   await openVehicle(`/assets/${ASSET_ID}/maintenance?${panelParam}`, scenario);
   const panel = await screen.findByRole("dialog", { name });
   expect(within(panel).getByRole("button", { name: "History" })).toBeTruthy();
+});
+
+it("names the work order and its problem by their numbers (#608)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, scenario);
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(within(panel).getByText(`Work order ${WO_REF}`)).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: `From problem ${ISSUE_REF}` })).toBeTruthy();
+});
+
+it("names the problem and the work orders it spawned by their numbers, in French too (#608)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=issue:${ISSUE_ID}`, { ...scenario, locale: "fr-CM" });
+  const panel = await screen.findByRole("dialog", { name: /Kekem/ });
+  expect(within(panel).getByText("Problème PB-0003")).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: "OT-0007" })).toBeTruthy();
+});
+
+it("says the number is pending for a record the server has not numbered yet (#608)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    workOrderDetails: [
+      workOrderDetail("APPROVED", { number: null, issue: { id: ISSUE_ID, number: null, safetyCritical: true } }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(within(panel).getByText("Work order number pending")).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: "From problem number pending" })).toBeTruthy();
 });
 
 it("follows a reference by pushing history, so Back returns to the record", async () => {
@@ -279,7 +306,7 @@ it("names the other safety problem that blocks the release, not a manager (#588)
     role: "FINANCE",
     asset: asset({
       availability: grounded([groundingWorkOrder("COMPLETED")], {}, [
-        { id: "00000000-0000-4000-8000-0000000000f1", description: "Steering play on the left" },
+        { id: "00000000-0000-4000-8000-0000000000f1", number: 5, description: "Steering play on the left" },
       ]),
     }),
     workOrders: [workOrderRow("COMPLETED")],

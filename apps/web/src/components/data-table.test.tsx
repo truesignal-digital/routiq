@@ -546,6 +546,138 @@ describe("DataTable", () => {
       expect(screen.getByText("Ada Lovelace")).toBeTruthy();
     });
 
+    // #548: a list is never sorted by a column the viewer cannot see.
+    describe("hiding the sorted column", () => {
+      const twoSortable: DataTableColumn<Person>[] = labelledColumns.map((column, index) =>
+        index < 2 ? { ...column, enableSorting: true } : column,
+      );
+      const byName: SortingState = [{ id: "name", desc: false }];
+
+      async function sortBy(header: string) {
+        const cell = screen.getByRole("columnheader", { name: header });
+        await userEvent.click(within(cell).getByRole("button"));
+      }
+
+      async function hide(label: string) {
+        await userEvent.click(screen.getByRole("button", { name: "View" }));
+        await userEvent.click(await screen.findByRole("menuitemcheckbox", { name: label }));
+      }
+
+      it("goes back to the default sort when the table owns sorting", async () => {
+        render(
+          <DataTable
+            columns={twoSortable}
+            data={[...data].reverse()}
+            defaultSorting={byName}
+            enableColumnVisibility
+          />,
+        );
+        await sortBy("Email");
+        expect(screen.getByRole("columnheader", { name: "Email" }).getAttribute("aria-sort")).toBe(
+          "ascending",
+        );
+
+        await hide("Email address");
+
+        expect(screen.getByRole("columnheader", { name: "Name" }).getAttribute("aria-sort")).toBe(
+          "ascending",
+        );
+        expect(renderedNames()).toEqual(["Ada Lovelace", "Grace Hopper"]);
+      });
+
+      it("asks the parent for the default sort when the screen owns sorting and the view menu", async () => {
+        const onSortingChange = vi.fn();
+        function Screen() {
+          const [visibility, setVisibility] = useState<VisibilityState>({});
+          const [sorting, setSorting] = useState<SortingState>([{ id: "email", desc: true }]);
+          return (
+            <>
+              <DataTableViewOptions columns={twoSortable} value={visibility} onChange={setVisibility} />
+              <DataTable
+                columns={twoSortable}
+                data={data}
+                columnVisibility={visibility}
+                onColumnVisibilityChange={setVisibility}
+                sorting={sorting}
+                defaultSorting={byName}
+                onSortingChange={(next) => {
+                  onSortingChange(next);
+                  setSorting(next);
+                }}
+              />
+            </>
+          );
+        }
+        render(<Screen />);
+
+        await hide("Email address");
+
+        await waitFor(() => expect(onSortingChange).toHaveBeenCalledExactlyOnceWith(byName));
+        expect(screen.getByRole("columnheader", { name: "Name" }).getAttribute("aria-sort")).toBe(
+          "ascending",
+        );
+      });
+
+      it("sorts by the first visible sortable column when the default's column is hidden too", async () => {
+        const onSortingChange = vi.fn();
+        render(
+          <DataTable
+            columns={twoSortable}
+            data={data}
+            sorting={byName}
+            defaultSorting={byName}
+            onSortingChange={onSortingChange}
+            enableColumnVisibility
+          />,
+        );
+
+        await hide("Full name");
+
+        // Never `[]`: a server read would fall back to its own order, which can be the hidden column.
+        await waitFor(() =>
+          expect(onSortingChange).toHaveBeenCalledExactlyOnceWith([{ id: "email", desc: false }]),
+        );
+      });
+
+      it("drops the sort only when no visible column can sort", async () => {
+        const onSortingChange = vi.fn();
+        render(
+          <DataTable
+            columns={labelledColumns.map((column, index) =>
+              index === 0 ? { ...column, enableSorting: true } : column,
+            )}
+            data={data}
+            sorting={byName}
+            defaultSorting={byName}
+            onSortingChange={onSortingChange}
+            enableColumnVisibility
+          />,
+        );
+
+        await hide("Full name");
+
+        await waitFor(() => expect(onSortingChange).toHaveBeenCalledExactlyOnceWith([]));
+      });
+
+      it("leaves the sort alone when another column is hidden", async () => {
+        const onSortingChange = vi.fn();
+        render(
+          <DataTable
+            columns={twoSortable}
+            data={data}
+            sorting={byName}
+            defaultSorting={byName}
+            onSortingChange={onSortingChange}
+            enableColumnVisibility
+          />,
+        );
+
+        await hide("Email address");
+
+        expect(onSortingChange).not.toHaveBeenCalled();
+      });
+    });
+
     it("renders only one view menu when the table embeds its own", () => {
       render(
         <DataTable columns={labelledColumns} data={data} enableColumnVisibility />,

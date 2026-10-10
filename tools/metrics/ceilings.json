@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 688141,
+    "ceiling": 694047,
     "raises": [
       {
         "date": "2026-10-06",
@@ -221,13 +221,37 @@
       {
         "date": "2026-10-10",
         "from": 688043,
-        "to": 688141,
-        "reason": "#640/#642/#643 work-order cost visibility split and shared costs list"
+        "to": 688223,
+        "reason": "Fall back to the first visible sortable column when the sorted and default columns are hidden (#548)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688223,
+        "to": 688723,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688723,
+        "to": 689328,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 689328,
+        "to": 692894,
+        "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 692894,
+        "to": 694047,
+        "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22508,
+    "ceiling": 22832,
     "raises": [
       {
         "date": "2026-10-06",
@@ -276,11 +300,17 @@
         "from": 22212,
         "to": 22508,
         "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22508,
+        "to": 22832,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259547,
+    "ceiling": 261338,
     "raises": [
       {
         "date": "2026-10-06",
@@ -479,6 +509,30 @@
         "from": 259326,
         "to": 259547,
         "reason": "#622 empty-Home sentences (fr+en) in the core catalog; #617 module-off crumb"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259547,
+        "to": 260139,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260139,
+        "to": 260358,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260358,
+        "to": 261228,
+        "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261228,
+        "to": 261338,
+        "reason": "#608 work order and problem numbers (formatter and catalog strings)"
       }
     ]
   }

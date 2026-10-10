@@ -25,8 +25,12 @@ import { viewerOf, type Viewer } from "../model.js";
 export const ASSET_ID = "00000000-0000-4000-8000-00000000a001";
 export const BRANCH_ID = "00000000-0000-4000-8000-00000000b001";
 export const ISSUE_ID = "00000000-0000-4000-8000-00000000c001";
+export const ISSUE_NUMBER = 3;
+export const OTHER_ISSUE_NUMBER = 5;
 export const OTHER_ISSUE_ID = "00000000-0000-4000-8000-00000000c002";
 export const WORK_ORDER_ID = "00000000-0000-4000-8000-00000000d001";
+/** Shown "OT-0007" in French, "WO-0007" in English (#608). */
+export const WORK_ORDER_NUMBER = 7;
 export const ENTRY_ID = "00000000-0000-4000-8000-00000000e001";
 export const DOCUMENT_ID = "00000000-0000-4000-8000-00000000f001";
 export const INTERVAL_ID = "00000000-0000-4000-8000-00000000a0a1";
@@ -74,6 +78,7 @@ export function groundingWorkOrder(
 ): AvailabilityWorkOrder {
   return {
     id: WORK_ORDER_ID,
+    number: WORK_ORDER_NUMBER,
     status,
     rowVersion: 3,
     createdAt: "2026-09-22T18:05:00.000Z",
@@ -96,6 +101,7 @@ export function grounded(
     intervalRowVersion: 1,
     issue: {
       id: ISSUE_ID,
+      number: ISSUE_NUMBER,
       description: "Brake pressure warning on the Kekem descent",
       safetyCritical: true,
       category: "BRAKES",
@@ -178,16 +184,28 @@ export function attention(
     ENTRY_AWAITING_REVIEW: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00006", rowVersion: 1 },
     ENTRY_EVIDENCE_MISSING: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00006", rowVersion: 1 },
     DIRECTION_NOTE: { entityType: "note", id: NOTE_ID, number: null, rowVersion: null },
+    VEHICLE_DOUBLE_BOOKED: { entityType: "activity", id: TRIP_ID, number: "DLA-2026-00009", rowVersion: 1 },
   };
+  const subject = overrides.subject ?? subjects[code];
+  // The read numbers a work order or problem subject (#608), as these fixtures' records are numbered.
+  const recordNumber =
+    subject.entityType === "work_order"
+      ? WORK_ORDER_NUMBER
+      : subject.entityType === "operational_issue"
+        ? subject.id === ISSUE_ID
+          ? ISSUE_NUMBER
+          : OTHER_ISSUE_NUMBER
+        : undefined;
+  const { params, ...rest } = overrides;
   return {
     code,
     severity: code === "DOCUMENT_EXPIRED" ? "CRITICAL" : code.startsWith("ENTRY_AWAITING") ? "INFO" : "WARNING",
-    subject: subjects[code],
+    subject,
     since: "2026-09-23T00:00:00.000Z",
     partOfGrounding: false,
     makerPrincipalIds: [],
-    params: {},
-    ...overrides,
+    ...rest,
+    params: { ...(recordNumber === undefined ? {} : { recordNumber }), ...params },
   };
 }
 
@@ -201,6 +219,7 @@ const branchRef = { id: BRANCH_ID, code: "DLA", name: "Douala" };
 export function workOrderRow(status: WorkOrderStatus, overrides: Partial<WorkOrderListItem> = {}): WorkOrderListItem {
   return {
     id: WORK_ORDER_ID,
+    number: WORK_ORDER_NUMBER,
     status,
     description: "Brake repair: replace pads and air valve",
     asset: assetRef,
@@ -211,7 +230,7 @@ export function workOrderRow(status: WorkOrderStatus, overrides: Partial<WorkOrd
     costOutcome: null,
     costToCome: null,
     currency: "XAF",
-    issue: { id: ISSUE_ID, safetyCritical: true },
+    issue: { id: ISSUE_ID, number: ISSUE_NUMBER, safetyCritical: true },
     createdAt: "2026-09-22T18:05:00.000Z",
     completedAt: null,
     cancelledAt: null,
@@ -252,6 +271,7 @@ export function workOrderDetail(status: WorkOrderStatus, overrides: Partial<Work
 export function issueRow(overrides: Partial<IssueListItem> = {}): IssueListItem {
   return {
     id: ISSUE_ID,
+    number: ISSUE_NUMBER,
     asset: assetRef,
     branch: branchRef,
     description: "Brake pressure warning on the Kekem descent",
@@ -317,12 +337,18 @@ export function entryRow(overrides: Partial<FinancialEntryListItem> = {}): Finan
     recordedBy: actor(OTHER_ID, "Hervé"),
     evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
     assetShareMinor: 310_000,
-    assetLinks: { activityId: null, activityNumber: null, workOrderId: WORK_ORDER_ID },
+    assetLinks: {
+      activityId: null,
+      activityNumber: null,
+      workOrderId: WORK_ORDER_ID,
+      workOrderNumber: WORK_ORDER_NUMBER,
+    },
     links: {
       activityId: null,
       activityNumber: null,
       workOrderId: WORK_ORDER_ID,
       workOrderAssetId: ASSET_ID,
+      workOrderNumber: WORK_ORDER_NUMBER,
       workOrderDescription: "Replace brake pads",
     },
     ...overrides,

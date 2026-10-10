@@ -71,6 +71,10 @@
     "screenLoadFailed": "This page could not be opened. Check your connection, then try again.",
     "screenFailed": "Something went wrong on this page. Try again.",
     "retry": "Try again",
+    "offline": {
+      "banner": "You're offline. Pages will load when the connection is back.",
+      "waiting": "You're offline. This will load as soon as the connection is back."
+    },
     "counts": {
       "moneyWaiting": "{count, plural, one {# entry waiting for your approval} other {# entries waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
@@ -180,6 +184,7 @@
     "SELF_ROLE_CHANGE": "You cannot change your own role or branches. Ask a Director.",
     "MEMBER_ROLE_NOT_GRANTABLE": "You cannot give or remove this role. Ask a Director.",
     "MEMBER_BRANCH_OUT_OF_SCOPE": "This member or these branches are outside your branches. Ask a Director.",
+    "LOGIN_ALREADY_LINKED": "This login already belongs to another person. Unlink it from them first.",
     "DIRECTOR_REQUIRES_ALL_BRANCHES": "A Director always covers every branch.",
     "LAST_BRANCH": "Your workspace must keep at least one active branch.",
     "BRANCH_INACTIVE": "This branch is deactivated: no new operations are possible.",
@@ -558,7 +563,7 @@
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
         "linkedTo": "Linked to",
-        "workOrderLink": "Work order: {title}",
+        "workOrderLink": "Work order {ref}: {title}",
         "tripLink": "Activity {number}",
         "paymentMethod": "Payment method",
         "description": "Description",
@@ -698,7 +703,12 @@
     "notRecorded": "Not recorded",
     "add": "Add",
     "readFailed": "Could not load",
-    "howCalculated": "How this is calculated"
+    "howCalculated": "How this is calculated",
+    "recordNumber": {
+      "workOrder": "WO-{number}",
+      "issue": "PRB-{number}",
+      "pending": "number pending"
+    }
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
@@ -1184,6 +1194,7 @@
         "DISMISSED": "Dismissed"
       },
       "columns": {
+        "reference": "No.",
         "asset": "Asset",
         "description": "Description",
         "safety": "State",
@@ -1315,11 +1326,13 @@
     "branchEmptyHint": "No one is attached to this branch.",
     "active": "Active",
     "inactive": "Inactive",
+    "noLogin": "No login",
     "columns": {
       "displayName": "Name",
       "personCode": "Staff number",
       "defaultRole": "Usual role",
-      "active": "Status"
+      "active": "Status",
+      "login": "Login"
     },
     "roles": {
       "DRIVER": "Driver",
@@ -1329,6 +1342,16 @@
       "MECHANIC": "Mechanic",
       "CLERK": "Clerk",
       "OTHER": "Other"
+    },
+    "login": {
+      "person": "Person",
+      "field": "Login",
+      "placeholder": "Choose a login",
+      "option": "{name} ({username})",
+      "linkHint": "This person signs in with the login you choose. Work planned for them, or with them on the crew, then shows as theirs.",
+      "relinkHint": "Choose the login this person signs in with from now on. The old link stays in the history.",
+      "unlinkHint": "{name} keeps their records, and the login stays. Work planned for {name} stops showing for that login. The link stays in the history.",
+      "noneFree": "No login is free to link. Add the user first, under Users."
     },
     "lead": "The people your fleet works with: drivers, mechanics and crew. A person can drive without signing in."
   },
@@ -1394,7 +1417,10 @@
         "roleChanged": "Role updated: {name}",
         "pinReset": "PIN reset: {name}",
         "deactivated": "User deactivated: {name}",
-        "reactivated": "User reactivated: {name}"
+        "reactivated": "User reactivated: {name}",
+        "loginLinked": "Login linked",
+        "loginRelinked": "Login changed",
+        "loginUnlinked": "Login unlinked"
       },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
     },
@@ -1503,6 +1529,9 @@
       "asset-commissioned": "Asset commissioned",
       "asset-assigned": "Asset assigned",
       "person-registered": "Person registered",
+      "person-login-linked": "Login linked",
+      "person-login-relinked": "Login changed",
+      "person-login-unlinked": "Login unlinked",
       "document-added": "Document added",
       "document-renewed": "Document renewed",
       "financial_entry-posted": "Entry posted",
@@ -2053,6 +2082,21 @@
       "submit": "Reset PIN",
       "submitting": "Resetting…"
     },
+    "link-person-login": {
+      "label": "Link login",
+      "submit": "Link login",
+      "submitting": "Linking…",
+      "relink": {
+        "label": "Change login",
+        "submit": "Change login",
+        "submitting": "Changing…"
+      }
+    },
+    "unlink-person-login": {
+      "label": "Unlink login",
+      "submit": "Unlink login",
+      "submitting": "Unlinking…"
+    },
     "cancel-work-order": {
       "label": "Cancel work order",
       "submit": "Cancel work order",
@@ -2421,6 +2465,11 @@
         "title": "{description}",
         "detail": "Note from the Director · {name} · {when}",
         "badge": "Note from the Director"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "Activity {ref} overlaps another open activity",
+        "detail": "This vehicle is also on {numbers}. Close the one that has ended.",
+        "detailUnnamed": "This vehicle is also on another open activity. Close the one that has ended."
       }
     },
     "maintenance": {

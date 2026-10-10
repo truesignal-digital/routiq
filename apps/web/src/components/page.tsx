@@ -1,7 +1,9 @@
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOnline } from "@/lib/online";
 import { cn } from "@/lib/utils";
 
 /** Going back is the SiteHeader breadcrumb's job; screens carry no back link. */
@@ -97,6 +99,25 @@ export function LoadingState({
   className,
   rowClassName,
 }: LoadingStateProps) {
+  const online = useOnline();
+  const { t } = useTranslation();
+
+  // Offline the read is paused, not slow: say so rather than shimmer forever (#576).
+  if (!online) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex flex-col items-center rounded-2xl border border-dashed border-foreground/20 px-5 py-12 text-center",
+          className,
+        )}
+      >
+        <WifiOff className="size-6 text-muted-foreground" aria-hidden />
+        <p className="mt-4 max-w-md text-sm text-muted-foreground">{t("shell.offline.waiting")}</p>
+      </div>
+    );
+  }
+
   return (
     <div role="status" className={cn("flex flex-col gap-3", className)}>
       <span className="sr-only">{label}</span>

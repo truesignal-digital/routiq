@@ -473,6 +473,8 @@ describe("activity, person and place reads", () => {
           defaultRole: "DRIVER",
           branchId: doualaBranchId,
           active: true,
+          loginPrincipalId: null,
+          rowVersion: 1,
         },
       ],
     });
