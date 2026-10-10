@@ -3,7 +3,8 @@
 > **Superseded in part (2026-10-08, #535).** Approval rules are no longer
 > engineer-edited, first-match-wins. Direction edits the approval bands in
 > Company settings → Approvals (`update-approval-threshold` v2, Direction
-> only; #354), and the most specific matching rule wins: a category, branch or
+> and, since #711 (ADR-0013), the Administrators; #354), and the most specific
+> matching rule wins: a category, branch or
 > amount rule overrides a broad default. The rest of this record stands.
 
 A workspace enables a SET of template presets (`workspace_templates`, same shape
