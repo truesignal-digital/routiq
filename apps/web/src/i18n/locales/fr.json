@@ -664,7 +664,7 @@
       "statusLocked": "Verrouillée depuis le {date}",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
       "lockExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer. Une écriture tardive datée de ce mois sera comptabilisée dans le mois en cours et gardera sa date.",
-      "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et plus rien ne pourra être comptabilisé avant sa réouverture.",
+      "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et les écritures datées de ce mois ne pourront pas être comptabilisées avant sa réouverture.",
       "reasonLabel": "Motif de la réouverture",
       "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
       "cancel": "Annuler",
