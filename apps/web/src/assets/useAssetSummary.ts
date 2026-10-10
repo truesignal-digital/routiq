@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import type { AssetSummary } from "@routiq/contracts";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
 import { fetchAssetSummary, type AssetSummaryParams } from "./api.js";
 
@@ -12,15 +12,13 @@ import { fetchAssetSummary, type AssetSummaryParams } from "./api.js";
  */
 export function useAssetSummary(callerParams: AssetSummaryParams = {}) {
   const session = useActiveSession();
-  const params = useBranchScopedParams(callerParams);
+  return useQuery(assetSummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams)));
+}
 
-  return useQuery<AssetSummary>({
-    queryKey: ["ws", session?.workspaceSlug, "assets", "summary", params],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchAssetSummary(token, params, signal);
-    },
+export function assetSummaryQueryOptions(workspaceSlug: string | undefined, params: AssetSummaryParams) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "assets", "summary", params],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchAssetSummary(token, params, signal)),
   });
 }

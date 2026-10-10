@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import type { AssetOverview } from "@routiq/contracts";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 import { useBranchScopedParams, type BranchScopedParams } from "../shell/branch-scope.js";
 import { fetchAssetOverview } from "./api.js";
 
@@ -10,15 +11,14 @@ import { fetchAssetOverview } from "./api.js";
  */
 export function useAssetOverview() {
   const session = useActiveSession();
-  const params = useBranchScopedParams<BranchScopedParams>({});
+  return useQuery(assetOverviewQueryOptions(session?.workspaceSlug, useBranchScopedParams<BranchScopedParams>({})));
+}
 
-  return useQuery<AssetOverview>({
-    queryKey: ["ws", session?.workspaceSlug, "assets", "overview", params],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchAssetOverview(token, params, signal);
-    },
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function assetOverviewQueryOptions(workspaceSlug: string | undefined, params: BranchScopedParams) {
+  return queryOptions<AssetOverview>({
+    queryKey: ["ws", workspaceSlug, "assets", "overview", params],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchAssetOverview(token, params, signal)),
   });
 }
