@@ -396,6 +396,11 @@
         "more": "{count, plural, one {# more vehicle in Money} other {# more vehicles in Money}}",
         "basis": "Revenue minus expenses recorded on the vehicle",
         "openMoney": "Open Money"
+      },
+      "summary": {
+        "sentence": "{total, plural, =0 {No vehicle is in the fleet yet.} one {Can drive today: {canDrive, number} of # vehicle.} other {Can drive today: {canDrive, number} of # vehicles.}}",
+        "longest": "{code} has been off the road the longest, since {date}.",
+        "badge": "{count, plural, =0 {None grounded} one {# grounded} other {# grounded}}"
       }
     },
     "documents": {
@@ -1313,6 +1318,11 @@
         "noFuelDetail": "Add the fuel so their costs are complete.",
         "noKm": "{count, number} closed without km",
         "noKmDetail": "Add the km so their distances are complete."
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {No activity has started this week yet.} one {# activity started this week; {closed, number} of them closed.} other {# activities started this week; {closed, number} of them closed.}}",
+        "open": "{open, plural, =0 {Nothing is still open.} one {# activity is still open.} other {# activities are still open.}}",
+        "counted": "{fuelCounted, select, yes {Closed activities missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed activities missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
       }
     }
   },
@@ -1522,6 +1532,13 @@
         "open": "Open",
         "waitingApproval": "{count, plural, one {# work order waits for approval} other {# work orders wait for approval}}",
         "waitingCompletion": "{count, plural, one {# work order waits for sign-off} other {# work orders wait for sign-off}}"
+      },
+      "summary": {
+        "sentence": "{open, plural, =0 {No problem is open.} one {# problem is open.} other {# problems are open.}}",
+        "grounded": "{grounded, plural, =0 {No vehicle is off the road.} one {# vehicle is off the road.} other {# vehicles are off the road.}}",
+        "counted": "Repair time and cost over the last {days, number} days, from {count, plural, =0 {no completed work order} one {# completed work order} other {# completed work orders}}.",
+        "badge": "{count, plural, one {# off the road} other {# off the road}}",
+        "sentenceSafety": "{open, plural, one {# problem is open, and it is safety-critical.} other {# problems are open, {safety, number} of them safety-critical.}}"
       }
     }
   },
@@ -3352,6 +3369,44 @@
           "detail": "{without, plural, =0 {every one has a vehicle} one {# without a vehicle yet} other {# without a vehicle yet}}"
         }
       }
+    }
+  },
+  "overview": {
+    "summary": {
+      "label": "Summary",
+      "show": "Show summary",
+      "when": "{reason, select, MONDAY {Monday summary} MONTH_START {Start of the month summary} CHANGE {Something changed} other {Summary}} · {date}",
+      "change": {
+        "groundedOne": "{code} was grounded on {date} and is still off the road.",
+        "groundedMany": "{count, plural, one {# vehicle was grounded in the last 7 days and is still off the road: {codes}.} other {# vehicles were grounded in the last 7 days and are still off the road: {codes}.}}",
+        "expensesUp": "{window, select, lastMonth {Expenses are {percent} above {comparisonMonth}.} other {Expenses are {percent} above {comparisonMonth} at the same day.}}"
+      },
+      "money": {
+        "profit": {
+          "AHEAD": "{window, select, lastMonth {In {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue, {change} better than {comparisonMonth}.} other {So far in {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue, {change} better than {comparisonMonth} at the same day.}}",
+          "BEHIND": "{window, select, lastMonth {In {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue, {change} worse than {comparisonMonth}.} other {So far in {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue, {change} worse than {comparisonMonth} at the same day.}}",
+          "FLAT": "{window, select, lastMonth {In {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue, about the same as {comparisonMonth}.} other {So far in {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue, about the same as {comparisonMonth} at the same day.}}",
+          "FIRST_MONTH": "{window, select, lastMonth {In {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue. It was the first month in ROUTIQ, so there is nothing to compare it with.} other {So far in {month}: {result, select, loss {a loss of {amount}} other {a profit of {amount}}} on {revenue} revenue. It is the first month in ROUTIQ, so there is nothing to compare it with yet.}}"
+        },
+        "expenses": {
+          "AHEAD": "{window, select, lastMonth {In {month}: {amount} of expenses, {change} less than {comparisonMonth}.} other {So far in {month}: {amount} of expenses, {change} less than {comparisonMonth} at the same day.}}",
+          "BEHIND": "{window, select, lastMonth {In {month}: {amount} of expenses, {change} more than {comparisonMonth}.} other {So far in {month}: {amount} of expenses, {change} more than {comparisonMonth} at the same day.}}",
+          "FLAT": "{window, select, lastMonth {In {month}: {amount} of expenses, about the same as {comparisonMonth}.} other {So far in {month}: {amount} of expenses, about the same as {comparisonMonth} at the same day.}}",
+          "FIRST_MONTH": "{window, select, lastMonth {In {month}: {amount} of expenses. It was the first month in ROUTIQ, so there is nothing to compare it with.} other {So far in {month}: {amount} of expenses. It is the first month in ROUTIQ, so there is nothing to compare it with yet.}}"
+        },
+        "badge": {
+          "AHEAD": "Ahead of {comparisonMonth}",
+          "BEHIND": "Behind {comparisonMonth}",
+          "FLAT": "Level with {comparisonMonth}",
+          "NOT_ENOUGH_DATA": "Not enough data yet",
+          "FIRST_MONTH": "First month"
+        },
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# activity was} other {# activities were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# activity is} other {# activities are}} closed, so it is too early to give a profit.}}",
+        "notEnoughEntries": "{window, select, lastMonth {Nothing was posted for {month}, so there is no result to give.} other {Nothing has been posted for {month} yet, so there is no result to give.}}",
+        "reasonRevenue": "{direction, select, up {Revenue rose by {amount}.} other {Revenue fell by {amount}.}}",
+        "reasonCategory": "{direction, select, up {Spending on {category} rose by {amount}.} other {Spending on {category} fell by {amount}.}}"
+      },
+      "closeLabel": "Close the summary"
     }
   }
 }

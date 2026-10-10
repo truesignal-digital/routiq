@@ -167,6 +167,40 @@ describe("Dashboard › Overview", () => {
     expect(counted).toContain("5 ");
   });
 
+  it("opens on the 1st with last month's summary above the tiles and the expenses jump named (#667)", () => {
+    localStorage.clear();
+    state.overview = testOverview({
+      summary: {
+        ...testOverview().summary,
+        template: "AHEAD",
+        window: "LAST_MONTH",
+        period: { from: "2026-10-01", to: "2026-10-31" },
+        comparison: { from: "2026-09-01", to: "2026-09-30" },
+        currentMinor: 6_900_000,
+        comparisonMinor: 6_440_000,
+        reason: { kind: "REVENUE", category: null, changeMinor: 660_000 },
+      },
+      notice: {
+        today: "2026-11-01",
+        scheduledOn: "2026-11-01",
+        scheduledToday: "MONTH_START",
+        changes: [{ kind: "EXPENSES_UP", key: "EXPENSES_UP:2026-10-01", expenseMinor: 7_690_000, comparisonExpenseMinor: 6_100_000, percent: 26 }],
+      },
+    });
+    renderTab(<DashboardOverviewTab />);
+    const region = screen.getByRole("region", { name: "Summary" });
+    const text = region.textContent?.replace(/\s/g, " ") ?? "";
+    expect(text).toContain("Start of the month summary · Sunday, November 1");
+    expect(text).toContain("In October: a profit of FCFA 6,900,000 on FCFA 9,560,000 revenue, FCFA 460,000 better than September.");
+    expect(text).toContain("Revenue rose by FCFA 660,000.");
+    expect(text).toContain("Expenses are 26% above September.");
+    expect(text).toContain("Ahead of September");
+    // Above the tiles, with what it counted inside it.
+    const tiles = document.querySelector("[data-slot='metric-strip']")!;
+    expect(region.compareDocumentPosition(tiles) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(region.querySelector("[data-slot='dashboard-counted']")).toBeTruthy();
+  });
+
   it("explains the change in a bridge whose table adds up to this month's profit", async () => {
     renderTab(<DashboardOverviewTab />);
     const why = document.querySelector("[data-slot='dashboard-why']") as HTMLElement;

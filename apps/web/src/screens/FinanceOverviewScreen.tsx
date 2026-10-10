@@ -12,6 +12,7 @@ import { useMeContext } from "@/auth/me.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,8 @@ import { canApproveEntries, canManagePeriods, canReadMoneyOverview } from "@/fin
 import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { usePeriods } from "@/finance/usePeriods.js";
+import { moneySummaryText } from "@/overview/money-summary.js";
+import { SummaryStatusBadge } from "@/overview/SummaryStatusBadge.js";
 import {
   formatDate,
   formatMoney,
@@ -80,6 +83,7 @@ function MoneyOverview() {
   const lastMonth = closeMonth(periodsQuery.data?.currentPeriodCode);
   const lastPeriod = periodsQuery.data?.periods.find((period) => period.periodCode === lastMonth);
   const windows = useWindowLabels(overview);
+  const words = overview === undefined ? undefined : moneySummaryText(overview, t, i18n.resolvedLanguage);
 
   return (
     <div data-slot="money-overview" className="flex flex-col gap-5">
@@ -108,16 +112,25 @@ function MoneyOverview() {
         />
       )}
 
-      <OverviewTiles
-        overview={overview}
-        summary={summary}
-        isPending={overviewQuery.isPending || summaryQuery.isPending}
-        isError={overviewQuery.isError || summaryQuery.isError}
-        canApprove={canApprove}
-        close={canClose ? { month: lastMonth, period: lastPeriod, isPending: periodsQuery.isPending } : undefined}
-        comparisonShort={windows?.comparisonShort}
-      />
-      {overview !== undefined && <CountedLine overview={overview} />}
+      <OverviewSummary
+        page="money"
+        notice={overview?.notice}
+        sentence={words?.sentence}
+        details={words?.details}
+        badge={words === undefined ? undefined : <SummaryStatusBadge {...words.badge} />}
+        expensesUp={words?.expensesUp}
+        counted={overview === undefined ? null : <CountedLine overview={overview} />}
+      >
+        <OverviewTiles
+          overview={overview}
+          summary={summary}
+          isPending={overviewQuery.isPending || summaryQuery.isPending}
+          isError={overviewQuery.isError || summaryQuery.isError}
+          canApprove={canApprove}
+          close={canClose ? { month: lastMonth, period: lastPeriod, isPending: periodsQuery.isPending } : undefined}
+          comparisonShort={windows?.comparisonShort}
+        />
+      </OverviewSummary>
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <CategoryCard overview={overview} isPending={overviewQuery.isPending} windows={windows} />
@@ -361,9 +374,7 @@ function CountedLine({ overview }: { overview: FinanceOverviewResponse }) {
       : null,
   ].filter((sentence): sentence is string => sentence !== null);
   return (
-    <p data-slot="money-counted" className="-mt-2 text-xs text-muted-foreground">
-      {sentences.join(" ")}
-    </p>
+    <span data-slot="money-counted">{sentences.join(" ")}</span>
   );
 }
 

@@ -3,8 +3,10 @@ import { OPEN_WORK_ORDER_STATUSES } from "@routiq/contracts";
 import { CircleAlert, Clock, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
+import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatRelativeTime } from "@/lib/format.js";
@@ -38,9 +40,36 @@ export function MaintenanceOverview() {
           onRetry={() => void summaryQuery.refetch()}
         />
       )}
-      {tiles !== undefined && (
-        <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
-      )}
+      <OverviewSummary
+        page="maintenance"
+        notice={summary?.notice}
+        sentence={
+          summary === undefined
+            ? undefined
+            : summary.openSafetyCritical > 0
+              ? t("maintenance.overview.summary.sentenceSafety", { open: summary.openIssues, safety: summary.openSafetyCritical })
+              : t("maintenance.overview.summary.sentence", { open: summary.openIssues })
+        }
+        details={summary === undefined ? undefined : [t("maintenance.overview.summary.grounded", { grounded: summary.grounded })]}
+        badge={
+          summary === undefined || summary.grounded === 0 ? undefined : (
+            <StatusBadge tone="warning" icon={null}>
+              {t("maintenance.overview.summary.badge", { count: summary.grounded })}
+            </StatusBadge>
+          )
+        }
+        counted={
+          summary === undefined ? null : (
+            <span data-slot="maintenance-counted">
+              {t("maintenance.overview.summary.counted", { days: summary.repairWindowDays, count: summary.repairsCounted })}
+            </span>
+          )
+        }
+      >
+        {tiles !== undefined && (
+          <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
+        )}
+      </OverviewSummary>
       <Card className="lg:max-w-[calc(50%-0.5rem)]">
         <CardHeader>
           <CardTitle>{t("maintenance.overview.todo.title")}</CardTitle>

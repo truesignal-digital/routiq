@@ -54,6 +54,9 @@
       },
       "tiles": {
         "idle": "No trip for {days}+ days"
+      },
+      "summary": {
+        "sentence": "{total, plural, =0 {No truck is in the fleet yet.} one {Can drive today: {canDrive, number} of # truck.} other {Can drive today: {canDrive, number} of # trucks.}}"
       }
     },
     "filters": {
@@ -144,6 +147,11 @@
     "overview": {
       "weeks": {
         "title": "Trips per week"
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
+        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
       }
     }
   },
@@ -173,6 +181,11 @@
     "notify": {
       "success": {
         "assetReleased": "Truck returned to service"
+      }
+    },
+    "overview": {
+      "summary": {
+        "grounded": "{grounded, plural, =0 {No truck is off the road.} one {# truck is off the road.} other {# trucks are off the road.}}"
       }
     }
   },
@@ -378,6 +391,16 @@
       "columns": {
         "vehicles": "Trucks",
         "profit": "Truck profit"
+      }
+    }
+  },
+  "overview": {
+    "summary": {
+      "change": {
+        "groundedMany": "{count, plural, one {# truck was grounded in the last 7 days and is still off the road: {codes}.} other {# trucks were grounded in the last 7 days and are still off the road: {codes}.}}"
+      },
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
       }
     }
   }

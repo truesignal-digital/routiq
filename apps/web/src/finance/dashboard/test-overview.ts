@@ -98,6 +98,22 @@ export function testOverview(overrides: Partial<FinanceOverviewResponse> = {}): 
       openTrips: 5,
       otherCurrencyEntries: 0,
     },
+    summary: {
+      template: "BEHIND",
+      measure: "PROFIT",
+      window: "MONTH_SO_FAR",
+      period: { from: "2026-10-01", to: "2026-10-09" },
+      comparison: { from: "2026-09-01", to: "2026-09-09" },
+      currentMinor: 1_870_000,
+      comparisonMinor: 1_970_000,
+      revenueMinor: 9_560_000,
+      changePercent: 5,
+      reason: { kind: "CATEGORY", category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" }, changeMinor: 420_000 },
+      shortOf: null,
+      trips: { closed: 27, open: 5 },
+    },
+    // A Friday with nothing big: the summary is not due.
+    notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
     ...overrides,
   };
 }

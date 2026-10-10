@@ -163,4 +163,18 @@ describe("Trucks › Overview (#665)", () => {
     expect(screen.queryByRole("link", { name: "Documents due ≤ 30 days" })).toBeNull();
     expect(requested.some((href) => href.startsWith("/v1/coming-up"))).toBe(false);
   });
+
+  it("opens with the summary notice on a Monday, the fleet in one sentence (#667)", async () => {
+    localStorage.clear();
+    renderAs("ADMIN", undefined, {
+      ...OVERVIEW,
+      notice: { today: "2026-10-05", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] },
+    });
+    const region = await screen.findByRole("region", { name: "Summary" });
+    expect(region.textContent).toMatch(/Can drive today: 10 of 12 (vehicles|trucks)\./);
+    expect(region.querySelector("[data-summary=open]")?.textContent).toBe("In service and not grounded today.");
+    screen.getByRole("button", { name: "Close the summary" }).click();
+    await screen.findByRole("button", { name: "Show summary" });
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+  });
 });

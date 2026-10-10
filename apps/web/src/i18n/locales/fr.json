@@ -396,6 +396,11 @@
         "more": "{count, plural, one {# autre véhicule dans Argent} other {# autres véhicules dans Argent}}",
         "basis": "Recettes moins dépenses enregistrées sur le véhicule",
         "openMoney": "Ouvrir Argent"
+      },
+      "summary": {
+        "sentence": "{total, plural, =0 {Aucun véhicule dans la flotte pour l’instant.} one {Peut rouler aujourd’hui : {canDrive, number} véhicule sur #.} other {Peuvent rouler aujourd’hui : {canDrive, number} véhicules sur #.}}",
+        "longest": "{code} est à l’arrêt depuis le {date}, le plus longtemps de la flotte.",
+        "badge": "{count, plural, =0 {Aucun immobilisé} one {# immobilisé} other {# immobilisés}}"
       }
     },
     "documents": {
@@ -1313,6 +1318,11 @@
         "noFuelDetail": "Ajoutez le carburant pour que les coûts soient complets.",
         "noKm": "{count, number} clôtures sans km",
         "noKmDetail": "Ajoutez les km pour que les distances soient complètes."
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {Aucune activité n’a encore commencé cette semaine.} one {# activité a commencé cette semaine ; {closed, number} clôturée.} other {# activités ont commencé cette semaine ; {closed, number} clôturées.}}",
+        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# activité est encore ouverte.} other {# activités sont encore ouvertes.}}",
+        "counted": "{fuelCounted, select, yes {Activités clôturées incomplètes : {fuel, number} sans carburant et {km, number} sans km.} other {Activités clôturées incomplètes : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
       }
     }
   },
@@ -1522,6 +1532,13 @@
         "open": "Ouvrir",
         "waitingApproval": "{count, plural, one {# ordre de travail attend l'approbation} other {# ordres de travail attendent l'approbation}}",
         "waitingCompletion": "{count, plural, one {# ordre de travail attend la validation} other {# ordres de travail attendent la validation}}"
+      },
+      "summary": {
+        "sentence": "{open, plural, =0 {Aucun problème ouvert.} one {# problème est ouvert.} other {# problèmes sont ouverts.}}",
+        "grounded": "{grounded, plural, =0 {Aucun véhicule n’est à l’arrêt.} one {# véhicule est à l’arrêt.} other {# véhicules sont à l’arrêt.}}",
+        "counted": "Durée et coût des réparations sur les {days, number} derniers jours, d’après {count, plural, =0 {aucun ordre de travail terminé} one {# ordre de travail terminé} other {# ordres de travail terminés}}.",
+        "badge": "{count, plural, one {# à l’arrêt} other {# à l’arrêt}}",
+        "sentenceSafety": "{open, plural, one {# problème est ouvert, et il touche la sécurité.} other {# problèmes sont ouverts, dont {safety, number} touchant la sécurité.}}"
       }
     }
   },
@@ -3352,6 +3369,44 @@
           "detail": "{without, plural, =0 {véhicules affectés} one {# sans véhicule pour l’instant} other {# sans véhicule pour l’instant}}"
         }
       }
+    }
+  },
+  "overview": {
+    "summary": {
+      "label": "Résumé",
+      "show": "Afficher le résumé",
+      "when": "{reason, select, MONDAY {Résumé du lundi} MONTH_START {Résumé du début de mois} CHANGE {Quelque chose a changé} other {Résumé}} · {date}",
+      "change": {
+        "groundedOne": "{code} a été immobilisé le {date} et est toujours à l’arrêt.",
+        "groundedMany": "{count, plural, one {# véhicule a été immobilisé ces 7 derniers jours et est toujours à l’arrêt : {codes}.} other {# véhicules ont été immobilisés ces 7 derniers jours et sont toujours à l’arrêt : {codes}.}}",
+        "expensesUp": "{window, select, lastMonth {Les dépenses dépassent de {percent} celles de {comparisonMonth}.} other {Les dépenses dépassent de {percent} celles de {comparisonMonth} à la même date.}}"
+      },
+      "money": {
+        "profit": {
+          "AHEAD": "{window, select, lastMonth {En {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes, soit {change} de mieux qu’en {comparisonMonth}.} other {À ce jour en {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes, soit {change} de mieux qu’en {comparisonMonth} à la même date.}}",
+          "BEHIND": "{window, select, lastMonth {En {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes, soit {change} de moins bien qu’en {comparisonMonth}.} other {À ce jour en {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes, soit {change} de moins bien qu’en {comparisonMonth} à la même date.}}",
+          "FLAT": "{window, select, lastMonth {En {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes, à peu près comme en {comparisonMonth}.} other {À ce jour en {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes, à peu près comme en {comparisonMonth} à la même date.}}",
+          "FIRST_MONTH": "{window, select, lastMonth {En {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes. C’était le premier mois dans ROUTIQ : il n’y a rien à comparer.} other {À ce jour en {month} : {result, select, loss {une perte de {amount}} other {un bénéfice de {amount}}} pour {revenue} de recettes. C’est le premier mois dans ROUTIQ : il n’y a encore rien à comparer.}}"
+        },
+        "expenses": {
+          "AHEAD": "{window, select, lastMonth {En {month} : {amount} de dépenses, soit {change} de moins qu’en {comparisonMonth}.} other {À ce jour en {month} : {amount} de dépenses, soit {change} de moins qu’en {comparisonMonth} à la même date.}}",
+          "BEHIND": "{window, select, lastMonth {En {month} : {amount} de dépenses, soit {change} de plus qu’en {comparisonMonth}.} other {À ce jour en {month} : {amount} de dépenses, soit {change} de plus qu’en {comparisonMonth} à la même date.}}",
+          "FLAT": "{window, select, lastMonth {En {month} : {amount} de dépenses, à peu près autant qu’en {comparisonMonth}.} other {À ce jour en {month} : {amount} de dépenses, à peu près autant qu’en {comparisonMonth} à la même date.}}",
+          "FIRST_MONTH": "{window, select, lastMonth {En {month} : {amount} de dépenses. C’était le premier mois dans ROUTIQ : il n’y a rien à comparer.} other {À ce jour en {month} : {amount} de dépenses. C’est le premier mois dans ROUTIQ : il n’y a encore rien à comparer.}}"
+        },
+        "badge": {
+          "AHEAD": "En avance sur {comparisonMonth}",
+          "BEHIND": "En retard sur {comparisonMonth}",
+          "FLAT": "Stable par rapport à {comparisonMonth}",
+          "NOT_ENOUGH_DATA": "Pas encore assez de données",
+          "FIRST_MONTH": "Premier mois"
+        },
+        "notEnoughTrips": "{window, select, lastMonth {En {month}, {total, plural, one {seule {closed, number} activité sur # a été clôturée} other {seules {closed, number} activités sur # ont été clôturées}} : trop tôt pour donner un bénéfice.} other {À ce jour en {month}, {total, plural, one {seule {closed, number} activité sur # est clôturée} other {seules {closed, number} activités sur # sont clôturées}} : trop tôt pour donner un bénéfice.}}",
+        "notEnoughEntries": "{window, select, lastMonth {Rien n’a été comptabilisé en {month} : pas de résultat à donner.} other {Rien n’a encore été comptabilisé en {month} : pas de résultat à donner.}}",
+        "reasonRevenue": "{direction, select, up {Les recettes ont augmenté de {amount}.} other {Les recettes ont baissé de {amount}.}}",
+        "reasonCategory": "{direction, select, up {Les dépenses « {category} » ont augmenté de {amount}.} other {Les dépenses « {category} » ont baissé de {amount}.}}"
+      },
+      "closeLabel": "Fermer le résumé"
     }
   }
 }
