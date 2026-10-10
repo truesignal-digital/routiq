@@ -67,7 +67,8 @@ export function ownerOf(path: string): Owner | undefined {
   const inner = path.slice(WEB.length);
   if (COMPOSITION.some((file) => inner === file || inner === file.replace(/\.tsx?$/, ""))) return { kind: "composition" };
   for (const [code, roots] of Object.entries(MODULE_ROOTS) as [ModuleCode, readonly string[]][]) {
-    if (roots.some((root) => inner.startsWith(root))) return { kind: "module", code };
+    // A folder root also owns the folder itself: `@/maintenance` imports its index.
+    if (roots.some((root) => inner.startsWith(root) || `${inner}/` === root)) return { kind: "module", code };
   }
   return { kind: "core" };
 }
@@ -103,7 +104,7 @@ export function importsOf(file: SourceFile): ImportEdge[] {
   return [...edges.values()].sort((a, b) => a.line - b.line);
 }
 
-/** The repository path an import names, without extension; undefined for a package. */
+/** The repository path an import names, without extension or a trailing `/index`; undefined for a package. */
 export function resolveSpecifier(from: string, specifier: string): string | undefined {
   let target: string;
   if (specifier.startsWith("@/")) target = WEB + specifier.slice(2);
@@ -115,7 +116,7 @@ export function resolveSpecifier(from: string, specifier: string): string | unde
     }
     target = parts.join("/");
   } else return undefined;
-  return target.replace(/\.(js|jsx|ts|tsx)$/, "");
+  return target.replace(/\.(js|jsx|ts|tsx)$/, "").replace(/\/index$/, "");
 }
 
 /** The modules each web manifest says it uses: `uses: ["ACTIVITIES", …]` in `src/modules/<module>/manifest.ts`. */

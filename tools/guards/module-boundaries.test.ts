@@ -33,6 +33,11 @@ describe("who owns a path", () => {
     expect(resolveSpecifier("apps/web/src/shell/x.ts", "./sections.js")).toBe("apps/web/src/shell/sections");
     expect(resolveSpecifier("apps/web/src/shell/x.ts", "@/maintenance/status.js")).toBe("apps/web/src/maintenance/status");
     expect(resolveSpecifier("apps/web/src/shell/x.ts", "@routiq/contracts")).toBeUndefined();
+    // A directory import names the folder's index file.
+    expect(resolveSpecifier("apps/web/src/shell/x.ts", "@/maintenance/index.js")).toBe("apps/web/src/maintenance");
+    expect(ownerOf("apps/web/src/maintenance")).toEqual({ kind: "module", code: "MAINTENANCE" });
+    expect(ownerOf("apps/web/src/modules/finance")).toEqual({ kind: "module", code: "FINANCE" });
+    expect(ownerOf("apps/web/src/vehicle")).toEqual({ kind: "core" });
   });
 
   it("reads every kind of import, one per line that names it", () => {
@@ -119,6 +124,27 @@ describe("rejected edges", () => {
     ).toEqual([
       'lib/everything.ts:1 core → MAINTENANCE: export { useWorkOrders } from "../maintenance/useMaintenance.js";',
       'lib/everything.ts:2 core → FINANCE: export * from "../finance/model.js";',
+    ]);
+  });
+
+  it("rejects core importing a module through its folder's barrel", () => {
+    expect(
+      violations(
+        file("maintenance/index.ts", 'export * from "./useMaintenance.js";'),
+        file(
+          "shell/sections.ts",
+          [
+            'import { useWorkOrders } from "@/maintenance";',
+            'import { x } from "../finance";',
+            'import { y } from "@/maintenance/index.js";',
+            'import { z } from "../vehicle";',
+          ].join("\n"),
+        ),
+      ),
+    ).toEqual([
+      'shell/sections.ts:1 core → MAINTENANCE: import { useWorkOrders } from "@/maintenance";',
+      'shell/sections.ts:2 core → FINANCE: import { x } from "../finance";',
+      'shell/sections.ts:3 core → MAINTENANCE: import { y } from "@/maintenance/index.js";',
     ]);
   });
 
