@@ -41,10 +41,10 @@ vi.mock("../finance/useApprovals.js", async () => ({
 vi.mock("../finance/usePeriods.js", () => ({ usePeriods: () => pendingQuery }));
 vi.mock("../finance/useEntries.js", () => ({ useEntries: () => pendingInfiniteQuery }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: () => pendingInfiniteQuery }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => pendingQuery,
 }));
-vi.mock("../documents/useCategories.js", () => ({ useCategories: () => pendingQuery }));
+vi.mock("../categories/useCategories.js", () => ({ useCategories: () => pendingQuery }));
 vi.mock("../documents/useDocuments.js", () => ({
   useAssetDocuments: () => pendingQuery,
 }));

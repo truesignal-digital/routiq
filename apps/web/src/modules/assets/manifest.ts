@@ -8,6 +8,7 @@ import type { WebModuleManifest } from "../manifest.js";
  */
 export const assetsManifest: WebModuleManifest = {
   code: "ASSETS",
+  uses: [],
   navRows: [
     { key: "assets", group: "daily", place: { after: "home" }, labelKey: "assets.title", to: "/assets", icon: Truck },
   ],

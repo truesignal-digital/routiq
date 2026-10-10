@@ -35,7 +35,7 @@ import { useAssetColumns, type AssetColumnId } from "@/assets/assetColumns.js";
 import { assetFilterQuery, isAssetFilter } from "@/assets/display.js";
 import { canManageAssets } from "@/assets/permissions.js";
 import { contributes } from "@/modules/manifest.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";

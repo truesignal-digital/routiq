@@ -23,7 +23,7 @@ import {
 import { canRecordActivities } from "@/activities/permissions.js";
 import { useActivities, useActivitySummary } from "@/activities/useActivities.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
-import { useCategories } from "@/documents/useCategories.js";
+import { useCategories } from "@/categories/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";

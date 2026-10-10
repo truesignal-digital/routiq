@@ -11,7 +11,7 @@ import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
 import { contributes } from "@/modules/manifest.js";
 import { canViewDocuments } from "@/documents/permissions.js";
-import { useCategories } from "@/documents/useCategories.js";
+import { useCategories } from "@/categories/useCategories.js";
 import { canReadFinance, canReadFinanceEntries } from "@/finance/permissions.js";
 import { canSeeWorkOrderCosts, canViewMaintenance } from "@/maintenance/permissions.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";

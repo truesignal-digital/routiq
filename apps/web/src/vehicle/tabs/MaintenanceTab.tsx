@@ -3,34 +3,18 @@ import { useTranslation } from "react-i18next";
 import { ChevronRight, CircleCheck, ShieldAlert, TriangleAlert, Wrench } from "lucide-react";
 import type { IssueListItem, WorkOrderListItem } from "@routiq/contracts";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatMoney, formatRelativeTime } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useIssues, useWorkOrders } from "@/maintenance/useMaintenance.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
-import { actionDef } from "../actions.js";
 import { useVehicle } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps, workOrderSteps } from "../flow.js";
-import { recordReference, type VehicleActionKey } from "../model.js";
-import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader, useStepLabel } from "../parts.js";
+import { recordReference } from "../model.js";
+import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
-
-/** The one primary button a tab carries; it starts the action the way the catalogue says. */
-export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
-  const stepLabel = useStepLabel();
-  const { can, availability, runAction } = useVehicle();
-  if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
-  const Icon = actionDef(actionKey).icon;
-  return (
-    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
-      <Icon aria-hidden />
-      {stepLabel({ key: actionKey })}
-    </Button>
-  );
-}
 
 /**
  * Problems reported on this vehicle and the work orders that fix them. With

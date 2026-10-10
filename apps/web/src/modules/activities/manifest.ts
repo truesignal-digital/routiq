@@ -13,6 +13,8 @@ const onlyFor =
  */
 export const activitiesManifest: WebModuleManifest = {
   code: "ACTIVITIES",
+  // A trip runs vehicles and shows the money recorded on it.
+  uses: ["ASSETS", "FINANCE"],
   navRows: [
     {
       key: "activities",

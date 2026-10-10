@@ -10,6 +10,8 @@ import type { WebModuleManifest } from "../manifest.js";
  */
 export const financeManifest: WebModuleManifest = {
   code: "FINANCE",
+  // Entries are charged to vehicles; logging fuel records the odometer reading with it.
+  uses: ["ASSETS", "ACTIVITIES"],
   navRows: [
     {
       key: "finances",

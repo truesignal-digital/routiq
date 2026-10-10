@@ -6,6 +6,8 @@ import type { WebModuleManifest } from "../manifest.js";
  */
 export const documentsManifest: WebModuleManifest = {
   code: "DOCUMENTS",
+  // Its forms pick the vehicle a paper belongs to.
+  uses: ["ASSETS"],
   navRows: [],
   navCounts: [],
   homeCards: [],

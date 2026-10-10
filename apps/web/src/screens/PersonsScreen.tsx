@@ -23,7 +23,7 @@ import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import {
   useCreatedElsewhereNotice,

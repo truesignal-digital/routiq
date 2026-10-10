@@ -107,7 +107,7 @@ vi.mock("../activities/useActivities.js", () => ({
   },
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: () => ({
     data: [
       {
@@ -119,7 +119,7 @@ vi.mock("../documents/useCategories.js", () => ({
   }),
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: {
       assetClasses: [],

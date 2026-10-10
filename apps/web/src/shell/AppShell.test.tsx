@@ -40,7 +40,7 @@ const branches: { current: Array<{ id: string; code: string; name: string }> } =
   current: [],
 };
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: branches.current },
     isError: false,

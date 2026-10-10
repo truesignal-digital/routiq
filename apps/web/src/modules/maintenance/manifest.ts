@@ -12,6 +12,8 @@ const WORKSHOP_PAGE_ROLES: readonly Role[] = ["DIRECTOR", "ADMIN", "TECHNICIAN"]
  */
 export const maintenanceManifest: WebModuleManifest = {
   code: "MAINTENANCE",
+  // A work order is on a vehicle, and its cost lines are money entries.
+  uses: ["ASSETS", "FINANCE"],
   navRows: [
     {
       key: "maintenance",
