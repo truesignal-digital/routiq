@@ -16,7 +16,7 @@ Latest run: 2026-10-09T01:45:57.486Z on abd53810, 7 runs each. Runs recorded: 3.
 | `/assets.requests` | 4 (2026-10-06) | 4 | 4 | 0% | 4 | 4 |
 | `/assets.shifts` | – (–) | – | – | – | – | 0 |
 | `/assets/:id.ready_ms` | 474 ms (2026-10-06) | 249 ms | 268 ms | −43% | 249 ms | 282 ms |
-| `/assets/:id.requests` | 6 (2026-10-06) | 2 | 2 | −67% | 2 | 2 |
+| `/assets/:id.requests` | 6 (2026-10-06) | 2 | 2 | −67% | 2 | 5 |
 | `/assets/:id.shifts` | – (–) | – | – | – | – | 0 |
 | `/finance/approvals.ready_ms` | 272 ms (2026-10-06) | – | – | – | 272 ms | 286 ms |
 | `/finance/approvals.requests` | 3 (2026-10-06) | 1 | 1 | −67% | 1 | 1 |
@@ -42,4 +42,5 @@ Latest run: 2026-10-09T01:45:57.486Z on abd53810, 7 runs each. Runs recorded: 3.
 - 2026-10-09 `/.ready_ms` 793 → 1197: Home's own code now arrives after sign-in (fetched while the PIN is typed; a scripted sign-in is faster than a person). Develop measured 1032 ms in the same side-by-side run (5b6dd261 vs abd53810), already over 793; sign-in plus Home is still about 1.6 s faster
 - 2026-10-09 `/.requests` 6 → 7: Develop drift, not this change: develop 5b6dd261 makes the same 7 requests on Home in the same side-by-side run (navigation counts #322)
 - 2026-10-09 `/activities.requests` 4 → 5: Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Trips in the same side-by-side run
+- 2026-10-10 `/assets/:id.requests` 2 → 5: Measured on the right vehicle: since the passenger company was seeded the run opened another workspace's vehicle (a 404, two requests). From the director's own list the vehicle makes 5: detail, attention, revenue categories, the month's money and recent history. Measured at the top of the #494-#498 stack, 3 runs
 - 2026-10-09 `/maintenance.requests` 4 → 5: Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Maintenance in the same side-by-side run

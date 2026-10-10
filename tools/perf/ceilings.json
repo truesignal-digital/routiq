@@ -64,8 +64,16 @@
     "kind": "time"
   },
   "/assets/:id.requests": {
-    "ceiling": 2,
-    "kind": "count"
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-10",
+        "from": 2,
+        "to": 5,
+        "reason": "Measured on the right vehicle: since the passenger company was seeded the run opened another workspace's vehicle (a 404, two requests). From the director's own list the vehicle makes 5: detail, attention, revenue categories, the month's money and recent history. Measured at the top of the #494-#498 stack, 3 runs"
+      }
+    ]
   },
   "/assets/:id.shifts": {
     "ceiling": 0,
