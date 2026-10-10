@@ -21,6 +21,10 @@ export interface Segment {
   env: Record<string, string>;
   /** Directory set by an earlier `cd` in the same command line. */
   cwd: string | undefined;
+  /** Output goes into the next segment through `|`. */
+  pipe: boolean;
+  /** Text fed to stdin by a heredoc or here-string. */
+  stdin?: string;
 }
 
 export interface Context {
@@ -29,31 +33,43 @@ export interface Context {
   prBase: (viewArgs: string[], env: Record<string, string>, cwd: string | undefined) => string | undefined;
 }
 
-/** Drops heredoc bodies so text written to files or PR bodies is not read as commands. */
-function stripHeredocs(command: string): string {
-  const lines = command.split("\n");
+/**
+ * Lifts heredoc bodies out of the command line, so text written to files or PR
+ * bodies is not read as commands. Each body is kept, in order, for the segment
+ * whose `<<WORD` introduced it (a shell reading it is checked like a command).
+ */
+function liftHeredocs(command: string): { source: string; bodies: string[] } {
   const out: string[] = [];
+  const bodies: string[] = [];
   let terminator: string | undefined;
   let tabs = false;
-  for (const line of lines) {
+  let body: string[] = [];
+  for (const line of command.split("\n")) {
     if (terminator !== undefined) {
-      if ((tabs ? line.replace(/^\t+/, "") : line) === terminator) terminator = undefined;
+      if ((tabs ? line.replace(/^\t+/, "") : line) === terminator) {
+        bodies.push(body.join("\n"));
+        terminator = undefined;
+      } else {
+        body.push(line);
+      }
       continue;
     }
     out.push(line);
-    const match = /<<(-?)\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2/.exec(line);
+    const match = /<<(-?)\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2/.exec(line.replace(/<<</g, ""));
     if (match?.[3] !== undefined) {
       terminator = match[3];
       tabs = match[1] === "-";
+      body = [];
     }
   }
-  return out.join("\n");
+  if (terminator !== undefined) bodies.push(body.join("\n"));
+  return { source: out.join("\n"), bodies };
 }
 
 /** Splits a shell command line into simple commands, honouring quotes. */
-export function segments(command: string): Segment[] {
-  const source = stripHeredocs(command);
-  const raw: string[][] = [];
+export function segments(command: string, startCwd?: string): Segment[] {
+  const { source, bodies } = liftHeredocs(command);
+  const raw: { words: string[]; pipe: boolean }[] = [];
   let tokens: string[] = [];
   let token = "";
   let inToken = false;
@@ -62,9 +78,9 @@ export function segments(command: string): Segment[] {
     token = "";
     inToken = false;
   };
-  const endSegment = () => {
+  const endSegment = (pipe = false) => {
     endToken();
-    if (tokens.length > 0) raw.push(tokens);
+    if (tokens.length > 0) raw.push({ words: tokens, pipe });
     tokens = [];
   };
   for (let i = 0; i < source.length; i++) {
@@ -91,6 +107,8 @@ export function segments(command: string): Segment[] {
       i++;
     } else if (c === " " || c === "\t") {
       endToken();
+    } else if (c === "|" && source[i + 1] !== "|" && source[i - 1] !== "|") {
+      endSegment(true);
     } else if (c === "\n" || c === ";" || c === "|" || c === "&" || c === "(" || c === ")") {
       endSegment();
     } else {
@@ -101,8 +119,9 @@ export function segments(command: string): Segment[] {
   endSegment();
 
   const result: Segment[] = [];
-  let cwd: string | undefined;
-  for (const words of raw) {
+  let cwd = startCwd;
+  let nextBody = 0;
+  for (const { words, pipe } of raw) {
     const env: Record<string, string> = {};
     let start = 0;
     while (start < words.length) {
@@ -113,18 +132,24 @@ export function segments(command: string): Segment[] {
       start++;
     }
     const rest: string[] = [];
+    let stdin: string | undefined;
     for (let i = start; i < words.length; i++) {
       const word = words[i] as string;
-      const redirect = /^\d*(<<-?|>>?|<)(.*)$/.exec(word);
-      if (redirect === null) rest.push(word);
-      else if (redirect[2] === "") i++;
+      const redirect = /^\d*(<<<|<<-?|>>?|<)(.*)$/s.exec(word);
+      if (redirect === null) {
+        rest.push(word);
+        continue;
+      }
+      const target = redirect[2] === "" ? words[++i] : redirect[2];
+      if (redirect[1] === "<<<") stdin = target;
+      else if (redirect[1]?.startsWith("<<")) stdin = bodies[nextBody++];
     }
     if (rest[0] === "cd" && rest[1] !== undefined) {
       const target = expandHome(rest[1]);
       cwd = cwd === undefined ? target : resolve(cwd, target);
       continue;
     }
-    if (rest.length > 0) result.push({ tokens: rest, env, cwd });
+    if (rest.length > 0) result.push({ tokens: rest, env, cwd, pipe, ...(stdin === undefined ? {} : { stdin }) });
   }
   return result;
 }
@@ -135,7 +160,7 @@ function expandHome(path: string): string {
 
 /** The git subcommand and its arguments, skipping global options such as `-C dir`. */
 function gitCall(tokens: string[]): { cwd: string | undefined; config: string[]; sub: string; args: string[] } | undefined {
-  const at = tokens.indexOf("git");
+  const at = tokens.findIndex((t) => commandName(t) === "git");
   if (at === -1) return undefined;
   let cwd: string | undefined;
   const config: string[] = [];
@@ -148,6 +173,50 @@ function gitCall(tokens: string[]): { cwd: string | undefined; config: string[];
   }
   const sub = tokens[i];
   return sub === undefined ? undefined : { cwd, config, sub, args: tokens.slice(i + 1) };
+}
+
+/** `/usr/bin/git` and `git` are the same command. */
+function commandName(token: string): string {
+  return token.slice(token.lastIndexOf("/") + 1);
+}
+
+const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
+
+/**
+ * The script a shell segment runs: the string after `-c` (or `-lc`, `-ec`...),
+ * the text after `eval`, a heredoc or here-string, or an `echo`/`printf`
+ * piped into it. A shell given a script file is not followed.
+ */
+function shellScript(segment: Segment, previous: Segment | undefined): string | undefined {
+  const { tokens } = segment;
+  const evalAt = tokens.findIndex((t) => commandName(t) === "eval");
+  if (evalAt !== -1) return tokens.slice(evalAt + 1).join(" ");
+  const at = tokens.findIndex((t) => SHELLS.has(commandName(t)));
+  if (at === -1) return undefined;
+  const args = tokens.slice(at + 1);
+  const dashC = args.findIndex((a) => /^-[a-zA-Z]*c[a-zA-Z]*$/.test(a));
+  if (dashC !== -1) return args[dashC + 1] ?? "";
+  if (args.some((a) => !a.startsWith("-"))) return undefined;
+  if (segment.stdin !== undefined) return segment.stdin;
+  if (previous?.pipe === true && previous.stdin !== undefined) return previous.stdin;
+  if (previous?.pipe === true && ["echo", "printf"].includes(commandName(previous.tokens[0] ?? ""))) {
+    return previous.tokens
+      .slice(1)
+      .filter((t) => !/^-[neE]+$/.test(t))
+      .join(" ")
+      .replace(/\\n/g, "\n");
+  }
+  return undefined;
+}
+
+/** `git config` writes that move or unset the hooks directory; reads and `.githooks` are fine. */
+function changesHooksPath(args: string[]): boolean {
+  const at = args.findIndex((a) => a.toLowerCase() === "core.hookspath");
+  if (at === -1) return false;
+  if (args.some((a) => ["--get", "--get-all", "--get-regexp", "get", "--list", "-l"].includes(a))) return false;
+  if (args.some((a) => ["--unset", "--unset-all", "unset"].includes(a))) return true;
+  const value = args[at + 1];
+  return value !== undefined && value !== ".githooks";
 }
 
 function refTarget(arg: string): string {
@@ -236,41 +305,55 @@ function decideGhApi(args: string[]): string | undefined {
 
 /** Returns why the command is blocked, or undefined when it may run. */
 export function decide(command: string, context: Context): string | undefined {
-  for (const segment of segments(command)) {
-    const { tokens } = segment;
-    const gh = tokens.indexOf("gh");
-    if (gh !== -1 && tokens[gh + 1] === "pr" && tokens[gh + 2] === "merge") {
-      const reason = decidePrMerge(tokens.slice(gh + 3), segment, context);
-      if (reason !== undefined) return reason;
-      continue;
-    }
-    if (gh !== -1 && tokens[gh + 1] === "api") {
-      const reason = decideGhApi(tokens.slice(gh + 2));
-      if (reason !== undefined) return reason;
-      continue;
-    }
-    const git = gitCall(tokens);
-    if (git === undefined) continue;
-    const { sub, args } = git;
-    const cwd = git.cwd === undefined ? segment.cwd : resolve(segment.cwd ?? ".", git.cwd);
-    if (args.includes("--no-verify")) return "--no-verify skips the pre-push typecheck and guards.";
-    if (git.config.some((c) => /^core\.hooksPath=/i.test(c))) return "Overriding core.hooksPath skips the pre-push checks.";
-    if (sub === "push") {
-      const reason = decidePush(args, cwd, context);
-      if (reason !== undefined) return reason;
-    }
-    if (sub === "reset" && args.includes("--hard")) return "reset --hard discards work.";
-    if (sub === "clean" && (args.includes("--force") || hasShortFlag(args, "f"))) return "clean -f deletes untracked files.";
-    if (sub === "branch") {
-      const force = args.includes("--force") || hasShortFlag(args, "f");
-      const del = args.includes("--delete") || hasShortFlag(args, "d");
-      if (hasShortFlag(args, "D") || (del && force)) return "branch -D deletes unmerged work.";
-    }
-    if (sub === "checkout" && args.includes(".")) return "checkout . discards local changes.";
-    if (sub === "restore" && args.includes(".")) {
-      const onlyStaged = (args.includes("--staged") || hasShortFlag(args, "S")) && !args.includes("--worktree") && !hasShortFlag(args, "W");
-      if (!onlyStaged) return "restore . discards local changes.";
-    }
+  return decideIn(command, context, undefined, {}, 0);
+}
+
+function decideIn(command: string, context: Context, startCwd: string | undefined, outerEnv: Record<string, string>, depth: number): string | undefined {
+  if (depth > 5) return "Too many nested shells to check.";
+  let previous: Segment | undefined;
+  for (const parsed of segments(command, startCwd)) {
+    const segment = { ...parsed, env: { ...outerEnv, ...parsed.env } };
+    const reason = decideSegment(segment, previous, context, depth);
+    if (reason !== undefined) return reason;
+    previous = segment;
+  }
+  return undefined;
+}
+
+function decideSegment(segment: Segment, previous: Segment | undefined, context: Context, depth: number): string | undefined {
+  const { tokens } = segment;
+  const script = shellScript(segment, previous);
+  if (script !== undefined) {
+    const reason = decideIn(script, context, segment.cwd, segment.env, depth + 1);
+    if (reason !== undefined) return reason;
+  }
+  const gh = tokens.findIndex((t) => commandName(t) === "gh");
+  if (gh !== -1) {
+    const [group, action] = [tokens[gh + 1], tokens[gh + 2]];
+    if (group === "pr" && action === "merge") return decidePrMerge(tokens.slice(gh + 3), segment, context);
+    if (group === "api") return decideGhApi(tokens.slice(gh + 2));
+    if (group === "alias" && (action === "set" || action === "import")) return "gh aliases hide commands from the guardrails.";
+  }
+  const git = gitCall(tokens);
+  if (git === undefined) return undefined;
+  const { sub, args } = git;
+  const cwd = git.cwd === undefined ? segment.cwd : resolve(segment.cwd ?? ".", git.cwd);
+  if (args.includes("--no-verify")) return "--no-verify skips the pre-push typecheck and guards.";
+  if (git.config.some((c) => /^core\.hooksPath=/i.test(c)) || (sub === "config" && changesHooksPath(args))) {
+    return "Changing core.hooksPath skips the pre-push checks.";
+  }
+  if (sub === "push") return decidePush(args, cwd, context);
+  if (sub === "reset" && args.includes("--hard")) return "reset --hard discards work.";
+  if (sub === "clean" && (args.includes("--force") || hasShortFlag(args, "f"))) return "clean -f deletes untracked files.";
+  if (sub === "branch") {
+    const force = args.includes("--force") || hasShortFlag(args, "f");
+    const del = args.includes("--delete") || hasShortFlag(args, "d");
+    if (hasShortFlag(args, "D") || (del && force)) return "branch -D deletes unmerged work.";
+  }
+  if (sub === "checkout" && args.includes(".")) return "checkout . discards local changes.";
+  if (sub === "restore" && args.includes(".")) {
+    const onlyStaged = (args.includes("--staged") || hasShortFlag(args, "S")) && !args.includes("--worktree") && !hasShortFlag(args, "W");
+    if (!onlyStaged) return "restore . discards local changes.";
   }
   return undefined;
 }

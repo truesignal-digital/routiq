@@ -46,6 +46,17 @@ describe("git guardrails hook", () => {
     `GH_CONFIG_DIR=~/.config/gh gh pr merge https://github.com/o/r/pull/601 --merge --match-head-commit ${SHA}`,
     `gh pr merge --squash --match-head-commit ${SHA}`,
     `gh pr merge 601 --auto --squash --match-head-commit ${SHA}`,
+    `bash -c "gh pr merge 601 --squash --match-head-commit ${SHA}"`,
+    'bash -c "pnpm typecheck && git push -u origin feat/x"',
+    "bash scripts/deploy.sh",
+    "echo 'git push --force' > notes.txt",
+    "printf 'git reset --hard' | wc -c",
+    "cat <<'EOF' > /tmp/x.sh\ngit push -f origin feat/x\nEOF",
+    "git config core.hooksPath",
+    "git config --get core.hooksPath",
+    "git config core.hooksPath .githooks",
+    "gh alias list",
+    "/usr/bin/git push -u origin feat/x",
   ])("allows %s", (command) => {
     expect(decide(command, context())).toBeUndefined();
   });
@@ -91,6 +102,29 @@ describe("git guardrails hook", () => {
     "gh api -X PUT repos/o/r/pulls/601/merge -f sha=abc",
     "gh api graphql -f query='mutation { mergePullRequest(input: {}) { clientMutationId } }'",
     "gh api -X DELETE repos/o/r/git/refs/heads/feat/x",
+    // One level of indirection (Fable review of #674).
+    `bash -c "gh pr merge 602 --merge --match-head-commit ${SHA}"`,
+    'bash -c "git push origin HEAD:main"',
+    "sh -c 'git push origin HEAD:main'",
+    "zsh -lc 'git reset --hard'",
+    'eval "git push origin HEAD:main"',
+    "eval git push -f origin feat/x",
+    'GH_CONFIG_DIR=/x bash -c "gh pr merge 601 --admin"',
+    'bash -c "bash -c \\"git push --force\\""',
+    "bash <<EOF\ngit push -f origin feat/x\nEOF",
+    "sh <<'EOF'\necho hi\ngit push origin develop\nEOF",
+    "cat <<'EOF' | bash\ngit clean -fd\nEOF",
+    "bash <<< 'git push -f origin feat/x'",
+    'echo "git push -f origin feat/x" | sh',
+    "printf 'git status\\ngit reset --hard\\n' | bash",
+    `gh alias set pm "pr merge" && gh pm 602 --merge --match-head-commit ${SHA}`,
+    "gh alias import aliases.yml",
+    "/usr/bin/git push -f origin feat/x",
+    "/opt/homebrew/bin/gh pr merge 601 --admin",
+    "git config core.hooksPath /dev/null",
+    "git config core.hooksPath /dev/null && git push origin feat/x",
+    "git config --unset core.hooksPath",
+    "git config --global core.hooksPath /tmp/none",
   ])("blocks %s", (command) => {
     expect(decide(command, context())).toBeDefined();
   });
@@ -136,8 +170,8 @@ describe("git guardrails hook", () => {
   it("tracks cd and inline env per command", () => {
     const parsed = segments("cd /repo/wt && GH_CONFIG_DIR=/x gh pr view 1; git status");
     expect(parsed).toEqual([
-      { tokens: ["gh", "pr", "view", "1"], env: { GH_CONFIG_DIR: "/x" }, cwd: "/repo/wt" },
-      { tokens: ["git", "status"], env: {}, cwd: "/repo/wt" },
+      { tokens: ["gh", "pr", "view", "1"], env: { GH_CONFIG_DIR: "/x" }, cwd: "/repo/wt", pipe: false },
+      { tokens: ["git", "status"], env: {}, cwd: "/repo/wt", pipe: false },
     ]);
   });
 
@@ -368,6 +402,20 @@ describe("ratchet", () => {
   it("reads rule ids from rules.ts", () => {
     expect(ruleIds('{ id: "H9", x }, { id: "DS-1" }')).toEqual(["H9", "DS-1"]);
     expect(ruleIds(undefined)).toEqual([]);
+  });
+
+  it("passes a new rule that starts with grandfathered baselines, but not new files under an existing rule", () => {
+    const result = ratchet(
+      input({
+        head: { H9: { "a.tsx": 2, "c.tsx": 1 }, B1: { "x.ts": 3, "y.ts": 1 } },
+        headRuleIds: ["H9", "J1", "B1"],
+      }),
+    );
+    expect(result.blocking).toEqual(["baseline raised: [H9] c.tsx 0 → 1"]);
+  });
+
+  it("still blocks baselines for a rule that existed on base with no baselined files", () => {
+    expect(ratchet(input({ head: { H9: { "a.tsx": 2 }, J1: { "z.ts": 1 } } })).blocking).toEqual(["baseline raised: [J1] z.ts 0 → 1"]);
   });
 
   it("skips the baseline comparison when the base branch has no baselines yet", () => {

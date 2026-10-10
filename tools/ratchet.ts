@@ -63,6 +63,8 @@ export function ratchet(input: RatchetInput): { blocking: string[]; excused: str
   const weakened: string[] = [];
   if (input.base !== undefined) {
     for (const [id, files] of Object.entries(input.head)) {
+      // A rule new in this PR starts from its grandfathered counts (`pnpm lint:tighten`).
+      if (input.base[id] === undefined && !input.baseRuleIds.includes(id)) continue;
       for (const [path, count] of Object.entries(files)) {
         const before = input.base[id]?.[path] ?? 0;
         if (count > before) weakened.push(`baseline raised: [${id}] ${path} ${before} → ${count}`);
