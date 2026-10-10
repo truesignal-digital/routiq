@@ -20,12 +20,6 @@ export function ScreenPending() {
   );
 }
 
-/** A vehicle section, inside the workspace's own page frame. */
-export function SectionPending() {
-  const { t } = useTranslation();
-  return <LoadingState label={t("shell.pageLoading")} />;
-}
-
 /**
  * A screen that could not open: its code did not arrive (offline, a dropped
  * connection) or it failed while drawing. Shown in the screen's own slot, so
