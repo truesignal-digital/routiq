@@ -112,7 +112,7 @@ vi.mock("../members/useMembers.js", () => ({
   },
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: {
       assetClasses: [],

@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { DiscardGuardScope, formPanelClassName, useDiscardGuard } from "@/components/command-form.js";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { contributes } from "@/modules/manifest.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { recordReference, samePanel, type PanelRef } from "../model.js";
 import { DocumentRecord } from "./DocumentRecord.js";
@@ -10,6 +11,7 @@ import { EntryRecord } from "./EntryRecord.js";
 import { IssueRecord } from "./IssueRecord.js";
 import { NoteRecord } from "./NoteRecord.js";
 import { ReadingsRecord } from "./ReadingsRecord.js";
+import { PanelMissing } from "./shared.js";
 import { StandaloneForm } from "./StandaloneForm.js";
 import { TripRecord } from "./TripRecord.js";
 import { WorkOrderRecord } from "./WorkOrderRecord.js";
@@ -68,6 +70,9 @@ function backToValues(ref: PanelRef): { kind: string; ref: string } {
 }
 
 function RecordView({ record, form }: { record: PanelRef; form: PanelForm | undefined }) {
+  const { viewer } = useVehicle();
+  // A record of a module that is off is not there to open, even from a link.
+  if (!contributes("recordPanels", record.kind, viewer.enabledModules)) return <PanelMissing />;
   switch (record.kind) {
     case "work_order":
       return <WorkOrderRecord id={record.id} form={form} />;

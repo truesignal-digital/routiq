@@ -144,6 +144,8 @@
     "AUTH_LOCKED": "Account temporarily locked after several attempts. Try again later.",
     "COMMAND_NOT_FOUND": "Unknown action. Update the app and retry.",
     "MODULE_DISABLED": "This module is not enabled for your workspace.",
+    "MODULE_STILL_REQUIRED": "Another module that is on needs this one. Turn that one off first.",
+    "MODULE_DEPENDENCY_DISABLED": "This module needs a module that is off. Turn that one on first.",
     "UNIQUE_CONSTRAINT_VIOLATION": "An identical record already exists.",
     "COMMAND_FAILED": "The action failed. Retry; if it persists, contact your administrator.",
     "AUDIT_EVENT_MISSING": "The action failed. Retry; if it persists, contact your administrator.",
@@ -2274,6 +2276,7 @@
         "lead": "Available.",
         "sinceAndTrip": "In service since {since}; last activity {lastTrip}.",
         "sinceNoTrips": "In service since {since}; no activities yet.",
+        "sinceOnly": "In service since {since}.",
         "lastTripOnly": "Last activity {lastTrip}.",
         "noTrips": "No activities yet."
       },

@@ -45,12 +45,12 @@ vi.mock("./usePlaces.js", () => ({
   usePlaces: mocks.usePlaces,
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: mocks.useCategories,
 }));
 
 // The trip's expense is RecordEntryForm: its branch list and approval hint.
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: [{ code: "DLA", name: "Douala" }] },
     isPending: false,

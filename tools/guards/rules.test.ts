@@ -434,6 +434,14 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "B1",
+    bad: [file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";')],
+    good: [
+      file("apps/web/src/modules/index.ts", 'import { financeManifest } from "./finance/manifest.js";'),
+      file("apps/web/src/finance/x.ts", 'import { useMeContext } from "@/auth/me.js";'),
+    ],
+  },
+  {
     id: "P1",
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],
@@ -633,6 +641,25 @@ describe("comments", () => {
       '/** `<input type="datetime-local">` values — no offset. */\n// never use type="date" here\n * type="date"',
     );
     expect(rule("H9").check([documented])).toEqual([]);
+  });
+});
+
+describe("B1 module boundaries", () => {
+  const manifest = file("apps/web/src/modules/finance/manifest.ts", 'export const m = { code: "FINANCE", uses: ["ASSETS"] };');
+
+  it("flags core importing a module and a module importing one it does not declare", () => {
+    const core = file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";');
+    const finance = file("apps/web/src/finance/y.ts", 'import { useWorkOrders } from "../maintenance/useMaintenance.js";');
+    expect(rule("B1").check([manifest, core, finance]).map((v) => v.path)).toEqual([
+      "apps/web/src/dashboard/x.ts",
+      "apps/web/src/finance/y.ts",
+    ]);
+  });
+
+  it("accepts composition, and a module's declared use", () => {
+    const composition = file("apps/web/src/modules/index.ts", 'import { m } from "./finance/manifest.js";');
+    const declared = file("apps/web/src/finance/z.ts", 'import { useAssetOptions } from "../assets/useAssetOptions.js";');
+    expect(rule("B1").check([manifest, composition, declared])).toEqual([]);
   });
 });
 

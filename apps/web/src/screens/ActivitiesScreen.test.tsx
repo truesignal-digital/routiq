@@ -107,7 +107,7 @@ vi.mock("../activities/useActivities.js", () => ({
   },
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: () => ({
     data: [
       {
@@ -119,7 +119,7 @@ vi.mock("../documents/useCategories.js", () => ({
   }),
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: {
       assetClasses: [],
@@ -311,10 +311,5 @@ describe("ActivitiesScreen", () => {
     expect(issuedQueries[0]?.sort).toBe("startedAt:desc");
   });
 
-  it("shows a denied surface when the module is off", async () => {
-    meValue = { role: "ADMIN", enabledModules: ["CORE"] };
-    render(<ActivitiesScreen />);
-    expect(await screen.findByText("activities.title")).toBeTruthy();
-    expect(screen.queryByText("DLA-2026-00042")).toBeNull();
-  });
+  // With Trips off the shell never opens this screen: modules/manifests.test.tsx.
 });

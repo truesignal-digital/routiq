@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import type { ModuleCode } from "@routiq/contracts";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { contributes } from "@/modules/manifest.js";
 import { useVehicle, type VehicleGates } from "./context.js";
 import { tabMarkers } from "./flow.js";
 
@@ -18,18 +20,25 @@ const SEGMENT: Record<VehicleTab, string> = {
   details: "details",
 };
 
+/** role-config: the tabs a role may not read even with their module on; the module comes from its manifest. */
 const GATE: Partial<Record<VehicleTab, keyof VehicleGates>> = {
-  maintenance: "maintenance",
   money: "money",
-  trips: "trips",
   documents: "documents",
 };
 
-export function visibleTabs(gates: VehicleGates): VehicleTab[] {
-  return VEHICLE_TABS.filter((tab) => {
-    const gate = GATE[tab];
-    return gate === undefined || gates[gate];
-  });
+/** Whether a tab is there for this viewer: its module on (manifest) and its gate open. */
+export function tabShown(
+  tab: VehicleTab,
+  gates: VehicleGates,
+  enabledModules: readonly ModuleCode[],
+): boolean {
+  if (!contributes("vehicleTabs", tab, enabledModules)) return false;
+  const gate = GATE[tab];
+  return gate === undefined || gates[gate];
+}
+
+export function visibleTabs(gates: VehicleGates, enabledModules: readonly ModuleCode[]): VehicleTab[] {
+  return VEHICLE_TABS.filter((tab) => tabShown(tab, gates, enabledModules));
 }
 
 /** Which section the URL is on: the segment after the vehicle id, "now" when there is none. */
@@ -53,7 +62,7 @@ export function VehicleTabsNav() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { asset, gates, attention, viewer } = useVehicle();
-  const tabs = visibleTabs(gates);
+  const tabs = visibleTabs(gates, viewer.enabledModules);
   const active = activeTab(pathname, asset.id);
   const markers = tabMarkers(attention, asset, viewer);
 

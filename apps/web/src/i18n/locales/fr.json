@@ -144,6 +144,8 @@
     "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
     "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
+    "MODULE_STILL_REQUIRED": "Un autre module activé a besoin de celui-ci. Désactivez-le d'abord.",
+    "MODULE_DEPENDENCY_DISABLED": "Ce module a besoin d'un module qui n'est pas activé. Activez celui-là d'abord.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
     "COMMAND_FAILED": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
     "AUDIT_EVENT_MISSING": "L'action a échoué. Réessayez ; si le problème persiste, contactez votre administrateur.",
@@ -2274,6 +2276,7 @@
         "lead": "Disponible.",
         "sinceAndTrip": "En service depuis {since} ; dernière activité {lastTrip}.",
         "sinceNoTrips": "En service depuis {since} ; aucune activité pour l'instant.",
+        "sinceOnly": "En service depuis {since}.",
         "lastTripOnly": "Dernière activité {lastTrip}.",
         "noTrips": "Aucune activité pour l'instant."
       },

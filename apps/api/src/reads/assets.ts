@@ -577,7 +577,8 @@ export function registerAssetReadRoutes(
             ),
           ];
 
-          const activityRows = await tx
+          // Trips are ACTIVITIES' records: with the module off the vehicle names none (#328).
+          const activityRows = !modules.has("ACTIVITIES") ? [] : await tx
             .select({
               id: activities.id,
               activityNumber: activities.activityNumber,
