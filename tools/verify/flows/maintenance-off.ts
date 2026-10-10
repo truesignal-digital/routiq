@@ -18,7 +18,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
  */
 const MAINTENANCE_READ = /\/v1\/(work-orders|issues|maintenance)(\/|\?|$)/;
 
-const flow: DriveScript = async ({ page, account, t, nav, shot, quiet, log, apiGet }) => {
+const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet }) => {
   const failures: string[] = [];
   const check = (ok: boolean, what: string) => {
     log(`${ok ? "PASS" : "FAIL"} ${what}`);
@@ -43,7 +43,8 @@ const flow: DriveScript = async ({ page, account, t, nav, shot, quiet, log, apiG
   }
   log(`modules on: ${me.enabledModules.join(", ")}`);
 
-  await nav("/");
+  await (await openSidebar(page)).getByRole("link", { name: t("Accueil", "Home"), exact: true }).click();
+  await page.waitForURL((url) => url.pathname === "/");
   await quiet();
   const sidebar = await openSidebar(page);
   check((await sidebar.getByRole("link", { name: "Maintenance", exact: true }).count()) === 0, "no Maintenance row in the sidebar");
