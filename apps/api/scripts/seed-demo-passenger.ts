@@ -330,9 +330,11 @@ export async function seedLittoralVoyages() {
   const yaounde = { kind: "place", placeId: ids.placeYaounde, name: "Yaoundé" } as const;
 
   // ── The closed voyage ──────────────────────────────────────────────────────
-  // Paul copies the coach's sheet: readings, crew, the leg and the seats sold.
+  // Éric files the coach's sheet: readings, crew, the leg and the seats sold.
   // The money comes from the people who handle it, then Paul closes the trip.
-  await runCommand(paul, storyAnchorOperation, {
+  // No command links Éric's account to his Person yet, so the trip is his by
+  // recording it: a driver spends only on his own trips (#592).
+  await runCommand(eric, storyAnchorOperation, {
     activityId: ids.closedVoyage,
     branchCode: DLA,
     activityTypeCode: "SCHEDULED_JOURNEY",
@@ -430,8 +432,9 @@ export async function seedLittoralVoyages() {
   }
 
   // ── The voyage on the road ─────────────────────────────────────────────────
+  // Éric starts his own departure, so the fuel he buys below is on his trip (#592).
   await runCommand(
-    paul,
+    eric,
     "create-activity:voyage:road",
     {
       activityId: ids.roadVoyage,
@@ -449,7 +452,7 @@ export async function seedLittoralVoyages() {
         value: 186_040,
         observedAt: at(0, "06:50"),
       },
-      crew: [{ activityPersonId: ids.roadCrew, personId: ids.crewJoseph, role: "DRIVER" }],
+      crew: [{ activityPersonId: ids.roadCrew, personId: ids.crewEric, role: "DRIVER" }],
     },
     { clientOccurredAt: at(0, "06:55") },
   );

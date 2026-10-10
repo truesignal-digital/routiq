@@ -810,6 +810,7 @@
       "assets": "Assets and crew",
       "legs": "Legs",
       "money": "Revenue and costs",
+      "moneyCosts": "Costs",
       "km": "{count} km",
       "closedAt": "Closed {date}",
       "overview": {
@@ -962,7 +963,8 @@
         "legs": "Legs",
         "flavourJourney": "Seats",
         "flavourHaulage": "Cargo",
-        "money": "Revenue and expenses"
+        "money": "Revenue and expenses",
+        "moneyCosts": "Costs"
       },
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch",

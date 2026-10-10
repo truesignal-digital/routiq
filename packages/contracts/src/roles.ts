@@ -58,7 +58,8 @@ export const legacyRoleInput = z
  * - BRANCH_ENTRIES: the entries of the role's branches, no totals or periods.
  * - WORK_ORDER_COSTS: the cost lines of work orders, through the work-order
  *   reads, and the receipts and history of entries that are only such lines.
- * - OWN_ENTRIES: the entries the member recorded, nothing summed over others.
+ * - OWN_ENTRIES: the expenses the member recorded, nothing summed over others.
+ *   Never revenue: it is a trip's price, which a driver does not see (#593).
  */
 export const MONEY_READ_SCOPES = [
   "LEDGER",

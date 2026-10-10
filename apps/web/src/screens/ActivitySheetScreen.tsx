@@ -889,7 +889,9 @@ function SheetForm({
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("activities.record.sections.money")}</CardTitle>
+            <CardTitle>
+              {t(canAddRevenue ? "activities.record.sections.money" : "activities.record.sections.moneyCosts")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <EntryRows
