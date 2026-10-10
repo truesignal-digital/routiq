@@ -16,6 +16,7 @@ import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { monthBounds } from "./finance.js";
 import { readableEntrySql } from "./money-scope.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { workspaceTimezone } from "./workspace-day.js";
 
 /** approve-entry's `allowedRoles` (commands/entry-decisions.ts). */
 const ENTRY_DECIDER_ROLES: readonly Role[] = ["DIRECTOR", "FINANCE"];
@@ -43,13 +44,13 @@ export function registerFinanceSummaryReadRoutes(
 
       const result = await read(async (tx) => {
         const [workspace] = await tx
-          .select({ currency: workspaces.defaultCurrency, timezone: workspaces.timezone })
+          .select({ currency: workspaces.defaultCurrency })
           .from(workspaces)
           .where(eq(workspaces.id, auth.workspaceId));
         const currency = workspace?.currency ?? "XAF";
         const month = currentBusinessDate(
           new Date(),
-          workspace?.timezone ?? "Africa/Douala",
+          await workspaceTimezone(tx, auth.workspaceId),
         ).slice(0, 7);
         const { from, to } = monthBounds(month);
 

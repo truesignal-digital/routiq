@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 686938,
+    "ceiling": 687197,
     "raises": [
       {
         "date": "2026-10-06",
@@ -203,7 +203,7 @@
       {
         "date": "2026-10-10",
         "from": 686158,
-        "to": 686938,
+        "to": 687197,
         "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
       }
     ]
@@ -262,7 +262,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259125,
+    "ceiling": 259326,
     "raises": [
       {
         "date": "2026-10-06",
@@ -449,6 +449,12 @@
         "from": 258556,
         "to": 259125,
         "reason": "Planned-trip and cancelled status words for the planning read (#336)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259125,
+        "to": 259326,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
       }
     ]
   }

@@ -13,6 +13,7 @@ import {
   situationOf,
   tabMarkers,
   workOrderSteps,
+  workOrderWaiting,
   type EntryFacts,
 } from "./flow.js";
 import type { RoleStep } from "./model.js";
@@ -187,6 +188,22 @@ describe("a work order's next step, per role", () => {
     for (const role of ["FINANCE", "CASHIER", "DRIVER"] as const) {
       expect(token(attentionStep(item, viewer(role), asset())), role).toBe("none");
     }
+  });
+});
+
+describe("who a work order waits on (#588)", () => {
+  it("waits on a manager's release once the grounding repair is done", () => {
+    expect(workOrderWaiting("COMPLETED", true)).toBe("release");
+    expect(workOrderWaiting("COMPLETED", false)).toBeNull();
+  });
+
+  it("waits on the other safety-critical problem when one still blocks the release", () => {
+    expect(workOrderWaiting("COMPLETED", true, true)).toBe("otherSafetyIssue");
+    // Not the grounding order: it waits on nothing, whatever else is open.
+    expect(workOrderWaiting("COMPLETED", false, true)).toBeNull();
+    // Before the close, the order's own next step still comes first.
+    expect(workOrderWaiting("APPROVED", true, true)).toBe("completion");
+    expect(workOrderWaiting("COMPLETION_SUBMITTED", true, true)).toBe("signOff");
   });
 });
 
