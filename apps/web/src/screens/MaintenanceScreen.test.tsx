@@ -256,6 +256,7 @@ const admin: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS", "MAINTENANCE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function as(role: MeContext["role"]): MeContext {

@@ -1,6 +1,6 @@
 # Finance approvals
 
-Expenses above the approval threshold (100,000 XAF for drivers, technicians and cashiers) wait in the approvals queue. Finance or Direction approves or rejects each one; nobody decides on an entry they recorded themselves.
+Expenses above the approval threshold (100,000 XAF for drivers, technicians and cashiers) wait in the approvals queue. Finance or the Director approves or rejects each one; nobody decides on an entry they recorded themselves.
 
 ## Sub-features
 

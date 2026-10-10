@@ -298,8 +298,12 @@ export const financeSummaryResponse = z.object({
   currency: z.string(),
   /** The current business month, `YYYY-MM`, that `out` and `in` cover. */
   month: monthCode,
-  /** Latest OPEN and latest LOCKED accounting month; null when there is none. */
-  openPeriodCode: z.string().nullable(),
+  /**
+   * Accounting months before `month` still OPEN, oldest first: what the lead
+   * says is not locked yet (#526). `month` itself is left out, open or not.
+   */
+  unlockedPeriodCodes: z.array(periodCode),
+  /** Latest LOCKED accounting month; null when there is none. */
   lastLockedPeriodCode: z.string().nullable(),
   /** Signed ledger totals (POSTED + REVERSED) by economic date in `month`. */
   outMinor: z.number().int(),

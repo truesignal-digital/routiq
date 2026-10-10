@@ -635,6 +635,7 @@ export type WaitingOn =
   | "workshop"
   | "finance"
   | "financePeer"
+  | "approver"
   | "director"
   | "manager"
   | "operations"
@@ -671,6 +672,8 @@ function waitingOn(item: AssetAttentionItem): WaitingOn {
   if (item.code === "ENTRY_AWAITING_REVIEW") {
     if (item.params.approver === "DIRECTION_APPROVES") return "director";
     if (item.params.approver === "FINANCE_PEER_APPROVES") return "financePeer";
+    // A band no role on the chain decides: name no role (#645).
+    if (item.params.approver === "WAITS") return "approver";
   }
   return WAITING_ON[item.code];
 }

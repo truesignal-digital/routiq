@@ -147,7 +147,7 @@
     "AUTH_INVALID_TOKEN": "Session expired. Please sign in again.",
     "AUTH_LOCKED": "Account temporarily locked after several attempts. Try again later.",
     "COMMAND_NOT_FOUND": "Unknown action. Update the app and retry.",
-    "MODULE_DISABLED": "This module is not enabled for your workspace.",
+    "MODULE_DISABLED": "This module is not enabled for your company.",
     "MODULE_STILL_REQUIRED": "Another module that is on needs this one. Turn that one off first.",
     "MODULE_DEPENDENCY_DISABLED": "This module needs a module that is off. Turn that one on first.",
     "UNIQUE_CONSTRAINT_VIOLATION": "An identical record already exists.",
@@ -475,13 +475,15 @@
     },
     "money": {
       "lead": {
-        "both": "Every expense and revenue. {open} is open; {locked} is locked.",
-        "open": "Every expense and revenue. {open} is open.",
-        "none": "Every expense and revenue.",
+        "unlocked": "Every expense and revenue. {months} {count, plural, one {isn't} other {aren't}} locked yet. Tiles show {month}.",
+        "unlockedMany": "Every expense and revenue. {count} months aren't locked yet, starting with {oldest}. Tiles show {month}.",
+        "locked": "Every expense and revenue. {locked} is locked. Tiles show {month}.",
+        "none": "Every expense and revenue. Tiles show {month}.",
         "own": {
-          "both": "Your expenses. {open} is open; {locked} is locked.",
-          "open": "Your expenses. {open} is open.",
-          "none": "Your expenses."
+          "unlocked": "Your expenses. {months} {count, plural, one {isn't} other {aren't}} locked yet. Tiles show {month}.",
+          "unlockedMany": "Your expenses. {count} months aren't locked yet, starting with {oldest}. Tiles show {month}.",
+          "locked": "Your expenses. {locked} is locked. Tiles show {month}.",
+          "none": "Your expenses. Tiles show {month}."
         }
       },
       "tiles": {
@@ -541,7 +543,6 @@
       "retry": "Try again",
       "empty": "No entries recorded yet.",
       "branchEmpty": "No entry recorded for this branch.",
-      "ownScope": "Only the entries you recorded appear here.",
       "ownEmpty": "You have not recorded any entry yet. Entries you record appear here.",
       "loadMore": "Load more",
       "status": {
@@ -2383,6 +2384,7 @@
       "recorder": "Whoever recorded it",
       "director": "The Director",
       "financePeer": "Another Finance member or the Director",
+      "approver": "An approver",
       "team": "The team"
     },
     "now": {
@@ -2774,7 +2776,7 @@
         "release": "Waiting on a manager to release the vehicle to service.",
         "otherSafetyIssue": "Waiting on {count, plural, one {another safety-critical problem to be closed: “{description}”.} other {# other safety-critical problems to be closed, including “{description}”.}}",
         "planning": "Waiting on the workshop to plan a work order.",
-        "entryReview": "Waiting on {approver, select, DIRECTION_APPROVES {the Director} FINANCE_PEER_APPROVES {another Finance member or the Director} other {Finance}} to review it. Until then it is not counted in posted totals.",
+        "entryReview": "Waiting on {approver, select, DIRECTION_APPROVES {the Director} FINANCE_PEER_APPROVES {another Finance member or the Director} FINANCE_APPROVES {Finance} other {an approver}} to review it. Until then it is not counted in posted totals.",
         "entryReceipt": "Waiting on {name} to attach the receipt.",
         "documentRenewal": "Waiting on operations to renew it."
       },

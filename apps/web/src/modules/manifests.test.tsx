@@ -144,7 +144,7 @@ describe("direct links to a module that is off", () => {
     await closeVehicle();
   });
 
-  const NOT_INCLUDED = "This module is not enabled for your workspace.";
+  const NOT_INCLUDED = "This module is not enabled for your company.";
 
   it.each(PAGES)("%s's page %s says it is not included and reads nothing of it", async (code, path) => {
     const recorded = await openVehicle(path, { role: "DIRECTOR", modules: ["CORE", ...MODULES.filter((m) => m !== code)] });
