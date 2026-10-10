@@ -9,7 +9,7 @@ import { WeekColumns } from "@/components/overview/week-columns.js";
 import { ErrorState } from "@/components/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, formatMoney, formatPercent } from "@/lib/format.js";
+import { formatDate, formatMoney, formatPercent, moneyAmountParts } from "@/lib/format.js";
 import { PAGE_USAGE_RANGE, pointsChange, useFleetUsage, wholeShare } from "@/overview/useFleetUsage.js";
 import { windowLabel } from "@/overview/window-label.js";
 import { useActivitySummary } from "./useActivities.js";
@@ -245,7 +245,7 @@ function RoutesCard({
       <CardHeader>
         <CardTitle>{t("activities.overview.routes.title")}</CardTitle>
         <CardDescription>
-          {t("activities.overview.routes.question", { period: windowLabel(usage.period, usage.range, language), currency })}
+          {t("activities.overview.routes.question", { period: windowLabel(usage.period, usage.range, language), currency: moneyAmountParts(null, { currency, locale: language }).symbol })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

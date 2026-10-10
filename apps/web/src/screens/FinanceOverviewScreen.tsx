@@ -31,6 +31,7 @@ import {
   formatPercent,
   formatRelativeTime,
   localizedLabel,
+  moneyAmountParts,
 } from "@/lib/format.js";
 
 /** The range picker's choices as the address spells them; this month is the bare `/finance`. */
@@ -211,7 +212,7 @@ function FuelPerKmCard({ usage }: { usage: FleetUsageResponse | undefined }) {
         <CardDescription>
           {usage === undefined
             ? t("finance.overview.fuel.questionShort")
-            : t("finance.overview.fuel.question", { period: windowLabel(usage.period, usage.range, language), currency })}
+            : t("finance.overview.fuel.question", { period: windowLabel(usage.period, usage.range, language), currency: moneyAmountParts(null, { currency, locale: language }).symbol })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
