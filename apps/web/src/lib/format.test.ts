@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   currencyUnit,
+  formatCompact,
   formatPercent,
   formatMoney,
   formatDate,
@@ -189,6 +190,11 @@ describe("format", () => {
       expect(formatMonth("2026-09", "en")).toBe("September 2026");
       expect(formatMonth("2026-09", "fr-CM")).toBe("septembre 2026");
       expect(formatMonth("2026-09-15", "en", { month: "short", year: false })).toBe("Sept");
+    });
+
+    it("writes a chart axis figure short, with a true minus", () => {
+      expect(formatCompact(-85_000, "en")).toBe("−85K");
+      expect(formatCompact(2_300_000, "en")).toBe("2.3M");
     });
 
     it("gives a date input dd/mm/yyyy in both languages", () => {

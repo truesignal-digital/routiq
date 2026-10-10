@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 764827,
+    "ceiling": 775946,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,11 +313,17 @@
         "from": 764263,
         "to": 764827,
         "reason": "Dashboard summary setting (#669): Company settings section, form, read hook, and its fr and en words"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 764827,
+        "to": 775946,
+        "reason": "Stacking #668 (km and daily status) and #699 (one can-drive count) on the #669 stack: their own raises were counted from #665 + #666 only, so the combined build carries both. Measured on the merge alone (0e44ed07); the #712 formatters on top shrink it slightly"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23261,
+    "ceiling": 23326,
     "raises": [
       {
         "date": "2026-10-06",
@@ -390,11 +396,17 @@
         "from": 22832,
         "to": 23261,
         "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 23261,
+        "to": 23326,
+        "reason": "Stacking #668 (km and daily status) and #699 (one can-drive count) on the #669 stack: their own raises were counted from #665 + #666 only, so the combined build carries both. Measured on the merge alone (0e44ed07); the #712 formatters on top shrink it slightly"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 280366,
+    "ceiling": 283175,
     "raises": [
       {
         "date": "2026-10-06",
@@ -671,6 +683,12 @@
         "from": 279795,
         "to": 280366,
         "reason": "Dashboard summary setting (#669): its fr and en words in the first-load i18n chunk and the schedule list in contracts"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 280366,
+        "to": 283175,
+        "reason": "Stacking #668 (km and daily status) and #699 (one can-drive count) on the #669 stack: their own raises were counted from #665 + #666 only, so the combined build carries both. Measured on the merge alone (0e44ed07); the #712 formatters on top shrink it slightly"
       }
     ]
   }

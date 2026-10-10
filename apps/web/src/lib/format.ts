@@ -334,11 +334,11 @@ export function formatCount(value: number, locale?: string): string {
   return plainSpaces(new Intl.NumberFormat(locale ?? i18n.resolvedLanguage, { maximumFractionDigits: 0 }).format(value));
 }
 
-/** A chart axis figure, short: "2M", "2 M", "450K". The exact amount is in the hover and the table. */
+/** A chart axis figure, short: "2M", "2 M", "450K", "−85K". The exact amount is in the hover and the table. */
 export function formatCompact(value: number, locale?: string): string {
   return plainSpaces(
     new Intl.NumberFormat(locale ?? i18n.resolvedLanguage, { notation: "compact", maximumFractionDigits: 1 }).format(value),
-  );
+  ).replace("-", MINUS);
 }
 
 /**
