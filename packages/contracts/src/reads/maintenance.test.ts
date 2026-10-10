@@ -221,6 +221,7 @@ describe("work order detail contract", () => {
         entryStatus: "SUBMITTED",
       },
     ],
+    otherBranchesCostMinor: 0,
   };
 
   it("accepts a completed order with its timeline and its costs", () => {
@@ -303,8 +304,14 @@ describe("work order detail contract", () => {
       declaredCostMinor: null,
       costLines: null,
       pendingCostLines: null,
+      otherBranchesCostMinor: null,
     };
     expect(workOrderDetail.parse(withheld)).toEqual(withheld);
+  });
+
+  it("carries what other branches booked as one signed sum (#643)", () => {
+    expect(workOrderDetail.parse({ ...detail, otherBranchesCostMinor: 12_000 }).otherBranchesCostMinor).toBe(12_000);
+    expect(workOrderDetail.safeParse({ ...detail, otherBranchesCostMinor: 1.5 }).success).toBe(false);
   });
 
   it("rejects a detail missing its chronologie", () => {

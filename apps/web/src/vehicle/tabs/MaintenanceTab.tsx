@@ -195,7 +195,15 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       aside={
         <>
           {/* Without work-order costs (#390) the amounts never came: no line,
-              rather than a "No estimate" that would not be true. */}
+              rather than a "No estimate" that would not be true. With FINANCE
+              off the estimate alone is the workshop's to show (#640). */}
+          {gates.workOrderEstimate && !gates.workOrderCosts && (
+            <div className={cn(!active && "text-muted-foreground")}>
+              {wo.expectedCostMinor !== null
+                ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
+                : t("vehicle.maintenance.noEstimate")}
+            </div>
+          )}
           {gates.workOrderCosts && (
             <div className={cn(!active && "text-muted-foreground")}>
               {closedWithoutCost !== null

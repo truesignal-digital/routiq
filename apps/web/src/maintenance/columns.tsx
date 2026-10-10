@@ -9,6 +9,7 @@ import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadg
 import { formatDate, formatMoney } from "@/lib/format.js";
 import { useIssueCategoryLabel } from "./issue-category.js";
 import { NotRecorded } from "@/components/not-recorded.js";
+import type { WorkOrderMoneyShown } from "./permissions.js";
 
 /**
  * A work order has no number of its own — the read publishes only its id — so
@@ -34,12 +35,19 @@ function AssetCell({
   );
 }
 
-export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
+/**
+ * The queue's columns. A cost column the reader may not see is left out rather
+ * than filled with "Not recorded" (#640): the estimate for every role that
+ * reads work-order costs, the actual cost only while FINANCE is on too.
+ */
+export function useWorkOrderColumns(money: WorkOrderMoneyShown): DataTableColumn<WorkOrderListItem>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+  const { estimate, actual } = money;
 
   return useMemo(
-    () => [
+    () => {
+      const columns: DataTableColumn<WorkOrderListItem>[] = [
       {
         id: "reference",
         header: t("maintenance.workOrders.columns.reference"),
@@ -138,8 +146,12 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
           <WorkOrderStatusBadge status={row.original.status} />
         ),
       },
-    ],
-    [locale, t],
+    ];
+      return columns.filter(
+        (column) => (column.id !== "expectedCost" || estimate) && (column.id !== "actualCost" || actual),
+      );
+    },
+    [locale, t, estimate, actual],
   );
 }
 

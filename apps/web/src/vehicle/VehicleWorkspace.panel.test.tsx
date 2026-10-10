@@ -332,6 +332,29 @@ it("lists the lines awaiting review among the costs the actual cost counts (#612
   expect(within(panel).queryByText(/not counted in the posted costs/)).toBeNull();
 });
 
+it("adds one line for the cost recorded in other branches, so the list adds up (#643)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    role: "ADMIN",
+    asset: asset({ availability: { state: "AVAILABLE", since: null } }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 12_000,
+        costLines: [],
+        pendingCostLines: [],
+        otherBranchesCostMinor: 12_000,
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  const costs = within(panel).getByRole("heading", { name: "Costs" }).closest("section");
+  const line = within(costs as HTMLElement).getByText("Recorded in other branches").closest("li");
+  expect((line?.textContent ?? "").replace(/[\s\u00a0\u202f,]/g, "")).toContain("12000");
+  expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
+});
+
 describe("the grounding note's tone agrees with the vehicle header (#500)", () => {
   const completed = {
     ...scenario,
