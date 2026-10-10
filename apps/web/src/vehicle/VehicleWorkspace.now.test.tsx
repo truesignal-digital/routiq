@@ -7,6 +7,7 @@ import {
   ME_ID,
   NOTE_ID,
   OTHER_ID,
+  TRIP_ID,
   WORK_ORDER_ID,
   actor,
   attention,
@@ -269,5 +270,60 @@ describe("the Overview tab and its To do section (#90)", () => {
       get.mockRestore();
       set.mockRestore();
     }
+  });
+});
+
+describe("a vehicle on two unfinished trips (#577)", () => {
+  const doubleBooked = (tripNumbers: string[]) =>
+    attention("VEHICLE_DOUBLE_BOOKED", { params: { tripNumbers } });
+
+  it("flags the trip, names the other one, and opens the trip from the row", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      attention: [doubleBooked(["DLA-2026-00012"])],
+    });
+    const card = await todoCard();
+    // Closing a trip happens on the trip, so the flag waits on operations.
+    expect(await within(card).findByText(EMPTY)).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /Waiting on others/ }));
+    const row = within(card).getByRole("button", { name: /Trip DLA-2026-00009 overlaps another open trip/ });
+    expect(
+      within(row).getByText("This truck is also on DLA-2026-00012. Close whichever trip has ended."),
+    ).toBeTruthy();
+    expect(within(row).getByText("Operations")).toBeTruthy();
+
+    await user.click(row);
+    await waitFor(() =>
+      expect(recorded.requests.some(({ url }) => url.pathname === `/v1/activities/${TRIP_ID}`)).toBe(true),
+    );
+  });
+
+  it("still says close the stale one when the other trip is not the reader's to see", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "DRIVER", attention: [doubleBooked([])] });
+    const card = await todoCard();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /Waiting on others/ }));
+    expect(
+      within(card).getByText("This truck is also on another open trip. Close the one that has ended."),
+    ).toBeTruthy();
+  });
+
+  // The harness workspace runs the trucking preset alone, so its words apply.
+  it("speaks the preset's words in French", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      locale: "fr-CM",
+      attention: [doubleBooked(["DLA-2026-00012", "DLA-2026-00014"])],
+    });
+    const card = await todoCard(/^À faire/);
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /En attente des autres/ }));
+    expect(within(card).getByText(/^Le trajet DLA-2026-00009 chevauche un autre trajet ouvert$/)).toBeTruthy();
+    expect(
+      within(card).getByText(
+        "Ce camion est aussi sur DLA-2026-00012 et DLA-2026-00014. Clôturez le trajet terminé.",
+      ),
+    ).toBeTruthy();
   });
 });

@@ -1,9 +1,10 @@
 import {
   TRIP_CONFLICT_CODES,
+  type CommandWarningCode,
   type CommandWarningMetadata,
   type TripConflictCode,
 } from "@routiq/contracts";
-import { sql, type SQL } from "drizzle-orm";
+import { and, eq, isNull, ne, sql, type SQL } from "drizzle-orm";
 import { alias, type AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   activities,
@@ -91,6 +92,8 @@ export interface TripConflicts {
   codes: TripConflictCode[];
   /** The other trips behind each double booking, by trip number. */
   tripIds: CommandWarningMetadata;
+  /** The other trips holding one of this trip's vehicles, the same list as VEHICLE_DOUBLE_BOOKED's. */
+  vehicleTripIds: string[];
 }
 
 /**
@@ -166,7 +169,45 @@ export async function tripConflicts(
     result.set(row.id, {
       codes: TRIP_CONFLICT_CODES.filter((code) => found[code]),
       tripIds: tripIdsByCode,
+      vehicleTripIds: row.vehicleTripIds,
     });
   }
   return result;
+}
+
+/**
+ * The warning a live or replayed start returns when its vehicle is already
+ * taken (ADR-0012 §4, #577): another PLANNED trip whose window overlaps, or
+ * another OPEN trip still holding it on an open segment, whatever the
+ * windows say (a phone clock running fast stamps a start ahead of now(),
+ * which the window rule would miss). VEHICLE_DOUBLE_BOOKED with the other
+ * trips' ids; a start is a fact, so it is never refused for this. Run after
+ * the trip is OPEN with its segment.
+ */
+export async function startedTripDoubleBooking(
+  tx: TenantTx,
+  scope: { workspaceId: string; timezone: string },
+  tripId: string,
+): Promise<{ warnings: CommandWarningCode[]; warningMetadata?: CommandWarningMetadata }> {
+  const conflicts = (await tripConflicts(tx, { ...scope, maintenanceOn: false }, [tripId])).get(tripId);
+  const mine = alias(activityAssetSegments, "started_segment");
+  const theirs = alias(activityAssetSegments, "other_segment");
+  const holding = await tx
+    .selectDistinct({ id: theirs.activityId })
+    .from(theirs)
+    .innerJoin(activities, and(eq(activities.workspaceId, theirs.workspaceId), eq(activities.id, theirs.activityId)))
+    .innerJoin(mine, and(eq(mine.workspaceId, theirs.workspaceId), eq(mine.assetId, theirs.assetId)))
+    .where(
+      and(
+        eq(theirs.workspaceId, scope.workspaceId),
+        eq(mine.activityId, tripId),
+        isNull(mine.endedAt),
+        isNull(theirs.endedAt),
+        ne(theirs.activityId, tripId),
+        eq(activities.status, "OPEN"),
+      ),
+    );
+  const tripIds = [...new Set([...(conflicts?.vehicleTripIds ?? []), ...holding.map((row) => row.id)])];
+  if (tripIds.length === 0) return { warnings: [] };
+  return { warnings: ["VEHICLE_DOUBLE_BOOKED"], warningMetadata: { VEHICLE_DOUBLE_BOOKED: { tripIds } } };
 }

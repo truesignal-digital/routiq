@@ -40,6 +40,7 @@ export function attentionText(
     override: p.overrideRequired === true ? "yes" : "no",
     name: recorder,
     when: formatDateTime(item.since, locale),
+    numbers: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(p.tripNumbers ?? []),
   };
   const key = `vehicle.attention.${item.code}`;
   // Which facts exist picks the whole sentence; nothing is glued together.
@@ -54,6 +55,8 @@ export function attentionText(
             : "detailActual"
           : item.code === "WORK_ORDER_COST_TO_COME" && p.declaredCostMinor !== undefined
             ? "detailDeclared"
-            : "detail";
+            : item.code === "VEHICLE_DOUBLE_BOOKED" && (p.tripNumbers ?? []).length === 0
+              ? "detailUnnamed"
+              : "detail";
   return { title: t(`${key}.title`, values), detail: t(`${key}.${detail}`, values) };
 }

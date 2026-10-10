@@ -17,6 +17,10 @@
     "title": "Accueil",
     "loadFailed": "Impossible de charger le tableau de bord. Veuillez réessayer.",
     "retry": "Réessayer",
+    "empty": {
+      "modulesOff": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise.",
+      "modulesOffCompanyPages": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise. Les pages Entreprise du menu restent disponibles."
+    },
     "cards": {
       "pendingApprovals": {
         "title": "Approbations en attente",
@@ -67,6 +71,10 @@
     "screenLoadFailed": "Impossible d'ouvrir cette page. Vérifiez votre connexion, puis réessayez.",
     "screenFailed": "Un problème est survenu sur cette page. Réessayez.",
     "retry": "Réessayer",
+    "offline": {
+      "banner": "Vous êtes hors ligne. Les pages s'afficheront au retour de la connexion.",
+      "waiting": "Vous êtes hors ligne. Ce contenu s'affichera dès le retour de la connexion."
+    },
     "counts": {
       "moneyWaiting": "{count, plural, one {# écriture attend votre approbation} other {# écritures attendent votre approbation}}",
       "maintenanceNew": "{count, plural, one {# nouveau problème à traiter} other {# nouveaux problèmes à traiter}}",
@@ -469,7 +477,12 @@
       "lead": {
         "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
         "open": "Toutes les dépenses et recettes. {open} est ouvert.",
-        "none": "Toutes les dépenses et recettes."
+        "none": "Toutes les dépenses et recettes.",
+        "own": {
+          "both": "Vos dépenses. {open} est ouvert ; {locked} est clôturé.",
+          "open": "Vos dépenses. {open} est ouvert.",
+          "none": "Vos dépenses."
+        }
       },
       "tiles": {
         "out": "Sorties en {month}",
@@ -2453,6 +2466,11 @@
         "title": "{description}",
         "detail": "Note de la Direction · {name} · {when}",
         "badge": "Note de la Direction"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "L'activité {ref} chevauche une autre activité ouverte",
+        "detail": "Ce véhicule est aussi sur {numbers}. Clôturez celle qui est terminée.",
+        "detailUnnamed": "Ce véhicule est aussi sur une autre activité ouverte. Clôturez celle qui est terminée."
       }
     },
     "maintenance": {

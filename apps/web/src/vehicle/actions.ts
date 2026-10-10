@@ -176,6 +176,7 @@ function recordOf(item: AssetAttentionItem): PanelRef {
   if (entityType === "work_order") return { kind: "work_order", id };
   if (entityType === "operational_issue") return { kind: "issue", id };
   if (entityType === "document") return { kind: "document", id };
+  if (entityType === "activity") return { kind: "trip", id };
   return { kind: "entry", id };
 }
 

@@ -17,6 +17,10 @@
     "title": "Home",
     "loadFailed": "We couldn't load the dashboard. Please retry.",
     "retry": "Try again",
+    "empty": {
+      "modulesOff": "Home has nothing to show: the modules that fill it are switched off for your company.",
+      "modulesOffCompanyPages": "Home has nothing to show: the modules that fill it are switched off for your company. The Company pages in the menu still work."
+    },
     "cards": {
       "pendingApprovals": {
         "title": "Pending approvals",
@@ -67,6 +71,10 @@
     "screenLoadFailed": "This page could not be opened. Check your connection, then try again.",
     "screenFailed": "Something went wrong on this page. Try again.",
     "retry": "Try again",
+    "offline": {
+      "banner": "You're offline. Pages will load when the connection is back.",
+      "waiting": "You're offline. This will load as soon as the connection is back."
+    },
     "counts": {
       "moneyWaiting": "{count, plural, one {# entry waiting for your approval} other {# entries waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
@@ -469,7 +477,12 @@
       "lead": {
         "both": "Every expense and revenue. {open} is open; {locked} is locked.",
         "open": "Every expense and revenue. {open} is open.",
-        "none": "Every expense and revenue."
+        "none": "Every expense and revenue.",
+        "own": {
+          "both": "Your expenses. {open} is open; {locked} is locked.",
+          "open": "Your expenses. {open} is open.",
+          "none": "Your expenses."
+        }
       },
       "tiles": {
         "out": "Expenses in {month}",
@@ -2453,6 +2466,11 @@
         "title": "{description}",
         "detail": "Note from the Director · {name} · {when}",
         "badge": "Note from the Director"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "Activity {ref} overlaps another open activity",
+        "detail": "This vehicle is also on {numbers}. Close the one that has ended.",
+        "detailUnnamed": "This vehicle is also on another open activity. Close the one that has ended."
       }
     },
     "maintenance": {

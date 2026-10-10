@@ -600,6 +600,29 @@ describe("planned trips (ADR-0012)", () => {
       });
     });
 
+    // #577: the truck left, so the start is accepted; the stale trip is named.
+    for (const origin of ["HUMAN_UI", "OFFLINE_SYNC"] as const) {
+      it(`${origin}: starting on a vehicle still on another open trip warns, and both stay open`, async () => {
+        const vehicle = await truck();
+        const stale = await started(vehicle, new Date(Date.now() - 3 * 3_600_000).toISOString());
+        const id = await planned({ plannedAssetId: vehicle });
+        const reply = await api.send(
+          admin.token,
+          "start-planned-trip",
+          startPayload(id, vehicle, { startedAt: new Date(Date.now() - 3_600_000).toISOString() }),
+          { origin },
+        );
+        expect(reply.status, JSON.stringify(reply.body)).toBe(200);
+        expect(reply.body).toMatchObject({
+          recordStatus: "OPEN",
+          warnings: ["VEHICLE_DOUBLE_BOOKED"],
+          warningMetadata: { VEHICLE_DOUBLE_BOOKED: { tripIds: [stale] } },
+        });
+        expect((await trip(id)).status).toBe("OPEN");
+        expect((await trip(stale)).status).toBe("OPEN");
+      });
+    }
+
     it("warns VEHICLE_GROUNDED only while Maintenance is on", async () => {
       const vehicle = await truck();
       await api.ok(admin.token, "report-issue", {
