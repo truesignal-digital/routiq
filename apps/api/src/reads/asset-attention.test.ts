@@ -7,6 +7,7 @@ import {
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import {
+  activities,
   approvalRules,
   assetAvailabilityIntervals,
   branches,
@@ -555,6 +556,113 @@ describe("GET /v1/assets/:assetId/attention", () => {
     const refused = await api.get(gatedAdmin.token, `/v1/assets/${truck}/attention`);
     expect(refused.status).toBe(403);
     expect(refused.body).toEqual({ error: { code: "MODULE_DISABLED", metadata: { module: "ASSETS" } } });
+  });
+
+  // #577: a vehicle on two unfinished trips flags both, each naming the other,
+  // until someone closes the stale one.
+  it("flags both trips while a vehicle is on two unfinished trips", async () => {
+    const truck = await seedAsset(ctx.app, admin.token);
+    const startTrip = async (minutesAgo: number) => {
+      const activityId = randomUUID();
+      await api.ok(admin.token, "create-activity", {
+        activityId,
+        branchCode: "DLA",
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: truck,
+        startedAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+      });
+      const [row] = await ctx.db
+        .select({ activityNumber: activities.activityNumber, startedAt: activities.startedAt })
+        .from(activities)
+        .where(eq(activities.id, activityId));
+      return { id: activityId, number: row!.activityNumber, startedAt: row!.startedAt! };
+    };
+    const stale = await startTrip(600);
+    expect(codes((await attention(manager.token, truck)).items)).toEqual([]);
+    const current = await startTrip(30);
+
+    const items = (await attention(manager.token, truck)).items.filter(
+      (item) => item.code === "VEHICLE_DOUBLE_BOOKED",
+    );
+    // Since the second start: that is when the vehicle came to be on both.
+    const since = current.startedAt.toISOString();
+    // Same severity and since: the read orders the pair by subject id.
+    items.sort((left, right) => (left.subject.id === stale.id ? -1 : right.subject.id === stale.id ? 1 : 0));
+    expect(items).toEqual([
+      {
+        code: "VEHICLE_DOUBLE_BOOKED",
+        severity: "WARNING",
+        subject: { entityType: "activity", id: stale.id, number: stale.number, rowVersion: 1 },
+        since,
+        partOfGrounding: false,
+        makerPrincipalIds: [],
+        params: { tripNumbers: [current.number] },
+      },
+      {
+        code: "VEHICLE_DOUBLE_BOOKED",
+        severity: "WARNING",
+        subject: { entityType: "activity", id: current.id, number: current.number, rowVersion: 1 },
+        since,
+        partOfGrounding: false,
+        makerPrincipalIds: [],
+        params: { tripNumbers: [stale.number] },
+      },
+    ]);
+
+    // A driver reads only their own trips, and is on neither.
+    expect(codes((await attention(driver.token, truck)).items)).not.toContain("VEHICLE_DOUBLE_BOOKED");
+
+    await api.ok(
+      admin.token,
+      "close-activity",
+      { activityId: stale.id, endedAt: new Date(Date.now() - 300 * 60_000).toISOString() },
+      { expectedVersion: 1 },
+    );
+    expect(codes((await attention(manager.token, truck)).items)).toEqual([]);
+  });
+
+  it("flags both trips when the second start is stamped ahead of the server clock", async () => {
+    const truck = await seedAsset(ctx.app, admin.token);
+    for (const minutesAgo of [60, -2]) {
+      await api.ok(admin.token, "create-activity", {
+        activityId: randomUUID(),
+        branchCode: "DLA",
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: truck,
+        startedAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+      });
+    }
+    expect(codes((await attention(manager.token, truck)).items)).toEqual([
+      "VEHICLE_DOUBLE_BOOKED",
+      "VEHICLE_DOUBLE_BOOKED",
+    ]);
+  });
+
+  it("leaves the trip flag out while Activities is off", async () => {
+    const gated = await seedWorkspace(ctx.db);
+    const director = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
+    const truck = await seedAsset(ctx.app, director.token);
+    for (const minutesAgo of [300, 20]) {
+      await api.ok(director.token, "create-activity", {
+        activityId: randomUUID(),
+        branchCode: gated.branch.code,
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: truck,
+        startedAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+      });
+    }
+    expect(codes((await attention(director.token, truck)).items)).toEqual([
+      "VEHICLE_DOUBLE_BOOKED",
+      "VEHICLE_DOUBLE_BOOKED",
+    ]);
+    await setModule(ctx.db, gated.workspace.id, "ACTIVITIES", false);
+    expect((await attention(director.token, truck)).items).toEqual([]);
   });
 
   it("answers 404 outside the caller's branches", async () => {
