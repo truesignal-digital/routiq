@@ -117,7 +117,10 @@
         "rowAttribute": "Charge line {position} to this trip",
         "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
       },
-      "activityTypesFailed": "Could not load trip types."
+      "activityTypesFailed": "Could not load trip types.",
+      "soFar": {
+        "asset": "Vehicle"
+      }
     },
     "subtitle": "Every trip your vehicles run, from start to close.",
     "loadFailed": "We couldn't load trips. Please retry."

@@ -280,7 +280,6 @@
       }
     },
     "form": {
-      "eyebrow": "New registration",
       "assetCode": "Asset code",
       "assetClass": "Asset class",
       "branch": "Branch",
@@ -318,7 +317,19 @@
       },
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
-      "acquisitionAmount": "Acquisition amount (FCFA)"
+      "acquisitionAmount": "Acquisition amount (FCFA)",
+      "description": "Copy what the papers say. Only the code, class and branch are needed now.",
+      "sections": {
+        "identity": "Identity",
+        "vehicle": "Plate and make",
+        "capacity": "Capacity",
+        "purchase": "Purchase",
+        "papers": "Papers"
+      },
+      "soFar": {
+        "makeAndModel": "Make and model",
+        "files": "{count, plural, one {# file} other {# files}}"
+      }
     },
     "actions": {
       "assignTo": "Assign to branch",
@@ -387,6 +398,23 @@
     "search": {
       "placeholder": "Type to search",
       "empty": "Nothing matches"
+    },
+    "page": {
+      "done": "Done",
+      "notStarted": "Not started",
+      "missing": "{count, plural, one {# missing} other {# missing}}",
+      "nothingMissing": "Nothing missing",
+      "soFar": "So far",
+      "stillMissing": "Still missing",
+      "go": "Go",
+      "goTo": "Go to {field}",
+      "hintWithDraft": "{missing} · draft saved {time}",
+      "step": "Step {current} of {total}",
+      "review": "Review",
+      "next": "Next",
+      "back": "Back",
+      "change": "Change",
+      "changeSection": "Change {section}"
     }
   },
   "fileUpload": {
@@ -1120,6 +1148,17 @@
           "BANK": "Bank",
           "OTHER": "Other"
         }
+      },
+      "soFar": {
+        "asset": "Asset",
+        "route": "Route",
+        "routeValue": "{from} → {to}",
+        "distance": "Distance",
+        "distanceValue": "{km, number} km",
+        "revenue": "Revenue",
+        "expenses": "Expenses",
+        "profit": "Profit",
+        "loss": "Loss"
       }
     },
     "subtitle": "Every activity your fleet runs, from start to close.",
