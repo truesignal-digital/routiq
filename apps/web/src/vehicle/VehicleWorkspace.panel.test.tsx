@@ -306,7 +306,7 @@ it("names the other safety problem that blocks the release, not a manager (#588)
     role: "FINANCE",
     asset: asset({
       availability: grounded([groundingWorkOrder("COMPLETED")], {}, [
-        { id: "00000000-0000-4000-8000-0000000000f1", description: "Steering play on the left" },
+        { id: "00000000-0000-4000-8000-0000000000f1", number: 5, description: "Steering play on the left" },
       ]),
     }),
     workOrders: [workOrderRow("COMPLETED")],
