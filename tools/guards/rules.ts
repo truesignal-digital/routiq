@@ -289,6 +289,23 @@ function catalogKeys(file: SourceFile): { path: string; line: number; text: stri
   });
 }
 
+const isWorkflow = (path: string) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(path);
+
+/**
+ * CI's image pulls, off Docker Hub's anonymous rate limit (#603): every
+ * `image:` names its registry, and a workflow that runs the test suites tells
+ * testcontainers to pull through the mirror.
+ */
+function dockerHubPulls(files: readonly SourceFile[]): Violation[] {
+  return files.filter((file) => isWorkflow(file.path)).flatMap((file) => {
+    // A first path segment with a dot or a port is a registry host; anything else resolves to Docker Hub.
+    const bareImages = matchLines(file, /^\s*image:\s*["']?(?![\w.-]+[.:][\w.-]*\/)[\w.-]+(\/[\w.-]+)*(:[\w.-]+)?["']?\s*$/);
+    const mirrored = /^\s*TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX:\s*\S/m.test(file.content);
+    const testSteps = mirrored ? [] : matchLines(file, /\bpnpm\b.*\btest\b/);
+    return [...bareImages, ...testSteps];
+  });
+}
+
 export const RULES: readonly Rule[] = [
   {
     id: "A2",
@@ -449,6 +466,18 @@ export const RULES: readonly Rule[] = [
     name: "no-optimistic-cache",
     fix: "Render server truth plus the command's pending state (ADR-0001); never patch the query cache.",
     check: linesMatching(/\b(setQueryData|onMutate)\b/, isWebProduction),
+  },
+  {
+    id: "C1",
+    name: "ci-images-off-docker-hub",
+    fix: "Anonymous Docker Hub pulls are rate-limited and failed every CI run for hours (#603). Pull through the mirror: `image: mirror.gcr.io/library/postgres:17` (or another registry host), and set `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io` in the env of a workflow that runs the tests.",
+    check: dockerHubPulls,
+  },
+  {
+    id: "C2",
+    name: "no-define-in-web-build",
+    fix: "A value compiled in through Vite `define` (commit, date, build id) renames the chunk it lands in and every chunk importing it, so the JS size totals move with each commit (#598). Put it in index.html instead, as the `routiq-version` meta tag in apps/web/vite.config.ts does, and read it at run time.",
+    check: linesMatching(/^\s*define\s*:/, (path) => /^apps\/[^/]+\/vite\.config\.[cm]?[jt]s$/.test(path)),
   },
   {
     id: "H6",
