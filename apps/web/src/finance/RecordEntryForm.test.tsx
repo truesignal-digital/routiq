@@ -674,6 +674,32 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     ]);
   });
 
+  it("records again a cost on a completed work order as a late invoice: approval hint, reason required (#613)", async () => {
+    const client = recordingClient(submitted);
+    const cancelled: FinancialEntryDetail = {
+      ...pending,
+      status: "REVERSED",
+      postedAt: "2026-09-12T08:00:00.000Z",
+      description: null,
+      lateWorkOrderCost: true,
+    };
+    inPanel(
+      <RecordEntryForm surface="panel" recordAgainFrom={cancelled} client={client} onRecorded={vi.fn()} onDismiss={vi.fn()} />,
+    );
+    const panel = screen.getByRole("dialog", { name: "Record expense" });
+
+    expect(
+      within(panel).getByText("This work is completed: the invoice goes to approval, whatever its amount."),
+    ).toBeTruthy();
+    expect(within(panel).queryByLabelText("Description (optional)")).toBeNull();
+    const submit = within(panel).getByRole("button", { name: "Record the expense" });
+    await waitFor(() => expect(within(panel).getByLabelText("Branch").textContent).toContain("Douala"));
+    // No reason, no invoice: the server would refuse it (LATE_COST_REASON_REQUIRED).
+    expect(submit.hasAttribute("disabled")).toBe(true);
+    await userEvent.type(within(panel).getByLabelText("Reason"), "Invoice re-entered with the right amount");
+    await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  });
+
   it("keeps the entry number in the title on one line (#442)", () => {
     const panel = openEdit(recordingClient(submitted));
     const numbers = [...panel.querySelectorAll("[data-slot='sheet-title'] [data-record-number]")];

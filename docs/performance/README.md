@@ -14,14 +14,14 @@ Latest run: 2026-10-09T01:45:57.486Z on abd53810, 7 runs each. Runs recorded: 3.
 | `/assets.requests` | 4 (2026-10-06) | 4 | 4 | 0% | 4 | 4 |
 | `/assets/:id.ready_ms` | 474 ms (2026-10-06) | 249 ms | 268 ms | −43% | 249 ms | 282 ms |
 | `/assets/:id.requests` | 6 (2026-10-06) | 2 | 2 | −67% | 2 | 2 |
-| `/finance/approvals.ready_ms` | 272 ms (2026-10-06) | – | – | – | 272 ms | 286 ms |
-| `/finance/approvals.requests` | 3 (2026-10-06) | 1 | 1 | −67% | 1 | 1 |
+| `/finance/approvals.ready_ms` | 272 ms (2026-10-06) | – | – | – | 272 ms | – |
+| `/finance/approvals.requests` | 3 (2026-10-06) | 1 | 1 | −67% | 1 | – |
 | `/finance/entries.ready_ms` | 346 ms (2026-10-06) | 455 ms | 371 ms | +7% | 346 ms | 363 ms |
 | `/finance/entries.requests` | 4 (2026-10-06) | 4 | 4 | 0% | 4 | 4 |
 | `/maintenance.ready_ms` | 262 ms (2026-10-06) | – | – | – | 262 ms | 275 ms |
 | `/maintenance.requests` | 4 (2026-10-06) | 5 | 5 | +25% | 4 | 5 |
-| `/more.ready_ms` | 207 ms (2026-10-06) | – | – | – | 207 ms | 218 ms |
-| `/more.requests` | 1 (2026-10-06) | – | – | – | 1 | 1 |
+| `/more.ready_ms` | 207 ms (2026-10-06) | – | – | – | 207 ms | – |
+| `/more.requests` | 1 (2026-10-06) | – | – | – | 1 | – |
 | `/my-settings.requests` | 1 (2026-10-09) | 1 | 1 | 0% | 1 | 1 |
 | `api.p95_ms` | 202 ms (2026-10-06) | 642 ms | 544 ms | +170% | 202 ms | – |
 | `login.js_bytes` | 547.7 kB (2026-10-06) | 571.6 kB | 275.1 kB | −50% | 275.1 kB | 275.1 kB |
