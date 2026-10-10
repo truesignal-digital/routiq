@@ -109,7 +109,7 @@ export function DashboardScreen() {
 function EmptyHome({ hasCompanyPages }: { hasCompanyPages: boolean }) {
   const { t } = useTranslation();
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader title={t("home.title")} />
       <EmptyState
         className="mt-6"
