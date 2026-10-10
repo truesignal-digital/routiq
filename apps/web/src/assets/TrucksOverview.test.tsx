@@ -3,12 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ModuleCode, Role } from "@routiq/contracts";
+import type { AssetOverview, ModuleCode, Role } from "@routiq/contracts";
 import { i18n } from "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { testUsage } from "../overview/test-usage.js";
-import { TrucksOverview } from "./TrucksOverview.js";
+import { TrucksOverview, truckSummaryDetails } from "./TrucksOverview.js";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, search, children, ...props }: { to: string; search?: Record<string, string>; children?: ReactNode }) => (
@@ -199,5 +199,31 @@ describe("Trucks › Overview (#665)", () => {
     await waitFor(() => expect(container.querySelector("[data-metric=on-the-road]")?.textContent).toContain("120 days not recorded"));
     expect(container.querySelector("[data-metric=on-the-road] [data-slot=metric-value]")?.textContent).toBe("Not recorded");
     BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, ["/v1/assets/usage", usage]);
+  });
+
+  it("opens with the summary notice on a Monday, the fleet in one sentence (#667)", async () => {
+    localStorage.clear();
+    renderAs("ADMIN", undefined, {
+      ...OVERVIEW,
+      notice: { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] },
+    });
+    const region = await screen.findByRole("region", { name: "Summary" });
+    expect(region.textContent).toMatch(/Can drive today: 10 of 12 (vehicles|trucks)\./);
+    expect(region.querySelector("[data-summary=open]")?.textContent).toBe("In service and not grounded today.");
+    screen.getByRole("button", { name: "Close the summary" }).click();
+    await screen.findByRole("button", { name: "Show summary" });
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+  });
+
+  it("names a grounding once: as the big change, not again as the longest off the road (#667)", () => {
+    const notice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START" as const, scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+    const t = i18n.getFixedT("en");
+    const grounded = { ...OVERVIEW, notice } as AssetOverview;
+    expect(truckSummaryDetails(grounded, t, "en")).toHaveLength(1);
+    const changed = {
+      ...grounded,
+      notice: { ...notice, changes: [{ kind: "VEHICLE_GROUNDED" as const, key: "G", assetId: "a3", assetCode: "VH003", since: "2026-10-07T08:00:00.000Z" }] },
+    };
+    expect(truckSummaryDetails(changed, t, "en")).toEqual([]);
   });
 });

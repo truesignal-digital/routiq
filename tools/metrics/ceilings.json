@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 770159,
+    "ceiling": 776358,
     "raises": [
       {
         "date": "2026-10-06",
@@ -287,37 +287,19 @@
       {
         "date": "2026-10-10",
         "from": 713902,
-        "to": 735807,
-        "reason": "Trucks, Trips and Maintenance Overviews (#665): three Overview screens, the Trucks and Trips frames, the fleet Documents tab, the Planning tab, the profit-bars and week-columns parts, their loaders and fr/en words, about 16 kB gzip, loaded after sign-in. Counted from develop's ceiling, so it also covers the stacked Money page (#664), money words (#659) and page frame (#676) until they merge"
+        "to": 764827,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): notice component, money sentence helper, verdict badge, fr/en words across the catalogs and the five Overview chunks, plus the Company settings section, form and read hook, about 6.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge (re-recorded on develop 4dee04a4)"
       },
       {
         "date": "2026-10-10",
-        "from": 694679,
-        "to": 694965,
-        "reason": "Loss/Profit helper and money words (#659)"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 694679,
-        "to": 699097,
-        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's 286 B until that PR merges"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 713902,
-        "to": 742646,
-        "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 713902,
-        "to": 770159,
-        "reason": "Km and daily status (#668): the fleet board, ranked bars with a median, month columns, the usage read's hook and loaders, the fuel per km, cost per km, km driven empty, revenue per km by route and days off the road cards, about 12.2 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's raises until they merge"
+        "from": 764827,
+        "to": 776358,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop 6cc4a1db)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23293,
+    "ceiling": 23330,
     "raises": [
       {
         "date": "2026-10-06",
@@ -376,12 +358,6 @@
       {
         "date": "2026-10-10",
         "from": 22832,
-        "to": 23077,
-        "reason": "Overview parts (#665 profit bars and week columns, #664 compare bars and To do list, #676 page frame): their Tailwind classes, 245 B gzip counted from develop's ceiling"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 22832,
         "to": 22941,
         "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
       },
@@ -394,13 +370,19 @@
       {
         "date": "2026-10-10",
         "from": 22832,
-        "to": 23293,
-        "reason": "Km and daily status (#668): the fleet board cell and ranked-bar classes, 55 B gzip against the merged #665 + #666 build; the rest is #665's and #666's classes until they merge"
+        "to": 23261,
+        "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 23261,
+        "to": 23330,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop 6cc4a1db)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 280436,
+    "ceiling": 283157,
     "raises": [
       {
         "date": "2026-10-06",
@@ -657,26 +639,14 @@
       {
         "date": "2026-10-10",
         "from": 266200,
-        "to": 273099,
-        "reason": "Trucks, Trips and Maintenance open on an Overview tab (#665): fr/en words for the three Overviews, their tabs and filters (about 2.9 kB gzip measured on the two locale catalogs), the tab routes with their filter validation, legacy-link redirects and loaders (about 1.6 kB). Counted from develop's ceiling, so it also covers the stacked #659/#664/#676 words, routes and frame (about 2.4 kB) until they merge; about 35 ms on a pilot phone at about 5 ms per kB"
+        "to": 280366,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): the notice's fr/en ICU sentences (money templates, module Overview sentences, trip-word overlays for both presets), the notice component, the summary setting's fr/en words and the schedule list in contracts, about 2.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge (re-recorded on develop 4dee04a4)"
       },
       {
         "date": "2026-10-10",
-        "from": 261561,
-        "to": 262681,
-        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 266200,
-        "to": 273236,
-        "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 266200,
-        "to": 280436,
-        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge"
+        "from": 280366,
+        "to": 283157,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop 6cc4a1db)"
       }
     ]
   }

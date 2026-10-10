@@ -384,6 +384,16 @@
           "path": "src/components/overview/month-columns.tsx",
           "type": "registry:file",
           "target": "components/overview/month-columns.tsx"
+        },
+        {
+          "path": "src/components/overview/overview-summary.tsx",
+          "type": "registry:file",
+          "target": "components/overview/overview-summary.tsx"
+        },
+        {
+          "path": "src/components/overview/summary-notice.ts",
+          "type": "registry:file",
+          "target": "components/overview/summary-notice.ts"
         }
       ],
       "registryDependencies": [

@@ -17,6 +17,38 @@ const companyProfit = {
   companyProfitMinor: 200_000,
 };
 
+const summary: FinanceOverviewResponse["summary"] = {
+  template: "BEHIND",
+  measure: "PROFIT",
+  window: "MONTH_SO_FAR",
+  period: { from: "2026-10-01", to: "2026-10-09" },
+  comparison: { from: "2026-09-01", to: "2026-09-09" },
+  currentMinor: 200_000,
+  comparisonMinor: 300_000,
+  revenueMinor: 900_000,
+  changePercent: 33,
+  reason: { kind: "CATEGORY", category: { code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" }, changeMinor: 100_000 },
+  shortOf: null,
+  trips: { closed: 4, open: 1 },
+};
+
+const notice: FinanceOverviewResponse["notice"] = {
+  today: "2026-10-09",
+  schedule: "MONDAY_AND_MONTH_START",
+  scheduledOn: "2026-10-05",
+  scheduledToday: null,
+  changes: [
+    {
+      kind: "VEHICLE_GROUNDED",
+      key: "VEHICLE_GROUNDED:7d1c0f0e-8a43-4f3c-9d0e-0a7f3c1b2d4e",
+      assetId: "3f0b4c2a-1d5e-4f6a-8b7c-9d0e1f2a3b4c",
+      assetCode: "VH003",
+      since: "2026-10-07T08:00:00.000Z",
+    },
+    { kind: "EXPENSES_UP", key: "EXPENSES_UP:2026-10-01", expenseMinor: 700_000, comparisonExpenseMinor: 500_000, percent: 40 },
+  ],
+};
+
 const ledgerBody: FinanceOverviewResponse = {
   currency: "XAF",
   range: "THIS_MONTH",
@@ -40,6 +72,8 @@ const ledgerBody: FinanceOverviewResponse = {
     openTrips: 0,
     otherCurrencyEntries: 0,
   },
+  summary,
+  notice,
 };
 
 const cashierBody: FinanceOverviewResponse = {
@@ -50,6 +84,7 @@ const cashierBody: FinanceOverviewResponse = {
   vehicles: null,
   branches: null,
   companyProfit: null,
+  summary: { ...summary, measure: "EXPENSES", revenueMinor: null, currentMinor: 700_000, comparisonMinor: 500_000 },
 };
 
 describe("financeOverviewQuery", () => {
@@ -79,6 +114,7 @@ describe("financeOverviewResponse", () => {
       { companyProfit: ledgerBody.companyProfit },
       { vehicles: [] },
       { branches: [] },
+      { summary },
     ]) {
       expect(financeOverviewResponse.safeParse({ ...cashierBody, ...leak }).success, JSON.stringify(leak)).toBe(false);
     }
@@ -95,6 +131,23 @@ describe("financeOverviewResponse", () => {
 
   it("carries money as whole minor units", () => {
     expect(financeOverviewResponse.safeParse({ ...ledgerBody, period: { ...window(200_000), revenueMinor: 900_000.5 } }).success).toBe(false);
+  });
+});
+
+describe("the summary notice (#667)", () => {
+  it("takes the five templates and nothing else", () => {
+    for (const template of ["AHEAD", "BEHIND", "FLAT", "NOT_ENOUGH_DATA", "FIRST_MONTH"]) {
+      expect(financeOverviewResponse.safeParse({ ...ledgerBody, summary: { ...summary, template } }).success, template).toBe(true);
+    }
+    expect(financeOverviewResponse.safeParse({ ...ledgerBody, summary: { ...summary, template: "GREAT" } }).success).toBe(false);
+  });
+
+  it("takes only the two scheduled reasons and the two kinds of change", () => {
+    expect(financeOverviewResponse.safeParse({ ...ledgerBody, notice: { ...notice, scheduledToday: "MONDAY" } }).success).toBe(true);
+    expect(financeOverviewResponse.safeParse({ ...ledgerBody, notice: { ...notice, scheduledToday: "FRIDAY" } }).success).toBe(false);
+    expect(
+      financeOverviewResponse.safeParse({ ...ledgerBody, notice: { ...notice, changes: [{ kind: "PRICE_UP", key: "x" }] } }).success,
+    ).toBe(false);
   });
 });
 

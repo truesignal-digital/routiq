@@ -67,6 +67,9 @@
           "noMaintenance": "Status from trips. Work orders and grounding are not counted: Maintenance is off."
         },
         "empty": "No truck to show."
+      },
+      "summary": {
+        "sentence": "{total, plural, =0 {No truck is in the fleet yet.} one {Can drive today: {canDrive, number} of # truck.} other {Can drive today: {canDrive, number} of # trucks.}}"
       }
     },
     "filters": {
@@ -173,6 +176,11 @@
       },
       "routes": {
         "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
+        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
       }
     }
   },
@@ -209,6 +217,9 @@
         "question": "Are repairs keeping trucks off the road longer? Truck-days in the workshop or grounded.",
         "column": "{month}: {days, plural, one {# truck-day} other {# truck-days}} off the road",
         "columnPartial": "{month} (so far): {days, plural, one {# truck-day} other {# truck-days}} off the road"
+      },
+      "summary": {
+        "grounded": "{grounded, plural, =0 {No truck is off the road.} one {# truck is off the road.} other {# trucks are off the road.}}"
       }
     }
   },
@@ -437,6 +448,14 @@
     },
     "usage": {
       "kmKnown": "Km known for {known, number} of {total, plural, one {# truck} other {# trucks}}"
+    },
+    "summary": {
+      "change": {
+        "groundedMany": "{count, plural, one {# truck was grounded in the last 7 days and is still off the road: {codes}.} other {# trucks were grounded in the last 7 days and are still off the road: {codes}.}}"
+      },
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { FinanceOverviewResponse, FinanceSummaryResponse, FleetUsageResponse, OverviewRange, Role } from "@routiq/contracts";
+import type { FinanceOverviewResponse, FinanceSummaryResponse, FleetUsageResponse, OverviewNotice, OverviewRange, Role } from "@routiq/contracts";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
 import { testUsage } from "../overview/test-usage.js";
@@ -97,6 +97,21 @@ function overview(view: FinanceOverviewResponse["view"], range: OverviewRange = 
       openTrips: 5,
       otherCurrencyEntries: 0,
     },
+    summary: {
+      template: "BEHIND",
+      measure: profit ? "PROFIT" : "EXPENSES",
+      window: "MONTH_SO_FAR",
+      period: { from: "2026-10-01", to: "2026-10-09" },
+      comparison: { from: "2026-09-01", to: "2026-09-09" },
+      currentMinor: profit ? 1_870_000 : 7_690_000,
+      comparisonMinor: profit ? 2_007_000 : 6_928_000,
+      revenueMinor: profit ? 9_560_000 : null,
+      changePercent: profit ? 7 : 11,
+      reason: { kind: "CATEGORY", category: { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs" }, changeMinor: 420_000 },
+      shortOf: null,
+      trips: { closed: 27, open: 5 },
+    },
+    notice: state.notice,
   };
 }
 
@@ -105,9 +120,12 @@ const usageState = vi.hoisted(() => ({
   calls: [] as { range: string; enabled: boolean }[],
 }));
 
+const NOT_DUE: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+
 const state = vi.hoisted(() => ({
   view: "PROFIT" as "PROFIT" | "REVENUE_AND_EXPENSES",
   ranges: [] as string[],
+  notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } as OverviewNotice,
 }));
 
 vi.mock("../overview/useFleetUsage.js", () => ({
@@ -204,6 +222,8 @@ beforeEach(() => {
   state.ranges = [];
   usageState.current = testUsage();
   usageState.calls = [];
+  state.notice = NOT_DUE;
+  localStorage.clear();
 });
 
 afterEach(cleanup);
@@ -325,6 +345,32 @@ describe("Money Overview (#664)", () => {
     renderAs("DRIVER");
     expect(navigate).toHaveBeenCalledWith({ to: "/finance/entries", replace: true });
     expect(document.querySelector('[data-slot="money-overview"]')).toBeNull();
+  });
+
+  it("opens on a Monday with the summary notice above the tiles; closed, the counted line sits under them (#667)", async () => {
+    state.notice = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
+    renderAs("FINANCE");
+    const region = screen.getByRole("region", { name: "Summary" });
+    expect(region.textContent?.replace(/\s/g, " ")).toContain(
+      "So far in October: a profit of FCFA 1,870,000 on FCFA 9,560,000 revenue, FCFA 137,000 worse than September at the same day.",
+    );
+    expect(region.textContent).toContain("Spending on Repairs rose by");
+    expect(region.querySelector('[data-slot="money-counted"]')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close the summary" }));
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    const counted = document.querySelector('[data-slot="money-counted"]');
+    expect(counted?.closest('[data-summary="closed"]')).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show summary" })).toBeTruthy();
+  });
+
+  it("tells the cashier about expenses, never profit", async () => {
+    state.view = "REVENUE_AND_EXPENSES";
+    renderAs("CASHIER");
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    const text = screen.getByRole("region", { name: "Summary" }).textContent ?? "";
+    expect(text.replace(/\s/g, " ")).toContain("So far in October: FCFA 7,690,000 of expenses, 11% more than September at the same day.");
+    expect(text).not.toMatch(/profit/i);
   });
 });
 

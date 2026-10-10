@@ -6,9 +6,11 @@ import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
 import { FleetBoard } from "@/components/overview/fleet-board.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ProfitBars } from "@/components/overview/profit-bars.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
+import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
@@ -66,6 +68,7 @@ export function TrucksOverview() {
   const usageQuery = useFleetUsage(PAGE_USAGE_RANGE);
   const groundingCounted = contributes("fields", "assets.attentionGrounding", me?.enabledModules);
   const vehicles = moneyQuery.data?.vehicles ?? null;
+  const overview = overviewQuery.data;
   const documentRows = fleetDocumentRows(todoQuery.data, comingUpQuery.data);
 
   const tiles = metricTiles(
@@ -89,14 +92,39 @@ export function TrucksOverview() {
           onRetry={() => void overviewQuery.refetch()}
         />
       )}
-      {tiles !== undefined && (
-        <MetricStrip
-          tiles={tiles}
-          isPending={overviewQuery.isPending || summaryQuery.isPending}
-          isError={overviewQuery.isError || summaryQuery.isError}
-        />
-      )}
-      {usageQuery.data !== undefined && <KmCoverage usage={usageQuery.data} />}
+      <OverviewSummary
+        page="trucks"
+        notice={overview?.notice}
+        sentence={
+          overview === undefined
+            ? undefined
+            : t("assets.overview.summary.sentence", { canDrive: overview.canDrive, total: overview.total })
+        }
+        details={overview === undefined ? undefined : truckSummaryDetails(overview, t, i18n.resolvedLanguage)}
+        badge={
+          overview?.grounded == null ? undefined : (
+            <StatusBadge tone={overview.grounded.count > 0 ? "warning" : "success"} icon={null}>
+              {t("assets.overview.summary.badge", { count: overview.grounded.count })}
+            </StatusBadge>
+          )
+        }
+        counted={
+          overview === undefined ? null : (
+            <span data-slot="trucks-counted">
+              {t(groundingCounted ? "assets.overview.tiles.canDriveInfo" : "assets.overview.tiles.canDriveInfoNoGrounding")}
+            </span>
+          )
+        }
+      >
+        {tiles !== undefined && (
+          <MetricStrip
+            tiles={tiles}
+            isPending={overviewQuery.isPending || summaryQuery.isPending}
+            isError={overviewQuery.isError || summaryQuery.isError}
+          />
+        )}
+        {usageQuery.data !== undefined && <KmCoverage usage={usageQuery.data} />}
+      </OverviewSummary>
 
       <FleetBoardCard usage={usageQuery.data} isPending={usageQuery.isPending} isError={usageQuery.isError} onRetry={() => void usageQuery.refetch()} />
 
@@ -135,6 +163,19 @@ export function TrucksOverview() {
       )}
     </div>
   );
+}
+
+/**
+ * The vehicle grounded longest, when one is: the Trucks summary's second
+ * sentence, left out when the notice already names that grounding as a change.
+ */
+export function truckSummaryDetails(overview: AssetOverview, t: Translate, language: string | undefined): string[] {
+  const first = overview.grounded?.first;
+  if (first == null) return [];
+  // A read from before #667 carries no notice.
+  const changes: AssetOverview["notice"]["changes"] = (overview as Partial<AssetOverview>).notice?.changes ?? [];
+  if (changes.some((change) => change.kind === "VEHICLE_GROUNDED" && change.assetId === first.assetId)) return [];
+  return [t("assets.overview.summary.longest", { code: first.assetCode, date: formatDate(first.since, language) })];
 }
 
 export function overviewTiles({

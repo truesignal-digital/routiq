@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PROFITABILITY_LAYERS } from "../commands/categories.js";
 import { moneyMinor } from "../envelope.js";
 import { monthCode } from "./finance.js";
+import { moneySummarySchema, overviewNoticeSchema } from "./overview-notice.js";
 
 /**
  * The Overview range picker (dashboards.html, RangePicker). THIS_MONTH runs
@@ -181,13 +182,26 @@ export const financeOverviewResponse = /* @__PURE__ */ (() => {
         /** Posted entries in the period in another currency, left out of every total. */
         otherCurrencyEntries: count,
       }),
+      /**
+       * The summary sentence's template and values (#667). It reads its own
+       * month windows whatever the range: the month so far, or last month
+       * from the 1st to the 2nd.
+       */
+      summary: moneySummarySchema(),
+      /** When the summary notice shows; big changes include expenses up. */
+      notice: overviewNoticeSchema(),
     })
     .superRefine((body, ctx) => {
       // The view decides profit for the whole body, so no section can leak it
       // to the cashier, and no section can drop it for a ledger reader.
       const profitFields = [body.period.profitMinor, body.comparison.profitMinor, body.companyProfit];
       if (body.view === "REVENUE_AND_EXPENSES") {
-        if (profitFields.some((field) => field !== null) || body.vehicles !== null || body.branches !== null) {
+        if (
+          profitFields.some((field) => field !== null) ||
+          body.vehicles !== null ||
+          body.branches !== null ||
+          body.summary.measure === "PROFIT"
+        ) {
           ctx.addIssue({ code: "custom", message: "REVENUE_AND_EXPENSES carries no profit" });
         }
       } else if (profitFields.some((field) => field === null)) {

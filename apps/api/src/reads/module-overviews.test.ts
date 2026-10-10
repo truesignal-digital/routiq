@@ -544,5 +544,46 @@ describe("module overviews", () => {
       });
     });
   });
-});
 
+  /** #667: every module Overview's read says when its summary notice shows. */
+  describe("the summary notice on each module Overview", () => {
+    const reads = {
+      trucks: (actor: Actor, query = "") => get(actor, `/v1/assets/overview${query}`, assetOverview),
+      trips: (actor: Actor, query = "") => get(actor, `/v1/activities/summary${query}`, activitySummary),
+      maintenance: (actor: Actor, query = "") => get(actor, `/v1/maintenance/summary${query}`, maintenanceSummary),
+    };
+    const grounded = (notice: { changes: { kind: string; assetCode?: string }[] }) =>
+      notice.changes.filter((change) => change.kind === "VEHICLE_GROUNDED").map((change) => change.assetCode);
+
+    it("gives the workspace's day and the fixed schedule, and names this week's groundings as big changes", async () => {
+      const today = currentBusinessDate(new Date(), "Africa/Douala");
+      for (const [name, read] of Object.entries(reads)) {
+        const { notice } = await read(director);
+        expect(notice.today, name).toBe(today);
+        expect(notice.schedule, name).toBe("MONDAY_AND_MONTH_START");
+        expect(notice.scheduledOn !== null && notice.scheduledOn <= today, name).toBe(true);
+        expect(grounded(notice), name).toEqual(["VH002", "VH003"]);
+        // The key is the grounding's: the same one every day until it ends.
+        expect((await read(director)).notice.changes.map((change) => change.key), name).toEqual(
+          notice.changes.map((change) => change.key),
+        );
+        expect(notice.changes.some((change) => change.kind === "EXPENSES_UP"), name).toBe(false);
+      }
+    });
+
+    it("keeps the groundings inside the caller's branch scope and the narrowing", async () => {
+      for (const [name, read] of Object.entries(reads)) {
+        expect(grounded((await read(doualaOnly)).notice), name).toEqual(["VH002"]);
+        expect(grounded((await read(director, `?branchId=${yaoundeId}`)).notice), name).toEqual(["VH003"]);
+        expect(grounded((await read(doualaOnly, `?branchId=${yaoundeId}`)).notice), name).toEqual([]);
+      }
+    });
+
+    it("names no grounding while Maintenance is off", async () => {
+      await withModuleOff("MAINTENANCE", async () => {
+        expect(grounded((await reads.trucks(director)).notice)).toEqual([]);
+        expect(grounded((await reads.trips(director)).notice)).toEqual([]);
+      });
+    });
+  });
+});

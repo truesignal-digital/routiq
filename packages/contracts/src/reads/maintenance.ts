@@ -3,6 +3,7 @@ import { workOrderCostOutcome } from "../commands/complete-work-order.js";
 import { recordArtifact } from "./artifacts.js";
 import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
+import { overviewNoticeSchema } from "./overview-notice.js";
 
 /**
  * The owner's state machine (#28). APPROVED is open work, where costs attach;
@@ -399,6 +400,8 @@ export const maintenanceSummary = /* @__PURE__ */ (() =>
         workOrders: z.number().int().nonnegative(),
       })
       .nullable(),
+    /** When the Maintenance Overview's summary notice shows (#667). */
+    notice: overviewNoticeSchema(),
   }))();
 
 export type MaintenanceSummaryQuery = z.infer<typeof maintenanceSummaryQuery>;

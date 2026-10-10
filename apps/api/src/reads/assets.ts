@@ -73,6 +73,7 @@ import { readableTripSql } from "./trip-scope.js";
 import type { AuthContext } from "../auth/types.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { invalidRequest } from "./read-gate.js";
+import { overviewNoticeToday } from "./overview-notice.js";
 
 /** The filters both the list and the summary narrow the fleet by. */
 const assetFilters = {
@@ -625,10 +626,11 @@ export function registerAssetReadRoutes(
               .orderBy(sql`${lastTripAt} asc nulls first`, asc(assets.assetCode), asc(assets.id))
               .limit(1)
           : [];
-        return { counts, firstGrounded, firstIdle };
+        const notice = await overviewNoticeToday(tx, auth, modules, parsedQuery.data.branchId);
+        return { counts, firstGrounded, firstIdle, notice };
       });
 
-      const { counts, firstGrounded, firstIdle } = result;
+      const { counts, firstGrounded, firstIdle, notice } = result;
       return assetOverview.parse({
         total: counts?.total ?? 0,
         canDrive: counts?.canDrive ?? 0,
@@ -659,6 +661,7 @@ export function registerAssetReadRoutes(
                     },
             }
           : null,
+        notice,
       });
     },
   );

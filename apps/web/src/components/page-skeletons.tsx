@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * rows, as DataTable draws them on a phone.
  */
 
-/** Every page has one width (#658), so a skeleton has it too. */
+/** Every page has one width, the page frame (#658), so the skeleton has it too. */
 function Frame({ children }: { children: ReactNode }) {
   return (
     <PageContainer>
@@ -117,7 +117,7 @@ export function RecordSkeleton() {
   );
 }
 
-/** A trip on its own page: the same record. */
+/** A trip on its own page: the same record, with room for its timeline. */
 export function WideRecordSkeleton() {
   return (
     <Frame>

@@ -152,4 +152,14 @@ describe("Trips › Overview (#665)", () => {
     await vi.waitFor(() => expect(container.querySelector("[data-metric=empty-km] [data-slot=metric-value]")?.textContent).toBe("18%"));
     expect(container.querySelector("[data-slot=revenue-per-km-by-route]")).toBeNull();
   });
+
+  it("puts the summary notice over the tiles: hidden on a plain day, the week in whole sentences when shown (#667)", async () => {
+    renderWith({ ...SUMMARY, notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } });
+    const counted = await screen.findByText("Closed activities missing data: 3 without fuel and 2 without km.");
+    expect(counted.closest("[data-summary=closed]")).toBeTruthy();
+    screen.getByRole("button", { name: "Show summary" }).click();
+    const region = await screen.findByRole("region", { name: "Summary" });
+    expect(region.textContent).toContain("6 activities started this week; 4 of them closed.");
+    expect(region.textContent).toContain("5 activities are still open.");
+  });
 });

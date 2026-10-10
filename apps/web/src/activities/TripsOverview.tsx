@@ -4,6 +4,7 @@ import { Fuel, Gauge, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
 import { RankedBars } from "@/components/overview/ranked-bars.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { WeekColumns } from "@/components/overview/week-columns.js";
 import { ErrorState } from "@/components/page";
@@ -47,9 +48,17 @@ export function TripsOverview() {
           onRetry={() => void summaryQuery.refetch()}
         />
       )}
-      {tiles !== undefined && (
-        <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
-      )}
+      <OverviewSummary
+        page="trips"
+        notice={summary?.notice}
+        sentence={summary === undefined ? undefined : t("activities.overview.summary.sentence", { started: summary.thisWeek, closed: summary.weekClosed })}
+        details={summary === undefined ? undefined : [t("activities.overview.summary.open", { open: summary.open })]}
+        counted={summary === undefined ? null : <span data-slot="trips-counted">{tripCounted(summary, t)}</span>}
+      >
+        {tiles !== undefined && (
+          <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
+        )}
+      </OverviewSummary>
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card data-slot="trips-per-week">
@@ -105,6 +114,12 @@ export function TripsOverview() {
       </div>
     </div>
   );
+}
+
+/** What the Trips figures leave out: closed trips missing fuel or km; fuel is a money fact, not counted while Money is off. */
+export function tripCounted(summary: ActivitySummary, t: Translate): string {
+  const { fuel, km } = summary.closedMissing;
+  return t("activities.overview.summary.counted", { fuelCounted: fuel === null ? "no" : "yes", fuel: fuel ?? 0, km });
 }
 
 /**

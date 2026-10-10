@@ -7,6 +7,7 @@ import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,8 @@ import { dashboardMode, vehicleRows, vehiclesAtALoss, type DashboardMode } from 
 import { ProfitBridge } from "@/finance/dashboard/ProfitBridge.js";
 import { CompanyLinesList, VehicleProfitTable, VehiclesAtALoss } from "@/finance/dashboard/VehicleProfit.js";
 import { useFleetUsage } from "@/overview/useFleetUsage.js";
+import { moneySummaryText } from "@/overview/money-summary.js";
+import { SummaryStatusBadge } from "@/overview/SummaryStatusBadge.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatMoney, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
@@ -112,23 +115,33 @@ export function DashboardOverviewTab() {
   const todo = useTodo();
   const rows = overview === undefined ? [] : vehicleRows(overview, branchId);
   const steps = overview === undefined || mode !== "profit" ? undefined : profitBridge(overview);
+  const words = overview === undefined ? undefined : moneySummaryText(overview, t, i18n.resolvedLanguage);
 
   return (
     <div data-slot="dashboard-overview" data-mode={mode} className="flex flex-col gap-5">
       <RangeBar overview={overview} range={range} />
       {query.isError && <OverviewError onRetry={() => void query.refetch()} />}
 
-      <OverviewTiles
-        overview={overview}
-        mode={mode}
-        fleet={showFleet ? fleet.data : undefined}
-        showFleet={showFleet}
-        usage={showFleet ? usage.data : undefined}
-        isPending={query.isPending || (showFleet && fleet.isPending)}
-        isError={query.isError}
-        comparisonShort={windows?.comparisonShort}
-      />
-      {overview !== undefined && <CountedLine overview={overview} mode={mode} />}
+      <OverviewSummary
+        page="dashboard"
+        notice={overview?.notice}
+        sentence={words?.sentence}
+        details={words?.details}
+        badge={words === undefined ? undefined : <SummaryStatusBadge {...words.badge} />}
+        expensesUp={words?.expensesUp}
+        counted={overview === undefined ? null : <CountedLine overview={overview} mode={mode} />}
+      >
+        <OverviewTiles
+          overview={overview}
+          mode={mode}
+          fleet={showFleet ? fleet.data : undefined}
+          showFleet={showFleet}
+          usage={showFleet ? usage.data : undefined}
+          isPending={query.isPending || (showFleet && fleet.isPending)}
+          isError={query.isError}
+          comparisonShort={windows?.comparisonShort}
+        />
+      </OverviewSummary>
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card data-slot="dashboard-why">
@@ -490,9 +503,7 @@ function CountedLine({ overview, mode }: { overview: FinanceOverviewResponse; mo
       : null,
   ].filter((sentence): sentence is string => sentence !== null);
   return (
-    <p data-slot="dashboard-counted" className="-mt-2 text-xs text-muted-foreground">
-      {sentences.join(" ")}
-    </p>
+    <span data-slot="dashboard-counted">{sentences.join(" ")}</span>
   );
 }
 

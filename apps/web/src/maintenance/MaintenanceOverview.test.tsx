@@ -140,4 +140,25 @@ describe("Maintenance › Overview (#665)", () => {
     await screen.findByText("VH003 · since 10/1/26");
     await vi.waitFor(() => expect(container.querySelector("[data-slot=days-off-road]")).toBeNull());
   });
+
+  it("puts the summary notice over the tiles, with a grounding as the big change (#667)", async () => {
+    renderWith({
+      ...SUMMARY,
+      notice: {
+        today: "2026-10-09",
+        schedule: "MONDAY_AND_MONTH_START",
+        scheduledOn: "2026-10-05",
+        scheduledToday: null,
+        changes: [
+          { kind: "VEHICLE_GROUNDED", key: "G1", assetId: "a3", assetCode: "VH003", since: "2026-10-07T08:00:00.000Z" },
+        ],
+      },
+    });
+    await screen.findByText("Repair time and cost over the last 90 days, from 4 completed work orders.");
+    screen.getByRole("button", { name: "Show summary" }).click();
+    const region = await screen.findByRole("region", { name: "Summary" });
+    expect(region.textContent).toContain("2 problems are open, 1 of them safety-critical.");
+    expect(region.textContent).toContain("1 vehicle is off the road.");
+    expect(region.textContent).toContain("VH003 was grounded on October 7 and is still off the road.");
+  });
 });

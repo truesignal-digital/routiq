@@ -76,6 +76,7 @@ import {
 } from "./trip-plan.js";
 import { readableTripSql } from "./trip-scope.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
+import { loadOverviewNotice } from "./overview-notice.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -470,7 +471,8 @@ export function registerActivityReadRoutes(
 
         const summary = await read(async (tx) => {
           const timezone = await workspaceTimezone(tx, auth.workspaceId);
-          const week = isoWeek(currentBusinessDate(new Date(), timezone));
+          const today = currentBusinessDate(new Date(), timezone);
+          const week = isoWeek(today);
           const firstWeekFrom = addDays(week.from, -7 * (ACTIVITY_OVERVIEW_WEEKS - 1));
 
           // The same scope the list applies: session branches and a driver's
@@ -573,6 +575,7 @@ export function registerActivityReadRoutes(
             },
             weekKm: counts?.weekKm ?? null,
             weeks,
+            notice: await loadOverviewNotice(tx, auth, modules, { branchId, today, timezone }),
           };
         });
 
