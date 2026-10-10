@@ -148,6 +148,15 @@ export const ATTENTION_CODES = [
   "WORK_ORDER_AWAITING_AUTHORIZATION",
   "WORK_ORDER_IN_PROGRESS",
   "WORK_ORDER_AWAITING_SIGN_OFF",
+  /**
+   * A completed work order with cost still to come (#82): closed with
+   * "invoice pending", or a v1 close's declared amount above what the books
+   * hold (`declaredCostMinor`, `recordedCostMinor`). WARNING: the repair's
+   * money is not in the books yet. Only for callers who read work-order costs
+   * with the books on; left out while a cost line on the order awaits review,
+   * which ENTRY_AWAITING_REVIEW already shows.
+   */
+  "WORK_ORDER_COST_TO_COME",
   "ASSET_AWAITING_RELEASE",
   "DOCUMENT_EXPIRED",
   "DOCUMENT_EXPIRING",
@@ -211,6 +220,9 @@ export const assetAttentionItem = z.object({
       currency: z.string().length(3),
       expectedCostMinor: moneyMinor,
       actualCostMinor: moneyMinor,
+      /** WORK_ORDER_COST_TO_COME from a v1 close: what it declared, and what the books hold. */
+      declaredCostMinor: moneyMinor,
+      recordedCostMinor: moneyMinor,
       documentTypeLabelFr: z.string(),
       documentTypeLabelEn: z.string(),
       expiresAt: z.iso.date(),

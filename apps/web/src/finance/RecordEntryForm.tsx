@@ -96,6 +96,12 @@ export interface RecordEntryFormProps {
    * the two; it is a normal recording.
    */
   recordAgainFrom?: FinancialEntryDetail | undefined;
+  /**
+   * The invoice for a work order that is already completed (#82): the server
+   * holds it for review whatever the amount and needs a reason, which the
+   * description carries (LATE_COST_REASON_REQUIRED otherwise).
+   */
+  lateCost?: boolean | undefined;
 }
 
 type RecordPayload = ReturnType<typeof toRecordExpensePayload>;
@@ -156,6 +162,7 @@ export function RecordEntryForm({
   onDismiss,
   editing,
   recordAgainFrom,
+  lateCost = false,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
   const label = useCommandLabel();
@@ -188,11 +195,13 @@ export function RecordEntryForm({
         paymentMethod: z.enum(PAYMENT_METHODS),
         economicDate: z.string().min(1, t("form.errors.required")),
         counterpartyName: z.string(),
-        description: z.string(),
+        description: lateCost
+          ? z.string().trim().min(1, t("form.errors.required"))
+          : z.string(),
         paymentReference: z.string(),
         assetId: z.string(),
       }),
-    [t, editing],
+    [t, editing, lateCost],
   );
   const form = useForm<RecordFormValues>({
     resolver: zodResolver(formSchema),
@@ -232,6 +241,7 @@ export function RecordEntryForm({
   const amountInput = form.watch("amountInput");
   const paymentMethod = form.watch("paymentMethod");
   const economicDate = form.watch("economicDate");
+  const description = form.watch("description");
   const categoriesQuery = useCategories(
     direction === "EXPENSE" ? "EXPENSE_CATEGORY" : "REVENUE_CATEGORY",
   );
@@ -275,7 +285,8 @@ export function RecordEntryForm({
       amountMinor !== null &&
       amountMinor > 0 &&
       economicDate &&
-      paymentMethod,
+      paymentMethod &&
+      (!lateCost || description.trim() !== ""),
   );
 
   async function onValid(values: RecordFormValues) {
@@ -359,6 +370,31 @@ export function RecordEntryForm({
     : !directionLocked
     ? t("finance.record.title")
     : label(direction === "EXPENSE" ? "record-expense" : "record-revenue");
+  const descriptionField = (
+    <FormField
+      control={form.control}
+      name="description"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>
+            {t(lateCost ? "finance.record.lateCostReasonLabel" : "finance.record.descriptionLabel")}
+          </FormLabel>
+          <FormControl>
+            <Textarea
+              placeholder={t(
+                lateCost
+                  ? "finance.record.lateCostReasonPlaceholder"
+                  : "finance.record.descriptionPlaceholder",
+              )}
+              className="min-h-24"
+              {...field}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
   const chrome =
     surface === "page"
       ? { surface, hideCancel: true, className: "mt-6" }
@@ -521,13 +557,20 @@ export function RecordEntryForm({
                   placeholder={t("finance.record.amountPlaceholder")}
                 />
               </FormControl>
-              {editing === undefined && (
-                <RuleHint commandType={direction === "EXPENSE" ? "record-expense" : "record-revenue"} />
+              {lateCost ? (
+                <FormDescription>{t("finance.record.lateCostHint")}</FormDescription>
+              ) : (
+                editing === undefined && (
+                  <RuleHint commandType={direction === "EXPENSE" ? "record-expense" : "record-revenue"} />
+                )
               )}
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* The reason a late invoice needs sits with the amount it explains. */}
+        {lateCost && descriptionField}
 
         <FormField
           control={form.control}
@@ -593,23 +636,7 @@ export function RecordEntryForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("finance.record.descriptionLabel")}</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t("finance.record.descriptionPlaceholder")}
-                  className="min-h-24"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {!lateCost && descriptionField}
 
         <FormField
           control={form.control}

@@ -60,10 +60,30 @@ export interface FinancialEntryWriteResult {
 
 const TERMINAL_ASSET_STATUSES = new Set(["SOLD", "RETIRED", "WRITTEN_OFF"]);
 
+/**
+ * The work-order states that take new cost: APPROVED (the work in progress),
+ * and COMPLETED for the invoice that arrives after the close (#82). SUBMITTED
+ * spend is not yet authorized, COMPLETION_SUBMITTED is being signed off on the
+ * cost it declared, and REJECTED and CANCELLED work never happened.
+ */
+const WORK_ORDER_COST_STATUSES = new Set(["APPROVED", "COMPLETED"]);
+
+const LATE_COST_REVIEW: ApprovalDecision = { outcome: "APPROVAL_REQUIRED", ruleId: null };
+
 /** What an entry says, apart from where it is booked: the part an edit may change. */
 export type FinancialEntryFacts = Omit<FinancialEntryWriteRequest, "entryId" | "branchCode">;
 
 export type EntryCategory = Pick<typeof categories.$inferSelect, "id" | "evidencePolicy">;
+
+export interface EntryReferences {
+  /** The category the entry is booked to. */
+  category: EntryCategory;
+  /**
+   * A line names a COMPLETED work order: the invoice that came after the
+   * close (#82). Such an entry always waits for review, whatever its amount.
+   */
+  lateWorkOrderCost: boolean;
+}
 
 /** §3.4: the lines sum exactly to the entry. The database checks it again at commit (0031). */
 export function assertPostingsBalance(
@@ -96,7 +116,15 @@ export async function writeFinancialEntry(
     envelope,
     request.branchCode,
   );
-  const category = await resolveEntryReferences(tx, ctx, request, envelope.origin);
+  const { category, lateWorkOrderCost } = await resolveEntryReferences(
+    tx,
+    ctx,
+    request,
+    envelope.origin,
+  );
+  // record-expense asks for review already (`requiresReview`); this holds for
+  // every other caller, so no path posts a late repair invoice unseen (#82).
+  const decision = lateWorkOrderCost ? LATE_COST_REVIEW : approval;
 
   const entryNumber = await nextEntryNumber(
     tx,
@@ -106,7 +134,7 @@ export async function writeFinancialEntry(
   );
   const warnings: CommandWarningCode[] = [...branchWarnings];
 
-  const posting = await resolvePostingOrDefer(tx, ctx, envelope, request.economicDate, approval);
+  const posting = await resolvePostingOrDefer(tx, ctx, envelope, request.economicDate, decision);
   const { isPosted, period } = posting;
   warnings.push(...posting.warnings);
   if (
@@ -235,17 +263,19 @@ export async function writeFinancialEntry(
  * Every reference the entry's facts name, checked the same way whether the
  * entry is being recorded or its author is editing it while it waits: the
  * category of the right kind, and each line's vehicle, trip, work order and
- * person. Returns the category the entry is booked to.
+ * person. Returns the category the entry is booked to, and whether the entry
+ * is a late cost on a closed work order.
  */
 export async function resolveEntryReferences(
   tx: Tx,
   ctx: CommandContext,
   request: Pick<
     FinancialEntryFacts,
-    "direction" | "categoryCode" | "categoryKind" | "categoryRefType" | "postings"
+    "direction" | "categoryCode" | "categoryKind" | "categoryRefType" | "postings" | "description"
   >,
   origin: CommandOrigin,
-): Promise<EntryCategory> {
+): Promise<EntryReferences> {
+  let lateWorkOrderCost = false;
   const categoryMatches = await tx
     .select({
       id: categories.id,
@@ -418,16 +448,24 @@ export async function resolveEntryReferences(
         });
       }
     }
-    // Costs attach only to APPROVED work (#28): SUBMITTED spend is not yet
-    // authorized, and COMPLETED, REJECTED and CANCELLED orders are closed to
-    // new cost. Reversals do not come through here — they copy the original
-    // attribution and are always allowed.
-    const notOpen = workOrderRows.find((row) => row.status !== "APPROVED");
+    // Costs attach to APPROVED work (#28), and to COMPLETED work for the
+    // invoice that arrives after the close (#82). Reversals do not come
+    // through here — they copy the original attribution and are always allowed.
+    const notOpen = workOrderRows.find((row) => !WORK_ORDER_COST_STATUSES.has(row.status));
     if (notOpen) {
       throw new CommandError(409, "WORK_ORDER_NOT_OPEN", {
         workOrderId: notOpen.id,
         status: notOpen.status,
       });
+    }
+    const closed = workOrderRows.find((row) => row.status === "COMPLETED");
+    if (closed) {
+      // The close settled what the order knew of its cost; a cost arriving
+      // after it says why, and the entry's description carries that reason.
+      if ((request.description?.trim() ?? "") === "") {
+        throw new CommandError(422, "LATE_COST_REASON_REQUIRED", { workOrderId: closed.id });
+      }
+      lateWorkOrderCost = true;
     }
   }
 
@@ -460,7 +498,40 @@ export async function resolveEntryReferences(
     }
   }
 
-  return category;
+  return { category, lateWorkOrderCost };
+}
+
+/**
+ * Whether any line names a COMPLETED work order, for the approval context of
+ * a command, which runs before the references are resolved. The writer decides
+ * the same again from the rows it reads; this lets the receipt say
+ * APPROVAL_REQUIRED too.
+ */
+export async function namesCompletedWorkOrder(
+  tx: Tx,
+  ctx: CommandContext,
+  postings: readonly { workOrderId?: string | undefined }[],
+): Promise<boolean> {
+  const ids = [
+    ...new Set(
+      postings.flatMap((posting) =>
+        posting.workOrderId === undefined ? [] : [posting.workOrderId],
+      ),
+    ),
+  ];
+  if (ids.length === 0) return false;
+  const rows = await tx
+    .select({ id: workOrders.id })
+    .from(workOrders)
+    .where(
+      and(
+        eq(workOrders.workspaceId, ctx.workspaceId),
+        inArray(workOrders.id, ids),
+        eq(workOrders.status, "COMPLETED"),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 export interface PostingDecision {

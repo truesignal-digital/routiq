@@ -48,7 +48,13 @@ import {
   type KeysetColumn,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
-import { parseActualCost, workOrderActualCostSql } from "./work-order-cost.js";
+import {
+  costToCome,
+  parseActualCost,
+  workOrderActualCostSql,
+  workOrderCostToComeColumns,
+  type CostToComeFacts,
+} from "./work-order-cost.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /**
@@ -90,25 +96,30 @@ function serializeOptionalMinor(value: bigint | null): number | null {
 }
 
 /**
- * A work order's three amounts, or null for each when the caller may not read
- * work-order costs (#390). Null, never zero: a hidden figure must not read as
- * a free repair.
+ * A work order's three amounts and its cost still to come (#82), or null for
+ * each when the caller may not read work-order costs (#390). Null, never zero:
+ * a hidden figure must not read as a free repair.
  */
 function workOrderAmounts(
   auth: AuthContext,
-  row: {
+  row: CostToComeFacts & {
     expectedCostMinor: bigint | null;
     actualCostMinor: string | null;
-    declaredCostMinor: bigint | null;
   },
 ) {
   if (!canReadWorkOrderCosts(auth.role)) {
-    return { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null };
+    return {
+      expectedCostMinor: null,
+      actualCostMinor: null,
+      declaredCostMinor: null,
+      costToCome: null,
+    };
   }
   return {
     expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
     actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
     declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+    costToCome: costToCome(row),
   };
 }
 
@@ -287,6 +298,7 @@ export function registerMaintenanceReadRoutes(
               actualCostMinor: workOrderActualCostSql(),
               declaredCostMinor: workOrders.declaredCostMinor,
               costOutcome: workOrders.costOutcome,
+              ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
               safetyCritical: operationalIssues.safetyCritical,
@@ -442,6 +454,7 @@ export function registerMaintenanceReadRoutes(
               actualCostMinor: workOrderActualCostSql(),
               declaredCostMinor: workOrders.declaredCostMinor,
               costOutcome: workOrders.costOutcome,
+              ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
               safetyCritical: operationalIssues.safetyCritical,

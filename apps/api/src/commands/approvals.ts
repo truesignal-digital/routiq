@@ -19,6 +19,11 @@ export interface ApprovalContext {
   branchId?: string;
   categoryCode?: string;
   amountMinor?: number | bigint;
+  /**
+   * No rule may auto-approve this write, whatever its amount: a repair
+   * invoice booked after the work order closed (#82).
+   */
+  requiresReview?: boolean;
 }
 
 /**
@@ -49,6 +54,7 @@ export async function evaluateApproval(
   commandType: string,
   approvalContext: ApprovalContext,
 ): Promise<ApprovalDecision> {
+  if (approvalContext.requiresReview === true) return APPROVAL_REQUIRED;
   const rules = await loadApprovalRules(tx, ctx.workspaceId, commandType);
   if (rules.length === 0) return APPROVAL_REQUIRED;
 

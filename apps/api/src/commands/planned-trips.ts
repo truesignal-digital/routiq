@@ -17,19 +17,18 @@ import {
   type TripDiscrepancyCode,
   type UpdatePlannedTripPayload,
 } from "@routiq/contracts";
-import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   activities,
   activityAssetSegments,
   activityPeople,
-  assetAvailabilityIntervals,
   assets,
   meterReadings,
   persons,
-  workspaces,
 } from "../db/schema.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { currentBusinessDate } from "../reads/business-date.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import {
   assetBranchIds,
   branchIdsByCode,
@@ -50,6 +49,7 @@ import {
 import { nextActivityNumber } from "./numbering.js";
 import { assertOwnTrip } from "./own-records.js";
 import { resolveOrCreatePlace } from "./places.js";
+import { tripConflicts } from "./trip-conflicts.js";
 import { validateCustomValues } from "./templates.js";
 
 /**
@@ -164,153 +164,32 @@ async function resolveRouteEnd(
   return { placeId, text: null };
 }
 
-async function workspaceTimezone(tx: Tx, ctx: CommandContext): Promise<string> {
-  const [workspace] = await tx
-    .select({ timezone: workspaces.timezone })
-    .from(workspaces)
-    .where(eq(workspaces.id, ctx.workspaceId))
-    .limit(1);
-  if (!workspace) throw new Error("workspace row missing for a verified session");
-  return workspace.timezone;
-}
-
-/**
- * The end of the business day holding `at`, in the workspace time zone: where
- * a booking with no planned end stops occupying its vehicle (ADR-0012 §4).
- */
-function endOfBusinessDay(at: SQL, timezone: string): SQL {
-  return sql`(((${at}) AT TIME ZONE ${timezone})::date + 1)::timestamp AT TIME ZONE ${timezone}`;
-}
-
-/**
- * A trip's booked window (ADR-0012 §4). PLANNED: planned start to planned
- * end, or to the end of the start's business day. OPEN: actual start to the
- * later of the planned end and now.
- */
-function bookedWindow(timezone: string): SQL {
-  return sql`CASE
-    WHEN ${activities.status} = 'PLANNED' THEN tstzrange(
-      ${activities.plannedStartAt},
-      COALESCE(${activities.plannedEndAt}, ${endOfBusinessDay(sql`${activities.plannedStartAt}`, timezone)}),
-      '[)')
-    ELSE tstzrange(
-      ${activities.startedAt},
-      GREATEST(${activities.plannedEndAt}, now(), ${activities.startedAt}),
-      '[)')
-  END`;
-}
-
-interface PlannedAssignment {
-  id: string;
-  plannedStartAt: Date;
-  plannedEndAt: Date | null;
-  plannedAssetId: string | null;
-  plannedDriverPersonId: string | null;
-}
-
 interface Collisions {
   warnings: CommandWarningCode[];
   warningMetadata?: CommandWarningMetadata;
 }
 
 /**
- * Warnings for a planned trip, recomputed from current rows and never stored
- * (ADR-0012 §4): its vehicle or driver on another PLANNED or OPEN trip whose
- * window overlaps, and its vehicle grounded now (Maintenance on only).
+ * Warnings for a planned trip as it now stands in the database (ADR-0012 §4):
+ * `tripConflicts`, the rule the planning read recomputes on every read.
  * Disposed vehicles and ineligible drivers are refused before this runs.
  */
-async function collisionWarnings(
-  tx: Tx,
-  ctx: CommandContext,
-  trip: PlannedAssignment,
-): Promise<Collisions> {
-  if (trip.plannedAssetId === null && trip.plannedDriverPersonId === null) {
-    return { warnings: [] };
-  }
-  const timezone = await workspaceTimezone(tx, ctx);
-  const start = sql`${trip.plannedStartAt.toISOString()}::timestamptz`;
-  const end =
-    trip.plannedEndAt === null
-      ? endOfBusinessDay(start, timezone)
-      : sql`${trip.plannedEndAt.toISOString()}::timestamptz`;
-  const overlapping = and(
-    eq(activities.workspaceId, ctx.workspaceId),
-    sql`${activities.id} <> ${trip.id}`,
-    inArray(activities.status, ["PLANNED", "OPEN"]),
-    sql`${bookedWindow(timezone)} && tstzrange(${start}, ${end}, '[)')`,
-  );
-
-  const warnings: CommandWarningCode[] = [];
-  const warningMetadata: CommandWarningMetadata = {};
-
-  if (trip.plannedAssetId !== null) {
-    const assetId = trip.plannedAssetId;
-    const clashes = await tx
-      .select({ id: activities.id })
-      .from(activities)
-      .where(
-        and(
-          overlapping,
-          sql`(
-            (${activities.status} = 'PLANNED' AND ${activities.plannedAssetId} = ${assetId})
-            OR (${activities.status} = 'OPEN' AND EXISTS (
-              SELECT 1 FROM ${activityAssetSegments}
-              WHERE ${activityAssetSegments.workspaceId} = ${activities.workspaceId}
-                AND ${activityAssetSegments.activityId} = ${activities.id}
-                AND ${activityAssetSegments.assetId} = ${assetId}
-                AND ${activityAssetSegments.endedAt} IS NULL))
-          )`,
-        ),
-      )
-      .orderBy(activities.activityNumber);
-    if (clashes.length > 0) {
-      warnings.push("VEHICLE_DOUBLE_BOOKED");
-      warningMetadata.VEHICLE_DOUBLE_BOOKED = { tripIds: clashes.map((row) => row.id) };
-    }
-
-    if (await isModuleEnabled(tx, ctx.workspaceId, "MAINTENANCE")) {
-      const [grounded] = await tx
-        .select({ id: assetAvailabilityIntervals.id })
-        .from(assetAvailabilityIntervals)
-        .where(
-          and(
-            eq(assetAvailabilityIntervals.workspaceId, ctx.workspaceId),
-            eq(assetAvailabilityIntervals.assetId, assetId),
-            sql`${assetAvailabilityIntervals.closedAt} IS NULL`,
-          ),
-        )
-        .limit(1);
-      if (grounded) warnings.push("VEHICLE_GROUNDED");
-    }
-  }
-
-  if (trip.plannedDriverPersonId !== null) {
-    const personId = trip.plannedDriverPersonId;
-    const clashes = await tx
-      .select({ id: activities.id })
-      .from(activities)
-      .where(
-        and(
-          overlapping,
-          sql`(
-            (${activities.status} = 'PLANNED' AND ${activities.plannedDriverPersonId} = ${personId})
-            OR (${activities.status} = 'OPEN' AND EXISTS (
-              SELECT 1 FROM ${activityPeople}
-              WHERE ${activityPeople.workspaceId} = ${activities.workspaceId}
-                AND ${activityPeople.activityId} = ${activities.id}
-                AND ${activityPeople.personId} = ${personId}
-                AND ${activityPeople.role} = 'DRIVER'))
-          )`,
-        ),
-      )
-      .orderBy(activities.activityNumber);
-    if (clashes.length > 0) {
-      warnings.push("DRIVER_DOUBLE_BOOKED");
-      warningMetadata.DRIVER_DOUBLE_BOOKED = { tripIds: clashes.map((row) => row.id) };
-    }
-  }
-
-  return Object.keys(warningMetadata).length > 0 ? { warnings, warningMetadata } : { warnings };
+async function collisionWarnings(tx: Tx, ctx: CommandContext, tripId: string): Promise<Collisions> {
+  const conflicts = (
+    await tripConflicts(
+      tx,
+      {
+        workspaceId: ctx.workspaceId,
+        timezone: await workspaceTimezone(tx, ctx.workspaceId),
+        maintenanceOn: await isModuleEnabled(tx, ctx.workspaceId, "MAINTENANCE"),
+      },
+      [tripId],
+    )
+  ).get(tripId);
+  if (conflicts === undefined || conflicts.codes.length === 0) return { warnings: [] };
+  return Object.keys(conflicts.tripIds).length > 0
+    ? { warnings: conflicts.codes, warningMetadata: conflicts.tripIds }
+    : { warnings: conflicts.codes };
 }
 
 /** The plan as the audit event keeps it, before and after. Money as numbers, like every snapshot. */
@@ -399,17 +278,6 @@ async function editPlannedTrip(
   return { trip: updated, changed: true };
 }
 
-function assignmentOf(trip: TripRow): PlannedAssignment {
-  if (trip.plannedStartAt === null) throw new Error(`planned trip without a start: ${trip.id}`);
-  return {
-    id: trip.id,
-    plannedStartAt: trip.plannedStartAt,
-    plannedEndAt: trip.plannedEndAt,
-    plannedAssetId: trip.plannedAssetId,
-    plannedDriverPersonId: trip.plannedDriverPersonId,
-  };
-}
-
 function editResult(trip: TripRow, collisions: Collisions = { warnings: [] }): CommandExecuteResult {
   return {
     recordId: trip.id,
@@ -470,7 +338,7 @@ const planTrip: CommandDefinition<PlanTripPayload> = {
       tx,
       ctx,
       branch,
-      currentBusinessDate(plannedStartAt, await workspaceTimezone(tx, ctx)),
+      currentBusinessDate(plannedStartAt, await workspaceTimezone(tx, ctx.workspaceId)),
     );
 
     const [trip] = await tx
@@ -534,7 +402,7 @@ const planTrip: CommandDefinition<PlanTripPayload> = {
       ],
     });
 
-    const collisions = await collisionWarnings(tx, ctx, assignmentOf(trip));
+    const collisions = await collisionWarnings(tx, ctx, trip.id);
     return {
       recordId: trip.id,
       rowVersion: trip.rowVersion,
@@ -579,7 +447,7 @@ const assignTrip: CommandDefinition<AssignTripPayload> = {
       plannedAssetId: payload.plannedAssetId,
       plannedDriverPersonId: payload.plannedDriverPersonId,
     });
-    return editResult(trip, await collisionWarnings(tx, ctx, assignmentOf(trip)));
+    return editResult(trip, await collisionWarnings(tx, ctx, trip.id));
   },
 };
 
@@ -603,7 +471,7 @@ const rescheduleTrip: CommandDefinition<RescheduleTripPayload> = {
       plannedStartAt: new Date(payload.plannedStartAt),
       plannedEndAt: payload.plannedEndAt === undefined ? null : new Date(payload.plannedEndAt),
     });
-    return editResult(trip, await collisionWarnings(tx, ctx, assignmentOf(trip)));
+    return editResult(trip, await collisionWarnings(tx, ctx, trip.id));
   },
 };
 

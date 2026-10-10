@@ -185,6 +185,13 @@ function fullHaulage(): ActivityDetail {
         supersededById: null,
       },
     ],
+    plannedAsset: null,
+    plannedDriver: null,
+    plannedOriginName: null,
+    plannedDestinationName: null,
+    cancellation: null,
+    discrepancyCodes: [],
+    priceCurrency: "XAF",
     financialEntries: [
       {
         entryId: "00000000-0000-4000-8000-000000000081",

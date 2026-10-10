@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 682663,
+    "ceiling": 684895,
     "raises": [
       {
         "date": "2026-10-06",
@@ -175,6 +175,24 @@
         "from": 682090,
         "to": 682663,
         "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 682663,
+        "to": 683412,
+        "reason": "Late repair invoices (#82): cost-to-come strings in fr and en and the late-invoice form state on the vehicle panel"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 683412,
+        "to": 684216,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 684216,
+        "to": 684895,
+        "reason": "Planned-trip and cancelled status words for the planning read (#336)"
       }
     ]
   },
@@ -232,7 +250,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 257700,
+    "ceiling": 259125,
     "raises": [
       {
         "date": "2026-10-06",
@@ -401,6 +419,24 @@
         "from": 256557,
         "to": 257700,
         "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 257700,
+        "to": 258261,
+        "reason": "Late repair invoices (#82): cost-to-come strings in fr and en and the late-invoice form state on the vehicle panel"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 258261,
+        "to": 258556,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 258556,
+        "to": 259125,
+        "reason": "Planned-trip and cancelled status words for the planning read (#336)"
       }
     ]
   }

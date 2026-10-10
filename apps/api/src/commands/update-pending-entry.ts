@@ -189,7 +189,12 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       categoryRefType: direction.categoryRefType,
     };
     assertPostingsBalance(facts);
-    const category = await resolveEntryReferences(tx, ctx, facts, envelope.origin);
+    const { category, lateWorkOrderCost } = await resolveEntryReferences(
+      tx,
+      ctx,
+      facts,
+      envelope.origin,
+    );
 
     // Under the standalone command's rules, as the sheets evaluate their
     // entries: thresholds are tenant-editable per command type, and a second
@@ -198,6 +203,8 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       branchId: entry.branchId,
       categoryCode: payload.categoryCode,
       amountMinor: payload.amountMinor,
+      // An edit cannot move a late repair invoice into the auto band (#82).
+      requiresReview: lateWorkOrderCost,
     });
     const posting = await resolvePostingOrDefer(tx, ctx, envelope, payload.economicDate, approval);
     const postingPeriodId = posting.period?.periodId ?? null;
