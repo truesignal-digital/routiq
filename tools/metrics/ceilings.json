@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 684970,
+    "ceiling": 692282,
     "raises": [
       {
         "date": "2026-10-06",
@@ -199,6 +199,12 @@
         "from": 684895,
         "to": 684970,
         "reason": "Named shift regions on the shell's header, page and rules notice for flow:no-shift and pnpm perf (#494)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 684970,
+        "to": 692282,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
       }
     ]
   },
@@ -256,7 +262,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259125,
+    "ceiling": 260621,
     "raises": [
       {
         "date": "2026-10-06",
@@ -443,6 +449,12 @@
         "from": 258556,
         "to": 259125,
         "reason": "Planned-trip and cancelled status words for the planning read (#336)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259125,
+        "to": 260621,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
       }
     ]
   }
