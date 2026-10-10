@@ -58,7 +58,7 @@ it("starts no reads for a page whose module is off: the page gate answers instea
     role: "DIRECTOR",
     modules: ["ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES"],
   });
-  expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+  expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
   expect(maintenanceReads(recorded)).toEqual([]);
 });
 
