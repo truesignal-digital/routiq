@@ -71,6 +71,10 @@
     "screenLoadFailed": "Impossible d'ouvrir cette page. Vérifiez votre connexion, puis réessayez.",
     "screenFailed": "Un problème est survenu sur cette page. Réessayez.",
     "retry": "Réessayer",
+    "offline": {
+      "banner": "Vous êtes hors ligne. Les pages s'afficheront au retour de la connexion.",
+      "waiting": "Vous êtes hors ligne. Ce contenu s'affichera dès le retour de la connexion."
+    },
     "counts": {
       "moneyWaiting": "{count, plural, one {# écriture attend votre approbation} other {# écritures attendent votre approbation}}",
       "maintenanceNew": "{count, plural, one {# nouveau problème à traiter} other {# nouveaux problèmes à traiter}}",
