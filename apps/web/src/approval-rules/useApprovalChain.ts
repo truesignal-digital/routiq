@@ -75,23 +75,27 @@ export function approvalChainKey(workspaceSlug: string | undefined) {
 
 /**
  * The caller's own approval chain and the rules notice they have not
- * dismissed (#422). Refetched on focus, so a change Direction makes reaches an
- * open screen on the member's next visit to it.
+ * dismissed (#422). Refetched on focus once older than
+ * APPROVAL_CHAIN_RECHECK_MS, so a change Direction makes reaches an open
+ * screen on the member's next visit to it.
  */
 export function useApprovalChain() {
   return useQuery(approvalChainQueryOptions(useActiveSession()?.workspaceSlug));
 }
 
 /**
- * Also loaded by the shell before it draws, so the rules notice is there at
- * first paint or not at all (#495). Fresh for a minute, so the shell does not
- * ask again for what its loader just fetched; a new screen still rechecks it.
+ * How often moving between screens asks for the chain again (#496): a change
+ * Direction makes still reaches a member already in the app within a minute,
+ * without a request on every screen.
  */
+export const APPROVAL_CHAIN_RECHECK_MS = 60_000;
+
+/** Also loaded by the shell before it draws, so the rules notice is there at first paint or not at all (#495). */
 export function approvalChainQueryOptions(workspaceSlug: string | undefined) {
   return queryOptions({
     queryKey: approvalChainKey(workspaceSlug),
     enabled: workspaceSlug !== undefined,
-    staleTime: 60_000,
+    staleTime: APPROVAL_CHAIN_RECHECK_MS,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
@@ -101,8 +105,9 @@ export function approvalChainQueryOptions(workspaceSlug: string | undefined) {
 }
 
 /**
- * Asks for the chain again on every new screen, so a change Direction makes
- * reaches a member already in the app on their next screen (#422). A router
+ * Asks for the chain again on a new screen once the last answer is older than
+ * APPROVAL_CHAIN_RECHECK_MS, so a change Direction makes reaches a member
+ * already in the app (#422) without a request on every screen (#496). A router
  * subscription rather than a pathname read: the shell must not re-render on
  * navigation. Invalidating rather than refetching, so after sign-out, when the
  * cache is empty, nothing comes back under the ended session.
@@ -115,7 +120,10 @@ export function useRecheckApprovalChainOnNavigation(): void {
     () =>
       router.subscribe("onResolved", (event) => {
         if (!event.pathChanged) return;
-        void queryClient.invalidateQueries({ queryKey: approvalChainKey(workspaceSlug) });
+        void queryClient.invalidateQueries({
+          queryKey: approvalChainKey(workspaceSlug),
+          predicate: (query) => Date.now() - query.state.dataUpdatedAt >= APPROVAL_CHAIN_RECHECK_MS,
+        });
       }),
     [router, queryClient, workspaceSlug],
   );

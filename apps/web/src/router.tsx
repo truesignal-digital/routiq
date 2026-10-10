@@ -62,6 +62,44 @@ export interface RouterContext {
 
 const rootRoute = createRootRouteWithContext<RouterContext>()();
 
+/**
+ * Each screen's loader starts its first view's reads (routes/*.loader.ts,
+ * #496), its module loaded on demand like the screen and fetched with the
+ * screens in the background (preloadScreens), so moving around offline needs
+ * no code.
+ */
+const LOADERS = {
+  home: () => import("./routes/home.loader.js"),
+  assets: () => import("./routes/assets.loader.js"),
+  vehicle: () => import("./routes/vehicle.loader.js"),
+  activities: () => import("./routes/activities.loader.js"),
+  finance: () => import("./routes/finance.loader.js"),
+  maintenance: () => import("./routes/maintenance.loader.js"),
+};
+
+/**
+ * A loader never fails or holds a navigation. Offline its module may be
+ * missing (and a failed fetch stays failed for the page's life) and its reads
+ * would wait for the connection, so the screen opens at once and shows its
+ * own loading state; a read that fails is left to the screen.
+ *
+ * A page whose module is off starts no reads: ModulePageGate shows "not
+ * included" instead, and every read would be refused (#326). Each loader
+ * still checks the member's role for its own reads.
+ */
+function startReads(args: ReadArgs, run: () => Promise<void>): Promise<void> | undefined {
+  if (!navigator.onLine) return undefined;
+  return import("./modules/app-shell.js")
+    .then(({ pageModuleOn }) => pageModuleOn(args.context.queryClient, args.location.pathname))
+    .then((on) => (on ? run() : undefined))
+    .catch(() => undefined);
+}
+
+interface ReadArgs {
+  context: RouterContext;
+  location: { pathname: string };
+}
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -93,6 +131,7 @@ const appRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.home(args))),
   component: DashboardScreen,
 });
 
@@ -104,6 +143,8 @@ const assetsRoute = createRoute({
   validateSearch: z.object({
     status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.assets().then((load) => load.assets(args))),
   component: AssetsStub,
 });
 
@@ -130,12 +171,14 @@ const assetDetailRoute = createRoute({
       .optional()
       .catch(undefined),
   }),
+  loader: (args) => startReads(args, () => LOADERS.vehicle().then((load) => load.vehicle(args))),
   component: VehicleWorkspaceScreen,
 });
 
 const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
+  loader: (args) => startReads(args, () => LOADERS.vehicle().then((load) => load.vehicleNow(args))),
   component: NowTab,
   pendingComponent: SectionPending,
   errorComponent: SectionError,
@@ -216,6 +259,8 @@ const financeEntriesRoute = createRoute({
     view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
     branch: z.literal("all").optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.finance().then((load) => load.financeEntries(args))),
   component: FinanceEntriesScreen,
 });
 
@@ -228,6 +273,8 @@ const activitiesRoute = createRoute({
     from: z.iso.date().optional().catch(undefined),
     to: z.iso.date().optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.activities().then((load) => load.activities(args))),
   component: ActivitiesScreen,
 });
 
@@ -259,6 +306,8 @@ const maintenanceRoute = createRoute({
     status: workOrderStatus.optional().catch(undefined),
     issueStatus: issueStatus.optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.maintenance().then((load) => load.maintenance(args))),
   component: MaintenanceScreen,
 });
 
@@ -375,6 +424,9 @@ export const router = createRouter({
   context: { queryClient },
   defaultPendingComponent: ScreenPending,
   defaultErrorComponent: ScreenError,
+  // The Query cache decides what is fresh (lib/query-client.ts); the router
+  // never keeps loader results of its own.
+  defaultPreloadStaleTime: 0,
 });
 
 // Every navigation is a fresh chance to fetch a screen whose code failed before.
@@ -393,6 +445,7 @@ export function preloadAfterSignIn(): void {
   // The shell's frame and loader are not screens, but sign-in waits on them too.
   void ShellPending.preload();
   void import("./shell/shell-loader.js").catch(() => undefined);
+  void LOADERS.home().catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
@@ -434,6 +487,10 @@ export async function preloadScreens(busy: () => boolean = () => false): Promise
   for (const screen of [...AFTER_SIGN_IN, ...SCREENS_BY_USE]) {
     while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
     await screen.preload();
+  }
+  for (const loader of Object.values(LOADERS)) {
+    while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
+    await loader().catch(() => undefined);
   }
 }
 

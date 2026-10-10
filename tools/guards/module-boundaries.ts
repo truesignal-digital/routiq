@@ -9,7 +9,11 @@ import { isTestFile, type SourceFile, type Violation } from "./scan.js";
  *   the feature folders they grew up in, listed here one by one.
  * - composition: the few files that know every module and wire them into
  *   core's slots (COMPOSITION). The router and the entry are here because
- *   they name every screen.
+ *   they name every screen, and the route loaders (#496) because they are the
+ *   router's: each names its screen's reads, across modules where the screen
+ *   reads across them. The router runs a loader only while its page's module
+ *   is on, as ModulePageGate shows the page. `routes/scope.ts`, which every
+ *   loader shares, stays core.
  * - core: everything else, including the vehicle record's frame (header, tab
  *   bar, action catalogue, record panel) that every module plugs into.
  *
@@ -57,7 +61,18 @@ export const MODULE_ROOTS: Record<ModuleCode, readonly string[]> = {
 };
 
 /** The composition boundary: the only files that may import every module. */
-export const COMPOSITION: readonly string[] = ["modules/index.ts", "modules/app-shell.ts", "router.tsx", "main.tsx"];
+export const COMPOSITION: readonly string[] = [
+  "modules/index.ts",
+  "modules/app-shell.ts",
+  "router.tsx",
+  "main.tsx",
+  "routes/home.loader.ts",
+  "routes/assets.loader.ts",
+  "routes/vehicle.loader.ts",
+  "routes/activities.loader.ts",
+  "routes/finance.loader.ts",
+  "routes/maintenance.loader.ts",
+];
 
 export type Owner = { kind: "core" } | { kind: "composition" } | { kind: "module"; code: ModuleCode };
 
