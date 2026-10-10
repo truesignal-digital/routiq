@@ -58,7 +58,8 @@
     "entries": {
       "detail": {
         "asset": "Véhicule",
-        "tripLink": "Voyage {number}"
+        "tripLink": "Voyage {number}",
+        "notLinked": "Liée à aucun véhicule, aucun voyage ni aucun ordre de travail."
       },
       "filters": {
         "asset": "Véhicule"
@@ -97,7 +98,15 @@
         "branchOnly": "Seules les écritures de vos agences sur ce voyage."
       },
       "closedAt": "Clôturé le {date}",
-      "loadFailed": "Impossible de charger ce voyage."
+      "loadFailed": "Impossible de charger ce voyage.",
+      "status": {
+        "complete": "Compléter le voyage"
+      },
+      "notLinked": "Aucun véhicule sur ce voyage.",
+      "tabs": {
+        "label": "Sections du voyage"
+      },
+      "noMoney": "Aucune recette ni dépense sur ce voyage pour l'instant."
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",

@@ -12,9 +12,9 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
+import { StatusBlock as RecordStatusBlock, type StatusNote, type StatusTone } from "@/components/status-block.js";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
-import { cn } from "@/lib/utils";
 import { contributes } from "@/modules/manifest.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { useVehicle } from "../context.js";
@@ -23,7 +23,6 @@ import { recordReference, type PanelRef, type RoleStep } from "../model.js";
 import { LinkButton, useLockText, useStepLabel, withNodes } from "../parts.js";
 import { STEP_ICONS } from "../steps.js";
 
-type Tone = "critical" | "waiting" | "success" | "neutral";
 
 const REPORT_MAX = 140;
 
@@ -41,7 +40,7 @@ function monthYear(iso: string, locale: string): string {
  * underneath. The report is quoted, never paraphrased into a grammar only
  * English has.
  */
-export function StatusBlock({ now = new Date() }: { now?: Date }) {
+export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
   const { t, i18n } = useTranslation();
   const { asset, attention, viewer, panel } = useVehicle();
   const locale = i18n.language;
@@ -56,11 +55,11 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
       <LinkButton onClick={() => openRef({ kind, id })}>{recordReference(id)}</LinkButton>
     );
 
-  let tone: Tone = "neutral";
+  let tone: StatusTone = "neutral";
   let Icon: LucideIcon = CircleQuestionMark;
   let lead = "";
   let follow: ReactNode = null;
-  const notes: Array<{ key: string; icon: LucideIcon; body: ReactNode }> = [];
+  const notes: StatusNote[] = [];
 
   switch (situation.kind) {
     case "grounded":
@@ -145,43 +144,16 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
   const { step, record } = groundingStep(asset, viewer);
 
   return (
-    <div
-      role="status"
-      data-tone={tone}
-      className={cn(
-        "flex flex-col gap-3 rounded-xl border px-4 py-3 md:flex-row md:items-start md:gap-8",
-        tone === "critical" && "border-destructive/25 bg-destructive/[0.04] dark:bg-destructive/10",
-        tone === "waiting" && "border-transparent bg-warning/10 ring-1 ring-warning/30",
-        tone === "success" && "border-success/25 bg-success/[0.05] dark:bg-success/10",
-        tone === "neutral" && "bg-muted/40",
-      )}
-    >
-      <div className="flex min-w-0 flex-1 gap-3">
-        <Icon
-          className={cn(
-            "mt-0.5 size-5 shrink-0 md:mt-1",
-            tone === "critical" && "text-destructive",
-            tone === "waiting" && "text-warning-foreground",
-            tone === "success" && "text-success-foreground",
-            tone === "neutral" && "text-muted-foreground",
-          )}
-          aria-hidden
-        />
-        <div className="min-w-0 space-y-1.5">
-          <p className="text-base leading-snug text-pretty md:text-lg md:leading-snug">
-            <span className="font-semibold">{lead}</span>{" "}
-            {follow !== null && <span className="text-foreground/80">{follow}</span>}
-          </p>
-          {notes.map((note) => (
-            <p key={note.key} className="flex gap-1.5 text-sm text-foreground/80">
-              <note.icon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <span>{note.body}</span>
-            </p>
-          ))}
-        </div>
-      </div>
-      <StatusAction step={step} record={record} />
-    </div>
+    <RecordStatusBlock
+      tone={tone}
+      icon={Icon}
+      lead={lead}
+      follow={follow}
+      notes={notes}
+      action={record === null || step.kind === "none" ? undefined : <StatusAction step={step} record={record} />}
+      // The truck's phone bar holds its quick actions; its decision stays in the block.
+      phoneAction="inline"
+    />
   );
 }
 
@@ -215,7 +187,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
   if (step.kind === "go") {
     const StepIcon = STEP_ICONS[step.step.key];
     return (
-      <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:items-end md:pl-0">
+      <div className="flex flex-col gap-1.5 md:items-end">
         <Button className="desktop:h-9" onClick={() => panel.openStep(step.step)}>
           <StepIcon aria-hidden />
           {stepLabel(step.step)}
@@ -229,7 +201,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
   if (step.step.key === "release") {
     const StepIcon = STEP_ICONS.release;
     return (
-      <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:max-w-64 md:items-end md:pl-0">
+      <div className="flex flex-col gap-1.5 md:max-w-64 md:items-end">
         <Button className="desktop:h-9" disabled aria-describedby={reasonId}>
           <StepIcon aria-hidden />
           {stepLabel(step.step)}
@@ -243,7 +215,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
   }
 
   return (
-    <div className="flex shrink-0 flex-col gap-1.5 pl-8 md:max-w-64 md:items-end md:pl-0">
+    <div className="flex flex-col gap-1.5 md:max-w-64 md:items-end">
       <Button variant="outline" className="bg-background desktop:h-9" onClick={() => panel.openRecord(record)}>
         {t("vehicle.status.openRecord", {
           kind: record.kind,

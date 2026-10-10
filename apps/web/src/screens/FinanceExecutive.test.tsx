@@ -112,8 +112,8 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
 }
 
 const languages = [
-  { locale: "en", money: "Money", waiting: "Waiting for your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
-  { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "Détail de l'écriture", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
+  { locale: "en", money: "Money", waiting: "Waiting for your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "FIN-EXEC", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
+  { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "FIN-EXEC", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
 ];
 const viewers = languages.flatMap((language) => [390, 1280].map((width) => ({ ...language, width })));
 
@@ -182,9 +182,10 @@ it("opens a dashboard total in its period and retains branch/period after inspec
   await user.click(await screen.findByRole("button", { name: "FIN-EXEC" }));
   const drawer = await screen.findByRole("dialog", { name: "FIN-EXEC" });
   await user.click(within(drawer).getByRole("button", { name: "Open full screen" }));
-  await screen.findByRole("heading", { name: "Entry detail" });
-  await user.click(screen.getByRole("button", { name: "History" }));
-  await screen.findByText("No history");
+  await screen.findByRole("heading", { level: 1, name: "FIN-EXEC" });
+  // History is the record page's last tab (#662).
+  await user.click(screen.getByRole("tab", { name: "History" }));
+  expect((await screen.findAllByText("No history")).length).toBeGreaterThan(0);
   await user.keyboard("{Escape}");
   await act(async () => { history.back(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });

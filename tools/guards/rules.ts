@@ -116,6 +116,23 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
 ];
 
 /**
+ * The record pages and the parts they are built from (#662): the money entry,
+ * the trip and the truck. A new record page joins this list.
+ */
+const RECORD_PAGES: readonly string[] = [
+  "apps/web/src/screens/FinanceEntryDetailScreen.tsx",
+  "apps/web/src/screens/ActivityDetailScreen.tsx",
+  "apps/web/src/finance/EntryPage.tsx",
+  "apps/web/src/activities/detail/",
+  "apps/web/src/vehicle/VehicleWorkspaceScreen.tsx",
+  "apps/web/src/vehicle/header/",
+  "apps/web/src/vehicle/tabs/",
+  "apps/web/src/components/record-page.tsx",
+  "apps/web/src/components/status-block.tsx",
+  "apps/web/src/components/record-history-sheet.tsx",
+];
+
+/**
  * The forms a centred dialog may host (#296): a decision on an existing
  * record, with at most a reason. Approve, reject and reverse an entry; the
  * work-order decisions and cancel; dismiss and resolve a problem; release to
@@ -643,6 +660,15 @@ export const RULES: readonly Rule[] = [
         path.startsWith("apps/web/src/screens/") &&
         path !== "apps/web/src/screens/LoginScreen.tsx",
     ),
+  },
+  {
+    id: "DS-6",
+    name: "no-full-width-button-on-record",
+    fix: "A record page keeps its actions in the header (top right) and the decision in the status block, and on a phone in the bottom action bar (components/record-page.tsx, components/status-block.tsx; #662, docs/design/consistency/fullpages.html). Drop the w-full button under the content; move the action there.",
+    check: (files) =>
+      files
+        .filter((file) => isWebProduction(file.path) && RECORD_PAGES.some((root) => file.path.startsWith(root)))
+        .flatMap((file) => matchFile(file, /<Button\b(?:=>|[^<>])*?\bw-full\b/)),
   },
   {
     id: "J1",

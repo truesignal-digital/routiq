@@ -26,7 +26,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   await drawer.getByRole("button", { name: t("Ouvrir en plein écran", "Open full screen") }).click();
   await page.waitForURL((url) => url.pathname === `/finance/entries/${entry.id}`);
-  await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
+  // The record page is titled with the entry's own number (#662).
+  await page.getByRole("heading", { level: 1, name: entry.entryNumber }).waitFor();
   await quiet();
   await shot("entry-detail", { caption: "Open full screen shows the entry's detail page" });
 

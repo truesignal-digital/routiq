@@ -403,6 +403,24 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "DS-6",
+    // #662: Edit and Cancel entry were full-width buttons under the money entry's card.
+    bad: [
+      file(
+        "apps/web/src/screens/FinanceEntryDetailScreen.tsx",
+        '<Button\n  variant="outline"\n  onClick={() => setEditOpen(true)}\n  className="w-full"\n>',
+      ),
+      file("apps/web/src/activities/detail/TripPage.tsx", '<Button className="w-full" onClick={close}>'),
+      file("apps/web/src/vehicle/tabs/NowTab.tsx", '<Button variant="outline" className="mt-4 w-full">'),
+    ],
+    good: [
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<Button variant="outline" onClick={onEdit}>'),
+      // A full-width control that is not a button, and a form panel that is not a record page.
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<SelectTrigger className="w-full">'),
+      file("apps/web/src/finance/RecordEntryForm.tsx", '<Button className="w-full" onClick={submit}>'),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],

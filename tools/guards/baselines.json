@@ -41,8 +41,6 @@
     "apps/web/src/components/money-input.tsx": 1
   },
   "H16": {
-    "apps/web/src/activities/detail/ActivityAssetsPanel.tsx": 3,
-    "apps/web/src/activities/detail/ActivityOverview.tsx": 1,
     "apps/web/src/components/ui/file-upload.tsx": 1
   },
   "H17": {

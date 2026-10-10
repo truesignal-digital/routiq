@@ -46,29 +46,29 @@ describe("which sections a viewer gets", () => {
   it("gives every section to a manager with every module", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Overview", "Maintenance", "Money", "Trips", "Documents", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Money", "Trips", "Documents", "Details", "History"]);
   });
 
   it("keeps the books from the workshop, and each module's section from a workspace without it", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "TECHNICIAN" });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Documents", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Documents", "Details", "History"]);
     cleanup();
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", modules: ["CORE", "ASSETS"] });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Overview", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Details", "History"]);
   });
 
   it("keeps the books from the counter and the drivers, and documents from the counter (#264)", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}`, { role: "CASHIER", asset: asset({ finance: undefined }) });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Details", "History"]);
     expect(requested(recorded, `/v1/assets/${ASSET_ID}/documents`)).toEqual([]);
     expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`)).toEqual([]);
     cleanup();
     const driver = await openVehicle(`/assets/${ASSET_ID}`, { role: "DRIVER", asset: asset({ finance: undefined }) });
     await screen.findByText("Available.");
-    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Documents", "History", "Details"]);
+    expect(tabNames()).toEqual(["Overview", "Maintenance", "Trips", "Documents", "Details", "History"]);
     expect(requested(driver, `/v1/assets/${ASSET_ID}/finance`)).toEqual([]);
   });
 
@@ -122,7 +122,7 @@ describe("which sections a viewer gets", () => {
 });
 
 describe("Details", () => {
-  it("is its own section after History, reached by a deep link, and the header no longer discloses it", async () => {
+  it("is its own section before History, reached by a deep link, and the header no longer discloses it", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/details`, { role: "ADMIN" });
     expect(await screen.findByRole("heading", { name: "Details" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Details", selected: true })).toBeTruthy();
@@ -151,10 +151,11 @@ describe("Details", () => {
   it.each([
     ["en", "Details"],
     ["fr-CM", "Détails"],
-  ] as const)("%s: the phone's tab bar ends with %s", async (locale, name) => {
+  ] as const)("%s: the phone's tab bar puts %s just before History, which comes last (#662)", async (locale, name) => {
     await openVehicle(`/assets/${ASSET_ID}/details`, { role: "DRIVER", width: 390, locale });
     await screen.findByRole("tab", { name, selected: true });
-    expect(tabNames().at(-1)).toBe(name);
+    expect(tabNames().at(-2)).toBe(name);
+    expect(tabNames().at(-1)).toBe(locale === "en" ? "History" : "Historique");
   });
 });
 
@@ -622,3 +623,22 @@ describe("Maintenance and Trips", () => {
   });
 });
 
+
+// #662: the truck shares the record header of the money entry and the trip.
+describe("the truck's record header", () => {
+  it("titles the page with the code, puts the status badge beside it and the plate on the facts line", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN" });
+    const header = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('[data-slot="record-header"]');
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
+    expect(within(header).getByRole("heading", { level: 1 }).textContent).toContain("VH003");
+    expect(within(header).getByText("Available")).toBeTruthy();
+    expect(header.querySelector('[data-slot="record-facts"]')?.textContent).toContain("LT 482 AB");
+    const filled = within(header)
+      .queryAllByRole("button")
+      .filter((button) => /(^|\s)bg-primary(\s|$)/.test(button.className));
+    expect(filled.length).toBeLessThanOrEqual(1);
+  });
+});

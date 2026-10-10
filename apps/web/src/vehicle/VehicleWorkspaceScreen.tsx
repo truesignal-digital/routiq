@@ -14,13 +14,11 @@ import { canViewDocuments } from "@/documents/permissions.js";
 import { useCategories } from "@/categories/useCategories.js";
 import { canReadFinance, canReadFinanceEntries } from "@/finance/permissions.js";
 import { canSeeWorkOrderCosts, canViewMaintenance } from "@/maintenance/permissions.js";
-import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { actionAvailability, actionDef, actionPermitted, type VehicleFacts } from "./actions.js";
 import { AllActionsSheet } from "./AllActionsSheet.js";
 import { useVehicle, VehicleCtx, type PanelControls, type PanelForm, type VehicleContextValue } from "./context.js";
-import { FactsLine } from "./header/FactsLine.js";
-import { IdentityStrip } from "./header/IdentityStrip.js";
-import { StatusBlock } from "./header/StatusBlock.js";
+import { VehicleHeader } from "./header/IdentityStrip.js";
+import { VehicleStatusBlock } from "./header/StatusBlock.js";
 import {
   panelParam,
   parsePanel,
@@ -151,12 +149,10 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
   return (
     <VehicleCtx.Provider value={value}>
       <PageContainer className="pb-48 md:pb-28">
-        <header className="space-y-2.5">
-          <IdentityStrip />
-          <OtherBranchNotice branchCode={asset.branch.code} />
-          <StatusBlock />
-          <FactsLine />
-        </header>
+        <div className="space-y-2.5">
+          <VehicleHeader />
+          <VehicleStatusBlock />
+        </div>
         <VehicleTabsNav />
         <div className="mt-5">
           <TabOutlet />

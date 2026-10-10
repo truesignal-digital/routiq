@@ -550,7 +550,7 @@
         "REVERSED": "Cancelled"
       },
       "detail": {
-        "title": "Entry detail",
+        "title": "Money entry",
         "notFound": "This entry could not be found.",
         "entryNumber": "Entry number",
         "direction": "Direction",
@@ -577,7 +577,7 @@
         "reversedByEntry": "Cancelled by entry {number}",
         "rejectedReason": "Rejection reason",
         "latePosting": "Late posting",
-        "breadcrumb": "Detail",
+        "breadcrumb": "Entry",
         "editAction": "Edit",
         "receipt": "Receipt",
         "noReceiptFile": "No file on this entry.",
@@ -591,7 +591,41 @@
           "RECORDED": "Recorded with the entry · {date} · {name}",
           "ATTACHED": "Attached later · {date} · {name}"
         },
-        "cancellationReason": "Reason"
+        "cancellationReason": "Reason",
+        "statusBlock": {
+          "waiting": "Waiting for approval",
+          "waitingYou": "Waiting for your approval",
+          "waitingFollow": "{approver, select, DIRECTION_APPROVES {The Director decides.} FINANCE_PEER_APPROVES {Another Finance member or the Director decides.} other {Finance decides.}} Until then it is not counted in posted totals.",
+          "rejected": "Rejected",
+          "rejectedFollow": "It stays in the history and is never counted.",
+          "rejectedReason": "Reason: “{reason}”. It stays in the history and is never counted.",
+          "cancelled": "Cancelled",
+          "cancellation": "This entry cancels another one",
+          "cancelledReason": "Reason: {reason}.",
+          "noReceipt": "No receipt yet",
+          "noReceiptFollow": "Waiting on {name} to attach the receipt."
+        },
+        "sections": {
+          "what": "What",
+          "howMuch": "Who and how much",
+          "proof": "Proof"
+        },
+        "truck": "Vehicle",
+        "recordedByLabel": "Recorded by",
+        "recordedBy": "Recorded by {name}",
+        "files": "Files",
+        "fileCount": "{count, plural, =0 {No file} one {# file} other {# files}}",
+        "cancellationNoReceipt": "A cancellation has no receipt of its own; the entry it cancels has.",
+        "kind": "Kind",
+        "counted": "Counted in posted totals",
+        "countedWhen": "{status, select, SUBMITTED {After approval} POSTED {Yes} REVERSED {Yes, with its cancellation} other {Never}}",
+        "month": "Posting month",
+        "notPosted": "Not posted",
+        "notLinked": "Not linked to a vehicle, an activity or a work order.",
+        "tabs": {
+          "label": "Entry sections",
+          "receipt": "Receipt"
+        }
       },
       "viewer": {
         "description": "Economic date {date}",
@@ -821,7 +855,6 @@
       "summary": "Summary",
       "clientReference": "Client ref.",
       "endedAt": "Ended",
-      "assets": "Assets and crew",
       "legs": "Legs",
       "money": "Revenue and costs",
       "moneyCosts": "Costs",
@@ -830,9 +863,8 @@
       "overview": {
         "started": "Started",
         "ended": "Ended",
-        "net": "Net",
-        "postedOnly": "posted lines only",
-        "legs": "Legs"
+        "legs": "Legs",
+        "distance": "Distance"
       },
       "timeline": {
         "title": "Planned vs actual",
@@ -867,13 +899,48 @@
         "passengers": "Passengers"
       },
       "moneySummary": {
-        "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
         "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
         "ownOnly": "Only the entries you recorded on this activity.",
-        "branchOnly": "Only the entries of your branches on this activity."
-      }
+        "branchOnly": "Only the entries of your branches on this activity.",
+        "result": "{sign, select, loss {Loss} other {Profit}}"
+      },
+      "status": {
+        "openFollow": "Close it when it is back. Anything missing is flagged on the record, never invented.",
+        "gaps": "{count, plural, one {Closed, but # thing is missing} other {Closed, but # things are missing}}",
+        "gapsFollow": "Its profit can't be trusted until they are added: reopen it, add them, then close it again.",
+        "gapsManager": "Its profit can't be trusted until they are added. A manager reopens it to add them.",
+        "complete": "Complete the activity"
+      },
+      "sections": {
+        "truckAndCrew": "Vehicle and crew",
+        "job": "Job"
+      },
+      "truck": "Vehicle",
+      "crew": "Crew",
+      "startKm": "Meter at departure",
+      "endKm": "Meter at arrival",
+      "type": "Type",
+      "customer": "Customer",
+      "clientReferenceLabel": "Customer reference",
+      "route": "Route",
+      "routeValue": "{from} → {to}",
+      "notes": "Notes",
+      "readingValue": "{value, number} {unit}",
+      "moneyBox": {
+        "title": "Money",
+        "result": "{sign, select, loss {Loss} other {Profit}}",
+        "revenue": "Revenue",
+        "expenses": "Expenses"
+      },
+      "notLinked": "No vehicle on this activity.",
+      "tabs": {
+        "label": "Activity sections",
+        "money": "Money"
+      },
+      "noLegs": "No legs recorded.",
+      "noMoney": "No revenue or expense on this activity yet."
     },
     "actions": {
       "choose": "Choose",
@@ -1744,7 +1811,9 @@
         "RECEIPT_EXPECTED": "Receipt expected",
         "NO_RECEIPT_EXPECTED": "No receipt expected"
       }
-    }
+    },
+    "latest": "Latest",
+    "allHistory": "All history"
   },
   "dateField": {
     "placeholderDate": "mm/dd/yyyy",
@@ -2840,6 +2909,12 @@
         "searchPlaceholder": "Search, e.g. fuel, renew, sign off",
         "noMatch": "No action matches “{query}”."
       }
+    },
+    "badge": {
+      "grounded": "Grounded",
+      "repaired": "Repaired, waiting for release",
+      "available": "Available",
+      "notAssessed": "Not assessed"
     }
   },
   "approvalRules": {
@@ -2907,6 +2982,16 @@
       "success": {
         "thresholdsSaved": "Approval thresholds saved"
       }
+    }
+  },
+  "record": {
+    "context": "About this record",
+    "actionBar": "Decision",
+    "linked": "Linked",
+    "openTab": "Open the tab",
+    "tabs": {
+      "overview": "Overview",
+      "history": "History"
     }
   }
 }

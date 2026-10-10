@@ -127,7 +127,8 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
         <dl className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <dt className="text-sm font-medium">
-              <span>{t("activities.detail.moneySummary.net")}</span>
+              {/* A negative profit is a loss, never a negative profit (CONTEXT.md, money words). */}
+              <span>{t("activities.detail.moneySummary.result", { sign: postedNet < 0 ? "loss" : "profit" })}</span>
               <span className="ml-2 text-muted-foreground text-xs">
                 {t("activities.detail.moneySummary.postedOnly")}
               </span>
@@ -138,7 +139,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
                 netToneClass(postedNet),
               )}
             >
-              {formatMoney(postedNet, { locale, sign: { context: "net" } })}
+              {formatMoney(Math.abs(postedNet), { locale })}
             </dd>
           </div>
 

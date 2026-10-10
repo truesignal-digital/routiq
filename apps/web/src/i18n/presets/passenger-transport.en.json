@@ -58,7 +58,8 @@
     "entries": {
       "detail": {
         "asset": "Vehicle",
-        "tripLink": "Trip {number}"
+        "tripLink": "Trip {number}",
+        "notLinked": "Not linked to a vehicle, a trip or a work order."
       },
       "filters": {
         "asset": "Vehicle"
@@ -94,7 +95,15 @@
         "ownOnly": "Only the entries you recorded on this trip.",
         "branchOnly": "Only the entries of your branches on this trip."
       },
-      "loadFailed": "We couldn't load this trip."
+      "loadFailed": "We couldn't load this trip.",
+      "status": {
+        "complete": "Complete the trip"
+      },
+      "notLinked": "No vehicle on this trip.",
+      "tabs": {
+        "label": "Trip sections"
+      },
+      "noMoney": "No revenue or expense on this trip yet."
     },
     "actions": {
       "reasonPlaceholder": "Why reopen this trip?",

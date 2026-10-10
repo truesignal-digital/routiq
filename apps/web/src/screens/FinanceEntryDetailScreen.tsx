@@ -1,19 +1,33 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { FinancialEntryDetail } from "@routiq/contracts";
 import { useCommandLabel } from "@/commands/labels.js";
-import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
+import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
+import { LatestHistory, RecordHistory } from "@/components/record-history-sheet.js";
+import { RecordBody, RecordHeader, RecordTabs, TabCount } from "@/components/record-page.js";
+import { StatusBlock } from "@/components/status-block.js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { EntrySummary } from "@/finance/EntrySummary.js";
 import { useMeContext } from "@/auth/me.js";
 import { useActiveSession } from "@/auth/store.js";
+import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
+import {
+  entryAssets,
+  EntryLinked,
+  EntryMoneyBox,
+  EntryOverview,
+  EntryReceiptTab,
+  useEntryStatus,
+  type EntryAbilities,
+  type EntryTab,
+} from "@/finance/EntryPage.js";
+import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { cancellationReasonWords, isOwnSubmission } from "@/finance/model.js";
+import { amountKind, isOwnSubmission } from "@/finance/model.js";
 import {
   canApproveEntries,
   canEditPendingEntry,
@@ -27,8 +41,10 @@ import {
   RejectEntryForm,
   ReverseEntryForm,
 } from "@/finance/EntryDecisionForms.js";
-import { ReversalLink } from "@/finance/ReversalLink.js";
+import { localizedLabel } from "@/lib/format.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
+import { entrySteps } from "@/vehicle/flow.js";
+import { viewerOf } from "@/vehicle/model.js";
 
 export function FinanceEntryDetailScreen() {
   const { t } = useTranslation();
@@ -44,7 +60,6 @@ export function FinanceEntryDetailScreen() {
 
 function FinanceEntryDetailContent() {
   const { t } = useTranslation();
-  const label = useCommandLabel();
   const { entryId } = useParams({ from: "/app/finance/entries/$entryId" });
   const navigate = useNavigate();
   const me = useMeContext();
@@ -52,13 +67,14 @@ function FinanceEntryDetailContent() {
   const entryQuery = useEntry(entryId);
   // `?reverse=1` is how the entries list's ⋯ menu hands an operator straight
   // into the dialog instead of duplicating it there.
-  const { reverse: openReverse } = useSearch({
+  const { reverse: openReverse, tab } = useSearch({
     from: "/app/finance/entries/$entryId",
   });
   const [reverseOpen, setReverseOpen] = useState(openReverse === true);
   const [editOpen, setEditOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [recordAgainOpen, setRecordAgainOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
   const queryClient = useQueryClient();
   const session = useActiveSession();
 
@@ -81,6 +97,12 @@ function FinanceEntryDetailContent() {
       role: me?.role,
       enabledModules: me?.enabledModules,
     }) && entryQuery.data?.postings.length === 1;
+  // role-config: the receipt is missing and the viewer may attach it (the
+  // vehicle panel's rule: drivers and the workshop to their own entries only).
+  const canAttach =
+    entryQuery.data !== undefined &&
+    me !== undefined &&
+    entrySteps(entryQuery.data, viewerOf(me)).offered.some((offer) => offer.step.key === "attach-evidence");
 
   /** ADR-0001: server truth after the save or the conflict, never a local patch. */
   const refreshFinance = async () => {
@@ -89,159 +111,255 @@ function FinanceEntryDetailContent() {
     });
   };
 
-  return (
-    <PageContainer>
-      <PageHeader title={t("finance.entries.detail.title")} />
-
-      {entryQuery.isPending ? (
-        <LoadingState className="mt-6" label={t("finance.entries.loading")} />
-      ) : entryQuery.isError ? (
+  if (entryQuery.isPending) {
+    return (
+      <PageContainer>
+        <LoadingState label={t("finance.entries.loading")} />
+      </PageContainer>
+    );
+  }
+  if (entryQuery.isError) {
+    return (
+      <PageContainer>
         <ErrorState
-          className="mt-6"
           message={t("finance.entries.loadFailed")}
           retryLabel={t("finance.entries.retry")}
           onRetry={() => void entryQuery.refetch()}
         />
-      ) : entryQuery.data ? (
-        <div className="mt-6 space-y-6">
-          {/* The record stays open: identity is workspace-scoped, so the ambient
-              branch is a list lens and never an access boundary. */}
-          <OtherBranchNotice branchId={entryQuery.data.branchId} />
-          <Card>
-            <CardContent>
-              <EntrySummary entryId={entryId} />
-            </CardContent>
-          </Card>
+      </PageContainer>
+    );
+  }
+  const entry = entryQuery.data;
+  if (entry === undefined) {
+    return (
+      <PageContainer>
+        <EmptyState icon={<FileText className="size-7" aria-hidden />} message={t("finance.entries.detail.notFound")} />
+      </PageContainer>
+    );
+  }
 
-          {(entryQuery.data.reversesEntryId || entryQuery.data.reversedByEntryId || entryQuery.data.cancellation) && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="mb-3 font-semibold">{t("finance.entries.detail.reversalChain")}</h2>
-              <div className="space-y-2">
-                {entryQuery.data.cancellation && (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">{t("finance.entries.detail.cancellationReason")}</span>{" "}
-                    <span className="font-medium">{cancellationReasonWords(entryQuery.data.cancellation, t)}</span>
-                  </p>
-                )}
-                {entryQuery.data.reversesEntryId && (
-                  <ReversalLink entryId={entryQuery.data.reversesEntryId} type="reverses" />
-                )}
-                {entryQuery.data.reversedByEntryId && (
-                  <ReversalLink entryId={entryQuery.data.reversedByEntryId} type="reversedBy" />
-                )}
-              </div>
-            </div>
-          )}
-
-          {canEdit && (
-            <Button
-              variant="outline"
-              onClick={() => setEditOpen(true)}
-              className="w-full"
-            >
-              {t("finance.entries.detail.editAction")}
-            </Button>
-          )}
-
-          {canEdit && editOpen && (
-            <RecordEntryForm
-              surface="sheet"
-              editing={entryQuery.data}
-              onRecorded={() => {
-                setEditOpen(false);
-                void refreshFinance();
-              }}
-              onDismiss={() => {
-                setEditOpen(false);
-                void refreshFinance();
-              }}
-            />
-          )}
-
-          {decidesAboveBand && (
-            <p className="text-sm text-muted-foreground">{t("finance.entries.detail.directionDecides")}</p>
-          )}
-
-          {canDecide && (
-            <EntryDecisionButtons
-              entry={{ id: entryQuery.data.id, rowVersion: entryQuery.data.rowVersion }}
-              onReject={() => setRejectOpen(true)}
-            />
-          )}
-
-          {canDecide && rejectOpen && (
-            <RejectEntryForm
-              surface="dialog"
-              entry={entryQuery.data}
-              onDismiss={() => setRejectOpen(false)}
-            />
-          )}
-
-          {canReverse && (
-            <Button
-              variant="destructive"
-              onClick={() => setReverseOpen(true)}
-              className="w-full"
-            >
-              {label("reverse-entry")}
-            </Button>
-          )}
-
-          {/* Stays mounted once the entry reads Cancelled: a "wrong details"
-              cancellation ends on the Record again step. */}
-          {reverseOpen && (canReverse || entryQuery.data.status === "REVERSED") && (
-            <ReverseEntryForm
-              surface="dialog"
-              entry={{ id: entryQuery.data.id, rowVersion: entryQuery.data.rowVersion }}
-              onReversed={(reversalEntryId, reasonCode) => {
-                if (reasonCode === "WRONG_DETAILS") return;
-                setTimeout(() => {
-                  void navigate({
-                    to: "/finance/entries/$entryId",
-                    params: { entryId: reversalEntryId },
-                  });
-                }, 1500);
-              }}
-              // role-config: a work-order cost is recorded again by the roles that book one (#559).
-              {...recordAgainStep(me, entryQuery.data, {
-                recordAgain: () => {
-                  setReverseOpen(false);
-                  setRecordAgainOpen(true);
-                },
-                openWorkOrder: (assetId, workOrderId) =>
-                  void navigate({
-                    to: "/assets/$assetId/maintenance",
-                    params: { assetId },
-                    search: { panel: `work_order:${workOrderId}` },
-                  }),
-              })}
-              onDismiss={() => setReverseOpen(false)}
-            />
-          )}
-
-          {recordAgainOpen && (
-            <RecordEntryForm
-              surface="sheet"
-              recordAgainFrom={entryQuery.data}
-              onRecorded={(outcome) => {
-                setRecordAgainOpen(false);
-                void refreshFinance();
-                void navigate({
-                  to: "/finance/entries/$entryId",
-                  params: { entryId: outcome.recordId },
-                });
-              }}
-              onDismiss={() => setRecordAgainOpen(false)}
-            />
-          )}
-        </div>
-      ) : (
-        <EmptyState
-          className="mt-6"
-          icon={<FileText className="size-7" aria-hidden />}
-          message={t("finance.entries.detail.notFound")}
+  return (
+    <EntryPage
+      entry={entry}
+      can={{ decide: canDecide, aboveBand: decidesAboveBand, attach: canAttach, edit: canEdit }}
+      canReverse={canReverse}
+      tab={tab ?? "overview"}
+      onTab={(next) =>
+        void navigate({
+          to: ".",
+          search: (previous: Record<string, unknown>) => ({
+            ...previous,
+            tab: next === "overview" ? undefined : next,
+          }),
+          // A tab is a view of the same record: Back leaves the record, not the tab.
+          replace: true,
+        })
+      }
+      onEdit={() => setEditOpen(true)}
+      onReject={() => setRejectOpen(true)}
+      onReverse={() => setReverseOpen(true)}
+      onAttach={() => setAttachOpen(true)}
+    >
+      {canEdit && editOpen && (
+        <RecordEntryForm
+          surface="sheet"
+          editing={entry}
+          onRecorded={() => {
+            setEditOpen(false);
+            void refreshFinance();
+          }}
+          onDismiss={() => {
+            setEditOpen(false);
+            void refreshFinance();
+          }}
         />
       )}
+
+      {canAttach && attachOpen && (
+        <AttachEvidenceForm
+          surface="sheet"
+          entry={{ id: entry.id, entryNumber: entry.entryNumber }}
+          onDone={() => void refreshFinance()}
+          onDismiss={() => setAttachOpen(false)}
+        />
+      )}
+
+      {canDecide && rejectOpen && (
+        <RejectEntryForm surface="dialog" entry={entry} onDismiss={() => setRejectOpen(false)} />
+      )}
+
+      {/* Stays mounted once the entry reads Cancelled: a "wrong details"
+          cancellation ends on the Record again step. */}
+      {reverseOpen && (canReverse || entry.status === "REVERSED") && (
+        <ReverseEntryForm
+          surface="dialog"
+          entry={{ id: entry.id, rowVersion: entry.rowVersion }}
+          onReversed={(reversalEntryId, reasonCode) => {
+            if (reasonCode === "WRONG_DETAILS") return;
+            setTimeout(() => {
+              void navigate({
+                to: "/finance/entries/$entryId",
+                params: { entryId: reversalEntryId },
+              });
+            }, 1500);
+          }}
+          // role-config: a work-order cost is recorded again by the roles that book one (#559).
+          {...recordAgainStep(me, entry, {
+            recordAgain: () => {
+              setReverseOpen(false);
+              setRecordAgainOpen(true);
+            },
+            openWorkOrder: (assetId, workOrderId) =>
+              void navigate({
+                to: "/assets/$assetId/maintenance",
+                params: { assetId },
+                search: { panel: `work_order:${workOrderId}` },
+              }),
+          })}
+          onDismiss={() => setReverseOpen(false)}
+        />
+      )}
+
+      {recordAgainOpen && (
+        <RecordEntryForm
+          surface="sheet"
+          recordAgainFrom={entry}
+          onRecorded={(outcome) => {
+            setRecordAgainOpen(false);
+            void refreshFinance();
+            void navigate({
+              to: "/finance/entries/$entryId",
+              params: { entryId: outcome.recordId },
+            });
+          }}
+          onDismiss={() => setRecordAgainOpen(false)}
+        />
+      )}
+    </EntryPage>
+  );
+}
+
+/**
+ * The money entry as a record page (#662): header with its number and status,
+ * the status block holding the decision it waits for, Overview · Receipt ·
+ * History, and the context column with its amount, links and latest history.
+ */
+function EntryPage({
+  entry,
+  can,
+  canReverse,
+  tab,
+  onTab,
+  onEdit,
+  onReject,
+  onReverse,
+  onAttach,
+  children,
+}: {
+  entry: FinancialEntryDetail;
+  can: EntryAbilities;
+  canReverse: boolean;
+  tab: EntryTab;
+  onTab: (tab: EntryTab) => void;
+  onEdit: () => void;
+  onReject: () => void;
+  onReverse: () => void;
+  onAttach: () => void;
+  /** The forms and dialogs the page opens. */
+  children: ReactNode;
+}) {
+  const { t, i18n } = useTranslation();
+  const label = useCommandLabel();
+  const locale = i18n.language;
+  const attachButton = (
+    <Button onClick={onAttach}>{label("attach-evidence")}</Button>
+  );
+  const status = useEntryStatus(entry, can, {
+    decision: (
+      <EntryDecisionButtons entry={{ id: entry.id, rowVersion: entry.rowVersion }} onReject={onReject} />
+    ),
+    attach: attachButton,
+  });
+  // The status block holds Attach receipt when the missing receipt is the news.
+  const attachInHeader = can.attach && status?.action !== attachButton;
+  const assets = entryAssets(entry);
+
+  return (
+    <PageContainer className="pb-28 md:pb-6">
+      <RecordHeader
+        name={entry.entryNumber}
+        status={<EntryStatusBadge status={entry.status} />}
+        facts={[
+          t("finance.entries.detail.amountKind", { kind: amountKind(entry) }),
+          localizedLabel(entry.category, locale),
+          assets.length === 0 ? null : <span className="tabular-nums">{assets.map((asset) => asset.code).join(", ")}</span>,
+          t("finance.entries.detail.recordedBy", { name: entry.recordedBy.displayName ?? t("history.actor.unknown") }),
+        ]}
+        actions={
+          attachInHeader || can.edit || canReverse ? (
+            <>
+              {attachInHeader && (
+                <Button variant="outline" onClick={onAttach}>
+                  {label("attach-evidence")}
+                </Button>
+              )}
+              {can.edit && (
+                <Button variant="outline" onClick={onEdit}>
+                  {t("finance.entries.detail.editAction")}
+                </Button>
+              )}
+              {canReverse && (
+                <Button variant="destructive" onClick={onReverse}>
+                  {label("reverse-entry")}
+                </Button>
+              )}
+            </>
+          ) : undefined
+        }
+      >
+        {/* The record stays open: identity is workspace-scoped, so the ambient
+            branch is a list lens and never an access boundary. */}
+        <OtherBranchNotice branchId={entry.branchId} />
+      </RecordHeader>
+
+      {status !== undefined && (
+        <div className="mt-4">
+          <StatusBlock {...status} />
+        </div>
+      )}
+
+      <RecordBody
+        overview={tab === "overview"}
+        tabs={
+          <RecordTabs
+            label={t("finance.entries.detail.tabs.label")}
+            overview={{ key: "overview", label: t("record.tabs.overview") }}
+            work={[
+              {
+                key: "receipt",
+                label: t("finance.entries.detail.tabs.receipt"),
+                marker: <TabCount n={entry.evidenceFiles.length} />,
+              },
+            ]}
+            history={{ key: "history", label: t("record.tabs.history") }}
+            active={tab}
+            onSelect={onTab}
+          />
+        }
+        lead={<EntryMoneyBox entry={entry} />}
+        context={
+          <>
+            <EntryLinked entry={entry} />
+            <LatestHistory entityType="financial_entry" entityId={entry.id} onShowAll={() => onTab("history")} />
+          </>
+        }
+      >
+        {tab === "overview" && <EntryOverview entry={entry} can={can} onEdit={onEdit} onAttach={onAttach} />}
+        {tab === "receipt" && <EntryReceiptTab entry={entry} />}
+        {tab === "history" && <RecordHistory entityType="financial_entry" entityId={entry.id} />}
+      </RecordBody>
+
+      {children}
     </PageContainer>
   );
 }
