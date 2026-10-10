@@ -29,8 +29,11 @@ import { createTestApp } from "../test/fixture.js";
  * 0045 (#334, planned trips) guards its columns, constraints and indexes, and
  * inserts the six scheduling commands' rules with NOT EXISTS.
  * 0046 (#362, first numbered 0045) only deletes dead approval rules, so a second
- * pass deletes nothing. 0048 (#661, first numbered 0047) inserts two document
- * types with ON CONFLICT DO NOTHING.
+ * pass deletes nothing.
+ * 0048 (#608, maintenance numbers, first numbered 0047) guards its columns and indexes, numbers only
+ * rows still without one, moves counters forward only and replaces its trigger.
+ * 0049 (#661, first numbered 0047) inserts two document types with ON CONFLICT
+ * DO NOTHING.
  *
  * The file's own database has already had all of them applied by the migrator, so
  * running them here IS the replay.
@@ -49,7 +52,8 @@ const MIGRATIONS = [
   "0042_cancellation_reason",
   "0045_planned_trips",
   "0046_platform_scope_entitlement_rules",
-  "0048_document_types_visite_carte_grise",
+  "0048_maintenance_numbers",
+  "0049_document_types_visite_carte_grise",
 ];
 
 function statementsOf(migration: string): string[] {

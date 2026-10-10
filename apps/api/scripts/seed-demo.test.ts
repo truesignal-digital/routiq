@@ -70,7 +70,16 @@ const WORKSPACE_TABLES = [
   "operational_issues",
   "work_orders",
   "asset_availability_intervals",
+  "persons",
+  "person_logins",
 ] as const;
+
+/**
+ * French words the seed used to write into free text (#550: English for now,
+ * a French variant later). Whole words (letters on either side break a match), so place names such as Yaoundé pass.
+ */
+const FRENCH_WORDS =
+  /(?<!\p{L})(Livraison|Carburant|Péages?|Indemnité|Réparation|Départ|Billets|Gasoil|Assurances?|Joint|Remplacer|Rotules|Marchandises|Feuille|Versement|Sécurité|Marché|Client|en cours|attente|places)(?!\p{L})/iu;
 
 describe("seed-demo", () => {
   let client: pg.Client;
@@ -157,6 +166,87 @@ describe("seed-demo", () => {
       { username: "patrice", role: "DRIVER", scope: "YDE" },
       { username: "sali", role: "DRIVER", scope: "ALL" },
     ]);
+  });
+
+  /** Each workspace's persons that have a login, by username (#569). */
+  async function linkedDrivers(id: string) {
+    return rows<{ username: string; person: string; open_links: number; via: string }>(
+      `select c.username, p.display_name as person,
+              (select count(*)::int from person_logins l
+                where l.workspace_id = p.workspace_id and l.person_id = p.id and l.ended_at is null) as open_links,
+              (select k.command_type from person_logins l
+                 join commands k on k.workspace_id = l.workspace_id and k.id = l.created_by_command_id
+                where l.workspace_id = p.workspace_id and l.person_id = p.id and l.ended_at is null) as via
+         from persons p
+         join memberships m on m.workspace_id = p.workspace_id and m.id = p.membership_id
+         join credentials c on c.workspace_id = m.workspace_id and c.principal_id = m.principal_id
+        where p.workspace_id = $1
+        order by c.username`,
+      [id],
+    );
+  }
+
+  it("links each driver login to their person through link-person-login (#569)", async () => {
+    expect(await linkedDrivers(workspaceId)).toEqual([
+      { username: "patrice", person: "Patrice", open_links: 1, via: "link-person-login" },
+      { username: "sali", person: "Sali", open_links: 1, via: "link-person-login" },
+    ]);
+    expect(await linkedDrivers(littoralId)).toEqual([
+      { username: "eric", person: "Éric Tchoua", open_links: 1, via: "link-person-login" },
+    ]);
+  });
+
+  it("puts Sali on the crew of the trip the office opened, so it is her own trip (#569)", async () => {
+    const crew = await rows<{ description: string; person: string; role: string }>(
+      `select a.description, p.display_name as person, ap.role
+         from activity_people ap
+         join activities a on a.workspace_id = ap.workspace_id and a.id = ap.activity_id
+         join persons p on p.workspace_id = ap.workspace_id and p.id = ap.person_id
+        where ap.workspace_id = $1 and p.display_name = 'Sali'`,
+      [workspaceId],
+    );
+    expect(crew).toEqual([
+      { description: "Delivery under way: Douala to Yaoundé", person: "Sali", role: "DRIVER" },
+    ]);
+  });
+
+  it.each([
+    ["transports-ngwa"],
+    ["littoral-voyages"],
+  ])("writes the free text of %s in English (#550)", async (slug) => {
+    const id = slug === "transports-ngwa" ? workspaceId : littoralId;
+    const texts = await rows<{ source: string; text: string }>(
+      `select 'activity' as source, coalesce(description, '') || ' ' || coalesce(customer_name, '') as text
+         from activities where workspace_id = $1
+       union all
+       select 'entry', coalesce(description, '') || ' ' || coalesce(counterparty_name, '')
+         from financial_entries where workspace_id = $1
+       union all
+       select 'issue', description from operational_issues where workspace_id = $1
+       union all
+       select 'work order', description || ' ' || coalesce(summary, '') from work_orders where workspace_id = $1
+       union all
+       select 'note', body from notes where workspace_id = $1
+       union all
+       select 'command', payload::text from commands
+        where workspace_id = $1 and command_type in ('approve-entry', 'approve-work-order', 'close-activity', 'record-haulage-job-sheet')`,
+      [id],
+    );
+    expect(texts.length).toBeGreaterThan(0);
+    expect(texts.filter((row) => FRENCH_WORDS.test(row.text))).toEqual([]);
+  });
+
+  it("leaves one Transports Ngwa entry above Finance's band, waiting for the Director (#645)", async () => {
+    const waiting = await rows<{ category: string; amount: string; recorder: string }>(
+      `select c.code as category, e.amount_minor::text as amount, cr.username as recorder
+         from financial_entries e
+         join categories c on c.workspace_id = e.workspace_id and c.id = e.category_id
+         join commands k on k.workspace_id = e.workspace_id and k.id = e.created_by_command_id
+         join credentials cr on cr.workspace_id = k.workspace_id and cr.principal_id = k.initiated_by_principal_id
+        where e.workspace_id = $1 and e.status = 'SUBMITTED' and e.amount_minor > 1000000`,
+      [workspaceId],
+    );
+    expect(waiting).toEqual([{ category: "INSURANCE", amount: "1650000", recorder: "boris" }]);
   });
 
   it("registers VH003 under its plate and puts both trucks in service", async () => {

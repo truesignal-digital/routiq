@@ -47,6 +47,7 @@ const sessionIdentity = { username: "boris", workspaceSlug: "ngwa" };
 
 const ref: WorkOrderRef = {
   id: WORK_ORDER_ID,
+  number: 7,
   assetId: ASSET_ID,
   status: "APPROVED",
   issueId: null,
@@ -56,6 +57,7 @@ const ref: WorkOrderRef = {
 function makeDetail(overrides: Partial<WorkOrderDetail> = {}): WorkOrderDetail {
   return {
     id: WORK_ORDER_ID,
+    number: 7,
     status: "APPROVED",
     description: "Freins avant",
     asset: { id: ASSET_ID, assetCode: "VH003", registrationNumber: "LT 482 AB" },

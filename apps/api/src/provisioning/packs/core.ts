@@ -204,7 +204,7 @@ export const corePack: {
     },
     // The papers a Cameroonian truck carries (#661); the French names are the
     // ones people use in English too. Mirrored for existing workspaces by
-    // migration 0048.
+    // migration 0049.
     {
       kind: "DOCUMENT_TYPE",
       code: "VISITE_TECHNIQUE",

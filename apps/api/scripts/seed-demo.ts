@@ -25,6 +25,7 @@ const {
   assetState,
   assetRowVersion,
   workOrderRowVersion,
+  linkPersonLogin,
 } = kit;
 
 const ids = {
@@ -41,6 +42,10 @@ const ids = {
   amadou: demoId("user:amadou"),
   clarisse: demoId("user:clarisse"),
   driver: demoId("person:jean-ngwa"),
+  // The two driver logins' own Person records, linked to them (#569).
+  saliPerson: demoId("person:sali"),
+  patricePerson: demoId("person:patrice"),
+  vh001Insurance: demoId("entry:VH001:insurance"),
   vh001: demoId("asset:VH001"),
   vh003: demoId("asset:VH003"),
   tr001: demoId("asset:TR001"),
@@ -64,6 +69,7 @@ const ids = {
   yaoundeJourney: demoId("activity:douala-yaounde"),
   yaoundeSegment: demoId("segment:douala-yaounde:VH003"),
   yaoundeLeg: demoId("leg:douala-yaounde"),
+  yaoundeCrew: demoId("crew:douala-yaounde:driver"),
   yaoundeDestination: demoId("place:yaounde"),
   repair: demoId("entry:VH003:repair"),
   bafoussamFuel: demoId("entry:douala-bafoussam:fuel"),
@@ -273,6 +279,9 @@ async function resetDemoWorkspace(slug: string): Promise<boolean> {
     await tx
       .delete(schema.activities)
       .where(eq(schema.activities.workspaceId, workspace.id));
+    await tx
+      .delete(schema.personLogins)
+      .where(eq(schema.personLogins.workspaceId, workspace.id));
     await tx
       .delete(schema.persons)
       .where(eq(schema.persons.workspaceId, workspace.id));
@@ -599,6 +608,31 @@ async function seedTransportsNgwa() {
     defaultRole: "DRIVER",
   });
 
+  // Each driver login is a Person too, linked through the command an
+  // Administrateur uses on the People screen (#569), so the trips the office
+  // opens with them on the crew are their own.
+  const patrice = await actor(ids.patrice);
+  await Promise.all([
+    runCommand(boris, "register-person:sali", {
+      personId: ids.saliPerson,
+      displayName: "Sali",
+      personCode: "DRV002",
+      branchCode,
+      defaultRole: "DRIVER",
+    }),
+    runCommand(boris, "register-person:patrice", {
+      personId: ids.patricePerson,
+      displayName: "Patrice",
+      personCode: "DRV003",
+      branchCode: yaoundeBranch.code,
+      defaultRole: "DRIVER",
+    }),
+  ]);
+  await Promise.all([
+    linkPersonLogin(boris, "link-person-login:sali", ids.saliPerson, sali.principalId),
+    linkPersonLogin(boris, "link-person-login:patrice", ids.patricePerson, patrice.principalId),
+  ]);
+
   const garoua = await runCommand(boris, "record-haulage-job-sheet:douala-garoua", {
     activityId: ids.garouaJourney,
     close: true,
@@ -608,9 +642,9 @@ async function seedTransportsNgwa() {
     primaryAssetId: ids.vh003,
     startedAt: "2026-07-14T05:30:00Z",
     endedAt: "2026-07-15T18:20:00Z",
-    customerName: "Commerce du Nord",
+    customerName: "Northern Trading",
     clientReference: "NGWA-GAR-001",
-    cargoDescription: "Marchandises générales",
+    cargoDescription: "General goods",
     startReading: {
       readingId: ids.garouaStartReading,
       readingType: "ODOMETER",
@@ -666,7 +700,7 @@ async function seedTransportsNgwa() {
         economicDate: "2026-07-15",
         paymentMethod: "BANK",
         paymentReference: "VIR-NGWA-GAR-001",
-        counterpartyName: "Commerce du Nord",
+        counterpartyName: "Northern Trading",
       },
     ],
   });
@@ -677,7 +711,7 @@ async function seedTransportsNgwa() {
       branchCode,
       categoryCode: "FUEL",
       economicDate: "2026-07-14",
-      description: "Carburant — Douala à Garoua",
+      description: "Fuel: Douala to Garoua",
       amountMinor: 1_180_000,
       paymentMethod: "CASH",
       sourceReference: "NGWA-GAR-001",
@@ -688,7 +722,7 @@ async function seedTransportsNgwa() {
       branchCode,
       categoryCode: "TOLLS",
       economicDate: "2026-07-15",
-      description: "Péages — Douala à Garoua",
+      description: "Tolls: Douala to Garoua",
       amountMinor: 45_000,
       paymentMethod: "CASH",
       sourceReference: "NGWA-GAR-001",
@@ -699,7 +733,7 @@ async function seedTransportsNgwa() {
       branchCode,
       categoryCode: "DRIVER_ALLOWANCE",
       economicDate: "2026-07-15",
-      description: "Indemnité chauffeur — Douala à Garoua",
+      description: "Driver allowance: Douala to Garoua",
       amountMinor: 120_000,
       paymentMethod: "CASH",
       sourceReference: "NGWA-GAR-001",
@@ -739,8 +773,8 @@ async function seedTransportsNgwa() {
     primarySegmentId: ids.bafoussamSegment,
     primaryAssetId: ids.vh001,
     startedAt: "2026-07-21T06:00:00Z",
-    customerName: "Marché de Bafoussam",
-    description: "Livraison Douala à Bafoussam",
+    customerName: "Bafoussam Market",
+    description: "Delivery: Douala to Bafoussam",
   });
   await runCommand(boris, "record-movement-leg:douala-bafoussam", {
     legId: ids.bafoussamLeg,
@@ -778,8 +812,10 @@ async function seedTransportsNgwa() {
     primaryAssetId: ids.vh003,
     startedAt: "2026-07-29T07:15:00Z",
     plannedEndAt: "2026-07-30T16:00:00Z",
-    customerName: "Client Yaoundé",
-    description: "Livraison en cours Douala à Yaoundé",
+    customerName: "Yaoundé Wholesale",
+    description: "Delivery under way: Douala to Yaoundé",
+    // The office opened it; Sali drives it, so it is her trip too (#569).
+    crew: [{ activityPersonId: ids.yaoundeCrew, personId: ids.saliPerson, role: "DRIVER" }],
   });
   await runCommand(boris, "record-movement-leg:douala-yaounde", {
     legId: ids.yaoundeLeg,
@@ -802,7 +838,7 @@ async function seedTransportsNgwa() {
     branchCode,
     categoryCode: "REPAIRS",
     economicDate: "2026-07-29",
-    description: "Réparation en attente d’approbation — VH003",
+    description: "Repair awaiting approval: VH003",
     amountMinor: 450_000,
     paymentMethod: "CASH",
     sourceReference: "REP-VH003-001",
@@ -885,7 +921,7 @@ async function seedTransportsNgwa() {
       categoryCode: "REPAIRS",
       economicDate: day(-2),
       description: "Brake parts: pads, air valve and hoses",
-      counterpartyName: "Pièces Poids Lourds Akwa",
+      counterpartyName: "Akwa Truck Parts",
       amountMinor: 310_000,
       paymentMethod: "CASH",
       postings: [
@@ -1054,6 +1090,21 @@ async function seedTransportsNgwa() {
     postings: [
       { assetId: ids.vh001, activityId: ids.bafoussamJourney, amountMinor: 86_000 },
     ],
+  });
+
+  // VH001's annual cover: above Finance's 1,000,000 XAF band, so Boris's entry
+  // waits for the Director (#645), as Littoral Voyages' insurance does.
+  await runCommand(boris, "record-expense:VH001:insurance", {
+    entryId: ids.vh001Insurance,
+    branchCode,
+    categoryCode: "INSURANCE",
+    economicDate: day(-4),
+    description: "Annual insurance: VH001",
+    counterpartyName: "Douala Mutual Insurance",
+    amountMinor: 1_650_000,
+    paymentMethod: "BANK",
+    paymentReference: "TRF-NGWA-INS-0926",
+    postings: [{ assetId: ids.vh001, amountMinor: 1_650_000 }],
   });
 
   return {

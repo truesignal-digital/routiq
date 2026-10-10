@@ -23,6 +23,7 @@ const branch = {
 
 const listItem = {
   id: "5f4e3d2c-1b0a-4998-8776-655443322110",
+  number: 7,
   status: "APPROVED",
   description: "Remplacement de la pompe à eau",
   asset,
@@ -35,6 +36,7 @@ const listItem = {
   currency: "XAF",
   issue: {
     id: "aabbccdd-1122-4334-8556-677889900aab",
+    number: 3,
     safetyCritical: true,
   },
   createdAt: "2026-08-12T09:00:00.000Z",
@@ -53,6 +55,14 @@ const listItem = {
 describe("work order list contract", () => {
   it("accepts an approved order whose costs are not yet declared", () => {
     expect(workOrderListItem.parse(listItem)).toEqual(listItem);
+  });
+
+  it("carries the server's number, or null before the server has one, never zero or a fraction (#608)", () => {
+    expect(workOrderListItem.parse({ ...listItem, number: null }).number).toBeNull();
+    expect(workOrderListItem.safeParse({ ...listItem, number: 0 }).success).toBe(false);
+    expect(workOrderListItem.safeParse({ ...listItem, number: 1.5 }).success).toBe(false);
+    const { number: _number, ...unnumbered } = listItem;
+    expect(workOrderListItem.safeParse(unnumbered).success).toBe(false);
   });
 
   it("accepts a preventive order with no linked signalement", () => {
@@ -316,6 +326,7 @@ describe("work order detail contract", () => {
 describe("issue list contract", () => {
   const issue = {
     id: "aabbccdd-1122-4334-8556-677889900aab",
+    number: 3,
     asset,
     branch,
     description: "Fuite de liquide de frein",
@@ -327,7 +338,7 @@ describe("issue list contract", () => {
     resolutionNote: null,
     dismissedAt: null,
     dismissReason: null,
-    workOrders: [{ id: listItem.id, status: "APPROVED" }],
+    workOrders: [{ id: listItem.id, number: 7, status: "APPROVED" }],
     assetUnavailable: true,
     rowVersion: 1,
   };
