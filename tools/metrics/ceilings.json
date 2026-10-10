@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 713902,
+    "ceiling": 735807,
     "raises": [
       {
         "date": "2026-10-06",
@@ -283,11 +283,17 @@
         "from": 713353,
         "to": 713902,
         "reason": "Page-type skeletons for each screen route (#498)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 735807,
+        "reason": "Trucks, Trips and Maintenance Overviews (#665): three Overview screens, the Trucks and Trips frames, the fleet Documents tab, the Planning tab, the profit-bars and week-columns parts, their loaders and fr/en words, about 16 kB gzip, loaded after sign-in. Counted from develop's ceiling, so it also covers the stacked Money page (#664), money words (#659) and page frame (#676) until they merge"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22832,
+    "ceiling": 23077,
     "raises": [
       {
         "date": "2026-10-06",
@@ -342,11 +348,17 @@
         "from": 22508,
         "to": 22832,
         "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23077,
+        "reason": "Overview parts (#665 profit bars and week columns, #664 compare bars and To do list, #676 page frame): their Tailwind classes, 245 B gzip counted from develop's ceiling"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 266200,
+    "ceiling": 273099,
     "raises": [
       {
         "date": "2026-10-06",
@@ -599,6 +611,12 @@
         "from": 265616,
         "to": 266200,
         "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 273099,
+        "reason": "Trucks, Trips and Maintenance open on an Overview tab (#665): fr/en words for the three Overviews, their tabs and filters (about 2.9 kB gzip measured on the two locale catalogs), the tab routes with their filter validation, legacy-link redirects and loaders (about 1.6 kB). Counted from develop's ceiling, so it also covers the stacked #659/#664/#676 words, routes and frame (about 2.4 kB) until they merge; about 35 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
