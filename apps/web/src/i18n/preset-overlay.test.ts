@@ -353,6 +353,39 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  // #653: a start now returns these, so they speak the fleet's words.
+  it("names the trip and the truck in each fleet's own word in a start's warnings", () => {
+    const instance = freshInstance();
+    const warnings = (lng: "fr" | "en") =>
+      ["DRIVER_DOUBLE_BOOKED", "TRIP_STARTED_AFTER_CANCELLATION", "VEHICLE_GROUNDED"].map((code) =>
+        instance.t(`warnings.${code}`, { lng }),
+      );
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(warnings("fr")).toEqual([
+      "Ce chauffeur est déjà prévu sur un autre trajet au même moment.",
+      "Ce trajet avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours.",
+      "Ce camion est immobilisé en ce moment. Il doit être remis en service avant de partir.",
+    ]);
+    expect(warnings("en")).toEqual([
+      "This driver is already booked on another trip at the same time.",
+      "This trip had been cancelled, but it was started offline. It is running again.",
+      "This truck is grounded right now. It must be released to service before it leaves.",
+    ]);
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(warnings("fr")).toEqual([
+      "Ce chauffeur est déjà prévu sur un autre voyage au même moment.",
+      "Ce voyage avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours.",
+      "Ce véhicule est immobilisé en ce moment. Il doit être remis en service avant de partir.",
+    ]);
+    expect(warnings("en")).toEqual([
+      "This driver is already booked on another trip at the same time.",
+      "This trip had been cancelled, but it was started offline. It is running again.",
+      "This vehicle is grounded right now. It must be released to service before it leaves.",
+    ]);
+  });
+
   it("renames the vehicle inside the workshop too", () => {
     const instance = freshInstance();
 
