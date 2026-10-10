@@ -45,7 +45,7 @@ const state = vi.hoisted(() => ({
   comingUp: undefined as ComingUpResponse | undefined,
 }));
 
-vi.mock("../finance/useMoneyOverview.js", () => ({
+vi.mock("../overview/useMoneyOverview.js", () => ({
   useMoneyOverview: () => ({ data: state.overview, isPending: false, isError: false, refetch: vi.fn() }),
 }));
 vi.mock("../assets/useAssetSummary.js", () => ({

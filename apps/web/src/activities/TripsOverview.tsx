@@ -1,0 +1,211 @@
+import { Link } from "@tanstack/react-router";
+import type { ActivitySummary } from "@routiq/contracts";
+import { Fuel, Gauge, Route } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
+import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
+import { WeekColumns } from "@/components/overview/week-columns.js";
+import { ErrorState } from "@/components/page";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDate } from "@/lib/format.js";
+import { useActivitySummary } from "./useActivities.js";
+
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+const LIST = "/activities/list";
+
+function shortDay(iso: string, language: string | undefined): string {
+  return new Intl.DateTimeFormat(language, { month: "short", day: "numeric", timeZone: "UTC" }).format(
+    new Date(`${iso}T00:00:00Z`),
+  );
+}
+
+/**
+ * Trips › Overview (#665, dashboards.html#trips): how much work was done and
+ * what is left to close. Every tile and every column opens the Trips tab
+ * already filtered, so a number and its list always count the same trips.
+ */
+export function TripsOverview() {
+  const { t, i18n } = useTranslation();
+  const summaryQuery = useActivitySummary();
+  const summary = summaryQuery.data;
+  const language = i18n.resolvedLanguage;
+  const tiles = metricTiles(tripTiles(summary, t, language));
+
+  return (
+    <div data-slot="trips-overview" className="flex flex-col gap-5">
+      {summaryQuery.isError && (
+        <ErrorState
+          message={t("activities.loadFailed")}
+          retryLabel={t("activities.retry")}
+          onRetry={() => void summaryQuery.refetch()}
+        />
+      )}
+      {tiles !== undefined && (
+        <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+        <Card data-slot="trips-per-week">
+          <CardHeader>
+            <CardTitle>{t("activities.overview.weeks.title")}</CardTitle>
+            <CardDescription>{t("activities.overview.weeks.question", { count: summary?.weeks.length ?? 12 })}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {summary === undefined ? (
+              <Skeleton className="h-40 w-full" />
+            ) : (
+              <WeekColumns
+                doneLabel={t("activities.overview.weeks.closed")}
+                openLabel={t("activities.overview.weeks.open")}
+                columns={summary.weeks.map((week) => ({
+                  key: week.from,
+                  label: shortDay(week.from, language),
+                  total: week.started,
+                  done: week.closed,
+                  description: t("activities.overview.weeks.column", {
+                    week: shortDay(week.from, language),
+                    started: week.started,
+                    closed: week.closed,
+                  }),
+                  link: { to: LIST, search: { from: week.from, to: week.to } },
+                }))}
+              />
+            )}
+            <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
+              <span>{t("activities.overview.weeks.partial")}</span>
+              <Link to={LIST} className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
+                {t("activities.overview.openList")}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+        {/* On a phone people act first: To do comes before the chart. */}
+        <Card className="order-first lg:order-none">
+          <CardHeader>
+            <CardTitle>{t("activities.overview.todo.title")}</CardTitle>
+            <CardDescription>{t("activities.overview.todo.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {summary === undefined ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (
+              <ToDoList items={tripToDo(summary, t, language)} empty={t("activities.overview.todo.empty")} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export function tripTiles(summary: ActivitySummary | undefined, t: Translate, language: string | undefined): MetricTile[] {
+  const week = summary?.week;
+  const weekSearch = week === undefined ? {} : { from: week.from, to: week.to };
+  const missing = summary?.closedMissing;
+  return [
+    {
+      id: "week-closed",
+      label: t("activities.overview.tiles.weekClosed"),
+      value: summary === undefined ? null : String(summary.weekClosed),
+      hint: t("activities.overview.tiles.weekClosedHint"),
+      link: { to: LIST, search: { status: "CLOSED", ...weekSearch } },
+    },
+    {
+      id: "this-week",
+      label: t("activities.metrics.thisWeek"),
+      value: summary === undefined ? null : String(summary.thisWeek),
+      hint: t("activities.metrics.thisWeekHint"),
+      link: { to: LIST, search: weekSearch },
+    },
+    {
+      id: "open",
+      label: t("activities.status.OPEN"),
+      value: summary === undefined ? null : String(summary.open),
+      ...(summary === undefined
+        ? {}
+        : {
+            hint:
+              summary.oldestOpen === null
+                ? t("activities.overview.tiles.openNone")
+                : t("activities.overview.tiles.openOldest", { date: formatDate(summary.oldestOpen.startedAt, language) }),
+          }),
+      link: { to: LIST, search: { status: "OPEN" } },
+    },
+    {
+      id: "incomplete",
+      label: t("activities.overview.tiles.missingData"),
+      value: summary === undefined ? null : String(summary.incomplete),
+      tone: (summary?.incomplete ?? 0) > 0 ? "warning" : "neutral",
+      ...(missing === undefined
+        ? {}
+        : {
+            hint:
+              missing.fuel === null
+                ? t("activities.overview.tiles.missingKm", { km: missing.km })
+                : t("activities.overview.tiles.missingFuelKm", { fuel: missing.fuel, km: missing.km }),
+          }),
+      info: t("activities.overview.tiles.missingDataInfo"),
+      link: { to: LIST, search: { completeness: "COMPLETE_WITH_EXCEPTIONS" } },
+    },
+    {
+      id: "week-km",
+      label: t("activities.metrics.weekKm"),
+      value:
+        summary === undefined || summary.weekKm === null
+          ? null
+          : t("activities.metrics.weekKmValue", { km: summary.weekKm }),
+      hint: t("activities.metrics.weekKmHint"),
+    },
+  ];
+}
+
+/** Open trips, then closed trips missing a fact; at most one row each, the list one tap away. */
+export function tripToDo(summary: ActivitySummary, t: Translate, language: string | undefined): ToDoItem[] {
+  const items: ToDoItem[] = [];
+  if (summary.open > 0) {
+    const oldest = summary.oldestOpen;
+    items.push({
+      key: "open",
+      icon: <Route className="size-4" aria-hidden />,
+      title: t("activities.overview.todo.open", { count: summary.open }),
+      ...(oldest === null
+        ? {}
+        : {
+            detail:
+              oldest.assetCode === null
+                ? t("activities.overview.todo.oldest", {
+                    number: oldest.activityNumber,
+                    date: formatDate(oldest.startedAt, language),
+                  })
+                : t("activities.overview.todo.oldestWithTruck", {
+                    number: oldest.activityNumber,
+                    code: oldest.assetCode,
+                    date: formatDate(oldest.startedAt, language),
+                  }),
+          }),
+      action: { label: t("activities.overview.todo.openList"), to: LIST, search: { status: "OPEN" } },
+    });
+  }
+  const fuel = summary.closedMissing.fuel;
+  if (fuel !== null && fuel > 0) {
+    items.push({
+      key: "fuel",
+      icon: <Fuel className="size-4 text-warning-foreground" aria-hidden />,
+      title: t("activities.overview.todo.noFuel", { count: fuel }),
+      detail: t("activities.overview.todo.noFuelDetail"),
+      action: { label: t("activities.overview.todo.openList"), to: LIST, search: { missing: "fuel" } },
+    });
+  }
+  if (summary.closedMissing.km > 0) {
+    items.push({
+      key: "km",
+      icon: <Gauge className="size-4 text-warning-foreground" aria-hidden />,
+      title: t("activities.overview.todo.noKm", { count: summary.closedMissing.km }),
+      detail: t("activities.overview.todo.noKmDetail"),
+      action: { label: t("activities.overview.todo.openList"), to: LIST, search: { missing: "km" } },
+    });
+  }
+  return items;
+}

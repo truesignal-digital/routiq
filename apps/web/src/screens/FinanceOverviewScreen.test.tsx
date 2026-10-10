@@ -104,7 +104,7 @@ const state = vi.hoisted(() => ({
   ranges: [] as string[],
 }));
 
-vi.mock("../finance/useMoneyOverview.js", () => ({
+vi.mock("../overview/useMoneyOverview.js", () => ({
   useMoneyOverview: (range: OverviewRange) => {
     state.ranges.push(range);
     return { data: overview(state.view, range), isPending: false, isError: false, refetch: vi.fn() };

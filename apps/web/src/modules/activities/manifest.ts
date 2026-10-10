@@ -43,4 +43,5 @@ export const activitiesManifest: WebModuleManifest = {
   recordPanels: ["trip", "readings"],
   historyKinds: ["TRIPS", "READINGS"],
   fields: ["entry.tripLink", "vehicle.lastTrip"],
+  pageTabs: [],
 };

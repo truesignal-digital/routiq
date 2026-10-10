@@ -70,6 +70,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/assets/:assetId/attention",
       "/v1/assets/:assetId/custodian-candidates",
       "/v1/assets/:assetId/history",
+      "/v1/assets/overview",
       "/v1/assets/summary",
     ],
     roles: ALL_ROLES,

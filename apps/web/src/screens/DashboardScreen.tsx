@@ -39,6 +39,7 @@ import {
   type DashboardTab,
 } from "@/dashboard/tabs.js";
 import { useTodo } from "@/dashboard/useFleetAttention.js";
+import { roleLanding } from "@/shell/landing.js";
 import { visibleSectionGroups } from "@/shell/sections.js";
 
 const DEFAULT_RANGE: ChartRange = HOME_RANGE_DAYS;
@@ -58,6 +59,14 @@ const RECENT_COLUMNS: readonly FinanceEntryColumnId[] = [
  * keeps Home's tiles and panels, and a tab's address sends them back to it.
  */
 export function DashboardScreen() {
+  const me = useMeContext();
+  // The technician opens on the Maintenance Overview (#665).
+  const landing = roleLanding(me?.role, me?.enabledModules);
+  if (landing !== "/") return <Navigate to={landing} replace />;
+  return <Home />;
+}
+
+function Home() {
   const { t } = useTranslation();
   const me = useMeContext();
   const tabPath = useTabPath();

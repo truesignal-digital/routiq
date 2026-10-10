@@ -61,4 +61,5 @@ export const financeManifest: WebModuleManifest = {
   recordPanels: ["entry"],
   historyKinds: ["MONEY"],
   fields: ["trip.money"],
+  pageTabs: [],
 };

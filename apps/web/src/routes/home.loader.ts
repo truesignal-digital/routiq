@@ -4,7 +4,7 @@ import { rangeFromParam, type DashboardRangeParam } from "../dashboard/tabs.js";
 import { dashboardQueryOptions, HOME_RANGE_DAYS } from "../dashboard/useDashboard.js";
 import { comingUpQueryOptions, todoQueryOptions } from "../dashboard/useFleetAttention.js";
 import { entriesQueryOptions } from "../finance/useEntries.js";
-import { moneyOverviewQueryOptions } from "../finance/useMoneyOverview.js";
+import { moneyOverviewQueryOptions } from "../overview/useMoneyOverview.js";
 import { contributes } from "../modules/manifest.js";
 import { ambientBranchId } from "../shell/branch-context.js";
 import { scopedParams } from "../shell/branch-scope.js";

@@ -3,6 +3,7 @@ import {
   assetAttentionStatuses,
   assetListItem,
   assetListResponse,
+  assetOverview,
   assetSummary,
 } from "./assets.js";
 
@@ -87,5 +88,31 @@ describe("asset availability contract", () => {
     });
     expect(assetAvailability.safeParse({ state: "AVAILABLE" }).success).toBe(false);
     expect(assetAvailability.safeParse({ state: "UNKNOWN" }).success).toBe(false);
+  });
+});
+
+describe("asset overview contract", () => {
+  const assetId = "3f6b2a7c-9d41-4a52-8b0e-2c1d5e6f7a8b";
+  const overview = {
+    total: 8,
+    canDrive: 5,
+    grounded: { count: 2, first: { assetId, assetCode: "VH002", since: "2026-10-01T08:00:00.000Z" } },
+    idle: { count: 4, days: 5, first: { assetId, assetCode: "VH004", lastTripAt: null } },
+  };
+
+  it("accepts the counts, and null for a module that is off", () => {
+    expect(assetOverview.parse(overview)).toEqual(overview);
+    const off = { total: 3, canDrive: 3, grounded: null, idle: null };
+    expect(assetOverview.parse(off)).toEqual(off);
+  });
+
+  it("accepts no first vehicle when none is grounded or idle", () => {
+    const none = { ...overview, grounded: { count: 0, first: null }, idle: { count: 0, days: 5, first: null } };
+    expect(assetOverview.parse(none)).toEqual(none);
+  });
+
+  it("refuses a missing tile, which must be null rather than absent", () => {
+    expect(assetOverview.safeParse({ total: 3, canDrive: 3, grounded: null }).success).toBe(false);
+    expect(assetOverview.safeParse({ ...overview, canDrive: -1 }).success).toBe(false);
   });
 });

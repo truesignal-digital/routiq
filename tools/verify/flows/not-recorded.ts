@@ -24,7 +24,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, nav, log }) => {
   await noDash("home");
   await shot("home-tiles", { caption: "Home: the tiles hold figures or words, never a bare dash" });
 
-  await nav("/assets");
+  await nav("/assets/list");
   await quiet();
   if (!phone) await page.getByText(words).first().waitFor();
   await noDash("trucks");
@@ -44,7 +44,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, nav, log }) => {
     ...(phone ? {} : { highlight: page.locator("main [data-slot=not-recorded]").first() }),
   });
 
-  await nav("/maintenance");
+  await nav("/maintenance/work-orders");
   await quiet();
   await noDash("maintenance");
   await shot("maintenance-costs", {
@@ -53,7 +53,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, nav, log }) => {
       : "Maintenance: a cost not known yet reads \"Not recorded\", never a dash",
   });
 
-  await nav("/assets");
+  await nav("/assets/list");
   await quiet();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor();

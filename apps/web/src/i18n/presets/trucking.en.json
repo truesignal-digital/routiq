@@ -47,6 +47,19 @@
     },
     "columns": {
       "asset": "Truck"
+    },
+    "overview": {
+      "profit": {
+        "title": "Profit by truck"
+      },
+      "tiles": {
+        "idle": "No trip for {days}+ days"
+      }
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "No trip for 5+ days"
+      }
     }
   },
   "documents": {
@@ -127,7 +140,12 @@
       "activityTypesFailed": "Could not load trip types."
     },
     "subtitle": "Every trip your trucks run, from start to close.",
-    "loadFailed": "We couldn't load trips. Please retry."
+    "loadFailed": "We couldn't load trips. Please retry.",
+    "overview": {
+      "weeks": {
+        "title": "Trips per week"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {

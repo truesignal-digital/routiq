@@ -1,13 +1,18 @@
 import {
+  ASSET_AVAILABILITY_FILTERS,
+  ASSET_IDLE_DAYS,
   assetAttentionStatuses,
   assetDetail,
   assetLifecycleStatus,
   assetListResponse,
   assetListSortFields,
+  assetOverview,
+  assetOverviewQuery,
   assetSummary,
   canReadLedger,
   listQuery,
   STARTED_ACTIVITY_STATUSES,
+  type AssetAvailabilityFilter,
   type AssetFinancialSummary,
   type AssetLifecycleStatus,
   type AssetListSortField,
@@ -23,6 +28,7 @@ import {
   ilike,
   inArray,
   isNull,
+  notInArray,
   or,
   sql,
   type SQL,
@@ -66,6 +72,7 @@ import { serializeMinor } from "./serialize-minor.js";
 import { readableTripSql } from "./trip-scope.js";
 import type { AuthContext } from "../auth/types.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
+import { invalidRequest } from "./read-gate.js";
 
 /** The filters both the list and the summary narrow the fleet by. */
 const assetFilters = {
@@ -89,6 +96,8 @@ const listQuerySchema = listQuery(
       ),
     // The Attention tile's set, which is not a list of lifecycle statuses.
     attention: z.literal("true").optional(),
+    // The Trucks Overview's tiles (#665), counted by `/v1/assets/overview`.
+    availability: z.enum(ASSET_AVAILABILITY_FILTERS).optional(),
   },
   { sortFields: assetListSortFields },
 );
@@ -112,6 +121,76 @@ interface AssetScopeFilters {
   category?: string | undefined;
   branchId?: string | undefined;
   search?: string | undefined;
+  availability?: AssetAvailabilityFilter | undefined;
+}
+
+/** No new operational records after these (§4.1): out of the fleet that can work. */
+const DISPOSED = ["SOLD", "RETIRED", "WRITTEN_OFF"] as const;
+
+/** The vehicle holds an open availability interval. Says nothing unless MAINTENANCE is on. */
+function openIntervalSql(): SQL {
+  return sql`exists (
+    select 1 from ${assetAvailabilityIntervals}
+    where ${assetAvailabilityIntervals.workspaceId} = ${assets.workspaceId}
+      and ${assetAvailabilityIntervals.assetId} = ${assets.id}
+      and ${assetAvailabilityIntervals.closedAt} is null
+  )`;
+}
+
+/**
+ * When the vehicle last worked: the latest end, else start, of a started trip
+ * it carried. Counted by vehicle, whoever may read the trip. Null when it never
+ * carried one.
+ */
+function lastTripAtSql(): SQL<Date | null> {
+  return sql<Date | null>`(
+    select max(coalesce(${activities.endedAt}, ${activities.startedAt}))
+    from ${activityAssetSegments}
+    inner join ${activities}
+      on ${activities.workspaceId} = ${activityAssetSegments.workspaceId}
+      and ${activities.id} = ${activityAssetSegments.activityId}
+    where ${activityAssetSegments.workspaceId} = ${assets.workspaceId}
+      and ${activityAssetSegments.assetId} = ${assets.id}
+      and ${activities.status} in ('OPEN', 'CLOSED')
+  )`.mapWith(activities.startedAt);
+}
+
+/**
+ * Each availability rule once, as a condition on an `assets` row: the list's
+ * `availability` filter and the overview's tiles both read these, so a tile
+ * counts exactly the vehicles its filter lists. A rule owned by a module that
+ * is off matches nothing (its tile is null, not zero).
+ *
+ * - CAN_DRIVE: IN_SERVICE and, while MAINTENANCE is on, no open interval.
+ * - GROUNDED: an open interval on a vehicle not disposed (MAINTENANCE on).
+ * - IDLE: can drive, on no OPEN trip, and no started trip ended (else
+ *   started) in the last ASSET_IDLE_DAYS days, or none ever (ACTIVITIES on).
+ */
+function availabilitySql(filter: AssetAvailabilityFilter, modules: ReadonlySet<ModuleCode>): SQL {
+  switch (filter) {
+    case "CAN_DRIVE": {
+      const inService = eq(assets.lifecycleStatus, "IN_SERVICE");
+      return modules.has("MAINTENANCE") ? sql`(${inService} and not ${openIntervalSql()})` : inService;
+    }
+    case "GROUNDED":
+      if (!modules.has("MAINTENANCE")) return sql`false`;
+      return sql`(${notInArray(assets.lifecycleStatus, [...DISPOSED])} and ${openIntervalSql()})`;
+    case "IDLE": {
+      if (!modules.has("ACTIVITIES")) return sql`false`;
+      const onOpenTrip = sql`exists (
+        select 1 from ${activityAssetSegments}
+        inner join ${activities}
+          on ${activities.workspaceId} = ${activityAssetSegments.workspaceId}
+          and ${activities.id} = ${activityAssetSegments.activityId}
+        where ${activityAssetSegments.workspaceId} = ${assets.workspaceId}
+          and ${activityAssetSegments.assetId} = ${assets.id}
+          and ${activities.status} = 'OPEN'
+      )`;
+      const lastTripAt = lastTripAtSql();
+      return sql`(${availabilitySql("CAN_DRIVE", modules)} and not ${onOpenTrip} and (${lastTripAt} is null
+        or ${lastTripAt} < now() - make_interval(days => ${ASSET_IDLE_DAYS}::int)))`;
+    }
+  }
 }
 
 /**
@@ -171,6 +250,9 @@ function assetScopeConditions(
   }
   if (filters.attention) {
     conditions.push(needsAttention(modules));
+  }
+  if (filters.availability) {
+    conditions.push(availabilitySql(filters.availability, modules));
   }
 
   if (filters.category) {
@@ -326,7 +408,7 @@ export function registerAssetReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, attention, category, branchId, search, cursor, limit } =
+        const { status, attention, availability, category, branchId, search, cursor, limit } =
           parsedQuery.data;
         const sort = parsedQuery.data.sort ?? defaultAssetSort;
         const sortColumn = assetSortColumns[sort.field];
@@ -343,6 +425,7 @@ export function registerAssetReadRoutes(
         const conditions = assetScopeConditions(auth, modules, {
           status,
           attention: attention === "true",
+          availability,
           category,
           branchId,
           search,
@@ -481,6 +564,102 @@ export function registerAssetReadRoutes(
         req.log.error({ err: error }, "asset summary read failed");
         return reply.status(500).send({ error: { code: "READ_FAILED" } });
       }
+    },
+  );
+
+  // Ahead of `/v1/assets/:assetId` too. Every count reads `availabilitySql`,
+  // the rule the list's `availability` filter applies.
+  defineRead(
+    app,
+    { db, requireAuth },
+    { path: "/v1/assets/overview", module: "ASSETS", roles: ANY_ROLE, branchScope: "per-record" },
+    async ({ req, auth, modules, read }) => {
+      const parsedQuery = assetOverviewQuery.safeParse(req.query);
+      if (!parsedQuery.success) throw invalidRequest();
+      const scope = and(...assetScopeConditions(auth, modules, { branchId: parsedQuery.data.branchId }))!;
+      const grounded = availabilitySql("GROUNDED", modules);
+      const idle = availabilitySql("IDLE", modules);
+      const countWhere = (condition: SQL) => sql<number>`count(*) filter (where ${condition})::int`;
+      // Joined to the branch, so the correlated columns in a select list
+      // render qualified (a single-table select drops the table name).
+      const branchJoin = and(eq(branches.workspaceId, assets.workspaceId), eq(branches.id, assets.branchId));
+
+      const result = await read(async (tx) => {
+        const [counts] = await tx
+          .select({
+            total: countWhere(notInArray(assets.lifecycleStatus, [...DISPOSED])),
+            canDrive: countWhere(availabilitySql("CAN_DRIVE", modules)),
+            grounded: countWhere(grounded),
+            idle: countWhere(idle),
+          })
+          .from(assets)
+          .innerJoin(branches, branchJoin)
+          .where(scope);
+        const [firstGrounded] = modules.has("MAINTENANCE")
+          ? await tx
+              .select({
+                assetId: assets.id,
+                assetCode: assets.assetCode,
+                since: assetAvailabilityIntervals.openedAt,
+              })
+              .from(assets)
+              .innerJoin(
+                assetAvailabilityIntervals,
+                and(
+                  eq(assetAvailabilityIntervals.workspaceId, assets.workspaceId),
+                  eq(assetAvailabilityIntervals.assetId, assets.id),
+                  isNull(assetAvailabilityIntervals.closedAt),
+                ),
+              )
+              .where(and(scope, grounded))
+              .orderBy(asc(assetAvailabilityIntervals.openedAt), asc(assets.assetCode), asc(assets.id))
+              .limit(1)
+          : [];
+        const lastTripAt = lastTripAtSql();
+        const [firstIdle] = modules.has("ACTIVITIES")
+          ? await tx
+              .select({ assetId: assets.id, assetCode: assets.assetCode, lastTripAt })
+              .from(assets)
+              .innerJoin(branches, branchJoin)
+              .where(and(scope, idle))
+              .orderBy(sql`${lastTripAt} asc nulls first`, asc(assets.assetCode), asc(assets.id))
+              .limit(1)
+          : [];
+        return { counts, firstGrounded, firstIdle };
+      });
+
+      const { counts, firstGrounded, firstIdle } = result;
+      return assetOverview.parse({
+        total: counts?.total ?? 0,
+        canDrive: counts?.canDrive ?? 0,
+        grounded: modules.has("MAINTENANCE")
+          ? {
+              count: counts?.grounded ?? 0,
+              first:
+                firstGrounded === undefined
+                  ? null
+                  : {
+                      assetId: firstGrounded.assetId,
+                      assetCode: firstGrounded.assetCode,
+                      since: firstGrounded.since.toISOString(),
+                    },
+            }
+          : null,
+        idle: modules.has("ACTIVITIES")
+          ? {
+              count: counts?.idle ?? 0,
+              days: ASSET_IDLE_DAYS,
+              first:
+                firstIdle === undefined
+                  ? null
+                  : {
+                      assetId: firstIdle.assetId,
+                      assetCode: firstIdle.assetCode,
+                      lastTripAt: firstIdle.lastTripAt?.toISOString() ?? null,
+                    },
+            }
+          : null,
+      });
     },
   );
 

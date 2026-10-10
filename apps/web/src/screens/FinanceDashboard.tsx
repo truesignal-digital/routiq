@@ -20,7 +20,7 @@ import { MoneyMonthsChart } from "@/finance/dashboard/MoneyMonthsChart.js";
 import { dashboardMode, vehicleRows, vehiclesAtALoss, type DashboardMode } from "@/finance/dashboard/money-view.js";
 import { ProfitBridge } from "@/finance/dashboard/ProfitBridge.js";
 import { CompanyLinesList, VehicleProfitTable, VehiclesAtALoss } from "@/finance/dashboard/VehicleProfit.js";
-import { useMoneyOverview } from "@/finance/useMoneyOverview.js";
+import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatMoney, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";

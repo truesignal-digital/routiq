@@ -60,8 +60,8 @@ describe("/finance (#664)", () => {
     sessionStore.save({ ...identity, token: "token", expiresAt: "2099-01-01T00:00:00Z" });
     const router = createRouter({
       routeTree: applicationRouter.routeTree,
-      history: createMemoryHistory({ initialEntries: ["/finance?range=forever"] }),
       context: { queryClient: new QueryClient() },
+      history: createMemoryHistory({ initialEntries: ["/finance?range=forever"] }),
     });
     await router.load();
     expect(router.state.matches.at(-1)?.search).toEqual({});

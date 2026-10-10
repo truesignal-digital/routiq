@@ -7,12 +7,16 @@ import { router } from "../router.js";
  * why. A new screen gets a loader (routes/<screen>.loader.ts, #496) or a line here.
  */
 const NO_LOADER: Record<string, string> = {
+  "/app/assets": "the Trucks page's frame reads nothing of its own; each tab's route loads its reads (#665)",
+  "/app/activities": "the Trips page's frame reads nothing of its own; each tab's route loads its reads (#665)",
+  "/app/finance": "the Money page's frame; its Entries tab loads its reads (#664)",
+  "/app/finance/": "not yet: #504",
+  "/app/finance/approve": "not yet: #504",
+  "/app/assets/documents": "not yet: #504",
+  "/app/activities/planning": "not yet: #504",
   "/app/assets/$assetId/details": "reads only the vehicle, which its parent loads",
   "/app/more": "redirects to Home before it loads (#316)",
   "/app/finance/approvals": "redirects to the Money page's waiting view before it loads (#314)",
-  "/app/finance": "not yet: the Money page's tabs (#664, PR #680) predate the loaders; they get theirs when #680 merges develop",
-  "/app/finance/": "not yet: the Money page's tabs (#664, PR #680) predate the loaders; they get theirs when #680 merges develop",
-  "/app/finance/approve": "not yet: the Money page's tabs (#664, PR #680) predate the loaders; they get theirs when #680 merges develop",
   "/app/my-settings": "reads only the member and branches, which the shell loads",
   "/app/activities/$activityId": "not yet: #504",
   "/app/activities/record": "not yet: #504",

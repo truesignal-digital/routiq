@@ -58,6 +58,7 @@ describe("reads with one module off", () => {
     `/v1/assets/${truck}/history?limit=100`,
     "/v1/assets",
     "/v1/assets/summary",
+    "/v1/assets/overview",
     "/v1/dashboard",
     "/v1/nav-counts",
     `/v1/work-orders?assetId=${truck}`,

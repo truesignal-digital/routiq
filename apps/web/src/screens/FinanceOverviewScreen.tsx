@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { canApproveEntries, canManagePeriods, canReadMoneyOverview } from "@/finance/permissions.js";
 import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
-import { useMoneyOverview } from "@/finance/useMoneyOverview.js";
+import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { usePeriods } from "@/finance/usePeriods.js";
 import {
   formatDate,

@@ -40,11 +40,12 @@ it("never renders or reads as the previous member after an account switch", asyn
   await user.type(screen.getByLabelText("PIN code"), "666666");
   await user.click(signIn);
 
-  await screen.findByRole("heading", { name: "Dashboard" });
+  // The technician opens on the Maintenance Overview (#665), not on the admin's Home.
+  await screen.findByRole("heading", { name: "Maintenance" });
   await waitFor(() =>
-    expect(recorded.requests.slice(from).some((request) => request.url.pathname === "/v1/dashboard")).toBe(true),
+    expect(recorded.requests.slice(from).some((request) => request.url.pathname === "/v1/maintenance/summary")).toBe(true),
   );
-  // Home asks the workshop's own profile; the recent entries it would show an admin never load.
+  // The app asks the workshop's own profile; the recent entries it would show an admin never load.
   await waitFor(() => expect(recorded.requests.slice(from).some((request) => request.url.pathname === "/v1/me")).toBe(true));
   expect(screen.queryByText("Recent entries")).toBeNull();
 

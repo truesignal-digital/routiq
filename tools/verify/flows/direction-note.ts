@@ -22,6 +22,7 @@ type Item = { code: string; subject: { id: string }; params: { description?: str
 async function openVehicle(ctx: DriveContext): Promise<string> {
   const { page, t, quiet } = ctx;
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH001/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH001" }).waitFor();
   await quiet();

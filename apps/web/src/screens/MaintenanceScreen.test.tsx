@@ -32,10 +32,62 @@ const mocks = vi.hoisted(() => ({
   language: "en",
 }));
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => applyNavigate,
-  useSearch: () => useTestSearch(),
-}));
+/** The address the screen draws its tab from; a tab link or a navigate moves it. */
+const path = vi.hoisted(() => {
+  let current = "/maintenance/work-orders";
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (next: string) => {
+      current = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+});
+
+vi.mock("@tanstack/react-router", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useNavigate: () => (options: { to?: string }) => {
+      if (typeof options.to === "string") path.set(options.to);
+      applyNavigate(options);
+    },
+    useSearch: () => useTestSearch(),
+    useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
+      select({ location: { pathname: useSyncExternalStore(path.subscribe, path.get) } }),
+    useMatches: ({ select }: { select: (matches: Array<{ routeId: string }>) => unknown }) =>
+      select([{ routeId: `/app${useSyncExternalStore(path.subscribe, path.get)}` }]),
+    Link: ({
+      to,
+      search: _search,
+      children,
+      onClick,
+      ...props
+    }: {
+      to: string;
+      search?: unknown;
+      children?: ReactNode;
+      onClick?: (event: { preventDefault: () => void }) => void;
+    }) => (
+      <a
+        href={to}
+        {...props}
+        onClick={(event) => {
+          event.preventDefault();
+          onClick?.(event);
+          path.set(to);
+          applyNavigate({ search: {} });
+        }}
+      >
+        {children}
+      </a>
+    ),
+  };
+});
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
 
 vi.mock("../commands/instance.js", () => ({
@@ -296,6 +348,7 @@ function submittedEnvelope(): Record<string, unknown> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  path.set("/maintenance/work-orders");
   issuedQueries.length = 0;
   issuedIssueQueries.length = 0;
   me = admin;
@@ -597,7 +650,7 @@ describe("MaintenanceScreen — state-driven actions", () => {
     expect(screen.queryByRole("button", { name: "commands.create-work-order.label" })).toBeNull();
     expect(screen.queryByRole("button", { name: "commands.report-issue.label" })).toBeNull();
     // …and no menu on an open signalement.
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
   });
@@ -1007,7 +1060,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
 
     expect(
       await screen.findByText("Freins qui sifflent en descente"),
@@ -1026,7 +1079,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
 
     expect(await screen.findByText(label)).toBeTruthy();
     expect(screen.queryByText("BODYWORK")).toBeNull();
@@ -1036,7 +1089,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
 
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
@@ -1085,7 +1138,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     ];
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     expect(screen.getAllByText("maintenance.issues.status.DISMISSED").length).toBeGreaterThan(1);
     expect(screen.getByText("Doublon du signalement de lundi")).toBeTruthy();
@@ -1097,7 +1150,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await user.click(
       await screen.findByRole("radio", { name: "maintenance.issues.status.OPEN" }),
     );
@@ -1114,7 +1167,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     issueRows = [];
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await user.click(
       await screen.findByRole("radio", { name: "maintenance.issues.status.DISMISSED" }),
     );
@@ -1127,7 +1180,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     user: ReturnType<typeof userEvent.setup>,
     name: string,
   ): Promise<void> {
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
     await user.click(await screen.findByRole("menuitem", { name }));
@@ -1194,7 +1247,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     me = as("DRIVER");
     renderScreen();
 
-    await userEvent.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await userEvent.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
   });

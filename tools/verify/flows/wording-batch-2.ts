@@ -51,6 +51,7 @@ function statusBlock(ctx: DriveContext): Locator {
 async function groundedNamesTheOtherProblem(ctx: DriveContext) {
   const { page, t, shot, quiet, apiGet, log } = ctx;
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
   await quiet();

@@ -47,6 +47,19 @@
     },
     "columns": {
       "asset": "Camion"
+    },
+    "overview": {
+      "profit": {
+        "title": "Bénéfice par camion"
+      },
+      "tiles": {
+        "idle": "Sans trajet depuis {days} jours ou plus"
+      }
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "Sans trajet depuis 5 jours ou plus"
+      }
     }
   },
   "documents": {
@@ -139,7 +152,12 @@
       "closed": "Clôturé",
       "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
     },
-    "loadFailed": "Impossible de charger les trajets. Veuillez réessayer."
+    "loadFailed": "Impossible de charger les trajets. Veuillez réessayer.",
+    "overview": {
+      "weeks": {
+        "title": "Trajets par semaine"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {
