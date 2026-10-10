@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EntrySummary } from "@/finance/EntrySummary.js";
@@ -36,7 +36,7 @@ export function FinanceEntryDetailScreen() {
   if (!canReadFinanceEntries(me.role, me.enabledModules)) {
     return <PermissionDenied title={t("finance.entries.detail.title")}
       icon={<FileText className="size-7" aria-hidden />}
-      code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
+      code="ROLE_FORBIDDEN" />;
   }
   return <FinanceEntryDetailContent />;
 }

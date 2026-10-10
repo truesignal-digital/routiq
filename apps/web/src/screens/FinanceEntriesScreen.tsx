@@ -18,7 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
@@ -71,7 +71,7 @@ export function FinanceEntriesScreen() {
   if (!canReadFinanceEntries(me.role, me.enabledModules)) {
     return <PermissionDenied width="wide" title={t("finance.entries.title")}
       icon={<FileText className="size-7" aria-hidden />}
-      code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
+      code="ROLE_FORBIDDEN" />;
   }
   return <FinanceEntriesContent />;
 }

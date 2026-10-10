@@ -2,7 +2,7 @@ import { Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
 import { ApprovalSettings } from "@/settings/ApprovalSettings.js";
 import { canManageCompanySettings } from "@/settings/permissions.js";
@@ -13,12 +13,12 @@ export function CompanySettingsScreen() {
   const me = useMeContext();
 
   if (me === undefined) return null;
-  if (!canManageCompanySettings(me.role, me.enabledModules)) {
+  if (!canManageCompanySettings(me.role)) {
     return (
       <PermissionDenied
         title={t("settings.title")}
         icon={<Settings className="size-7" aria-hidden />}
-        code={me.role === "DIRECTOR" ? deniedCode(false) : "ROLE_FORBIDDEN"}
+        code="ROLE_FORBIDDEN"
       />
     );
   }

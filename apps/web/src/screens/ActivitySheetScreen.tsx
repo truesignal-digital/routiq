@@ -10,7 +10,7 @@ import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,7 +100,7 @@ export function ActivitySheetScreen() {
       <PermissionDenied
         title={label("record-journey-sheet")}
         icon={<RouteIcon className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("ACTIVITIES"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }

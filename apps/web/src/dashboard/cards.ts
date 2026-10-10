@@ -8,17 +8,18 @@ export type DashboardCardKey =
   | "openPeriodExpense"
   | "openPeriodRevenue";
 
+/** Home's panels under the tiles. */
+export const HOME_PANEL_KEYS = ["moneyChart", "recentEntries"] as const;
+export type HomePanelKey = (typeof HOME_PANEL_KEYS)[number];
+
+/** What Home holds that a module can own: the tiles and the panels. */
+export type HomeCardKey = DashboardCardKey | HomePanelKey;
+
 interface DashboardCardGate {
   key: DashboardCardKey;
   /**
-   * Module that owns the card, for cards core still assigns itself; a module's
-   * own cards are named in its manifest (`src/modules/`). A disabled module
-   * removes its cards entirely (§3.3a).
-   */
-  module?: ModuleCode;
-  /**
    * Extra role gate for cards whose target screen is itself role-gated. Absent
-   * means the module alone decides.
+   * means the owning module alone decides (its manifest names the card).
    */
   role?: (role: Role | undefined, enabledModules: readonly ModuleCode[]) => boolean;
 }
@@ -30,23 +31,14 @@ interface DashboardCardGate {
  * worse than not offering it.
  */
 const ALL_CARDS: DashboardCardGate[] = [
-  {
-    key: "pendingApprovals",
-    module: "FINANCE",
-    role: canApproveEntries,
-  },
-  { key: "assets", module: "ASSETS" },
-  { key: "openPeriodExpense", module: "FINANCE", role: canReadFinance },
-  { key: "openPeriodRevenue", module: "FINANCE", role: canReadFinance },
+  { key: "pendingApprovals", role: canApproveEntries },
+  { key: "assets" },
+  { key: "openPeriodExpense", role: canReadFinance },
+  { key: "openPeriodRevenue", role: canReadFinance },
 ];
 
-/** Every card Home has, in order; the module manifests name theirs from these. */
-export const DASHBOARD_CARD_KEYS: readonly DashboardCardKey[] = ALL_CARDS.map((card) => card.key);
-
-/** Cards core still assigns to a module inline; a manifest may not claim them too. */
-export const INLINE_OWNED_CARDS: readonly DashboardCardKey[] = ALL_CARDS.flatMap((card) =>
-  card.module === undefined ? [] : [card.key],
-);
+/** Everything Home has, in order; the module manifests name theirs from these. */
+export const HOME_CARD_KEYS: readonly HomeCardKey[] = [...ALL_CARDS.map((card) => card.key), ...HOME_PANEL_KEYS];
 
 /** While membership is loading no card can be justified, so none render. */
 export function visibleDashboardCards(
@@ -57,9 +49,25 @@ export function visibleDashboardCards(
   return ALL_CARDS.filter(
     (card) =>
       contributes("homeCards", card.key, enabledModules) &&
-      (card.module === undefined || enabledModules.includes(card.module)) &&
       (card.role === undefined || card.role(role, enabledModules)),
   ).map((card) => card.key);
+}
+
+/**
+ * Home's panels this role gets: the expense and revenue chart sums the books
+ * (ledger readers); the recent entries are whatever slice the entries read
+ * returns this role (#264).
+ */
+export function visibleHomePanels(
+  role: Role | undefined,
+  enabledModules: ModuleCode[] | undefined,
+): HomePanelKey[] {
+  if (enabledModules === undefined) return [];
+  const roleAllows: Record<HomePanelKey, boolean> = {
+    moneyChart: canReadFinance(role, enabledModules),
+    recentEntries: canOpenEntriesList(role, enabledModules),
+  };
+  return HOME_PANEL_KEYS.filter((key) => contributes("homeCards", key, enabledModules) && roleAllows[key]);
 }
 
 /**

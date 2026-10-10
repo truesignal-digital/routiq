@@ -30,12 +30,10 @@ export const EVENT_TONE_CLASS: Record<EventTone, string> = {
   success: "bg-success/15 text-success-foreground",
 };
 
-/** Kinds core still gates itself; a module's own kinds come and go with its manifest. */
+/** role-config: the kinds a role may not read even with their module on; the module comes from its manifest. */
 const KIND_GATE: Partial<Record<VehicleHistoryKind, keyof VehicleGates>> = {
   MONEY: "entries",
-  TRIPS: "trips",
   DOCUMENTS: "documents",
-  READINGS: "trips",
 };
 
 /** The kinds this viewer can ask for: a hidden section's events are never offered. */

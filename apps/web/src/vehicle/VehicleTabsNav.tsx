@@ -20,10 +20,9 @@ const SEGMENT: Record<VehicleTab, string> = {
   details: "details",
 };
 
-/** Tabs core still gates itself; a module's own tabs come and go with its manifest. */
+/** role-config: the tabs a role may not read even with their module on; the module comes from its manifest. */
 const GATE: Partial<Record<VehicleTab, keyof VehicleGates>> = {
   money: "money",
-  trips: "trips",
   documents: "documents",
 };
 

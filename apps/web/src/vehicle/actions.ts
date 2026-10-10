@@ -3,7 +3,6 @@ import {
   type AssetAttentionItem,
   type AssetDetail,
   type AttentionCode,
-  type ModuleCode,
   type Role,
 } from "@routiq/contracts";
 import {
@@ -41,7 +40,8 @@ import {
 
 /**
  * The production action catalogue: every action a vehicle offers, who may take
- * it, which module owns it, and whether this vehicle allows it right now. Only
+ * it, and whether this vehicle allows it right now (the owning module names its
+ * actions in its manifest, `src/modules/`). Only
  * built commands appear. Labels and descriptions live in i18n under
  * `vehicle.actions.<key>`.
  */
@@ -68,11 +68,6 @@ export interface VehicleActionDef {
   key: VehicleActionKey;
   group: ActionGroup;
   icon: LucideIcon;
-  /**
-   * The module that owns the action, for actions core still assigns itself.
-   * A module's own actions are named in its manifest (`src/modules/`) instead.
-   */
-  module?: ModuleCode;
   /** The roles the command's default rules accept, as the permission helpers list them. */
   roles: readonly Role[];
   open: ActionOpen;
@@ -89,16 +84,16 @@ const DOCUMENT_KEEPERS = ["DIRECTOR", "ADMIN", "FINANCE"] as const;
 const FIELD_REPORTERS = ["DIRECTOR", "ADMIN", "TECHNICIAN", "DRIVER"] as const;
 
 export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
-  { key: "log-fuel", group: "capture", icon: Fuel, module: "FINANCE", roles: EXPENSE_WRITERS, open: "form" },
-  { key: "record-expense", group: "capture", icon: Receipt, module: "FINANCE", roles: EXPENSE_WRITERS, open: "form" },
+  { key: "log-fuel", group: "capture", icon: Fuel, roles: EXPENSE_WRITERS, open: "form" },
+  { key: "record-expense", group: "capture", icon: Receipt, roles: EXPENSE_WRITERS, open: "form" },
   // Every role may attach, but on the vehicle only the ledger readers see
   // entries to attach to; the workshop reaches its own through work orders.
-  { key: "attach-evidence", group: "capture", icon: Paperclip, module: "FINANCE", roles: LEDGER_READER_ROLES, open: "record-form" },
+  { key: "attach-evidence", group: "capture", icon: Paperclip, roles: LEDGER_READER_ROLES, open: "record-form" },
   {
     key: "record-reading",
     group: "capture",
     icon: Gauge,
-    module: "ACTIVITIES",
+   
     roles: FIELD_REPORTERS,
     open: "form",
   },
@@ -106,7 +101,7 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
     key: "add-note",
     group: "capture",
     icon: StickyNote,
-    module: "CORE",
+   
     roles: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"],
     open: "form",
   },
@@ -123,22 +118,22 @@ export const VEHICLE_ACTIONS: readonly VehicleActionDef[] = [
   { key: "approve-completion", group: "maintenance", icon: ClipboardCheck, roles: WORK_ORDER_DECIDERS, open: "record-form" },
   { key: "cancel-work-order", group: "maintenance", icon: Ban, roles: WORKSHOP, open: "record-form" },
   { key: "release", group: "maintenance", icon: ShieldCheck, roles: MANAGERS, open: "record-form" },
-  { key: "start-trip", group: "operations", icon: Route, module: "ACTIVITIES", roles: TRIP_RUNNERS, open: "navigate" },
-  { key: "change-custodian", group: "operations", icon: UserRound, module: "ASSETS", roles: MANAGERS, open: "form" },
+  { key: "start-trip", group: "operations", icon: Route, roles: TRIP_RUNNERS, open: "navigate" },
+  { key: "change-custodian", group: "operations", icon: UserRound, roles: MANAGERS, open: "form" },
   {
     key: "transfer-branch",
     group: "operations",
     icon: ArrowLeftRight,
-    module: "ASSETS",
+   
     roles: ["DIRECTOR", "ADMIN", "FINANCE"],
     open: "form",
   },
-  { key: "add-document", group: "documents", icon: FilePlus2, module: "DOCUMENTS", roles: DOCUMENT_KEEPERS, open: "form" },
-  { key: "renew-document", group: "documents", icon: FileCheck2, module: "DOCUMENTS", roles: DOCUMENT_KEEPERS, open: "record-form" },
-  { key: "record-revenue", group: "money", icon: CircleDollarSign, module: "FINANCE", roles: REVENUE_WRITERS, open: "form" },
-  { key: "review-entry", group: "money", icon: BadgeCheck, module: "FINANCE", roles: ENTRY_DECIDERS, open: "record" },
-  { key: "reverse-entry", group: "money", icon: Undo2, module: "FINANCE", roles: ENTRY_DECIDERS, open: "navigate" },
-  { key: "commission", group: "lifecycle", icon: PlayCircle, module: "ASSETS", roles: MANAGERS, open: "form" },
+  { key: "add-document", group: "documents", icon: FilePlus2, roles: DOCUMENT_KEEPERS, open: "form" },
+  { key: "renew-document", group: "documents", icon: FileCheck2, roles: DOCUMENT_KEEPERS, open: "record-form" },
+  { key: "record-revenue", group: "money", icon: CircleDollarSign, roles: REVENUE_WRITERS, open: "form" },
+  { key: "review-entry", group: "money", icon: BadgeCheck, roles: ENTRY_DECIDERS, open: "record" },
+  { key: "reverse-entry", group: "money", icon: Undo2, roles: ENTRY_DECIDERS, open: "navigate" },
+  { key: "commission", group: "lifecycle", icon: PlayCircle, roles: MANAGERS, open: "form" },
 ];
 
 export function actionDef(key: VehicleActionKey): VehicleActionDef {
@@ -150,7 +145,6 @@ export function actionDef(key: VehicleActionKey): VehicleActionDef {
 /** Role and module: whether the action exists for this viewer at all. */
 export function actionPermitted(def: VehicleActionDef, viewer: Viewer): boolean {
   if (!contributes("vehicleActions", def.key, viewer.enabledModules)) return false;
-  if (def.module !== undefined && def.module !== "CORE" && !viewer.enabledModules.includes(def.module)) return false;
   return def.roles.includes(viewer.role);
 }
 
