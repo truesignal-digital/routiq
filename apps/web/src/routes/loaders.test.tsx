@@ -42,3 +42,31 @@ it("asks for a screen's data once, and not again when the screen is reopened wit
   expect(requested(recorded, `/v1/assets/${ASSET_ID}`)).toHaveLength(1);
   expect(requested(recorded, `/v1/assets/${ASSET_ID}/attention`)).toHaveLength(1);
 });
+
+/** What the Maintenance page's loader asks for (routes/maintenance.loader.ts). */
+function maintenanceReads(recorded: Awaited<ReturnType<typeof openVehicle>>["recorded"]): string[] {
+  return [
+    ...requested(recorded, "/v1/maintenance/summary"),
+    ...requested(recorded, "/v1/work-orders"),
+    ...requested(recorded, "/v1/issues"),
+    ...requested(recorded, "/v1/categories").filter((url) => url.searchParams.get("kind") === "ISSUE_TYPE"),
+  ].map((url) => `${url.pathname}${url.search}`);
+}
+
+it("starts no reads for a page whose module is off: the page gate answers instead (#496, #326)", async () => {
+  const { recorded } = await openVehicle("/maintenance", {
+    role: "DIRECTOR",
+    modules: ["ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES"],
+  });
+  expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+  expect(maintenanceReads(recorded)).toEqual([]);
+});
+
+it("starts the same page's reads while its module is on", async () => {
+  const { recorded } = await openVehicle("/maintenance", {
+    role: "DIRECTOR",
+    modules: ["ASSETS", "DOCUMENTS", "FINANCE", "ACTIVITIES", "MAINTENANCE"],
+  });
+  await screen.findByRole("heading", { level: 1, name: "Maintenance" });
+  expect(maintenanceReads(recorded).length).toBeGreaterThan(0);
+});

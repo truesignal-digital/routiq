@@ -10,6 +10,7 @@ import {
   workOrderListResponse,
   type HistoryActor,
   type ListSort,
+  type ModuleCode,
 } from "@routiq/contracts";
 import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
@@ -96,18 +97,27 @@ function serializeOptionalMinor(value: bigint | null): number | null {
 }
 
 /**
+ * Work-order money is Finance's (#328): the estimate and the cost summed from
+ * entries show only to a role that reads work-order costs (#390) while FINANCE
+ * is on.
+ */
+function workOrderCostsVisible(auth: AuthContext, modules: ReadonlySet<ModuleCode>): boolean {
+  return canReadWorkOrderCosts(auth.role) && modules.has("FINANCE");
+}
+
+/**
  * A work order's three amounts and its cost still to come (#82), or null for
- * each when the caller may not read work-order costs (#390). Null, never zero:
+ * each when work-order costs are hidden from the caller. Null, never zero:
  * a hidden figure must not read as a free repair.
  */
 function workOrderAmounts(
-  auth: AuthContext,
+  visible: boolean,
   row: CostToComeFacts & {
     expectedCostMinor: bigint | null;
     actualCostMinor: string | null;
   },
 ) {
-  if (!canReadWorkOrderCosts(auth.role)) {
+  if (!visible) {
     return {
       expectedCostMinor: null,
       actualCostMinor: null,
@@ -245,7 +255,7 @@ export function registerMaintenanceReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/work-orders", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = workOrderListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
@@ -376,7 +386,7 @@ export function registerMaintenanceReadRoutes(
             code: row.branchCode,
             name: row.branchName,
           },
-          ...workOrderAmounts(auth, row),
+          ...workOrderAmounts(workOrderCostsVisible(auth, modules), row),
           costOutcome: row.costOutcome,
           currency: row.currency,
           issue:
@@ -420,7 +430,7 @@ export function registerMaintenanceReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/work-orders/:workOrderId", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedParams = z
           .object({ workOrderId: z.uuid() })
@@ -539,7 +549,7 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
-          if (!canReadWorkOrderCosts(auth.role)) {
+          if (!workOrderCostsVisible(auth, modules)) {
             return { header, eventRows, costRows: null, completedBy: completers.get(header.id) ?? null };
           }
 
@@ -610,7 +620,7 @@ export function registerMaintenanceReadRoutes(
             code: header.branchCode,
             name: header.branchName,
           },
-          ...workOrderAmounts(auth, header),
+          ...workOrderAmounts(workOrderCostsVisible(auth, modules), header),
           costOutcome: header.costOutcome,
           currency: header.currency,
           issue:

@@ -44,8 +44,5 @@ describe("CompanySettingsScreen (#354)", () => {
     },
   );
 
-  it("says the module is off when Finance is not enabled", () => {
-    as("DIRECTOR", ["CORE"]);
-    expect(screen.queryByRole("region", { name: "approvals" })).toBeNull();
-  });
+  // With Money off the shell never opens this page: modules/manifests.test.tsx.
 });

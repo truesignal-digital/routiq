@@ -24,7 +24,9 @@ import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCommandLabel } from "../commands/labels.js";
 import { DESTRUCTIVE_STEPS, STEP_COMMANDS, STEP_ICONS } from "./steps.js";
-import type { Lock as LockReason, OfferedStep, Step } from "./model.js";
+import { actionDef } from "./actions.js";
+import { useVehicle } from "./context.js";
+import type { Lock as LockReason, OfferedStep, Step, VehicleActionKey } from "./model.js";
 
 export type Tone = "neutral" | "success" | "warning" | "info" | "danger";
 
@@ -312,6 +314,20 @@ export function useStepLabel() {
     step.key === "review-entry"
       ? t(`vehicle.actions.review-entry.${part}`)
       : label(STEP_COMMANDS[step.key], part);
+}
+
+/** The one primary button a tab carries; it starts the action the way the catalogue says. */
+export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
+  const stepLabel = useStepLabel();
+  const { can, availability, runAction } = useVehicle();
+  if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
+  const Icon = actionDef(actionKey).icon;
+  return (
+    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
+      <Icon aria-hidden />
+      {stepLabel({ key: actionKey })}
+    </Button>
+  );
 }
 
 /** The row's "…": its open steps first, then the locked ones with what they wait for. */

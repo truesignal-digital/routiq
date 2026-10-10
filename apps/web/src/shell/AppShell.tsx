@@ -12,6 +12,7 @@ import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overl
 import { AppSidebar } from "./AppSidebar.js";
 import { BottomBar } from "./BottomBar.js";
 import { BranchProvider, useCurrentBranch } from "./branch-context.js";
+import { ModulePageGate } from "./ModulePageGate.js";
 import { RecordCrumbProvider } from "./record-crumb.js";
 import { SiteHeader } from "./SiteHeader.js";
 
@@ -60,7 +61,9 @@ export function AppShell() {
                 <div data-shift-region="page" className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
                   {/* Rendered by each page's container, in the page's column (#467). */}
                   <PageNoticeProvider notice={<ApprovalRulesNotice />}>
-                    <Outlet />
+                    <ModulePageGate>
+                      <Outlet />
+                    </ModulePageGate>
                   </PageNoticeProvider>
                 </div>
                 <BottomBar />

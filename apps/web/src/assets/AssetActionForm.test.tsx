@@ -12,7 +12,7 @@ import { AssetActionForm } from "./AssetActions.js";
 const mocks = vi.hoisted(() => ({ toastAdd: vi.fn(), useAssetRegistrationReference: vi.fn() }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
-vi.mock("./reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
 

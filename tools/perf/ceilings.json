@@ -87,10 +87,6 @@
     "ceiling": 1,
     "kind": "count"
   },
-  "/finance/approvals.shifts": {
-    "ceiling": 0,
-    "kind": "count"
-  },
   "/finance/entries.ready_ms": {
     "ceiling": 363,
     "kind": "time"

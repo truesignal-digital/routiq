@@ -21,13 +21,12 @@ const TITLE_MAX = 120;
 
 export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
-  const { asset, viewer, panel, gates, pinnedLabel } = useVehicle();
-  const query = useIssue(id, gates.maintenance);
+  const { asset, viewer, panel, pinnedLabel } = useVehicle();
+  const query = useIssue(id);
   const categoryLabel = useIssueCategoryLabel();
   const host = useFormHost(t("vehicle.panel.issueTitle", { ref: recordReference(id) }));
   const locale = i18n.language;
 
-  if (!gates.maintenance) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
   if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
   const issue = query.data;
