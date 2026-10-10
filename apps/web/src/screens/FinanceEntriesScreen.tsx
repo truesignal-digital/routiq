@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import { financialEntryFilters, LIST_LIMIT_DEFAULT } from "@routiq/contracts";
-import type { FinanceSummaryResponse } from "@routiq/contracts";
+import type { FinanceSummaryResponse, FinancialEntryListItem } from "@routiq/contracts";
 import { CalendarCheck, FileText, Maximize2, Plus, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -33,6 +33,7 @@ import {
   canRecordFinance,
   canReverseEntry,
   entriesScope,
+  recordAgainStep,
 } from "@/finance/permissions.js";
 import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
 import { WaitingApprovals } from "@/finance/WaitingApprovals.js";
@@ -153,7 +154,7 @@ function FinanceEntriesContent() {
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   // Cancel entry from the record panel (#525): the panel closes and the dialog
   // takes over, as Reject does in the waiting view.
-  const [cancelling, setCancelling] = useState<{ id: string; rowVersion: number }>();
+  const [cancelling, setCancelling] = useState<Pick<FinancialEntryListItem, "id" | "rowVersion" | "links">>();
   const [recordingAgainId, setRecordingAgainId] = useState<string>();
   const periodCode = filterValues["periodCode"]?.trim() ?? "";
   const sort = toSortParam(sorting);
@@ -405,7 +406,7 @@ function FinanceEntriesContent() {
                     className="min-h-11"
                     onClick={() => {
                       drawer.close();
-                      setCancelling({ id: entry.id, rowVersion: entry.rowVersion });
+                      setCancelling({ id: entry.id, rowVersion: entry.rowVersion, links: entry.links });
                     }}
                   >
                     {label("reverse-entry")}
@@ -443,11 +444,20 @@ function FinanceEntriesContent() {
       {cancelling !== undefined && (
         <ReverseEntryForm
           surface="dialog"
-          entry={cancelling}
-          onRecordAgain={() => {
-            setRecordingAgainId(cancelling.id);
-            setCancelling(undefined);
-          }}
+          entry={{ id: cancelling.id, rowVersion: cancelling.rowVersion }}
+          // role-config: a work-order cost is recorded again by the roles that book one (#559).
+          {...recordAgainStep(me, cancelling, {
+            recordAgain: () => {
+              setRecordingAgainId(cancelling.id);
+              setCancelling(undefined);
+            },
+            openWorkOrder: (assetId, workOrderId) =>
+              void navigate({
+                to: "/assets/$assetId/maintenance",
+                params: { assetId },
+                search: { panel: `work_order:${workOrderId}` },
+              }),
+          })}
           onDismiss={() => setCancelling(undefined)}
         />
       )}

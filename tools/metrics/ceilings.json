@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 683894,
+    "ceiling": 684216,
     "raises": [
       {
         "date": "2026-10-06",
@@ -185,8 +185,8 @@
       {
         "date": "2026-10-10",
         "from": 683412,
-        "to": 683894,
-        "reason": "Planned-trip and cancelled status words for the planning read (#336)"
+        "to": 684216,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
       }
     ]
   },
@@ -244,7 +244,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 258730,
+    "ceiling": 258556,
     "raises": [
       {
         "date": "2026-10-06",
@@ -423,8 +423,8 @@
       {
         "date": "2026-10-10",
         "from": 258261,
-        "to": 258730,
-        "reason": "Planned-trip and cancelled status words for the planning read (#336)"
+        "to": 258556,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
       }
     ]
   }
