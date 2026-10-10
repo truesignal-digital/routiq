@@ -9,8 +9,9 @@ import { useCompanySettings, useInvalidateCompanySettings } from "./useCompanySe
 
 /**
  * Company settings › Dashboard summary (#669, dashboards.html#rule): when the
- * summary notice shows on the Dashboard and every module Overview. Direction
- * sets it for the company; each person can still close the notice.
+ * summary notice shows on the Dashboard and every module Overview. The
+ * Director or an Administrator (#711) sets it for the company; each person can
+ * still close the notice.
  */
 export function SummaryScheduleSettings({ client = commandClient }: { client?: CommandClient }) {
   const { t } = useTranslation();

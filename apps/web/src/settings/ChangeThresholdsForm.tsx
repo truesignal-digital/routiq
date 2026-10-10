@@ -49,7 +49,8 @@ function parsedBands(values: BandValues): UpdateApprovalThresholdV2Payload | und
 }
 
 /**
- * Direction moves both bands of the money chain in one command (#354). The
+ * The Director or an Administrator (#711) moves both bands of the money chain
+ * in one command (#354). The
  * form shows the chain the new amounts make and who will be told before it
  * sends anything, and sends nothing while both amounts are unchanged.
  */
