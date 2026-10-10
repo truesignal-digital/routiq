@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { router } from "../router.js";
 
 /**
@@ -40,4 +40,18 @@ it("every screen in the shell starts its reads in a route loader, or says why no
 it("lists no screen that has a loader after all", () => {
   const stale = Object.keys(NO_LOADER).filter((id) => router.routesById[id as keyof typeof router.routesById]?.options.loader !== undefined);
   expect(stale).toEqual([]);
+});
+
+it("leaves a screen's reads to the screen while offline, so no navigation waits on the connection", () => {
+  const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  try {
+    const screens = Object.values(router.routesById).filter((route) => route.id.startsWith("/app/") && route.options.loader !== undefined);
+    expect(screens.length).toBeGreaterThan(0);
+    for (const route of screens) {
+      const loader = route.options.loader as (args: unknown) => unknown;
+      expect(loader({}), route.id).toBeUndefined();
+    }
+  } finally {
+    onLine.mockRestore();
+  }
 });

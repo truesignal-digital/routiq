@@ -61,8 +61,31 @@ export interface RouterContext {
 
 const rootRoute = createRootRouteWithContext<RouterContext>()();
 
-// Each screen's loader starts its first view's reads (routes/*.loader.ts,
-// #496), loaded on demand like the screen itself.
+/**
+ * Each screen's loader starts its first view's reads (routes/*.loader.ts,
+ * #496), its module loaded on demand like the screen and fetched with the
+ * screens in the background (preloadScreens), so moving around offline needs
+ * no code.
+ */
+const LOADERS = {
+  home: () => import("./routes/home.loader.js"),
+  assets: () => import("./routes/assets.loader.js"),
+  vehicle: () => import("./routes/vehicle.loader.js"),
+  activities: () => import("./routes/activities.loader.js"),
+  finance: () => import("./routes/finance.loader.js"),
+  maintenance: () => import("./routes/maintenance.loader.js"),
+};
+
+/**
+ * A loader never fails or holds a navigation. Offline its module may be
+ * missing (and a failed fetch stays failed for the page's life) and its reads
+ * would wait for the connection, so the screen opens at once and shows its
+ * own loading state; a read that fails is left to the screen.
+ */
+function startReads(run: () => Promise<void>): Promise<void> | undefined {
+  if (!navigator.onLine) return undefined;
+  return run().catch(() => undefined);
+}
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -95,7 +118,7 @@ const appRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
-  loader: (args) => import("./routes/home.loader.js").then((load) => load.home(args)),
+  loader: (args) => startReads(() => LOADERS.home().then((load) => load.home(args))),
   component: DashboardScreen,
 });
 
@@ -108,7 +131,7 @@ const assetsRoute = createRoute({
     status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => import("./routes/assets.loader.js").then((load) => load.assets(args)),
+  loader: (args) => startReads(() => LOADERS.assets().then((load) => load.assets(args))),
   component: AssetsStub,
 });
 
@@ -135,14 +158,14 @@ const assetDetailRoute = createRoute({
       .optional()
       .catch(undefined),
   }),
-  loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicle(args)),
+  loader: (args) => startReads(() => LOADERS.vehicle().then((load) => load.vehicle(args))),
   component: VehicleWorkspaceScreen,
 });
 
 const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
-  loader: (args) => import("./routes/vehicle.loader.js").then((load) => load.vehicleNow(args)),
+  loader: (args) => startReads(() => LOADERS.vehicle().then((load) => load.vehicleNow(args))),
   component: NowTab,
   pendingComponent: SectionPending,
   errorComponent: SectionError,
@@ -224,7 +247,7 @@ const financeEntriesRoute = createRoute({
     branch: z.literal("all").optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => import("./routes/finance.loader.js").then((load) => load.financeEntries(args)),
+  loader: (args) => startReads(() => LOADERS.finance().then((load) => load.financeEntries(args))),
   component: FinanceEntriesScreen,
 });
 
@@ -238,7 +261,7 @@ const activitiesRoute = createRoute({
     to: z.iso.date().optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => import("./routes/activities.loader.js").then((load) => load.activities(args)),
+  loader: (args) => startReads(() => LOADERS.activities().then((load) => load.activities(args))),
   component: ActivitiesScreen,
 });
 
@@ -271,7 +294,7 @@ const maintenanceRoute = createRoute({
     issueStatus: issueStatus.optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => import("./routes/maintenance.loader.js").then((load) => load.maintenance(args)),
+  loader: (args) => startReads(() => LOADERS.maintenance().then((load) => load.maintenance(args))),
   component: MaintenanceScreen,
 });
 
@@ -409,7 +432,7 @@ export function preloadAfterSignIn(): void {
   // The shell's frame and loader are not screens, but sign-in waits on them too.
   void ShellPending.preload();
   void import("./shell/shell-loader.js").catch(() => undefined);
-  void import("./routes/home.loader.js").catch(() => undefined);
+  void LOADERS.home().catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
@@ -451,6 +474,10 @@ export async function preloadScreens(busy: () => boolean = () => false): Promise
   for (const screen of [...AFTER_SIGN_IN, ...SCREENS_BY_USE]) {
     while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
     await screen.preload();
+  }
+  for (const loader of Object.values(LOADERS)) {
+    while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
+    await loader().catch(() => undefined);
   }
 }
 
