@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 692282,
+    "ceiling": 695010,
     "raises": [
       {
         "date": "2026-10-06",
@@ -197,14 +197,14 @@
       {
         "date": "2026-10-10",
         "from": 684895,
-        "to": 684970,
-        "reason": "Named shift regions on the shell's header, page and rules notice for flow:no-shift and pnpm perf (#494)"
+        "to": 686158,
+        "reason": "Module manifests (#326): the manifest contract and slot lookups, the Maintenance manifest, the page gate, and the two module-dependency error messages in fr and en"
       },
       {
         "date": "2026-10-10",
-        "from": 684970,
-        "to": 692282,
-        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+        "from": 686158,
+        "to": 695010,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495), re-measured on develop's module manifests"
       }
     ]
   },
@@ -262,7 +262,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 260621,
+    "ceiling": 261401,
     "raises": [
       {
         "date": "2026-10-06",
@@ -453,8 +453,8 @@
       {
         "date": "2026-10-10",
         "from": 259125,
-        "to": 260621,
-        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+        "to": 261401,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load. Re-measured on develop's module manifests"
       }
     ]
   }

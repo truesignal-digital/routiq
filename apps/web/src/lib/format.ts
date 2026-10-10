@@ -127,6 +127,15 @@ export function parseWholeAmount(text: string, locale?: string): WholeAmount {
   return Number.isSafeInteger(minor) ? { kind: "amount", minor } : { kind: "invalid" };
 }
 
+/**
+ * A typed XAF amount in minor units (exponent 0), read with the grouping of
+ * the language the money input formatted it in. Null when empty or invalid.
+ */
+export function parseMoneyXaf(input: string, locale?: string): number | null {
+  const amount = parseWholeAmount(input, locale);
+  return amount.kind === "amount" ? amount.minor : null;
+}
+
 function toDate(value: string | Date | null | undefined): Date | null {
   if (value == null) return null;
   const date = value instanceof Date ? value : new Date(value);

@@ -7,7 +7,6 @@ import {
   FileWarning,
   ShieldAlert,
   ShieldOff,
-  Wrench,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { IssueListItem, IssueStatus, WorkOrderStatus } from "@routiq/contracts";
@@ -17,7 +16,6 @@ import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMeContext } from "@/auth/me.js";
@@ -43,7 +41,6 @@ import {
   canReleaseAssets,
   canReportIssues,
   canResolveIssues,
-  canViewMaintenance,
 } from "@/maintenance/permissions.js";
 import {
   useIssues,
@@ -100,7 +97,7 @@ export function MaintenanceScreen() {
   const label = useCommandLabel();
   const me = useMeContext();
 
-  const canView = canViewMaintenance(me?.enabledModules);
+  // The shell opens this page only while Maintenance is on (`ModulePageGate`).
   const permissions = {
     manage: canManageWorkOrders(me?.role, me?.enabledModules),
     approve: canApproveWorkOrders(me?.role, me?.enabledModules),
@@ -261,17 +258,6 @@ export function MaintenanceScreen() {
       });
     }
     return actions;
-  }
-
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        width="wide"
-        title={t("maintenance.title")}
-        icon={<Wrench className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("MAINTENANCE"))}
-      />
-    );
   }
 
   return (
