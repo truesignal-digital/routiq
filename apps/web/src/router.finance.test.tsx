@@ -13,7 +13,8 @@ async function land(path: string) {
   sessionStore.save({ ...identity, token: "token", expiresAt: "2099-01-01T00:00:00Z" });
   const router = createRouter({
     routeTree: applicationRouter.routeTree,
-    context: { queryClient: new QueryClient() },
+    // No retries: these tests check where a path lands, not the reads its loader starts.
+    context: { queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   await router.load();
