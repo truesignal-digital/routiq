@@ -2,6 +2,8 @@
 
 Home (`/`) is the Dashboard ("Tableau de bord" / "Dashboard"). Direction, Finance and the Administrator get its tabs: Overview (`/`), To do (`/to-do`), Profit by truck (`/profit-by-vehicle`) and Profit by branch (`/profit-by-branch`), the range in `?range=3-months|12-months` (#666). Drive it with `pnpm verify drive flow:dashboard --role director --lang en` (add `--viewport 390x844` for the phone layout, `--role admin-yde` for the costs view of a branch with no revenue). On a fresh seed this month holds almost no posted money; the 12-month range has the July trips.
 
+Every Overview (the Dashboard, Money, Trucks, Trips, Maintenance) starts with the summary notice when it is due: Mondays, the 1st, or a big change (a vehicle grounded in the last 7 days, expenses 20% above the comparison) (#667). Otherwise the tiles come first and the counted line under them has "Show summary" / "Afficher le résumé". Closing it is stored on the device per person, workspace and Overview (`localStorage` keys `routiq-summary-closed:*`), so a fresh browser context sees it again. Drive it with `pnpm verify drive flow:summary-notice --role director --lang en` (add `--viewport 390x844`).
+
 The cashier, the technician and the driver keep the older Home below: KPI cards for the role, a spending and revenue chart, and recent entries. Finance cards and the chart need a finance reader; the pending-approvals card needs FINANCE or DIRECTOR.
 
 ## Sub-features
