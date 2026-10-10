@@ -24,6 +24,7 @@ import {
   activities,
   activityAssetSegments,
   assetAvailabilityIntervals,
+  assets,
   categories,
   commands,
   documents,
@@ -54,7 +55,7 @@ const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING:
 const clip = (text: string): string => (text.length > 140 ? `${text.slice(0, 139)}…` : text);
 
 /** Whole days from `from` to `to`, both ISO dates. */
-function daysBetween(from: string, to: string): number {
+export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
@@ -89,8 +90,12 @@ async function lastReleases(
   return new Map(rows.map((row) => [row.issueId, row.closedAt]));
 }
 
-/** `books`: FINANCE is on, so a cost still to come can be booked (#82). */
-async function maintenanceItems(
+/**
+ * `books`: FINANCE is on, so a cost still to come can be booked (#82). The
+ * fleet To do (fleet-attention.ts) runs this per vehicle too, so a problem is
+ * "unplanned" by one rule on the truck page and on every Overview.
+ */
+export async function maintenanceItems(
   tx: TenantTx,
   auth: AuthContext,
   assetId: string,
@@ -391,13 +396,24 @@ async function maintenanceItems(
   return { items, grounding };
 }
 
-async function documentItems(
+export interface VehicleAttention<T> {
+  asset: { id: string; assetCode: string; branchId: string };
+  item: T;
+}
+
+/**
+ * Current documents of the vehicles `vehicles` selects (a condition on
+ * `assets`) that expire within `horizonDays`, or already have. The truck page
+ * asks for one vehicle; the fleet To do and Coming up for the caller's branches.
+ */
+export async function documentAttentionRows(
   tx: TenantTx,
   workspaceId: string,
-  assetId: string,
+  vehicles: SQL,
   businessDate: string,
   timezone: string,
-): Promise<AssetAttentionItem[]> {
+  horizonDays: number = DOCUMENT_EXPIRING_WINDOW_DAYS,
+): Promise<Array<VehicleAttention<AssetAttentionItem>>> {
   const superseding = alias(documents, "superseding");
   // The workspace's midnight, so the edge sits where the business date turns.
   const dayStart = (date: SQL) => dayStartSql(date, timezone).mapWith(documents.createdAt);
@@ -413,8 +429,12 @@ async function documentItems(
       ),
       labelFr: categories.labelFr,
       labelEn: categories.labelEn,
+      assetId: assets.id,
+      assetCode: assets.assetCode,
+      branchId: assets.branchId,
     })
     .from(documents)
+    .innerJoin(assets, and(eq(assets.workspaceId, documents.workspaceId), eq(assets.id, documents.assetId)))
     .leftJoin(
       superseding,
       and(eq(superseding.workspaceId, documents.workspaceId), eq(superseding.supersedesDocumentId, documents.id)),
@@ -430,11 +450,11 @@ async function documentItems(
     .where(
       and(
         eq(documents.workspaceId, workspaceId),
-        eq(documents.assetId, assetId),
+        vehicles,
         // Current documents only: a renewal supersedes the old row.
         isNull(superseding.id),
         isNotNull(documents.expiresAt),
-        lte(documents.expiresAt, addDays(businessDate, DOCUMENT_EXPIRING_WINDOW_DAYS)),
+        lte(documents.expiresAt, addDays(businessDate, horizonDays)),
       ),
     );
 
@@ -442,20 +462,48 @@ async function documentItems(
     const expiresAt = row.expiresAt!;
     const expired = expiresAt < businessDate;
     return {
-      code: expired ? "DOCUMENT_EXPIRED" : "DOCUMENT_EXPIRING",
-      severity: expired ? "CRITICAL" : "WARNING",
-      subject: { entityType: "document", id: row.id, number: row.documentNumber, rowVersion: null },
-      since: (expired ? row.expiredSince : row.expiringSince).toISOString(),
-      partOfGrounding: false,
-      makerPrincipalIds: [],
-      params: {
-        documentTypeLabelFr: row.labelFr ?? row.documentTypeCode,
-        documentTypeLabelEn: row.labelEn ?? row.documentTypeCode,
-        expiresAt,
-        daysLeft: daysBetween(businessDate, expiresAt),
-      },
-    } satisfies AssetAttentionItem;
+      asset: { id: row.assetId, assetCode: row.assetCode, branchId: row.branchId },
+      item: {
+        code: expired ? "DOCUMENT_EXPIRED" : "DOCUMENT_EXPIRING",
+        severity: expired ? "CRITICAL" : "WARNING",
+        subject: { entityType: "document", id: row.id, number: row.documentNumber, rowVersion: null },
+        since: (expired ? row.expiredSince : row.expiringSince).toISOString(),
+        partOfGrounding: false,
+        makerPrincipalIds: [],
+        params: {
+          documentTypeLabelFr: row.labelFr ?? row.documentTypeCode,
+          documentTypeLabelEn: row.labelEn ?? row.documentTypeCode,
+          expiresAt,
+          daysLeft: daysBetween(businessDate, expiresAt),
+        },
+      } satisfies AssetAttentionItem,
+    };
   });
+}
+
+/**
+ * Still owes its paperwork: waiting for a decision, or posted while its month
+ * is open, with no receipt where one is expected (ENTRY_EVIDENCE_MISSING).
+ * Over the outer `financial_entries` row.
+ */
+export function evidenceStillDueSql(): SQL {
+  return and(
+    or(
+      eq(financialEntries.status, "SUBMITTED"),
+      and(
+        eq(financialEntries.status, "POSTED"),
+        // Every column written with its table: drizzle leaves the outer one
+        // bare when the select reads financial_entries alone (#483).
+        sql`exists (
+          select 1 from ${postingPeriods} open_period
+          where open_period.workspace_id = ${sql.identifier("financial_entries")}.workspace_id
+            and open_period.id = ${sql.identifier("financial_entries")}.posting_period_id
+            and open_period.status = 'OPEN'
+        )`,
+      ),
+    ),
+    entryEvidenceMissingSql(),
+  )!;
 }
 
 async function entryItems(
@@ -472,15 +520,8 @@ async function entryItems(
   const conditions: SQL[] = [
     eq(financialEntries.workspaceId, auth.workspaceId),
     onVehicle,
-    or(
-      eq(financialEntries.status, "SUBMITTED"),
-      // Posted paperwork can still be completed while its month is open.
-      and(
-        eq(financialEntries.status, "POSTED"),
-        eq(postingPeriods.status, "OPEN"),
-        entryEvidenceMissingSql(),
-      ),
-    )!,
+    // Posted paperwork can still be completed while its month is open.
+    or(eq(financialEntries.status, "SUBMITTED"), evidenceStillDueSql())!,
   ];
   if (auth.branchScope !== "ALL") {
     conditions.push(inArray(financialEntries.branchId, auth.branchScope));
@@ -521,10 +562,6 @@ async function entryItems(
       and(eq(commands.workspaceId, financialEntries.workspaceId), eq(commands.id, financialEntries.createdByCommandId)),
     )
     .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
-    .leftJoin(
-      postingPeriods,
-      and(eq(postingPeriods.workspaceId, financialEntries.workspaceId), eq(postingPeriods.id, financialEntries.postingPeriodId)),
-    )
     .where(and(...conditions));
 
   const directionDecides = await directionDecidesEntries(tx, auth, rows);
@@ -645,7 +682,8 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
     items.push(...(await maintenanceItems(tx, auth, assetId, modules.has("FINANCE"))).items);
   }
   if (modules.has("DOCUMENTS") && canReadDocuments(auth.role)) {
-    items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate, timezone)));
+    const rows = await documentAttentionRows(tx, auth.workspaceId, eq(assets.id, assetId), businessDate, timezone);
+    items.push(...rows.map((row) => row.item));
   }
   if (modules.has("ACTIVITIES")) {
     items.push(...(await tripItems(tx, auth, assetId)));

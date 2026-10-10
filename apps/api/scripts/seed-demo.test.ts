@@ -325,10 +325,10 @@ describe("seed-demo", () => {
       [workspaceId, vh003],
     );
     expect(documents).toEqual([
+      { type: "CARTE_GRISE", days_left: null, renews_one: false },
       { type: "INSURANCE", days_left: 12, renews_one: false },
       { type: "PERMIT", days_left: 400, renews_one: false },
-      { type: "REGISTRATION", days_left: null, renews_one: false },
-      { type: "TECHNICAL_INSPECTION", days_left: -3, renews_one: true },
+      { type: "VISITE_TECHNIQUE", days_left: -3, renews_one: true },
     ]);
   });
 
