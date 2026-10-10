@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 687376,
+    "ceiling": 688223,
     "raises": [
       {
         "date": "2026-10-06",
@@ -211,6 +211,18 @@
         "from": 687197,
         "to": 687376,
         "reason": "Driver views (#584, #619): a driver's entry crumb under their truck and the driver lead on the Money page, in fr and en"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 687376,
+        "to": 688043,
+        "reason": "#622 empty-Home state and sentences (fr+en); #617 module-off crumb"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688043,
+        "to": 688223,
+        "reason": "Fall back to the first visible sortable column when the sorted and default columns are hidden (#548)"
       }
     ]
   },
@@ -268,7 +280,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259326,
+    "ceiling": 259547,
     "raises": [
       {
         "date": "2026-10-06",
@@ -461,6 +473,12 @@
         "from": 259125,
         "to": 259326,
         "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259326,
+        "to": 259547,
+        "reason": "#622 empty-Home sentences (fr+en) in the core catalog; #617 module-off crumb"
       }
     ]
   }

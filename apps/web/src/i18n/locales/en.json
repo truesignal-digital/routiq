@@ -17,6 +17,10 @@
     "title": "Home",
     "loadFailed": "We couldn't load the dashboard. Please retry.",
     "retry": "Try again",
+    "empty": {
+      "modulesOff": "Home has nothing to show: the modules that fill it are switched off for your company.",
+      "modulesOffCompanyPages": "Home has nothing to show: the modules that fill it are switched off for your company. The Company pages in the menu still work."
+    },
     "cards": {
       "pendingApprovals": {
         "title": "Pending approvals",
