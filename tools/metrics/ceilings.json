@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 742024,
+    "ceiling": 713902,
     "raises": [
       {
         "date": "2026-10-06",
@@ -257,18 +257,6 @@
       {
         "date": "2026-10-10",
         "from": 694679,
-        "to": 694965,
-        "reason": "Loss/Profit helper and money words (#659)"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 694679,
-        "to": 699097,
-        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's 286 B until that PR merges"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 694679,
         "to": 694831,
         "reason": "#653 trucking overlays for the grounded-vehicle warning"
       },
@@ -293,13 +281,25 @@
       {
         "date": "2026-10-10",
         "from": 713353,
-        "to": 742024,
-        "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
+        "to": 713902,
+        "reason": "Page-type skeletons for each screen route (#498)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 694965,
+        "reason": "Loss/Profit helper and money words (#659)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 699097,
+        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's 286 B until that PR merges"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23070,
+    "ceiling": 22832,
     "raises": [
       {
         "date": "2026-10-06",
@@ -360,17 +360,11 @@
         "from": 22832,
         "to": 22941,
         "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 22832,
-        "to": 23070,
-        "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 272640,
+    "ceiling": 266200,
     "raises": [
       {
         "date": "2026-10-06",
@@ -603,12 +597,6 @@
       {
         "date": "2026-10-10",
         "from": 261561,
-        "to": 262681,
-        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 261561,
         "to": 263756,
         "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
       },
@@ -627,8 +615,14 @@
       {
         "date": "2026-10-10",
         "from": 265616,
-        "to": 272640,
-        "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
+        "to": 266200,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 262681,
+        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
       }
     ]
   }
