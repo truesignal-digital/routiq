@@ -55,6 +55,7 @@ const admin: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 function fakeClient(result: SubmitResult): CommandClient & { seen: unknown[] } {

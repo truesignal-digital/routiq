@@ -135,14 +135,14 @@ describe("direct links with Maintenance off", () => {
 
   it.each(ROLES)("/maintenance tells %s the module is not included and reads nothing", async (role) => {
     const recorded = await openVehicle("/maintenance", { role, modules: OFF });
-    expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "Maintenance" })).toBeTruthy();
     expect(nothingRead(recorded)).toEqual([]);
   });
 
   it("the vehicle's Maintenance section says the same, without its tab or its reads", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/maintenance`, { role: "TECHNICIAN", modules: OFF });
-    expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
     const tabs = within(screen.getByRole("navigation", { name: "Vehicle sections" })).getAllByRole("tab");
     expect(tabs.map((tab) => tab.textContent)).not.toContain("Maintenance");
     expect(nothingRead(recorded)).toEqual([]);
@@ -165,6 +165,6 @@ describe("direct links with Maintenance off", () => {
     });
     expect(await screen.findByRole("heading", { name: "Maintenance", level: 2 })).toBeTruthy();
     expect(requested(recorded, "/v1/work-orders").length).toBeGreaterThan(0);
-    expect(screen.queryByText("This module is not enabled for your workspace.")).toBeNull();
+    expect(screen.queryByText("This module is not enabled for your company.")).toBeNull();
   });
 });

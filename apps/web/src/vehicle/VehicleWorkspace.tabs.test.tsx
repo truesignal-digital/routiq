@@ -107,7 +107,7 @@ describe("which sections a viewer gets", () => {
       role: "ADMIN",
       modules: ALL_MODULES.filter((module) => module !== "MAINTENANCE"),
     });
-    expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
     expect(requested(recorded, "/v1/work-orders")).toEqual([]);
     expect(requested(recorded, "/v1/issues")).toEqual([]);
   });
@@ -180,6 +180,28 @@ describe("Money", () => {
     // The vehicle's page never narrows to the shell's agency.
     expect(requested(recorded, "/v1/finance/entries").every((url) => !url.searchParams.has("branchId"))).toBe(true);
     expect(recorded.history.location.search).toContain("entries=review");
+  });
+
+  // #639: with no month in the URL, the tab opens on the workspace's month, not the phone's.
+  it("opens on the workspace's month when the device is still in the month before", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Noon UTC on 30 September: 1 October already at UTC+14, still September on the device.
+    vi.setSystemTime(new Date("2026-09-30T12:00:00Z"));
+    try {
+      const recorded = await openVehicle(`/assets/${ASSET_ID}/money`, {
+        role: "FINANCE",
+        timezone: "Pacific/Kiritimati",
+      });
+      expect(await screen.findByRole("heading", { name: "Money · October 2026" })).toBeTruthy();
+      await waitFor(() =>
+        expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`).at(-1)?.searchParams.get("periodCode")).toBe("2026-10"),
+      );
+      expect(requested(recorded, "/v1/finance/entries").at(-1)?.searchParams.get("periodCode")).toBe("2026-10");
+      // October is the current month: there is no month after it to open.
+      expect((screen.getByRole("button", { name: "Next month" }) as HTMLButtonElement).disabled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe("one name for the pending state", () => {

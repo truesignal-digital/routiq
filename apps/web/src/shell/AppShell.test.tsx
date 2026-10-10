@@ -68,6 +68,7 @@ function membership(enabledModules: ModuleCode[]): MeContext {
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
 }
 

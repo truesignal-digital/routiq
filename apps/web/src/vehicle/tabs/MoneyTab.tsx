@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, CircleDollarSign, Receipt } from "lucide-react";
 import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contracts";
+import { useWorkspaceMonth } from "@/auth/workspace-day.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
@@ -85,11 +86,6 @@ export function shiftMonth(period: string, by: number): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export function MoneyTab() {
   const { t } = useTranslation();
   const { gates } = useVehicle();
@@ -112,7 +108,8 @@ function MoneySection() {
   const search = useSearch({ strict: false }) as MoneySearch;
   const { asset } = useVehicle();
   const locale = i18n.language;
-  const period = search.period ?? currentMonth();
+  const thisMonth = useWorkspaceMonth();
+  const period = search.period ?? thisMonth;
   const financeQuery = useAssetFinance(asset.id, period, true);
   const chip = chipOf(search);
   const entriesQuery = useVehicleEntries(asset.id, entriesFilter(chip, period), true);
@@ -155,7 +152,7 @@ function MoneySection() {
                 variant="ghost"
                 size="desktop-icon-sm"
                 aria-label={t("vehicle.money.periodNext")}
-                disabled={period >= currentMonth()}
+                disabled={period >= thisMonth}
                 onClick={() => go({ ...searchOf(chip), period: shiftMonth(period, 1) })}
               >
                 <ChevronRight aria-hidden />

@@ -97,8 +97,8 @@ vi.mock("../auth/me.js", () => ({
 const summary = {
   currency: "XAF",
   month: "2026-10",
-  openPeriodCode: "2026-10",
-  lastLockedPeriodCode: "2026-09",
+  unlockedPeriodCodes: ["2026-08"],
+  lastLockedPeriodCode: "2026-07",
   outMinor: 412_500,
   inMinor: 450_000,
   missingReceipt: { count: 1, oldestEconomicDate: "2026-10-01" },
@@ -450,15 +450,12 @@ describe("FinanceEntriesScreen", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("tells a driver the list holds only what they recorded (#264)", () => {
+  // #645: the lead's "Your expenses." already says it; no second scope line.
+  it("tells a driver the list holds only what they recorded once, in the lead (#264)", () => {
     vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
     render(<FinanceEntriesScreen />);
-    expect(screen.getByText("finance.entries.ownScope")).toBeTruthy();
-  });
-
-  it("says nothing about scope to a ledger reader", () => {
-    render(<FinanceEntriesScreen />);
-    expect(screen.queryByText("finance.entries.ownScope")).toBeNull();
+    expect(screen.getByText("finance.money.lead.own.unlocked")).toBeTruthy();
+    expect(document.querySelector('[data-slot="money-scope-line"]')).toBeNull();
   });
 
   it("sends the chosen order to the read, restarting the cursor", async () => {
@@ -741,7 +738,7 @@ describe("Money page (#314)", () => {
     vi.mocked(canApproveEntries).mockReturnValue(true);
     render(<FinanceEntriesScreen />);
 
-    expect(screen.getByText("finance.money.lead.both")).toBeTruthy();
+    expect(screen.getByText("finance.money.lead.unlocked")).toBeTruthy();
     const tiles = document.querySelectorAll('[data-slot="metric-tile"]');
     expect(tiles).toHaveLength(4);
     expect(screen.getByRole("button", { name: "finance.money.tiles.waiting" })).toBeTruthy();
@@ -751,8 +748,8 @@ describe("Money page (#314)", () => {
     vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
     render(<FinanceEntriesScreen />);
 
-    expect(screen.getByText("finance.money.lead.own.both")).toBeTruthy();
-    expect(screen.queryByText("finance.money.lead.both")).toBeNull();
+    expect(screen.getByText("finance.money.lead.own.unlocked")).toBeTruthy();
+    expect(screen.queryByText("finance.money.lead.unlocked")).toBeNull();
   });
 
   it("filters the list from a tile, and clears it from the same tile", async () => {

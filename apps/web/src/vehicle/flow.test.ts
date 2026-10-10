@@ -561,7 +561,8 @@ describe("to-dos from the attention read", () => {
       vehicle,
       viewer("FINANCE"),
     ).map((todo) => todo.who);
-    expect(who).toEqual(["finance", "financePeer", "director", "finance", "finance"]);
+    // #645: WAITS is a band no role decides, so it names no role.
+    expect(who).toEqual(["finance", "financePeer", "director", "approver", "finance"]);
   });
 
   it("locks the review, and leaves it out of the to-do count, above Finance's band (#393)", () => {
