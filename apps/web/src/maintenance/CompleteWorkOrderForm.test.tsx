@@ -10,7 +10,7 @@ import { sessionStore } from "../auth/store.js";
 import type { CommandClient, SubmitResult } from "../commands/client.js";
 import { i18n } from "../i18n/index.js";
 import { openSelect } from "../test-select.js";
-import { todayIsoDate } from "./close-cost.js";
+import { workspaceToday } from "../lib/workspace-day.js";
 import { CompleteWorkOrderForm, type WorkOrderRef } from "./MaintenanceDialogs.js";
 
 const mocks = vi.hoisted(() => ({
@@ -108,6 +108,7 @@ function me(role: MeContext["role"], modules: MeContext["enabledModules"] = ["CO
     membershipId: "00000000-0000-4000-8000-000000000003",
     displayName: "Sali Ahmadou",
     workspaceName: "Transports Ngwa",
+    timezone: "Africa/Douala",
     role,
     branchScope: "ALL",
     enabledModules: modules,
@@ -220,11 +221,30 @@ describe("closing a work order with nothing recorded", () => {
           categoryCode: "REPAIRS",
           // XAF has exponent 0: 50 000 francs are 50 000 minor units.
           amountMinor: 50_000,
-          economicDate: todayIsoDate(),
+          economicDate: workspaceToday("Africa/Douala"),
         },
       ],
     });
     expect("actualCostMinor" in sent!.payload).toBe(false);
+  });
+
+  // #639: the cost is dated the workspace's today, not the phone's.
+  it("dates the cost on the workspace's day when the device is still on the day before", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Noon UTC on 30 September: 1 October already at UTC+14, still 30 September on the device.
+    vi.setSystemTime(new Date("2026-09-30T12:00:00Z"));
+    try {
+      const client = recordingClient();
+      const { panel } = renderForm(client, { ...me("ADMIN"), timezone: "Pacific/Kiritimati" });
+      await userEvent.type(within(panel).getByLabelText("How much did the repair cost?"), "50000");
+      await userEvent.click(submitButton(panel));
+      await waitFor(() => expect(client.seen).toHaveLength(1));
+      expect(client.seen[0]!.payload).toMatchObject({
+        costLines: [{ economicDate: "2026-10-01" }],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each([

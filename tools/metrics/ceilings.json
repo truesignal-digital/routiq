@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 694047,
+    "ceiling": 694679,
     "raises": [
       {
         "date": "2026-10-06",
@@ -247,6 +247,12 @@
         "from": 692894,
         "to": 694047,
         "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694047,
+        "to": 694679,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
       }
     ]
   },
@@ -310,7 +316,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 261338,
+    "ceiling": 261561,
     "raises": [
       {
         "date": "2026-10-06",
@@ -533,6 +539,12 @@
         "from": 261228,
         "to": 261338,
         "reason": "#608 work order and problem numbers (formatter and catalog strings)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261338,
+        "to": 261561,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
       }
     ]
   }

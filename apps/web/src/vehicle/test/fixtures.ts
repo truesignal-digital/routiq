@@ -61,6 +61,7 @@ export function me(role: Role, modules: ModuleCode[] = ALL_MODULES): MeContext {
     membershipId: "00000000-0000-4000-8000-000000000003",
     displayName: "Sali Ahmadou",
     workspaceName: "Transports Ngwa",
+    timezone: "Africa/Douala",
     role,
     branchScope: "ALL",
     enabledModules: modules,

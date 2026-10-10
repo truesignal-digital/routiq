@@ -496,6 +496,8 @@ it.each([
   ["FINANCE_APPROVES", "Waiting on Finance to review it."],
   ["FINANCE_PEER_APPROVES", "Waiting on another Finance member or the Director to review it."],
   ["DIRECTION_APPROVES", "Waiting on the Director to review it."],
+  // #645: no role on the chain decides it, so no role is named.
+  ["WAITS", "Waiting on an approver to review it."],
 ] as const)("says who reviews a waiting entry on its record (#542, %s)", async (approver, sentence) => {
   await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
     role: "ADMIN",

@@ -147,7 +147,7 @@
     "AUTH_INVALID_TOKEN": "Session expirée. Veuillez vous reconnecter.",
     "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
     "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
-    "MODULE_DISABLED": "Ce module n'est pas activé pour votre espace de travail.",
+    "MODULE_DISABLED": "Ce module n'est pas activé pour votre entreprise.",
     "MODULE_STILL_REQUIRED": "Un autre module activé a besoin de celui-ci. Désactivez-le d'abord.",
     "MODULE_DEPENDENCY_DISABLED": "Ce module a besoin d'un module qui n'est pas activé. Activez celui-là d'abord.",
     "UNIQUE_CONSTRAINT_VIOLATION": "Un enregistrement identique existe déjà.",
@@ -475,13 +475,15 @@
     },
     "money": {
       "lead": {
-        "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
-        "open": "Toutes les dépenses et recettes. {open} est ouvert.",
-        "none": "Toutes les dépenses et recettes.",
+        "unlocked": "Toutes les dépenses et recettes. {months} {count, plural, one {n'est pas encore clôturé} other {ne sont pas encore clôturés}}. Les totaux portent sur {month}.",
+        "unlockedMany": "Toutes les dépenses et recettes. {count} mois ne sont pas encore clôturés, à partir de {oldest}. Les totaux portent sur {month}.",
+        "locked": "Toutes les dépenses et recettes. {locked} est clôturé. Les totaux portent sur {month}.",
+        "none": "Toutes les dépenses et recettes. Les totaux portent sur {month}.",
         "own": {
-          "both": "Vos dépenses. {open} est ouvert ; {locked} est clôturé.",
-          "open": "Vos dépenses. {open} est ouvert.",
-          "none": "Vos dépenses."
+          "unlocked": "Vos dépenses. {months} {count, plural, one {n'est pas encore clôturé} other {ne sont pas encore clôturés}}. Les totaux portent sur {month}.",
+          "unlockedMany": "Vos dépenses. {count} mois ne sont pas encore clôturés, à partir de {oldest}. Les totaux portent sur {month}.",
+          "locked": "Vos dépenses. {locked} est clôturé. Les totaux portent sur {month}.",
+          "none": "Vos dépenses. Les totaux portent sur {month}."
         }
       },
       "tiles": {
@@ -541,7 +543,6 @@
       "retry": "Réessayer",
       "empty": "Aucune écriture enregistrée pour l'instant.",
       "branchEmpty": "Aucune écriture pour cette agence.",
-      "ownScope": "Seules les écritures que vous avez saisies apparaissent ici.",
       "ownEmpty": "Vous n'avez saisi aucune écriture. Celles que vous saisirez apparaîtront ici.",
       "loadMore": "Charger plus",
       "status": {
@@ -2384,6 +2385,7 @@
       "recorder": "L'auteur de la saisie",
       "director": "La Direction",
       "financePeer": "Un autre membre de la Finance ou la Direction",
+      "approver": "Un approbateur",
       "team": "L'équipe"
     },
     "now": {
@@ -2775,7 +2777,7 @@
         "release": "En attente de la remise en service par un responsable.",
         "otherSafetyIssue": "En attente de la clôture {count, plural, one {d'un autre problème critique : « {description} ».} other {de # autres problèmes critiques, dont « {description} ».}}",
         "planning": "En attente d'un ordre de travail de l'atelier.",
-        "entryReview": "En attente d'examen par {approver, select, DIRECTION_APPROVES {la Direction} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} other {la Finance}}. D'ici là, elle n'est pas comptée dans le comptabilisé.",
+        "entryReview": "En attente d'examen par {approver, select, DIRECTION_APPROVES {la Direction} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} FINANCE_APPROVES {la Finance} other {un approbateur}}. D'ici là, elle n'est pas comptée dans le comptabilisé.",
         "entryReceipt": "En attente du reçu de {name}.",
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },

@@ -45,6 +45,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/money-input.js";
 import { useMeContext } from "../auth/me.js";
+import { useWorkspaceToday } from "../auth/workspace-day.js";
 import { useActiveSession } from "../auth/store.js";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
 import { useCategories } from "../categories/useCategories.js";
@@ -64,7 +65,6 @@ import {
   newCostLine,
   recordedCost,
   REPAIR_CATEGORY_CODE,
-  todayIsoDate,
   toCompletionCost,
   type CostChoice,
   type CostLineDraft,
@@ -557,7 +557,8 @@ export function CompleteWorkOrderForm({
   const repairCategory = categories.find((category) => category.code === REPAIR_CATEGORY_CODE);
   // Loaded and without the repair category: the first line asks for one.
   const askCategory = categoriesQuery.isSuccess && repairCategory === undefined;
-  const [economicDate] = useState(() => todayIsoDate());
+  const today = useWorkspaceToday();
+  const [economicDate] = useState(today);
   const intent = useRef<CommandIntent<CompleteWorkOrderInput> | undefined>(undefined);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
