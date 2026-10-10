@@ -77,7 +77,7 @@ const FLEET: AssetOverview = {
   canDrive: 10,
   grounded: { count: 1, first: { assetId: "a3", assetCode: "VH003", since: "2026-10-01T08:00:00.000Z" } },
   idle: null,
-  notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+  notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
 };
 
 const SCOPE = { ambientBranch: "IGNORED" as const, branchIds: "ALL" as const };

@@ -461,9 +461,7 @@
     },
     "usage": {
       "kmKnown": "Km connus pour {known, number} sur {total, plural, one {# camion} other {# camions}}"
-    }
-  },
-  "overview": {
+    },
     "summary": {
       "change": {
         "groundedMany": "{count, plural, one {# camion a été immobilisé ces 7 derniers jours et est toujours à l’arrêt : {codes}.} other {# camions ont été immobilisés ces 7 derniers jours et sont toujours à l’arrêt : {codes}.}}"

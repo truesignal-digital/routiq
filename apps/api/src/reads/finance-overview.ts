@@ -14,7 +14,7 @@ import {
   type OverviewRange,
   type SummaryTemplate,
 } from "@routiq/contracts";
-import { and, eq, gte, inArray, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";

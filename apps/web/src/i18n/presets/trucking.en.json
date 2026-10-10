@@ -448,9 +448,7 @@
     },
     "usage": {
       "kmKnown": "Km known for {known, number} of {total, plural, one {# truck} other {# trucks}}"
-    }
-  },
-  "overview": {
+    },
     "summary": {
       "change": {
         "groundedMany": "{count, plural, one {# truck was grounded in the last 7 days and is still off the road: {codes}.} other {# trucks were grounded in the last 7 days and are still off the road: {codes}.}}"
