@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 764263,
+    "ceiling": 764827,
     "raises": [
       {
         "date": "2026-10-06",
@@ -307,6 +307,12 @@
         "from": 713902,
         "to": 764263,
         "reason": "Summary notice on every Overview (#667): component, money sentence helper, verdict badge and fr/en words, about 6.3 kB gzip across the catalogs and the five Overview chunks. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 764263,
+        "to": 764827,
+        "reason": "Dashboard summary setting (#669): Company settings section, form, read hook, and its fr and en words"
       }
     ]
   },
@@ -388,7 +394,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 279795,
+    "ceiling": 280366,
     "raises": [
       {
         "date": "2026-10-06",
@@ -659,6 +665,12 @@
         "from": 266200,
         "to": 279795,
         "reason": "Summary notice on every Overview (#667): its fr/en ICU sentences (five money templates for profit and expenses, the module Overviews' sentences, trip-word overlays for both presets) in the first-load i18n catalog plus the notice component, about 2.3 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 279795,
+        "to": 280366,
+        "reason": "Dashboard summary setting (#669): its fr and en words in the first-load i18n chunk and the schedule list in contracts"
       }
     ]
   }
