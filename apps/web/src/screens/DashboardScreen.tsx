@@ -17,7 +17,7 @@ import {
 import { useMeContext } from "@/auth/me.js";
 import { ModulePage, type ModulePageTab } from "@/components/module-page.js";
 import { ChartAreaInteractive, type ChartRange } from "@/dashboard/ChartAreaInteractive.js";
-import { useDashboard } from "@/dashboard/useDashboard.js";
+import { HOME_RANGE_DAYS, useDashboard } from "@/dashboard/useDashboard.js";
 import {
   canOpenEntriesList,
   showsDashboardOverview,
@@ -41,7 +41,7 @@ import {
 import { useTodo } from "@/dashboard/useFleetAttention.js";
 import { visibleSectionGroups } from "@/shell/sections.js";
 
-const DEFAULT_RANGE: ChartRange = 90;
+const DEFAULT_RANGE: ChartRange = HOME_RANGE_DAYS;
 
 /** Module-level so the column memo in `useFinanceEntryColumns` holds. */
 const RECENT_COLUMNS: readonly FinanceEntryColumnId[] = [

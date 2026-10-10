@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import {
   DASHBOARD_SERIES_DAYS_DEFAULT,
   dashboardResponse,
   type DashboardResponse,
 } from "@routiq/contracts";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 import {
   useBranchScopedParams,
   type BranchScopedParams,
@@ -40,14 +41,16 @@ export async function fetchDashboard(
 export function useDashboard(days: number = DASHBOARD_SERIES_DAYS_DEFAULT) {
   const session = useActiveSession();
   const { branchId } = useBranchScopedParams<BranchScopedParams>({});
+  return useQuery(dashboardQueryOptions(session?.workspaceSlug, days, branchId));
+}
 
-  return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "dashboard", days, branchId ?? "ALL"],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchDashboard(token, days, signal, fetch, branchId);
-    },
+/** The range Home opens on. */
+export const HOME_RANGE_DAYS = 90;
+
+export function dashboardQueryOptions(workspaceSlug: string | undefined, days: number, branchId: string | undefined) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "dashboard", days, branchId ?? "ALL"],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchDashboard(token, days, signal, fetch, branchId)),
   });
 }

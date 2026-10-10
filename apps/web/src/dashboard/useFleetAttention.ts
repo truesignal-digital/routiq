@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import type { ComingUpResponse, TodoResponse } from "@routiq/contracts";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -72,27 +73,27 @@ export function fetchComingUp(
  */
 export function useTodo(enabled = true) {
   const session = useActiveSession();
-  return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "finance", "todo"],
-    enabled: enabled && session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchTodo(token, signal);
-    },
+  return useQuery({ ...todoQueryOptions(session?.workspaceSlug), enabled: enabled && session !== undefined });
+}
+
+export function todoQueryOptions(workspaceSlug: string | undefined) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "finance", "todo"],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchTodo(token, signal)),
   });
 }
 
 /** What falls due in the next `days` days (`GET /v1/coming-up`), whole Branch Scope. */
 export function useComingUp(days: 14 | 30 = 14, enabled = true) {
   const session = useActiveSession();
-  return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "coming-up", days],
-    enabled: enabled && session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchComingUp(token, days, signal);
-    },
+  return useQuery({ ...comingUpQueryOptions(session?.workspaceSlug, days), enabled: enabled && session !== undefined });
+}
+
+export function comingUpQueryOptions(workspaceSlug: string | undefined, days: 14 | 30) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "coming-up", days],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchComingUp(token, days, signal)),
   });
 }
