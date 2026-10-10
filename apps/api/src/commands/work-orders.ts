@@ -29,6 +29,7 @@ import {
 } from "./dispatcher.js";
 import { writeFinancialEntry } from "./financial-entry-writer.js";
 import { resolveLinkedIssueOnCompletion } from "./issue-decisions.js";
+import { nextWorkOrderNumber } from "./numbering.js";
 import {
   loadWorkOrderForUpdate,
   requireAsset,
@@ -108,10 +109,12 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
     }
 
     const status = approval.outcome === "AUTO_APPROVED" ? "APPROVED" : "SUBMITTED";
+    const number = await nextWorkOrderNumber(tx, ctx);
 
     await tx.insert(workOrders).values({
       id: payload.workOrderId,
       workspaceId: ctx.workspaceId,
+      number,
       assetId: payload.assetId,
       ...(payload.issueId === undefined ? {} : { issueId: payload.issueId }),
       description: payload.description,
@@ -127,6 +130,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
       entityId: payload.workOrderId,
       afterState: {
         id: payload.workOrderId,
+        number,
         assetId: payload.assetId,
         issueId: payload.issueId ?? null,
         description: payload.description,
@@ -137,6 +141,7 @@ export const createWorkOrder: CommandDefinition<CreateWorkOrderPayload> = {
       },
       changedFields: [
         "id",
+        "number",
         "assetId",
         "issueId",
         "description",

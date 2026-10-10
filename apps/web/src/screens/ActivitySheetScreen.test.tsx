@@ -87,6 +87,7 @@ const clerk: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ACTIVITIES", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 /** The office side: records the fares and freight a driver does not (#532). */

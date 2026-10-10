@@ -30,7 +30,6 @@ import {
 import { contributes } from "../modules/manifest.js";
 import { groundingFacts, isDisposed, releaseBlocker, releaseLockFor } from "./flow.js";
 import {
-  recordReference,
   type Lock,
   type LockKey,
   type PanelRef,
@@ -177,7 +176,16 @@ function recordOf(item: AssetAttentionItem): PanelRef {
   if (entityType === "work_order") return { kind: "work_order", id };
   if (entityType === "operational_issue") return { kind: "issue", id };
   if (entityType === "document") return { kind: "document", id };
+  if (entityType === "activity") return { kind: "trip", id };
   return { kind: "entry", id };
+}
+
+/** The work order or problem an item is about, for a lock reason that names it (#608). */
+function subjectRef(item: AssetAttentionItem): Pick<Lock, "ref"> {
+  const number = item.params.recordNumber ?? null;
+  if (item.subject.entityType === "work_order") return { ref: { kind: "work_order", number } };
+  if (item.subject.entityType === "operational_issue") return { ref: { kind: "issue", number } };
+  return {};
 }
 
 /**
@@ -194,7 +202,7 @@ function decision(
   if (first === undefined) return locked({ key: noneLock });
   const open = items.find((item) => !item.makerPrincipalIds.includes(viewer.principalId));
   if (open !== undefined) return enabled(recordOf(open));
-  return locked({ key: makerLock, params: { ref: recordReference(first.subject.id) } });
+  return locked({ key: makerLock, ...subjectRef(first) });
 }
 
 /**

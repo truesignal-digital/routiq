@@ -123,6 +123,7 @@ export async function loadAvailability(
   const [issue] = await tx
     .select({
       id: operationalIssues.id,
+      number: operationalIssues.number,
       description: operationalIssues.description,
       safetyCritical: operationalIssues.safetyCritical,
       category: operationalIssues.category,
@@ -145,6 +146,7 @@ export async function loadAvailability(
   const orders = await tx
     .select({
       id: workOrders.id,
+      number: workOrders.number,
       status: workOrders.status,
       rowVersion: workOrders.rowVersion,
       createdAt: commands.executedAt,
@@ -179,6 +181,7 @@ export async function loadAvailability(
     intervalRowVersion: open.rowVersion,
     issue: {
       id: issue.id,
+      number: issue.number,
       description: issue.description,
       safetyCritical: issue.safetyCritical,
       category: issue.category,
@@ -190,6 +193,7 @@ export async function loadAvailability(
     },
     workOrders: orders.map((order) => ({
       id: order.id,
+      number: order.number,
       status: order.status,
       rowVersion: order.rowVersion,
       createdAt: order.createdAt.toISOString(),

@@ -79,13 +79,6 @@ function parseSpecNumber(raw: string): number | undefined {
 
 const trimmedOrNull = (raw: string) => (raw.trim() === "" ? null : raw.trim());
 
-/** Today in the reader's own calendar, as an ISO date. */
-export function todayIso(now: Date = new Date()): string {
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
 interface CheckContext {
   /** What the card opened with: a field still holding it is not re-checked. */
   initial: DetailsFormValues;

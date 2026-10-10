@@ -47,6 +47,7 @@ const approver: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 const approvalEntries = [

@@ -23,7 +23,8 @@ const WORK_ORDER_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 const ISSUE_ID = "5e6f7a8b-0000-4000-8000-000000000002";
 const ASSET_ID = "9c0d1e2f-0000-4000-8000-000000000003";
 const NEW_RECORD_ID = "0000aaaa-0000-4000-8000-00000000000f";
-const WORK_ORDER_REFERENCE = "1A2B3C4D";
+/** This suite's `t` returns keys: the work order's number renders as its catalog key (#608). */
+const WORK_ORDER_REFERENCE = "common.recordNumber.workOrder";
 
 const mocks = vi.hoisted(() => ({
   submit: vi.fn(),
@@ -150,6 +151,7 @@ const { MaintenanceScreen } = await import("./MaintenanceScreen.js");
 function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
   return {
     id: WORK_ORDER_ID,
+    number: 7,
     status,
     description: "Remplacement des plaquettes de frein",
     asset: {
@@ -169,7 +171,7 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
     costOutcome: status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? "LINES" : null,
     costToCome: null,
     currency: "XAF",
-    issue: { id: ISSUE_ID, safetyCritical: true },
+    issue: { id: ISSUE_ID, number: 3, safetyCritical: true },
     createdAt: "2026-08-01T08:00:00.000Z",
     completedAt: null,
     cancelledAt: null,
@@ -216,11 +218,13 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
       },
     ],
     pendingCostLines: [],
+    otherBranchesCostMinor: 0,
   };
 }
 
 const issue: IssueListItem = {
   id: ISSUE_ID,
+  number: 3,
   asset: { id: ASSET_ID, assetCode: "CMR-TR-014", registrationNumber: "LT-8842-AB" },
   branch: {
     id: "22222222-2222-4222-8222-222222222222",
@@ -236,7 +240,7 @@ const issue: IssueListItem = {
   resolutionNote: null,
   dismissedAt: null,
   dismissReason: null,
-  workOrders: [{ id: WORK_ORDER_ID, status: "APPROVED" }],
+  workOrders: [{ id: WORK_ORDER_ID, number: 7, status: "APPROVED" }],
   assetUnavailable: true,
   rowVersion: 2,
 };
@@ -252,6 +256,7 @@ const admin: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS", "MAINTENANCE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function as(role: MeContext["role"]): MeContext {
@@ -350,6 +355,42 @@ describe("MaintenanceScreen — work order queue", () => {
     renderScreen();
     await screen.findByText(WORK_ORDER_REFERENCE);
     expect(issuedQueries.at(-1)?.branchId).toBeUndefined();
+  });
+});
+
+describe("MaintenanceScreen — cost columns", () => {
+  const headers = async () => {
+    await screen.findByText(WORK_ORDER_REFERENCE);
+    return screen.getAllByRole("columnheader").map((header) => header.textContent);
+  };
+
+  it("shows Expected and Actual cost while FINANCE is on", async () => {
+    me = { ...admin, enabledModules: [...admin.enabledModules, "FINANCE"] };
+    renderScreen();
+    expect(await headers()).toEqual(
+      expect.arrayContaining([
+        "maintenance.workOrders.columns.expectedCost",
+        "maintenance.workOrders.columns.actualCost",
+      ]),
+    );
+  });
+
+  it("drops the Actual cost column while FINANCE is off, keeping the estimate (#640)", async () => {
+    workOrderRow = { ...makeWorkOrder("COMPLETED"), actualCostMinor: null, costOutcome: null };
+    renderScreen();
+    const shown = await headers();
+    expect(shown).toContain("maintenance.workOrders.columns.expectedCost");
+    expect(shown).not.toContain("maintenance.workOrders.columns.actualCost");
+    expect(screen.queryByText(/not recorded|notRecorded/i)).toBeNull();
+  });
+
+  it("drops both cost columns for a driver, who reads no work-order money (#390)", async () => {
+    me = { ...as("DRIVER"), enabledModules: [...admin.enabledModules, "FINANCE"] };
+    workOrderRow = { ...makeWorkOrder("APPROVED"), expectedCostMinor: null };
+    renderScreen();
+    const shown = await headers();
+    expect(shown).not.toContain("maintenance.workOrders.columns.expectedCost");
+    expect(shown).not.toContain("maintenance.workOrders.columns.actualCost");
   });
 });
 
@@ -563,7 +604,7 @@ describe("MaintenanceScreen — state-driven actions", () => {
 });
 
 describe("MaintenanceScreen — row sheet costs", () => {
-  it("keeps pending cost lines apart from the posted set", async () => {
+  it("lists pending lines in Costs, marked awaiting review, so the list adds up to Actual cost (#642)", async () => {
     const user = userEvent.setup();
     detail = {
       ...makeDetail(workOrderRow),
@@ -583,27 +624,56 @@ describe("MaintenanceScreen — row sheet costs", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    const posted = within(sheet).getByText("maintenance.detail.costLines").parentElement;
-    const pending = within(sheet).getByText("maintenance.detail.pendingCostLines")
-      .parentElement;
-    if (posted === null || pending === null) throw new Error("cost sections missing");
+    const costs = within(sheet).getByText("maintenance.detail.costLines").parentElement;
+    if (costs === null) throw new Error("cost section missing");
 
-    expect(within(posted).getByText("DLA-2026-00007")).toBeTruthy();
-    expect(within(posted).queryByText("DLA-2026-00009")).toBeNull();
-    expect(within(pending).getByText("DLA-2026-00009")).toBeTruthy();
-    expect(
-      within(pending).getByText("finance.entries.status.SUBMITTED"),
-    ).toBeTruthy();
-    expect(
-      within(pending).getByText("maintenance.detail.pendingCostLinesHint"),
-    ).toBeTruthy();
+    expect(within(costs).getByText("DLA-2026-00007")).toBeTruthy();
+    expect(within(costs).getByText("DLA-2026-00009")).toBeTruthy();
+    expect(within(costs).getByText("finance.entries.status.SUBMITTED")).toBeTruthy();
+    // No second section telling the reader these are not counted.
+    expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.detail.pendingCostLinesHint")).toBeNull();
+  });
+
+  it("sums the lines booked in other branches into one line, without their details (#643)", async () => {
+    const user = userEvent.setup();
+    detail = { ...makeDetail(workOrderRow), otherBranchesCostMinor: 12_000 };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    const costs = within(sheet).getByText("maintenance.detail.costLines").parentElement;
+    if (costs === null) throw new Error("cost section missing");
+    const other = within(costs).getByText("maintenance.detail.otherBranchesCost").closest("li");
+    if (other === null) throw new Error("other-branches line missing");
+    expect((other.textContent ?? "").replace(/[\s\u00a0\u202f,]/g, "")).toContain("12000");
+  });
+
+  it("shows no other-branches line when every line is the reader's", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).queryByText("maintenance.detail.otherBranchesCost")).toBeNull();
+  });
+
+  it("keeps the estimate in the sheet while FINANCE is off, and drops the actual cost (#640)", async () => {
+    const user = userEvent.setup();
+    workOrderRow = { ...makeWorkOrder("COMPLETED"), actualCostMinor: null, costOutcome: null };
+    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null, otherBranchesCostMinor: null };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).getByText("maintenance.workOrders.columns.expectedCost")).toBeTruthy();
+    expect((sheet.textContent ?? "").replace(/[\s\u00a0\u202f,]/g, "")).toContain("40000");
+    expect(within(sheet).queryByText("maintenance.workOrders.columns.actualCost")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.detail.costLines")).toBeNull();
   });
 
   it("shows a driver no cost facts and no cost sections when the server withholds the money (#390)", async () => {
     const user = userEvent.setup();
     me = as("DRIVER");
     workOrderRow = { ...makeWorkOrder("COMPLETED"), expectedCostMinor: null, actualCostMinor: null };
-    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null };
+    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null, otherBranchesCostMinor: null };
     renderScreen();
 
     const sheet = await openSheet(user);
@@ -615,13 +685,6 @@ describe("MaintenanceScreen — row sheet costs", () => {
     expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
   });
 
-  it("shows no pending section when nothing awaits approval", async () => {
-    const user = userEvent.setup();
-    renderScreen();
-
-    const sheet = await openSheet(user);
-    expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
-  });
 });
 
 describe("MaintenanceScreen — commands", () => {
@@ -833,6 +896,8 @@ describe("MaintenanceScreen — commands", () => {
 
   it("moves the header onto the refetched detail once completion is declared", async () => {
     const user = userEvent.setup();
+    // The actual cost is Finance's figure: on screen only while FINANCE is on (#640).
+    me = { ...admin, enabledModules: [...admin.enabledModules, "FINANCE"] };
     // Only the detail read learns the work order completed: the table handed
     // the drawer a row snapshot when it opened and never revises it, so a header
     // still bound to that snapshot would keep showing "Approuvé" and no cost.

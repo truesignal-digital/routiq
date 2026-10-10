@@ -11,12 +11,12 @@ import {
   WorkOrderDecisionForm,
   type WorkOrderRef,
 } from "@/maintenance/MaintenanceDialogs.js";
-import { Chronologie, CostLines } from "@/maintenance/WorkOrderSheet.js";
+import { Chronologie, WorkOrderCosts } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, situationOf, workOrderSteps, workOrderWaiting } from "../flow.js";
-import { recordReference } from "../model.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import { DetailHeader, DetailSection, FactList, Note, SafetyMark } from "../parts.js";
 import {
   PanelFooter,
@@ -30,7 +30,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
   const { t, i18n } = useTranslation();
   const { asset, attention, viewer, panel, gates } = useVehicle();
   const query = useWorkOrder(id);
-  const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordReference(id) }));
+  const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordNumberText(t, "work_order", query.data?.number) }));
   const locale = i18n.language;
 
   if (query.isPending) return <PanelLoading />;
@@ -60,7 +60,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.workOrderEyebrow", { ref: recordReference(wo.id) })}
+        eyebrow={t("vehicle.panel.workOrderEyebrow", { ref: recordNumberText(t, "work_order", wo.number) })}
         title={wo.description}
         meta={
           <>
@@ -84,7 +84,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               aria-hidden
             />
             <span className="min-w-0 flex-1 text-sm font-medium">
-              {t("vehicle.panel.fromProblem", { ref: recordReference(wo.issue.id) })}
+              {t("vehicle.panel.fromProblem", { ref: recordNumberText(t, "issue", wo.issue.number) })}
             </span>
             <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           </button>
@@ -131,7 +131,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               }),
             ],
             // Costs a viewer may not read are left out, not shown as blanks.
-            ...(!gates.workOrderCosts
+            ...(!gates.workOrderEstimate
               ? []
               : ([
                   [
@@ -140,6 +140,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
                       ? t("vehicle.maintenance.noEstimate")
                       : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
                   ],
+                ] as const)),
+            ...(!gates.workOrderCosts
+              ? []
+              : ([
                   [
                     t("vehicle.panel.actualCost"),
                     wo.actualCostMinor === null
@@ -176,16 +180,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        {/* Null when the reader may not see work-order costs (#390). The lines
-            awaiting review are listed too, marked as such: the actual cost
-            counts them (#81), and the list must add up to it (#612). */}
+        {/* Null when the reader may not see work-order costs (#390, #328). */}
         {wo.costLines !== null && (
           <DetailSection title={t("vehicle.panel.costs")}>
-            {wo.costLines.length + (wo.pendingCostLines?.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
-            ) : (
-              <CostLines lines={[...wo.costLines, ...(wo.pendingCostLines ?? [])]} locale={locale} />
-            )}
+            <WorkOrderCosts detail={wo} locale={locale} />
           </DetailSection>
         )}
 
@@ -217,6 +215,7 @@ function WorkOrderForm({
   const { asset, pinnedLabel, refresh, panel } = useVehicle();
   const ref: WorkOrderRef = {
     id: wo.id,
+    number: wo.number,
     assetId: wo.asset.id,
     status: wo.status,
     issueId: wo.issue?.id ?? null,
