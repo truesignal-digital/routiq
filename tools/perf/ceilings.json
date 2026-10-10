@@ -23,6 +23,10 @@
       }
     ]
   },
+  "/.shifts": {
+    "ceiling": 2,
+    "kind": "count"
+  },
   "/activities.ready_ms": {
     "ceiling": 309,
     "kind": "time"
@@ -39,6 +43,10 @@
       }
     ]
   },
+  "/activities.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/assets.ready_ms": {
     "ceiling": 336,
     "kind": "time"
@@ -47,12 +55,28 @@
     "ceiling": 4,
     "kind": "count"
   },
+  "/assets.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/assets/:id.ready_ms": {
     "ceiling": 282,
     "kind": "time"
   },
   "/assets/:id.requests": {
-    "ceiling": 2,
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-10",
+        "from": 2,
+        "to": 5,
+        "reason": "Measured on the right vehicle: since the passenger company was seeded the run opened another workspace's vehicle (a 404, two requests). From the director's own list the vehicle makes 5: detail, attention, revenue categories, the month's money and recent history. Measured at the top of the #494-#498 stack, 3 runs"
+      }
+    ]
+  },
+  "/assets/:id.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "/finance/entries.ready_ms": {
@@ -61,6 +85,10 @@
   },
   "/finance/entries.requests": {
     "ceiling": 4,
+    "kind": "count"
+  },
+  "/finance/entries.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "/maintenance.ready_ms": {
@@ -79,8 +107,16 @@
       }
     ]
   },
+  "/maintenance.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/my-settings.requests": {
     "ceiling": 1,
+    "kind": "count"
+  },
+  "/my-settings.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "login.js_bytes": {
@@ -94,5 +130,9 @@
   "login.usable_ms": {
     "ceiling": 2648,
     "kind": "time"
+  },
+  "reload.shifts": {
+    "ceiling": 2,
+    "kind": "count"
   }
 }

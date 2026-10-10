@@ -224,6 +224,11 @@ export const assetAttentionItem = z.object({
   /** Allowlisted facts for the sentence; every key optional. */
   params: z
     .object({
+      /**
+       * A problem or work order subject's number (#608); the client words the
+       * prefix. Absent for every other subject.
+       */
+      recordNumber: z.number().int().positive(),
       description: z.string().max(140),
       safetyCritical: z.boolean(),
       amountMinor: moneyMinor,
@@ -316,8 +321,8 @@ export const VEHICLE_HISTORY_PARAMS = {
     "status",
     "artifactCount",
   ],
-  operational_issue: ["description", "safetyCritical"],
-  work_order: ["description"],
+  operational_issue: ["recordNumber", "description", "safetyCritical"],
+  work_order: ["recordNumber", "description"],
   asset_availability_interval: ["issueDescription"],
   "asset.assigned": [
     "custodianDisplayName",

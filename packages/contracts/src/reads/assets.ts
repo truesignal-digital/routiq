@@ -2,7 +2,7 @@ import { z } from "zod";
 import { activityCompleteness, activityStatus } from "./activities.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
-import { issueStatus, workOrderStatus } from "./maintenance.js";
+import { issueStatus, maintenanceRecordNumber, workOrderStatus } from "./maintenance.js";
 
 export const assetLifecycleStatuses = [
   "REGISTERED",
@@ -131,6 +131,7 @@ export const assetCustodian = z.object({
 /** A work order answering the grounding signalement, with its makers for the client's lock reasons. */
 export const availabilityWorkOrder = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   status: workOrderStatus,
   rowVersion: z.number().int().positive(),
   createdAt: z.iso.datetime(),
@@ -158,6 +159,7 @@ export const assetAvailability = z.discriminatedUnion("state", [
     intervalRowVersion: z.number().int().positive(),
     issue: z.object({
       id: z.uuid(),
+      number: maintenanceRecordNumber,
       description: z.string(),
       safetyCritical: z.boolean(),
       category: z.string().nullable(),
@@ -175,7 +177,9 @@ export const assetAvailability = z.discriminatedUnion("state", [
      * is listed, release-asset-to-service refuses (SAFETY_ISSUE_OPEN). The
      * server computes both from one query, so the lock and the refusal agree.
      */
-    otherOpenSafetyIssues: z.array(z.object({ id: z.uuid(), description: z.string() })),
+    otherOpenSafetyIssues: z.array(
+      z.object({ id: z.uuid(), number: maintenanceRecordNumber, description: z.string() }),
+    ),
   }),
 ]);
 

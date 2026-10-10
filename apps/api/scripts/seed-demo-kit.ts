@@ -222,6 +222,41 @@ export function demoKit(slug: string) {
     return workOrder.rowVersion;
   }
 
+  /**
+   * Gives a person their login through link-person-login (#569), as the
+   * member administrator `admin`, at the person's current version. A person
+   * already linked to that login is left alone, so a re-seed adds nothing.
+   */
+  async function linkPersonLogin(
+    admin: AuthContext,
+    operation: string,
+    personId: string,
+    principalId: string,
+  ): Promise<void> {
+    const [person] = await authDb
+      .select({ membershipId: schema.persons.membershipId, rowVersion: schema.persons.rowVersion })
+      .from(schema.persons)
+      .where(and(eq(schema.persons.workspaceId, workspaceId), eq(schema.persons.id, personId)));
+    if (!person) throw new Error(`Person ${personId} is missing`);
+    const [login] = await authDb
+      .select({ id: schema.memberships.id })
+      .from(schema.memberships)
+      .where(
+        and(
+          eq(schema.memberships.workspaceId, workspaceId),
+          eq(schema.memberships.principalId, principalId),
+        ),
+      );
+    if (!login) throw new Error(`Login ${principalId} is missing`);
+    if (person.membershipId === login.id) return;
+    await runCommand(
+      admin,
+      operation,
+      { personId, principalId },
+      { expectedVersion: person.rowVersion },
+    );
+  }
+
   async function branchCodes(): Promise<string[]> {
     const rows = await authDb
       .select({ code: schema.branches.code })
@@ -320,6 +355,7 @@ export function demoKit(slug: string) {
     assetRowVersion,
     activityState,
     workOrderRowVersion,
+    linkPersonLogin,
     branchCodes,
     accountsSummary,
     addBranchesAndMembers,

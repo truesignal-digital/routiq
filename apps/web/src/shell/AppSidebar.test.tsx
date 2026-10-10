@@ -65,6 +65,7 @@ function member(role: Role, branchScope: BranchScope = [DOUALA]): MeContext {
     branchScope,
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE", "MAINTENANCE"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
   };
 }
 

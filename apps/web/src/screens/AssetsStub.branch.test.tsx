@@ -79,6 +79,7 @@ function renderScreen() {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
   };
   return render(
     <QueryClientProvider

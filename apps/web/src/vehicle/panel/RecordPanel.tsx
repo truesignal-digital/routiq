@@ -5,7 +5,9 @@ import { DiscardGuardScope, formPanelClassName, useDiscardGuard } from "@/compon
 import { useIsMobile } from "@/hooks/use-mobile";
 import { contributes } from "@/modules/manifest.js";
 import { useVehicle, type PanelForm } from "../context.js";
-import { recordReference, samePanel, type PanelRef } from "../model.js";
+import { recordNumberText } from "@/lib/record-number.js";
+import { samePanel, type PanelRef } from "../model.js";
+import { usePanelRecordNumber } from "../useVehicle.js";
 import { DocumentRecord } from "./DocumentRecord.js";
 import { EntryRecord } from "./EntryRecord.js";
 import { IssueRecord } from "./IssueRecord.js";
@@ -25,6 +27,7 @@ export function RecordPanel() {
   const isMobile = useIsMobile();
   const { panel } = useVehicle();
   const { current, form, previous } = panel;
+  const previousNumber = usePanelRecordNumber(previous);
   const standalone = form !== undefined && form.record === undefined ? form : undefined;
   const recordForm =
     form !== undefined && form.record !== undefined && samePanel(form.record, current) ? form : undefined;
@@ -48,7 +51,13 @@ export function RecordPanel() {
                 className="flex items-center gap-1 self-start px-4 pt-3 text-xs font-medium text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="size-3.5" aria-hidden />
-                {t("vehicle.panel.backTo", backToValues(previous))}
+                {t("vehicle.panel.backTo", {
+                  kind: previous.kind,
+                  ref:
+                    (previous.kind === "work_order" || previous.kind === "issue") && previousNumber !== undefined
+                      ? recordNumberText(t, previous.kind, previousNumber)
+                      : "",
+                })}
               </button>
             )}
             <RecordView key={panelKey(current)} record={current} form={recordForm} />
@@ -63,10 +72,6 @@ export function RecordPanel() {
 
 function panelKey(ref: PanelRef): string {
   return ref.kind === "readings" ? ref.kind : `${ref.kind}:${ref.id}`;
-}
-
-function backToValues(ref: PanelRef): { kind: string; ref: string } {
-  return { kind: ref.kind, ref: ref.kind === "readings" ? "" : recordReference(ref.id) };
 }
 
 function RecordView({ record, form }: { record: PanelRef; form: PanelForm | undefined }) {

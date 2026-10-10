@@ -120,6 +120,7 @@ async function maintenanceItems(
   const issues = await tx
     .select({
       id: operationalIssues.id,
+      number: operationalIssues.number,
       description: operationalIssues.description,
       safetyCritical: operationalIssues.safetyCritical,
       status: operationalIssues.status,
@@ -154,6 +155,7 @@ async function maintenanceItems(
   const orders = await tx
     .select({
       id: workOrders.id,
+      number: workOrders.number,
       issueId: workOrders.issueId,
       status: workOrders.status,
       description: workOrders.description,
@@ -232,6 +234,7 @@ async function maintenanceItems(
       partOfGrounding: grounding?.issueId === issue.id,
       makerPrincipalIds: [],
       params: {
+        recordNumber: issue.number,
         description: clip(issue.description),
         safetyCritical: issue.safetyCritical,
         hasCompletedWorkOrder,
@@ -241,8 +244,10 @@ async function maintenanceItems(
     });
   }
 
-  // Work-order money is Finance's (#328), and hidden from a driver (#390).
-  const costsVisible = books && canReadWorkOrderCosts(auth.role);
+  // The estimate is the workshop's quote (#640); the actual cost is Finance's
+  // (#328). Both are hidden from a driver (#390).
+  const estimateVisible = canReadWorkOrderCosts(auth.role);
+  const costsVisible = books && estimateVisible;
   for (const order of orders) {
     const subject = {
       entityType: "work_order" as const,
@@ -252,13 +257,13 @@ async function maintenanceItems(
     };
     // Absent for a caller who may not read work-order costs (#390): the
     // sentence without an amount, never a zero.
-    const costs = !costsVisible
+    const costs = !estimateVisible
       ? {}
       : {
           ...(order.expectedCostMinor === null
             ? {}
             : { expectedCostMinor: serializeMinor(order.expectedCostMinor) }),
-          ...(order.actualCostMinor === null
+          ...(order.actualCostMinor === null || !costsVisible
             ? {}
             : { actualCostMinor: serializeMinor(BigInt(order.actualCostMinor)) }),
           currency: order.currency,
@@ -272,7 +277,7 @@ async function maintenanceItems(
         since: order.createdAt.toISOString(),
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: maker ? [maker] : [],
-        params: { description: clip(order.description), ...costs },
+        params: { recordNumber: order.number, description: clip(order.description), ...costs },
       });
     } else if (order.status === "APPROVED") {
       items.push({
@@ -283,6 +288,7 @@ async function maintenanceItems(
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: [],
         params: {
+          recordNumber: order.number,
           description: clip(order.description),
           ...costs,
           ...(order.completionRejectReason === null
@@ -300,7 +306,7 @@ async function maintenanceItems(
         since: (completion?.occurredAt ?? order.createdAt).toISOString(),
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: maker ? [maker] : [],
-        params: { description: clip(order.description), ...costs },
+        params: { recordNumber: order.number, description: clip(order.description), ...costs },
       });
     } else if (order.status === "COMPLETED" && costsVisible) {
       const toCome = costToCome(order);
@@ -315,6 +321,7 @@ async function maintenanceItems(
           partOfGrounding: false,
           makerPrincipalIds: [],
           params: {
+            recordNumber: order.number,
             description: clip(order.description),
             currency: order.currency,
             ...(toCome.reason === "DECLARED_NOT_RECORDED"

@@ -598,6 +598,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
       intervalRowVersion: 1,
       issue: {
         id: issueId,
+        number: expect.any(Number),
         description: "Fuite de liquide de frein",
         safetyCritical: true,
         category: "BRAKES",
@@ -611,6 +612,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
       workOrders: [
         {
           id: workOrderId,
+          number: expect.any(Number),
           status: "COMPLETED",
           rowVersion: expect.any(Number),
           createdAt: expect.any(String),

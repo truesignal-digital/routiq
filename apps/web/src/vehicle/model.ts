@@ -1,5 +1,6 @@
 import type { ModuleCode, PrincipalType, Role } from "@routiq/contracts";
 import type { MeContext } from "../auth/me.js";
+import type { NumberedRecord } from "../lib/record-number.js";
 
 /** The records the panel can show, each addressed by `kind:id` in the URL. */
 export const PANEL_RECORD_KINDS = [
@@ -113,6 +114,8 @@ export type LockKey =
 export interface Lock {
   key: LockKey;
   params?: Record<string, string | number> | undefined;
+  /** The work order or problem the reason names, worded as `{ref}` in the reader's language (#608). */
+  ref?: NumberedRecord | undefined;
 }
 
 /** A role's own step on a record: take it, wait for a prerequisite, or nothing. */
@@ -144,11 +147,3 @@ export function viewerOf(me: MeContext): Viewer {
   };
 }
 
-/**
- * A work order or signalement has no number of its own — the reads publish
- * only ids — so both are named by the head of the id, as the maintenance queue
- * already does (`workOrderReference`).
- */
-export function recordReference(id: string): string {
-  return id.slice(0, 8).toUpperCase();
-}

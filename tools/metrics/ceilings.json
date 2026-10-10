@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 692894,
+    "ceiling": 713902,
     "raises": [
       {
         "date": "2026-10-06",
@@ -241,6 +241,48 @@
         "from": 689328,
         "to": 692894,
         "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 692894,
+        "to": 694047,
+        "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694047,
+        "to": 694679,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 694831,
+        "reason": "#653 trucking overlays for the grounded-vehicle warning"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694831,
+        "to": 703751,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 703751,
+        "to": 710828,
+        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 710828,
+        "to": 713353,
+        "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713353,
+        "to": 713902,
+        "reason": "Page-type skeletons for each screen route (#498)"
       }
     ]
   },
@@ -304,7 +346,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 261228,
+    "ceiling": 266200,
     "raises": [
       {
         "date": "2026-10-06",
@@ -521,6 +563,42 @@
         "from": 260358,
         "to": 261228,
         "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261228,
+        "to": 261338,
+        "reason": "#608 work order and problem numbers (formatter and catalog strings)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261338,
+        "to": 261561,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 263756,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 263756,
+        "to": 264506,
+        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 264506,
+        "to": 265616,
+        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265616,
+        "to": 266200,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
       }
     ]
   }

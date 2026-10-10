@@ -154,7 +154,7 @@ describe("entries waiting on someone else (#542)", () => {
 });
 
 describe("a repair whose invoice is still to come (#82)", () => {
-  const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
+  const WO_REF = "WO-0007";
 
   it("asks the workshop to enter the invoice, and opens the late invoice form on the order", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, {
