@@ -26,12 +26,10 @@ export function rangeFromParam(param: DashboardRangeParam | undefined): Overview
 }
 
 /**
- * The range the money tabs share, kept when moving between tabs. To do has no
- * range (it counts the whole Branch Scope, today), so it drops it.
+ * The range the money tabs share, kept when moving between tabs. To do
+ * ignores it (it counts the whole Branch Scope, today) but keeps it in its
+ * address, so coming back from To do lands on the same range.
  */
-export function dashboardTabSearch(
-  tab: DashboardTab,
-  range: DashboardRangeParam | undefined,
-): { range?: DashboardRangeParam } {
-  return tab === "todo" || range === undefined ? {} : { range };
+export function dashboardTabSearch(range: DashboardRangeParam | undefined): { range?: DashboardRangeParam } {
+  return range === undefined ? {} : { range };
 }

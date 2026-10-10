@@ -596,13 +596,13 @@ describe("Dashboard by role (#666)", () => {
     },
   );
 
-  it("counts what waits on the To do tab, and keeps the range on the money tabs only", async () => {
+  it("counts what waits on the To do tab, and keeps the range from tab to tab", async () => {
     installDashboardFetch();
     await renderDashboard(membership("DIRECTOR", MODULES), "/profit-by-vehicle?range=3-months");
     const nav = await screen.findByRole("navigation", { name: "Dashboard sections" });
     const todo = await within(nav).findByRole("tab", { name: /To do/ });
     await waitFor(() => expect(todo.textContent).toContain("5"));
-    expect(todo.getAttribute("href")).toBe("/to-do");
+    expect(todo.getAttribute("href")).toBe("/to-do?range=3-months");
     expect(within(nav).getByRole("tab", { name: "Profit by branch" }).getAttribute("href")).toBe(
       "/profit-by-branch?range=3-months",
     );

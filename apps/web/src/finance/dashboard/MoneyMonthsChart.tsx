@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import type { OverviewSeriesPoint } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
@@ -23,7 +23,7 @@ function shortMonth(periodCode: string, language: string | undefined): string {
 
 /**
  * Revenue and expenses per month, the 12 closed months (dashboards.html):
- * one axis, a line each, a label at each line's end, exact values on hover
+ * one axis, a line each (an unfilled area: the chart kind Home already loads), a label at each line's end, exact values on hover
  * and a table view. An internal fleet sees the expenses line alone.
  */
 export function MoneyMonthsChart({
@@ -39,6 +39,8 @@ export function MoneyMonthsChart({
   const language = i18n.resolvedLanguage;
   const [view, setView] = useState<"chart" | "table">("chart");
   const profit = mode === "profit";
+  const last = series[series.length - 1];
+  const revenueOnTop = last === undefined || last.revenueMinor >= last.expenseMinor;
   const data = series.map((point) => ({
     periodCode: point.periodCode,
     month: shortMonth(point.periodCode, language),
@@ -64,7 +66,7 @@ export function MoneyMonthsChart({
         <MonthsTable series={series} currency={currency} profit={profit} />
       ) : (
         <ChartContainer config={CONFIG} className="aspect-auto h-[200px] w-full">
-          <LineChart data={data} margin={{ top: 8, right: 64, bottom: 0, left: 0 }}>
+          <AreaChart data={data} margin={{ top: 8, right: 64, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={6} minTickGap={12} />
             <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(value: number) => formatCompact(value, language)} />
@@ -90,26 +92,28 @@ export function MoneyMonthsChart({
               }}
             />
             {profit && (
-              <Line
+              <Area
                 dataKey="revenue"
                 type="monotone"
+                fillOpacity={0}
                 stroke="var(--color-revenue)"
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
-                label={endLabel(data.length, t("dashboard.months.revenue"))}
+                label={endLabel(data.length, t("dashboard.months.revenue"), revenueOnTop ? "above" : "below")}
               />
             )}
-            <Line
+            <Area
               dataKey="expense"
               type="monotone"
+              fillOpacity={0}
               stroke="var(--color-expense)"
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}
-              label={endLabel(data.length, t("dashboard.months.expenses"))}
+              label={endLabel(data.length, t("dashboard.months.expenses"), profit && revenueOnTop ? "below" : "above")}
             />
-          </LineChart>
+          </AreaChart>
         </ChartContainer>
       )}
       <ChartViewToggle view={view} onChange={setView} />
@@ -117,11 +121,16 @@ export function MoneyMonthsChart({
   );
 }
 
-/** The series name at the end of its line, in the text colour (insights.html, chart rules). */
-function endLabel(count: number, name: string) {
+/**
+ * The series name at the end of its line, in the text colour (insights.html,
+ * chart rules). Both sit above their line's end, the higher line's a row
+ * higher, so two lines ending close together never print over each other or
+ * over the month axis.
+ */
+function endLabel(count: number, name: string, place: "above" | "below") {
   return ({ x, y, index }: { x?: number | string | undefined; y?: number | string | undefined; index?: number | undefined }) =>
     index === count - 1 ? (
-      <text x={Number(x) + 6} y={Number(y) + 4} fontSize={11} className="fill-foreground">
+      <text x={Number(x) + 6} y={Number(y) + (place === "above" ? -16 : -4)} fontSize={11} className="fill-foreground">
         {name}
       </text>
     ) : null;

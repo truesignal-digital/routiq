@@ -71,7 +71,7 @@ export function DashboardScreen() {
 /**
  * The Dashboard's header and tab bar over the tab's own route. The range the
  * money tabs share rides along in each tab's address; To do counts the whole
- * Branch Scope today, so its tab carries no range and shows how many wait.
+ * Branch Scope today, whatever the range, and its tab shows how many wait.
  */
 /**
  * The tab route rendered under Home. Read from the matched child, not the
@@ -91,7 +91,7 @@ function DashboardPage() {
     key: tab,
     label: t(`dashboard.tabs.${tab}`),
     to: DASHBOARD_TAB_PATH[tab],
-    search: dashboardTabSearch(tab, search.range),
+    search: dashboardTabSearch(search.range),
     ...(tab === "todo" && todo !== undefined
       ? { count: todo.totalCount, countLabel: t("dashboard.tabs.todoCount", { count: todo.totalCount }) }
       : {}),

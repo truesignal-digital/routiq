@@ -185,46 +185,46 @@ export function DashboardOverviewTab() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card data-slot="dashboard-vehicles-card">
-          <CardHeader>
-            <CardTitle>
-              {t(isMobile && mode === "profit" ? "dashboard.vehicles.atALossTitle" : `dashboard.vehicles.title.${mode}`)}
-            </CardTitle>
-            <CardDescription>
-              {windows === undefined
-                ? null
-                : t(`dashboard.vehicles.description.${mode}`, { period: windows.periodShort })}
-            </CardDescription>
-            <CardAction>
-              <CardLink to="/profit-by-vehicle" range={range}>
-                {t("dashboard.openTab")}
-              </CardLink>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {overview === undefined ? (
-              <Skeleton className="h-48 w-full" />
-            ) : overview.vehicles === null ? (
-              <p className="py-2 text-sm text-muted-foreground">{t("dashboard.vehicles.unavailable")}</p>
-            ) : isMobile && mode === "profit" ? (
-              <VehiclesAtALoss rows={vehiclesAtALoss(rows)} currency={overview.currency} />
-            ) : (
-              <>
-                <VehicleProfitTable
-                  overview={overview}
-                  rows={rows}
-                  mode={mode}
-                  limit={isMobile ? 3 : OVERVIEW_VEHICLE_ROWS}
-                />
-                {!isMobile && (
-                  <CompanyLinesList overview={overview} rows={rows} mode={mode} branchChosen={branchId !== undefined} />
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+      <Card data-slot="dashboard-vehicles-card">
+        <CardHeader>
+          <CardTitle>
+            {t(isMobile && mode === "profit" ? "dashboard.vehicles.atALossTitle" : `dashboard.vehicles.title.${mode}`)}
+          </CardTitle>
+          <CardDescription>
+            {windows === undefined
+              ? null
+              : t(`dashboard.vehicles.description.${mode}`, { period: windows.periodShort })}
+          </CardDescription>
+          <CardAction>
+            <CardLink to="/profit-by-vehicle" range={range}>
+              {t("dashboard.openTab")}
+            </CardLink>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {overview === undefined ? (
+            <Skeleton className="h-48 w-full" />
+          ) : overview.vehicles === null ? (
+            <p className="py-2 text-sm text-muted-foreground">{t("dashboard.vehicles.unavailable")}</p>
+          ) : isMobile && mode === "profit" ? (
+            <VehiclesAtALoss rows={vehiclesAtALoss(rows)} currency={overview.currency} />
+          ) : (
+            <>
+              <VehicleProfitTable
+                overview={overview}
+                rows={rows}
+                mode={mode}
+                limit={isMobile ? 3 : OVERVIEW_VEHICLE_ROWS}
+              />
+              {!isMobile && (
+                <CompanyLinesList overview={overview} rows={rows} mode={mode} branchChosen={branchId !== undefined} />
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card data-slot="dashboard-months">
           <CardHeader>
             <CardTitle>{t(`dashboard.months.title.${mode}`)}</CardTitle>
@@ -241,9 +241,6 @@ export function DashboardOverviewTab() {
             )}
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
         <Card data-slot="dashboard-branches-card">
           <CardHeader>
             <CardTitle>{t(`dashboard.branches.title.${mode}`)}</CardTitle>
@@ -372,7 +369,14 @@ function OverviewTiles({
       value: fleet === undefined ? null : t("dashboard.tiles.canDriveValue", { count: fleet.canDrive, total: fleet.inService }),
       ...(fleet === undefined
         ? {}
-        : { hint: grounded > 0 ? t("dashboard.tiles.offTheRoad", { count: grounded }) : t("dashboard.tiles.allCanDrive") }),
+        : {
+            hint:
+              fleet.inService === 0
+                ? t("dashboard.tiles.noneInService")
+                : grounded > 0
+                  ? t("dashboard.tiles.offTheRoad", { count: grounded })
+                  : t("dashboard.tiles.allCanDrive"),
+          }),
       tone: grounded > 0 ? "warning" : "neutral",
       link: { to: "/assets" },
     });

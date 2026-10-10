@@ -3022,7 +3022,8 @@
       "canDriveValue": "{count} of {total}",
       "offTheRoad": "{count, plural, one {# in service is off the road} other {# in service are off the road}}",
       "allCanDrive": "Every vehicle in service can drive",
-      "profitHint": "{change} · {share} of revenue"
+      "profitHint": "{change} · {share} of revenue",
+      "noneInService": "No vehicle is in service"
     },
     "counted": {
       "profitMeans": "Profit = revenue − expenses recorded in ROUTIQ; taxes and loan repayments aren't in it.",

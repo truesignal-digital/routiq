@@ -95,8 +95,10 @@ export function profitBridge(
   const steps: BridgeStep[] = [{ key: "start", kind: "total", value: start, from: 0, to: start }];
   let running = start;
   for (const change of changes) {
-    steps.push({ ...change, from: running, to: running + change.value });
-    running += change.value;
+    // A change of nothing is 0, never −0, so it reads as no change.
+    const value = change.value === 0 ? 0 : change.value;
+    steps.push({ ...change, value, from: running, to: running + value });
+    running += value;
   }
   steps.push({ key: "end", kind: "total", value: end, from: 0, to: end });
   return steps;

@@ -9,10 +9,9 @@ describe("dashboard tabs", () => {
     expect(activeDashboardTab("/profit-by-branch")).toBe("branches");
   });
 
-  it("keeps the range on the money tabs and drops it on To do", () => {
-    expect(dashboardTabSearch("vehicles", "3-months")).toEqual({ range: "3-months" });
-    expect(dashboardTabSearch("overview", undefined)).toEqual({});
-    expect(dashboardTabSearch("todo", "12-months")).toEqual({});
+  it("keeps the range from tab to tab, this month being no parameter", () => {
+    expect(dashboardTabSearch("3-months")).toEqual({ range: "3-months" });
+    expect(dashboardTabSearch(undefined)).toEqual({});
   });
 
   it("maps the address's range to the read's", () => {

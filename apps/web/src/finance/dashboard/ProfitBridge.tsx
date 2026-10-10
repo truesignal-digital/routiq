@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "react-i18next";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.js";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCompact, formatMoney, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 import type { BridgeStep } from "./bridge.js";
 import { ChartViewToggle } from "./ChartViewToggle.js";
-
-const CONFIG = {
-  range: { label: "", color: "var(--series-1)" },
-} satisfies ChartConfig;
 
 interface Labelled {
   step: BridgeStep;
@@ -101,62 +96,68 @@ function BridgeList({ labelled, currency }: { labelled: Labelled[]; currency: st
   );
 }
 
+/**
+ * The waterfall on a wide screen, drawn in HTML rather than a chart library:
+ * one axis (the zero line), a floating bar per step from where the running
+ * total stood to where it ends, its short value above it, and the exact
+ * amount on hover. Totals in the text colour, rises blue, falls orange.
+ */
 function BridgeChart({ labelled, currency }: { labelled: Labelled[]; currency: string }) {
   const { t } = useTranslation();
-  const data = labelled.map(({ step, label }) => ({
-    key: step.key,
-    label,
-    // A floating bar from where the running total stood to where it ends.
-    range: [Math.min(step.from, step.to), Math.max(step.from, step.to)] as [number, number],
-    step,
-  }));
+  const ends = labelled.flatMap(({ step }) => [step.from, step.to]);
+  const low = Math.min(0, ...ends);
+  const high = Math.max(0, ...ends);
+  const span = Math.max(1, high - low);
+  // Distance from the top of the plot, as a share of its height.
+  const at = (value: number) => ((high - value) / span) * 100;
   return (
-    <ChartContainer config={CONFIG} className="aspect-auto h-[300px] w-full">
-      <BarChart data={data} margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} tickMargin={6} height={40} />
-        <YAxis tickLine={false} axisLine={false} width={48} tickFormatter={(value: number) => formatCompact(value)} />
-        <ReferenceLine y={0} stroke="var(--border)" />
-        <Tooltip
-          cursor={{ fill: "var(--muted)" }}
-          content={({ active, payload }) => {
-            const step = (payload?.[0]?.payload as { step?: BridgeStep; label?: string } | undefined)?.step;
-            const label = (payload?.[0]?.payload as { label?: string } | undefined)?.label;
-            if (active !== true || step === undefined) return null;
+    <div data-slot="profit-bridge-chart" className="flex flex-col gap-2 pt-5">
+      <div className="relative h-[240px]">
+        <div aria-hidden className="absolute inset-x-0 h-px bg-border" style={{ top: `${at(0)}%` }} />
+        <ol className="absolute inset-0 flex items-stretch gap-2">
+          {labelled.map(({ step, label }) => {
+            const top = at(Math.max(step.from, step.to));
+            const height = Math.max(at(Math.min(step.from, step.to)) - top, 0.5);
+            const exact =
+              step.kind === "total"
+                ? profitOrLoss(step.value, { currency }).text
+                : `${t(step.value >= 0 ? "dashboard.bridge.raised" : "dashboard.bridge.lowered")}: ${signed(step.value, currency)}`;
             return (
-              <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
-                <p className="font-medium">{label}</p>
-                <p className="flex justify-between gap-4 tabular-nums">
-                  <span className="text-muted-foreground">
-                    {step.kind === "total"
-                      ? t(step.value < 0 ? "common.loss" : "common.profit")
-                      : t(step.value >= 0 ? "dashboard.bridge.raised" : "dashboard.bridge.lowered")}
-                  </span>
-                  <span className="font-medium">
-                    {step.kind === "total"
-                      ? formatMoney(Math.abs(step.value), { currency })
-                      : signed(step.value, currency)}
-                  </span>
-                </p>
-              </div>
+              <li key={step.key} data-slot="profit-bridge-bar" data-kind={step.kind} className="relative min-w-0 flex-1">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<div />}
+                    aria-label={`${label}: ${exact}`}
+                    className={cn(
+                      "absolute inset-x-1 rounded-[4px]",
+                      step.kind === "total" ? "bg-foreground" : step.value >= 0 ? "bg-series-1" : "bg-series-2",
+                    )}
+                    style={{ top: `${top}%`, height: `${height}%` }}
+                  />
+                  <TooltipContent>
+                    <span className="font-medium">{label}</span> · <span className="tabular-nums">{exact}</span>
+                  </TooltipContent>
+                </Tooltip>
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 -translate-y-full pb-0.5 text-center text-[11px] text-muted-foreground tabular-nums"
+                  style={{ top: `${top}%` }}
+                >
+                  {step.kind === "change" && step.value > 0 ? "+" : ""}
+                  {formatCompact(step.value)}
+                </span>
+              </li>
             );
-          }}
-        />
-        <Bar dataKey="range" radius={4} isAnimationActive={false}>
-          {data.map((point) => (
-            <Cell
-              key={point.key}
-              fill={
-                point.step.kind === "total"
-                  ? "var(--foreground)"
-                  : point.step.value >= 0
-                    ? "var(--series-1)"
-                    : "var(--series-2)"
-              }
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ChartContainer>
+          })}
+        </ol>
+      </div>
+      <ol aria-hidden className="flex gap-2">
+        {labelled.map(({ step, label }) => (
+          <li key={step.key} className="line-clamp-2 min-w-0 flex-1 text-center text-xs leading-tight break-words text-muted-foreground" title={label}>
+            {label}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }

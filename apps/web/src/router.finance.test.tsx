@@ -60,6 +60,7 @@ describe("/finance (#664)", () => {
     const router = createRouter({
       routeTree: applicationRouter.routeTree,
       history: createMemoryHistory({ initialEntries: ["/finance?range=forever"] }),
+      context: { queryClient: new QueryClient() },
     });
     await router.load();
     expect(router.state.matches.at(-1)?.search).toEqual({});

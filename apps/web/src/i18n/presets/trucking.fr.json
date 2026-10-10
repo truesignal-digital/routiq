@@ -354,7 +354,8 @@
     "tiles": {
       "vehicleCosts": "Coûts des camions",
       "canDrive": "Camions disponibles",
-      "allCanDrive": "Tous les camions en service peuvent rouler"
+      "allCanDrive": "Tous les camions en service peuvent rouler",
+      "noneInService": "Aucun camion en service"
     },
     "branches": {
       "title": {

@@ -171,6 +171,14 @@ describe("Dashboard › Overview", () => {
     renderTab(<DashboardOverviewTab />);
     const why = document.querySelector("[data-slot='dashboard-why']") as HTMLElement;
     expect(within(why).getByText("What changed the profit")).toBeTruthy();
+    // The waterfall: one bar per step, each naming its exact effect for hover and screen readers.
+    const bars = [...why.querySelectorAll("[data-slot='profit-bridge-bar']")];
+    expect(bars.map((bar) => bar.getAttribute("data-kind"))).toEqual([
+      "total", "change", "change", "change", "change", "change", "change", "total",
+    ]);
+    expect(bars[2]?.querySelector("[aria-label]")?.getAttribute("aria-label")).toBe(
+      `Fuel: Lowered the profit: ${formatMoney(-420_000, { currency: "XAF", sign: { context: "net" } })}`,
+    );
     await userEvent.click(within(why).getByRole("button", { name: "Table" }));
     const rows = [...why.querySelectorAll("[data-slot='profit-bridge-row']")].map((row) => [
       row.querySelector("dt")?.textContent,

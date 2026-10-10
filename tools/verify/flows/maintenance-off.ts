@@ -43,7 +43,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   }
   log(`modules on: ${me.enabledModules.join(", ")}`);
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Accueil", "Home"), exact: true }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Tableau de bord", "Dashboard"), exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
   const sidebar = await openSidebar(page);
