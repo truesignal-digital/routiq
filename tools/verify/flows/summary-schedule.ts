@@ -46,6 +46,23 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   log(`api: GET /v1/company-settings → ${before.status} ${JSON.stringify(before.body)}`);
   await expectSchedule("MONDAY_AND_MONTH_START");
 
+  const region = page.getByRole("region", { name: t("Résumé", "Summary") });
+  const openDashboard = async () => {
+    await (await openSidebar(page)).getByRole("link", { name: t("Tableau de bord", "Dashboard"), exact: true }).click();
+    await page.waitForURL((url) => url.pathname === "/");
+    await page.locator("[data-slot='metric-strip']").waitFor();
+    await quiet();
+  };
+  const dueByDefault = (await noticeOf("/v1/finance/overview")).changes.length > 0;
+  if (dueByDefault) {
+    await openDashboard();
+    await region.waitFor();
+    await shot("dashboard-default", {
+      caption: "On the default schedule, a big change (a truck grounded this week) opens the summary above the tiles",
+      highlight: region,
+    });
+  }
+
   await openSettings();
   await shot("settings-default", {
     caption: "Company settings › Dashboard summary: by default the summary shows every Monday and on the 1st of the month",
@@ -67,16 +84,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   });
   await expectSchedule("NEVER");
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Tableau de bord", "Dashboard"), exact: true }).click();
-  await page.waitForURL((url) => url.pathname === "/");
-  await page.locator("[data-slot='metric-strip']").waitFor();
-  await quiet();
-  const region = page.getByRole("region", { name: t("Résumé", "Summary") });
+  await openDashboard();
   if ((await region.count()) !== 0) throw new Error("the summary opened on its own under Never");
   const show = page.getByRole("button", { name: t("Afficher le résumé", "Show summary") });
   await show.waitFor();
   await shot("dashboard-never", {
-    caption: "Under Never the Dashboard opens on the tiles; the counted line and Show summary stay under them",
+    caption: "Under Never the Dashboard opens on the tiles, even with the grounding; the counted line and Show summary stay under them",
     highlight: page.locator("[data-slot='overview-counted']"),
   });
   await show.click();
