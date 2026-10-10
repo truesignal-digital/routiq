@@ -108,7 +108,7 @@ describe("Trips › Overview (#665)", () => {
   });
 
   it("puts the summary notice over the tiles: hidden on a plain day, the week in whole sentences when shown (#667)", async () => {
-    renderWith({ ...SUMMARY, notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } });
+    renderWith({ ...SUMMARY, notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } });
     const counted = await screen.findByText("Closed activities missing data: 3 without fuel and 2 without km.");
     expect(counted.closest("[data-summary=closed]")).toBeTruthy();
     screen.getByRole("button", { name: "Show summary" }).click();

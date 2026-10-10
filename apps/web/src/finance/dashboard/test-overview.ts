@@ -113,7 +113,7 @@ export function testOverview(overrides: Partial<FinanceOverviewResponse> = {}): 
       trips: { closed: 27, open: 5 },
     },
     // A Friday with nothing big: the summary is not due.
-    notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+    notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
     ...overrides,
   };
 }

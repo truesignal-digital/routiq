@@ -2240,6 +2240,11 @@
       "submit": "Enregistrer les seuils",
       "submitting": "Enregistrement…"
     },
+    "set-summary-schedule": {
+      "label": "Modifier le résumé du tableau de bord",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement…"
+    },
     "create-category": {
       "label": "Créer une catégorie",
       "submit": "Créer la catégorie",
@@ -3140,6 +3145,24 @@
     "title": "Paramètres de l'entreprise",
     "description": "Des règles qui s'appliquent à toute l'entreprise. Seule la Direction peut les modifier.",
     "retry": "Réessayer",
+    "summary": {
+      "title": "Résumé du tableau de bord",
+      "description": "Quand le résumé s’affiche sur le tableau de bord et chaque vue d’ensemble. Il s’affiche aussi lors d’un changement important, sauf avec Jamais.",
+      "loading": "Chargement du réglage du résumé",
+      "loadFailed": "Le réglage du résumé n’a pas pu être chargé.",
+      "closable": "Chacun peut toujours le fermer.",
+      "schedule": {
+        "MONDAY_AND_MONTH_START": "Chaque lundi et le 1er du mois",
+        "MONDAY": "Chaque lundi",
+        "MONTH_START": "Le 1er du mois seulement",
+        "NEVER": "Jamais : les indicateurs seulement"
+      },
+      "form": {
+        "description": "S’applique à toute l’entreprise, dès la prochaine visite.",
+        "now": "Actuellement",
+        "field": "Afficher le résumé"
+      }
+    },
     "approvals": {
       "title": "Approbations",
       "description": "Jusqu'à quel montant une saisie d'argent est enregistrée sans contrôle, et qui décide au-delà.",
@@ -3174,7 +3197,8 @@
     },
     "notify": {
       "success": {
-        "thresholdsSaved": "Seuils d'approbation enregistrés"
+        "thresholdsSaved": "Seuils d'approbation enregistrés",
+        "summaryScheduleSaved": "Résumé du tableau de bord enregistré"
       }
     }
   },

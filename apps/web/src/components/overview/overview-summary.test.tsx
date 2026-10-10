@@ -28,10 +28,10 @@ function me(principalId = SALI): MeContext {
   };
 }
 
-const FRIDAY: OverviewNotice = { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
-const MONDAY: OverviewNotice = { today: "2026-10-05", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
-const NEXT_MONDAY: OverviewNotice = { today: "2026-10-12", scheduledOn: "2026-10-12", scheduledToday: "MONDAY", changes: [] };
-const FIRST: OverviewNotice = { today: "2026-11-01", scheduledOn: "2026-11-01", scheduledToday: "MONTH_START", changes: [] };
+const FRIDAY: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+const MONDAY: OverviewNotice = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
+const NEXT_MONDAY: OverviewNotice = { today: "2026-10-12", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-12", scheduledToday: "MONDAY", changes: [] };
+const FIRST: OverviewNotice = { today: "2026-11-01", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-11-01", scheduledToday: "MONTH_START", changes: [] };
 const grounding = (key: string, code: string) => ({
   kind: "VEHICLE_GROUNDED" as const,
   key,
@@ -85,9 +85,40 @@ describe("noticeReason", () => {
     expect(noticeReason(changed, { scheduledOn: "2026-10-05", changeKeys: [] })).toBe("CHANGE");
     expect(noticeReason(changed, { scheduledOn: "2026-10-05", changeKeys: ["G1"] })).toBeNull();
   });
+
+  it("follows the company's schedule (#669): NEVER shows nothing, big changes included", () => {
+    const never: OverviewNotice = { ...FRIDAY, schedule: "NEVER", scheduledOn: null, scheduledToday: null };
+    expect(noticeReason(never, undefined)).toBeNull();
+    expect(noticeReason({ ...never, changes: [grounding("G1", "VH003")] }, undefined)).toBeNull();
+    // Back on a schedule, a close made under NEVER covers no scheduled day.
+    expect(noticeReason(MONDAY, { scheduledOn: null, changeKeys: [] })).toBe("MONDAY");
+    // Mondays only: the server names Monday, and the 1st comes as a plain day.
+    const mondays: OverviewNotice = { ...FIRST, schedule: "MONDAY", scheduledOn: "2026-10-26", scheduledToday: null };
+    expect(noticeReason(mondays, undefined)).toBeNull();
+  });
 });
 
 describe("OverviewSummary (#667)", () => {
+  it("stays closed under NEVER (#669), and Show summary still opens it, its changes named", async () => {
+    const never: OverviewNotice = {
+      ...MONDAY,
+      schedule: "NEVER",
+      scheduledOn: null,
+      scheduledToday: null,
+      changes: [grounding("G1", "VH003")],
+    };
+    render(<Summary notice={never} />);
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    expect(order()).toEqual(["tiles", "counted"]);
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    expect(screen.getByRole("region", { name: "Summary" }).textContent).toContain("VH003");
+    await userEvent.click(screen.getByRole("button", { name: "Close the summary" }));
+    expect(readClosedSummary(summaryStorageKey(WORKSPACE, SALI, "dashboard"))).toEqual({
+      scheduledOn: null,
+      changeKeys: ["G1"],
+    });
+  });
+
   it("is hidden on a plain day: tiles first, then the counted line with Show summary", async () => {
     render(<Summary notice={FRIDAY} />);
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();

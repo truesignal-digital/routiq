@@ -114,12 +114,12 @@ function overview(view: FinanceOverviewResponse["view"], range: OverviewRange = 
   };
 }
 
-const NOT_DUE: OverviewNotice = { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+const NOT_DUE: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
 
 const state = vi.hoisted(() => ({
   view: "PROFIT" as "PROFIT" | "REVENUE_AND_EXPENSES",
   ranges: [] as string[],
-  notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } as OverviewNotice,
+  notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } as OverviewNotice,
 }));
 
 vi.mock("../overview/useMoneyOverview.js", () => ({
@@ -333,7 +333,7 @@ describe("Money Overview (#664)", () => {
   });
 
   it("opens on a Monday with the summary notice above the tiles; closed, the counted line sits under them (#667)", async () => {
-    state.notice = { today: "2026-10-05", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
+    state.notice = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
     renderAs("FINANCE");
     const region = screen.getByRole("region", { name: "Summary" });
     expect(region.textContent?.replace(/\s/g, " ")).toContain(
