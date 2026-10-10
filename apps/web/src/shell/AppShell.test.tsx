@@ -382,15 +382,15 @@ describe("AppShell (sidebar frame)", () => {
     realNotice.current = true;
     try {
       // The notice sits in the page's own column (#467), so only a page container shows it.
-      const router = await renderShell("/narrow-page");
+      const router = await renderShell("/framed-page");
       await waitFor(() => expect(chainReads).toHaveBeenCalledTimes(1));
 
       // Direction changes the rules; within the minute, moving screens asks nothing.
       notice = { changeId: "change-1", changedAt: "2026-10-05T09:00:00.000Z", changedBy: "Mme Ngo" };
       await router.navigate({ to: "/finance/entries" });
       await screen.findByText("/finance/entries");
-      await router.navigate({ href: "/narrow-page" });
-      await screen.findByText("Narrow page");
+      await router.navigate({ href: "/framed-page" });
+      await screen.findByText("Framed page");
       expect(chainReads).toHaveBeenCalledTimes(1);
       expect(document.querySelector("[data-slot='approval-rules-notice']")).toBeNull();
 
@@ -399,7 +399,7 @@ describe("AppShell (sidebar frame)", () => {
       client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - APPROVAL_CHAIN_RECHECK_MS });
       await router.navigate({ to: "/assets" });
       await screen.findByText("/assets");
-      await router.navigate({ href: "/narrow-page" });
+      await router.navigate({ href: "/framed-page" });
       await waitFor(() => expect(document.querySelector("[data-slot='approval-rules-notice']")).not.toBeNull());
       expect(chainReads).toHaveBeenCalledTimes(2);
     } finally {
