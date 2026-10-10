@@ -98,7 +98,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
   // Sign-in and the language switch leave time for the background fetch to
   // finish; a cold load of Home, then moving on at once, walks ahead of it.
   await page.goto(new URL("/", page.url()).href);
-  await page.getByRole("heading", { level: 1, name: t("Accueil", "Home"), exact: true }).waitFor({ timeout: 60_000 });
+  await page.getByRole("heading", { level: 1, name: t("Tableau de bord", "Dashboard"), exact: true }).waitFor({ timeout: 60_000 });
   const loadedAtStart = await codeFiles(page);
   log(`code files loaded by a cold load of Home: ${loadedAtStart.length}`);
   await watchShellShifts(page);

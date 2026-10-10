@@ -542,6 +542,7 @@ describe("GET /v1/assets", () => {
       expect(await summary(adminToken)).toEqual({
         total: 6,
         inService: 2,
+        canDrive: 2,
         attention: 3,
       });
     });
@@ -587,6 +588,7 @@ describe("GET /v1/assets", () => {
       expect(await summary(branchToken)).toEqual({
         total: 3,
         inService: 1,
+        canDrive: 1,
         attention: 1,
       });
     });
@@ -595,6 +597,7 @@ describe("GET /v1/assets", () => {
       expect(await summary(branchToken, `branchId=${yaoundeId}`)).toEqual({
         total: 0,
         inService: 0,
+        canDrive: 0,
         attention: 0,
       });
     });
@@ -603,16 +606,19 @@ describe("GET /v1/assets", () => {
       expect(await summary(adminToken, `branchId=${yaoundeId}`)).toEqual({
         total: 3,
         inService: 1,
+        canDrive: 1,
         attention: 2,
       });
       expect(await summary(adminToken, "category=BUS")).toEqual({
         total: 2,
         inService: 1,
+        canDrive: 1,
         attention: 1,
       });
       expect(await summary(adminToken, "search=mercedes")).toEqual({
         total: 2,
         inService: 1,
+        canDrive: 1,
         attention: 0,
       });
     });
@@ -621,6 +627,7 @@ describe("GET /v1/assets", () => {
       expect(await summary(adminToken, "status=IN_SERVICE")).toEqual({
         total: 6,
         inService: 2,
+        canDrive: 2,
         attention: 3,
       });
     });
@@ -749,7 +756,7 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
   }
 
   it("counts an IN_SERVICE vehicle with an open availability interval, once", async () => {
-    expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 3 });
+    expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, canDrive: 1, attention: 3 });
     await expectTileMatchesFilter(admin.token, ["VH002", "VH003", "VH004"]);
   });
 
@@ -759,14 +766,15 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
   });
 
   it("never counts a grounded vehicle outside the caller's branch scope", async () => {
-    expect(await summary(doualaOnly.token)).toEqual({ total: 3, inService: 2, attention: 2 });
+    expect(await summary(doualaOnly.token)).toEqual({ total: 3, inService: 2, canDrive: 1, attention: 2 });
     await expectTileMatchesFilter(doualaOnly.token, ["VH002", "VH003"]);
   });
 
   it("counts lifecycle statuses only while MAINTENANCE is off", async () => {
     await setModule(ctx.db, workspaceId, "MAINTENANCE", false);
     try {
-      expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 1 });
+      // Nothing grounds a vehicle without MAINTENANCE: every one in service can drive.
+      expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, canDrive: 3, attention: 1 });
       await expectTileMatchesFilter(admin.token, ["VH003"]);
     } finally {
       await setModule(ctx.db, workspaceId, "MAINTENANCE", true);
@@ -778,7 +786,7 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
       assetId: groundedId,
       workOrderId,
     });
-    expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 2 });
+    expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, canDrive: 2, attention: 2 });
     await expectTileMatchesFilter(admin.token, ["VH003", "VH004"]);
   });
 });

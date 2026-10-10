@@ -163,6 +163,7 @@ function isAssetSummary(value: unknown): value is AssetSummary {
     isRecord(value) &&
     isCount(value["total"]) &&
     isCount(value["inService"]) &&
+    isCount(value["canDrive"]) &&
     isCount(value["attention"])
   );
 }

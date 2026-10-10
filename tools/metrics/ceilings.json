@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 735807,
+    "ceiling": 713902,
     "raises": [
       {
         "date": "2026-10-06",
@@ -30,7 +30,7 @@
         "date": "2026-10-06",
         "from": 561383,
         "to": 561479,
-        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+        "reason": "#91: Assigned driver / Chauffeur attitr\u00e9 replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
       },
       {
         "date": "2026-10-06",
@@ -289,11 +289,29 @@
         "from": 713902,
         "to": 735807,
         "reason": "Trucks, Trips and Maintenance Overviews (#665): three Overview screens, the Trucks and Trips frames, the fleet Documents tab, the Planning tab, the profit-bars and week-columns parts, their loaders and fr/en words, about 16 kB gzip, loaded after sign-in. Counted from develop's ceiling, so it also covers the stacked Money page (#664), money words (#659) and page frame (#676) until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 694965,
+        "reason": "Loss/Profit helper and money words (#659)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 699097,
+        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's 286 B until that PR merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 742646,
+        "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23077,
+    "ceiling": 22832,
     "raises": [
       {
         "date": "2026-10-06",
@@ -354,11 +372,23 @@
         "from": 22832,
         "to": 23077,
         "reason": "Overview parts (#665 profit bars and week columns, #664 compare bars and To do list, #676 page frame): their Tailwind classes, 245 B gzip counted from develop's ceiling"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 22941,
+        "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23091,
+        "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 273099,
+    "ceiling": 266200,
     "raises": [
       {
         "date": "2026-10-06",
@@ -388,7 +418,7 @@
         "date": "2026-10-06",
         "from": 561383,
         "to": 561479,
-        "reason": "#91: Assigned driver / Chauffeur attitré replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
+        "reason": "#91: Assigned driver / Chauffeur attitr\u00e9 replaces the shorter Custodian / Responsable across every screen string, about 40 B gzip; this raise also takes in about 60 B of develop drift that sat inside the noise band"
       },
       {
         "date": "2026-10-06",
@@ -617,6 +647,18 @@
         "from": 266200,
         "to": 273099,
         "reason": "Trucks, Trips and Maintenance open on an Overview tab (#665): fr/en words for the three Overviews, their tabs and filters (about 2.9 kB gzip measured on the two locale catalogs), the tab routes with their filter validation, legacy-link redirects and loaders (about 1.6 kB). Counted from develop's ceiling, so it also covers the stacked #659/#664/#676 words, routes and frame (about 2.4 kB) until they merge; about 35 ms on a pilot phone at about 5 ms per kB"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 262681,
+        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 273236,
+        "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
       }
     ]
   }

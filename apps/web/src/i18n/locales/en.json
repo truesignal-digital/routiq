@@ -14,7 +14,7 @@
     "maintenance": "Maintenance"
   },
   "home": {
-    "title": "Home",
+    "title": "Dashboard",
     "loadFailed": "We couldn't load the dashboard. Please retry.",
     "retry": "Try again",
     "empty": {
@@ -60,7 +60,8 @@
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "empty": "No entries for this branch."
-    }
+    },
+    "loading": "Loading…"
   },
   "shell": {
     "navLabel": "Navigation",
@@ -3157,6 +3158,199 @@
     "notify": {
       "success": {
         "thresholdsSaved": "Approval thresholds saved"
+      }
+    }
+  },
+  "dashboard": {
+    "description": "Are we making money, what changed, and what needs you?",
+    "loadFailed": "We couldn't load the dashboard figures. Try again.",
+    "openTab": "Open the tab",
+    "tabs": {
+      "label": "Dashboard sections",
+      "overview": "Overview",
+      "todo": "To do",
+      "vehicles": "Profit by vehicle",
+      "branches": "Profit by branch",
+      "todoCount": "{count, plural, one {# thing waits} other {# things wait}}"
+    },
+    "tiles": {
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "vehicleCosts": "Vehicle costs",
+      "companyCosts": "Company costs",
+      "canDrive": "Vehicles that can drive",
+      "canDriveValue": "{count} of {total}",
+      "offTheRoad": "{count, plural, one {# in service is off the road} other {# in service are off the road}}",
+      "allCanDrive": "Every vehicle in service can drive",
+      "profitHint": "{change} · {share} of revenue",
+      "noneInService": "No vehicle is in service"
+    },
+    "counted": {
+      "profitMeans": "Profit = revenue − expenses recorded in ROUTIQ; taxes and loan repayments aren't in it.",
+      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed activity} other {# closed activities}}."
+    },
+    "bridge": {
+      "title": "What changed the profit",
+      "question": "What changed the profit?",
+      "description": "From {comparison} to {period}, {currency}. Blue raised the profit, orange lowered it.",
+      "revenue": "Revenue",
+      "otherCategories": "{count, plural, one {# other category} other {# other categories}}",
+      "noCategory": "Expenses without a category",
+      "companyCosts": "Company costs",
+      "raised": "Raised the profit",
+      "lowered": "Lowered the profit"
+    },
+    "categories": {
+      "title": "What changed the expenses",
+      "question": "Where did spending change?",
+      "description": "Each expense category, {period} (bar) against {comparison} (mark), {currency}."
+    },
+    "chart": {
+      "table": "Table",
+      "chart": "Chart"
+    },
+    "todo": {
+      "title": "To do",
+      "description": "Ranked by safety, then money · all your branches",
+      "empty": "Nothing waits for you.",
+      "loadFailed": "We couldn't load your To do. Try again.",
+      "seeAll": "See all {count}",
+      "more": "Showing the first {shown} of {count}.",
+      "rows": {
+        "VEHICLE_GROUNDED": {
+          "title": "{asset} off the road since {since}",
+          "detail": "Grounded {days, plural, =0 {today} one {# day} other {# days}} · no work order yet",
+          "detailPlanned": "Grounded {days, plural, =0 {today} one {# day} other {# days}} · a work order is planned",
+          "detailReady": "Grounded {days, plural, =0 {today} one {# day} other {# days}} · repaired, waits to be released",
+          "action": "Open"
+        },
+        "ISSUE_UNPLANNED": {
+          "title": "{asset}: {description}",
+          "titleSafety": "{asset}, safety: {description}",
+          "detail": "Reported {since} · no work order covers it",
+          "action": "Plan the repair"
+        },
+        "DOCUMENT_EXPIRED": {
+          "title": "{asset} {type} has expired",
+          "detail": "Expired on {date}",
+          "action": "Open"
+        },
+        "DOCUMENT_EXPIRING": {
+          "title": "{asset} {type} expires in {daysLeft, plural, =0 {less than a day} one {# day} other {# days}}",
+          "detail": "Expires on {date}",
+          "action": "Open"
+        },
+        "ENTRIES_AWAITING_APPROVAL": {
+          "title": "{count, plural, one {# expense waits} other {# expenses wait}} for your approval",
+          "detail": "{amount} · oldest since {since}",
+          "action": "Review"
+        },
+        "ENTRIES_EVIDENCE_MISSING": {
+          "title": "{count, plural, one {# entry has} other {# entries have}} no receipt",
+          "detail": "{amount} · oldest since {since}",
+          "action": "Open entries"
+        },
+        "PERIOD_OPEN": {
+          "title": "{month} is still open",
+          "detail": "{submitted, plural, =0 {Nothing waits for approval} one {# entry waits for approval} other {# entries wait for approval}} · {missing, plural, =0 {every receipt in} one {# receipt missing} other {# receipts missing}}",
+          "action": "Close month"
+        }
+      }
+    },
+    "vehicles": {
+      "title": {
+        "profit": "Profit by vehicle",
+        "costs": "Cost by vehicle"
+      },
+      "description": {
+        "profit": "{period} · revenue and expenses recorded on each vehicle · losses first",
+        "costs": "{period} · expenses recorded on each vehicle · costliest first"
+      },
+      "atALossTitle": "Vehicles at a loss",
+      "noneAtALoss": "No vehicle made a loss in this period.",
+      "empty": "No vehicle in this period.",
+      "unavailable": "Figures by vehicle need the Vehicles module.",
+      "columns": {
+        "vehicle": "Vehicle",
+        "branch": "Branch",
+        "trips": "Activities",
+        "km": "Km",
+        "revenue": "Revenue",
+        "expenses": "Expenses",
+        "profit": "Profit"
+      },
+      "tripsCount": "{count, plural, one {# activity} other {# activities}}",
+      "tripsWithoutKm": "{count, plural, one {# activity without km} other {# activities without km}}",
+      "lossDetail": "{count, plural, =0 {No activity} one {# activity} other {# activities}} · {amount} spent",
+      "expensesOnly": "{amount} spent",
+      "lines": {
+        "allVehicles": "Profit of all vehicles ({count})",
+        "branchVehicles": "Profit of this branch's vehicles ({count})",
+        "otherVehicles": "Other branches' vehicles in this branch's entries",
+        "revenueWithoutVehicle": "Revenue recorded on no vehicle",
+        "companyCosts": "Company costs",
+        "companyProfit": "Company profit",
+        "companyLoss": "Company loss",
+        "allVehicleCosts": "Costs of all vehicles ({count})",
+        "branchVehicleCosts": "Costs of this branch's vehicles ({count})",
+        "otherVehicleCosts": "Other branches' vehicles in this branch's entries",
+        "companyCostsPlus": "Company costs",
+        "allExpenses": "All expenses"
+      }
+    },
+    "months": {
+      "title": {
+        "profit": "Revenue and expenses per month",
+        "costs": "Expenses per month"
+      },
+      "description": {
+        "profit": "Is revenue staying ahead of expenses? Last 12 closed months, {currency}.",
+        "costs": "Are expenses rising? Last 12 closed months, {currency}."
+      },
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "month": "Month",
+      "open": "Open Money"
+    },
+    "branches": {
+      "title": {
+        "profit": "Vehicle profit by branch",
+        "costs": "Vehicle costs by branch"
+      },
+      "description": {
+        "profit": "Which branch's vehicles earn the most? {period}, {currency}.",
+        "costs": "Which branch's vehicles cost the most? {period}, {currency}."
+      },
+      "empty": "No branch has vehicles in this period.",
+      "companyCostsNote": "Company costs ({amount}) are not split by branch.",
+      "hover": "{count, plural, one {# vehicle} other {# vehicles}} · revenue {revenue} · expenses {expenses}",
+      "hoverCosts": "{count, plural, one {# vehicle} other {# vehicles}} · expenses {expenses}",
+      "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
+      "columns": {
+        "branch": "Branch",
+        "vehicles": "Vehicles",
+        "revenue": "Revenue",
+        "expenses": "Expenses",
+        "profit": "Vehicle profit"
+      }
+    },
+    "comingUp": {
+      "title": "Coming up",
+      "description": "Next {days} days · all your branches",
+      "empty": "Nothing falls due in the next {days} days.",
+      "loadFailed": "We couldn't load what is coming up. Try again.",
+      "notCounted": {
+        "SERVICE_DUE_BY_KM": "Services due by km aren't counted: ROUTIQ doesn't record service intervals yet."
+      },
+      "rows": {
+        "DOCUMENT_DUE": {
+          "title": "{asset} {type}",
+          "detail": "{date} · in {days, plural, one {# day} other {# days}}"
+        },
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# activity planned} other {# activities planned}}",
+          "detail": "{without, plural, =0 {every one has a vehicle} one {# without a vehicle yet} other {# without a vehicle yet}}"
+        }
       }
     }
   }

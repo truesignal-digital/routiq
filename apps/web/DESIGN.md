@@ -16,6 +16,7 @@ Every colour is a token in `src/styles.css`, defined under `:root` and again und
 | `--border` / `--input` / `--ring` | Lines, field outlines, the focus ring |
 | `--success` `--warning` `--info` `--destructive` `--signal` | Status only, never decoration |
 | `--chart-1` … `--chart-5` | Chart series, in order |
+| `--series-1` / `--series-2` | The two chart hues (blue, then orange) for series that must be told apart: revenue and expenses, a profit bridge's rises and falls. Red, amber and green stay for status |
 | `--sidebar-*` | The navigation rail |
 
 Neutrals are pure greys (chroma 0). Cream or warm off-white backgrounds are out.

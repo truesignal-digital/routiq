@@ -211,6 +211,21 @@ function needsAttention(modules: ReadonlySet<ModuleCode>): SQL {
 }
 
 /**
+ * In service and not grounded: the vehicles that can drive today. Without
+ * MAINTENANCE nothing grounds a vehicle, so in service is the whole answer.
+ */
+function canDrive(modules: ReadonlySet<ModuleCode>): SQL {
+  const inService = eq(assets.lifecycleStatus, "IN_SERVICE");
+  if (!modules.has("MAINTENANCE")) return inService;
+  const openInterval = and(
+    eq(assetAvailabilityIntervals.workspaceId, assets.workspaceId),
+    eq(assetAvailabilityIntervals.assetId, assets.id),
+    isNull(assetAvailabilityIntervals.closedAt),
+  );
+  return sql`(${inService} and not exists (select 1 from ${assetAvailabilityIntervals} where ${openInterval}))`;
+}
+
+/**
  * What "the caller's assets" means, in one place: the list pages exactly the
  * rows the summary counts, so a tile can never disagree with the table under it.
  */
@@ -520,6 +535,7 @@ export function registerAssetReadRoutes(
             .select({
               total: countAll,
               inService: countWhere(eq(assets.lifecycleStatus, "IN_SERVICE")),
+              canDrive: countWhere(canDrive(modules)),
               attention: countWhere(needsAttention(modules)),
             })
             .from(assets)
@@ -542,7 +558,7 @@ export function registerAssetReadRoutes(
         );
 
         return assetSummary.parse(
-          totals ?? { total: 0, inService: 0, attention: 0 },
+          totals ?? { total: 0, inService: 0, canDrive: 0, attention: 0 },
         );
       } catch (error) {
         req.log.error({ err: error }, "asset summary read failed");

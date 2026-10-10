@@ -33,6 +33,10 @@ interface PageTrail {
  * actually looking at.
  */
 export const PAGE_TRAILS: readonly PageTrail[] = [
+  // The Dashboard's tabs (#666): Overview is Home itself, the others name their tab under it.
+  { pattern: "/to-do", trail: [{ labelKey: "dashboard.tabs.todo" }] },
+  { pattern: "/profit-by-vehicle", trail: [{ labelKey: "dashboard.tabs.vehicles" }] },
+  { pattern: "/profit-by-branch", trail: [{ labelKey: "dashboard.tabs.branches" }] },
   { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
   // The module pages' tabs (#665): Overview is the section itself, the others
   // name their tab under it. Before the record patterns, or "list" reads as a

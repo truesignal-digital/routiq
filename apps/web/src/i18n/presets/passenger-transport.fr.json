@@ -312,5 +312,25 @@
     "VEHICLE_DOUBLE_BOOKED": "Ce véhicule est déjà prévu sur un autre voyage au même moment.",
     "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre voyage au même moment.",
     "TRIP_STARTED_AFTER_CANCELLATION": "Ce voyage avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# voyage clôturé} other {# voyages clôturés}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Voyages"
+      },
+      "tripsCount": "{count, plural, one {# voyage} other {# voyages}}",
+      "tripsWithoutKm": "{count, plural, one {# voyage sans km} other {# voyages sans km}}",
+      "lossDetail": "{count, plural, =0 {Aucun voyage} one {# voyage} other {# voyages}} · {amount} dépensés"
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# voyage prévu} other {# voyages prévus}}"
+        }
+      }
+    }
   }
 }

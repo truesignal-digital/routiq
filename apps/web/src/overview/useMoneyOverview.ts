@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import type { FinanceOverviewResponse, OverviewRange } from "@routiq/contracts";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 import { useBranchScopedParams, type BranchScopedParams } from "../shell/branch-scope.js";
 
 export async function fetchMoneyOverview(
@@ -61,14 +62,17 @@ export function isMoneyOverview(value: unknown): value is FinanceOverviewRespons
 export function useMoneyOverview(range: OverviewRange, enabled = true) {
   const session = useActiveSession();
   const { branchId } = useBranchScopedParams<BranchScopedParams>({});
-
   return useQuery({
-    queryKey: ["ws", session?.workspaceSlug, "finance", "overview", range, branchId ?? "ALL"],
+    ...moneyOverviewQueryOptions(session?.workspaceSlug, range, branchId),
     enabled: enabled && session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchMoneyOverview(token, range, branchId, signal);
-    },
+  });
+}
+
+/** `branchId` is the shell's: `useBranchScopedParams` in a hook, `ambientBranchId` in a loader. */
+export function moneyOverviewQueryOptions(workspaceSlug: string | undefined, range: OverviewRange, branchId: string | undefined) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "finance", "overview", range, branchId ?? "ALL"],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchMoneyOverview(token, range, branchId, signal)),
   });
 }

@@ -247,7 +247,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+    expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users"]);
   });
 
   it("groups the rows under Daily work and Company", async () => {
@@ -260,14 +260,14 @@ describe("AppShell (sidebar frame)", () => {
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Users"]);
+    expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Users"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
     // A core page: a module's page waits for membership (ModulePageGate).
     await renderShell("/");
-    expect(navLinkNames()).toEqual(["Home"]);
+    expect(navLinkNames()).toEqual(["Dashboard"]);
   });
 
   it("marks the section owning the route active, and only that one", async () => {
@@ -277,7 +277,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("highlights Home on the landing route without swallowing the others", async () => {
     await renderShell("/");
-    expect(activeNavName()).toBe("Home");
+    expect(activeNavName()).toBe("Dashboard");
 
     cleanup();
     await renderShell("/assets/new");
@@ -432,13 +432,13 @@ describe("AppShell (sidebar frame)", () => {
     it("renames the chrome of a single-preset workspace", async () => {
       me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Trucks", "Money", "Users"]);
     });
 
     // Runs after the overlay above: also proves unmounting clears it.
     it("keeps the base vocabulary for a mixed fleet", async () => {
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users"]);
     });
   });
 
@@ -462,7 +462,7 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users"]);
     });
 
     it("closes the sheet after navigating", async () => {

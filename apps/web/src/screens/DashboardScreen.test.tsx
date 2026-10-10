@@ -37,7 +37,7 @@ vi.mock("../auth/store.js", () => ({
   useActiveSession: () => session,
 }));
 
-const { DashboardScreen } = await import("./DashboardScreen.js");
+const { DashboardScreen, HomeWithoutOverview } = await import("./DashboardScreen.js");
 
 const FLAT_SERIES = Array.from({ length: 7 }, (_, index) => ({
   date: `2026-07-2${index}`,
@@ -177,12 +177,16 @@ function membership(role: Role, enabledModules: ModuleCode[]): MeContext {
 
 const ENTRY_DETAIL_PATH = "/finance/entries/$entryId";
 
+/**
+ * Home's tiles and panels, as the roles without the Dashboard's Overview get
+ * them. The Overview roles' page is covered under "Dashboard by role" below.
+ */
 async function renderHome(me: MeContext) {
   const rootRoute = createRootRoute();
   const homeRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
-    component: DashboardScreen,
+    component: HomeWithoutOverview,
   });
   const otherRoutes = ["/assets", "/finance/entries", "/finance/approvals"].map((path) =>
     createRoute({
@@ -512,11 +516,118 @@ describe("DashboardScreen — i18n", () => {
     installFetch();
     await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
-    expect(await screen.findByRole("heading", { name: "Accueil" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Tableau de bord" })).toBeTruthy();
     expect(screen.getByText("Approbations en attente")).toBeTruthy();
     expect(screen.getByText("Dépenses et recettes")).toBeTruthy();
     expect(screen.getByText("Écritures récentes")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "30 jours" })).toBeTruthy();
     expect(screen.queryByText("Pending approvals")).toBeNull();
+  });
+});
+
+/** The real DashboardScreen over stub tab routes: who gets the Dashboard's tabs. */
+async function renderDashboard(me: MeContext, path = "/") {
+  const rootRoute = createRootRoute();
+  const layout = createRoute({ getParentRoute: () => rootRoute, id: "home", component: DashboardScreen });
+  const tabs = ["/", "/to-do", "/profit-by-vehicle", "/profit-by-branch"].map((tabPath) =>
+    createRoute({
+      getParentRoute: () => layout,
+      path: tabPath,
+      component: () => <div data-testid="dashboard-tab">{tabPath}</div>,
+    }),
+  );
+  const elsewhere = ["/assets", "/finance/entries", "/finance/approvals"].map((other) =>
+    createRoute({ getParentRoute: () => rootRoute, path: other, component: () => <div>{other}</div> }),
+  );
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([layout.addChildren(tabs), ...elsewhere]),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
+  render(
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MeCtx.Provider value={me}>
+          <RouterProvider router={router} />
+        </MeCtx.Provider>
+      </QueryClientProvider>
+    </I18nextProvider>,
+  );
+  return router;
+}
+
+function installDashboardFetch() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      requested.push(url);
+      if (url.startsWith("/v1/todo")) {
+        return jsonResponse(
+          { businessDate: "2026-10-09", scope: { ambientBranch: "IGNORED", branchIds: "ALL" }, rows: [], totalCount: 5 },
+          200,
+        );
+      }
+      if (url.startsWith("/v1/dashboard")) return jsonResponse(dashboard, 200);
+      if (url.startsWith("/v1/finance/entries")) return jsonResponse(entries, 200);
+      throw new Error(`unexpected request: ${url}`);
+    }),
+  );
+}
+
+describe("Dashboard by role (#666)", () => {
+  const MODULES: ModuleCode[] = ["CORE", "ASSETS", "FINANCE"];
+
+  it.each(["DIRECTOR", "ADMIN", "FINANCE"] as const)(
+    "opens %s on the Dashboard: Overview, To do, Profit by vehicle, Profit by branch",
+    async (role) => {
+      installDashboardFetch();
+      await renderDashboard(membership(role, MODULES));
+      expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeTruthy();
+      const nav = screen.getByRole("navigation", { name: "Dashboard sections" });
+      expect(within(nav).getAllByRole("tab").map((tab) => tab.textContent?.replace(/\d+.*$/, ""))).toEqual([
+        "Overview",
+        "To do",
+        "Profit by vehicle",
+        "Profit by branch",
+      ]);
+      expect(screen.getByTestId("dashboard-tab").textContent).toBe("/");
+      // Home's own tiles and panels make way for the Overview.
+      expect(screen.queryByText("Recent entries")).toBeNull();
+    },
+  );
+
+  it("counts what waits on the To do tab, and keeps the range from tab to tab", async () => {
+    installDashboardFetch();
+    await renderDashboard(membership("DIRECTOR", MODULES), "/profit-by-vehicle?range=3-months");
+    const nav = await screen.findByRole("navigation", { name: "Dashboard sections" });
+    const todo = await within(nav).findByRole("tab", { name: /To do/ });
+    await waitFor(() => expect(todo.textContent).toContain("5"));
+    expect(todo.getAttribute("href")).toBe("/to-do?range=3-months");
+    expect(within(nav).getByRole("tab", { name: "Profit by branch" }).getAttribute("href")).toBe(
+      "/profit-by-branch?range=3-months",
+    );
+    expect(within(nav).getByRole("tab", { name: "Profit by vehicle" }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it.each(["CASHIER", "TECHNICIAN", "DRIVER"] as const)("keeps %s on Home without the Overview", async (role) => {
+    installDashboardFetch();
+    await renderDashboard(membership(role, MODULES));
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Dashboard sections" })).toBeNull();
+    expect(screen.queryByTestId("dashboard-tab")).toBeNull();
+    expect(requested.some((url) => url.startsWith("/v1/finance/overview"))).toBe(false);
+  });
+
+  it("sends a role without the Overview from a tab's address back to Home", async () => {
+    installDashboardFetch();
+    const router = await renderDashboard(membership("CASHIER", MODULES), "/profit-by-branch");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+
+  it("keeps the Dashboard's tabs away from everyone when Money is off", async () => {
+    installDashboardFetch();
+    await renderDashboard(membership("DIRECTOR", ["CORE", "ASSETS"]));
+    await screen.findByRole("heading", { name: "Dashboard" });
+    expect(screen.queryByRole("navigation", { name: "Dashboard sections" })).toBeNull();
   });
 });

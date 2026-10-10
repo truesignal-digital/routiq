@@ -14,7 +14,7 @@
     "maintenance": "Maintenance"
   },
   "home": {
-    "title": "Accueil",
+    "title": "Tableau de bord",
     "loadFailed": "Impossible de charger le tableau de bord. Veuillez réessayer.",
     "retry": "Réessayer",
     "empty": {
@@ -60,7 +60,8 @@
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les écritures. Veuillez réessayer.",
       "empty": "Aucune écriture pour cette agence."
-    }
+    },
+    "loading": "Chargement…"
   },
   "shell": {
     "navLabel": "Navigation",
@@ -3157,6 +3158,199 @@
     "notify": {
       "success": {
         "thresholdsSaved": "Seuils d'approbation enregistrés"
+      }
+    }
+  },
+  "dashboard": {
+    "description": "Gagnons-nous de l’argent, qu’est-ce qui a changé, et qu’est-ce qui vous attend ?",
+    "loadFailed": "Impossible de charger les chiffres du tableau de bord. Réessayez.",
+    "openTab": "Ouvrir l’onglet",
+    "tabs": {
+      "label": "Sections du tableau de bord",
+      "overview": "Vue d’ensemble",
+      "todo": "À faire",
+      "vehicles": "Bénéfice par véhicule",
+      "branches": "Bénéfice par agence",
+      "todoCount": "{count, plural, one {# chose attend} other {# choses attendent}}"
+    },
+    "tiles": {
+      "revenue": "Recettes",
+      "expenses": "Dépenses",
+      "vehicleCosts": "Coûts des véhicules",
+      "companyCosts": "Frais généraux",
+      "canDrive": "Véhicules disponibles",
+      "canDriveValue": "{count} sur {total}",
+      "offTheRoad": "{count, plural, one {# en service est immobilisé} other {# en service sont immobilisés}}",
+      "allCanDrive": "Tous les véhicules en service peuvent rouler",
+      "profitHint": "{change} · {share} des recettes",
+      "noneInService": "Aucun véhicule en service"
+    },
+    "counted": {
+      "profitMeans": "Bénéfice = recettes − dépenses enregistrées dans ROUTIQ ; les impôts et les remboursements d’emprunt n’y sont pas.",
+      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# activité clôturée} other {# activités clôturées}}."
+    },
+    "bridge": {
+      "title": "Ce qui a changé le bénéfice",
+      "question": "Qu’est-ce qui a changé le bénéfice ?",
+      "description": "Du {comparison} au {period}, {currency}. Le bleu a augmenté le bénéfice, l’orange l’a diminué.",
+      "revenue": "Recettes",
+      "otherCategories": "{count, plural, one {# autre catégorie} other {# autres catégories}}",
+      "noCategory": "Dépenses sans catégorie",
+      "companyCosts": "Frais généraux",
+      "raised": "A augmenté le bénéfice",
+      "lowered": "A diminué le bénéfice"
+    },
+    "categories": {
+      "title": "Ce qui a changé les dépenses",
+      "question": "Où les dépenses ont-elles changé ?",
+      "description": "Chaque catégorie de dépense, {period} (barre) face à {comparison} (repère), {currency}."
+    },
+    "chart": {
+      "table": "Tableau",
+      "chart": "Graphique"
+    },
+    "todo": {
+      "title": "À faire",
+      "description": "Classé par sécurité, puis par montant · toutes vos agences",
+      "empty": "Rien ne vous attend.",
+      "loadFailed": "Impossible de charger vos tâches. Réessayez.",
+      "seeAll": "Tout voir ({count})",
+      "more": "Les {shown} premières sur {count}.",
+      "rows": {
+        "VEHICLE_GROUNDED": {
+          "title": "{asset} immobilisé depuis le {since}",
+          "detail": "Immobilisé {days, plural, =0 {aujourd’hui} one {depuis # jour} other {depuis # jours}} · aucun ordre de travail",
+          "detailPlanned": "Immobilisé {days, plural, =0 {aujourd’hui} one {depuis # jour} other {depuis # jours}} · un ordre de travail est prévu",
+          "detailReady": "Immobilisé {days, plural, =0 {aujourd’hui} one {depuis # jour} other {depuis # jours}} · réparé, attend sa remise en service",
+          "action": "Ouvrir"
+        },
+        "ISSUE_UNPLANNED": {
+          "title": "{asset} : {description}",
+          "titleSafety": "{asset}, sécurité : {description}",
+          "detail": "Signalé le {since} · aucun ordre de travail ne le couvre",
+          "action": "Planifier la réparation"
+        },
+        "DOCUMENT_EXPIRED": {
+          "title": "{asset} : {type} expiré",
+          "detail": "Expiré le {date}",
+          "action": "Ouvrir"
+        },
+        "DOCUMENT_EXPIRING": {
+          "title": "{asset} : {type} expire {daysLeft, plural, =0 {dans moins d’un jour} one {dans # jour} other {dans # jours}}",
+          "detail": "Expire le {date}",
+          "action": "Ouvrir"
+        },
+        "ENTRIES_AWAITING_APPROVAL": {
+          "title": "{count, plural, one {# dépense attend} other {# dépenses attendent}} votre approbation",
+          "detail": "{amount} · la plus ancienne depuis le {since}",
+          "action": "Vérifier"
+        },
+        "ENTRIES_EVIDENCE_MISSING": {
+          "title": "{count, plural, one {# écriture n’a} other {# écritures n’ont}} pas de justificatif",
+          "detail": "{amount} · la plus ancienne depuis le {since}",
+          "action": "Ouvrir les écritures"
+        },
+        "PERIOD_OPEN": {
+          "title": "{month} est encore ouvert",
+          "detail": "{submitted, plural, =0 {Rien n’attend d’approbation} one {# écriture attend une approbation} other {# écritures attendent une approbation}} · {missing, plural, =0 {tous les justificatifs sont là} one {# justificatif manquant} other {# justificatifs manquants}}",
+          "action": "Clôturer le mois"
+        }
+      }
+    },
+    "vehicles": {
+      "title": {
+        "profit": "Bénéfice par véhicule",
+        "costs": "Coût par véhicule"
+      },
+      "description": {
+        "profit": "{period} · recettes et dépenses enregistrées sur chaque véhicule · pertes d’abord",
+        "costs": "{period} · dépenses enregistrées sur chaque véhicule · les plus coûteux d’abord"
+      },
+      "atALossTitle": "Véhicules en perte",
+      "noneAtALoss": "Aucun véhicule n’a fait de perte sur cette période.",
+      "empty": "Aucun véhicule sur cette période.",
+      "unavailable": "Les chiffres par véhicule demandent le module Véhicules.",
+      "columns": {
+        "vehicle": "Véhicule",
+        "branch": "Agence",
+        "trips": "Activités",
+        "km": "Km",
+        "revenue": "Recettes",
+        "expenses": "Dépenses",
+        "profit": "Bénéfice"
+      },
+      "tripsCount": "{count, plural, one {# activité} other {# activités}}",
+      "tripsWithoutKm": "{count, plural, one {# activité sans km} other {# activités sans km}}",
+      "lossDetail": "{count, plural, =0 {Aucune activité} one {# activité} other {# activités}} · {amount} dépensés",
+      "expensesOnly": "{amount} dépensés",
+      "lines": {
+        "allVehicles": "Bénéfice de tous les véhicules ({count})",
+        "branchVehicles": "Bénéfice des véhicules de l’agence ({count})",
+        "otherVehicles": "Véhicules d’autres agences dans les écritures de l’agence",
+        "revenueWithoutVehicle": "Recettes enregistrées sans véhicule",
+        "companyCosts": "Frais généraux",
+        "companyProfit": "Bénéfice de l’entreprise",
+        "companyLoss": "Perte de l’entreprise",
+        "allVehicleCosts": "Coûts de tous les véhicules ({count})",
+        "branchVehicleCosts": "Coûts des véhicules de l’agence ({count})",
+        "otherVehicleCosts": "Véhicules d’autres agences dans les écritures de l’agence",
+        "companyCostsPlus": "Frais généraux",
+        "allExpenses": "Toutes les dépenses"
+      }
+    },
+    "months": {
+      "title": {
+        "profit": "Recettes et dépenses par mois",
+        "costs": "Dépenses par mois"
+      },
+      "description": {
+        "profit": "Les recettes restent-elles au-dessus des dépenses ? 12 derniers mois clôturés, {currency}.",
+        "costs": "Les dépenses augmentent-elles ? 12 derniers mois clôturés, {currency}."
+      },
+      "revenue": "Recettes",
+      "expenses": "Dépenses",
+      "month": "Mois",
+      "open": "Ouvrir Argent"
+    },
+    "branches": {
+      "title": {
+        "profit": "Bénéfice des véhicules par agence",
+        "costs": "Coûts des véhicules par agence"
+      },
+      "description": {
+        "profit": "Les véhicules de quelle agence rapportent le plus ? {period}, {currency}.",
+        "costs": "Les véhicules de quelle agence coûtent le plus ? {period}, {currency}."
+      },
+      "empty": "Aucune agence n’a de véhicule sur cette période.",
+      "companyCostsNote": "Les frais généraux ({amount}) ne sont pas répartis par agence.",
+      "hover": "{count, plural, one {# véhicule} other {# véhicules}} · recettes {revenue} · dépenses {expenses}",
+      "hoverCosts": "{count, plural, one {# véhicule} other {# véhicules}} · dépenses {expenses}",
+      "vehicleCount": "{count, plural, one {# véhicule} other {# véhicules}}",
+      "columns": {
+        "branch": "Agence",
+        "vehicles": "Véhicules",
+        "revenue": "Recettes",
+        "expenses": "Dépenses",
+        "profit": "Bénéfice des véhicules"
+      }
+    },
+    "comingUp": {
+      "title": "À venir",
+      "description": "{days} prochains jours · toutes vos agences",
+      "empty": "Rien n’arrive à échéance dans les {days} prochains jours.",
+      "loadFailed": "Impossible de charger ce qui arrive. Réessayez.",
+      "notCounted": {
+        "SERVICE_DUE_BY_KM": "Les entretiens dus au kilométrage ne sont pas comptés : ROUTIQ n’enregistre pas encore les intervalles d’entretien."
+      },
+      "rows": {
+        "DOCUMENT_DUE": {
+          "title": "{asset} : {type}",
+          "detail": "{date} · dans {days, plural, one {# jour} other {# jours}}"
+        },
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# activité prévue} other {# activités prévues}}",
+          "detail": "{without, plural, =0 {véhicules affectés} one {# sans véhicule pour l’instant} other {# sans véhicule pour l’instant}}"
+        }
       }
     }
   }

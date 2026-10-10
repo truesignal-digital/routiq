@@ -51,6 +51,10 @@ const FleetDocumentsTab = lazyScreen(() => import("./documents/FleetDocumentsTab
 const BranchesScreen = lazyScreen(() => import("./screens/BranchesScreen.js"), "BranchesScreen");
 const CompanySettingsScreen = lazyScreen(() => import("./screens/CompanySettingsScreen.js"), "CompanySettingsScreen");
 const DashboardScreen = lazyScreen(() => import("./screens/DashboardScreen.js"), "DashboardScreen");
+const DashboardTodoTab = lazyScreen(() => import("./dashboard/DashboardTodoTab.js"), "DashboardTodoTab");
+const DashboardOverviewTab = lazyScreen(() => import("./screens/FinanceDashboard.js"), "DashboardOverviewTab");
+const DashboardVehiclesTab = lazyScreen(() => import("./screens/FinanceDashboard.js"), "DashboardVehiclesTab");
+const DashboardBranchesTab = lazyScreen(() => import("./screens/FinanceDashboard.js"), "DashboardBranchesTab");
 const MySettingsScreen = lazyScreen(() => import("./screens/MySettingsScreen.js"), "MySettingsScreen");
 const PersonsScreen = lazyScreen(() => import("./screens/PersonsScreen.js"), "PersonsScreen");
 const UsersScreen = lazyScreen(() => import("./screens/UsersScreen.js"), "UsersScreen");
@@ -202,12 +206,59 @@ const appRoute = createRoute({
   component: AppShell,
 });
 
-const indexRoute = createRoute({
+/**
+ * Home: the Dashboard's header and tabs for the ledger readers, Home's tiles
+ * for everyone else (DashboardScreen decides). Each tab is its own address;
+ * the money tabs share the range picker, this month being the bare address.
+ */
+const homeRoute = createRoute({
   getParentRoute: () => appRoute,
-  path: "/",
+  id: "home",
+  validateSearch: z.object({
+    range: z.enum(["3-months", "12-months"]).optional().catch(undefined),
+  }),
   loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.home(args))),
   pendingComponent: HomeSkeleton,
   component: DashboardScreen,
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/",
+  loaderDeps: ({ search }) => ({ range: search.range }),
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.dashboardOverview(args))),
+  component: DashboardOverviewTab,
+  pendingComponent: TabSkeleton,
+  errorComponent: SectionError,
+});
+
+const dashboardTodoRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/to-do",
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.dashboardTodo(args))),
+  component: DashboardTodoTab,
+  pendingComponent: TabSkeleton,
+  errorComponent: SectionError,
+});
+
+const dashboardVehiclesRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/profit-by-vehicle",
+  loaderDeps: ({ search }) => ({ range: search.range }),
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.dashboardMoney(args))),
+  component: DashboardVehiclesTab,
+  pendingComponent: TabSkeleton,
+  errorComponent: SectionError,
+});
+
+const dashboardBranchesRoute = createRoute({
+  getParentRoute: () => homeRoute,
+  path: "/profit-by-branch",
+  loaderDeps: ({ search }) => ({ range: search.range }),
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.dashboardMoney(args))),
+  component: DashboardBranchesTab,
+  pendingComponent: TabSkeleton,
+  errorComponent: SectionError,
 });
 
 /**
@@ -378,8 +429,8 @@ const financeRoute = createRoute({
       });
     }
   },
-  component: FinanceScreen,
   pendingComponent: ModuleListSkeleton,
+  component: FinanceScreen,
 });
 
 const financeOverviewRoute = createRoute({
@@ -611,7 +662,7 @@ const companySettingsRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
-    indexRoute,
+    homeRoute.addChildren([indexRoute, dashboardTodoRoute, dashboardVehiclesRoute, dashboardBranchesRoute]),
     assetsRoute.addChildren([assetsOverviewRoute, assetsListRoute, assetsDocumentsRoute]),
     // Before the $assetId route, or "new" reads as an asset id.
     assetsNewRoute,
@@ -677,7 +728,7 @@ router.subscribe("onBeforeLoad", () => {
  * While someone types their PIN, fetch the shell and Home, so signing in does
  * not wait on another download over a slow network.
  */
-export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
+export const AFTER_SIGN_IN = [AppShell, DashboardScreen, DashboardOverviewTab];
 
 export function preloadAfterSignIn(): void {
   for (const screen of AFTER_SIGN_IN) void screen.preload();
@@ -689,6 +740,9 @@ export function preloadAfterSignIn(): void {
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
 export const SCREENS_BY_USE = [
+  DashboardTodoTab,
+  DashboardVehiclesTab,
+  DashboardBranchesTab,
   TrucksFrame,
   TrucksOverview,
   AssetsStub,

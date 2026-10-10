@@ -16,16 +16,24 @@ export const TO_DO_LIMIT = 5;
 
 /**
  * What needs me? (dashboards.html, ToDo): the caller ranks the rows; the list
- * keeps the first five, each with its one button. Nothing waiting is said in
- * words, never left blank.
+ * keeps the first five, each with its one button. A To do tab passes no limit
+ * and lists every row. Nothing waiting is said in words, never left blank.
  */
-export function ToDoList({ items, empty }: { items: readonly ToDoItem[]; empty: ReactNode }) {
+export function ToDoList({
+  items,
+  empty,
+  limit = TO_DO_LIMIT,
+}: {
+  items: readonly ToDoItem[];
+  empty: ReactNode;
+  limit?: number;
+}) {
   if (items.length === 0) {
     return <p className="py-2 text-sm text-muted-foreground">{empty}</p>;
   }
   return (
     <ul data-slot="to-do-list" className="flex flex-col">
-      {items.slice(0, TO_DO_LIMIT).map((item) => (
+      {items.slice(0, limit).map((item) => (
         <li
           key={item.key}
           data-slot="to-do-row"

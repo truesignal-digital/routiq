@@ -55,7 +55,7 @@ export const financeManifest: WebModuleManifest = {
     },
   ],
   navCounts: [{ key: "moneyWaiting", listKey: (slug) => ["ws", slug, "finance", "approvals"] }],
-  homeCards: ["pendingApprovals", "openPeriodExpense", "openPeriodRevenue", "moneyChart", "recentEntries"],
+  homeCards: ["pendingApprovals", "openPeriodExpense", "openPeriodRevenue", "moneyChart", "recentEntries", "overview"],
   vehicleTabs: ["money"],
   vehicleActions: ["log-fuel", "record-expense", "attach-evidence", "record-revenue", "review-entry", "reverse-entry"],
   recordPanels: ["entry"],
