@@ -34,6 +34,7 @@ const summary: FinanceOverviewResponse["summary"] = {
 
 const notice: FinanceOverviewResponse["notice"] = {
   today: "2026-10-09",
+  schedule: "MONDAY_AND_MONTH_START",
   scheduledOn: "2026-10-05",
   scheduledToday: null,
   changes: [

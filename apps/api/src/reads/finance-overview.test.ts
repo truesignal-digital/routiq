@@ -70,6 +70,22 @@ describe("summary windows and schedule (#667)", () => {
     // A Monday that is the 1st is the 1st.
     expect(summarySchedule("2026-06-01")).toEqual({ scheduledOn: "2026-06-01", scheduledToday: "MONTH_START" });
   });
+
+  it("follows the company's schedule (#669)", () => {
+    // Mondays only: the 1st is an ordinary day, and the last Monday stays the scheduled one.
+    expect(summarySchedule("2026-10-05", "MONDAY")).toEqual({ scheduledOn: "2026-10-05", scheduledToday: "MONDAY" });
+    expect(summarySchedule("2026-10-01", "MONDAY")).toEqual({ scheduledOn: "2026-09-28", scheduledToday: null });
+    expect(summarySchedule("2026-06-01", "MONDAY")).toEqual({ scheduledOn: "2026-06-01", scheduledToday: "MONDAY" });
+    // The 1st only: Mondays are ordinary days.
+    expect(summarySchedule("2026-10-01", "MONTH_START")).toEqual({ scheduledOn: "2026-10-01", scheduledToday: "MONTH_START" });
+    expect(summarySchedule("2026-10-05", "MONTH_START")).toEqual({ scheduledOn: "2026-10-01", scheduledToday: null });
+    expect(summarySchedule("2026-10-31", "MONTH_START")).toEqual({ scheduledOn: "2026-10-01", scheduledToday: null });
+    // Never: no scheduled day at all.
+    expect(summarySchedule("2026-10-01", "NEVER")).toEqual({ scheduledOn: null, scheduledToday: null });
+    expect(summarySchedule("2026-10-05", "NEVER")).toEqual({ scheduledOn: null, scheduledToday: null });
+    // The default is both.
+    expect(summarySchedule("2026-10-05", "MONDAY_AND_MONTH_START")).toEqual(summarySchedule("2026-10-05"));
+  });
 });
 
 /**

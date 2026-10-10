@@ -98,7 +98,7 @@ describe("asset overview contract", () => {
     canDrive: 5,
     grounded: { count: 2, first: { assetId, assetCode: "VH002", since: "2026-10-01T08:00:00.000Z" } },
     idle: { count: 4, days: 5, first: { assetId, assetCode: "VH004", lastTripAt: null } },
-    notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+    notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
   };
 
   it("accepts the counts, and null for a module that is off", () => {
