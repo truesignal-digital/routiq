@@ -84,7 +84,7 @@ async function main(): Promise<number> {
       if (v.status === "missing") {
         failed = true;
         trustworthy = false;
-        process.stdout.write(`GONE  ${v.name}: not measured this run (ceiling ${fmt(v.name, v.ceiling)})\n`);
+        process.stdout.write(`GONE  ${v.name}: not measured this run (ceiling ${fmt(v.name, v.ceiling)}); if the screen is gone, delete its ceilings from tools/perf/ceilings.json\n`);
         continue;
       }
       if (v.status === "new") {

@@ -146,7 +146,7 @@ async function lockDialogs(ctx: DriveContext) {
   // Newest first: the current month, then the open past month.
   for (const [index, label, expected] of [
     [1, "lock-past", t("sera comptabilisée dans le mois en cours et gardera sa date", "posts in the current month and keeps its date")],
-    [0, "lock-current", t("plus rien ne pourra être comptabilisé avant sa réouverture", "nothing can be posted until it is reopened")],
+    [0, "lock-current", t("les écritures datées de ce mois ne pourront pas être comptabilisées avant sa réouverture", "entries dated this month can't post until it is reopened")],
   ] as const) {
     await actions.nth(index).click();
     await page.getByRole("menuitem", { name: t("Verrouiller la période", "Lock period") }).click();

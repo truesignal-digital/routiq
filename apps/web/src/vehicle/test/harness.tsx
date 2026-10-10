@@ -38,6 +38,8 @@ export interface VehicleScenario {
   members?: Record<string, Role>;
   modules?: ModuleCode[];
   principalType?: PrincipalType;
+  /** The workspace's time zone `/v1/me` names; the fixture's Douala otherwise. */
+  timezone?: string;
   width?: number;
   locale?: "en" | "fr-CM";
   asset?: AssetDetail;
@@ -154,6 +156,7 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
       return json({
         ...me(member ?? scenario.role, scenario.modules ?? ALL_MODULES),
         principalType: scenario.principalType ?? "HUMAN",
+        ...(scenario.timezone === undefined ? {} : { timezone: scenario.timezone }),
       });
     }
     if (p === "/v1/reference/asset-registration") {

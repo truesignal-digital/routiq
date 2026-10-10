@@ -17,6 +17,7 @@ export const COMMAND_INTENTS = {
   "set-branch-status": ["deactivate", "reactivate"],
   "record-journey-sheet": ["close"],
   "change-issue-severity": ["lower"],
+  "link-person-login": ["relink"],
 } as const satisfies Partial<Record<CommandName, readonly string[]>>;
 
 type Intents = typeof COMMAND_INTENTS;

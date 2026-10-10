@@ -285,6 +285,17 @@ function shapeOf(entityType: HistoryEntityType, field: string): HistoryFieldShap
 }
 
 /**
+ * Whether the reader sees money: for every field, or per field where a record
+ * mixes amounts with different owners (a work order's estimate is
+ * Maintenance's, its actual cost Finance's — #640).
+ */
+export type MoneyShown = boolean | ((field: string) => boolean);
+
+function moneyShown(showMoney: MoneyShown, field: string): boolean {
+  return typeof showMoney === "boolean" ? showMoney : showMoney(field);
+}
+
+/**
  * The changes the record history sheet can give a row: a shape the sheet shows
  * (not `HIDDEN`), money only for a reader who may see it, and something on at
  * least one side. The timeline's chips come from this same filter, so a chip
@@ -293,12 +304,12 @@ function shapeOf(entityType: HistoryEntityType, field: string): HistoryFieldShap
 export function shownChanges(
   entityType: HistoryEntityType,
   changes: readonly HistoryFieldChange[],
-  { showMoney }: { showMoney: boolean },
+  { showMoney }: { showMoney: MoneyShown },
 ): HistoryFieldChange[] {
   return changes.filter(({ field, before, after }) => {
     const shape = shapeOf(entityType, field);
     if (shape === undefined || shape === "HIDDEN") return false;
-    if (shape === "MONEY" && !showMoney) return false;
+    if (shape === "MONEY" && !moneyShown(showMoney, field)) return false;
     return !(isNothing(before) && isNothing(after));
   });
 }
@@ -308,7 +319,7 @@ export async function presentChanges(
   workspaceId: string,
   entityType: HistoryEntityType,
   changes: readonly HistoryFieldChange[],
-  { showMoney }: { showMoney: boolean },
+  { showMoney }: { showMoney: MoneyShown },
 ): Promise<HistoryDiffChange[]> {
   // Gather every key each lookup needs, so one event costs one query per source.
   const wanted = new Map<HistoryNameSource, Set<string>>();
@@ -354,14 +365,14 @@ export async function presentChanges(
       const sides = both(scalar);
       if (sides) change = { field, kind: "VALUE", ...sides };
     } else if (shape === "MONEY") {
-      if (!showMoney) continue;
+      if (!moneyShown(showMoney, field)) continue;
       const sides = both(minor);
       if (sides) change = { field, kind: "MONEY", ...sides };
     } else if (shape === "COUNT") {
       const sides = both(count);
       if (sides) change = { field, kind: "COUNT", ...sides };
     } else if (shape === "LINES") {
-      const sides = both((value) => lines(value, showMoney));
+      const sides = both((value) => lines(value, moneyShown(showMoney, field)));
       if (sides) change = { field, kind: "LINES", ...sides };
     } else if (shape === "CREW") {
       const personNames = names.get("person") ?? new Map<string, HistoryName>();

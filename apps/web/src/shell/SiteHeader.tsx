@@ -26,7 +26,12 @@ export function SiteHeader() {
   const me = useMeContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const recordLabel = useRecordCrumbLabel(pathname);
-  const crumbs = breadcrumbTrail(visibleSections(me?.role, me?.enabledModules), pathname, recordLabel);
+  const crumbs = breadcrumbTrail(
+    visibleSections(me?.role, me?.enabledModules),
+    pathname,
+    recordLabel,
+    me?.enabledModules,
+  );
   const crumbText = (crumb: Crumb) => crumb.label ?? t(crumb.labelKey);
   const { scoped } = useBranchScope();
   // Beside the branch pill a phone has room for one crumb: the full trail

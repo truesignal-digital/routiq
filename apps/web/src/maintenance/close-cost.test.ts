@@ -4,7 +4,6 @@ import {
   defaultCostChoice,
   newCostLine,
   recordedCost,
-  todayIsoDate,
   toCompletionCost,
 } from "./close-cost.js";
 
@@ -99,11 +98,5 @@ describe("toCompletionCost", () => {
       costLines: [],
       sourceArtifactIds: [],
     });
-  });
-});
-
-describe("todayIsoDate", () => {
-  it("reads the device's calendar day, not UTC's", () => {
-    expect(todayIsoDate(new Date(2026, 8, 30, 0, 30))).toBe("2026-09-30");
   });
 });

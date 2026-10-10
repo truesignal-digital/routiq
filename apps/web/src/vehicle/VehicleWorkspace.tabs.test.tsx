@@ -7,6 +7,7 @@ import {
   ASSET_ID,
   ENTRY_ID,
   WORK_ORDER_ID,
+  WORK_ORDER_NUMBER,
   asset,
   documentRow,
   entryDetail,
@@ -107,7 +108,7 @@ describe("which sections a viewer gets", () => {
       role: "ADMIN",
       modules: ALL_MODULES.filter((module) => module !== "MAINTENANCE"),
     });
-    expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
     expect(requested(recorded, "/v1/work-orders")).toEqual([]);
     expect(requested(recorded, "/v1/issues")).toEqual([]);
   });
@@ -182,6 +183,28 @@ describe("Money", () => {
     expect(recorded.history.location.search).toContain("entries=review");
   });
 
+  // #639: with no month in the URL, the tab opens on the workspace's month, not the phone's.
+  it("opens on the workspace's month when the device is still in the month before", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Noon UTC on 30 September: 1 October already at UTC+14, still September on the device.
+    vi.setSystemTime(new Date("2026-09-30T12:00:00Z"));
+    try {
+      const recorded = await openVehicle(`/assets/${ASSET_ID}/money`, {
+        role: "FINANCE",
+        timezone: "Pacific/Kiritimati",
+      });
+      expect(await screen.findByRole("heading", { name: "Money · October 2026" })).toBeTruthy();
+      await waitFor(() =>
+        expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`).at(-1)?.searchParams.get("periodCode")).toBe("2026-10"),
+      );
+      expect(requested(recorded, "/v1/finance/entries").at(-1)?.searchParams.get("periodCode")).toBe("2026-10");
+      // October is the current month: there is no month after it to open.
+      expect((screen.getByRole("button", { name: "Next month" }) as HTMLButtonElement).disabled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   describe("one name for the pending state", () => {
     const pending = workOrderDetail("APPROVED", {
       pendingCostLines: [
@@ -199,8 +222,9 @@ describe("Money", () => {
     });
 
     it.each([
-      ["en", "Awaiting review", "Costs awaiting review"],
-      ["fr-CM", "En attente d'examen", "Coûts en attente d'examen"],
+      // The pending line is one of the order's costs, marked as awaiting review (#612).
+      ["en", "Awaiting review", "Costs"],
+      ["fr-CM", "En attente d'examen", "Coûts"],
     ] as const)("%s: Money, its entry badges and the work order's pending costs agree", async (locale, name, heading) => {
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09&entries=review&panel=work_order:${WORK_ORDER_ID}`, {
         role: "FINANCE",
@@ -209,7 +233,7 @@ describe("Money", () => {
         workOrderDetails: [pending],
       });
       const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-      expect(await within(panel).findByText(heading)).toBeTruthy();
+      expect(await within(panel).findByRole("heading", { name: heading })).toBeTruthy();
       expect(within(panel).getByText(name)).toBeTruthy();
       expect(within(panel).queryByText(/Pending|En attente$|approval|approbation/)).toBeNull();
       cleanup();
@@ -484,12 +508,26 @@ describe("History", () => {
       entries: [
         entryRow({
           status: "POSTED",
-          assetLinks: { activityId: "00000000-0000-4000-8000-0000000000e4", activityNumber: "DLA-2026-00004", workOrderId: null },
+          assetLinks: {
+            activityId: "00000000-0000-4000-8000-0000000000e4",
+            activityNumber: "DLA-2026-00004",
+            workOrderId: null,
+            workOrderNumber: null,
+          },
         }),
       ],
     });
     const link = await screen.findByRole("button", { name: "for trip DLA-2026-00004" });
     expect(recordNumbers(link)).toEqual(["DLA-2026-00004"]);
+  });
+
+  it("names a Money row's work order by its number, kept on one line (#608)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09`, {
+      role: "FINANCE",
+      entries: [entryRow({ status: "POSTED" })],
+    });
+    const link = await screen.findByRole("button", { name: "for work order WO-0007" });
+    expect(recordNumbers(link)).toEqual(["WO-0007"]);
   });
 });
 
@@ -499,7 +537,7 @@ describe("Maintenance and Trips", () => {
       role: "TECHNICIAN",
       workOrders: [workOrderRow("APPROVED")],
       issues: [
-        issueRow({ workOrders: [{ id: workOrderRow("APPROVED").id, status: "APPROVED" }] }),
+        issueRow({ workOrders: [{ id: workOrderRow("APPROVED").id, number: WORK_ORDER_NUMBER, status: "APPROVED" }] }),
         issueRow({ id: "00000000-0000-4000-8000-00000000c009", description: "Rear mudguard cracked", safetyCritical: false, category: "BODYWORK" }),
       ],
     });
@@ -509,6 +547,11 @@ describe("Maintenance and Trips", () => {
     // The problem already in a work order is not "new".
     expect(screen.queryByText("Brake pressure warning on the Kekem descent")).toBeNull();
     expect(await screen.findByText("Bodywork")).toBeTruthy();
+    // Each row reads by its number (#608).
+    const orderRow = screen.getByText("Brake repair: replace pads and air valve").closest("li")!;
+    expect(within(orderRow).getByText("WO-0007")).toBeTruthy();
+    expect(orderRow.textContent).toContain("from problem PRB-0003");
+    expect(within(screen.getByText("Rear mudguard cracked").closest("li")!).getByText("PRB-0003")).toBeTruthy();
   });
 
   it("lists a driver's work orders without an amount or a missing estimate (#390)", async () => {
@@ -522,21 +565,34 @@ describe("Maintenance and Trips", () => {
     expect(item.queryByText(/planned/)).toBeNull();
   });
 
-  it("shows no work-order amount, nor a missing estimate, while FINANCE is off (#328)", async () => {
-    // What the API sends with FINANCE off: every amount null, no cost lines.
-    const hidden = { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null, costToCome: null };
+  it("keeps the estimate but shows no actual cost or cost lines while FINANCE is off (#640)", async () => {
+    // What the API sends with FINANCE off: the estimate, and no Finance figure.
+    const hidden = { actualCostMinor: null, declaredCostMinor: null, costToCome: null };
     await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=work_order:${WORK_ORDER_ID}`, {
       role: "DIRECTOR",
       modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
       workOrders: [workOrderRow("APPROVED", hidden)],
-      workOrderDetails: [workOrderDetail("APPROVED", { ...hidden, costLines: null, pendingCostLines: null })],
+      workOrderDetails: [
+        workOrderDetail("APPROVED", { ...hidden, costLines: null, pendingCostLines: null, otherBranchesCostMinor: null }),
+      ],
     });
     const dialog = await screen.findByRole("dialog", { name: "Brake repair: replace pads and air valve" });
-    expect(within(dialog).queryByText("Expected cost")).toBeNull();
+    expect(within(dialog).getByText("Expected cost")).toBeTruthy();
     expect(within(dialog).queryByText("Actual cost")).toBeNull();
+    expect(within(dialog).queryByRole("heading", { name: "Costs" })).toBeNull();
     const item = within(screen.getAllByText("Brake repair: replace pads and air valve").find((el) => el.closest("li"))!.closest("li")!);
-    expect(item.queryByText("No estimate")).toBeNull();
-    expect(item.queryByText(/planned|XAF|FCFA/)).toBeNull();
+    expect(item.getByText(/planned/)).toBeTruthy();
+  });
+
+  it("says Money is not included when FINANCE is off, without reading the books", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money`, {
+      role: "DIRECTOR",
+      modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
+    });
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
+    expect(
+      recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.endsWith("/finance")),
+    ).toBe(false);
   });
 
   it("says what a closed order's cost is instead of inventing a zero (#131)", async () => {
