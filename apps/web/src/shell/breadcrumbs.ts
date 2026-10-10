@@ -1,4 +1,6 @@
-import { activeSection, type ShellSection } from "./sections.js";
+import { activeSection, isSectionActive, type ShellSection } from "./sections.js";
+import type { ModuleCode } from "@routiq/contracts";
+import { pageOwner } from "../modules/manifest.js";
 
 export interface Crumb {
   /** Translation key; this module stays free of i18n so it can be unit-tested. */
@@ -16,6 +18,12 @@ interface PageTrail {
   pattern: string;
   /** Crumbs below the shell section, outermost first. */
   trail: readonly Crumb[];
+  /**
+   * The section key to file the page under when the viewer does not have the
+   * section that owns the route: a driver has no Money, so their entry sits
+   * under their truck (#584).
+   */
+  elsewhere?: string;
 }
 
 /**
@@ -47,6 +55,7 @@ export const PAGE_TRAILS: readonly PageTrail[] = [
       { labelKey: "finance.entries.title", to: "/finance/entries" },
       { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
+    elsewhere: "assets",
   },
   // Redirects to the waiting view; named the same in case a frame renders first.
   { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
@@ -71,29 +80,49 @@ function matchesPattern(pattern: string, pathname: string): boolean {
   );
 }
 
+function reachable(sections: readonly ShellSection[], to: string | undefined): boolean {
+  return to === undefined || sections.some((section) => isSectionActive(section, to));
+}
+
 /**
  * `Accueil / <section> / <page>` for the current location. The last crumb is
  * always the page you are on and carries no `to`; everything before it links.
  * `recordLabel` names the record on a detail route; until the screen has
- * loaded it the crumb says what kind of record it is.
+ * loaded it the crumb says what kind of record it is. With `enabledModules`,
+ * a page whose module is off is named by that module's row (#617).
  */
 export function breadcrumbTrail(
   sections: readonly ShellSection[],
   pathname: string,
   recordLabel?: string,
+  enabledModules?: readonly ModuleCode[],
 ): Crumb[] {
   const crumbs: Crumb[] = [{ labelKey: "home.title", to: "/" }];
+  const owner = pageOwner(pathname);
+  if (owner !== undefined && enabledModules !== undefined && !enabledModules.includes(owner.code)) {
+    // ModulePageGate shows the module's not-included page in place of this
+    // one, titled with the module's row; anything deeper would link into it.
+    return [...crumbs, { labelKey: owner.row.labelKey }];
+  }
 
-  const section = activeSection(sections, pathname);
+  const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
+  const section =
+    activeSection(sections, pathname) ?? sections.find(({ key }) => key === page?.elsewhere);
   // The home section is the crumb we just seeded; anything else nests under it.
   if (section !== undefined && section.key !== "home") {
     crumbs.push({ labelKey: section.labelKey, to: section.to });
   }
 
-  const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
   if (page !== undefined) {
-    // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
-    crumbs.push(...page.trail.filter((crumb) => crumb.labelKey !== section?.labelKey));
+    crumbs.push(
+      ...page.trail.filter(
+        (crumb) =>
+          // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
+          crumb.labelKey !== section?.labelKey &&
+          // A link into a place the viewer does not have would open a page they cannot use.
+          reachable(sections, crumb.to),
+      ),
+    );
   }
 
   const last = crumbs[crumbs.length - 1];

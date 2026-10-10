@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 705324,
+    "ceiling": 713858,
     "raises": [
       {
         "date": "2026-10-06",
@@ -203,31 +203,91 @@
       {
         "date": "2026-10-10",
         "from": 686158,
-        "to": 695010,
-        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495), re-measured on develop's module manifests"
+        "to": 687197,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
       },
       {
         "date": "2026-10-10",
-        "from": 695010,
-        "to": 702102,
-        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496), re-measured on develop's module manifests"
+        "from": 687197,
+        "to": 687376,
+        "reason": "Driver views (#584, #619): a driver's entry crumb under their truck and the driver lead on the Money page, in fr and en"
       },
       {
         "date": "2026-10-10",
-        "from": 702102,
-        "to": 704715,
-        "reason": "Intent preloading and the sidebar preloader (#497), re-measured on develop's module manifests"
+        "from": 687376,
+        "to": 688043,
+        "reason": "#622 empty-Home state and sentences (fr+en); #617 module-off crumb"
       },
       {
         "date": "2026-10-10",
-        "from": 704715,
-        "to": 705324,
-        "reason": "Page-type skeletons for each screen route (#498), re-measured on develop's module manifests"
+        "from": 688043,
+        "to": 688223,
+        "reason": "Fall back to the first visible sortable column when the sorted and default columns are hidden (#548)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688223,
+        "to": 688723,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688723,
+        "to": 689328,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 689328,
+        "to": 692894,
+        "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 692894,
+        "to": 694047,
+        "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694047,
+        "to": 694679,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 694794,
+        "reason": "Named shift regions on the shell's header, page and rules notice for flow:no-shift and pnpm perf (#494)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694794,
+        "to": 703743,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 703743,
+        "to": 710739,
+        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 710739,
+        "to": 713275,
+        "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713275,
+        "to": 713858,
+        "reason": "Page-type skeletons for each screen route (#498)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22508,
+    "ceiling": 22832,
     "raises": [
       {
         "date": "2026-10-06",
@@ -276,11 +336,17 @@
         "from": 22212,
         "to": 22508,
         "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22508,
+        "to": 22832,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 263827,
+    "ceiling": 266258,
     "raises": [
       {
         "date": "2026-10-06",
@@ -471,26 +537,68 @@
       {
         "date": "2026-10-10",
         "from": 259125,
-        "to": 261401,
-        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load. Re-measured on develop's module manifests"
+        "to": 259326,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
       },
       {
         "date": "2026-10-10",
-        "from": 261401,
-        "to": 262150,
-        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults; re-measured on develop's module manifests"
+        "from": 259326,
+        "to": 259547,
+        "reason": "#622 empty-Home sentences (fr+en) in the core catalog; #617 module-off crumb"
       },
       {
         "date": "2026-10-10",
-        "from": 262150,
-        "to": 263247,
-        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader; re-measured on develop's module manifests"
+        "from": 259547,
+        "to": 260139,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
       },
       {
         "date": "2026-10-10",
-        "from": 263247,
-        "to": 263827,
-        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand; re-measured on develop's module manifests"
+        "from": 260139,
+        "to": 260358,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260358,
+        "to": 261228,
+        "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261228,
+        "to": 261338,
+        "reason": "#608 work order and problem numbers (formatter and catalog strings)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261338,
+        "to": 261561,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 263813,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 263813,
+        "to": 264569,
+        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 264569,
+        "to": 265673,
+        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265673,
+        "to": 266258,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
       }
     ]
   }

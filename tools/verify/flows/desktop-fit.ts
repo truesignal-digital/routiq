@@ -3,14 +3,14 @@ import { DEMO_ACCOUNTS, type DemoAccount } from "../accounts.js";
 import { signOutThroughNameMenu, type DriveScript } from "../browser.js";
 
 /**
- * The entries list fits its card (#436). Opens it at 1440 × 900 and 1280 × 800
- * with the sidebar open, in French and English, and fails with the measured
- * widths when the page is wider than the screen, when the table scrolls
+ * The entries list (#436), Trips and the Money waiting view (#450) fit the
+ * screen at desktop widths. Opens each at 1440 × 900 and 1280 × 800 with the
+ * sidebar open, in French and English, and fails with the route and the
+ * measured widths when the page is wider than the screen, when a table scrolls
  * sideways inside its card, when a row's ⋯ menu sits past the card's right
  * edge, when opening that menu scrolls the table and hides the start of the
- * first column, or when no sorted column header shows (a list is never sorted
- * by a column the viewer can't see).
- * Trips and the Money waiting view have the same check in flow:desktop-fit-shell.
+ * first column, or when the entries list shows no sorted column header (a list
+ * is never sorted by a column the viewer can't see).
  * Run: pnpm verify drive flow:desktop-fit
  */
 export const DESKTOP_VIEWPORTS = [
@@ -18,12 +18,15 @@ export const DESKTOP_VIEWPORTS = [
   { width: 1280, height: 800 },
 ] as const;
 
-export const FIT_ROUTES = ["/finance/entries"] as const;
+export const FIT_ROUTES = ["/finance/entries", "/activities", "/finance/entries?view=waiting"] as const;
 
 /** Routes with a default sort: its column must be on screen at every width. */
 const SORTED_ROUTES: readonly string[] = ["/finance/entries"];
 
-/** Every role that reads money: the ⋯ menu differs by role, the columns don't. */
+/**
+ * Every role that reads money: the ⋯ menu differs by role, the columns don't.
+ * Direction and Finance are the ones with rows in the waiting view.
+ */
 const FIT_USERNAMES = ["nadege", "emilienne", "boris", "clarisse", "sali"] as const;
 
 interface TableMeasure {

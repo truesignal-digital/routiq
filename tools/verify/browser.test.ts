@@ -2,9 +2,11 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { drive } from "./browser.js";
+import { drive, signedInUsername } from "./browser.js";
 
 const harness = vi.hoisted(() => ({ dir: "", commit: "slot-start", url: "http://localhost/", dirty: false,
+  /** What the page's localStorage holds under routiq.sessions.v1. */
+  session: null as string | null,
   emit: (_event: string, ..._args: unknown[]): boolean => false, events: () => {},
 }));
 vi.mock("./stack.js", () => ({
@@ -24,7 +26,8 @@ vi.mock("playwright-core", async () => {
     getByLabel: () => locator, getByRole: () => locator,
     waitForURL: async () => {}, waitForTimeout: async () => {},
     screenshot: async () => {}, close: async () => {},
-    evaluate: async () => {
+    evaluate: async (fn: unknown) => {
+      if (String(fn).includes("routiq.sessions.v1")) return harness.session;
       harness.events();
       harness.events = () => {};
       return { layoutShifts: 0, cumulativeLayoutShift: 0, domNodes: 10 };
@@ -38,10 +41,12 @@ vi.mock("playwright-core", async () => {
 
 const options = { role: "admin", lang: "fr", video: false, reel: false, throttle: "none", strict: false, headed: false, viewport: { width: 1440, height: 900 } } as const;
 const summary = () => JSON.parse(readFileSync(path.join(harness.dir, "summary.json"), "utf8")) as {
-  ok: boolean; commit: string; metrics: { consoleErrors: number; failedRequests: number; expectedRefusals?: number }; steps: Array<{ step: string; ok: boolean; detail: string }>;
+  ok: boolean; account: string; frames: Array<{ label: string; account?: string }>; commit: string; metrics: { consoleErrors: number; failedRequests: number; expectedRefusals?: number }; steps: Array<{ step: string; ok: boolean; detail: string }>;
 };
 
 beforeEach(() => {
+  harness.session = null;
+  harness.events = () => {};
   harness.dir = mkdtempSync(path.join(tmpdir(), "verify-browser-"));
   let clock = 0;
   vi.spyOn(Date, "now").mockImplementation(() => (clock += 500));
@@ -109,4 +114,55 @@ it("refuses declarations that would conceal server failures", async () => {
   writeFileSync(file, 'export default async ctx => { ctx.expectRefusal({ status: 500, url: /./ }); };');
   expect(await drive(1, [file], options, "drive")).toBe(false);
   expect(summary().steps.at(-1)?.detail).toContain("400 to 499");
+});
+
+
+describe("--strict", () => {
+  it("records ok: false in summary.json when a console error fails the run (#567)", async () => {
+    harness.events = () => {
+      harness.emit("console", { type: () => "error", text: () => "boom", location: () => ({ url: "http://localhost/" }) });
+    };
+    expect(await drive(1, [], { ...options, strict: true }, "drive")).toBe(false);
+    expect(summary().ok).toBe(false);
+  });
+
+  it("leaves a clean strict run ok", async () => {
+    expect(await drive(1, [], { ...options, strict: true }, "drive")).toBe(true);
+    expect(summary().ok).toBe(true);
+  });
+});
+
+
+describe("signed-in account per shot (#565)", () => {
+  const sessions = (username: string | undefined) => JSON.stringify({
+    sessions: { "transports-ngwa:boris": { username: "boris", workspaceSlug: "transports-ngwa", token: "t", expiresAt: "2099-01-01T00:00:00Z" },
+      "transports-ngwa:nadege": { username: "nadege", workspaceSlug: "transports-ngwa", token: "t", expiresAt: "2099-01-01T00:00:00Z" } },
+    ...(username === undefined ? {} : { activeKey: `transports-ngwa:${username}` }),
+  });
+
+  it("records who was signed in at each shot, not only the account the drive started as", async () => {
+    const file = path.join(harness.dir, "switch.mjs");
+    writeFileSync(file, `export default async ctx => {
+      await ctx.shot("as-admin");
+      globalThis.__switch("signed-out");
+      await ctx.shot("login-page");
+      globalThis.__switch("nadege");
+      await ctx.shot("as-finance");
+    };`);
+    harness.session = sessions("boris");
+    (globalThis as { __switch?: (to: string) => void }).__switch = (to) => {
+      harness.session = sessions(to === "signed-out" ? undefined : to);
+    };
+    expect(await drive(1, [file], options, "drive")).toBe(true);
+    expect(summary().account).toBe("boris");
+    expect(summary().frames.map(({ label, account }) => [label, account])).toEqual([
+      ["as-admin", "boris"], ["login-page", ""], ["as-finance", "nadege"],
+    ]);
+  });
+});
+
+it("reads no account from a value it can't parse", () => {
+  expect(signedInUsername("{not json")).toBeUndefined();
+  expect(signedInUsername(undefined)).toBeUndefined();
+  expect(signedInUsername(null)).toBe("");
 });

@@ -267,7 +267,7 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
-  // `view=waiting` is the "Waiting your approval" view (#314), beside the
+  // `view=waiting` is the "Waiting for your approval" view (#314), beside the
   // read's own events / books views (#427). `branch=all` arrives from an
   // overflow line that has already named the work outside the shell's agency,
   // so the queue opens widened.

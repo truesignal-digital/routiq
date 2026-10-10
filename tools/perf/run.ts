@@ -12,7 +12,9 @@ import { median, type Measured, type Run } from "./perf.js";
 /**
  * The screens a run opens after sign-in, in order, each by a tap: its sidebar
  * row, or a link on the screen or on Home (#494). `:asset` is the first vehicle
- * in the list, tapped from /assets; My settings opens from the name menu.
+ * in the list, tapped from /assets; My settings opens from the name menu. Only
+ * screens the router renders: a redirect reports its journey under the screen
+ * it lands on, so the opened path gets no ready time.
  */
 export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/maintenance", "/my-settings"] as const;
 
@@ -23,6 +25,22 @@ export const PROFILE = `phone: CPU ${PHONE_PROFILE.cpuSlowdown}x, ${PHONE_PROFIL
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 export const template = (route: string) => route.replace(UUID, ":id");
+
+/** The route template a screen's metrics are named after, as the app's route journey names it. */
+const screenTemplate = (screen: string) => template(screen.replace(":asset", "00000000-0000-0000-0000-000000000000"));
+
+/** Every metric a run can produce. A ceiling outside this list can never be measured and fails each run as GONE. */
+export function measurableMetrics(): string[] {
+  const screens = ["/", ...SCREENS.map(screenTemplate)];
+  return [
+    "login.js_bytes",
+    "login.lcp_ms",
+    "login.usable_ms",
+    "api.p95_ms",
+    "reload.shifts",
+    ...screens.flatMap((screen) => [`${screen}.requests`, `${screen}.ready_ms`, `${screen}.shifts`]),
+  ];
+}
 
 interface OneRun {
   /** metric → value for this run */
@@ -121,7 +139,7 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, asset: Vehi
     await page.waitForTimeout(HOME_DWELL_MS);
 
     for (const screen of SCREENS) {
-      const key = template(screen.replace(":asset", "00000000-0000-0000-0000-000000000000"));
+      const key = screenTemplate(screen);
       const before = apiRequests;
       const start = await pageNow(page);
       if (screen === "/assets/:asset") await tapText(page, asset.code);

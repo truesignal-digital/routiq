@@ -22,6 +22,7 @@ async function preloadedAs(role: Role, modules: readonly ModuleCode[] = MODULE_C
     branchScope: "ALL",
     enabledModules: [...modules],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
     displayName: "Ada",
     workspaceName: "Transports Douala",
   };

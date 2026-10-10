@@ -24,7 +24,7 @@ const entry: FinancialEntryDetail = {
   description: "Vehicle fuel", paymentReference: null, sourceReference: null,
   rejectedReason: null, reversesEntryId: null, reversedByEntryId: null, cancellation: null,
   ...entryVehicleFields,
-  evidenceFiles: [], postings: [], directionDecides: false,
+  evidenceFiles: [], postings: [], directionDecides: false, approver: null,
 };
 let client: QueryClient;
 
@@ -72,7 +72,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
         break;
       case "/v1/finance/summary":
         body = {
-          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          currency: "XAF", month: "2026-09", unlockedPeriodCodes: [], lastLockedPeriodCode: null,
           outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
         };
         break;
@@ -113,7 +113,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
 }
 
 const languages = [
-  { locale: "en", money: "Money", waiting: "Waiting your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
+  { locale: "en", money: "Money", waiting: "Waiting for your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
   { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "Détail de l'écriture", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
 ];
 const viewers = languages.flatMap((language) => [390, 1280].map((width) => ({ ...language, width })));
@@ -198,7 +198,7 @@ it("opens a dashboard total in its period and retains branch/period after inspec
 
 it.each(["/finance/entries", `/finance/entries/${entry.id}`])("does not fetch financial records through a disabled-module direct link: %s", async (path) => {
   const { requests } = await openFinance(path, { financeEnabled: false });
-  await screen.findByText("This module is not enabled for your workspace.");
+  await screen.findByText("This module is not enabled for your company.");
   expect(screen.queryByText("FIN-EXEC")).toBeNull();
   expect(requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.startsWith("/v1/history"))).toBe(false);
 });

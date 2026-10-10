@@ -203,6 +203,28 @@ describe("the Details card's edit mode", () => {
     expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, acquisitionDate: "2024-02-15" });
   });
 
+  // #639: the last day offered is the workspace's today, not the phone's.
+  it("offers the workspace's today when the device is still on the day before", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Noon UTC on 30 September: 1 October already at UTC+14, still 30 September on the device.
+    vi.setSystemTime(new Date("2026-09-30T12:00:00Z"));
+    try {
+      const { user } = await startEditing({
+        role: "ADMIN",
+        timezone: "Pacific/Kiritimati",
+        asset: asset({ acquisitionDate: "2026-09-15" }),
+      });
+      await user.click(screen.getByRole("button", { name: "Acquisition date" }));
+      const calendar = within(await screen.findByRole("dialog"));
+      await user.click(calendar.getByRole("button", { name: "Next month" }));
+      const day = (name: string) => calendar.getByRole("button", { name, hidden: true }) as HTMLButtonElement;
+      expect(day("Thursday, October 1, 2026").disabled).toBe(false);
+      expect(day("Friday, October 2, 2026").disabled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("puts the server's refusal on the field it is about", async () => {
     const { user } = await startEditing({
       role: "ADMIN",

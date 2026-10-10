@@ -3,6 +3,7 @@ import { PROFITABILITY_LAYERS } from "../commands/categories.js";
 import { COMMAND_ORIGINS, moneyMinor } from "../envelope.js";
 import { ROLES } from "../roles.js";
 import { meterReadingSource, meterReadingType } from "./assets.js";
+import { entryApprover } from "./approval-chain.js";
 import { monthCode } from "./finance.js";
 import { historyActor, historyEntityType, historyFieldChange } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
@@ -169,6 +170,14 @@ export const ATTENTION_CODES = [
    * acknowledge-note.
    */
   "DIRECTION_NOTE",
+  /**
+   * The vehicle is on this trip and on another unfinished one whose booked
+   * window overlaps (ADR-0012 §4, #577). One item per trip the caller may
+   * read, so both trips show; `tripNumbers` names the others the caller may
+   * read. WARNING: one of them is probably over and needs closing. Leaves
+   * once either trip is closed. Only with ACTIVITIES on.
+   */
+  "VEHICLE_DOUBLE_BOOKED",
 ] as const;
 export const attentionCode = z.enum(ATTENTION_CODES);
 
@@ -182,6 +191,7 @@ export const ATTENTION_SUBJECT_TYPES = [
   "document",
   "financial_entry",
   "note",
+  "activity",
 ] as const;
 
 /** How many days ahead an expiry becomes DOCUMENT_EXPIRING. */
@@ -214,6 +224,11 @@ export const assetAttentionItem = z.object({
   /** Allowlisted facts for the sentence; every key optional. */
   params: z
     .object({
+      /**
+       * A problem or work order subject's number (#608); the client words the
+       * prefix. Absent for every other subject.
+       */
+      recordNumber: z.number().int().positive(),
       description: z.string().max(140),
       safetyCritical: z.boolean(),
       amountMinor: moneyMinor,
@@ -241,6 +256,10 @@ export const assetAttentionItem = z.object({
        * rule as `directionDecides` on the approvals queue and entry detail.
        */
       directionDecides: z.boolean(),
+      /** VEHICLE_DOUBLE_BOOKED: the other unfinished trips on the vehicle, by number. */
+      tripNumbers: z.array(z.string()),
+      /** ENTRY_AWAITING_REVIEW only: who decides it, the same for every viewer (#542). */
+      approver: entryApprover,
     })
     .partial(),
 });
@@ -302,8 +321,8 @@ export const VEHICLE_HISTORY_PARAMS = {
     "status",
     "artifactCount",
   ],
-  operational_issue: ["description", "safetyCritical"],
-  work_order: ["description"],
+  operational_issue: ["recordNumber", "description", "safetyCritical"],
+  work_order: ["recordNumber", "description"],
   asset_availability_interval: ["issueDescription"],
   "asset.assigned": [
     "custodianDisplayName",

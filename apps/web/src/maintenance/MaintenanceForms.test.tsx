@@ -26,6 +26,7 @@ const sessionIdentity = { username: "paul", workspaceSlug: "sotrafret" };
 
 const openIssue: IssueListItem = {
   id: ISSUE_ID,
+  number: 3,
   asset: { id: ASSET_ID, assetCode: "DLA-T-001", registrationNumber: "LT 123 AB" },
   branch: { id: "00000000-0000-4000-8000-0000000000b1", code: "DLA", name: "Douala" },
   description: "Brakes squeal on the descent",

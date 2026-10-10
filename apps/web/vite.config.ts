@@ -43,6 +43,12 @@ export default defineConfig({
     // file runs in parallel on a CI runner; the 5 s default made them flaky
     // (#67). Still short enough to catch a hung test.
     testTimeout: 15_000,
+    // Off CI, half the cores (#556). `pnpm test` runs the packages' suites side
+    // by side and other checkouts often run theirs too; one worker per core each
+    // starved these CPU-bound tests past their timeouts. Measured here: 7 workers
+    // instead of 13 took 45 s instead of 40 s, with a third less CPU time and the
+    // slowest form tests 30-40% faster. CI is one job on its own runner.
+    ...(process.env.CI ? {} : { maxWorkers: "50%" }),
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
+import { applyPresetVocabulary } from "../i18n/preset-overlay.js";
 import { notifyCommandError, notifyCommandSuccess, notifyInfo } from "./notify.js";
 
 const mocks = vi.hoisted(() => ({
@@ -65,8 +66,21 @@ describe("command notifications", () => {
       title: "Entry recorded and posted",
       description:
         "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.\n" +
-        "Missing evidence: this category requires supporting documentation or a photo.",
+        "Attach the receipt when you have it.",
     });
+  });
+
+  // #543: the success toast read like a failure ("Missing evidence: …"). A
+  // missing receipt is a reminder, not a problem, in either language.
+  it("words a missing receipt on the success toast as a reminder", async () => {
+    for (const lng of ["en", "fr"] as const) {
+      await i18n.changeLanguage(lng);
+      mocks.add.mockClear();
+      notifyCommandSuccess("finance", "posted", ["EVIDENCE_MISSING"]);
+      const { description } = mocks.add.mock.calls[0]![0] as { description: string };
+      expect(description, lng).not.toMatch(/missing|manquant|exige|requires/i);
+    }
+    await i18n.changeLanguage("en");
   });
 
   it("falls back to the shared warnings catalog for a code no domain words itself", () => {
@@ -76,6 +90,27 @@ describe("command notifications", () => {
       type: "success",
       title: "Asset returned to service",
       description: "Vehicle released, but the problem that grounded it is still open.",
+    });
+  });
+
+  it("says a vehicle is on another trip in the preset's words (#577)", () => {
+    notifyCommandSuccess("activities", "sheetRecorded", ["VEHICLE_DOUBLE_BOOKED"]);
+    applyPresetVocabulary(i18n, "TRUCKING");
+    try {
+      notifyCommandSuccess("activities", "sheetRecorded", ["VEHICLE_DOUBLE_BOOKED"]);
+    } finally {
+      applyPresetVocabulary(i18n, undefined);
+    }
+
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "success",
+      title: "Sheet recorded",
+      description: "This vehicle is already booked on another activity at the same time.",
+    });
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "success",
+      title: "Sheet recorded",
+      description: "This truck is already booked on another trip at the same time.",
     });
   });
 

@@ -1,12 +1,13 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Money is one page (#314): the lead line names the open and last locked
- * month, the tiles match `GET /v1/finance/summary`, the "Waiting your approval"
- * tile opens the queue with Reject and Approve on each row, Reject asks for a
- * reason, Approve is one tap, the old /finance/approvals link lands on the same
- * view, and Accounting months is one click from the header. Mutates the slot
- * (one approval); reset with `pnpm verify up --reseed`.
+ * Money is one page (#314): the lead line names the months not locked yet (or
+ * the last locked one) and the month the tiles count (#526), the tiles match
+ * `GET /v1/finance/summary`, the "Waiting for your approval" tile opens the
+ * queue with Reject and Approve on each row, Reject asks for a reason, Approve
+ * is one tap, the old /finance/approvals link lands on the same view, and
+ * Accounting months is one click from the header. Mutates the slot (one
+ * approval); reset with `pnpm verify up --reseed`.
  * Run: pnpm verify drive flow:money-page --role finance --lang en --reel
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
@@ -34,11 +35,11 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await lead.waitFor();
   if ((await page.getByRole("tablist").count()) !== 0) throw new Error("the Money page still shows section tabs");
   await shot("money-page", {
-    caption: "Money is one page: the lead line names the open and locked month, the tiles count this month",
+    caption: "Money is one page: the lead line says which months aren't locked yet, the tiles count this month",
     highlight: page.locator("[data-slot='metric-strip']"),
   });
 
-  const waitingTile = page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true });
+  const waitingTile = page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true });
   const shown = (await page.locator("[data-slot='metric-tile']").filter({ has: waitingTile }).locator("[data-slot='metric-value']").textContent())?.trim();
   if (shown !== String(body.waiting.count)) throw new Error(`waiting tile shows ${shown}, API says ${body.waiting.count}`);
   await waitingTile.click();
