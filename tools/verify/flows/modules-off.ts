@@ -87,7 +87,8 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   }
   await shot(`${account.role.toLowerCase()}-home`, {
     caption: `${offNames} off: Home and the sidebar offer nothing of ${off.length === 1 ? "it" : "them"}`,
-    highlight: sidebar,
+    // The phone sheet re-renders while it opens; outline it on desktop only.
+    ...(phone ? {} : { highlight: sidebar }),
   });
   if (phone) await page.keyboard.press("Escape");
 
