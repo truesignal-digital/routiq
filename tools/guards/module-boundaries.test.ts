@@ -25,6 +25,8 @@ describe("who owns a path", () => {
     expect(ownerOf("apps/web/src/modules/manifest.ts")).toEqual({ kind: "core" });
     expect(ownerOf("apps/web/src/modules/index.ts")).toEqual({ kind: "composition" });
     expect(ownerOf("apps/web/src/router")).toEqual({ kind: "composition" });
+    expect(ownerOf("apps/web/src/routes/maintenance.loader.ts")).toEqual({ kind: "composition" });
+    expect(ownerOf("apps/web/src/routes/scope.ts")).toEqual({ kind: "core" });
     expect(ownerOf("apps/api/src/server.ts")).toBeUndefined();
   });
 
@@ -77,6 +79,20 @@ describe("allowed edges", () => {
         file("router.tsx", 'const S = lazyScreen(() => import("./screens/MaintenanceScreen.js"), "MaintenanceScreen");'),
       ),
     ).toEqual([]);
+  });
+
+  it("lets a route loader name its screen's reads in any module, but not the scope they share (#496)", () => {
+    expect(
+      violations(
+        file(
+          "routes/finance.loader.ts",
+          'import { assetsQueryOptions } from "../assets/useAssets.js";\nimport { entriesQueryOptions } from "../finance/useEntries.js";',
+        ),
+        file("routes/scope.ts", 'import { maintenanceSummaryQueryOptions } from "../maintenance/useMaintenance.js";'),
+      ),
+    ).toEqual([
+      'routes/scope.ts:1 core → MAINTENANCE: import { maintenanceSummaryQueryOptions } from "../maintenance/useMaintenance.js";',
+    ]);
   });
 
   it("lets a module import core, itself, and the modules it declares", () => {

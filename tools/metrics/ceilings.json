@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 699437,
+    "ceiling": 718613,
     "raises": [
       {
         "date": "2026-10-06",
@@ -257,13 +257,43 @@
       {
         "date": "2026-10-10",
         "from": 694679,
-        "to": 699437,
+        "to": 694831,
+        "reason": "#653 trucking overlays for the grounded-vehicle warning"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694831,
+        "to": 703751,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 703751,
+        "to": 710828,
+        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 710828,
+        "to": 713353,
+        "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713353,
+        "to": 713902,
+        "reason": "Page-type skeletons for each screen route (#498)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 718613,
         "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22968,
+    "ceiling": 22999,
     "raises": [
       {
         "date": "2026-10-06",
@@ -322,13 +352,13 @@
       {
         "date": "2026-10-10",
         "from": 22832,
-        "to": 22968,
+        "to": 22999,
         "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 262183,
+    "ceiling": 266864,
     "raises": [
       {
         "date": "2026-10-06",
@@ -561,7 +591,31 @@
       {
         "date": "2026-10-10",
         "from": 261561,
-        "to": 262183,
+        "to": 263756,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 263756,
+        "to": 264506,
+        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 264506,
+        "to": 265616,
+        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265616,
+        "to": 266200,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 266864,
         "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip"
       }
     ]

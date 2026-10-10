@@ -1105,6 +1105,24 @@
       ]
     },
     {
+      "name": "money-input",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/money-input.tsx",
+          "type": "registry:file",
+          "target": "components/money-input.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "input",
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
       "name": "form-kit",
       "type": "registry:component",
       "files": [
@@ -1143,6 +1161,7 @@
         "command-form",
         "use-command-form",
         "date-field",
+        "money-input",
         "file-upload",
         "input",
         "select",
@@ -1156,6 +1175,23 @@
         "react-hook-form",
         "react-i18next",
         "zod"
+      ]
+    },
+    {
+      "name": "page-skeletons",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/page-skeletons.tsx",
+          "type": "registry:file",
+          "target": "components/page-skeletons.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "skeleton"
+      ],
+      "dependencies": [
+        "react-i18next"
       ]
     }
   ]

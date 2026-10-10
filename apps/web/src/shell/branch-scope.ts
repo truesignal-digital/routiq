@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import type { NotifySuccessOptions } from "@/lib/notify.js";
 import {
   ALL_BRANCHES,
-  useAmbientBranchId,
+  ambientBranchId,
   useCurrentBranch,
   useCurrentBranchCode,
   type BranchOption,
+  type CurrentBranchId,
 } from "./branch-context.js";
 
 /**
@@ -25,7 +26,12 @@ export interface BranchScopedParams {
 }
 
 export function useBranchScopedParams<T extends BranchScopedParams>(params: T): T {
-  const branchId = useAmbientBranchId(params.branchId);
+  return scopedParams(params, useCurrentBranch().currentBranchId);
+}
+
+/** useBranchScopedParams without React, for a route loader: same params, same cache key (#496). */
+export function scopedParams<T extends BranchScopedParams>(params: T, currentBranchId: CurrentBranchId): T {
+  const branchId = ambientBranchId(currentBranchId, params.branchId);
   // `ALL_BRANCHES` resolves to `undefined`, and "every branch" is the absence of
   // the param — so the caller's own `branchId` is dropped before the rebuild
   // rather than spread back over the result as a sentinel the API would filter

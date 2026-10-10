@@ -58,7 +58,9 @@ export function AppShell() {
                 <SiteHeader />
                 <BranchScopeAnnouncer />
                 <OfflineNotice />
-                <div className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
+                {/* data-shift-region names the parts `flow:no-shift` and
+                    `pnpm perf` hold still once drawn (#494). */}
+                <div data-shift-region="page" className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
                   {/* Rendered by each page's container, in the page's column (#467). */}
                   <PageNoticeProvider notice={<ApprovalRulesNotice />}>
                     <ModulePageGate>
