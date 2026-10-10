@@ -235,11 +235,14 @@ export interface ChoiceOption {
 
 export interface ChoiceFieldProps extends KitFieldProps {
   options: readonly ChoiceOption[]
+  /** Two to four options too long for one row ("Every Monday and on the 1st"): one under the other. */
+  stacked?: boolean | undefined
 }
 
 /**
- * One answer from a fixed list. Two to four options are a segmented row, five
- * to twelve a select, more a search.
+ * One answer from a fixed list. Two to four options are a segmented row (or
+ * a column, `stacked`, when the labels are sentences), five to twelve a
+ * select, more a search.
  */
 export const ChoiceField = kitField(function ChoiceField({
   name,
@@ -248,6 +251,7 @@ export const ChoiceField = kitField(function ChoiceField({
   placeholder,
   disabled,
   options,
+  stacked = false,
 }: ChoiceFieldProps) {
   const { field, frame, describedBy, required, error } = useKitField(name, help)
   const value = typeof field.value === "string" ? field.value : undefined
@@ -257,13 +261,19 @@ export const ChoiceField = kitField(function ChoiceField({
       <FieldFrame label={label} help={help} frame={frame} group>
         <div
           data-slot="choice-segmented"
-          className="grid auto-cols-fr grid-flow-col overflow-hidden rounded-lg border border-input"
+          className={cn(
+            "grid overflow-hidden rounded-lg border border-input",
+            stacked ? "grid-flow-row" : "auto-cols-fr grid-flow-col",
+          )}
         >
           {options.map((option, index) => (
             <label
               key={option.value}
               className={cn(
-                "flex min-h-11 cursor-pointer items-center justify-center px-3 text-center text-sm transition-colors not-first:border-l not-first:border-input",
+                "flex min-h-11 cursor-pointer items-center px-3 text-sm transition-colors",
+                stacked
+                  ? "py-2 text-left not-first:border-t not-first:border-input"
+                  : "justify-center text-center not-first:border-l not-first:border-input",
                 "has-checked:bg-primary has-checked:font-medium has-checked:text-primary-foreground",
                 "has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-focus-visible:ring-inset",
                 disabled && "cursor-not-allowed opacity-50",

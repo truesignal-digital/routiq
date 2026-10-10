@@ -18,7 +18,7 @@ export function MySettingsScreen() {
   const who = useWho();
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer>
       <PageHeader title={t("mySettings.title")} />
 
       {who && (

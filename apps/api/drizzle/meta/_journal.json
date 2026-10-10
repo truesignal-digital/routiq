@@ -344,6 +344,20 @@
       "when": 1791606347235,
       "tag": "0048_maintenance_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1791645745442,
+      "tag": "0049_document_types_visite_carte_grise",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791671447466,
+      "tag": "0050_company_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -41,6 +41,20 @@ export const FIELD_SLOTS = [
 ] as const;
 export type FieldSlot = (typeof FIELD_SLOTS)[number];
 
+/**
+ * Tabs a module adds to another module's page (dashboards.html#rule): the
+ * Trucks page's Documents tab is the Documents module's, the Trips page's
+ * Planning tab the Scheduling module's. Core names each tab's address and
+ * words; the host page shows it only while its owner is on, and the shell's
+ * gate answers a direct link to it while the owner is off.
+ */
+export const PAGE_TABS = {
+  "assets.documents": { to: "/assets/documents", labelKey: "assets.page.tabs.documents" },
+  "activities.planning": { to: "/activities/planning", labelKey: "activities.page.tabs.planning" },
+} as const satisfies Record<string, { to: string; labelKey: string }>;
+export type PageTabKey = keyof typeof PAGE_TABS;
+export const PAGE_TAB_KEYS = Object.keys(PAGE_TABS) as readonly PageTabKey[];
+
 /** Where a module's sidebar row goes: right after, or right before, the row it names. */
 export type NavRowPlace = { after: string } | { before: string };
 
@@ -80,6 +94,8 @@ export interface WebModuleManifest {
   /** The vehicle timeline's filters. */
   historyKinds: readonly VehicleHistoryKind[];
   fields: readonly FieldSlot[];
+  /** Tabs it adds to another module's page (PAGE_TABS). */
+  pageTabs: readonly PageTabKey[];
 }
 
 /** The slots a manifest fills by key, as opposed to nav rows, which it defines whole. */
@@ -90,7 +106,8 @@ export type KeyedSlot =
   | "vehicleActions"
   | "recordPanels"
   | "historyKinds"
-  | "fields";
+  | "fields"
+  | "pageTabs";
 
 const KEYED_SLOTS: readonly KeyedSlot[] = [
   "navCounts",
@@ -100,6 +117,7 @@ const KEYED_SLOTS: readonly KeyedSlot[] = [
   "recordPanels",
   "historyKinds",
   "fields",
+  "pageTabs",
 ];
 
 function keysOf(manifest: WebModuleManifest, slot: KeyedSlot): readonly string[] {
@@ -143,8 +161,21 @@ export function moduleNavRows(): Array<ShellSection & { place: NavRowPlace }> {
   );
 }
 
-/** The module owning a page, by the subtree of one of its sidebar rows. */
+/**
+ * The module owning a page, by the subtree of one of its sidebar rows. A tab
+ * another module adds (PAGE_TABS) belongs to that module, named by the tab's
+ * own words under the host page's row.
+ */
 export function pageOwner(pathname: string): { code: ToggleableModuleCode; row: ModuleNavRow } | undefined {
+  const tab = PAGE_TAB_KEYS.find((key) => isRouteActive(PAGE_TABS[key].to, pathname));
+  const tabOwner = tab === undefined ? undefined : contributionOwner("pageTabs", tab);
+  for (const manifest of installed) {
+    for (const row of manifest.navRows) {
+      if (tab !== undefined && tabOwner !== undefined && isRouteActive(row.match ?? row.to, pathname)) {
+        return { code: tabOwner, row: { ...row, labelKey: PAGE_TABS[tab].labelKey } };
+      }
+    }
+  }
   for (const manifest of installed) {
     for (const row of manifest.navRows) {
       if (isRouteActive(row.match ?? row.to, pathname)) return { code: manifest.code, row };

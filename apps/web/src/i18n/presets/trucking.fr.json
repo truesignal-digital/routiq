@@ -47,6 +47,22 @@
     },
     "columns": {
       "asset": "Camion"
+    },
+    "overview": {
+      "profit": {
+        "title": "Bénéfice par camion"
+      },
+      "tiles": {
+        "idle": "Sans trajet depuis {days} jours ou plus"
+      },
+      "summary": {
+        "sentence": "{total, plural, =0 {Aucun camion dans la flotte pour l’instant.} one {Peut rouler aujourd’hui : {canDrive, number} camion sur #.} other {Peuvent rouler aujourd’hui : {canDrive, number} camions sur #.}}"
+      }
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "Sans trajet depuis 5 jours ou plus"
+      }
     }
   },
   "documents": {
@@ -64,6 +80,11 @@
       },
       "filters": {
         "asset": "Camion"
+      }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# trajet est encore ouvert} other {# trajets sont encore ouverts}} : leur argent peut encore arriver."
       }
     }
   },
@@ -134,7 +155,17 @@
       "closed": "Clôturé",
       "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
     },
-    "loadFailed": "Impossible de charger les trajets. Veuillez réessayer."
+    "loadFailed": "Impossible de charger les trajets. Veuillez réessayer.",
+    "overview": {
+      "weeks": {
+        "title": "Trajets par semaine"
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {Aucun trajet n’a encore commencé cette semaine.} one {# trajet a commencé cette semaine ; {closed, number} clôturé.} other {# trajets ont commencé cette semaine ; {closed, number} clôturés.}}",
+        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# trajet est encore ouvert.} other {# trajets sont encore ouverts.}}",
+        "counted": "{fuelCounted, select, yes {Trajets clôturés incomplets : {fuel, number} sans carburant et {km, number} sans km.} other {Trajets clôturés incomplets : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -162,6 +193,11 @@
     "notify": {
       "success": {
         "assetReleased": "Camion remis en service"
+      }
+    },
+    "overview": {
+      "summary": {
+        "grounded": "{grounded, plural, =0 {Aucun camion n’est à l’arrêt.} one {# camion est à l’arrêt.} other {# camions sont à l’arrêt.}}"
       }
     }
   },
@@ -301,5 +337,84 @@
     "VEHICLE_GROUNDED": "Ce camion est immobilisé en ce moment. Il doit être remis en service avant de partir.",
     "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre trajet au même moment.",
     "TRIP_STARTED_AFTER_CANCELLATION": "Ce trajet avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# trajet clôturé} other {# trajets clôturés}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Trajets",
+        "vehicle": "Camion"
+      },
+      "tripsCount": "{count, plural, one {# trajet} other {# trajets}}",
+      "tripsWithoutKm": "{count, plural, one {# trajet sans km} other {# trajets sans km}}",
+      "lossDetail": "{count, plural, =0 {Aucun trajet} one {# trajet} other {# trajets}} · {amount} dépensés",
+      "title": {
+        "profit": "Bénéfice par camion",
+        "costs": "Coût par camion"
+      },
+      "description": {
+        "profit": "{period} · recettes et dépenses enregistrées sur chaque camion · pertes d’abord",
+        "costs": "{period} · dépenses enregistrées sur chaque camion · les plus coûteux d’abord"
+      },
+      "atALossTitle": "Camions en perte",
+      "noneAtALoss": "Aucun camion n’a fait de perte sur cette période.",
+      "empty": "Aucun camion sur cette période.",
+      "lines": {
+        "allVehicles": "Bénéfice de tous les camions ({count})",
+        "branchVehicles": "Bénéfice des camions de l’agence ({count})",
+        "otherVehicles": "Camions d’autres agences dans les écritures de l’agence",
+        "revenueWithoutVehicle": "Recettes enregistrées sans camion",
+        "allVehicleCosts": "Coûts de tous les camions ({count})",
+        "branchVehicleCosts": "Coûts des camions de l’agence ({count})",
+        "otherVehicleCosts": "Camions d’autres agences dans les écritures de l’agence"
+      }
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# trajet prévu} other {# trajets prévus}}",
+          "detail": "{without, plural, =0 {camions affectés} one {# sans camion pour l’instant} other {# sans camion pour l’instant}}"
+        }
+      }
+    },
+    "tabs": {
+      "vehicles": "Bénéfice par camion"
+    },
+    "tiles": {
+      "vehicleCosts": "Coûts des camions",
+      "canDrive": "Camions disponibles",
+      "allCanDrive": "Tous les camions en service peuvent rouler",
+      "noneInService": "Aucun camion en service"
+    },
+    "branches": {
+      "title": {
+        "profit": "Bénéfice des camions par agence",
+        "costs": "Coûts des camions par agence"
+      },
+      "description": {
+        "profit": "Les camions de quelle agence rapportent le plus ? {period}, {currency}.",
+        "costs": "Les camions de quelle agence coûtent le plus ? {period}, {currency}."
+      },
+      "empty": "Aucune agence n’a de camion sur cette période.",
+      "hover": "{count, plural, one {# camion} other {# camions}} · recettes {revenue} · dépenses {expenses}",
+      "hoverCosts": "{count, plural, one {# camion} other {# camions}} · dépenses {expenses}",
+      "vehicleCount": "{count, plural, one {# camion} other {# camions}}",
+      "columns": {
+        "vehicles": "Camions",
+        "profit": "Bénéfice des camions"
+      }
+    }
+  },
+  "overview": {
+    "summary": {
+      "change": {
+        "groundedMany": "{count, plural, one {# camion a été immobilisé ces 7 derniers jours et est toujours à l’arrêt : {codes}.} other {# camions ont été immobilisés ces 7 derniers jours et sont toujours à l’arrêt : {codes}.}}"
+      },
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {En {month}, {total, plural, one {seul {closed, number} trajet sur # a été clôturé} other {seuls {closed, number} trajets sur # ont été clôturés}} : trop tôt pour donner un bénéfice.} other {À ce jour en {month}, {total, plural, one {seul {closed, number} trajet sur # est clôturé} other {seuls {closed, number} trajets sur # sont clôturés}} : trop tôt pour donner un bénéfice.}}"
+      }
+    }
   }
 }

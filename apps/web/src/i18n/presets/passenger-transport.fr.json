@@ -45,6 +45,16 @@
     },
     "columns": {
       "asset": "Véhicule"
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "Sans voyage depuis 5 jours ou plus"
+      }
+    },
+    "overview": {
+      "tiles": {
+        "idle": "Sans voyage depuis {days} jours ou plus"
+      }
     }
   },
   "documents": {
@@ -62,6 +72,11 @@
       },
       "filters": {
         "asset": "Véhicule"
+      }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# voyage est encore ouvert} other {# voyages sont encore ouverts}} : leur argent peut encore arriver."
       }
     }
   },
@@ -132,7 +147,17 @@
       "closed": "Clôturé",
       "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
     },
-    "loadFailed": "Impossible de charger les voyages. Veuillez réessayer."
+    "loadFailed": "Impossible de charger les voyages. Veuillez réessayer.",
+    "overview": {
+      "weeks": {
+        "title": "Voyages par semaine"
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {Aucun voyage n’a encore commencé cette semaine.} one {# voyage a commencé cette semaine ; {closed, number} clôturé.} other {# voyages ont commencé cette semaine ; {closed, number} clôturés.}}",
+        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# voyage est encore ouvert.} other {# voyages sont encore ouverts.}}",
+        "counted": "{fuelCounted, select, yes {Voyages clôturés incomplets : {fuel, number} sans carburant et {km, number} sans km.} other {Voyages clôturés incomplets : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -292,5 +317,32 @@
     "VEHICLE_DOUBLE_BOOKED": "Ce véhicule est déjà prévu sur un autre voyage au même moment.",
     "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre voyage au même moment.",
     "TRIP_STARTED_AFTER_CANCELLATION": "Ce voyage avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# voyage clôturé} other {# voyages clôturés}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Voyages"
+      },
+      "tripsCount": "{count, plural, one {# voyage} other {# voyages}}",
+      "tripsWithoutKm": "{count, plural, one {# voyage sans km} other {# voyages sans km}}",
+      "lossDetail": "{count, plural, =0 {Aucun voyage} one {# voyage} other {# voyages}} · {amount} dépensés"
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# voyage prévu} other {# voyages prévus}}"
+        }
+      }
+    }
+  },
+  "overview": {
+    "summary": {
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {En {month}, {total, plural, one {seul {closed, number} voyage sur # a été clôturé} other {seuls {closed, number} voyages sur # ont été clôturés}} : trop tôt pour donner un bénéfice.} other {À ce jour en {month}, {total, plural, one {seul {closed, number} voyage sur # est clôturé} other {seuls {closed, number} voyages sur # sont clôturés}} : trop tôt pour donner un bénéfice.}}"
+      }
+    }
   }
 }

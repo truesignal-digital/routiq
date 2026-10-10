@@ -2,7 +2,6 @@ import { createContext, useContext, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export type PageContainerProps = {
-  width?: "narrow" | "default" | "wide";
   className?: string;
   children: ReactNode;
 };
@@ -24,20 +23,21 @@ export function PageNoticeProvider({
   return <PageNoticeCtx.Provider value={notice}>{children}</PageNoticeCtx.Provider>;
 }
 
-export function PageContainer({
-  width = "default",
-  className,
-  children,
-}: PageContainerProps) {
+/**
+ * The page frame (#658, docs/design/consistency/fullpages.html#frame): every
+ * page has the same width, so moving between pages never makes the content
+ * jump. At most 1 200 px of content, centred, inside 24 px gutters (1 248 px
+ * with them); a phone keeps its 16 px gutters. Screens never set a width of
+ * their own (guard DS-5).
+ */
+export function PageContainer({ className, children }: PageContainerProps) {
   const notice = useContext(PageNoticeCtx);
-  const widthClass = {
-    narrow: "max-w-xl",
-    default: "max-w-3xl",
-    wide: "max-w-6xl",
-  }[width];
 
   return (
-    <section className={cn("mx-auto w-full px-4 py-6", widthClass, className)}>
+    <section
+      data-page-frame=""
+      className={cn("mx-auto w-full max-w-[1248px] px-4 py-6 sm:px-6", className)}
+    >
       {notice}
       {/* A container inside a page (a tab's permission screen) is not a page:
           the notice shows once, in the outermost column. */}

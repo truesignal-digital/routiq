@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
-import { FilePlus2, Maximize2, Route } from "lucide-react";
+import { Maximize2, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useCommandLabel } from "@/commands/labels.js";
-import { Button } from "@/components/ui/button";
+import { ACTIVITY_MISSING_FILTERS } from "@routiq/contracts";
 import { DateRangePicker } from "@/components/date-range-picker";
 import {
   DataTable,
@@ -12,16 +11,14 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
 } from "@/components/data-table";
-import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
-import { ErrorState, LoadingState, PageHeader } from "@/components/page";
-import { PageContainer } from "@/components/page-container";
+import { ErrorState, LoadingState } from "@/components/page";
 import { useMeContext } from "@/auth/me.js";
 import {
   useActivityColumns,
   type ActivityColumnId,
 } from "@/activities/activityColumns.js";
-import { canRecordActivities } from "@/activities/permissions.js";
-import { useActivities, useActivitySummary } from "@/activities/useActivities.js";
+import { useActivities } from "@/activities/useActivities.js";
+import { contributes } from "@/modules/manifest.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useCategories } from "@/categories/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
@@ -32,8 +29,8 @@ const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
 const COMPLETENESS_OPTIONS = ["COMPLETE", "COMPLETE_WITH_EXCEPTIONS"] as const;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** The filters the overview tiles set, kept in the URL so a tile's view is a link (#302). */
-const URL_FILTERS = ["status", "completeness", "from", "to"] as const;
+/** The filters the Overview's tiles set, kept in the URL so a tile's view is a link (#302). */
+const URL_FILTERS = ["status", "completeness", "from", "to", "missing"] as const;
 type UrlFilters = Partial<Record<(typeof URL_FILTERS)[number], string>>;
 
 /** Module-level so the column memo holds across renders. */
@@ -52,12 +49,21 @@ const LIST_COLUMNS: readonly ActivityColumnId[] = [
 /** Mirrors the read's own default so the header shows the order in force. */
 const DEFAULT_SORTING: SortingState = [{ id: "startedAt", desc: true }];
 
+/**
+ * Trips › Trips (#665): the trip list, starting with its search and filters.
+ * The tiles that sat above it moved into the Overview, and each opens this
+ * list already filtered through the URL.
+ */
 export function ActivitiesScreen() {
   const { t, i18n } = useTranslation();
-  const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
-  const canRecord = canRecordActivities(me?.role, me?.enabledModules);
+  // Fuel is a money fact: the server counts it only while Money is on.
+  const fuelCounted = contributes("fields", "trip.money", me?.enabledModules);
+  const missingOptions = useMemo(
+    () => ACTIVITY_MISSING_FILTERS.filter((option) => option !== "fuel" || fuelCounted),
+    [fuelCounted],
+  );
   const activityTypesQuery = useCategories("ACTIVITY_TYPE");
   // No branch named, so the picker follows the shell's agency like the list it
   // filters — offering a truck whose activities this list can never show would
@@ -65,7 +71,7 @@ export function ActivitiesScreen() {
   // workspaces are intentionally small enough for that tradeoff.
   const assetOptions = useAssetOptions();
 
-  const urlSearch = useSearch({ from: "/app/activities" });
+  const urlSearch = useSearch({ from: "/app/activities/list" });
   const [localFilters, setLocalFilters] = useState<DataTableFilterValues>({});
   const filterValues = useMemo<DataTableFilterValues>(() => {
     const values: DataTableFilterValues = { ...localFilters };
@@ -78,13 +84,14 @@ export function ActivitiesScreen() {
 
   const setUrlFilters = (next: UrlFilters) =>
     void navigate({
-      to: "/activities",
+      to: "/activities/list",
       replace: true,
       search: {
         status: STATUS_OPTIONS.find((option) => option === next.status),
         completeness: COMPLETENESS_OPTIONS.find((option) => option === next.completeness),
         from: next.from !== undefined && ISO_DATE.test(next.from) ? next.from : undefined,
         to: next.to !== undefined && ISO_DATE.test(next.to) ? next.to : undefined,
+        missing: ACTIVITY_MISSING_FILTERS.find((option) => option === next.missing),
       },
     });
 
@@ -105,7 +112,6 @@ export function ActivitiesScreen() {
     }
   };
 
-  const summaryQuery = useActivitySummary();
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const sort = toSortParam(sorting);
@@ -125,6 +131,7 @@ export function ActivitiesScreen() {
     ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
     ...(filterValues["from"] ? { from: filterValues["from"] } : {}),
     ...(filterValues["to"] ? { to: filterValues["to"] } : {}),
+    ...(filterValues["missing"] ? { missing: filterValues["missing"] } : {}),
     ...(sort ? { sort } : {}),
   });
 
@@ -146,6 +153,15 @@ export function ActivitiesScreen() {
         options: COMPLETENESS_OPTIONS.map((value) => ({
           value,
           label: t(`activities.completeness.${value}`),
+        })),
+      },
+      {
+        columnId: "missing",
+        type: "select",
+        placeholder: t("activities.filters.missing"),
+        options: missingOptions.map((value) => ({
+          value,
+          label: t(`activities.filters.missingOptions.${value}`),
         })),
       },
       {
@@ -193,92 +209,16 @@ export function ActivitiesScreen() {
         ),
       },
     ],
-    [activityTypesQuery.data, assetOptions, i18n.language, filterValues, t],
+    [activityTypesQuery.data, assetOptions, i18n.language, filterValues, t, missingOptions],
   );
-
-  const tiles = useMemo<MetricTiles>(() => {
-    const counts = summaryQuery.data;
-    const week = counts?.week;
-    const onWeek =
-      week !== undefined &&
-      urlSearch.from === week.from &&
-      urlSearch.to === week.to &&
-      urlSearch.status === undefined &&
-      urlSearch.completeness === undefined;
-    const only = (filter: UrlFilters, active: boolean) => () =>
-      setUrlFilters(active ? {} : filter);
-    const onOpen = urlSearch.status === "OPEN" && urlSearch.from === undefined;
-    const onIncomplete =
-      urlSearch.completeness === "COMPLETE_WITH_EXCEPTIONS" && urlSearch.from === undefined;
-    return [
-      {
-        label: t("activities.metrics.thisWeek"),
-        value: counts === undefined ? null : String(counts.thisWeek),
-        hint: t("activities.metrics.thisWeekHint"),
-        selected: onWeek,
-        ...(week === undefined
-          ? {}
-          : { onSelect: only({ from: week.from, to: week.to }, onWeek) }),
-      },
-      {
-        label: t("activities.status.OPEN"),
-        value: counts === undefined ? null : String(counts.open),
-        selected: onOpen,
-        onSelect: only({ status: "OPEN" }, onOpen),
-      },
-      {
-        label: t("activities.metrics.incomplete"),
-        value: counts === undefined ? null : String(counts.incomplete),
-        tone: "warning",
-        hint: t("activities.metrics.incompleteHint"),
-        selected: onIncomplete,
-        onSelect: only({ completeness: "COMPLETE_WITH_EXCEPTIONS" }, onIncomplete),
-      },
-      {
-        label: t("activities.metrics.weekKm"),
-        value:
-          counts === undefined || counts.weekKm === null
-            ? null
-            : t("activities.metrics.weekKmValue", { km: counts.weekKm }),
-        hint: t("activities.metrics.weekKmHint"),
-      },
-    ];
-    // setUrlFilters closes over navigate only.
-  }, [summaryQuery.data, t, urlSearch]);
 
   const columns = useActivityColumns(LIST_COLUMNS);
   const allActivities = activitiesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
 
   return (
-    <PageContainer width="wide">
-      <PageHeader
-        title={t("activities.title")}
-        actions={
-          canRecord ? (
-            <Button
-              type="button"
-              onClick={() => void navigate({ to: "/activities/record" })}
-            >
-              <FilePlus2 className="size-4" aria-hidden />
-              {label("record-journey-sheet")}
-            </Button>
-          ) : undefined
-        }
-      />
-
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-        {t("activities.subtitle")}
-      </p>
-
-      <MetricStrip
-        className="mt-6"
-        tiles={tiles}
-        isPending={summaryQuery.isPending}
-        isError={summaryQuery.isError}
-      />
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <BranchScopeLine
           count={activitiesQuery.isPending ? undefined : allActivities.length}
           hasMore={activitiesQuery.hasNextPage ?? false}
@@ -352,6 +292,6 @@ export function ActivitiesScreen() {
           />
         </div>
       )}
-    </PageContainer>
+    </>
   );
 }

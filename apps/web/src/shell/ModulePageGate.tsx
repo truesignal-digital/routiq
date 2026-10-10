@@ -23,7 +23,6 @@ export function ModulePageGate({ children }: { children: ReactNode }) {
   const Icon = owner.row.icon;
   return (
     <PermissionDenied
-      width="wide"
       title={t(owner.row.labelKey)}
       icon={<Icon className="size-7" aria-hidden />}
       code="MODULE_DISABLED"

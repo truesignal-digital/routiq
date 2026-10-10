@@ -3,6 +3,7 @@ import {
   WORK_ORDER_EVENT_KINDS,
   issueListItem,
   issueListResponse,
+  maintenanceSummary,
   workOrderDetail,
   workOrderListItem,
   workOrderListQuery,
@@ -169,6 +170,49 @@ describe("work order list query contract", () => {
 
   it("rejects an unparseable status", () => {
     expect(workOrderListQuery.safeParse({ status: "ANNULE" }).success).toBe(false);
+  });
+
+  it("reads open as a boolean, combinable with a status", () => {
+    expect(workOrderListQuery.parse({ open: "true" }).open).toBe(true);
+    expect(workOrderListQuery.parse({ open: "false", status: "COMPLETED" })).toMatchObject({
+      open: false,
+      status: "COMPLETED",
+    });
+    expect(workOrderListQuery.parse({}).open).toBeUndefined();
+    expect(workOrderListQuery.safeParse({ open: "yes" }).success).toBe(false);
+  });
+});
+
+describe("maintenance summary contract", () => {
+  const summary = {
+    openIssues: 2,
+    openSafetyCritical: 1,
+    grounded: 1,
+    firstGrounded: { assetId: asset.id, assetCode: "VH002", since: "2026-10-01T08:00:00.000Z" },
+    approvedWorkOrders: 1,
+    openWorkOrders: 3,
+    waitingApproval: 1,
+    waitingCompletion: 1,
+    averageRepairDays: 2.5,
+    repairsCounted: 3,
+    repairWindowDays: 90,
+    repairCost: { amountMinor: 100_000, currency: "XAF", workOrders: 2 },
+    notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+  };
+
+  it("accepts the overview, with the cost withheld as null", () => {
+    expect(maintenanceSummary.parse(summary)).toEqual(summary);
+    const withheld = { ...summary, firstGrounded: null, repairCost: null };
+    expect(maintenanceSummary.parse(withheld)).toEqual(withheld);
+  });
+
+  it("refuses a cost in a malformed currency or a fractional amount", () => {
+    expect(
+      maintenanceSummary.safeParse({ ...summary, repairCost: { ...summary.repairCost, currency: "XA" } }).success,
+    ).toBe(false);
+    expect(
+      maintenanceSummary.safeParse({ ...summary, repairCost: { ...summary.repairCost, amountMinor: 1.5 } }).success,
+    ).toBe(false);
   });
 });
 

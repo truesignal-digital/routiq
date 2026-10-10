@@ -9,17 +9,17 @@ interface ActivitiesSearch {
   completeness?: string | undefined;
   from?: string | undefined;
   to?: string | undefined;
+  missing?: string | undefined;
 }
 
-/** Trips as ActivitiesScreen first asks for them: the URL's filters (#302, #511), newest first. */
+/** Trips as ActivitiesScreen first asks for them: the URL's filters (#302, #511, #665), newest first. */
 export async function activities(args: LoaderArgs & { deps: ActivitiesSearch }): Promise<void> {
   const { client, slug, branch } = await scope(args);
-  const { status, completeness, from, to } = args.deps;
+  const { status, completeness, from, to, missing } = args.deps;
   await settle(
     ensure(client, categoriesQueryOptions(slug, "ACTIVITY_TYPE")),
     // The asset filter's options: the first page; the screen drains the rest.
     ensureList(client, assetsQueryOptions(slug, scopedParams({}, branch))),
-    ensure(client, activitySummaryQueryOptions(slug, scopedParams({}, branch))),
     ensureList(client,
       activitiesQueryOptions(
         slug,
@@ -29,6 +29,7 @@ export async function activities(args: LoaderArgs & { deps: ActivitiesSearch }):
             ...(completeness ? { completeness } : {}),
             ...(from ? { from } : {}),
             ...(to ? { to } : {}),
+            ...(missing ? { missing } : {}),
             sort: "startedAt:desc",
           },
           branch,
@@ -36,4 +37,10 @@ export async function activities(args: LoaderArgs & { deps: ActivitiesSearch }):
       ),
     ),
   );
+}
+
+/** The Trips Overview as TripsOverview first asks for it: one summary read (#665). */
+export async function tripsOverview(args: LoaderArgs): Promise<void> {
+  const { client, slug, branch } = await scope(args);
+  await ensure(client, activitySummaryQueryOptions(slug, scopedParams({}, branch)));
 }

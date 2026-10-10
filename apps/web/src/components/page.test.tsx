@@ -32,6 +32,14 @@ describe("page scaffolds", () => {
     expect(screen.getByRole("button", { name: "Add document" })).toBeTruthy();
   });
 
+  it("PageHeader puts its one-sentence description under the title, in the header", () => {
+    render(<PageHeader title="Branches" description="Each branch has its own team." />);
+
+    const description = screen.getByText("Each branch has its own team.");
+    expect(description.closest("header")).toBe(screen.getByRole("banner"));
+    expect(description.className).toContain("max-w-lg");
+  });
+
   // jsdom has no layout, so this pins the classes; the 390 px width itself is
   // measured in the running app by `pnpm verify drive flow:phone-overflow`.
   it("PageHeader stacks actions under the title on phone and lets them wrap (#183)", () => {

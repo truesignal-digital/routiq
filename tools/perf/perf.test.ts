@@ -102,7 +102,19 @@ describe("the ceilings file", () => {
 
 describe("SCREENS", () => {
   const router = readFileSync(new URL("../../apps/web/src/router.tsx", import.meta.url), "utf8");
-  const routeBlock = (path: string) => router.split("createRoute({").find((block) => block.includes(`path: "${path}"`));
+  const blocks = router.split("createRoute({");
+  const routeBlock = (path: string): string | undefined => {
+    const direct = blocks.find((block) => block.includes(`path: "${path}"`));
+    if (direct !== undefined) return direct;
+    // A child route names only its own segment under a parent route that names the rest (/finance → entries, #664).
+    const cut = path.lastIndexOf("/");
+    const parentIndex = blocks.findIndex((block) => block.includes(`path: "${path.slice(0, cut)}"`));
+    const parentName = parentIndex > 0 ? /const (\w+) = $/.exec(blocks[parentIndex - 1]!.trimEnd() + " ")?.[1] : undefined;
+    if (parentName === undefined) return undefined;
+    return blocks.find(
+      (block) => block.includes(`path: "${path.slice(cut + 1)}"`) && block.includes(`getParentRoute: () => ${parentName},`),
+    );
+  };
 
   // A redirect reports its journey under the screen it lands on, so the opened path never gets a ready time.
   it("opens screens the router renders, not redirects", () => {

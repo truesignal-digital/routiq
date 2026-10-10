@@ -37,7 +37,7 @@ it("preloads every row Direction sees, in sidebar order, but not Home", async ()
     "/assets",
     "/activities",
     "/maintenance",
-    "/finance/entries",
+    "/finance",
     "/more/persons",
     "/more/users",
     "/more/branches",
@@ -47,7 +47,7 @@ it("preloads every row Direction sees, in sidebar order, but not Home", async ()
 });
 
 it("never preloads a screen the role cannot see (#497)", async () => {
-  expect(await preloadedAs("TECHNICIAN")).not.toContain("/finance/entries");
+  expect(await preloadedAs("TECHNICIAN")).not.toContain("/finance");
   const cashier = await preloadedAs("CASHIER");
   expect(cashier).not.toContain("/activities");
   expect(cashier).not.toContain("/maintenance");

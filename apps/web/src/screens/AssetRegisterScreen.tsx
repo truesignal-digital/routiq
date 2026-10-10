@@ -197,7 +197,7 @@ export function AssetRegisterScreen() {
     localizedLabel(item);
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer>
       <p className="text-xs font-semibold text-muted-foreground">
         {t("assets.form.eyebrow")}
       </p>

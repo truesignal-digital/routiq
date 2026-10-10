@@ -131,10 +131,10 @@ async function renderShell(initialPath: string, ready = () => screen.findByTestI
   );
   const pageRoute = createRoute({
     getParentRoute: () => shellRoute,
-    path: "/narrow-page",
+    path: "/framed-page",
     component: () => (
-      <PageContainer width="narrow">
-        <h1 data-testid="screen">Narrow page</h1>
+      <PageContainer>
+        <h1 data-testid="screen">Framed page</h1>
         {/* A tab's permission screen is a container inside the page. */}
         <PageContainer>inner</PageContainer>
       </PageContainer>
@@ -247,7 +247,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+    expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users"]);
   });
 
   it("groups the rows under Daily work and Company", async () => {
@@ -260,14 +260,14 @@ describe("AppShell (sidebar frame)", () => {
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Users"]);
+    expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Users"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
     // A core page: a module's page waits for membership (ModulePageGate).
     await renderShell("/");
-    expect(navLinkNames()).toEqual(["Home"]);
+    expect(navLinkNames()).toEqual(["Dashboard"]);
   });
 
   it("marks the section owning the route active, and only that one", async () => {
@@ -277,7 +277,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("highlights Home on the landing route without swallowing the others", async () => {
     await renderShell("/");
-    expect(activeNavName()).toBe("Home");
+    expect(activeNavName()).toBe("Dashboard");
 
     cleanup();
     await renderShell("/assets/new");
@@ -382,15 +382,15 @@ describe("AppShell (sidebar frame)", () => {
     realNotice.current = true;
     try {
       // The notice sits in the page's own column (#467), so only a page container shows it.
-      const router = await renderShell("/narrow-page");
+      const router = await renderShell("/framed-page");
       await waitFor(() => expect(chainReads).toHaveBeenCalledTimes(1));
 
       // Direction changes the rules; within the minute, moving screens asks nothing.
       notice = { changeId: "change-1", changedAt: "2026-10-05T09:00:00.000Z", changedBy: "Mme Ngo" };
       await router.navigate({ to: "/finance/entries" });
       await screen.findByText("/finance/entries");
-      await router.navigate({ href: "/narrow-page" });
-      await screen.findByText("Narrow page");
+      await router.navigate({ href: "/framed-page" });
+      await screen.findByText("Framed page");
       expect(chainReads).toHaveBeenCalledTimes(1);
       expect(document.querySelector("[data-slot='approval-rules-notice']")).toBeNull();
 
@@ -399,7 +399,7 @@ describe("AppShell (sidebar frame)", () => {
       client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - APPROVAL_CHAIN_RECHECK_MS });
       await router.navigate({ to: "/assets" });
       await screen.findByText("/assets");
-      await router.navigate({ href: "/narrow-page" });
+      await router.navigate({ href: "/framed-page" });
       await waitFor(() => expect(document.querySelector("[data-slot='approval-rules-notice']")).not.toBeNull());
       expect(chainReads).toHaveBeenCalledTimes(2);
     } finally {
@@ -409,12 +409,12 @@ describe("AppShell (sidebar frame)", () => {
   });
 
   it("puts the approval-rules notice in the page's own column, once (#467)", async () => {
-    await renderShell("/narrow-page");
+    await renderShell("/framed-page");
 
     const notices = screen.getAllByTestId("rules-notice");
     expect(notices).toHaveLength(1);
     const column = screen.getByTestId("screen").closest("section");
-    expect(column?.className).toContain("max-w-xl");
+    expect(column?.hasAttribute("data-page-frame")).toBe(true);
     expect(notices[0]?.parentElement).toBe(column);
   });
 
@@ -432,13 +432,13 @@ describe("AppShell (sidebar frame)", () => {
     it("renames the chrome of a single-preset workspace", async () => {
       me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Trucks", "Money", "Users"]);
     });
 
     // Runs after the overlay above: also proves unmounting clears it.
     it("keeps the base vocabulary for a mixed fleet", async () => {
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users"]);
     });
   });
 
@@ -462,7 +462,7 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users"]);
     });
 
     it("closes the sheet after navigating", async () => {
@@ -471,7 +471,7 @@ describe("AppShell (sidebar frame)", () => {
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
       await userEvent.click(screen.getByRole("link", { name: "Money" }));
 
-      expect(router.state.location.pathname).toBe("/finance/entries");
+      expect(router.state.location.pathname).toBe("/finance");
       expect(screen.queryByRole("navigation", { name: "Navigation" })).toBeNull();
     });
 

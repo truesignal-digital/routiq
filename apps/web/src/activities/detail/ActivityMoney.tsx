@@ -5,7 +5,7 @@ import { CancellationDetails, foldedAmountClass, foldTripEntries } from "@/finan
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatMoney, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 type Entry = NonNullable<ActivityDetail["financialEntries"]>[number];
@@ -62,6 +62,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
   if (entries.length === 0) return null;
 
   const postedNet = postedNetMinor(entries);
+  const postedResult = profitOrLoss(postedNet, { locale });
   const pendingNet = pendingNetMinor(entries);
   const hasPending = entries.some((entry) => entry.status === "SUBMITTED");
   // One line per event (#427); the sums above stay on every signed row.
@@ -127,7 +128,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
         <dl className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <dt className="text-sm font-medium">
-              <span>{t("activities.detail.moneySummary.net")}</span>
+              <span>{postedResult.label}</span>
               <span className="ml-2 text-muted-foreground text-xs">
                 {t("activities.detail.moneySummary.postedOnly")}
               </span>
@@ -138,7 +139,7 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
                 netToneClass(postedNet),
               )}
             >
-              {formatMoney(postedNet, { locale, sign: { context: "net" } })}
+              {postedResult.amount}
             </dd>
           </div>
 

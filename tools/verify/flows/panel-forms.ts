@@ -13,7 +13,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet }) => {
     await page.waitForTimeout(400);
   };
 
-  await nav("/maintenance");
+  await nav("/maintenance/work-orders");
   await page.getByRole("button", { name: t("Signaler un problème", "Report a problem") }).first().click();
   await panel().waitFor();
   await settle();

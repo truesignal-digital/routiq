@@ -3,6 +3,7 @@ import {
   assetAttentionStatuses,
   assetListItem,
   assetListResponse,
+  assetOverview,
   assetSummary,
 } from "./assets.js";
 
@@ -41,16 +42,17 @@ describe("asset list contract", () => {
 });
 
 describe("asset summary contract", () => {
-  const summary = { total: 6, inService: 2, attention: 3 };
+  const summary = { total: 6, inService: 2, canDrive: 1, attention: 3 };
 
-  it("accepts the three fleet buckets", () => {
+  it("accepts the fleet buckets", () => {
     expect(assetSummary.parse(summary)).toEqual(summary);
   });
 
   it("accepts an empty fleet", () => {
-    expect(assetSummary.parse({ total: 0, inService: 0, attention: 0 })).toEqual({
+    expect(assetSummary.parse({ total: 0, inService: 0, canDrive: 0, attention: 0 })).toEqual({
       total: 0,
       inService: 0,
+      canDrive: 0,
       attention: 0,
     });
   });
@@ -64,6 +66,7 @@ describe("asset summary contract", () => {
 
   it("rejects a bucket left out — a missing tile must not read as zero", () => {
     expect(assetSummary.safeParse({ total: 6, inService: 2 }).success).toBe(false);
+    expect(assetSummary.safeParse({ total: 6, inService: 2, attention: 3 }).success).toBe(false);
   });
 
   it("groups the same statuses the ATTENTION filter selects", () => {
@@ -85,5 +88,37 @@ describe("asset availability contract", () => {
     });
     expect(assetAvailability.safeParse({ state: "AVAILABLE" }).success).toBe(false);
     expect(assetAvailability.safeParse({ state: "UNKNOWN" }).success).toBe(false);
+  });
+});
+
+describe("asset overview contract", () => {
+  const assetId = "3f6b2a7c-9d41-4a52-8b0e-2c1d5e6f7a8b";
+  const overview = {
+    total: 8,
+    canDrive: 5,
+    grounded: { count: 2, first: { assetId, assetCode: "VH002", since: "2026-10-01T08:00:00.000Z" } },
+    idle: { count: 4, days: 5, first: { assetId, assetCode: "VH004", lastTripAt: null } },
+    notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+  };
+
+  it("accepts the counts, and null for a module that is off", () => {
+    expect(assetOverview.parse(overview)).toEqual(overview);
+    const off = { total: 3, canDrive: 3, grounded: null, idle: null, notice: overview.notice };
+    expect(assetOverview.parse(off)).toEqual(off);
+  });
+
+  it("requires the summary notice (#667)", () => {
+    const { notice: _notice, ...withoutNotice } = overview;
+    expect(assetOverview.safeParse(withoutNotice).success).toBe(false);
+  });
+
+  it("accepts no first vehicle when none is grounded or idle", () => {
+    const none = { ...overview, grounded: { count: 0, first: null }, idle: { count: 0, days: 5, first: null } };
+    expect(assetOverview.parse(none)).toEqual(none);
+  });
+
+  it("refuses a missing tile, which must be null rather than absent", () => {
+    expect(assetOverview.safeParse({ total: 3, canDrive: 3, grounded: null }).success).toBe(false);
+    expect(assetOverview.safeParse({ ...overview, canDrive: -1 }).success).toBe(false);
   });
 });

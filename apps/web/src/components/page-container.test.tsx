@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PageContainer } from "./page-container";
 
+const classes = (el: Element | null) => (el?.className ?? "").split(/\s+/);
+
 describe("PageContainer", () => {
   it("renders children inside the container", () => {
     render(
@@ -12,34 +14,20 @@ describe("PageContainer", () => {
     expect(screen.getByText("Test content")).toBeTruthy();
   });
 
-  it("renders with default width (max-w-3xl)", () => {
+  // jsdom has no layout, so this pins the classes; the widths themselves are
+  // measured in the running app at 1440, 1920 and 390 (#658).
+  it("has one width: 1 200 px of content, centred, in 24 px gutters (16 on a phone)", () => {
     const { container } = render(
       <PageContainer>
         <div>Content</div>
       </PageContainer>
     );
     const section = container.querySelector("section");
-    expect(section?.classList.contains("max-w-3xl")).toBe(true);
-  });
-
-  it("renders with narrow width (max-w-xl)", () => {
-    const { container } = render(
-      <PageContainer width="narrow">
-        <div>Content</div>
-      </PageContainer>
+    expect(section?.hasAttribute("data-page-frame")).toBe(true);
+    expect(classes(section)).toEqual(
+      expect.arrayContaining(["mx-auto", "w-full", "max-w-[1248px]", "px-4", "sm:px-6", "py-6"]),
     );
-    const section = container.querySelector("section");
-    expect(section?.classList.contains("max-w-xl")).toBe(true);
-  });
-
-  it("renders with wide width (max-w-6xl)", () => {
-    const { container } = render(
-      <PageContainer width="wide">
-        <div>Content</div>
-      </PageContainer>
-    );
-    const section = container.querySelector("section");
-    expect(section?.classList.contains("max-w-6xl")).toBe(true);
+    expect(classes(section).filter((name) => name.startsWith("max-w-"))).toEqual(["max-w-[1248px]"]);
   });
 
   it("applies custom className", () => {
@@ -50,18 +38,5 @@ describe("PageContainer", () => {
     );
     const section = container.querySelector("section");
     expect(section?.classList.contains("custom-class")).toBe(true);
-  });
-
-  it("has consistent base classes (mx-auto, w-full, px-4, py-6)", () => {
-    const { container } = render(
-      <PageContainer>
-        <div>Content</div>
-      </PageContainer>
-    );
-    const section = container.querySelector("section");
-    expect(section?.classList.contains("mx-auto")).toBe(true);
-    expect(section?.classList.contains("w-full")).toBe(true);
-    expect(section?.classList.contains("px-4")).toBe(true);
-    expect(section?.classList.contains("py-6")).toBe(true);
   });
 });

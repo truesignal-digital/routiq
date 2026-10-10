@@ -18,18 +18,18 @@ export const financeManifest: WebModuleManifest = {
       group: "daily",
       place: { after: "maintenance" },
       labelKey: "finance.entries.title",
-      to: "/finance/entries",
+      // The Money page opens on its Overview; a role without one lands on Entries.
+      to: "/finance",
       match: "/finance",
       icon: Banknote,
       // A driver reads only the entries they recorded, on their truck and trips.
       reads: (role, enabledModules) =>
         canReadFinanceEntries(role, enabledModules) && moneyReadScope(role) !== "OWN_ENTRIES",
-      // The approvals route opens the waiting view (#314), across every branch
-      // the count covers.
+      // The count opens the To approve tab (#664), across every branch it covers.
       count: {
         key: "moneyWaiting",
         labelKey: "shell.counts.moneyWaiting",
-        to: "/finance/approvals",
+        to: "/finance/approve",
         search: { branch: "all" },
       },
     },
@@ -50,15 +50,16 @@ export const financeManifest: WebModuleManifest = {
       labelKey: "settings.title",
       to: "/more/company",
       icon: SlidersHorizontal,
-      // The approval chain is its only section so far (#354).
+      // The approval chain (#354) and the Dashboard summary schedule (#669).
       reads: canManageCompanySettings,
     },
   ],
   navCounts: [{ key: "moneyWaiting", listKey: (slug) => ["ws", slug, "finance", "approvals"] }],
-  homeCards: ["pendingApprovals", "openPeriodExpense", "openPeriodRevenue", "moneyChart", "recentEntries"],
+  homeCards: ["pendingApprovals", "openPeriodExpense", "openPeriodRevenue", "moneyChart", "recentEntries", "overview"],
   vehicleTabs: ["money"],
   vehicleActions: ["log-fuel", "record-expense", "attach-evidence", "record-revenue", "review-entry", "reverse-entry"],
   recordPanels: ["entry"],
   historyKinds: ["MONEY"],
   fields: ["trip.money"],
+  pageTabs: [],
 };

@@ -43,7 +43,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   }
   log(`modules on: ${me.enabledModules.join(", ")}`);
 
-  await (await openSidebar(page)).getByRole("link", { name: t("Accueil", "Home"), exact: true }).click();
+  await (await openSidebar(page)).getByRole("link", { name: t("Tableau de bord", "Dashboard"), exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
   const sidebar = await openSidebar(page);
@@ -66,6 +66,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     : await openSidebar(page);
   await places.getByRole("link", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("heading", { name: t("Camions", "Trucks"), level: 1 }).waitFor();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH001/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH001" }).waitFor();
   await quiet();
