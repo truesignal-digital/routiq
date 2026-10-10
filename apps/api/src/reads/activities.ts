@@ -8,6 +8,7 @@ import {
   personListQuery,
   personListResponse,
   placeListResponse,
+  STARTED_ACTIVITY_STATUSES,
   type ListSort,
 } from "@routiq/contracts";
 import {
@@ -19,6 +20,7 @@ import {
   ilike,
   inArray,
   lt,
+  ne,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -59,6 +61,15 @@ import {
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
 import { readableEntrySql } from "./money-scope.js";
+import {
+  cancellationOf,
+  plannedAssetCodeSql,
+  plannedDriverNameSql,
+  plannedRouteEndSql,
+  tripPrices,
+  tripPricesVisible,
+  tripRevenueVisible,
+} from "./trip-plan.js";
 import { readableTripSql } from "./trip-scope.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 
@@ -128,7 +139,7 @@ function legCountSql(): SQL<number> {
  * as the detail read names it — the place, else the text typed for an ad-hoc
  * stop. Null for an activity with no legs.
  */
-function legEndSql(end: "origin" | "destination"): SQL<string | null> {
+export function legEndSql(end: "origin" | "destination"): SQL<string | null> {
   const placeId = end === "origin" ? movementLegs.originPlaceId : movementLegs.destinationPlaceId;
   const text = end === "origin" ? movementLegs.originText : movementLegs.destinationText;
   const order = end === "origin" ? sql`asc` : sql`desc`;
@@ -224,7 +235,13 @@ export function registerActivityReadRoutes(
 
           const conditions: SQL[] = [readableTripSql(auth)];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
-          if (status) conditions.push(eq(activities.status, status));
+          // Unasked, only trips that have started (ADR-0012 §7): a client
+          // from before Scheduling never meets one with no start date.
+          conditions.push(
+            status === undefined
+              ? inArray(activities.status, [...STARTED_ACTIVITY_STATUSES])
+              : eq(activities.status, status),
+          );
           if (completeness) {
             conditions.push(eq(activities.completeness, completeness));
           }
@@ -382,7 +399,11 @@ export function registerActivityReadRoutes(
 
           // The same scope the list applies: session branches and a driver's
           // own trips, then the optional branch inside them, never instead.
-          const conditions: SQL[] = [readableTripSql(auth)];
+          // Started trips only, as the list lists them unasked.
+          const conditions: SQL[] = [
+            readableTripSql(auth),
+            inArray(activities.status, [...STARTED_ACTIVITY_STATUSES]),
+          ];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
 
           // Week edges are local midnights, so a trip started at 00:30 Monday
@@ -481,6 +502,19 @@ export function registerActivityReadRoutes(
               destinationName: legEndSql("destination"),
               distanceKm: distanceKmSql(),
               driverName: driverNameSql(),
+              plannedAssetId: activities.plannedAssetId,
+              plannedAssetCode: plannedAssetCodeSql(),
+              plannedDriverPersonId: activities.plannedDriverPersonId,
+              plannedDriverName: plannedDriverNameSql(),
+              plannedOriginName: plannedRouteEndSql("origin"),
+              plannedDestinationName: plannedRouteEndSql("destination"),
+              cancelledAt: activities.cancelledAt,
+              cancellationReason: activities.cancellationReason,
+              cancellationNote: activities.cancellationNote,
+              discrepancyCodes: activities.discrepancyCodes,
+              priceCurrency: activities.priceCurrency,
+              agreedPriceMinor: activities.agreedPriceMinor,
+              amountToCollectMinor: activities.amountToCollectMinor,
             })
             .from(activities)
             .innerJoin(
@@ -729,6 +763,20 @@ export function registerActivityReadRoutes(
               cancelledBy:
                 entry.cancelledBy === null ? null : toEntryCancellation(entry.cancelledBy, true),
             })) ?? null,
+          plannedAsset:
+            header.plannedAssetId === null || header.plannedAssetCode === null
+              ? null
+              : { id: header.plannedAssetId, assetCode: header.plannedAssetCode },
+          plannedDriver:
+            header.plannedDriverPersonId === null || header.plannedDriverName === null
+              ? null
+              : { personId: header.plannedDriverPersonId, displayName: header.plannedDriverName },
+          plannedOriginName: header.plannedOriginName,
+          plannedDestinationName: header.plannedDestinationName,
+          cancellation: cancellationOf(header),
+          discrepancyCodes: header.discrepancyCodes,
+          priceCurrency: header.priceCurrency,
+          ...tripPrices(tripPricesVisible(auth, modules), header),
         });
       } catch (error) {
         req.log.error({ err: error }, "activity detail read failed");
@@ -847,6 +895,9 @@ function activityFinancialRows(tx: ReadTx, auth: AuthContext, activityId: string
         eq(financialPostings.workspaceId, auth.workspaceId),
         eq(financialPostings.activityId, activityId),
         readableEntrySql(auth),
+        // A trip's revenue is its price (ADR-0012 §7, #583): withheld here,
+        // not only on the screen, from whoever may not read it.
+        tripRevenueVisible(auth.role) ? undefined : ne(financialEntries.direction, "REVENUE"),
       ),
     )
     .orderBy(

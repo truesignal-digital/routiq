@@ -152,7 +152,8 @@ vi.mock("../finance/useApprovals.js", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("../finance/permissions.js", () => ({
+vi.mock("../finance/permissions.js", async (importOriginal) => ({
+  recordAgainStep: (await importOriginal<typeof import("../finance/permissions.js")>()).recordAgainStep,
   canReadFinance: vi.fn(() => true),
   canReadFinanceEntries: vi.fn(() => true),
   canRecordFinance: vi.fn(() => true),

@@ -135,6 +135,26 @@ export async function plantWorkOrderRevenue(
   db: Db,
   opts: { revenueEntryId: string; workOrderId: string; createdByCommandId?: string },
 ): Promise<string> {
+  return copyRevenueEntry(db, opts);
+}
+
+/**
+ * Revenue a driver recorded, as they could before #570 refused it: a copy of
+ * a real revenue entry under the driver's recording command, so the money
+ * scope counts it as theirs.
+ */
+export async function plantDriverRevenue(
+  db: Db,
+  opts: { revenueEntryId: string; createdByCommandId: string },
+): Promise<string> {
+  return copyRevenueEntry(db, opts);
+}
+
+/** No command writes these rows now and postings are append-only, so each is a copy. */
+async function copyRevenueEntry(
+  db: Db,
+  opts: { revenueEntryId: string; workOrderId?: string; createdByCommandId?: string },
+): Promise<string> {
   const [entry] = await db
     .select()
     .from(financialEntries)
@@ -158,7 +178,7 @@ export async function plantWorkOrderRevenue(
         ...posting,
         id: randomUUID(),
         financialEntryId: entryId,
-        workOrderId: opts.workOrderId,
+        workOrderId: opts.workOrderId ?? posting.workOrderId,
         createdByCommandId,
       })),
     );

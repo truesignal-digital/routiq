@@ -23,7 +23,9 @@ export interface PresetVocabulary {
  * languages or in neither (#143).
  */
 export const FRENCH_AGREEMENT_KEYS: readonly string[] = [
+  "activities.status.PLANNED",
   "activities.status.CLOSED",
+  "activities.status.CANCELLED",
   "activities.state.closed",
   "activities.state.closedWithGaps",
   "activities.completeness.COMPLETE",

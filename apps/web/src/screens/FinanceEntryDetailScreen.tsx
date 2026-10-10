@@ -19,6 +19,7 @@ import {
   canEditPendingEntry,
   canReadFinanceEntries,
   canReverseEntry,
+  recordAgainStep,
 } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import {
@@ -195,10 +196,19 @@ function FinanceEntryDetailContent() {
                   });
                 }, 1500);
               }}
-              onRecordAgain={() => {
-                setReverseOpen(false);
-                setRecordAgainOpen(true);
-              }}
+              // role-config: a work-order cost is recorded again by the roles that book one (#559).
+              {...recordAgainStep(me, entryQuery.data, {
+                recordAgain: () => {
+                  setReverseOpen(false);
+                  setRecordAgainOpen(true);
+                },
+                openWorkOrder: (assetId, workOrderId) =>
+                  void navigate({
+                    to: "/assets/$assetId/maintenance",
+                    params: { assetId },
+                    search: { panel: `work_order:${workOrderId}` },
+                  }),
+              })}
               onDismiss={() => setReverseOpen(false)}
             />
           )}

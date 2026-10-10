@@ -299,6 +299,7 @@ export function RejectEntryForm({ entry, ...rest }: EntryDecisionHost & { entry:
 export function ReverseEntryForm({
   onReversed,
   onRecordAgain,
+  onOpenWorkOrder,
   ...host
 }: EntryDecisionHost & {
   /** The cancellation entry just created, for a host that wants to show it. */
@@ -308,6 +309,12 @@ export function ReverseEntryForm({
    * pre-filled from the cancelled entry. Without it the form just closes.
    */
   onRecordAgain?: (() => void) | undefined;
+  /**
+   * A work-order cost the viewer may not book (#559): after a "wrong details"
+   * cancellation the form says who records it again and offers the way to the
+   * work order instead of Record again. A host passes this or `onRecordAgain`.
+   */
+  onOpenWorkOrder?: (() => void) | undefined;
 }) {
   const { t } = useTranslation();
   const label = useCommandLabel();
@@ -341,7 +348,7 @@ export function ReverseEntryForm({
     await refresh();
     host.onDone?.();
     onReversed?.(reversalEntryId, payload.reasonCode);
-    if (payload.reasonCode === "WRONG_DETAILS" && onRecordAgain !== undefined) {
+    if (payload.reasonCode === "WRONG_DETAILS" && (onRecordAgain !== undefined || onOpenWorkOrder !== undefined)) {
       setRecordAgain(true);
       return;
     }
@@ -360,13 +367,21 @@ export function ReverseEntryForm({
       submitting={submission.submitting}
       onSubmit={() => void submit()}
       done={
-        recordAgain && onRecordAgain !== undefined
-          ? {
-              title: t("finance.entries.reversal.recordAgainTitle"),
-              body: t("finance.entries.reversal.recordAgainBody"),
-              action: { label: t("finance.entries.reversal.recordAgain"), onClick: onRecordAgain },
-            }
-          : undefined
+        !recordAgain
+          ? undefined
+          : onRecordAgain !== undefined
+            ? {
+                title: t("finance.entries.reversal.recordAgainTitle"),
+                body: t("finance.entries.reversal.recordAgainBody"),
+                action: { label: t("finance.entries.reversal.recordAgain"), onClick: onRecordAgain },
+              }
+            : onOpenWorkOrder !== undefined
+              ? {
+                  title: t("finance.entries.reversal.recordAgainTitle"),
+                  body: t("finance.entries.reversal.workOrderHandOffBody"),
+                  action: { label: t("finance.entries.reversal.openWorkOrder"), onClick: onOpenWorkOrder },
+                }
+              : undefined
       }
     >
       <fieldset className="flex flex-col gap-3">
@@ -398,6 +413,9 @@ export function ReverseEntryForm({
           value={reasonText}
           onChange={setReasonText}
         />
+      )}
+      {reasonCode === "WRONG_DETAILS" && onOpenWorkOrder !== undefined && (
+        <p className="text-sm text-muted-foreground">{t("finance.entries.reversal.workOrderHandOffHint")}</p>
       )}
     </CommandForm>
   );
