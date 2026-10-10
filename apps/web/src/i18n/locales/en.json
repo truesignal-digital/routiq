@@ -67,6 +67,10 @@
     "screenLoadFailed": "This page could not be opened. Check your connection, then try again.",
     "screenFailed": "Something went wrong on this page. Try again.",
     "retry": "Try again",
+    "offline": {
+      "banner": "You're offline. Pages will load when the connection is back.",
+      "waiting": "You're offline. This will load as soon as the connection is back."
+    },
     "counts": {
       "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
