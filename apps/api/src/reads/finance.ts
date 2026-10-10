@@ -728,6 +728,25 @@ export function registerFinanceReadRoutes(
             .where(eq(financialPostings.financialEntryId, entryId))
             .orderBy(asc(financialPostings.lineNo));
 
+          // A new cost on a completed order is a late invoice (#82); the form asks why up front (#613).
+          const lineWorkOrderIds = [
+            ...new Set(postingsRows.flatMap((row) => (row.workOrderId === null ? [] : [row.workOrderId]))),
+          ];
+          const [completedWorkOrder] =
+            lineWorkOrderIds.length === 0
+              ? []
+              : await tx
+                  .select({ id: workOrders.id })
+                  .from(workOrders)
+                  .where(
+                    and(
+                      eq(workOrders.workspaceId, auth.workspaceId),
+                      inArray(workOrders.id, lineWorkOrderIds),
+                      eq(workOrders.status, "COMPLETED"),
+                    ),
+                  )
+                  .limit(1);
+
           let reversedByEntryId: string | null = null;
           const [reversedByEntry] = await tx
             .select({ id: financialEntries.id })
@@ -770,6 +789,7 @@ export function registerFinanceReadRoutes(
           return {
             entry,
             directionDecides,
+            lateWorkOrderCost: completedWorkOrder !== undefined,
             category,
             periodCode,
             postings: postingsRows,
@@ -794,6 +814,7 @@ export function registerFinanceReadRoutes(
           evidenceFiles,
           recordedBy,
           directionDecides,
+          lateWorkOrderCost,
         } = result;
 
         const mappedPostings = postings.map((p) => ({
@@ -856,6 +877,7 @@ export function registerFinanceReadRoutes(
           links: toEntryLinks(entry),
           evidenceFiles,
           directionDecides,
+          lateWorkOrderCost,
         };
 
         return financialEntryDetail.parse(response);
