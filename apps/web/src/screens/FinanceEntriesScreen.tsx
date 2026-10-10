@@ -273,7 +273,7 @@ function FinanceEntriesContent() {
           </>
         }
       />
-      <MoneyLead summary={summary} />
+      <MoneyLead summary={summary} ownOnly={ownOnly} />
 
       <MoneyTiles
         summary={summary}
@@ -348,6 +348,7 @@ function FinanceEntriesContent() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={{ columnId: "entryNumber" }}
             rowActions={(entry) => [
@@ -521,8 +522,17 @@ function useMonthName() {
   };
 }
 
-/** Which month takes entries and which was closed last (#314). */
-function MoneyLead({ summary }: { summary: FinanceSummaryResponse | undefined }) {
+/**
+ * What the page holds, then which month takes entries and which was closed
+ * last (#314). A driver's page holds only their own expenses (#619).
+ */
+function MoneyLead({
+  summary,
+  ownOnly,
+}: {
+  summary: FinanceSummaryResponse | undefined;
+  ownOnly: boolean;
+}) {
   const { t } = useTranslation();
   const monthName = useMonthName();
   if (summary === undefined) return null;
@@ -530,13 +540,15 @@ function MoneyLead({ summary }: { summary: FinanceSummaryResponse | undefined })
   const locked = summary.lastLockedPeriodCode;
   const text =
     open !== null && locked !== null
-      ? t("finance.money.lead.both", {
+      ? t(ownOnly ? "finance.money.lead.own.both" : "finance.money.lead.both", {
           open: monthName(open, { capitalize: true }),
           locked: monthName(locked),
         })
       : open !== null
-        ? t("finance.money.lead.open", { open: monthName(open, { capitalize: true }) })
-        : t("finance.money.lead.none");
+        ? t(ownOnly ? "finance.money.lead.own.open" : "finance.money.lead.open", {
+            open: monthName(open, { capitalize: true }),
+          })
+        : t(ownOnly ? "finance.money.lead.own.none" : "finance.money.lead.none");
   return (
     <p data-slot="money-lead" className="mt-1 text-sm text-muted-foreground">
       {text}

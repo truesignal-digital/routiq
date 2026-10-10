@@ -234,7 +234,7 @@ describe("the status sentence and the step beside it, per role", () => {
       const block = await sentence();
       await waitFor(() =>
         expect(block.textContent).toContain(
-          `La réparation (${WO_REF}) est terminée, mais un autre problème critique est encore ouvert : « Steering locks on the left » (${OTHER_REF}). Il doit être clos avant la remise en service.`,
+          `La réparation (${WO_REF}) est terminée, mais un autre problème critique est encore ouvert : « Steering locks on the left » (${OTHER_REF}). Il doit être clos avant la remise en service.`,
         ),
       );
       expect(block.textContent).not.toMatch(/en attente d'un responsable/);

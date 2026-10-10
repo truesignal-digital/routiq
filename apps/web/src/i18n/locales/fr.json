@@ -17,6 +17,10 @@
     "title": "Accueil",
     "loadFailed": "Impossible de charger le tableau de bord. Veuillez réessayer.",
     "retry": "Réessayer",
+    "empty": {
+      "modulesOff": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise.",
+      "modulesOffCompanyPages": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise. Les pages Entreprise du menu restent disponibles."
+    },
     "cards": {
       "pendingApprovals": {
         "title": "Approbations en attente",
@@ -67,8 +71,12 @@
     "screenLoadFailed": "Impossible d'ouvrir cette page. Vérifiez votre connexion, puis réessayez.",
     "screenFailed": "Un problème est survenu sur cette page. Réessayez.",
     "retry": "Réessayer",
+    "offline": {
+      "banner": "Vous êtes hors ligne. Les pages s'afficheront au retour de la connexion.",
+      "waiting": "Vous êtes hors ligne. Ce contenu s'affichera dès le retour de la connexion."
+    },
     "counts": {
-      "moneyWaiting": "{count, plural, one {# dépense attend votre approbation} other {# dépenses attendent votre approbation}}",
+      "moneyWaiting": "{count, plural, one {# écriture attend votre approbation} other {# écritures attendent votre approbation}}",
       "maintenanceNew": "{count, plural, one {# nouveau problème à traiter} other {# nouveaux problèmes à traiter}}",
       "tooltip": "{label} : {waiting}"
     },
@@ -188,7 +196,7 @@
     "WORK_ORDER_NOT_OPEN": "Cet ordre de travail ne prend pas de coût pour l'instant : un coût s'y impute une fois l'ordre approuvé, mais pas pendant la validation de sa fin de travaux, ni s'il a été rejeté ou annulé.",
     "LATE_COST_REASON_REQUIRED": "Cet ordre de travail est déjà terminé. Indiquez pourquoi le coût arrive après la clôture.",
     "WORK_ORDER_COST_ONLY": "Un ordre de travail ne reçoit que des coûts. Enregistrez cette recette sur le véhicule, sans ordre de travail.",
-    "WORK_ORDER_COST_MISSING": "Indiquez le coût de la réparation, ou choisissez « Aucun coût » ou « Facture pas encore reçue ».",
+    "WORK_ORDER_COST_MISSING": "Indiquez le coût de la réparation, ou choisissez « Aucun coût » ou « Facture pas encore reçue ».",
     "WORK_ORDER_HAS_COSTS": "Des coûts ont déjà été enregistrés sur cet ordre de travail. Rouvrez le formulaire pour les voir.",
     "HUMAN_PRINCIPAL_REQUIRED": "Cette action doit être faite par une personne, pas par une intégration ni un agent automatique.",
     "ASSET_NOT_UNAVAILABLE": "Cet actif n'est pas immobilisé : aucune remise en service à effectuer.",
@@ -409,7 +417,7 @@
     "title": "Documents de l'actif",
     "add": "Ajouter un document",
     "renew": "Renouveler",
-    "renewTitle": "Renouveler « {name} »",
+    "renewTitle": "Renouveler « {name} »",
     "loading": "Chargement…",
     "loadFailed": "Impossible de charger les documents de cet actif.",
     "typesFailed": "Impossible de charger les types de document. Actualisez cette page.",
@@ -449,7 +457,7 @@
       },
       "warnings": {
         "generic": "L'action est terminée avec un avertissement ({code}).",
-        "EVIDENCE_MISSING": "Pièce justificative manquante : cette catégorie exige une photo ou un document.",
+        "EVIDENCE_MISSING": "Joignez le justificatif dès que vous l'avez.",
         "LATE_POSTING": "Le mois de cette date est verrouillé : l'écriture a été comptabilisée dans le mois en cours. Elle garde sa propre date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "Cette période contient des écritures en attente d'approbation."
       },
@@ -469,7 +477,12 @@
       "lead": {
         "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
         "open": "Toutes les dépenses et recettes. {open} est ouvert.",
-        "none": "Toutes les dépenses et recettes."
+        "none": "Toutes les dépenses et recettes.",
+        "own": {
+          "both": "Vos dépenses. {open} est ouvert ; {locked} est clôturé.",
+          "open": "Vos dépenses. {open} est ouvert.",
+          "none": "Vos dépenses."
+        }
       },
       "tiles": {
         "out": "Sorties en {month}",
@@ -560,6 +573,7 @@
         "asset": "Actif",
         "postingAmount": "Montant",
         "reversalChain": "Annulation",
+        "directionDecides": "Au-dessus de votre seuil d'approbation : la Direction décide.",
         "reversesEntry": "Annulation de l'écriture {number}",
         "reversedByEntry": "Annulée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
@@ -666,7 +680,7 @@
       "statusLocked": "Verrouillée depuis le {date}",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
       "lockExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer. Une écriture tardive datée de ce mois sera comptabilisée dans le mois en cours et gardera sa date.",
-      "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et plus rien ne pourra être comptabilisé avant sa réouverture.",
+      "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et les écritures datées de ce mois ne pourront pas être comptabilisées avant sa réouverture.",
       "reasonLabel": "Motif de la réouverture",
       "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
       "cancel": "Annuler",
@@ -1436,9 +1450,9 @@
       "cancel": "Annuler"
     },
     "actions": {
-      "renameHint": "Nouveau nom pour « {name} ». Le code reste inchangé.",
-      "deactivateHint": "Aucune nouvelle opération ne pourra viser « {name} ». Les enregistrements existants et l'historique sont conservés.",
-      "reactivateHint": "« {name} » pourra de nouveau recevoir des opérations.",
+      "renameHint": "Nouveau nom pour « {name} ». Le code reste inchangé.",
+      "deactivateHint": "Aucune nouvelle opération ne pourra viser « {name} ». Les enregistrements existants et l'historique sont conservés.",
+      "reactivateHint": "« {name} » pourra de nouveau recevoir des opérations.",
       "conflictTitle": "Cette agence a changé",
       "conflictBody": "Quelqu'un a modifié cette agence pendant votre saisie. Rechargez la liste et reprenez.",
       "reload": "Recharger"
@@ -2286,7 +2300,7 @@
     },
     "status": {
       "grounded": {
-        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — problème signalé : « {report} ».",
+        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — problème signalé : « {report} ».",
         "noWorkOrder": "Personne n'a encore planifié la réparation : le problème {issue} n'a pas d'ordre de travail.",
         "repairRefused": "La réparation a été refusée ({workOrder}) ; aucune autre n'est encore planifiée.",
         "awaitingAuthorization": "La réparation ({workOrder}) attend l'autorisation d'un responsable.",
@@ -2296,9 +2310,9 @@
         "awaitingRelease": "La réparation ({workOrder}) est terminée ; en attente d'un responsable pour la remise en service.",
         "awaitingReleaseSignedOff": "La réparation ({workOrder}) est validée ; en attente d'un responsable pour la remise en service.",
         "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
-        "otherIssueOpen": "La réparation ({workOrder}) est terminée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
-        "otherIssueOpenSignedOff": "La réparation ({workOrder}) est validée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
-        "issueClosedOtherIssueOpen": "Le problème {issue} a été clos sans réparation, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
+        "otherIssueOpen": "La réparation ({workOrder}) est terminée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
+        "otherIssueOpenSignedOff": "La réparation ({workOrder}) est validée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
+        "issueClosedOtherIssueOpen": "Le problème {issue} a été clos sans réparation, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
         "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
       },
       "repairedLead": "Réparation terminée — en attente de remise en service.",
@@ -2335,7 +2349,7 @@
       "needsSignOff": "Il faut que {ref} soit validé.",
       "needsAll": "Il faut que {ref} soit autorisé et terminé.",
       "needsWorkOrder": "Il faut un ordre de travail terminé, ou le problème clos.",
-      "otherSafetyIssueOpen": "{count, plural, one {Un autre problème critique est encore ouvert : « {description} ». Clôturez-le d'abord.} other {# autres problèmes critiques sont encore ouverts, dont « {description} ». Clôturez-les d'abord.}}",
+      "otherSafetyIssueOpen": "{count, plural, one {Un autre problème critique est encore ouvert : « {description} ». Clôturez-le d'abord.} other {# autres problèmes critiques sont encore ouverts, dont « {description} ». Clôturez-les d'abord.}}",
       "makerCannotApprove": "Vous avez créé {ref} ; une autre personne l'autorise.",
       "completerCannotSignOff": "Vous avez terminé {ref} ; une autre personne le valide.",
       "youRecordedIt": "Vous l'avez saisie ; une autre personne l'examine.",
@@ -2362,6 +2376,8 @@
       "manager": "Un responsable",
       "operations": "L'exploitation",
       "recorder": "L'auteur de la saisie",
+      "director": "La Direction",
+      "financePeer": "Un autre membre de la Finance ou la Direction",
       "team": "L'équipe"
     },
     "now": {
@@ -2444,6 +2460,11 @@
         "title": "{description}",
         "detail": "Note de la Direction · {name} · {when}",
         "badge": "Note de la Direction"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "L'activité {ref} chevauche une autre activité ouverte",
+        "detail": "Ce véhicule est aussi sur {numbers}. Clôturez celle qui est terminée.",
+        "detailUnnamed": "Ce véhicule est aussi sur une autre activité ouverte. Clôturez celle qui est terminée."
       }
     },
     "maintenance": {
@@ -2690,6 +2711,7 @@
       "fromProblem": "Du problème {ref}",
       "keepsGrounded": "Cet ordre de travail maintient le véhicule immobilisé. Une fois terminé, un responsable le remet en service.",
       "keepsGroundedUntilRelease": "Les travaux sont terminés, mais le véhicule reste immobilisé jusqu'à sa remise en service par un responsable.",
+      "keepsGroundedOtherIssueOpen": "Les travaux sont terminés, mais le véhicule reste immobilisé : {count, plural, one {un autre problème critique est encore ouvert : « {description} ».} other {# autres problèmes critiques sont encore ouverts, dont « {description} ».}}",
       "completionSentBack": "Fin des travaux renvoyée : {reason}",
       "opened": "Ouvert",
       "atBy": "{date} par {name}",
@@ -2745,17 +2767,18 @@
         "completion": "En attente de la fin des travaux par l'atelier.",
         "signOff": "En attente de la validation des travaux et de leur coût par un responsable.",
         "release": "En attente de la remise en service par un responsable.",
+        "otherSafetyIssue": "En attente de la clôture {count, plural, one {d'un autre problème critique : « {description} ».} other {de # autres problèmes critiques, dont « {description} ».}}",
         "planning": "En attente d'un ordre de travail de l'atelier.",
-        "entryReview": "En attente d'examen par la finance. D'ici là, elle n'est pas comptée dans le comptabilisé.",
+        "entryReview": "En attente d'examen par {approver, select, DIRECTION_APPROVES {la Direction} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} other {la Finance}}. D'ici là, elle n'est pas comptée dans le comptabilisé.",
         "entryReceipt": "En attente du reçu de {name}.",
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },
       "photoNumber": "Photo {number}",
       "splitEntryNotEditable": "Cette écriture est répartie sur plusieurs lignes et ne peut pas être modifiée ici. Demandez son rejet, puis saisissez-la à nouveau.",
       "directionNoteEyebrow": "Note de la Direction",
-      "notSeenYet": "Personne ne l'a encore marquée comme vue. Elle reste dans la liste « À faire » du véhicule jusque-là.",
+      "notSeenYet": "Personne ne l'a encore marquée comme vue. Elle reste dans la liste « À faire » du véhicule jusque-là.",
       "seenBy": "Vu par {name} le {date}",
-      "acknowledgeHint": "Indique à la Direction que vous avez lu cette note. Elle quitte la liste « À faire » ; votre nom et l'heure restent sur la note."
+      "acknowledgeHint": "Indique à la Direction que vous avez lu cette note. Elle quitte la liste « À faire » ; votre nom et l'heure restent sur la note."
     },
     "rows": {
       "actionsFor": "Actions pour {record}"
@@ -2854,7 +2877,7 @@
         "description": "Tout ce que vous pouvez faire sur {vehicle}, par domaine.",
         "search": "Rechercher une action",
         "searchPlaceholder": "Rechercher, ex. plein, renouveler, valider",
-        "noMatch": "Aucune action ne correspond à « {query} »."
+        "noMatch": "Aucune action ne correspond à « {query} »."
       }
     }
   },

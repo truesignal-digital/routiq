@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nextProvider } from "react-i18next";
@@ -96,11 +96,12 @@ const SCREEN_PATHS = [
   "/assets/new",
   "/finance/entries",
   "/finance/periods",
+  "/maintenance",
 ] as const;
 
 let client = new QueryClient();
 
-async function renderShell(initialPath: string) {
+async function renderShell(initialPath: string, ready = () => screen.findByTestId("screen")) {
   const rootRoute = createRootRoute();
   const shellRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -147,7 +148,7 @@ async function renderShell(initialPath: string) {
       </I18nextProvider>
     </QueryClientProvider>,
   );
-  await screen.findByTestId("screen");
+  await ready();
   return router;
 }
 
@@ -175,6 +176,33 @@ beforeEach(async () => {
 });
 
 afterEach(cleanup);
+
+describe("AppShell offline notice (#576)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function setOnline(online: boolean) {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
+    act(() => {
+      window.dispatchEvent(new Event(online ? "online" : "offline"));
+    });
+  }
+
+  const notice = "You're offline. Pages will load when the connection is back.";
+
+  it("says the app is offline under the site header while the connection is down", async () => {
+    await renderShell("/assets");
+    expect(screen.queryByText(notice)).toBeNull();
+
+    setOnline(false);
+    const shown = screen.getByText(notice);
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+    expect(header?.compareDocumentPosition(shown) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(shown.closest("[role='status']")).not.toBeNull();
+
+    setOnline(true);
+    expect(screen.queryByText(notice)).toBeNull();
+  });
+});
 
 describe("AppShell (sidebar frame)", () => {
   it("renders every screen inside the sidebar inset, under the site header", async () => {
@@ -256,6 +284,13 @@ describe("AppShell (sidebar frame)", () => {
     await renderShell("/finance/entries");
     const header = document.querySelector("[data-slot='sidebar-inset'] header");
     expect(header?.textContent).toContain("Money");
+  });
+
+  it("names a switched-off module's page in the site header, not just Home (#617)", async () => {
+    await renderShell("/maintenance", () => screen.findByText("This module is not enabled for your workspace."));
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+    expect(header?.querySelector("[data-slot='breadcrumb-page']")?.textContent).toBe("Maintenance");
+    expect(screen.queryByTestId("screen")).toBeNull();
   });
 
   it("overrides the English labels the vendored trigger and rail ship with", async () => {

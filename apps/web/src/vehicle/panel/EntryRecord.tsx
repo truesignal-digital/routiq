@@ -155,7 +155,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   const recorder = entry.recordedBy.displayName ?? t("history.actor.unknown");
   const waiting =
     entry.status === "SUBMITTED"
-      ? t("vehicle.panel.waitingOn.entryReview")
+      ? t("vehicle.panel.waitingOn.entryReview", { approver: entry.approver ?? "WAITS" })
       : missingReceipt(entry)
         ? t("vehicle.panel.waitingOn.entryReceipt", { name: recorder })
         : null;

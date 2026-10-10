@@ -105,7 +105,7 @@ describe("bottom bar counts (#322)", () => {
     const money = bar.getByRole("link", { name: "Money" });
     await waitFor(() => expect(money.getAttribute("aria-describedby")).not.toBeNull());
     const description = document.getElementById(money.getAttribute("aria-describedby") ?? "");
-    expect(description?.textContent).toBe("3 expenses waiting for your approval");
+    expect(description?.textContent).toBe("3 entries waiting for your approval");
 
     const badge = document.querySelector("[data-bar-count='moneyWaiting']");
     expect(badge?.textContent).toBe("3");

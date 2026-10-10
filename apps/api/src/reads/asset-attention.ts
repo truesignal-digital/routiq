@@ -21,6 +21,8 @@ import {
 } from "../commands/work-order-lookup.js";
 import type { Db } from "../db/client.js";
 import {
+  activities,
+  activityAssetSegments,
   assetAvailabilityIntervals,
   categories,
   commands,
@@ -41,9 +43,10 @@ import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { costToCome, workOrderActualCostSql, workOrderCostToComeColumns } from "./work-order-cost.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
-import { directionDecidesEntries } from "./approvals-queue.js";
+import { directionDecidesEntries, entryApprovers } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { directionNoteItems } from "./notes.js";
+import { readableTripSql } from "./trip-scope.js";
 
 const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
 
@@ -487,6 +490,7 @@ async function entryItems(
       amountMinor: financialEntries.amountMinor,
       rowVersion: financialEntries.rowVersion,
       createdAt: financialEntries.createdAt,
+      createdByCommandId: financialEntries.createdByCommandId,
       currency: financialEntries.currency,
       categoryLabelFr: categories.labelFr,
       categoryLabelEn: categories.labelEn,
@@ -519,6 +523,7 @@ async function entryItems(
     .where(and(...conditions));
 
   const directionDecides = await directionDecidesEntries(tx, auth, rows);
+  const approvers = await entryApprovers(tx, auth.workspaceId, rows);
   const items: AssetAttentionItem[] = [];
   for (const [index, row] of rows.entries()) {
     const recordedBy = toActor({
@@ -547,7 +552,11 @@ async function entryItems(
         since: row.createdAt.toISOString(),
         partOfGrounding: false,
         makerPrincipalIds: row.recorderPrincipalId ? [row.recorderPrincipalId] : [],
-        params: { ...params, directionDecides: directionDecides[index] ?? false },
+        params: {
+          ...params,
+          directionDecides: directionDecides[index] ?? false,
+          ...(approvers[index] ? { approver: approvers[index] } : {}),
+        },
       });
     }
     if (row.evidenceMissing) {
@@ -565,6 +574,62 @@ async function entryItems(
   return items;
 }
 
+/**
+ * The vehicle on two unfinished trips at once (#577): two OPEN trips holding
+ * it on open segments are the fact, whatever their windows say. One item per
+ * trip the caller may read, naming the others the caller may read, since the
+ * moment the vehicle came to be on both. A start is accepted with
+ * VEHICLE_DOUBLE_BOOKED; this is what stays until someone closes the stale trip.
+ */
+async function tripItems(tx: TenantTx, auth: AuthContext, assetId: string): Promise<AssetAttentionItem[]> {
+  const holding = await tx
+    .selectDistinct({
+      id: activities.id,
+      activityNumber: activities.activityNumber,
+      rowVersion: activities.rowVersion,
+      startedAt: activities.startedAt,
+      readable: sql<boolean>`${readableTripSql(auth)}`,
+    })
+    .from(activities)
+    .innerJoin(
+      activityAssetSegments,
+      and(
+        eq(activityAssetSegments.workspaceId, activities.workspaceId),
+        eq(activityAssetSegments.activityId, activities.id),
+      ),
+    )
+    .where(
+      and(
+        eq(activities.workspaceId, auth.workspaceId),
+        eq(activities.status, "OPEN"),
+        eq(activityAssetSegments.assetId, assetId),
+        isNull(activityAssetSegments.endedAt),
+      ),
+    )
+    .orderBy(activities.activityNumber, activities.id);
+  if (holding.length < 2) return [];
+
+  const items: AssetAttentionItem[] = [];
+  for (const trip of holding) {
+    if (!trip.readable) continue;
+    const others = holding.filter((other) => other.id !== trip.id);
+    const since = [trip, ...others]
+      .map((each) => each.startedAt)
+      .filter((at): at is Date => at !== null)
+      .reduce((latest, at) => (at > latest ? at : latest), new Date(0));
+    items.push({
+      code: "VEHICLE_DOUBLE_BOOKED",
+      severity: "WARNING",
+      subject: { entityType: "activity", id: trip.id, number: trip.activityNumber, rowVersion: trip.rowVersion },
+      since: since.toISOString(),
+      partOfGrounding: false,
+      makerPrincipalIds: [],
+      params: { tripNumbers: others.filter((other) => other.readable).map((other) => other.activityNumber) },
+    });
+  }
+  return items;
+}
+
 async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, modules: ReadonlySet<ModuleCode>) {
   const timezone = await workspaceTimezone(tx, auth.workspaceId);
   const businessDate = currentBusinessDate(new Date(), timezone);
@@ -576,6 +641,9 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
   }
   if (modules.has("DOCUMENTS") && canReadDocuments(auth.role)) {
     items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate, timezone)));
+  }
+  if (modules.has("ACTIVITIES")) {
+    items.push(...(await tripItems(tx, auth, assetId)));
   }
   // Ledger facts only for the roles that read the books (DECISIONS 1).
   if (modules.has("FINANCE") && canReadLedger(auth.role)) {
