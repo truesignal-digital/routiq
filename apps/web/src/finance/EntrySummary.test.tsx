@@ -67,6 +67,11 @@ vi.mock("./useEntry.js", () => ({
   useEntry: () => entryQuery,
 }));
 
+// Maintenance adds the work order an entry belongs to (#87).
+vi.mock("@/auth/me.js", () => ({
+  useMeContext: () => ({ role: "FINANCE", enabledModules: ["CORE", "FINANCE", "MAINTENANCE", "ACTIVITIES"] }),
+}));
+
 import { EntrySummary } from "./EntrySummary.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
 
@@ -97,6 +102,7 @@ const entry: FinancialEntryDetail = {
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,
+  approver: null,
   postings: [],
 };
 

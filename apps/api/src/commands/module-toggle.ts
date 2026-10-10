@@ -1,12 +1,20 @@
 import {
   disableModulePayload,
   enableModulePayload,
+  isModuleOn,
+  MODULE_CODES,
+  moduleToggleRefusal,
   moduleToggleV2Payload,
   type ModuleToggleV2Payload,
 } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { workspaceModules } from "../db/schema.js";
-import { appendPlatformAuditEvent, registerPlatformCommand } from "./dispatcher.js";
+import {
+  appendPlatformAuditEvent,
+  CommandError,
+  registerPlatformCommand,
+  type Tx,
+} from "./dispatcher.js";
 import { requiresWorkspaceTarget, workspaceBySlug } from "./platform-target.js";
 
 const FULL_FIELDS = [
@@ -25,6 +33,8 @@ const FULL_FIELDS = [
  * The receipt and the audit event carry `scope = 'PLATFORM'` and the tenant's
  * workspace id, so the change is on the platform trail and in the tenant's own
  * history. Turning a module off only hides it: every record it holds stays.
+ * A module another one requires (the manifests' `requires`) cannot go off
+ * while that one is on, and that one cannot come on without it.
  */
 function moduleToggleCommand(name: string, enabled: boolean, eventType: string): void {
   registerPlatformCommand<ModuleToggleV2Payload>({
@@ -35,6 +45,9 @@ function moduleToggleCommand(name: string, enabled: boolean, eventType: string):
     resolveWorkspace: (tx, _ctx, _envelope, payload) => workspaceBySlug(tx, payload.workspaceSlug),
 
     async execute(tx, ctx, envelope, payload, workspaceId) {
+      const refusal = moduleToggleRefusal(payload.moduleCode, enabled, await modulesOn(tx, workspaceId));
+      if (refusal !== undefined) throw new CommandError(409, refusal.code, refusal.metadata);
+
       const [existingRow] = await tx
         .select()
         .from(workspaceModules)
@@ -96,6 +109,15 @@ for (const [name, payloadSchema] of [
     resolveWorkspace: requiresWorkspaceTarget,
     execute: requiresWorkspaceTarget,
   });
+}
+
+async function modulesOn(tx: Tx, workspaceId: string) {
+  const rows = await tx
+    .select({ moduleCode: workspaceModules.moduleCode, enabled: workspaceModules.enabled })
+    .from(workspaceModules)
+    .where(eq(workspaceModules.workspaceId, workspaceId));
+  const byCode = new Map(rows.map((row) => [row.moduleCode, row]));
+  return new Set(MODULE_CODES.filter((code) => isModuleOn(code, byCode.get(code))));
 }
 
 function moduleState(row: typeof workspaceModules.$inferSelect): Record<string, unknown> {

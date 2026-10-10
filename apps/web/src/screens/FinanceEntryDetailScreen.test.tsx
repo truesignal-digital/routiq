@@ -33,14 +33,14 @@ vi.mock("@/finance/useEntry.js", () => ({ useEntry: mocks.entry }));
 vi.mock("@/finance/EntrySummary.js", () => ({ EntrySummary: () => null }));
 vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
 vi.mock("@/shell/BranchScopeNotices.js", () => ({ OtherBranchNotice: () => null }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: [{ id: BRANCH_ID, code: "DLA", name: "Douala" }] },
     isPending: false,
     isError: false,
   }),
 }));
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: () => ({
     data: [{ code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" }],
     isPending: false,
@@ -123,6 +123,24 @@ afterEach(() => {
   cleanup();
 });
 
+// #542: Finance opened an entry above its band and found no Approve or Reject,
+// and no reason why.
+describe("an entry above the viewer's approval band", () => {
+  it("says the Director decides instead of offering Approve and Reject", () => {
+    signedIn(OTHER_ID, "FINANCE");
+    showing(entry({ amountMinor: 1_450_000, directionDecides: true, approver: "DIRECTION_APPROVES" }));
+    expect(screen.queryByRole("button", { name: /^Approve/ })).toBeNull();
+    expect(screen.getByText("Above your approval band: the Director decides.")).toBeTruthy();
+  });
+
+  it("says nothing of the kind inside the band", () => {
+    signedIn(OTHER_ID, "FINANCE");
+    showing(entry({ directionDecides: false, approver: "FINANCE_APPROVES" }));
+    expect(screen.getByRole("button", { name: /^Approve/ })).toBeTruthy();
+    expect(screen.queryByText("Above your approval band: the Director decides.")).toBeNull();
+  });
+});
+
 describe("Edit on the finance entry detail", () => {
   it("is offered to the author while the entry waits, and opens the pre-filled form on the side panel", async () => {
     signedIn(AUTHOR_ID);
@@ -203,7 +221,7 @@ describe("Cancel entry on a work-order cost, as Finance (#559)", () => {
     await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
     await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
 
-    await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    await screen.findByText(/Ask the Director, the Administrator or the work order's technician/);
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
     expect(mocks.submit).toHaveBeenCalledOnce();
     await user.click(screen.getByRole("button", { name: "Open the work order" }));

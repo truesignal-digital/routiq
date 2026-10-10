@@ -35,11 +35,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
-import { useAssetRegistrationReference } from "../assets/reference.js";
+import { useAssetRegistrationReference } from "../reference/asset-registration.js";
 import { useAssetOptions } from "../assets/useAssetOptions.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { useCategories } from "../documents/useCategories.js";
+import { useCategories } from "../categories/useCategories.js";
 import { localizedLabel } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
@@ -99,7 +99,8 @@ export interface RecordEntryFormProps {
   /**
    * The invoice for a work order that is already completed (#82): the server
    * holds it for review whatever the amount and needs a reason, which the
-   * description carries (LATE_COST_REASON_REQUIRED otherwise).
+   * description carries (LATE_COST_REASON_REQUIRED otherwise). A pre-filled
+   * entry says so itself (`lateWorkOrderCost`).
    */
   lateCost?: boolean | undefined;
 }
@@ -162,7 +163,7 @@ export function RecordEntryForm({
   onDismiss,
   editing,
   recordAgainFrom,
-  lateCost = false,
+  lateCost: lateCostProp = false,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
   const label = useCommandLabel();
@@ -172,6 +173,8 @@ export function RecordEntryForm({
   const intentRevenueRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
   const intentUpdateRef = useRef<CommandIntent<UpdatePayload> | undefined>(undefined);
   const prefill = editing ?? recordAgainFrom;
+  // Recorded again or edited on a completed work order, it is a late invoice too (#613).
+  const lateCost = lateCostProp || prefill?.lateWorkOrderCost === true;
   const entryLink = prefill === undefined ? link : lineLink(prefill);
   const directionLocked = lockDirection || prefill !== undefined;
   const reference = useAssetRegistrationReference();

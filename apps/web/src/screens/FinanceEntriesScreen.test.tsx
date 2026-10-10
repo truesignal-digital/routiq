@@ -89,7 +89,8 @@ vi.mock("../auth/me.js", () => ({
   useMeContext: () => ({
     principalId: "test-user",
     role: "MANAGER",
-    enabledModules: ["FINANCE"],
+    // Maintenance adds the work order an entry belongs to (#87).
+    enabledModules: ["FINANCE", "MAINTENANCE"],
   }),
 }));
 

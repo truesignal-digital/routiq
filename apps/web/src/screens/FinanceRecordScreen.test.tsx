@@ -54,11 +54,11 @@ vi.mock("../artifacts/upload.js", () => ({
   uploadArtifact: mocks.uploadArtifact,
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: mocks.useCategories,
 }));
 
@@ -302,7 +302,7 @@ describe("finance record form", () => {
         type: "success",
         title: "Entry sent for approval",
         description:
-          "Missing evidence: this category requires supporting documentation or a photo.\n" +
+          "Attach the receipt when you have it.\n" +
           "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
       }),
     );

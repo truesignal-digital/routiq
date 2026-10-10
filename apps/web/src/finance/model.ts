@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CANCELLATION_REASON_CODES } from "@routiq/contracts";
-import { parseWholeAmount } from "../lib/format.js";
+// Money parsing is shared with every form that takes an amount, so it lives in lib.
+export { parseMoneyXaf } from "../lib/format.js";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
@@ -14,14 +15,6 @@ type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
 type RecordRevenuePayload = z.infer<typeof recordRevenuePayload>;
 type UpdatePendingEntryPayload = z.infer<typeof updatePendingEntryPayload>;
 
-/**
- * A typed XAF amount in minor units (exponent 0), read with the grouping of
- * the language the money input formatted it in. Null when empty or invalid.
- */
-export function parseMoneyXaf(input: string, locale?: string): number | null {
-  const amount = parseWholeAmount(input, locale);
-  return amount.kind === "amount" ? amount.minor : null;
-}
 
 /** A record's direction in words, where its own amount is shown unsigned. */
 export function amountKind(entry: {
@@ -160,23 +153,15 @@ export function isOwnSubmission(
 }
 
 /**
- * Compute the current period code (YYYY-MM format) from today's date.
- */
-export function currentPeriodCode(): string {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
-
-/**
  * Merge an implicit OPEN period for the current month if not present.
  * Allows locking the current month even if no entries have been posted yet.
+ * `current` is the server's month in the workspace's time zone (#591); the
+ * device clock may be in another month or zone.
  */
 export function mergeImplicitCurrentPeriod(
   periods: PeriodRead[],
+  current: string,
 ): PeriodRead[] {
-  const current = currentPeriodCode();
   const hasCurrentPeriod = periods.some((p) => p.periodCode === current);
 
   if (hasCurrentPeriod) {

@@ -199,8 +199,9 @@ describe("Money", () => {
     });
 
     it.each([
-      ["en", "Awaiting review", "Costs awaiting review"],
-      ["fr-CM", "En attente d'examen", "Coûts en attente d'examen"],
+      // The pending line is one of the order's costs, marked as awaiting review (#612).
+      ["en", "Awaiting review", "Costs"],
+      ["fr-CM", "En attente d'examen", "Coûts"],
     ] as const)("%s: Money, its entry badges and the work order's pending costs agree", async (locale, name, heading) => {
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09&entries=review&panel=work_order:${WORK_ORDER_ID}`, {
         role: "FINANCE",
@@ -209,7 +210,7 @@ describe("Money", () => {
         workOrderDetails: [pending],
       });
       const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-      expect(await within(panel).findByText(heading)).toBeTruthy();
+      expect(await within(panel).findByRole("heading", { name: heading })).toBeTruthy();
       expect(within(panel).getByText(name)).toBeTruthy();
       expect(within(panel).queryByText(/Pending|En attente$|approval|approbation/)).toBeNull();
       cleanup();
@@ -520,6 +521,23 @@ describe("Maintenance and Trips", () => {
     const item = within(title.closest("li")!);
     expect(item.queryByText("No estimate")).toBeNull();
     expect(item.queryByText(/planned/)).toBeNull();
+  });
+
+  it("shows no work-order amount, nor a missing estimate, while FINANCE is off (#328)", async () => {
+    // What the API sends with FINANCE off: every amount null, no cost lines.
+    const hidden = { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null, costToCome: null };
+    await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=work_order:${WORK_ORDER_ID}`, {
+      role: "DIRECTOR",
+      modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
+      workOrders: [workOrderRow("APPROVED", hidden)],
+      workOrderDetails: [workOrderDetail("APPROVED", { ...hidden, costLines: null, pendingCostLines: null })],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Brake repair: replace pads and air valve" });
+    expect(within(dialog).queryByText("Expected cost")).toBeNull();
+    expect(within(dialog).queryByText("Actual cost")).toBeNull();
+    const item = within(screen.getAllByText("Brake repair: replace pads and air valve").find((el) => el.closest("li"))!.closest("li")!);
+    expect(item.queryByText("No estimate")).toBeNull();
+    expect(item.queryByText(/planned|XAF|FCFA/)).toBeNull();
   });
 
   it("says what a closed order's cost is instead of inventing a zero (#131)", async () => {

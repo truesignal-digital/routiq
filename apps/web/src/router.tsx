@@ -40,7 +40,8 @@ const ActivityDetailScreen = lazyScreen(() => import("./screens/ActivityDetailSc
 const ActivitySheetScreen = lazyScreen(() => import("./screens/ActivitySheetScreen.js"), "ActivitySheetScreen");
 const FinanceEntryDetailScreen = lazyScreen(() => import("./screens/FinanceEntryDetailScreen.js"), "FinanceEntryDetailScreen");
 const FinancePeriodsScreen = lazyScreen(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
-const AppShell = lazyScreen(() => import("./shell/AppShell.js"), "AppShell");
+// The shell arrives with the installed module manifests (`modules/app-shell.ts`): sign-in needs neither.
+const AppShell = lazyScreen(() => import("./modules/app-shell.js"), "AppShell");
 const VehicleWorkspaceScreen = lazyScreen(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
 const DetailsTab = lazyScreen(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
 const DocumentsTab = lazyScreen(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
@@ -192,7 +193,7 @@ const financeRecordRoute = createRoute({
 const financeEntriesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/entries",
-  // `view=waiting` is the "Waiting your approval" view (#314), beside the
+  // `view=waiting` is the "Waiting for your approval" view (#314), beside the
   // read's own events / books views (#427). `branch=all` arrives from an
   // overflow line that has already named the work outside the shell's agency,
   // so the queue opens widened.

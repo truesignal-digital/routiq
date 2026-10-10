@@ -55,14 +55,6 @@
     "ceiling": 2,
     "kind": "count"
   },
-  "/finance/approvals.ready_ms": {
-    "ceiling": 286,
-    "kind": "time"
-  },
-  "/finance/approvals.requests": {
-    "ceiling": 1,
-    "kind": "count"
-  },
   "/finance/entries.ready_ms": {
     "ceiling": 363,
     "kind": "time"
@@ -86,14 +78,6 @@
         "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Maintenance in the same side-by-side run"
       }
     ]
-  },
-  "/more.ready_ms": {
-    "ceiling": 218,
-    "kind": "time"
-  },
-  "/more.requests": {
-    "ceiling": 1,
-    "kind": "count"
   },
   "/my-settings.requests": {
     "ceiling": 1,

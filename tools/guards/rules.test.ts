@@ -195,6 +195,16 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [file("apps/web/src/x.ts", "queryClient.invalidateQueries({ queryKey: key });")],
   },
   {
+    id: "C1",
+    bad: [file(".github/workflows/ci.yml", "        image: postgres:17")],
+    good: [file(".github/workflows/ci.yml", "        image: mirror.gcr.io/library/postgres:17")],
+  },
+  {
+    id: "C2",
+    bad: [file("apps/web/vite.config.ts", "  define: { __APP_VERSION__: JSON.stringify(sha) },")],
+    good: [file("apps/web/vite.config.ts", '  plugins: [{ name: "routiq-version" }],')],
+  },
+  {
     id: "H6",
     bad: [file("apps/web/src/screens/X.tsx", 'import { toast } from "@/components/ui/toast.js";')],
     good: [file("apps/web/src/lib/notify.ts", 'import { toast } from "@/components/ui/toast.js";')],
@@ -434,6 +444,27 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "D1",
+    bad: [
+      file("apps/api/src/reads/dashboard.ts", "const [workspace] = await tx.select({ timezone: workspaces.timezone }).from(workspaces);"),
+      file("apps/api/src/commands/periods.ts", "sql`select ${workspaces.timezone} from ${workspaces}`"),
+    ],
+    good: [
+      file("apps/api/src/reads/workspace-day.ts", "const [workspace] = await tx.select({ timezone: workspaces.timezone }).from(workspaces);"),
+      file("apps/api/src/reads/dashboard.ts", "const timezone = await workspaceTimezone(tx, auth.workspaceId);"),
+      file("apps/api/src/reads/branches.ts", "timezone: branches.timezone,"),
+      file("apps/api/src/reads/dashboard.test.ts", "await ctx.db.update(workspaces).set({ timezone: \"Asia/Tokyo\" }); expect(workspaces.timezone).toBeDefined();"),
+    ],
+  },
+  {
+    id: "B1",
+    bad: [file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";')],
+    good: [
+      file("apps/web/src/modules/index.ts", 'import { financeManifest } from "./finance/manifest.js";'),
+      file("apps/web/src/finance/x.ts", 'import { useMeContext } from "@/auth/me.js";'),
+    ],
+  },
+  {
     id: "P1",
     bad: [file("apps/web/src/router.tsx", 'import { MaintenancePrototypeScreen } from "./screens/MaintenancePrototypeScreen.js";')],
     good: [file("apps/web/src/router.tsx", 'import { AssetsStub } from "./screens/AssetsStub.js";')],
@@ -633,6 +664,68 @@ describe("comments", () => {
       '/** `<input type="datetime-local">` values — no offset. */\n// never use type="date" here\n * type="date"',
     );
     expect(rule("H9").check([documented])).toEqual([]);
+  });
+});
+
+describe("B1 module boundaries", () => {
+  const manifest = file("apps/web/src/modules/finance/manifest.ts", 'export const m = { code: "FINANCE", uses: ["ASSETS"] };');
+
+  it("flags core importing a module and a module importing one it does not declare", () => {
+    const core = file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";');
+    const finance = file("apps/web/src/finance/y.ts", 'import { useWorkOrders } from "../maintenance/useMaintenance.js";');
+    expect(rule("B1").check([manifest, core, finance]).map((v) => v.path)).toEqual([
+      "apps/web/src/dashboard/x.ts",
+      "apps/web/src/finance/y.ts",
+    ]);
+  });
+
+  it("accepts composition, and a module's declared use", () => {
+    const composition = file("apps/web/src/modules/index.ts", 'import { m } from "./finance/manifest.js";');
+    const declared = file("apps/web/src/finance/z.ts", 'import { useAssetOptions } from "../assets/useAssetOptions.js";');
+    expect(rule("B1").check([manifest, composition, declared])).toEqual([]);
+  });
+});
+
+describe("C1 CI images off Docker Hub", () => {
+  const ci = (lines: string[]) => file(".github/workflows/ci.yml", lines.join("\n"));
+
+  it("flags a service image with no registry, and a test step without the testcontainers mirror", () => {
+    const violations = rule("C1").check([ci(["    services:", "      postgres:", "        image: postgres:17", "      - run: pnpm test"])]);
+    expect(violations.map((v) => [v.line, v.text])).toEqual([
+      [3, "image: postgres:17"],
+      [4, "- run: pnpm test"],
+    ]);
+  });
+
+  it("accepts a mirrored image and a test step that sets the prefix", () => {
+    const mirrored = ci([
+      "    env:",
+      "      TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io",
+      "        image: mirror.gcr.io/library/postgres:17",
+      "        image: ghcr.io/owner/thing:1",
+      "        image: localhost:5000/thing",
+      "      - run: pnpm test",
+    ]);
+    expect(rule("C1").check([mirrored])).toEqual([]);
+  });
+
+  it("leaves compose files and Dockerfiles alone", () => {
+    expect(rule("C1").check([file("docker-compose.yml", "    image: postgres:17-alpine")])).toEqual([]);
+  });
+});
+
+describe("C2 no define in the web build", () => {
+  it("flags a define block in the Vite config", () => {
+    const config = file("apps/web/vite.config.ts", "export default defineConfig({\n  define: { __APP_VERSION__: JSON.stringify(sha) },\n});");
+    expect(rule("C2").check([config]).map((v) => v.line)).toEqual([2]);
+  });
+
+  it("accepts the meta-tag plugin and defineConfig itself", () => {
+    const config = file(
+      "apps/web/vite.config.ts",
+      'export default defineConfig({\n  plugins: [{ name: "routiq-version", transformIndexHtml: () => [] }],\n});',
+    );
+    expect(rule("C2").check([config])).toEqual([]);
   });
 });
 

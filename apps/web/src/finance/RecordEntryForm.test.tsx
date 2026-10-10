@@ -26,10 +26,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
-vi.mock("../documents/useCategories.js", () => ({ useCategories: mocks.useCategories }));
+vi.mock("../categories/useCategories.js", () => ({ useCategories: mocks.useCategories }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: mocks.useAssets }));
 vi.mock("../approval-rules/useApprovalChain.js", () => ({
   useApprovalChain: mocks.useApprovalChain,
@@ -304,7 +304,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
     expect(
       screen.getByText(
-        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for the Director.",
       ),
     ).toBeTruthy();
 
@@ -319,7 +319,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     );
     expect(
       screen.getByText(
-        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for the Director.",
       ),
     ).toBeTruthy();
   });
@@ -332,7 +332,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     const amount = screen.getByLabelText("Amount (FCFA)");
 
     await userEvent.type(amount, "1500000");
-    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for Direction.")).toBeTruthy();
+    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for the Director.")).toBeTruthy();
 
     await userEvent.clear(amount);
     await userEvent.type(amount, "250000");
@@ -511,10 +511,10 @@ describe("entry decisions on a record panel", () => {
 
     expect(within(panel).queryByText(/books work-order costs/)).toBeNull();
     await userEvent.click(within(panel).getByRole("radio", { name: "Wrong details, to record again" }));
-    expect(within(panel).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    expect(within(panel).getByText(/Only the Director, the Administrator or a technician books work-order costs/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Cancel entry" }));
 
-    expect(await screen.findByText(/Ask Direction, the Administrator or the work order's technician/)).toBeTruthy();
+    expect(await screen.findByText(/Ask the Director, the Administrator or the work order's technician/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Open the work order" }));
     expect(onOpenWorkOrder).toHaveBeenCalledOnce();
@@ -587,6 +587,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     ],
     evidenceFiles: [],
     directionDecides: false,
+    approver: null,
   };
 
   const submitted: SubmitResult = {
@@ -671,6 +672,32 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     expect(payload.postings).toEqual([
       expect.objectContaining({ assetId: ASSET_ID, workOrderId: WORK_ORDER_ID, amountMinor: 40_000 }),
     ]);
+  });
+
+  it("records again a cost on a completed work order as a late invoice: approval hint, reason required (#613)", async () => {
+    const client = recordingClient(submitted);
+    const cancelled: FinancialEntryDetail = {
+      ...pending,
+      status: "REVERSED",
+      postedAt: "2026-09-12T08:00:00.000Z",
+      description: null,
+      lateWorkOrderCost: true,
+    };
+    inPanel(
+      <RecordEntryForm surface="panel" recordAgainFrom={cancelled} client={client} onRecorded={vi.fn()} onDismiss={vi.fn()} />,
+    );
+    const panel = screen.getByRole("dialog", { name: "Record expense" });
+
+    expect(
+      within(panel).getByText("This work is completed: the invoice goes to approval, whatever its amount."),
+    ).toBeTruthy();
+    expect(within(panel).queryByLabelText("Description (optional)")).toBeNull();
+    const submit = within(panel).getByRole("button", { name: "Record the expense" });
+    await waitFor(() => expect(within(panel).getByLabelText("Branch").textContent).toContain("Douala"));
+    // No reason, no invoice: the server would refuse it (LATE_COST_REASON_REQUIRED).
+    expect(submit.hasAttribute("disabled")).toBe(true);
+    await userEvent.type(within(panel).getByLabelText("Reason"), "Invoice re-entered with the right amount");
+    await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
   });
 
   it("keeps the entry number in the title on one line (#442)", () => {

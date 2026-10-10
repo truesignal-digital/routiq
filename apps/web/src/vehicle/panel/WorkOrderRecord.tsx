@@ -29,11 +29,10 @@ import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
   const { asset, attention, viewer, panel, gates } = useVehicle();
-  const query = useWorkOrder(gates.maintenance ? id : undefined);
+  const query = useWorkOrder(id);
   const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordReference(id) }));
   const locale = i18n.language;
 
-  if (!gates.maintenance) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
   if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
   const wo = query.data;
@@ -47,7 +46,12 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
     return <WorkOrderForm stepKey={form.key} wo={wo} host={host} />;
   }
 
-  const waiting = workOrderWaiting(wo.status, isGrounding);
+  // Another safety-critical problem blocks the release, whoever signs it (#588).
+  const others = isGrounding ? (grounding?.grounded.otherOpenSafetyIssues ?? []) : [];
+  const [otherIssue] = others;
+  const otherIssueParams =
+    otherIssue === undefined ? undefined : { count: others.length, description: otherIssue.description };
+  const waiting = workOrderWaiting(wo.status, isGrounding, otherIssue !== undefined);
   const actor = (name: string | null) => name ?? t("history.actor.unknown");
   // The vehicle header's own test, so the panel and the header never disagree on one screen.
   const situation = situationOf(asset, attention, new Date());
@@ -87,7 +91,11 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
         )}
         {isGrounding && (
           <Note tone={repaired ? "warning" : "danger"}>
-            {t(wo.status === "COMPLETED" ? "vehicle.panel.keepsGroundedUntilRelease" : "vehicle.panel.keepsGrounded")}
+            {wo.status !== "COMPLETED"
+              ? t("vehicle.panel.keepsGrounded")
+              : otherIssueParams === undefined
+                ? t("vehicle.panel.keepsGroundedUntilRelease")
+                : t("vehicle.panel.keepsGroundedOtherIssueOpen", otherIssueParams)}
           </Note>
         )}
         {wo.status === "APPROVED" && wo.completionRejectReason !== null && (
@@ -168,20 +176,16 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        {/* Null when the reader may not see work-order costs (#390). */}
+        {/* Null when the reader may not see work-order costs (#390). The lines
+            awaiting review are listed too, marked as such: the actual cost
+            counts them (#81), and the list must add up to it (#612). */}
         {wo.costLines !== null && (
           <DetailSection title={t("vehicle.panel.costs")}>
-            {wo.costLines.length === 0 ? (
+            {wo.costLines.length + (wo.pendingCostLines?.length ?? 0) === 0 ? (
               <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
             ) : (
-              <CostLines lines={wo.costLines} locale={locale} />
+              <CostLines lines={[...wo.costLines, ...(wo.pendingCostLines ?? [])]} locale={locale} />
             )}
-          </DetailSection>
-        )}
-        {wo.pendingCostLines !== null && wo.pendingCostLines.length > 0 && (
-          <DetailSection title={t("maintenance.detail.pendingCostLines")}>
-            <p className="text-xs text-muted-foreground">{t("maintenance.detail.pendingCostLinesHint")}</p>
-            <CostLines lines={wo.pendingCostLines} locale={locale} />
           </DetailSection>
         )}
 
@@ -194,7 +198,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
       </div>
       <PanelFooter
         steps={steps}
-        waiting={waiting === null ? null : t(`vehicle.panel.waitingOn.${waiting}`)}
+        waiting={waiting === null ? null : t(`vehicle.panel.waitingOn.${waiting}`, otherIssueParams ?? {})}
         onStep={panel.openStep}
       />
     </>

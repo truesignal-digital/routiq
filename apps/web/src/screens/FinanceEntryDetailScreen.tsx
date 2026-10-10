@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EntrySummary } from "@/finance/EntrySummary.js";
@@ -37,7 +37,7 @@ export function FinanceEntryDetailScreen() {
   if (!canReadFinanceEntries(me.role, me.enabledModules)) {
     return <PermissionDenied title={t("finance.entries.detail.title")}
       icon={<FileText className="size-7" aria-hidden />}
-      code={deniedCode(me.enabledModules.includes("FINANCE"))} />;
+      code="ROLE_FORBIDDEN" />;
   }
   return <FinanceEntryDetailContent />;
 }
@@ -66,11 +66,13 @@ function FinanceEntryDetailContent() {
   // role-config: an approver decides while the entry waits, never on their own
   // entry (the maker guard the server also enforces), and never above their
   // approval band, where the Director decides.
-  const canDecide =
+  const mayDecideOthers =
     entryQuery.data?.status === "SUBMITTED" &&
     canApproveEntries(me?.role, me?.enabledModules) &&
-    !isOwnSubmission(entryQuery.data.recordedBy.principalId ?? "", me?.principalId) &&
-    !entryQuery.data.directionDecides;
+    !isOwnSubmission(entryQuery.data.recordedBy.principalId ?? "", me?.principalId);
+  const canDecide = mayDecideOthers && !entryQuery.data?.directionDecides;
+  // Says why Approve and Reject are missing above the band (#542).
+  const decidesAboveBand = mayDecideOthers && entryQuery.data?.directionDecides === true;
   // role-config: the author alone, while it waits, and only an entry this
   // single-line form can write back whole.
   const canEdit =
@@ -154,6 +156,10 @@ function FinanceEntryDetailContent() {
                 void refreshFinance();
               }}
             />
+          )}
+
+          {decidesAboveBand && (
+            <p className="text-sm text-muted-foreground">{t("finance.entries.detail.directionDecides")}</p>
           )}
 
           {canDecide && (

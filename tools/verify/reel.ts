@@ -311,6 +311,8 @@ export function camera(box: Box | undefined, viewport: Viewport, scale: number, 
 }
 
 export interface PaneState {
+  /** The pane's header: who is signed in on a single run, the commit on a comparison. */
+  label: string;
   src: string;
   timer: string;
   note: string;
@@ -341,7 +343,25 @@ export function failureReason(caption: string): string {
   return detail.slice(0, 56);
 }
 
-export function stateAt(time: number, timeline: Timeline, tracks: readonly Track[], viewport: Viewport, layout: Layout, srcFor: (pane: number, file: string) => string): FrameState {
+/**
+ * Who a single run's pane shows as signed in: the account at the shot the reel
+ * last reached, so a flow that signs in as someone else relabels the pane
+ * (#565). Runs recorded before shots carried an account use the drive's.
+ */
+export function paneLabel(run: RunSummary, beat: Frame | undefined): string {
+  if (beat?.account === undefined) return run.account;
+  return beat.account === "" ? "Signed out" : beat.account;
+}
+
+export function stateAt(
+  time: number,
+  timeline: Timeline,
+  tracks: readonly Track[],
+  viewport: Viewport,
+  layout: Layout,
+  srcFor: (pane: number, file: string) => string,
+  labelFor: (pane: number, beat: Frame | undefined) => string = () => "",
+): FrameState {
   const current = [...timeline.steps].reverse().find((step) => step.start <= time);
   const panes = tracks.map((track, i): PaneState => {
     let c = 0;
@@ -349,10 +369,12 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
     let noteTone: PaneState["noteTone"] = "muted";
     let zoom = 0;
     let box: Box | undefined;
+    let reached: Frame | undefined;
     for (const [n, step] of timeline.steps.entries()) {
       if (step.start > time) break;
       const pane = step.panes[i];
       if (pane === undefined) continue;
+      reached = pane.beat ?? reached;
       const local = time - step.start;
       if (noteTone !== "bad") note = "";
       const played = n === 0 ? (local / step.play) * (pane.to - pane.from) : local;
@@ -382,7 +404,7 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
             h: layout.scale * cam.k * (box.height + pad * 2),
             opacity: zoom,
           };
-    return { src: srcFor(i, frameAt(track, c)), timer: seconds(reelToReal(track, c)), note, noteTone, ...cam, ring };
+    return { label: labelFor(i, reached), src: srcFor(i, frameAt(track, c)), timer: seconds(reelToReal(track, c)), note, noteTone, ...cam, ring };
   });
   return {
     panes,
@@ -421,7 +443,7 @@ export function titleOf(run: RunSummary, options: ReelOptions): string {
   return target.charAt(0).toUpperCase() + target.slice(1);
 }
 
-function playerHtml(theme: AppTheme, layout: Layout, runs: readonly RunSummary[], labels: readonly string[], title: string, end: string): string {
+function playerHtml(theme: AppTheme, layout: Layout, runs: readonly RunSummary[], title: string, end: string): string {
   const after = runs.at(-1);
   const role = after === undefined ? "" : after.role.charAt(0) + after.role.slice(1).toLowerCase();
   const who = after === undefined ? "" : `${escape(after.account)} · ${escape(role)} · ${escape(after.lang)}`;
@@ -430,7 +452,7 @@ function playerHtml(theme: AppTheme, layout: Layout, runs: readonly RunSummary[]
     .map(
       (pane, i) => `
 <section class="pane" style="left:${pane.x}px;top:${pane.y - 76}px;width:${pane.w}px">
-  <div class="head"><span class="label">${escape(labels[i] ?? "")}</span><span class="timer" id="timer${i}"></span></div>
+  <div class="head"><span class="label" id="label${i}"></span><span class="timer" id="timer${i}"></span></div>
   <div class="note" id="note${i}"></div>
 </section>
 <div class="window" style="left:${pane.x}px;top:${pane.y}px;width:${pane.w}px;height:${pane.h}px">
@@ -480,6 +502,7 @@ window.__render = async (s) => {
     const img = document.getElementById("img" + i);
     if (img.getAttribute("src") !== p.src) { img.setAttribute("src", p.src); loads.push(img.decode().catch(() => {})); }
     img.style.transform = "translate(" + p.tx + "px," + p.ty + "px) scale(" + p.k + ")";
+    document.getElementById("label" + i).textContent = p.label;
     document.getElementById("timer" + i).textContent = p.timer;
     const note = document.getElementById("note" + i);
     note.textContent = p.note;
@@ -553,14 +576,15 @@ export async function buildReel(afterDir: string, beforeDir: string | undefined,
   const layout = computeLayout(runs.length, viewport);
   const theme = appTheme(readFileSync(path.join(REPO_ROOT, "apps/web/src/styles.css"), "utf8"));
   const title = titleOf(after, options);
-  const labels = before === undefined ? [after.account] : [`Before · ${short(before.commit)}`, `After · ${short(after.commit)}`];
+  const labelFor = (pane: number, beat: Frame | undefined) =>
+    before === undefined ? paneLabel(after, beat) : pane === 0 ? `Before · ${short(before.commit)}` : `After · ${short(after.commit)}`;
 
   const name = before === undefined ? "reel" : "reel-compare";
   const work = path.join(afterDir, name);
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
   const player = path.join(work, "player.html");
-  writeFileSync(player, playerHtml(theme, layout, runs, labels, title, endHtml(after, before)));
+  writeFileSync(player, playerHtml(theme, layout, runs, title, endHtml(after, before)));
   const srcFor = (pane: number, file: string) => pathToFileURL(path.join(runs[pane]?.dir ?? "", "cast", file)).href;
 
   const browser = await chromium.launch();
@@ -572,7 +596,7 @@ export async function buildReel(afterDir: string, beforeDir: string | undefined,
     let lastKey = "";
     let lastFile = "";
     for (let n = 0; n < count; n += 1) {
-      const state = stateAt(n / FPS, timeline, tracks, viewport, layout, srcFor);
+      const state = stateAt(n / FPS, timeline, tracks, viewport, layout, srcFor, labelFor);
       const file = path.join(work, `${String(n).padStart(6, "0")}.jpg`);
       const key = JSON.stringify(state, (_, value: unknown) => (typeof value === "number" ? Math.round(value * 100) / 100 : value));
       if (key === lastKey) {
