@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { FinancialEntryListItem } from "@routiq/contracts";
+import type { FinancialEntryListItem, ModuleCode } from "@routiq/contracts";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -32,6 +32,18 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 const { EntryLinks } = await import("./EntryLinks.js");
+const { MeCtx } = await import("../auth/me.js");
+const { me } = await import("../vehicle/test/fixtures.js");
+
+const WITH_MAINTENANCE: ModuleCode[] = ["CORE", "FINANCE", "ACTIVITIES", "MAINTENANCE"];
+
+function renderLinks(links: FinancialEntryListItem["links"], modules: ModuleCode[] = WITH_MAINTENANCE) {
+  return render(
+    <MeCtx.Provider value={me("FINANCE", modules)}>
+      <EntryLinks links={links} />
+    </MeCtx.Provider>,
+  );
+}
 
 const WORK_ORDER_ID = "3f1a9c40-0000-4000-8000-0000000000c1";
 const ASSET_ID = "00000000-0000-4000-8000-0000000000a1";
@@ -63,7 +75,7 @@ afterEach(cleanup);
 
 describe("entry links", () => {
   it("names the work order by its description and opens it in its vehicle's workspace (#547)", () => {
-    render(<EntryLinks links={{ ...none, ...workOrder }} />);
+    renderLinks({ ...none, ...workOrder });
 
     const link = screen.getByRole("link", { name: "Work order: Replace brake pads" });
     expect(document.body.textContent).not.toMatch(/3F1A9C40/i);
@@ -73,7 +85,7 @@ describe("entry links", () => {
   });
 
   it("links the trip by its number", () => {
-    render(<EntryLinks links={{ ...none, activityId: TRIP_ID, activityNumber: "DLA-2026-00042" }} />);
+    renderLinks({ ...none, activityId: TRIP_ID, activityNumber: "DLA-2026-00042" });
 
     const link = screen.getByRole("link", { name: "Activity DLA-2026-00042" });
     expect(link.getAttribute("href")).toBe(`/activities/${TRIP_ID}`);
@@ -82,15 +94,21 @@ describe("entry links", () => {
   it("says it in French by default", async () => {
     await i18n.changeLanguage("fr-CM");
     try {
-      render(<EntryLinks links={{ ...none, ...workOrder }} />);
+      renderLinks({ ...none, ...workOrder });
       expect(screen.getByRole("link", { name: "Ordre de travail : Replace brake pads" })).toBeTruthy();
     } finally {
       await i18n.changeLanguage("en");
     }
   });
 
+  it("leaves the work order out while Maintenance is off, keeping the trip", () => {
+    renderLinks({ ...workOrder, activityId: TRIP_ID, activityNumber: "DLA-2026-00042" }, ["CORE", "FINANCE", "ACTIVITIES"]);
+    expect(screen.queryByRole("link", { name: "Work order: Replace brake pads" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Activity DLA-2026-00042" })).toBeTruthy();
+  });
+
   it("renders nothing for an entry that belongs to neither", () => {
-    const { container } = render(<EntryLinks links={none} />);
+    const { container } = renderLinks(none);
     expect(container.textContent).toBe("");
   });
 });

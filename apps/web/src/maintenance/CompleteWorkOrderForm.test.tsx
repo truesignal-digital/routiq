@@ -25,7 +25,7 @@ vi.mock("./useMaintenance.js", () => ({
   useIssues: () => ({ data: { pages: [] } }),
   useWorkOrder: () => ({ data: mocks.detail, isPending: false, isError: false }),
 }));
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: () => ({
     data: [
       { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs" },

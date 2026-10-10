@@ -176,7 +176,7 @@ function projectState(
 /**
  * A vehicle's purchase price is a ledger figure (#121): the same rule as the
  * vehicle's own detail and its History tab. A work order's amounts follow the
- * work-order reads (#390). Posting-line totals are money too, under the same
+ * work-order reads (#390, #328). Posting-line totals are money too, under the same
  * rule.
  */
 function showsHistoryMoney(
@@ -185,7 +185,7 @@ function showsHistoryMoney(
   modules: ReadonlySet<string>,
 ): boolean {
   if (entityType === "asset") return canReadLedger(auth.role) && modules.has("FINANCE");
-  if (entityType === "work_order") return canReadWorkOrderCosts(auth.role);
+  if (entityType === "work_order") return canReadWorkOrderCosts(auth.role) && modules.has("FINANCE");
   return true;
 }
 

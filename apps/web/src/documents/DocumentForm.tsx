@@ -28,7 +28,7 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { localizedLabel } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { renewalDefaults, type AssetDocument } from "./model.js";
-import { useCategories } from "./useCategories.js";
+import { useCategories } from "../categories/useCategories.js";
 
 /** Refusals that describe the asset or the document, not a failed save. */
 const INFORMATIVE_CODES = ["ASSET_NOT_OPERATIONAL", "DOCUMENT_ALREADY_SUPERSEDED"] as const;

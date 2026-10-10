@@ -392,10 +392,8 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
       primary = { kind: "locked", step: { key: "approve-entry", record }, lock };
     }
   }
-  if (
-    canReverseEntry(viewer.role, entry) &&
-    viewer.enabledModules.includes("FINANCE")
-  ) {
+  // An entry's panel opens only while Money is on (its manifest owns the panel).
+  if (canReverseEntry(viewer.role, entry)) {
     offered.push({ step: { key: "reverse-entry", record } });
   }
   return { primary, offered };
