@@ -29,30 +29,35 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, expectRefu
   await page.waitForURL((url) => url.pathname === `/activities/${own.id}`);
   await quiet();
 
-  const record = page.getByRole("button", { name: t("Saisir le compteur", "Record odometer"), exact: true });
+  const record = page.getByRole("button", { name: t("Relever le compteur", "Record odometer"), exact: true });
   await shot("own-trip", {
     caption: `Sali opens her own open trip ${own.activityNumber}`,
     highlight: record,
   });
   await record.click();
-  const form = page.getByRole("dialog");
-  await form.getByLabel(t("Valeur", "Value"), { exact: true }).fill("187400");
-  await shot("reading-form", { caption: "She records the odometer on her own trip", highlight: form });
+  const form = page.getByRole("dialog", { name: t("Relever le compteur", "Record odometer") });
+  const value = form.getByLabel(t("Valeur", "Value"), { exact: true });
+  await value.fill("187400");
+  await shot("reading-form", { caption: "She records the odometer on her own trip", highlight: value });
   await form.getByRole("button", { name: t("Enregistrer le relevé", "Record the reading"), exact: true }).click();
-  await form.waitFor({ state: "detached" });
+  const recorded = page.getByRole("main").getByText(/187[,\s\u202f\u00a0]400 km/).first();
+  await recorded.waitFor();
   await quiet();
+  await recorded.scrollIntoViewIfNeeded();
 
   const detail = await apiGet(`/v1/activities/${own.id}`);
   const readings = (detail.body as { readings?: Array<{ value: number }> }).readings ?? [];
   if (!readings.some((reading) => reading.value === 187_400)) throw new Error("the reading is not on her trip");
   await shot("reading-recorded", {
     caption: `The reading of 187,400 km is on ${own.activityNumber}`,
-    highlight: page.getByRole("main"),
+    highlight: recorded,
   });
   log(`own trip ${own.activityNumber}: reading recorded`);
 
   // The same writes, sent by id onto a trip that is not hers.
   expectRefusal({ status: 403, url: /\/v1\/commands\/(record-meter-reading|record-movement-leg|record-expense)$/ });
+  // tsx names the inner functions with an `__name` helper the page lacks.
+  await page.evaluate("globalThis.__name = (fn) => fn");
   const sent = await page.evaluate(async (activityId) => {
     const raw = window.localStorage.getItem("routiq.sessions.v1");
     const sessions = raw === null ? {} : (JSON.parse(raw) as { activeKey?: string; sessions?: Record<string, { token?: string }> });
