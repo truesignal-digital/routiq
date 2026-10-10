@@ -40,8 +40,12 @@ export const TODO_MONEY_CODES = [
   "PERIOD_OPEN",
 ] as const;
 
-export const TODO_CODES = [...TODO_SAFETY_CODES, ...TODO_MONEY_CODES] as const;
-export const todoCode = z.enum(TODO_CODES);
+// Every schema below is built inside a pure call: the web reads these shapes by
+// their types only, and a bundler keeps every argument of a top-level zod call,
+// so written flat they would ship in the first load unused.
+
+export const TODO_CODES = /* @__PURE__ */ (() => [...TODO_SAFETY_CODES, ...TODO_MONEY_CODES] as const)();
+export const todoCode = /* @__PURE__ */ (() => z.enum(TODO_CODES))();
 export type TodoCode = z.infer<typeof todoCode>;
 
 /**
@@ -73,7 +77,7 @@ export const COMING_UP_CODES = [
   /** PLANNED trips starting inside the window, and how many still have no vehicle. Scheduling only. */
   "TRIPS_PLANNED",
 ] as const;
-export const comingUpCode = z.enum(COMING_UP_CODES);
+export const comingUpCode = /* @__PURE__ */ (() => z.enum(COMING_UP_CODES))();
 export type ComingUpCode = z.infer<typeof comingUpCode>;
 
 export const COMING_UP_ROLES = {
@@ -95,7 +99,7 @@ export const COMING_UP_READER_ROLES = ["DIRECTOR", "ADMIN", "FINANCE", "TECHNICI
  * service can be due by km (dashboards.html#home, "where known").
  */
 export const COMING_UP_NOT_COUNTED = ["SERVICE_DUE_BY_KM"] as const;
-export const comingUpNotCounted = z.enum(COMING_UP_NOT_COUNTED);
+export const comingUpNotCounted = /* @__PURE__ */ (() => z.enum(COMING_UP_NOT_COUNTED))();
 
 /** Days ahead Coming up looks: the Dashboard's 14, the Trucks Overview's 30. */
 export const COMING_UP_WINDOWS = [14, 30] as const;
@@ -116,118 +120,126 @@ export const FLEET_ATTENTION_RECORD_KINDS = [
 ] as const;
 export const FLEET_ATTENTION_LIST_KINDS = ["approvals", "entries_evidence_missing", "planning"] as const;
 
-const recordLink = z.object({
-  kind: z.enum(FLEET_ATTENTION_RECORD_KINDS),
-  id: z.uuid(),
-  /** Document number, or the period's YYYY-MM; null where the record has none. */
-  number: z.string().nullable(),
-});
-const listLink = z.object({
-  kind: z.enum(FLEET_ATTENTION_LIST_KINDS),
-  id: z.null(),
-  number: z.null(),
-});
-export const fleetAttentionLink = z.discriminatedUnion("kind", [recordLink, listLink]);
+export const fleetAttentionLink = /* @__PURE__ */ (() => {
+  const recordLink = z.object({
+    kind: z.enum(FLEET_ATTENTION_RECORD_KINDS),
+    id: z.uuid(),
+    /** Document number, or the period's YYYY-MM; null where the record has none. */
+    number: z.string().nullable(),
+  });
+  const listLink = z.object({
+    kind: z.enum(FLEET_ATTENTION_LIST_KINDS),
+    id: z.null(),
+    number: z.null(),
+  });
+  return z.discriminatedUnion("kind", [recordLink, listLink]);
+})();
 
 /** The vehicle a row is about; null on rows that sum across vehicles. */
-const rowAsset = z.object({ id: z.uuid(), assetCode: z.string() }).nullable();
+const rowAsset = /* @__PURE__ */ (() => z.object({ id: z.uuid(), assetCode: z.string() }).nullable())();
 
 /**
  * What the lens was: the caller's whole Branch Scope, never the Ambient
  * Branch. A `branchId` in the query is ignored, and `ambientBranch` says so.
  */
-export const fleetAttentionScope = z.object({
-  ambientBranch: z.literal("IGNORED"),
-  /** The branches counted: every one, or the caller's list. */
-  branchIds: z.union([z.literal("ALL"), z.array(z.uuid())]),
-});
+export const fleetAttentionScope = /* @__PURE__ */ (() =>
+  z.object({
+    ambientBranch: z.literal("IGNORED"),
+    /** The branches counted: every one, or the caller's list. */
+    branchIds: z.union([z.literal("ALL"), z.array(z.uuid())]),
+  }))();
 
-export const todoRow = z.object({
-  code: todoCode,
-  severity: attentionSeverity,
-  link: fleetAttentionLink,
-  asset: rowAsset,
-  /** The row's branch; null on rows that sum across branches. */
-  branchId: z.uuid().nullable(),
-  /** Since when this needs attention: the oldest record behind a summed row. */
-  since: z.iso.datetime(),
-  /** Allowlisted facts for the sentence; every key optional. */
-  params: z
-    .object({
-      /** Sum of the rows behind a summed row; one row per currency. */
-      count: z.number().int().positive(),
-      amountMinor: moneyMinor,
-      currency: z.string().length(3),
-      /** Whole business days since `since`. */
-      days: z.number().int().nonnegative(),
-      description: z.string().max(140),
-      safetyCritical: z.boolean(),
-      categoryLabelFr: z.string(),
-      categoryLabelEn: z.string(),
-      /** VEHICLE_GROUNDED: a live work order covers the grounding problem. */
-      workOrderPlanned: z.boolean(),
-      /** VEHICLE_GROUNDED: the repair is done and the vehicle waits to be released. */
-      readyForRelease: z.boolean(),
-      documentTypeLabelFr: z.string(),
-      documentTypeLabelEn: z.string(),
-      expiresAt: z.iso.date(),
-      /** Days from the business date to expiry; negative once expired. */
-      daysLeft: z.number().int(),
-      /** PERIOD_OPEN: the month, its waiting entries and its missing receipts. */
-      periodCode: monthCode,
-      submittedCount: z.number().int().nonnegative(),
-      evidenceMissingCount: z.number().int().nonnegative(),
-      /** PERIOD_OPEN: older past months also still open. */
-      olderOpenCount: z.number().int().nonnegative(),
-    })
-    .partial(),
-});
+export const todoRow = /* @__PURE__ */ (() =>
+  z.object({
+    code: todoCode,
+    severity: attentionSeverity,
+    link: fleetAttentionLink,
+    asset: rowAsset,
+    /** The row's branch; null on rows that sum across branches. */
+    branchId: z.uuid().nullable(),
+    /** Since when this needs attention: the oldest record behind a summed row. */
+    since: z.iso.datetime(),
+    /** Allowlisted facts for the sentence; every key optional. */
+    params: z
+      .object({
+        /** Sum of the rows behind a summed row; one row per currency. */
+        count: z.number().int().positive(),
+        amountMinor: moneyMinor,
+        currency: z.string().length(3),
+        /** Whole business days since `since`. */
+        days: z.number().int().nonnegative(),
+        description: z.string().max(140),
+        safetyCritical: z.boolean(),
+        categoryLabelFr: z.string(),
+        categoryLabelEn: z.string(),
+        /** VEHICLE_GROUNDED: a live work order covers the grounding problem. */
+        workOrderPlanned: z.boolean(),
+        /** VEHICLE_GROUNDED: the repair is done and the vehicle waits to be released. */
+        readyForRelease: z.boolean(),
+        documentTypeLabelFr: z.string(),
+        documentTypeLabelEn: z.string(),
+        expiresAt: z.iso.date(),
+        /** Days from the business date to expiry; negative once expired. */
+        daysLeft: z.number().int(),
+        /** PERIOD_OPEN: the month, its waiting entries and its missing receipts. */
+        periodCode: monthCode,
+        submittedCount: z.number().int().nonnegative(),
+        evidenceMissingCount: z.number().int().nonnegative(),
+        /** PERIOD_OPEN: older past months also still open. */
+        olderOpenCount: z.number().int().nonnegative(),
+      })
+      .partial(),
+  }))();
 
-export const todoResponse = z.object({
-  /** Today in the workspace timezone: what days and expiry were judged against. */
-  businessDate: z.iso.date(),
-  scope: fleetAttentionScope,
-  rows: z.array(todoRow).max(FLEET_ATTENTION_ROW_LIMIT),
-  /** Rows before the limit. */
-  totalCount: z.number().int().nonnegative(),
-});
+export const todoResponse = /* @__PURE__ */ (() =>
+  z.object({
+    /** Today in the workspace timezone: what days and expiry were judged against. */
+    businessDate: z.iso.date(),
+    scope: fleetAttentionScope,
+    rows: z.array(todoRow).max(FLEET_ATTENTION_ROW_LIMIT),
+    /** Rows before the limit. */
+    totalCount: z.number().int().nonnegative(),
+  }))();
 
-export const comingUpQuery = z.object({
-  days: z.coerce
-    .number()
-    .int()
-    .refine((days) => (COMING_UP_WINDOWS as readonly number[]).includes(days))
-    .default(14),
-});
+export const comingUpQuery = /* @__PURE__ */ (() =>
+  z.object({
+    days: z.coerce
+      .number()
+      .int()
+      .refine((days) => (COMING_UP_WINDOWS as readonly number[]).includes(days))
+      .default(14),
+  }))();
 
-export const comingUpRow = z.object({
-  code: comingUpCode,
-  link: fleetAttentionLink,
-  asset: rowAsset,
-  branchId: z.uuid().nullable(),
-  /** The day it falls due: the expiry, or the first planned start. */
-  dueDate: z.iso.date(),
-  params: z
-    .object({
-      documentTypeLabelFr: z.string(),
-      documentTypeLabelEn: z.string(),
-      daysLeft: z.number().int().nonnegative(),
-      plannedCount: z.number().int().positive(),
-      withoutVehicleCount: z.number().int().nonnegative(),
-    })
-    .partial(),
-});
+export const comingUpRow = /* @__PURE__ */ (() =>
+  z.object({
+    code: comingUpCode,
+    link: fleetAttentionLink,
+    asset: rowAsset,
+    branchId: z.uuid().nullable(),
+    /** The day it falls due: the expiry, or the first planned start. */
+    dueDate: z.iso.date(),
+    params: z
+      .object({
+        documentTypeLabelFr: z.string(),
+        documentTypeLabelEn: z.string(),
+        daysLeft: z.number().int().nonnegative(),
+        plannedCount: z.number().int().positive(),
+        withoutVehicleCount: z.number().int().nonnegative(),
+      })
+      .partial(),
+  }))();
 
-export const comingUpResponse = z.object({
-  businessDate: z.iso.date(),
-  windowDays: z.union([z.literal(14), z.literal(30)]),
-  scope: fleetAttentionScope,
-  /** Soonest first. */
-  rows: z.array(comingUpRow).max(FLEET_ATTENTION_ROW_LIMIT),
-  totalCount: z.number().int().nonnegative(),
-  /** What could not be counted because ROUTIQ does not record it. */
-  notCounted: z.array(comingUpNotCounted),
-});
+export const comingUpResponse = /* @__PURE__ */ (() =>
+  z.object({
+    businessDate: z.iso.date(),
+    windowDays: z.union([z.literal(14), z.literal(30)]),
+    scope: fleetAttentionScope,
+    /** Soonest first. */
+    rows: z.array(comingUpRow).max(FLEET_ATTENTION_ROW_LIMIT),
+    totalCount: z.number().int().nonnegative(),
+    /** What could not be counted because ROUTIQ does not record it. */
+    notCounted: z.array(comingUpNotCounted),
+  }))();
 
 export type FleetAttentionLink = z.infer<typeof fleetAttentionLink>;
 export type TodoRow = z.infer<typeof todoRow>;
